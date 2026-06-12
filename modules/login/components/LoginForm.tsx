@@ -1,0 +1,121 @@
+
+import React, { useState } from 'react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { LoginCredentials } from '../login.types';
+
+interface LoginFormProps {
+  onSubmit: (credentials: LoginCredentials) => void;
+  isLoading?: boolean;
+  onBack: () => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) => {
+  // Credenciais preenchidas para desenvolvimento
+  const [email, setEmail] = useState('gestor@universo.com');
+  const [password, setPassword] = useState('123456');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ email, password });
+  };
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit}>
+      
+      {/* Campo E-mail */}
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider ml-1">
+          E-mail Acadêmico
+        </label>
+        <div className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#4169E1] transition-colors">
+            <Mail size={20} />
+          </div>
+          <input 
+            type="email" 
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-medium text-sm shadow-sm"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Campo Senha */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center ml-1">
+          <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider">
+            Senha
+          </label>
+          <a href="#" className="text-xs font-bold text-[#4169E1] hover:text-[#001a33] transition-colors">
+            Esqueceu a senha?
+          </a>
+        </div>
+        <div className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#4169E1] transition-colors">
+            <Lock size={20} />
+          </div>
+          <input 
+            type={showPassword ? "text" : "password"} 
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full pl-12 pr-12 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-medium text-sm shadow-sm"
+            required
+          />
+          <button 
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#001a33] transition-colors p-1"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Checkbox Lembrar-me */}
+      <div className="flex items-center ml-1">
+        <label className="flex items-center cursor-pointer group select-none">
+          <div className="relative">
+            <input 
+              type="checkbox" 
+              className="peer sr-only"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <div className="w-5 h-5 border-2 border-slate-300 rounded peer-checked:bg-[#4169E1] peer-checked:border-[#4169E1] transition-all"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <span className="ml-3 text-sm font-medium text-slate-500 group-hover:text-[#001a33] transition-colors">
+            Manter conectado
+          </span>
+        </label>
+      </div>
+
+      {/* Botão de Ação */}
+      <button 
+        disabled={isLoading}
+        className="w-full bg-gradient-to-r from-[#4169E1] to-[#001a33] hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+      >
+        <span>{isLoading ? 'Autenticando...' : 'Acessar Plataforma'}</span>
+        {!isLoading && (
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        )}
+      </button>
+
+      {/* Texto de suporte */}
+      <p className="text-center text-slate-400 text-xs font-medium pt-4">
+        Não tem acesso? <a href="/#/contato" className="text-[#4169E1] hover:underline font-bold">Fale com a secretaria</a>
+      </p>
+    </form>
+  );
+};
+
+export default LoginForm;

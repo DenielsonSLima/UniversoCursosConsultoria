@@ -1,0 +1,229 @@
+modules/gestor/cadastros/modelos-documentos/diploma/components/DiplomaCard.tsx:22:            onClick={(e) => { e.stopPropagation(); onEdit(modelo); }}
+modules/gestor/cadastros/modelos-documentos/diploma/components/DiplomaCard.tsx:28:            onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
+modules/gestor/cadastros/modelos-documentos/diploma/diploma.service.ts:5:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/carteirinha/components/CarteirinhaCard.tsx:22:            onClick={(e) => { e.stopPropagation(); onEdit(modelo); }}
+modules/gestor/cadastros/modelos-documentos/carteirinha/components/CarteirinhaCard.tsx:28:            onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
+modules/gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service.ts:17:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service.ts:34:  async getNextNumber() {
+modules/gestor/cadastros/modelos-documentos/transferencia/transferencia.service.ts:5:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/declaracao/declaracao.service.ts:48:  async getQrConfig() {
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:58:    loadData();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:74:    const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:79:    const qrData = await declaracaoService.getQrConfig();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:102:      const reader = new FileReader();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:127:    e.preventDefault();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:130:    const rect = canvasRef.current.getBoundingClientRect();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:162:    e.preventDefault();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:167:    e.stopPropagation();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:215:          if (token === '{POLO_ID}') return polo.id.slice(0,3).toUpperCase();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoEditor.tsx:421:                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoQrConfig.tsx:29:    loadConfig();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoQrConfig.tsx:33:    const config = await declaracaoService.getQrConfig();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoQrConfig.tsx:55:    onBack();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoList.tsx:18:    loadPolos();
+modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoList.tsx:22:    const data = await empresasService.getAll();
+modules/gestor/cadastros/modelos-documentos/estagio/estagio.service.ts:5:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/diarios/diarios.service.ts:5:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/historico/historico.service.ts:5:  async getTemplate() {
+modules/gestor/cadastros/modelos-documentos/ModelosDocumentosPage.tsx:62:        {renderContent()}
+modules/gestor/cadastros/cursos-livres/cursos-livres.service.ts:62:  async getAll(): Promise<CursoLivre[]> {
+modules/gestor/cadastros/cursos-livres/components/CursoLivreDetails.tsx:154:    onUpdate();
+modules/gestor/cadastros/cursos-livres/CursosLivresPage.tsx:16:    loadCursos();
+modules/gestor/cadastros/cursos-livres/CursosLivresPage.tsx:21:    const data = await cursosLivresService.getAll();
+modules/gestor/cadastros/cursos-livres/CursosLivresPage.tsx:34:    loadCursos();
+modules/gestor/cadastros/ficha-matricula/components/FichaCard.tsx:19:            onClick={(e) => { e.stopPropagation(); onEdit(ficha); }}
+modules/gestor/cadastros/ficha-matricula/components/FichaCard.tsx:25:            onClick={(e) => { e.stopPropagation(); onDelete(ficha.id); }}
+modules/gestor/cadastros/ficha-matricula/components/FichaEditor.tsx:179:              onKeyDown={(e) => e.key === 'Enter' && addCampo()}
+modules/gestor/cadastros/cursos-tecnicos/components/DisciplinaContentModal.tsx:51:    onClose();
+modules/gestor/cadastros/cursos-tecnicos/components/CursoTecnicoDetails.tsx:158:    onUpdate();
+modules/gestor/cadastros/cursos-tecnicos/cursos-tecnicos.service.ts:62:  async getAll(): Promise<CursoTecnico[]> {
+modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx:16:    loadCursos();
+modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx:21:    const data = await cursosTecnicosService.getAll();
+modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx:34:    loadCursos(); // Recarrega para refletir mudanças de carga horária, etc.
+modules/gestor/cadastros/cursos-especializacao/components/CursoEspecializacaoDetails.tsx:142:    onUpdate();
+modules/gestor/cadastros/cursos-especializacao/CursosEspecializacaoPage.tsx:16:    loadCursos();
+modules/gestor/cadastros/cursos-especializacao/CursosEspecializacaoPage.tsx:21:    const data = await cursosEspecializacaoService.getAll();
+modules/gestor/cadastros/cursos-especializacao/CursosEspecializacaoPage.tsx:34:    loadCursos();
+modules/gestor/cadastros/cursos-especializacao/cursos-especializacao.service.ts:55:  async getAll(): Promise<CursoEspecializacao[]> {
+modules/gestor/secretaria/documentos/SecretariaDocumentosPage.tsx:19:    e.preventDefault();
+modules/gestor/secretaria/SecretariaPage.tsx:64:        {renderContent()}
+modules/gestor/secretaria/alunos/SecretariaAlunosPage.tsx:20:    ? MOCK_ALUNOS.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || a.matricula.includes(searchTerm))
+modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx:25:    loadData();
+modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx:31:    const cursosData = await cursosTecnicosService.getAll();
+modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx:37:    await loadData();
+modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx:14:  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx:24:      const cursos = await cursosTecnicosService.getAll();
+modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx:41:    fetchCurso();
+modules/gestor/gestao/tecnicos/detalhes/components/TurmaAlunos.tsx:55:    a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx:20:    a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroConfig.tsx:128:        onDragOver={(e) => e.preventDefault()}
+modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroConfig.tsx:299:            if(cronograma.length === 0) gerarCronograma(); // Auto gera se estiver vazio na primeira edição
+modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx:101:        {renderContent()}
+modules/gestor/gestao/livres/GestaoLivres.tsx:17:    loadData();
+modules/gestor/gestao/livres/GestaoLivres.tsx:23:    const cursosData = await cursosLivresService.getAll();
+modules/gestor/gestao/livres/GestaoLivres.tsx:29:    await loadData();
+modules/gestor/gestao/ead/GestaoEad.tsx:16:    loadData();
+modules/gestor/gestao/ead/GestaoEad.tsx:28:    await loadData();
+modules/gestor/gestao/components/forms/TurmaEadForm.tsx:30:        const year = date.getFullYear();
+modules/gestor/gestao/components/forms/TurmaEadForm.tsx:31:        const month = date.getMonth() + 1;
+modules/gestor/gestao/components/forms/TurmaEadForm.tsx:35:            const siglaCurso = curso.nome.substring(0, 4).toUpperCase().replace(/\s/g, '');
+modules/gestor/gestao/components/forms/TurmaEadForm.tsx:51:    e.preventDefault();
+modules/gestor/gestao/components/forms/TurmaEadForm.tsx:64:    onClose();
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:30:    empresasService.getAll().then(setPolos);
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:38:        const year = date.getFullYear();
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:40:        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:43:            const siglaCurso = curso.nome.substring(0, 4).toUpperCase().replace(/\s/g, '');
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:44:            const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:45:            const turnoSigla = formData.turno.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:48:            const codigo = `LIVRE-${siglaCurso}-${turnoSigla}-${poloSigla}-${month}/${year.toString().slice(-2)}`;
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:51:            const nome = `${curso.nome} - ${formData.turno.charAt(0) + formData.turno.slice(1).toLowerCase()} - ${polo.cidade}`;
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:61:    e.preventDefault();
+modules/gestor/gestao/components/forms/TurmaLivreForm.tsx:76:    onClose();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:30:    empresasService.getAll().then(setPolos);
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:38:        const year = date.getFullYear();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:41:            const siglaCurso = curso.nome.includes('Instrumentação') ? 'INST' : curso.nome.substring(0, 4).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:42:            const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:43:            const turnoSigla = formData.turno.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:49:            const nome = `${curso.nome.replace('Especialização em ', '')} - ${formData.turno.charAt(0) + formData.turno.slice(1).toLowerCase()} - ${polo.cidade} (${year})`;
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:59:    e.preventDefault();
+modules/gestor/gestao/components/forms/TurmaEspecializacaoForm.tsx:74:    onClose();
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:32:    empresasService.getAll().then(setPolos);
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:41:        const year = date.getFullYear();
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:42:        const month = date.getMonth() + 1;
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:47:            const cursoSigla = curso.nome.substring(0, 3).toUpperCase(); // Ex: TEC -> TEC (Melhorar logica real depois)
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:49:            const siglaCursoSmart = curso.nome.includes('Enfermagem') ? 'ENF' : curso.nome.includes('Radiologia') ? 'RAD' : curso.nome.substring(0,4).toUpperCase().replace(/\s/g, '');
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:51:            const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:52:            const turnoSigla = formData.turno.substring(0, 3).toUpperCase();
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:58:            const nome = `${curso.nome} - ${formData.turno.charAt(0) + formData.turno.slice(1).toLowerCase()} - ${polo.cidade} - ${year}.${semester}`;
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:68:    e.preventDefault();
+modules/gestor/gestao/components/forms/TurmaTecnicoForm.tsx:83:    onClose();
+modules/gestor/gestao/components/TurmaFormModal.tsx:30:    e.preventDefault();
+modules/gestor/gestao/components/TurmaFormModal.tsx:44:    onClose();
+modules/gestor/gestao/components/TurmaCard.tsx:24:  const colors = getColors();
+modules/gestor/gestao/especializacao/GestaoEspecializacao.tsx:17:    loadData();
+modules/gestor/gestao/especializacao/GestaoEspecializacao.tsx:23:    const cursosData = await cursosEspecializacaoService.getAll();
+modules/gestor/gestao/especializacao/GestaoEspecializacao.tsx:29:    await loadData();
+modules/gestor/parceiros/components/export/ParceirosExportModal.tsx:53:                  onClick={() => { alert('Iniciando download do Excel...'); onClose(); }}
+modules/gestor/parceiros/components/export/ParceirosExportModal.tsx:88:                onClick={() => { alert('Baixando PDF...'); onClose(); }}
+modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDetalhes.tsx:86:        {activeTab === 'acesso' && <ParceiroAcesso email={professorData.email || `${professorData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
+modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDetalhes.tsx:101:        {activeTab === 'acesso' && <ParceiroAcesso email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
+modules/gestor/parceiros/components/cards/PJCard.tsx:46:        <button className="text-slate-400 hover:text-slate-700 transition-colors p-1 -mr-1" onClick={(e) => { e.stopPropagation(); /* Menu handler */ }}>
+modules/gestor/parceiros/components/cards/PFCard.tsx:52:        <button className="text-slate-400 hover:text-slate-700 transition-colors p-1 -mr-1" onClick={(e) => { e.stopPropagation(); /* Menu handler */ }}>
+modules/gestor/parceiros/components/cards/AlunoCard.tsx:53:        <button className="text-slate-400 hover:text-slate-700 transition-colors p-1 -mr-1" onClick={(e) => { e.stopPropagation(); /* Menu handler */ }}>
+modules/gestor/parceiros/components/cards/ProfessorCard.tsx:53:        <button className="text-slate-400 hover:text-slate-700 transition-colors p-1 -mr-1" onClick={(e) => { e.stopPropagation(); /* Menu handler */ }}>
+modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoResponsavel.tsx:24:    let idade = hoje.getFullYear() - nasc.getFullYear();
+modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoResponsavel.tsx:25:    const m = hoje.getMonth() - nasc.getMonth();
+modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoForm.tsx:75:    e.preventDefault();
+modules/gestor/parceiros/components/formularioparceiros/professor/ParceiroProfessorForm.tsx:77:    e.preventDefault();
+modules/gestor/parceiros/components/ParceirosList.tsx:35:        const id = i.toString();
+modules/gestor/parceiros/components/ParceirosList.tsx:209:    setAllItems(generateData());
+modules/gestor/parceiros/components/ParceirosList.tsx:222:        const lowerTerm = searchTerm.toLowerCase();
+modules/gestor/parceiros/components/ParceirosList.tsx:223:        const contentStr = `${item.nome} ${item.cpf || ''} ${item.cnpj || ''} ${item.cidade || ''}`.toLowerCase();
+modules/gestor/parceiros/components/ParceirosCard.tsx:20:  const isPrefeitura = data.tipo.toLowerCase().includes('prefeitura');
+modules/gestor/parceiros/parceiros.service.ts:5:  async getAll() {
+modules/gestor/configuracoes/marca-dagua/marca-dagua.service.ts:36:  async getCompaniesWithWatermark() {
+modules/gestor/configuracoes/marca-dagua/MarcaDaguaConfig.tsx:12:    loadData();
+modules/gestor/configuracoes/marca-dagua/MarcaDaguaConfig.tsx:16:    const data = await marcaDaguaService.getCompaniesWithWatermark();
+modules/gestor/configuracoes/marca-dagua/MarcaDaguaConfig.tsx:22:    await loadData();
+modules/gestor/configuracoes/marca-dagua/components/WatermarkEditor.tsx:24:      const reader = new FileReader();
+modules/gestor/configuracoes/usuarios/usuarios.service.ts:65:  async getGlobalUsers() {
+modules/gestor/configuracoes/usuarios/UsuariosConfig.tsx:15:    loadCompanies();
+modules/gestor/configuracoes/usuarios/UsuariosConfig.tsx:26:    const data = await empresasService.getAll();
+modules/gestor/configuracoes/usuarios/components/UsersList.tsx:20:    loadUsers();
+modules/gestor/configuracoes/usuarios/components/UsersList.tsx:27:      data = await usuariosService.getGlobalUsers();
+modules/gestor/configuracoes/usuarios/components/UsersList.tsx:40:          id: Math.random().toString(),
+modules/gestor/configuracoes/usuarios/components/UsersList.tsx:51:    user.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+modules/gestor/configuracoes/usuarios/components/UsersList.tsx:52:    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+modules/gestor/configuracoes/usuarios/components/UserFormAdd.tsx:47:    loadCompanies();
+modules/gestor/configuracoes/usuarios/components/UserFormAdd.tsx:51:    const data = await empresasService.getAll();
+modules/gestor/configuracoes/usuarios/components/UserFormAdd.tsx:105:    e.preventDefault();
+modules/gestor/configuracoes/usuarios/components/UserFormAdd.tsx:217:                    <div className={`h-full transition-all duration-300 ${getStrengthColor()}`} style={{ width: `${(passwordStrength / 5) * 100}%` }}></div>
+modules/gestor/configuracoes/usuarios/components/UserFormAdd.tsx:219:                  <span className="text-[10px] font-bold uppercase text-slate-500">{getStrengthLabel()}</span>
+modules/gestor/configuracoes/contas-bancarias/components/AccountForm.tsx:22:    e.preventDefault();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:27:    loadAccounts();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:49:      loadAccounts();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:57:      loadAccounts();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:67:    loadAccounts();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:75:    const name = bankName.toLowerCase();
+modules/gestor/configuracoes/contas-bancarias/components/CompanyAccountsManager.tsx:168:                    onClick={(e) => { e.stopPropagation(); confirmToggleStatus(account); }}
+modules/gestor/configuracoes/contas-bancarias/contas-bancarias.service.ts:45:  async getCompanies() {
+modules/gestor/configuracoes/contas-bancarias/ContasBancariasConfig.tsx:12:    loadCompanies();
+modules/gestor/configuracoes/contas-bancarias/ContasBancariasConfig.tsx:16:    const data = await contasBancariasService.getCompanies();
+modules/gestor/configuracoes/templates-mensagens/TemplatesMensagensConfig.tsx:96:                     onClick={(e) => { e.stopPropagation(); handeRemove(template.id); }}
+modules/gestor/configuracoes/polos/PolosConfig.tsx:78:                     onClick={(e) => { e.stopPropagation(); handeRemove(polo.id); }}
+modules/gestor/configuracoes/polos/PolosConfig.tsx:160:                    onChange={e => setEditingPolo({...editingPolo, estado: e.target.value.toUpperCase()})}
+modules/gestor/configuracoes/saldo-inicial/components/AccountBalanceManager.tsx:17:    loadAccounts();
+modules/gestor/configuracoes/saldo-inicial/components/AccountBalanceManager.tsx:35:    const name = bankName.toLowerCase();
+modules/gestor/configuracoes/saldo-inicial/saldo-inicial.service.ts:49:  async getCompanies() {
+modules/gestor/configuracoes/saldo-inicial/SaldoInicialConfig.tsx:12:    loadCompanies();
+modules/gestor/configuracoes/saldo-inicial/SaldoInicialConfig.tsx:16:    const data = await saldoInicialService.getCompanies();
+modules/gestor/configuracoes/categorias/CategoriasConfig.tsx:31:    cat.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+modules/gestor/configuracoes/categorias/CategoriasConfig.tsx:32:    cat.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+modules/gestor/configuracoes/api-status/api-status.service.ts:5:  async checkHealth() {
+modules/gestor/configuracoes/ConfiguracoesPage.tsx:87:          {renderSection()}
+modules/gestor/configuracoes/empresas/components/EmpresaForm.tsx:36:    e.preventDefault();
+modules/gestor/configuracoes/empresas/EmpresasConfig.tsx:24:    loadCompanies();
+modules/gestor/configuracoes/empresas/EmpresasConfig.tsx:28:    const data = await empresasService.getAll();
+modules/gestor/configuracoes/empresas/EmpresasConfig.tsx:58:      loadCompanies();
+modules/gestor/configuracoes/empresas/EmpresasConfig.tsx:66:        loadCompanies();
+modules/gestor/configuracoes/empresas/EmpresasConfig.tsx:76:    await loadCompanies();
+modules/gestor/configuracoes/empresas/empresas.service.ts:60:  async getAll() {
+modules/gestor/biblioteca/components/InstitutionalLibrary.tsx:17:    loadDocs();
+modules/gestor/biblioteca/components/InstitutionalLibrary.tsx:22:    const data = await bibliotecaService.getInstitutionalDocuments();
+modules/gestor/biblioteca/components/InstitutionalLibrary.tsx:30:        loadDocs();
+modules/gestor/biblioteca/components/InstitutionalLibrary.tsx:35:    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+modules/gestor/biblioteca/components/InstitutionalLibrary.tsx:36:    doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
+modules/gestor/biblioteca/components/UploadModal.tsx:25:    empresasService.getAll().then(setPolos);
+modules/gestor/biblioteca/components/UploadModal.tsx:37:    e.preventDefault();
+modules/gestor/biblioteca/components/UploadModal.tsx:48:    const ext = formData.file.name.split('.').pop()?.toUpperCase() || 'OTHER';
+modules/gestor/biblioteca/components/UploadModal.tsx:66:    onClose();
+modules/gestor/biblioteca/components/TeacherRepository.tsx:12:    loadTeachers();
+modules/gestor/biblioteca/components/TeacherRepository.tsx:17:    const data = await bibliotecaService.getTeacherRepositories();
+modules/gestor/biblioteca/biblioteca.service.ts:92:  async getInstitutionalDocuments() {
+modules/gestor/biblioteca/biblioteca.service.ts:98:  async getTeacherRepositories() {
+modules/gestor/dashboard/dashboard.service.ts:5:  async getStats() {
+modules/gestor/calendario/CalendarioPage.tsx:27:    loadData();
+modules/gestor/calendario/CalendarioPage.tsx:31:    const eventsData = await calendarioService.getEvents();
+modules/gestor/calendario/CalendarioPage.tsx:32:    const typesData = await calendarioService.getEventTypes();
+modules/gestor/calendario/CalendarioPage.tsx:40:    loadData();
+modules/gestor/calendario/CalendarioPage.tsx:45:    loadData();
+modules/gestor/calendario/CalendarioPage.tsx:51:    loadData();
+modules/gestor/calendario/CalendarioPage.tsx:56:    loadData();
+modules/gestor/calendario/CalendarioPage.tsx:74:    const dateStr = date.toISOString().split('T')[0];
+modules/gestor/calendario/components/CalendarSidebar.tsx:18:      .filter(e => e.date.startsWith(currentYear.toString()))
+modules/gestor/calendario/components/EventModal.tsx:34:    e.preventDefault();
+modules/gestor/calendario/calendario.service.ts:27:  async getEvents() {
+modules/gestor/calendario/calendario.service.ts:53:  async getEventTypes() {
+modules/gestor/components/ConfirmModal.tsx:37:  const colors = getColors();
+modules/gestor/components/ConfirmModal.tsx:78:                onConfirm();
+modules/gestor/components/ConfirmModal.tsx:79:                onClose();
+modules/gestor/gestor.page.tsx:75:  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+modules/gestor/gestor.page.tsx:81:  const navigate = useNavigate();
+modules/gestor/gestor.page.tsx:104:      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+modules/gestor/gestor.page.tsx:105:      item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+modules/gestor/gestor.page.tsx:175:                  Gerenciamento de {sub.charAt(0).toUpperCase() + sub.slice(1)}
+modules/gestor/gestor.page.tsx:287:          <aside className="w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
+modules/gestor/gestor.page.tsx:406:          {renderContent()}
+modules/gestor/comunicacao/ComunicacaoPage.tsx:254:                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+modules/public/contact/ContactPage.tsx:8:  const { pathname } = useLocation();
+modules/public/components/Header.tsx:7:  const navigate = useNavigate();
+modules/public/components/Header.tsx:8:  const location = useLocation();
+modules/public/components/Header.tsx:19:    e.preventDefault();
+modules/public/components/Footer.tsx:9:  const navigate = useNavigate();
+modules/public/components/Footer.tsx:12:    e.preventDefault();
+modules/public/components/CourseCard.tsx:25:        {renderIcon()}
+modules/public/faq/components/FaqAccordion.tsx:44:    faq.q.toLowerCase().includes(searchTerm.toLowerCase()) || 
+modules/public/faq/components/FaqAccordion.tsx:45:    faq.a.toLowerCase().includes(searchTerm.toLowerCase())
+modules/public/faq/FaqPage.tsx:11:  const { pathname } = useLocation();
+modules/public/public.page.tsx:14:  const { hash } = useLocation();
+modules/public/validator/ValidatorPage.tsx:11:  const [searchParams] = useSearchParams();
+modules/public/validator/ValidatorPage.tsx:67:    e.preventDefault();
+modules/public/validator/ValidatorPage.tsx:108:                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+modules/ead/ead.service.ts:6:  async getCourses() {
+modules/cad-aed/cad-aed.service.ts:6:  async getCourses() {
+modules/login/components/LoginForm.tsx:20:    e.preventDefault();
+modules/login/LoginPage.tsx:20:  const navigate = useNavigate();
+modules/login/LoginPage.tsx:45:      const email = credentials.email.toLowerCase();
+modules/login/login.service.ts:28:    const { error } = await supabase.auth.signOut();
+modules/login/login.service.ts:33:  async getSession() {
+modules/login/login.service.ts:34:    const { data } = await supabase.auth.getSession();

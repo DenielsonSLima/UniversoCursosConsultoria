@@ -1,0 +1,60 @@
+
+import React from 'react';
+import { Clock, Calendar, ChevronRight, Award, GraduationCap } from 'lucide-react';
+import { CursoEspecializacao } from '../cursos-especializacao.types';
+
+interface CursoEspecializacaoCardProps {
+  curso: CursoEspecializacao;
+  onClick: () => void;
+}
+
+const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso, onClick }) => {
+  return (
+    <div 
+      onClick={onClick}
+      className="group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-rose-900/10 hover:border-rose-200 transition-all duration-300 cursor-pointer flex flex-col h-full relative overflow-hidden"
+    >
+      <div className="flex items-start justify-between mb-6 relative z-10">
+        <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+          <Award size={28} />
+        </div>
+        <span className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-slate-100 group-hover:bg-rose-50 group-hover:text-rose-700 transition-colors">
+          {curso.area}
+        </span>
+      </div>
+
+      <h3 className="text-lg font-black text-[#001a33] mb-2 group-hover:text-rose-600 transition-colors relative z-10">
+        {curso.nome}
+      </h3>
+      
+      <div className="flex items-center gap-2 mb-4 text-xs text-slate-400 font-medium">
+         <GraduationCap size={14} />
+         <span>Req: {curso.requisito}</span>
+      </div>
+
+      <p className="text-xs text-slate-500 font-medium mb-6 line-clamp-2 relative z-10">
+        {curso.descricao}
+      </p>
+
+      <div className="mt-auto space-y-3 relative z-10">
+        <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl">
+          <Clock size={16} className="text-rose-500" />
+          <span className="font-bold">{curso.cargaHorariaTotal}h</span>
+          <span className="text-slate-400">|</span>
+          <Calendar size={16} className="text-blue-500" />
+          <span className="font-bold">{curso.duracaoMeses} Meses</span>
+        </div>
+
+        <button className="w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+          <span>Ver Grade</span>
+          <ChevronRight size={14} />
+        </button>
+      </div>
+
+      {/* Decorative */}
+      <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-rose-50 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-2xl"></div>
+    </div>
+  );
+};
+
+export default CursoEspecializacaoCard;
