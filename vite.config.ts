@@ -18,7 +18,9 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(env.REACT_APP_SUPABASE_URL),
-        'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(env.REACT_APP_SUPABASE_ANON_KEY)
+        'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(env.REACT_APP_SUPABASE_ANON_KEY),
+        // Modo da aplicação: 'development' (local) ou 'production' (Vercel)
+        'import.meta.env.VITE_APP_MODE': JSON.stringify(env.VITE_APP_MODE || 'production'),
       },
       optimizeDeps: {
         include: ['react', 'react-dom', 'react-router-dom', 'lucide-react']
