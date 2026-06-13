@@ -47,7 +47,7 @@ description: >
 
 ---
 
-## ⚡ As 10 Regras de Ouro (Imutáveis — Nunca Quebre)
+## ⚡ As 15 Regras de Ouro (Imutáveis — Nunca Quebre)
 
 ```
 REGRA 1  → Componentes NUNCA fazem chamadas de API diretas
@@ -58,8 +58,13 @@ REGRA 5  → Lógica financeira crítica SEMPRE no banco (RPCs/Triggers)
 REGRA 6  → Validação com Zod SEMPRE na entrada de Edge Functions
 REGRA 7  → Paginação SEMPRE — nunca retornar listas sem limite
 REGRA 8  → Erros SEMPRE tratados com mensagem amigável ao usuário
-REGRA 9  → Realtime APENAS onde a UX exige — não em todas as tabelas
+REGRA 9  → Realtime APENAS onde a UX exige — não em todas as tabelas (economize egress)
 REGRA 10 → DRY — se repetiu 2x, extraia para função/hook/service
+REGRA 11 → TanStack Query SEMPRE para sincronização e cache de dados do servidor
+REGRA 12 → Front-end é burro: NUNCA execute cálculos de negócio complexos ou financeiros no cliente
+REGRA 13 → Economia de egress: evite pooling constante de rede; prefira realtime reativo com invalidação precisa de cache
+REGRA 14 → Arquitetura modular: separe visualização, formulários, cartões e lógica de hooks/serviços de forma isolada
+REGRA 15 → Invalidação inteligente: revalide apenas chaves de cache afetadas e com cleanup de realtime adequado
 ```
 
 ---

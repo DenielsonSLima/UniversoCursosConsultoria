@@ -8,20 +8,30 @@ import ProfessoresKpi from './kpis/ProfessoresKpi';
 
 interface ParceirosKpisProps {
   totalParceiros: number;
-  totalAlunosVinculados: number;
-  totalProfessoresVinculados: number;
+  totalParceirosAtivos: number;
+  totalAlunos: number;
+  totalAlunosAtivos: number;
+  totalAlunosInativos: number;
+  totalProfessores: number;
+  totalProfessoresAtivos: number;
+  totalProfessoresInativos: number;
 }
 
 const ParceirosKpis: React.FC<ParceirosKpisProps> = ({ 
   totalParceiros, 
-  totalAlunosVinculados, 
-  totalProfessoresVinculados 
+  totalParceirosAtivos,
+  totalAlunos, 
+  totalAlunosAtivos,
+  totalAlunosInativos,
+  totalProfessores, 
+  totalProfessoresAtivos,
+  totalProfessoresInativos 
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <TotalParceirosKpi total={totalParceiros} />
-      <AlunosKpi total={totalAlunosVinculados} ativos={totalAlunosVinculados} inativos={0} />
-      <ProfessoresKpi total={totalProfessoresVinculados} ativos={totalProfessoresVinculados} inativos={0} />
+      <TotalParceirosKpi total={totalParceiros} ativos={totalParceirosAtivos} />
+      <AlunosKpi total={totalAlunos} ativos={totalAlunosAtivos} inativos={totalAlunosInativos} />
+      <ProfessoresKpi total={totalProfessores} ativos={totalProfessoresAtivos} inativos={totalProfessoresInativos} />
     </div>
   );
 };

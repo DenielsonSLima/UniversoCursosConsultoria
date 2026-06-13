@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { Upload, Save, X, Building, MapPin, Phone, Mail, FileText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Upload, Save, X, Building, MapPin, Phone, Mail, FileText, RefreshCw } from 'lucide-react';
+import { empresasService } from '../empresas.service';
 
 interface EmpresaFormProps {
   initialData?: any;
@@ -24,8 +25,27 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
     telefone: '',
     email: '',
     site: '',
-    tipo: 'Filial'
+    tipo: 'Filial',
+    logoUrl: ''
   });
+
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const publicUrl = await empresasService.uploadLogo(file);
+      setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+    } catch (error: any) {
+      alert(`Erro ao fazer upload da logo: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -60,12 +80,39 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
         {/* Coluna da Logo */}
         <div className="lg:col-span-1">
           <label className="block text-xs font-bold text-[#001a33] uppercase tracking-wider mb-2">Logotipo da Unidade</label>
-          <div className="w-full aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center text-center p-6 hover:bg-blue-50 hover:border-blue-300 transition-all cursor-pointer group">
-            <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-400 group-hover:text-blue-500 mb-4 transition-colors">
-              <Upload size={24} />
-            </div>
-            <p className="text-sm font-bold text-[#001a33]">Clique para enviar</p>
-            <p className="text-xs text-slate-400 mt-1">Recomendado: 500x500px (PNG)</p>
+          <input 
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/png, image/jpeg, image/jpg"
+            onChange={handleLogoChange}
+          />
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center text-center p-6 hover:bg-blue-50 hover:border-blue-300 transition-all cursor-pointer group relative overflow-hidden"
+          >
+            {uploading ? (
+              <div className="flex flex-col items-center">
+                <RefreshCw size={32} className="animate-spin text-blue-500 mb-2" />
+                <p className="text-sm font-bold text-slate-500">Enviando imagem...</p>
+              </div>
+            ) : formData.logoUrl ? (
+              <>
+                <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain p-4 bg-white rounded-2xl" />
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity">
+                  <Upload size={24} className="mb-2" />
+                  <p className="text-xs font-bold uppercase tracking-wider">Alterar Logotipo</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-400 group-hover:text-blue-500 mb-4 transition-colors">
+                  <Upload size={24} />
+                </div>
+                <p className="text-sm font-bold text-[#001a33]">Clique para enviar</p>
+                <p className="text-xs text-slate-400 mt-1">Recomendado: 500x500px (PNG)</p>
+              </>
+            )}
           </div>
         </div>
 

@@ -5,9 +5,10 @@ import { Building2, TrendingUp } from 'lucide-react';
 
 interface TotalParceirosKpiProps {
   total: number;
+  ativos: number;
 }
 
-const TotalParceirosKpi: React.FC<TotalParceirosKpiProps> = ({ total }) => {
+const TotalParceirosKpi: React.FC<TotalParceirosKpiProps> = ({ total, ativos }) => {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-[#001a33] to-[#003366] p-5 rounded-3xl text-white shadow-xl shadow-blue-900/10 group flex flex-col justify-center">
       <div className="relative z-10 w-full">
@@ -20,7 +21,7 @@ const TotalParceirosKpi: React.FC<TotalParceirosKpiProps> = ({ total }) => {
         <div className="flex items-end justify-between">
           <h3 className="text-3xl font-black tracking-tight leading-none">{total}</h3>
           <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-lg">
-            <TrendingUp size={12} /> {total} Ativos
+            <TrendingUp size={12} /> {ativos} Ativos
           </span>
         </div>
       </div>

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, User, Briefcase, FileText, DollarSign } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroPFDetalhesProps {
   pfInicial: any;
@@ -10,7 +12,13 @@ interface ParceiroPFDetalhesProps {
 
 const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBack }) => {
   const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'docs' | 'financeiro'>('dados');
-  const [pfData, setPfData] = useState(pfInicial);
+
+  // Carrega dados da PF usando React Query com initialData
+  const { data: pfData = pfInicial } = useQuery({
+    queryKey: ['parceiro', pfInicial.id],
+    queryFn: () => parceirosService.getById(pfInicial.id),
+    initialData: pfInicial,
+  });
 
   const tabs = [
     { id: 'dados', label: 'Dados Pessoais', icon: <User size={18} /> },

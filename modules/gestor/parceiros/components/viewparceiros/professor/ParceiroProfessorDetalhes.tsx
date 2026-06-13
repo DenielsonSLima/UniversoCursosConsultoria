@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, User, BookOpen, FileText, DollarSign, KeyRound } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import ParceiroProfessorDados from './ParceiroProfessorDados';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroProfessorDetalhesProps {
   professorInicial: any;
@@ -11,11 +13,32 @@ interface ParceiroProfessorDetalhesProps {
 }
 
 const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack }) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'dados' | 'turmas' | 'docs' | 'financeiro' | 'acesso'>('dados');
-  const [professorData, setProfessorData] = useState(professorInicial);
 
-  const handleDataChange = (newData: any) => {
-    setProfessorData(newData);
+  // Carrega dados do professor usando React Query com initialData
+  const { data: professorData = professorInicial } = useQuery({
+    queryKey: ['parceiro', professorInicial.id],
+    queryFn: () => parceirosService.getById(professorInicial.id),
+    initialData: professorInicial,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (newData: any) => parceirosService.update(professorData.id, newData),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['parceiro', professorData.id], updated);
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
+      alert('Dados do professor atualizados com sucesso!');
+    },
+    onError: (err: any) => {
+      alert('Erro ao atualizar dados do professor.');
+      console.error(err);
+    }
+  });
+
+  const handleDataChange = async (newData: any) => {
+    updateMutation.mutate(newData);
   };
 
   const tabs = [
@@ -44,7 +67,7 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
                         {professorData.nome}
                     </h2>
                     <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
-                        Professor • Documento: {professorData.cpf || 'Não informado'} • Status: <span className="text-emerald-600">Ativo</span>
+                        Professor • Documento: {professorData.cpf || 'Não informado'} • Status: <span className={professorData.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{professorData.status || 'ATIVO'}</span>
                     </p>
                 </div>
             </div>

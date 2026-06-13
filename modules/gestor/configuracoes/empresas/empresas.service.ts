@@ -215,5 +215,31 @@ export const empresasService = {
     }
 
     return resultCompany;
+  },
+
+  /**
+   * Faz o upload da logo para o bucket público 'documentos' na pasta 'logos'
+   */
+  async uploadLogo(file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `logos/logo_${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('documentos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Erro ao fazer upload da logo da empresa:', error);
+      throw new Error(error.message);
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('documentos')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
   }
 };

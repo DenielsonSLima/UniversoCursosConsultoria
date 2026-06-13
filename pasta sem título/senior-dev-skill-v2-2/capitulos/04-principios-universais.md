@@ -16,6 +16,11 @@
 > Cada função, componente, service ou módulo tem **uma razão para existir**.
 > Se tem mais de uma, divida.
 
+> **💡 O Front-end é Burro:**
+> O frontend serve estritamente para exibir dados e capturar interações do usuário.
+> **NUNCA execute cálculos de negócio complexos, taxas ou lógicas financeiras no cliente.**
+> Se as regras mudarem, você precisará atualizar múltiplos clientes móveis/web. Toda lógica e fórmulas de cálculo devem ficar centralizadas no banco de dados (RPCs/Views/Triggers) ou no servidor (Edge Functions). O frontend apenas consome os resultados prontos.
+
 ```typescript
 // ❌ 3 responsabilidades em 1 função
 async function criarUsuario(dados: any) {
@@ -152,6 +157,10 @@ onSuccess: () => {
   // Relatórios, cadastros, configurações → não tocados
 }
 ```
+
+> **🛡️ Economia de Rede / Egress:**
+> Evite pooling de rede constante ou consultas redundantes (como carregar dados repetidamente em handlers de navegação como botões de "Voltar").
+> Em vez disso, use **TanStack Query** combinado com assinaturas focadas do **Supabase Realtime** para invalidar caches de queries específicos em tempo real de forma cirúrgica. O banco só é consultado quando os dados realmente mudarem.
 
 ---
 

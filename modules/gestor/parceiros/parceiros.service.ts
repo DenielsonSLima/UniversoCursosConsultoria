@@ -2,6 +2,27 @@
 
 import { supabase } from '../../../lib/supabase';
 
+// Helper to convert YYYY-MM-DD (DB) to DD/MM/AAAA (Frontend)
+function dateDbToBr(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const clean = dateStr.split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
+// Helper to convert DD/MM/AAAA (Frontend) to YYYY-MM-DD (DB)
+function dateBrToDb(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return null;
+}
+
 // Helper to map DB snake_case to Frontend camelCase
 function toCamel(s: any) {
   if (!s) return null;
@@ -28,10 +49,12 @@ function toCamel(s: any) {
     status: s.status,
     observacao: s.observacao,
     foto: s.foto_url,
-    dataNascimento: s.data_nascimento,
+    dataNascimento: dateDbToBr(s.data_nascimento),
     sexo: s.sexo,
     rg: s.rg,
     orgaoEmissor: s.orgao_emissor,
+    rgUfEmissao: s.rg_uf_emissao,
+    rgDataEmissao: dateDbToBr(s.rg_data_emissao),
     nacionalidade: s.nacionalidade,
     naturalidade: s.naturalidade,
     tituloEleitor: s.titulo_eleitor,
@@ -39,11 +62,32 @@ function toCamel(s: any) {
     nomeMae: s.nome_mae,
     nomePai: s.nome_pai,
     nomeSocial: s.nome_social,
+    estadoCivil: s.estado_civil,
+    pcd: s.pcd,
+    pcdTipo: s.pcd_tipo,
+    escolaridadeAnterior: s.escolaridade_anterior,
+    instituicaoOrigem: s.instituicao_origem,
+    anoConclusaoEnsinoMedio: s.ano_conclusao_ensino_medio,
     responsavelNome: s.responsavel_nome,
     responsavelCpf: s.responsavel_cpf,
     responsavelParentesco: s.responsavel_parentesco,
+    responsavelTelefone: s.responsavel_telefone,
+    responsavelCargo: s.responsavel_cargo,
     especialidade: s.especialidade,
+    titulacao: s.titulacao,
+    areaFormacao: s.area_formacao,
+    registroProfissional: s.registro_profissional,
+    numeroRegistro: s.numero_registro,
+    instituicaoFormacao: s.instituicao_formacao,
+    tipoVinculo: s.tipo_vinculo,
+    chavePix: s.chave_pix,
+    banco: s.banco,
+    agencia: s.agencia,
+    conta: s.conta,
+    tipoConta: s.tipo_conta,
+    tipoServico: s.tipo_servico,
     tipoPj: s.tipo_pj,
+    tipoConvenio: s.tipo_convenio,
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };
@@ -70,13 +114,15 @@ function toSnake(c: any) {
       : (c.polo === 'estancia' || c.poloId === '55555555-5555-5555-5555-555555555555' 
         ? '55555555-5555-5555-5555-555555555555' 
         : null),
-    status: c.status || 'ativo',
+    status: c.status || 'ATIVO',
     observacao: c.observacao || null,
     foto_url: c.foto || null,
-    data_nascimento: c.dataNascimento || null,
+    data_nascimento: dateBrToDb(c.dataNascimento),
     sexo: c.sexo || null,
     rg: c.rg || null,
     orgao_emissor: c.orgaoEmissor || null,
+    rg_uf_emissao: c.rgUfEmissao || null,
+    rg_data_emissao: dateBrToDb(c.rgDataEmissao),
     nacionalidade: c.nacionalidade || 'Brasileira',
     naturalidade: c.naturalidade || null,
     titulo_eleitor: c.tituloEleitor || null,
@@ -84,11 +130,32 @@ function toSnake(c: any) {
     nome_mae: c.nomeMae || null,
     nome_pai: c.nomePai || null,
     nome_social: c.nomeSocial || null,
+    estado_civil: c.estadoCivil || null,
+    pcd: c.pcd || false,
+    pcd_tipo: c.pcdTipo || null,
+    escolaridade_anterior: c.escolaridadeAnterior || null,
+    instituicao_origem: c.instituicaoOrigem || null,
+    ano_conclusao_ensino_medio: c.anoConclusaoEnsinoMedio || null,
     responsavel_nome: c.responsavelNome || null,
     responsavel_cpf: c.responsavelCpf || null,
     responsavel_parentesco: c.responsavelParentesco || null,
+    responsavel_telefone: c.responsavelTelefone || null,
+    responsavel_cargo: c.responsavelCargo || null,
     especialidade: c.especialidade || null,
-    tipo_pj: c.tipoPj || null
+    titulacao: c.titulacao || null,
+    area_formacao: c.areaFormacao || null,
+    registro_profissional: c.registroProfissional || null,
+    numero_registro: c.numeroRegistro || null,
+    instituicao_formacao: c.instituicaoFormacao || null,
+    tipo_vinculo: c.tipoVinculo || null,
+    chave_pix: c.chavePix || null,
+    banco: c.banco || null,
+    agencia: c.agencia || null,
+    conta: c.conta || null,
+    tipo_conta: c.tipoConta || null,
+    tipo_servico: c.tipoServico || null,
+    tipo_pj: c.tipoPj || null,
+    tipo_convenio: c.tipoConvenio || null,
   };
 }
 
@@ -280,13 +347,29 @@ export const parceirosService = {
       .insert({
         aluno_id: alunoId,
         turma_id: turmaId,
-        status: 'ativo'
+        status: 'ATIVO'
       })
       .select()
       .single();
       
     if (error) {
       console.error('Erro ao matricular aluno:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+
+  async updateMatriculaStatus(matriculaId: string, status: string) {
+    const { data, error } = await supabase
+      .from('matriculas')
+      .update({ status: status.toUpperCase() })
+      .eq('id', matriculaId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Erro ao atualizar status da matricula:', error);
       throw error;
     }
     
@@ -320,11 +403,25 @@ export const parceirosService = {
       console.error('Erro ao buscar KPIs dos parceiros:', error);
       throw error;
     }
-    const kpi = data && data[0] ? data[0] : { total_parceiros: 0, total_alunos: 0, total_professores: 0 };
+    const kpi = data && data[0] ? data[0] : { 
+      total_parceiros: 0, 
+      total_parceiros_ativos: 0,
+      total_alunos: 0, 
+      total_alunos_ativos: 0, 
+      total_alunos_inativos: 0, 
+      total_professores: 0, 
+      total_professores_ativos: 0, 
+      total_professores_inativos: 0 
+    };
     return {
       totalParceiros: Number(kpi.total_parceiros),
+      totalParceirosAtivos: Number(kpi.total_parceiros_ativos),
       totalAlunosVinculados: Number(kpi.total_alunos),
-      totalProfessoresVinculados: Number(kpi.total_professores)
+      totalAlunosAtivos: Number(kpi.total_alunos_ativos),
+      totalAlunosInativos: Number(kpi.total_alunos_inativos),
+      totalProfessoresVinculados: Number(kpi.total_professores),
+      totalProfessoresAtivos: Number(kpi.total_professores_ativos),
+      totalProfessoresInativos: Number(kpi.total_professores_inativos)
     };
   }
 };

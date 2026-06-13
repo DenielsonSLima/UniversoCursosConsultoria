@@ -1,25 +1,64 @@
-
 // File: modules/gestor/parceiros/components/formularioparceiros/professor/ParceiroProfessorForm.tsx
+// Formulário completo de Professor em 4 etapas (Wizard)
 
 import React, { useState } from 'react';
-import { User, MapPin, Phone, Mail, Save, X, AlertCircle, Briefcase, FileText } from 'lucide-react';
+import {
+  User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
+  GraduationCap, Briefcase, DollarSign, ChevronRight, ChevronLeft,
+  CheckCircle2, Shield
+} from 'lucide-react';
 
 interface ParceiroProfessorFormProps {
   onCancel?: () => void;
   onSave?: (data: any) => void;
 }
 
+const STEPS = [
+  { id: 1, label: 'Dados Pessoais', icon: User, color: 'purple' },
+  { id: 2, label: 'Formação', icon: GraduationCap, color: 'indigo' },
+  { id: 3, label: 'Financeiro', icon: DollarSign, color: 'emerald' },
+  { id: 4, label: 'Endereço & Contato', icon: MapPin, color: 'violet' },
+];
+
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const TITULACOES = ['Graduação', 'Especialização', 'Mestrado', 'Doutorado', 'Pós-Doutorado'];
+const REGISTROS = ['CRM','COREN','CRO','CRN','CRP','CRF','CREA','CRC','OAB','CREFITO','Não possui'];
+const TIPOS_VINCULO = ['CLT', 'PJ', 'Autônomo', 'Voluntário', 'Contrato'];
+const BANCOS = [
+  'Banco do Brasil', 'Caixa Econômica Federal', 'Bradesco', 'Itaú', 'Santander',
+  'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'BTG Pactual', 'Outro'
+];
+
 const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel, onSave }) => {
-  const [formData, setFormData] = useState<any>({
-    // Dados Pessoais
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const [formData, setFormData] = useState({
+    // Step 1 — Dados Pessoais
     polo: 'matriz',
     nomeCompleto: '',
     cpf: '',
-    
-    // Dados Profissionais (Diferença para o aluno)
+    dataNascimento: '',
+    sexo: '',
+    rg: '',
+    orgaoEmissor: '',
+
+    // Step 2 — Formação Acadêmica
+    titulacao: '',
+    areaFormacao: '',
+    instituicaoFormacao: '',
     especialidade: '',
-    
-    // Endereço
+    registroProfissional: '',
+    numeroRegistro: '',
+
+    // Step 3 — Financeiro & Vínculo
+    tipoVinculo: '',
+    chavePix: '',
+    banco: '',
+    agencia: '',
+    conta: '',
+    tipoConta: 'Corrente',
+
+    // Step 4 — Endereço & Contato
     cep: '',
     endereco: '',
     numero: '',
@@ -27,321 +66,444 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
     bairro: '',
     cidade: '',
     uf: '',
-
-    // Contato
     email: '',
     contato1: '',
     contato2: '',
-
-    // Outros
-    observacao: ''
+    observacao: '',
   });
 
-  // Funções de Máscara
-  const maskCPF = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const maskCEP = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{3})\d+?$/, '$1');
-  };
-
-  const maskPhone = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
-  };
+  const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+  const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
+  const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+  const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     let finalValue = value;
-
-    if (name === 'cpf') finalValue = maskCPF(value);
-    if (name === 'cep') finalValue = maskCEP(value);
-    if (name === 'contato1' || name === 'contato2') finalValue = maskPhone(value);
-
+    if (type === 'text' || type === 'textarea' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+      if (name !== 'email') {
+        finalValue = value.toUpperCase();
+      }
+    }
+    if (name === 'cpf') finalValue = maskCPF(finalValue);
+    if (name === 'cep') finalValue = maskCEP(finalValue);
+    if (name === 'contato1' || name === 'contato2') finalValue = maskPhone(finalValue);
+    if (name === 'dataNascimento') finalValue = maskDate(finalValue);
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
+  const handleCepBlur = async () => {
+    const cep = formData.cep.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          endereco: data.logradouro || '',
+          bairro: data.bairro || '',
+          cidade: data.localidade || '',
+          uf: data.uf || '',
+        }));
+      }
+    } catch {}
+  };
+
+  const stepValid = () => {
+    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && formData.cpf.length === 14;
+    if (currentStep === 4) return formData.email.trim() !== '' && formData.contato1.length >= 14;
+    return true;
+  };
+
+  const handleNext = () => { if (stepValid() && currentStep < 4) setCurrentStep(s => s + 1); };
+  const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Dados do Professor:', formData);
     if (onSave) onSave(formData);
   };
 
+  const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-purple-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
+  const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 animate-fadeIn">
-      
-      {/* Header do Formulário */}
-      <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+    <div className="animate-fadeIn">
+      {/* Header */}
+      <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
-          <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">
-            Novo Professor (Parceiro)
-          </h3>
-          <p className="text-slate-500 text-sm font-medium">Preencha os dados completos para o vínculo.</p>
+          <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Professor</h3>
+          <p className="text-slate-500 text-sm font-medium mt-0.5">Cadastro completo de vínculo docente</p>
         </div>
         {onCancel && (
-          <button 
-            type="button" 
-            onClick={onCancel}
-            className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors"
-          >
+          <button type="button" onClick={onCancel} className="p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">
             <X size={20} />
           </button>
         )}
       </div>
 
-      {/* Seção 1: Dados Pessoais */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-blue-600 border-b border-slate-50 pb-2">
-          <User size={18} />
-          <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Vínculo</h4>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Polo/Unidade <span className="text-red-500">*</span></label>
-            <select 
-              name="polo"
-              value={formData.polo || 'matriz'}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all cursor-pointer"
+      {/* Step Indicator */}
+      <div className="flex items-center justify-between mb-8 relative">
+        <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 z-0" />
+        {STEPS.map((step) => {
+          const Icon = step.icon;
+          const done = currentStep > step.id;
+          const active = currentStep === step.id;
+          return (
+            <div key={step.id} className="flex flex-col items-center gap-2 z-10 flex-1">
+              <button
+                type="button"
+                onClick={() => done && setCurrentStep(step.id)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                  done ? 'bg-emerald-500 border-emerald-500 text-white cursor-pointer' :
+                  active ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-500/30' :
+                  'bg-white border-slate-200 text-slate-400 cursor-default'
+                }`}
+              >
+                {done ? <CheckCircle2 size={18} /> : <Icon size={16} />}
+              </button>
+              <span className={`text-[9px] font-black uppercase tracking-wider text-center leading-tight ${
+                active ? 'text-purple-600' : done ? 'text-emerald-600' : 'text-slate-400'
+              }`}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        {/* ══════════════ STEP 1: DADOS PESSOAIS ══════════════ */}
+        {currentStep === 1 && (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="flex items-center gap-2 text-purple-600 border-b border-slate-100 pb-2 mb-5">
+              <User size={16} />
+              <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Identificação</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className={labelCls}>Polo/Unidade <span className="text-red-500">*</span></label>
+                <select name="polo" value={formData.polo} onChange={handleChange} className={inputCls}>
+                  <option value="matriz">Matriz — Aracaju</option>
+                  <option value="estancia">Polo Estância</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Nome Completo <span className="text-red-500">*</span></label>
+                <input type="text" name="nomeCompleto" value={formData.nomeCompleto} onChange={handleChange}
+                  className={inputCls} placeholder="Ex: Dr. Roberto Santos" required />
+              </div>
+
+              <div>
+                <label className={labelCls}>CPF <span className="text-red-500">*</span></label>
+                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange}
+                  maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" required />
+              </div>
+
+              <div>
+                <label className={labelCls}>Data de Nascimento</label>
+                <input type="text" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange}
+                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Sexo</label>
+                <select name="sexo" value={formData.sexo} onChange={handleChange} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  <option value="MASCULINO">MASCULINO</option>
+                  <option value="FEMININO">FEMININO</option>
+                  <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
+                  <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>RG</label>
+                <input type="text" name="rg" value={formData.rg} onChange={handleChange}
+                  className={inputCls} placeholder="Número do RG" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Órgão Emissor</label>
+                <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={handleChange}
+                  className={inputCls} placeholder="SSP/SE" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════ STEP 2: FORMAÇÃO ══════════════ */}
+        {currentStep === 2 && (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="flex items-center gap-2 text-indigo-600 border-b border-slate-100 pb-2 mb-5">
+              <GraduationCap size={16} />
+              <h4 className="text-xs font-black uppercase tracking-wider">Formação Acadêmica & Registro Profissional</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelCls}>Titulação <span className="text-red-500">*</span></label>
+                <select name="titulacao" value={formData.titulacao} onChange={handleChange} className={inputCls}>
+                  <option value="">Selecione a titulação...</option>
+                  {TITULACOES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Área de Formação <span className="text-red-500">*</span></label>
+                <input type="text" name="areaFormacao" value={formData.areaFormacao} onChange={handleChange}
+                  className={inputCls} placeholder="Ex: Enfermagem, Administração..." />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Instituição de Formação</label>
+                <input type="text" name="instituicaoFormacao" value={formData.instituicaoFormacao} onChange={handleChange}
+                  className={inputCls} placeholder="Nome da universidade / faculdade" />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Especialidade / Disciplinas que Leciona</label>
+                <input type="text" name="especialidade" value={formData.especialidade} onChange={handleChange}
+                  className={inputCls} placeholder="Ex: Anatomia, Microbiologia, Gestão..." />
+              </div>
+
+              <div>
+                <label className={labelCls}>Conselho / Registro Profissional</label>
+                <select name="registroProfissional" value={formData.registroProfissional} onChange={handleChange} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {REGISTROS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Número do Registro</label>
+                <input type="text" name="numeroRegistro" value={formData.numeroRegistro} onChange={handleChange}
+                  className={inputCls} placeholder="Ex: COREN-SE 123456" />
+              </div>
+            </div>
+
+            <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
+              <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-indigo-700 font-medium">
+                Para cursos na área da saúde (Enfermagem, Radiologia, etc.), o registro profissional ativo no respectivo conselho é obrigatório para ministrar aulas práticas.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════ STEP 3: FINANCEIRO ══════════════ */}
+        {currentStep === 3 && (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="flex items-center gap-2 text-emerald-600 border-b border-slate-100 pb-2 mb-5">
+              <DollarSign size={16} />
+              <h4 className="text-xs font-black uppercase tracking-wider">Tipo de Vínculo & Dados para Pagamento</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className={labelCls}>Tipo de Vínculo <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-1">
+                  {TIPOS_VINCULO.map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, tipoVinculo: t }))}
+                      className={`py-3 px-4 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all ${
+                        formData.tipoVinculo === t
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="h-px bg-slate-100 my-2" />
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">Dados para pagamento (PIX ou Transferência)</p>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Chave PIX</label>
+                <input type="text" name="chavePix" value={formData.chavePix} onChange={handleChange}
+                  className={inputCls} placeholder="CPF, telefone, e-mail ou chave aleatória" />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="h-px bg-slate-100 my-1" />
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">Ou dados bancários</p>
+              </div>
+
+              <div>
+                <label className={labelCls}>Banco</label>
+                <select name="banco" value={formData.banco} onChange={handleChange} className={inputCls}>
+                  <option value="">Selecione o banco...</option>
+                  {BANCOS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Tipo de Conta</label>
+                <select name="tipoConta" value={formData.tipoConta} onChange={handleChange} className={inputCls}>
+                  <option value="Corrente">Corrente</option>
+                  <option value="Poupança">Poupança</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Agência</label>
+                <input type="text" name="agencia" value={formData.agencia} onChange={handleChange}
+                  className={inputCls} placeholder="0000" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Número da Conta</label>
+                <input type="text" name="conta" value={formData.conta} onChange={handleChange}
+                  className={inputCls} placeholder="00000-0" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════ STEP 4: ENDEREÇO & CONTATO ══════════════ */}
+        {currentStep === 4 && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex items-center gap-2 text-violet-600 border-b border-slate-100 pb-2 mb-5">
+              <MapPin size={16} />
+              <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              <div>
+                <label className={labelCls}>CEP</label>
+                <input type="text" name="cep" value={formData.cep} onChange={handleChange} onBlur={handleCepBlur}
+                  maxLength={9} className={inputCls} placeholder="00000-000" />
+              </div>
+
+              <div className="md:col-span-3">
+                <label className={labelCls}>Endereço</label>
+                <input type="text" name="endereco" value={formData.endereco} onChange={handleChange}
+                  className={inputCls} placeholder="Rua / Avenida" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Número</label>
+                <input type="text" name="numero" value={formData.numero} onChange={handleChange}
+                  className={inputCls} placeholder="123" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Complemento</label>
+                <input type="text" name="complemento" value={formData.complemento} onChange={handleChange}
+                  className={inputCls} placeholder="Apto, Bloco..." />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>Bairro</label>
+                <input type="text" name="bairro" value={formData.bairro} onChange={handleChange}
+                  className={inputCls} placeholder="Bairro" />
+              </div>
+
+              <div className="md:col-span-3">
+                <label className={labelCls}>Cidade</label>
+                <input type="text" name="cidade" value={formData.cidade} onChange={handleChange}
+                  className={inputCls} placeholder="Nome da cidade" />
+              </div>
+
+              <div>
+                <label className={labelCls}>UF</label>
+                <select name="uf" value={formData.uf} onChange={handleChange} className={inputCls}>
+                  <option value="">UF</option>
+                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-violet-600 border-b border-slate-100 pb-2">
+              <Phone size={16} />
+              <h4 className="text-xs font-black uppercase tracking-wider">Contato e Acesso</h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="md:col-span-2">
+                <label className={labelCls}><Mail size={12} className="inline mr-1" />E-mail <span className="text-red-500">*</span></label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange}
+                  className={inputCls} placeholder="professor@email.com" required />
+                <p className="text-[10px] text-slate-400 mt-1 ml-0.5 flex items-center gap-1">
+                  <AlertCircle size={10} />O acesso ao portal do professor será enviado para este e-mail.
+                </p>
+              </div>
+
+              <div>
+                <label className={labelCls}>Celular / WhatsApp <span className="text-red-500">*</span></label>
+                <input type="tel" name="contato1" value={formData.contato1} onChange={handleChange}
+                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" required />
+              </div>
+
+              <div>
+                <label className={labelCls}>Telefone Secundário</label>
+                <input type="tel" name="contato2" value={formData.contato2} onChange={handleChange}
+                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}><FileText size={12} className="inline mr-1" />Observações Internas</label>
+              <textarea name="observacao" value={formData.observacao} onChange={handleChange} rows={3}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:border-violet-400 outline-none transition-all resize-none" placeholder="Disponibilidade de horários, restrições, etc..." />
+            </div>
+          </div>
+        )}
+
+        {/* Navegação */}
+        <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={currentStep === 1 ? onCancel : handleBack}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
+          >
+            <ChevronLeft size={16} />
+            {currentStep === 1 ? 'Cancelar' : 'Voltar'}
+          </button>
+
+          {currentStep < 4 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!stepValid()}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-purple-700 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="matriz">Matriz - Aracaju</option>
-              <option value="estancia">Polo Estância</option>
-            </select>
-          </div>
+              Próximo <ChevronRight size={16} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-purple-900 shadow-lg shadow-purple-900/20 transition-all"
+            >
+              <Save size={16} /> Salvar Professor
+            </button>
+          )}
+        </div>
 
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nome Completo <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="nomeCompleto"
-              value={formData.nomeCompleto}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-              placeholder="Ex: Dr. Roberto Santos"
-              required
-            />
+        {/* Progresso */}
+        <div className="mt-4">
+          <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            <span>Etapa {currentStep} de 4</span>
+            <span>{Math.round((currentStep / 4) * 100)}% concluído</span>
           </div>
-          
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">CPF <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="cpf"
-              value={formData.cpf}
-              onChange={handleChange}
-              maxLength={14}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-mono focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-              placeholder="000.000.000-00"
-              required
+          <div className="w-full bg-slate-100 rounded-full h-1.5">
+            <div
+              className="bg-purple-600 h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${(currentStep / 4) * 100}%` }}
             />
           </div>
         </div>
-      </div>
-
-      {/* Seção 2: Endereço */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-blue-600 border-b border-slate-50 pb-2">
-          <MapPin size={18} />
-          <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">CEP <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="cep"
-              value={formData.cep}
-              onChange={handleChange}
-              maxLength={9}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="00000-000"
-              required
-            />
-          </div>
-
-          <div className="md:col-span-3 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Endereço (Rua/Av) <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="endereco"
-              value={formData.endereco}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="Nome da rua"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Número <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="numero"
-              value={formData.numero}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="123"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Complemento</label>
-            <input 
-              type="text" 
-              name="complemento"
-              value={formData.complemento}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="Apto, Bloco..."
-            />
-          </div>
-
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Bairro <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="bairro"
-              value={formData.bairro}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="Bairro"
-              required
-            />
-          </div>
-
-          <div className="md:col-span-3 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Cidade <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="cidade"
-              value={formData.cidade}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="Nome da cidade"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">UF <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              name="uf"
-              value={formData.uf}
-              onChange={handleChange}
-              maxLength={2}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all uppercase text-center"
-              placeholder="SE"
-              required
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Seção 3: Contatos */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-blue-600 border-b border-slate-50 pb-2">
-          <Phone size={18} />
-          <h4 className="text-xs font-black uppercase tracking-wider">Contatos e Acesso</h4>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1 flex items-center gap-2">
-              <Mail size={14} /> E-mail Válido <span className="text-red-500">*</span>
-            </label>
-            <input 
-              type="email" 
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="professor@email.com"
-              required
-            />
-            <p className="text-[10px] text-slate-400 flex items-center gap-1 pl-1">
-              <AlertCircle size={10} /> O acesso ao portal do professor será enviado para este e-mail.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Celular / WhatsApp (Principal) <span className="text-red-500">*</span></label>
-            <input 
-              type="tel" 
-              name="contato1"
-              value={formData.contato1}
-              onChange={handleChange}
-              maxLength={15}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="(00) 00000-0000"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Especialidade (Opcional)</label>
-            <input 
-              type="text" 
-              name="especialidade"
-              value={formData.especialidade}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              placeholder="Ex: Enfermagem, Administração..."
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Seção 4: Observações */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-blue-600 border-b border-slate-50 pb-2">
-          <FileText size={18} />
-          <h4 className="text-xs font-black uppercase tracking-wider">Observações (Opcional)</h4>
-        </div>
-        <div>
-          <textarea 
-            name="observacao"
-            value={formData.observacao}
-            onChange={handleChange}
-            rows={4}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all resize-none"
-            placeholder="Observações adicionais ou notas internas..."
-          ></textarea>
-        </div>
-      </div>
-
-      {/* Botões de Ação */}
-      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-        <button 
-          type="button" 
-          onClick={onCancel}
-          className="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
-        >
-          Cancelar
-        </button>
-        <button 
-          type="submit" 
-          className="px-8 py-3 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 flex items-center gap-2"
-        >
-          <Save size={16} /> Salvar Professor
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };
 

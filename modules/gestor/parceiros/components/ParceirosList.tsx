@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import PFCard from './cards/PFCard';
 import PJCard from './cards/PJCard';
 import AlunoCard from './cards/AlunoCard';
@@ -10,79 +11,22 @@ import ProfessorCard from './cards/ProfessorCard';
 import { parceirosService } from '../parceiros.service';
 
 interface ParceirosListProps {
-  activeTab: 'todos' | 'professores' | 'alunos' | 'pj' | 'pf';
-  searchTerm?: string;
-  statusFilter?: string;
-  cursoFilter?: string;
-  turmaFilter?: string;
+  items: any[];
+  isLoading: boolean;
   onSelectParceiro?: (parceiro: any) => void;
 }
 
 const ParceirosList: React.FC<ParceirosListProps> = ({ 
-  activeTab, 
-  searchTerm = '', 
-  statusFilter = 'todos',
-  cursoFilter = 'todos',
-  turmaFilter = 'todas',
+  items, 
+  isLoading,
   onSelectParceiro 
 }) => {
   const [page, setPage] = useState(1);
-  const [allItems, setAllItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  // Busca dados reais do banco de dados baseados na aba ativa
+  // Reseta para a página 1 ao alterar a quantidade de itens (filtros)
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const data = await parceirosService.getAll(activeTab);
-        setAllItems(data);
-        setPage(1); // Reseta para pagina 1 ao trocar de aba
-      } catch (err) {
-        console.error('Erro ao buscar parceiros do banco:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [activeTab]);
-
-  // Aplicar filtros
-  const items = useMemo(() => {
-    return allItems.filter(item => {
-      // 1. Filtro de Status
-      if (statusFilter !== 'todos' && item.status !== statusFilter) {
-        return false;
-      }
-      // 2. Filtro de Buscas
-      if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
-        const contentStr = `${item.nome} ${item.cpf || ''} ${item.cnpj || ''} ${item.cidade || ''}`.toLowerCase();
-        if (!contentStr.includes(lowerTerm)) {
-          return false;
-        }
-      }
-      // 3. Filtro de Curso (apenas alunos e professores)
-      if (cursoFilter !== 'todos') {
-        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') {
-          return false;
-        }
-        if (item.cursoId !== cursoFilter) {
-          return false;
-        }
-      }
-      // 4. Filtro de Turma (apenas alunos e professores)
-      if (turmaFilter !== 'todas') {
-        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') {
-          return false; 
-        }
-        if (item.turmaId !== turmaFilter) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [allItems, searchTerm, statusFilter, cursoFilter, turmaFilter]);
+    setPage(1);
+  }, [items.length]);
 
   // Paginação simplificada 
   const itemsPerPage = 20;
@@ -92,20 +36,15 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
   const renderCard = (item: any) => {
     const handleSelect = () => onSelectParceiro && onSelectParceiro(item);
     
-    switch (activeTab) {
-      case 'alunos':
+    switch (item.tipo) {
+      case 'Aluno':
         return <AlunoCard key={item.id} data={item} onClick={handleSelect} />;
-      case 'professores':
+      case 'Professor':
         return <ProfessorCard key={item.id} data={item} onClick={handleSelect} />;
-      case 'pj':
+      case 'PJ':
         return <PJCard key={item.id} data={item} onClick={handleSelect} />;
-      case 'pf':
-        return <PFCard key={item.id} data={item} onClick={handleSelect} />;
+      case 'PF':
       default:
-        // Render based on item.tipo
-        if (item.tipo === 'Aluno') return <AlunoCard key={item.id} data={item} onClick={handleSelect} />;
-        if (item.tipo === 'Professor') return <ProfessorCard key={item.id} data={item} onClick={handleSelect} />;
-        if (item.tipo === 'PJ') return <PJCard key={item.id} data={item} onClick={handleSelect} />;
         return <PFCard key={item.id} data={item} onClick={handleSelect} />;
     }
   };
@@ -119,7 +58,7 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
         - Desktop Pequeno: 3 colunas
         - Desktop Grande (XL): 4 colunas
       */}
-      {loading ? (
+      {isLoading ? (
         <div className="py-20 text-center col-span-full">
           <RefreshCw className="animate-spin text-[#4169E1] mx-auto mb-4" size={36} />
           <p className="text-slate-500 font-medium">Buscando registros do banco de dados...</p>

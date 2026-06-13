@@ -1,8 +1,10 @@
 
 // File: modules/gestor/parceiros/ParceirosPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, LayoutGrid, Users, GraduationCap, Sparkles, X, Building, User, Download, BookOpen, CheckCircle2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 import ParceirosKpis from './components/ParceirosKpis';
 import ParceirosFilters from './components/ParceirosFilters';
 import ParceirosList from './components/ParceirosList';
@@ -24,6 +26,7 @@ interface ParceirosPageProps {
 }
 
 const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos' }) => {
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState<'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(activeTabInicial);
@@ -36,27 +39,52 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   // States for Direct Enrollment
   const [createdAlunoNome, setCreatedAlunoNome] = useState('');
   const [showEnrollmentModalForAlunoId, setShowEnrollmentModalForAlunoId] = useState<string | null>(null);
-  const [turmasDisponiveis, setTurmasDisponiveis] = useState<any[]>([]);
   const [selectedTurmaIdForEnrollment, setSelectedTurmaIdForEnrollment] = useState('');
 
-  useEffect(() => {
-    if (showEnrollmentModalForAlunoId) {
-      const fetchTurmas = async () => {
-        try {
-          const list = await parceirosService.getTurmasDisponiveis();
-          setTurmasDisponiveis(list);
-        } catch (err) {
-          console.error('Erro ao carregar turmas:', err);
-        }
-      };
-      fetchTurmas();
-    }
-  }, [showEnrollmentModalForAlunoId]);
+  // 1. Carregar todos os parceiros
+  const { data: allPartners = [], isLoading: loadingPartners } = useQuery<any[]>({
+    queryKey: ['parceiros', 'todos'],
+    queryFn: () => parceirosService.getAll('todos'),
+  });
 
-  // Handle Saves to Supabase
-  const handleSaveAluno = async (data: any) => {
-    try {
-      const created = await parceirosService.create({ ...data, tipo: 'Aluno' });
+  // 2. Carregar Turmas Disponíveis com React Query
+  const { data: turmasDisponiveis = [] } = useQuery({
+    queryKey: ['turmas_disponiveis'],
+    queryFn: parceirosService.getTurmasDisponiveis,
+    enabled: !!showEnrollmentModalForAlunoId,
+  });
+
+  // 3. Realtime para sincronização automática
+  useEffect(() => {
+    const channel = supabase
+      .channel('parceiros_realtime_global')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'parceiros' },
+        (payload) => {
+          console.log('[Realtime] Alteração detectada em parceiros, invalidando queries...', payload);
+          queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+          queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
+          
+          const changedId = (payload.new as any)?.id || (payload.old as any)?.id;
+          if (changedId) {
+            queryClient.invalidateQueries({ queryKey: ['parceiro', changedId] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Mutations para criação e matrículas
+  const saveAlunoMutation = useMutation({
+    mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Aluno' }),
+    onSuccess: (created, data) => {
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       if (data.matricularAgora) {
         setCreatedAlunoNome(created.nome);
         setShowEnrollmentModalForAlunoId(created.id);
@@ -64,80 +92,187 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         alert('Aluno cadastrado com sucesso!');
       }
       setShowForm(null);
-      setSearchTerm(' '); // Trigger force update
-      setTimeout(() => setSearchTerm(''), 100);
-    } catch (err) {
+    },
+    onError: (err: any) => {
       alert('Erro ao salvar aluno. Verifique se o CPF já está cadastrado.');
       console.error(err);
     }
-  };
+  });
 
-  const handleSaveProfessor = async (data: any) => {
-    try {
-      await parceirosService.create({ ...data, tipo: 'Professor' });
+  const saveProfessorMutation = useMutation({
+    mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Professor' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       alert('Professor cadastrado com sucesso!');
       setShowForm(null);
-      setSearchTerm(' ');
-      setTimeout(() => setSearchTerm(''), 100);
-    } catch (err) {
+    },
+    onError: (err: any) => {
       alert('Erro ao salvar professor. Verifique se o CPF já está cadastrado.');
       console.error(err);
     }
-  };
+  });
 
-  const handleSavePF = async (data: any) => {
-    try {
-      await parceirosService.create({ ...data, tipo: 'PF' });
+  const savePFMutation = useMutation({
+    mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PF' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       alert('Parceiro Pessoa Física cadastrado com sucesso!');
       setShowForm(null);
-      setSearchTerm(' ');
-      setTimeout(() => setSearchTerm(''), 100);
-    } catch (err) {
+    },
+    onError: (err: any) => {
       alert('Erro ao salvar parceiro Pessoa Física.');
       console.error(err);
     }
-  };
+  });
 
-  const handleSavePJ = async (data: any) => {
-    try {
-      await parceirosService.create({ ...data, tipo: 'PJ' });
+  const savePJMutation = useMutation({
+    mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PJ' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       alert('Parceiro Pessoa Jurídica cadastrado com sucesso!');
       setShowForm(null);
-      setSearchTerm(' ');
-      setTimeout(() => setSearchTerm(''), 100);
-    } catch (err) {
+    },
+    onError: (err: any) => {
       alert('Erro ao salvar parceiro Pessoa Jurídica.');
       console.error(err);
     }
-  };
-
-  const [kpis, setKpis] = useState({
-    totalParceiros: 0,
-    totalAlunosVinculados: 0,
-    totalProfessoresVinculados: 0
   });
 
-  const fetchKpis = async () => {
-    try {
-      const data = await parceirosService.getKpis();
-      setKpis(data);
-    } catch (err) {
-      console.error('Erro ao buscar KPIs:', err);
+  const enrollAlunoMutation = useMutation({
+    mutationFn: ({ alunoId, turmaId }: { alunoId: string, turmaId: string }) =>
+      parceirosService.matricularAluno(alunoId, turmaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matriculas'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      setShowEnrollmentModalForAlunoId(null);
+      setSelectedTurmaIdForEnrollment('');
+      alert('Matrícula efetuada com sucesso!');
+    },
+    onError: (err: any) => {
+      alert('Erro ao realizar matrícula.');
+      console.error(err);
     }
+  });
+
+  const handleSaveAluno = async (data: any) => {
+    saveAlunoMutation.mutate(data);
   };
 
-  useEffect(() => {
-    if (!selectedParceiro && !showForm) {
-      fetchKpis();
-    }
-  }, [selectedParceiro, showForm]);
-  
+  const handleSaveProfessor = async (data: any) => {
+    saveProfessorMutation.mutate(data);
+  };
+
+  const handleSavePF = async (data: any) => {
+    savePFMutation.mutate(data);
+  };
+
+  const handleSavePJ = async (data: any) => {
+    savePJMutation.mutate(data);
+  };
+
   // States for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [cursoFilter, setCursoFilter] = useState('todos');
   const [turmaFilter, setTurmaFilter] = useState('todas');
   const [sortOrder, setSortOrder] = useState('az');
+
+  // Filtros e Pesquisa locais para resposta em tempo real e cálculo dinâmico de KPIs
+  const filteredPartners = useMemo(() => {
+    return allPartners.filter(item => {
+      // Filtro de Aba (Tipo)
+      if (activeTab !== 'todos') {
+        let expectedTipo = '';
+        if (activeTab === 'professores') expectedTipo = 'Professor';
+        else if (activeTab === 'alunos') expectedTipo = 'Aluno';
+        else if (activeTab === 'pj') expectedTipo = 'PJ';
+        else if (activeTab === 'pf') expectedTipo = 'PF';
+        
+        if (item.tipo !== expectedTipo) return false;
+      }
+
+      // Filtro de Status (Case Insensitive)
+      if (statusFilter !== 'todos' && item.status?.toLowerCase() !== statusFilter.toLowerCase()) {
+        return false;
+      }
+
+      // Filtro de Busca (Nome, CPF, CNPJ, Cidade)
+      if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase();
+        const contentStr = `${item.nome} ${item.cpf || ''} ${item.cnpj || ''} ${item.cidade || ''}`.toLowerCase();
+        if (!contentStr.includes(lowerTerm)) {
+          return false;
+        }
+      }
+
+      // Filtro de Curso
+      if (cursoFilter !== 'todos') {
+        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') {
+          return false;
+        }
+        if (item.cursoId !== cursoFilter) {
+          return false;
+        }
+      }
+
+      // Filtro de Turma
+      if (turmaFilter !== 'todas') {
+        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') {
+          return false;
+        }
+        if (item.turmaId !== turmaFilter) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allPartners, activeTab, searchTerm, statusFilter, cursoFilter, turmaFilter]);
+
+  // Ordenação
+  const sortedAndFilteredPartners = useMemo(() => {
+    const sorted = [...filteredPartners];
+    if (sortOrder === 'az') {
+      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+    } else if (sortOrder === 'za') {
+      sorted.sort((a, b) => b.nome.localeCompare(a.nome));
+    } else if (sortOrder === 'recent') {
+      sorted.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+    } else if (sortOrder === 'oldest') {
+      sorted.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+    }
+    return sorted;
+  }, [filteredPartners, sortOrder]);
+
+  // Calcular KPIs dinamicamente com base nos parceiros filtrados
+  const kpis = useMemo(() => {
+    const totalParceiros = filteredPartners.length;
+    const totalParceirosAtivos = filteredPartners.filter(p => p.status?.toLowerCase() === 'ativo').length;
+    
+    const alunos = filteredPartners.filter(p => p.tipo === 'Aluno');
+    const totalAlunosVinculados = alunos.length;
+    const totalAlunosAtivos = alunos.filter(p => p.status?.toLowerCase() === 'ativo').length;
+    const totalAlunosInativos = alunos.filter(p => ['inativo', 'cancelado', 'desistente'].includes(p.status?.toLowerCase() || '')).length;
+    
+    const professores = filteredPartners.filter(p => p.tipo === 'Professor');
+    const totalProfessoresVinculados = professores.length;
+    const totalProfessoresAtivos = professores.filter(p => p.status?.toLowerCase() === 'ativo').length;
+    const totalProfessoresInativos = professores.filter(p => p.status?.toLowerCase() === 'inativo').length;
+
+    return {
+      totalParceiros,
+      totalParceirosAtivos,
+      totalAlunosVinculados,
+      totalAlunosAtivos,
+      totalAlunosInativos,
+      totalProfessoresVinculados,
+      totalProfessoresAtivos,
+      totalProfessoresInativos
+    };
+  }, [filteredPartners]);
 
   // Função mock para busca
   const handleSearch = (term: string) => {
@@ -155,17 +290,21 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
 
   // Se um parceiro foi selecionado na lista, mostra os detalhes
   if (selectedParceiro) {
+    const handleBackFromDetails = () => {
+      setSelectedParceiro(null);
+    };
+
     if (selectedParceiro.tipo === 'Aluno') {
-      return <ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={() => setSelectedParceiro(null)} />;
+      return <ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} />;
     }
     if (selectedParceiro.tipo === 'Professor') {
-      return <ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={() => setSelectedParceiro(null)} />;
+      return <ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={handleBackFromDetails} />;
     }
     if (selectedParceiro.tipo === 'PJ') {
-      return <ParceiroPJDetalhes pjInicial={selectedParceiro} onBack={() => setSelectedParceiro(null)} />;
+      return <ParceiroPJDetalhes pjInicial={selectedParceiro} onBack={handleBackFromDetails} />;
     }
     if (selectedParceiro.tipo === 'PF' || !selectedParceiro.tipo) {
-      return <ParceiroPFDetalhes pfInicial={selectedParceiro} onBack={() => setSelectedParceiro(null)} />;
+      return <ParceiroPFDetalhes pfInicial={selectedParceiro} onBack={handleBackFromDetails} />;
     }
   }
 
@@ -336,9 +475,14 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
       </div>
 
       <ParceirosKpis 
-        totalParceiros={kpis.totalParceiros} 
-        totalAlunosVinculados={kpis.totalAlunosVinculados} 
-        totalProfessoresVinculados={kpis.totalProfessoresVinculados} 
+        totalParceiros={kpis.totalParceiros || 0} 
+        totalParceirosAtivos={kpis.totalParceirosAtivos || 0} 
+        totalAlunos={kpis.totalAlunosVinculados || 0} 
+        totalAlunosAtivos={kpis.totalAlunosAtivos || 0} 
+        totalAlunosInativos={kpis.totalAlunosInativos || 0} 
+        totalProfessores={kpis.totalProfessoresVinculados || 0} 
+        totalProfessoresAtivos={kpis.totalProfessoresAtivos || 0} 
+        totalProfessoresInativos={kpis.totalProfessoresInativos || 0} 
       />
 
       {/* Navegação por Abas (Pills Design) */}
@@ -415,11 +559,8 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
       />
 
       <ParceirosList 
-        activeTab={activeTab} 
-        searchTerm={searchTerm}
-        statusFilter={statusFilter}
-        cursoFilter={cursoFilter}
-        turmaFilter={turmaFilter}
+        items={sortedAndFilteredPartners}
+        isLoading={loadingPartners}
         onSelectParceiro={(parceiro) => setSelectedParceiro(parceiro)} 
       />
 
@@ -488,22 +629,17 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
                 Pular Matrícula
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (!selectedTurmaIdForEnrollment) return;
-                  try {
-                    await parceirosService.matricularAluno(showEnrollmentModalForAlunoId, selectedTurmaIdForEnrollment);
-                    setShowEnrollmentModalForAlunoId(null);
-                    setSelectedTurmaIdForEnrollment('');
-                    alert('Matrícula efetuada com sucesso!');
-                  } catch (err) {
-                    alert('Erro ao realizar matrícula.');
-                    console.error(err);
-                  }
+                  enrollAlunoMutation.mutate({
+                    alunoId: showEnrollmentModalForAlunoId,
+                    turmaId: selectedTurmaIdForEnrollment
+                  });
                 }}
-                disabled={!selectedTurmaIdForEnrollment}
+                disabled={!selectedTurmaIdForEnrollment || enrollAlunoMutation.isPending}
                 className="flex-1 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
               >
-                Confirmar Matrícula
+                {enrollAlunoMutation.isPending ? 'Matriculando...' : 'Confirmar Matrícula'}
               </button>
             </div>
           </div>

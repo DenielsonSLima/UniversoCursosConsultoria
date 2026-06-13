@@ -92,5 +92,20 @@ export const polosService = {
     }
 
     return true;
+  },
+
+  async getById(id: string): Promise<Polo> {
+    const { data, error } = await supabase
+      .from('polos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao buscar polo por ID:', error);
+      throw new Error(error.message);
+    }
+
+    return data;
   }
 };

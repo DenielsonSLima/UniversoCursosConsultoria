@@ -265,9 +265,14 @@ const GestorPage: React.FC = () => {
     <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
       
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
-        <div className="p-6 flex flex-col items-center border-b border-white/10">
-          <span className="text-2xl font-black uppercase tracking-tighter">Universo</span>
-          <span className="text-[10px] uppercase tracking-[0.25em] text-blue-400">Portal Gestor</span>
+        <div className="p-6 border-b border-white/10">
+          <div className="bg-white p-3 rounded-2xl shadow-md flex items-center justify-center">
+            <img 
+              src="/LogoUniverso.png" 
+              alt="Universo Cursos e Consultoria" 
+              className="h-11 w-full object-contain" 
+            />
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
@@ -335,8 +340,10 @@ const GestorPage: React.FC = () => {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 w-full bg-[#001a33] text-white z-30 px-4 py-3 flex justify-between items-center shadow-lg">
-        <span className="font-black uppercase">Universo Gestor</span>
+      <div className="lg:hidden fixed top-0 w-full bg-[#001a33] text-white z-30 px-4 py-2 flex justify-between items-center shadow-lg">
+        <div className="bg-white px-3 py-1 rounded-xl flex items-center justify-center">
+          <img src="/LogoUniverso.png" alt="Universo" className="h-6 object-contain" />
+        </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X /> : <Menu />}
         </button>
@@ -345,7 +352,10 @@ const GestorPage: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileMenuOpen(false)}>
           <aside className="w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-             <nav className="flex-1 overflow-y-auto space-y-2 mt-12">
+             <div className="bg-white p-3 rounded-2xl flex items-center justify-center mb-4 mt-12">
+               <img src="/LogoUniverso.png" alt="Universo" className="h-8 object-contain" />
+             </div>
+             <nav className="flex-1 overflow-y-auto space-y-2">
               {menuItems.map((item) => (
                 <div key={item.id}>
                   <button

@@ -13,8 +13,24 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
   const [isEditing, setIsEditing] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type } = e.target;
+    let finalValue = value;
+    if (type === 'text' || e.target.tagName === 'SELECT') {
+      if (name !== 'email') {
+        finalValue = value.toUpperCase();
+      }
+    }
+    const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+    const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
+    const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+    const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
+
+    if (name === 'cpf') finalValue = maskCPF(finalValue);
+    if (name === 'cep') finalValue = maskCEP(finalValue);
+    if (name === 'telefone' || name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
+    if (name === 'dataNascimento' || name === 'rgDataEmissao') finalValue = maskDate(finalValue);
+
+    setFormData({ ...formData, [name]: finalValue });
   };
 
   const handleSave = () => {
@@ -114,24 +130,26 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nascimento</label>
-                    <input type="date" name="dataNascimento" value={formData.dataNascimento || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+                    <input type="text" name="dataNascimento" value={formData.dataNascimento || ''} onChange={handleChange} maxLength={10} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" placeholder="DD/MM/AAAA" />
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Sexo</label>
                     <select name="sexo" value={formData.sexo || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none">
                         <option value="">Selecione...</option>
-                        <option value="Masculino">Masculino</option>
-                        <option value="Feminino">Feminino</option>
-                        <option value="Outro">Outro</option>
+                        <option value="MASCULINO">MASCULINO</option>
+                        <option value="FEMININO">FEMININO</option>
+                        <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
+                        <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
                     </select>
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Status Acadêmico</label>
-                    <select name="status" value={formData.status || 'Ativo'} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold">
-                        <option value="Ativo">Ativo</option>
-                        <option value="Inativo">Inativo</option>
-                        <option value="Trancado">Trancado</option>
-                        <option value="Formado">Formado</option>
+                    <select name="status" value={formData.status || 'ATIVO'} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold">
+                        <option value="ATIVO">ATIVO</option>
+                        <option value="INATIVO">INATIVO</option>
+                        <option value="TRANCADO">TRANCADO</option>
+                        <option value="CONCLUÍDO">CONCLUÍDO</option>
+                        <option value="DESISTENTE">DESISTENTE</option>
                     </select>
                 </div>
               </>
@@ -142,7 +160,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
                 <DisplayField label="CPF" value={formData.cpf} />
                 <DisplayField label="Data de Nascimento" value={formData.dataNascimento} />
                 <DisplayField label="Sexo" value={formData.sexo} />
-                <DisplayField label="Status Acadêmico" value={formData.status || 'Ativo'} />
+                <DisplayField label="Status Acadêmico" value={formData.status || 'ATIVO'} />
               </>
             )}
           </div>

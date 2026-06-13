@@ -1,5 +1,8 @@
 import React, { useRef } from 'react';
-import { X, Printer, Download, User, CheckCircle } from 'lucide-react';
+import { X, Printer, User, CheckCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { empresasService } from '../../../../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../../../../configuracoes/polos/polos.service';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -8,6 +11,18 @@ interface FichaAlunoModalProps {
 
 const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
+
+  const { data: company } = useQuery<any>({
+    queryKey: ['empresa_principal'],
+    queryFn: () => empresasService.getCompanyPrincipal(),
+  });
+
+  const poloId = aluno?.poloId || localStorage.getItem('current_polo_id');
+  const { data: polo } = useQuery<any>({
+    queryKey: ['polo_detalhes', poloId],
+    queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
+    enabled: !!poloId,
+  });
 
   const handlePrint = () => {
     window.print();
@@ -48,19 +63,46 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
           {/* Use 'print:' classes to customize the print behavior */}
           <div 
             ref={printRef}
-            className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-md p-6 sm:p-10 print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 flex flex-col"
+            className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-md p-6 sm:p-10 print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 flex flex-col relative"
             id="print-area"
           >
-            {/* Header com Logo e Info Polo */}
-            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
+            {/* Watermark (Marca d'água) */}
+            {polo?.watermark_url && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+                <img 
+                  src={polo.watermark_url} 
+                  alt="Watermark" 
+                  style={{
+                    opacity: polo.watermark_opacity ?? 0.1,
+                    width: `${polo.watermark_scale ?? 50}%`,
+                    transform: 'rotate(-45deg)'
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Header com Logo e Info da Empresa e Polo */}
+            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4 relative z-10">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#001a33] rounded-xl flex items-center justify-center">
-                  <span className="text-white text-xl font-black">U</span>
+                <div className="w-16 h-16 bg-[#001a33] rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shrink-0">
+                  {company?.logoUrl ? (
+                    <img src={company.logoUrl} alt="Logo" className="w-full h-full object-contain p-1 bg-white" />
+                  ) : (
+                    <span className="text-white text-xl font-black">
+                      {(company?.nomeFantasia || 'U')[0].toUpperCase()}
+                    </span>
+                  )}
                 </div>
-                <div>
-                   <h1 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Universidade Nome</h1>
-                   <p className="text-xs font-bold text-slate-600 mt-1 uppercase tracking-wider">Unidade: {aluno?.polo || 'Matriz Aracaju'}</p>
-                   <p className="text-[10px] text-slate-500 mt-0.5">CNPJ: 00.000.000/0001-00</p>
+                <div className="text-left">
+                  <h1 className="text-lg font-black text-[#001a33] uppercase tracking-tight">
+                    {company?.nomeFantasia || company?.razaoSocial || 'Universidade Universo'}
+                  </h1>
+                  <div className="text-[10px] text-slate-600 space-y-0.5 font-medium">
+                    <p className="font-bold">Unidade: {polo?.nome || aluno?.poloNome || 'Matriz - Aracaju'}</p>
+                    <p>CNPJ: {company?.cnpj || '00.000.000/0001-00'}</p>
+                    <p>Endereço: {company?.endereco ? `${company.endereco}, ${company.numero || 'S/N'} - ${company.bairro || ''}, ${company.cidade || ''}/${company.uf || ''}` : ''}</p>
+                    <p>Contato: {company?.telefone || ''} | {company?.email || ''}</p>
+                  </div>
                 </div>
               </div>
               <div className="text-right">
@@ -73,7 +115,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             </div>
 
             {/* Foto e Resumo */}
-            <div className="flex gap-6 mb-4 items-center border border-slate-300 p-3 rounded-xl">
+            <div className="flex gap-6 mb-4 items-center border border-slate-300 p-3 rounded-xl relative z-10 bg-white/90">
                <div className="w-24 h-32 bg-slate-200 border-2 border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 overflow-hidden relative">
                  {aluno?.foto ? (
                    <img src={aluno.foto} alt="Foto Aluno" className="w-full h-full object-cover" />
@@ -102,7 +144,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             </div>
 
             {/* Dados Pessoais */}
-            <div className="mb-4">
+            <div className="mb-4 relative z-10">
               <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2 border-b-2 border-slate-300 pb-1">Dados Pessoais</h4>
               <div className="grid grid-cols-3 gap-y-3 gap-x-6 bg-slate-50 p-3 rounded-xl border border-slate-200">
                 <div className="col-span-3">
@@ -148,7 +190,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             </div>
 
             {/* Contato e Endereço */}
-            <div className="mb-4">
+            <div className="mb-4 relative z-10">
               <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2 border-b-2 border-slate-300 pb-1">Contato & Endereço</h4>
               <div className="grid grid-cols-2 gap-y-3 gap-x-6 border border-slate-200 p-3 rounded-xl">
                 <div className="col-span-1">
@@ -174,7 +216,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             </div>
             
             {/* Responsável Financeiro */}
-            <div className="mb-4">
+            <div className="mb-4 relative z-10">
               <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-2 border-b-2 border-slate-300 pb-1">Responsável Financeiro</h4>
               <div className="flex gap-4 items-center bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
                 <div className="flex items-center gap-2">
@@ -186,7 +228,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             <div className="flex-1"></div>
 
             {/* Termo de aceite e Assinaturas */}
-            <div className="mt-8 pt-6 border-t-2 border-slate-900 border-dashed">
+            <div className="mt-8 pt-6 border-t-2 border-slate-900 border-dashed relative z-10">
               <p className="text-[10px] text-slate-600 font-medium text-justify mb-8 leading-relaxed">
                 Declaro para os devidos fins que as informações prestadas nesta ficha cadastral são verdadeiras. 
                 Estou ciente do regulamento interno da instituição e dos termos contratuais relativos à prestação de serviços educacionais 

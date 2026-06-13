@@ -3,12 +3,14 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, User, Users, FileText, DollarSign, KeyRound, FileBadge } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAlunoDados from './ParceiroAlunoDados';
 import ParceiroAlunoCursos from './ParceiroAlunoCursos';
 import ParceiroAlunoDocumentos from './ParceiroAlunoDocumentos';
 import ParceiroAlunoFinanceiro from './ParceiroAlunoFinanceiro';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import FichaAlunoModal from './ficha/FichaAlunoModal';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroAlunoDetalhesProps {
   alunoInicial: any;
@@ -16,12 +18,33 @@ interface ParceiroAlunoDetalhesProps {
 }
 
 const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack }) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'docs' | 'financeiro' | 'acesso'>('dados');
-  const [alunoData, setAlunoData] = useState(alunoInicial);
   const [isFichaOpen, setIsFichaOpen] = useState(false);
 
-  const handleDataChange = (newData: any) => {
-    setAlunoData(newData);
+  // Carregar dados reais usando React Query com initialData do parceiro selecionado
+  const { data: alunoData = alunoInicial } = useQuery({
+    queryKey: ['parceiro', alunoInicial.id],
+    queryFn: () => parceirosService.getById(alunoInicial.id),
+    initialData: alunoInicial,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (newData: any) => parceirosService.update(alunoData.id, newData),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['parceiro', alunoData.id], updated);
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
+      alert('Dados do aluno atualizados com sucesso!');
+    },
+    onError: (err: any) => {
+      alert('Erro ao atualizar dados do aluno.');
+      console.error(err);
+    }
+  });
+
+  const handleDataChange = async (newData: any) => {
+    updateMutation.mutate(newData);
   };
 
   const tabs = [
@@ -51,7 +74,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                           {alunoData.nome}
                       </h2>
                       <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
-                          Matrícula: {alunoData.id || 'Nova'} • Status: <span className="text-emerald-600">Ativo</span>
+                          Matrícula: {alunoData.id || 'Nova'} • Status: <span className={alunoData.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{alunoData.status || 'ATIVO'}</span>
                       </p>
                   </div>
                 </div>
@@ -94,9 +117,9 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             />
         )}
         {activeTab === 'cursos' && (
-            <ParceiroAlunoCursos />
+            <ParceiroAlunoCursos alunoId={alunoData.id} />
         )}
-        {activeTab === 'docs' && <ParceiroAlunoDocumentos />}
+        {activeTab === 'docs' && <ParceiroAlunoDocumentos alunoId={alunoData.id} />}
         {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro />}
         {activeTab === 'acesso' && <ParceiroAcesso email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
       </div>

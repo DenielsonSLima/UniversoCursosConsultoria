@@ -13,7 +13,24 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   const [formData, setFormData] = useState(data);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type } = e.target;
+    let finalValue = value;
+    if (type === 'text' || e.target.tagName === 'SELECT') {
+      if (name !== 'email') {
+        finalValue = value.toUpperCase();
+      }
+    }
+    const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+    const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
+    const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+    const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
+
+    if (name === 'cpf') finalValue = maskCPF(finalValue);
+    if (name === 'cep') finalValue = maskCEP(finalValue);
+    if (name === 'telefone') finalValue = maskPhone(finalValue);
+    if (name === 'dataNascimento') finalValue = maskDate(finalValue);
+
+    setFormData({ ...formData, [name]: finalValue });
   };
 
   const handleSave = () => {

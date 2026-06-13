@@ -85,6 +85,17 @@ const { conta_id, valor } = await req.json() // sem Zod
 
 // ❌ Tabela sem organization_id
 CREATE TABLE produtos (id UUID, nome TEXT) -- empresas misturadas!
+
+// ❌ Estado local para gerenciar dados do servidor (sem TanStack Query)
+const [dados, setDados] = useState([]);
+useEffect(() => { service.getAll().then(setDados) }, [])
+
+// ❌ Re-fetch manual redundante ou pooling constante (sem invalidação reativa/realtime)
+const handleBack = () => { setRefreshKey(k => k + 1) }
+
+// ❌ Cálculo de negócio ou financeiro no frontend (Front-end é burro)
+const totalComDesconto = total - (total * taxaDesconto)
+```
 ```
 
 ---

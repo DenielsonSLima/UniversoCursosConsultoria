@@ -66,9 +66,9 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
           ) : (
             <div className="h-full flex flex-col animate-fadeIn">
               <div className="bg-slate-200 flex-1 rounded-2xl overflow-y-auto border border-slate-300 p-4 shadow-inner">
-                 <div className="bg-white mx-auto shadow-md min-h-[900px] w-full max-w-[750px] p-10">
-                    <PdfTemplate />
-                 </div>
+                  <div className="bg-white mx-auto shadow-md min-h-[900px] w-full max-w-[750px] p-10 relative print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 flex flex-col" id="print-area">
+                     <PdfTemplate />
+                  </div>
               </div>
             </div>
           )}
@@ -85,11 +85,11 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
                 <ArrowLeft size={16} /> Voltar
               </button>
               <button 
-                onClick={() => { alert('Baixando PDF...'); onClose(); }}
+                onClick={() => window.print()}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 uppercase tracking-widest text-xs"
               >
                 <Download size={16} />
-                Baixar PDF
+                Imprimir / PDF
               </button>
             </>
           ) : (
@@ -103,6 +103,22 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
         </div>
 
       </div>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-area, #print-area * {
+            visibility: visible;
+          }
+          #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 };

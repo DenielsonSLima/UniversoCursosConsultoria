@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Building, List, FileText, DollarSign } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroPJDetalhesProps {
   pjInicial: any;
@@ -10,7 +12,13 @@ interface ParceiroPJDetalhesProps {
 
 const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBack }) => {
   const [activeTab, setActiveTab] = useState<'dados' | 'servicos' | 'docs' | 'financeiro'>('dados');
-  const [pjData, setPjData] = useState(pjInicial);
+
+  // Carrega dados da PJ usando React Query com initialData
+  const { data: pjData = pjInicial } = useQuery({
+    queryKey: ['parceiro', pjInicial.id],
+    queryFn: () => parceirosService.getById(pjInicial.id),
+    initialData: pjInicial,
+  });
 
   const tabs = [
     { id: 'dados', label: 'Dados da Empresa', icon: <Building size={18} /> },
