@@ -2,8 +2,11 @@
 // File: modules/public/components/Footer.tsx
 
 import React from 'react';
-import { Facebook, Instagram, Phone, Mail, MapPin } from 'lucide-react';
+import { Facebook, Instagram, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+// Validador de documentos fica visível apenas em modo de desenvolvimento (local)
+const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
@@ -66,6 +69,18 @@ const Footer: React.FC = () => {
               <li><button onClick={(e) => handleLink(e, 'quem-somos')} className="hover:text-white transition-colors">Quem Somos</button></li>
               <li><button onClick={() => navigate('/contato')} className="hover:text-white transition-colors">Fale Conosco</button></li>
               <li><button onClick={() => navigate('/faq')} className="hover:text-white transition-colors">FAQ</button></li>
+              {/* Validador de Documentos: apenas em modo desenvolvimento (local) */}
+              {isDevelopmentMode && (
+                <li>
+                  <button
+                    onClick={() => navigate('/validador')}
+                    className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                  >
+                    <ShieldCheck size={14} />
+                    Validador de Docs
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 

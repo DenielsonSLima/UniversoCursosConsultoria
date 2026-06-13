@@ -2,6 +2,10 @@ import React from 'react';
 import { Menu, X, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+// Em desenvolvimento: abre o login interno. Em produção: redireciona ao Proesc.
+const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+const PROESC_LOGIN_URL = 'https://app.proesc.com/universo-cursos-e-consultoria/login';
+
 const Header: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const navigate = useNavigate();
@@ -93,7 +97,13 @@ const Header: React.FC = () => {
             })}
             <div className="h-6 w-px bg-slate-200 ml-2"></div>
             <button 
-              onClick={() => window.location.href = 'https://app.proesc.com/universo-cursos-e-consultoria/login'}
+              onClick={() => {
+                if (isDevelopmentMode) {
+                  navigate('/login');
+                } else {
+                  window.location.href = PROESC_LOGIN_URL;
+                }
+              }}
               className="flex items-center space-x-2 bg-blue-600 text-white hover:bg-blue-700 px-5 py-2 rounded-full transition-all shadow-md font-bold uppercase text-[10px] tracking-widest"
             >
               <User size={14} />
@@ -133,7 +143,11 @@ const Header: React.FC = () => {
             <button 
               onClick={() => {
                 setIsOpen(false);
-                window.location.href = 'https://app.proesc.com/universo-cursos-e-consultoria/login';
+                if (isDevelopmentMode) {
+                  navigate('/login');
+                } else {
+                  window.location.href = PROESC_LOGIN_URL;
+                }
               }}
               className="w-full flex justify-center items-center space-x-2 bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest mt-4"
             >
