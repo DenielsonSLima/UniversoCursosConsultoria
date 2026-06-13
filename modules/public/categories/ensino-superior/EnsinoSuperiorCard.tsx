@@ -2,14 +2,14 @@
 import React from 'react';
 import { GraduationCap } from 'lucide-react';
 
-const EnsinoSuperiorCard: React.FC = () => {
-  const handleClick = () => {
-    alert('Esta seção está em desenvolvimento. Volte em breve!');
-  };
+interface EnsinoSuperiorCardProps {
+  onClick?: () => void;
+}
 
+const EnsinoSuperiorCard: React.FC<EnsinoSuperiorCardProps> = ({ onClick }) => {
   return (
     <div 
-      onClick={handleClick}
+      onClick={onClick}
       className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl hover:bg-white/20 transition-all duration-500 cursor-pointer overflow-hidden shadow-xl min-h-[220px] flex flex-col justify-between"
     >
       <div className="absolute -right-4 -top-4 text-white/5 group-hover:text-white/10 transition-colors">

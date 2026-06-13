@@ -1,5 +1,6 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { X, Sparkles } from 'lucide-react';
 import CursosLivresCard from '../categories/cursos-livres/CursosLivresCard';
 import CursosEadCard from '../categories/cursos-ead/CursosEadCard';
 import EspecializacaoTecnicaCard from '../categories/especializacao-tecnica/EspecializacaoTecnicaCard';
@@ -7,8 +8,26 @@ import CursosTecnicosCard from '../categories/cursos-tecnicos/CursosTecnicosCard
 import EnsinoSuperiorCard from '../categories/ensino-superior/EnsinoSuperiorCard';
 
 const CategoriesSection: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+
+  const openModal = (name: string) => {
+    setCategoryName(name);
+    setIsOpen(true);
+  };
+
   return (
     <section className="relative py-16 overflow-hidden">
+      <style>{`
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+
       {/* Background with Image and professional Blue Gradient */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -25,18 +44,65 @@ const CategoriesSection: React.FC = () => {
             Cursos <span className="text-blue-400">Ofertados</span>
           </h2>
           <p className="text-blue-100 text-base max-w-2xl mx-auto font-light">
-            Soluções completas em ensino e capacitação para impulsionar seu sucesso profissional com a qualidade Universo.
+            Soluções completas em ensino e capacitação para impulsionar seu sucesso profissional com a quality Universo.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-7xl mx-auto">
-          <CursosLivresCard />
+          <CursosLivresCard onClick={() => openModal('Cursos Livres')} />
           <CursosEadCard />
-          <EspecializacaoTecnicaCard />
-          <CursosTecnicosCard />
-          <EnsinoSuperiorCard />
+          <EspecializacaoTecnicaCard onClick={() => openModal('Especialização Técnica')} />
+          <CursosTecnicosCard onClick={() => openModal('Cursos Técnicos')} />
+          <EnsinoSuperiorCard onClick={() => openModal('Ensino Superior')} />
         </div>
       </div>
+
+      {/* Custom 'Em Desenvolvimento' Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          {/* Click outside to close */}
+          <div className="absolute inset-0" onClick={() => setIsOpen(false)}></div>
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md overflow-hidden bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center z-10 animate-scaleIn">
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            {/* Header Icon */}
+            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-lg shadow-blue-500/10">
+              <Sparkles size={30} />
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
+              Em Breve!
+            </h3>
+
+            {/* Subtitle */}
+            <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-4">
+              {categoryName}
+            </p>
+
+            {/* Description */}
+            <p className="text-slate-300 text-sm leading-relaxed mb-8 font-light">
+              Estamos preparando uma experiência completa de ensino para a área de <strong className="text-white font-bold">{categoryName}</strong>. Em breve, esta seção estará totalmente disponível com matrículas abertas e certificação reconhecida!
+            </p>
+
+            {/* Action Button */}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/40 uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
