@@ -39,7 +39,7 @@ const slides: SlideData[] = [
     image: '/banner3.png', // Graduation success background
     title: 'Invista no seu futuro',
     subtitle: 'Venha fazer parte da Família Universo. Cursos técnicos e profissionalizantes com certificação reconhecida e credenciamento oficial.',
-    supportingPhrase: 'Siga nossa instituição no Instagram: @universocursose',
+    supportingPhrase: 'Siga nossa instituição no Instagram: @universocursoseconsultoria',
     buttons: [
       { text: 'Conheça Nossos Cursos', primary: true, action: 'cursos' },
       { text: 'Falar com Consultor', primary: false, action: 'contato' }
