@@ -2,7 +2,7 @@
 // File: modules/public/components/Footer.tsx
 
 import React from 'react';
-import { Facebook, Instagram, Phone } from 'lucide-react';
+import { Facebook, Instagram, Phone, Mail, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Footer: React.FC = () => {
@@ -80,12 +80,33 @@ const Footer: React.FC = () => {
                   rel="noopener noreferrer" 
                   className="flex items-start gap-4"
                 >
-                  <Phone size={18} className="text-blue-500 mt-1" />
+                  <Phone size={18} className="text-blue-500 mt-1 shrink-0" />
                   <div className="text-slate-400 group-hover:text-white transition-colors">
                     <p className="font-bold text-white text-[10px] uppercase tracking-widest mb-1">Central de Vendas</p>
-                    <p>(79) 99602-8316</p>
+                    <p>+55 (79) 99602-8316</p>
                   </div>
                 </a>
+              </li>
+              <li className="flex items-start gap-4 group">
+                <a 
+                  href="mailto:universo.cursoseconsultoria@gmail.com" 
+                  className="flex items-start gap-4"
+                >
+                  <Mail size={18} className="text-blue-500 mt-1 shrink-0" />
+                  <div className="text-slate-400 group-hover:text-white transition-colors">
+                    <p className="font-bold text-white text-[10px] uppercase tracking-widest mb-1">E-mail</p>
+                    <p className="break-all">universo.cursoseconsultoria@gmail.com</p>
+                  </div>
+                </a>
+              </li>
+              <li className="flex items-start gap-4 group">
+                <div className="flex items-start gap-4">
+                  <MapPin size={18} className="text-blue-500 mt-1 shrink-0" />
+                  <div className="text-slate-400">
+                    <p className="font-bold text-white text-[10px] uppercase tracking-widest mb-1">Endereço</p>
+                    <p className="text-xs leading-relaxed max-w-[200px]">R. V, nº 56 - Lot. São José, Japoatã - SE, 49950-000</p>
+                  </div>
+                </div>
               </li>
             </ul>
           </div>
