@@ -4,8 +4,8 @@ import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
 const unitsData = [
   {
     name: "Unidade Japoatã (Matriz)",
-    address: "R. V, nº 56 - Lot. São José, Japoatã - SE, 49950-000",
-    phone: "(79) 99602-8316",
+    address: "Rua V, nº 56 - Loteamento São José, Japoatã - SE, 49950-000",
+    phone: "(79) 99602-8316 / (79) 99861-7614",
     whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
@@ -15,9 +15,9 @@ const unitsData = [
   },
   {
     name: "Unidade Aquidabã",
-    address: "Av. Sete de Setembro, Aquidabã - SE",
-    phone: "(79) 99999-0002",
-    whatsapp: "5579999990002",
+    address: "Rua Eduardo Chaves, nº 109, Centro (Vizinho ao Fórum), Aquidabã - SE, 49945-000",
+    phone: "(79) 99602-8316 / (79) 99861-7614",
+    whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
       { day: "Sábado", time: "08:00 às 17:00" }
@@ -26,9 +26,9 @@ const unitsData = [
   },
   {
     name: "Unidade Porto da Folha",
-    address: "Rua da Liberdade, Porto da Folha - SE",
-    phone: "(79) 99999-0003",
-    whatsapp: "5579999990003",
+    address: "Rua Major João Gonçalves, nº 1783, Centro (Vizinho à Delegacia), Porto da Folha - SE, 49800-000",
+    phone: "(79) 99602-8316 / (79) 99861-7614",
+    whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
       { day: "Sábado", time: "08:00 às 17:00" }
