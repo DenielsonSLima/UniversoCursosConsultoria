@@ -38,7 +38,7 @@ const unitsData = [
       { day: "Sábado", time: "08:00 às 17:00" }
     ],
     image: null,
-    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Rua+Eduardo+Chaves%2C+109%2C+Centro%2C+Aquidab%C3%A3+-+SE%2C+49945-000"
+    mapsUrl: "https://maps.app.goo.gl/SSe3eGXDpMmSoseu5"
   },
   {
     name: "Unidade Porto da Folha",
