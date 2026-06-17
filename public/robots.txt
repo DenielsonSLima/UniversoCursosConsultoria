@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://universocursosconsultoria.com.br/sitemap.xml
+Sitemap: https://universocc.com.br/sitemap.xml
