@@ -19,7 +19,7 @@ const slides: SlideData[] = [
   {
     image: '/banner1.png', // Student split background
     title: 'Sua qualificação começa aqui — e abre portas no mercado.',
-    subtitle: 'Desde 2011 formando profissionais em Sergipe. Cursos técnicos e profissionalizantes com certificação reconhecida.',
+    subtitle: 'Desde 2011 oferecendo formação profissional e consultoria de excelência. Cursos livres, técnicos e profissionalizantes.',
     locations: ['Japoatã', 'Porto da Folha', 'Aquidabã'],
     buttons: [
       { text: 'Conheça Nossos Cursos', primary: true, action: 'cursos' },
@@ -110,7 +110,7 @@ const HeroSlider: React.FC = () => {
                   <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-6 animate-slideUp">
                     <span className="text-[10px] uppercase tracking-[0.2em] bg-blue-600/30 text-blue-300 border border-blue-400/20 px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
                       <MapPin size={12} className="text-blue-400" />
-                      Polos em Sergipe:
+                      Nossos Polos:
                     </span>
                     {slide.locations.map((loc) => (
                       <span 

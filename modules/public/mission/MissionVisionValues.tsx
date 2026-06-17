@@ -56,7 +56,7 @@ const MissionVisionValues: React.FC = () => {
               <h3 className="text-3xl font-bold text-white uppercase tracking-tight">Visão</h3>
             </div>
             <p className="text-blue-100 text-lg leading-relaxed font-light">
-              Ser reconhecida como a maior instituição formadora de profissionais técnicos da saúde do interior de Sergipe, expandindo para o ensino superior e construindo um centro hospitalar próprio até 2035.
+              Ser reconhecida como referência regional e nacional em formação profissional, capacitação e consultoria, expandindo para o ensino superior e construindo um centro hospitalar próprio até 2035.
             </p>
           </div>
         </div>

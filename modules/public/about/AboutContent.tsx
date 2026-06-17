@@ -60,7 +60,7 @@ const AboutContent: React.FC = () => {
 
             <div className="space-y-4 text-slate-700 leading-relaxed text-base mb-8">
               <p>
-                A <strong className="text-blue-900 font-bold">Universo Cursos e Consultoria</strong> é referência em educação profissional e estratégica no Sertão Sergipano, com unidades em Japoatã, Aquidabã e Porto da Folha.
+                A <strong className="text-blue-900 font-bold">Universo Cursos e Consultoria</strong> é referência em educação profissional e de consultoria estratégica, com atuação expandida e polos em Japoatã, Aquidabã e Porto da Folha.
               </p>
               <p>
                 Além da formação educacional, a Universo se destaca na prestação de serviços de consultoria e assessoria técnica para instituições públicas e privadas, nas áreas de:
