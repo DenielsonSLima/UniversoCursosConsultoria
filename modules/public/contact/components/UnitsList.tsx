@@ -4,8 +4,15 @@ import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
 const unitsData = [
   {
     name: "Unidade Japoatã (Matriz)",
-    address: "Rua V, nº 56 - Loteamento São José, Japoatã - SE, 49950-000",
-    phone: "(79) 99602-8316 / (79) 99861-7614",
+    address: [
+      "Rua V, nº 56 - Loteamento São José",
+      "CEP 49950-000",
+      "Japoatã - SE"
+    ],
+    phone: [
+      "(79) 99602-8316",
+      "(79) 99861-7614"
+    ],
     whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
@@ -15,8 +22,15 @@ const unitsData = [
   },
   {
     name: "Unidade Aquidabã",
-    address: "Rua Eduardo Chaves, nº 109, Centro (Vizinho ao Fórum), Aquidabã - SE, 49945-000",
-    phone: "(79) 99602-8316 / (79) 99861-7614",
+    address: [
+      "Rua Eduardo Chaves, nº 109, Centro (Vizinho ao Fórum)",
+      "CEP 49945-000",
+      "Aquidabã - SE"
+    ],
+    phone: [
+      "(79) 99602-8316",
+      "(79) 99861-7614"
+    ],
     whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
@@ -26,8 +40,15 @@ const unitsData = [
   },
   {
     name: "Unidade Porto da Folha",
-    address: "Rua Major João Gonçalves, nº 1783, Centro (Vizinho à Delegacia), Porto da Folha - SE, 49800-000",
-    phone: "(79) 99602-8316 / (79) 99861-7614",
+    address: [
+      "Rua Major João Gonçalves, nº 1783, Centro (Vizinho à Delegacia)",
+      "CEP 49800-000",
+      "Porto da Folha - SE"
+    ],
+    phone: [
+      "(79) 99602-8316",
+      "(79) 99861-7614"
+    ],
     whatsapp: "5579996028316",
     hours: [
       { day: "Segunda a Sexta", time: "08:00 às 17:00" },
@@ -67,7 +88,11 @@ const UnitsList: React.FC = () => {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Localização</p>
-                <p className="text-slate-700 font-medium leading-snug">{unit.address}</p>
+                <div className="space-y-0.5">
+                  {unit.address.map((line, idx) => (
+                    <p key={idx} className="text-slate-700 font-medium leading-snug">{line}</p>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -78,7 +103,9 @@ const UnitsList: React.FC = () => {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Telefone</p>
-                <p className="text-slate-700 font-bold">{unit.phone}</p>
+                {unit.phone.map((p, idx) => (
+                  <p key={idx} className="text-slate-700 font-bold">{p}</p>
+                ))}
               </div>
             </div>
 
