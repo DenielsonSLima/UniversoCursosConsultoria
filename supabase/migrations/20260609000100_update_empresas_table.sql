@@ -34,7 +34,7 @@ CREATE POLICY "Acesso total local empresas"
 -- 3. Inserir os dados iniciais do mockup (Seeding)
 INSERT INTO empresas (id, nome_fantasia, razao_social, cnpj, endereco, numero, bairro, cidade, uf, cep, telefone, email, tipo, ativo)
 VALUES 
-  ('11111111-1111-1111-1111-111111111111', 'Universo Cursos - Matriz', 'Universo Cursos e Consultoria LTDA', '00.000.000/0001-00', 'Rua Principal', '100', 'Centro', 'Japoatã', 'SE', '49950-000', '(79) 99999-0001', 'japoata@universo.com', 'Matriz', true),
+  ('11111111-1111-1111-1111-111111111111', 'Universo Cursos - Matriz', 'Universo Cursos e Consultoria LTDA', '00.000.000/0001-00', 'R. V', '56', 'Lot. São José', 'Japoatã', 'SE', '49950-000', '(79) 99602-8316', 'japoata@universo.com', 'Matriz', true),
   ('22222222-2222-2222-2222-222222222222', 'Universo - Polo Aquidabã', 'Universo Cursos e Consultoria LTDA', '00.000.000/0002-00', 'Av. Sete de Setembro', '500', 'Centro', 'Aquidabã', 'SE', '49945-000', '(79) 99999-0002', 'aquidaba@universo.com', 'Filial', true),
   ('33333333-3333-3333-3333-333333333333', 'Universo - Porto da Folha', 'Universo Cursos e Consultoria LTDA', '00.000.000/0003-00', 'Rua da Liberdade', '230', 'Comércio', 'Porto da Folha', 'SE', '49800-000', '(79) 99999-0003', 'portodafolha@universo.com', 'Filial', false)
 ON CONFLICT (id) DO NOTHING;

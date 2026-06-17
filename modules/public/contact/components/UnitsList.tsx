@@ -4,14 +4,14 @@ import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
 const unitsData = [
   {
     name: "Unidade Japoatã (Matriz)",
-    address: "Rua Principal, Centro, Japoatã - SE",
-    phone: "(79) 99999-0001",
-    whatsapp: "5579999990001",
+    address: "R. V, nº 56 - Lot. São José, Japoatã - SE, 49950-000",
+    phone: "(79) 99602-8316",
+    whatsapp: "5579996028316",
     hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 21:00" },
-      { day: "Sábado", time: "08:00 às 12:00" }
+      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
+      { day: "Sábado", time: "08:00 às 17:00" }
     ],
-    image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=800"
+    image: "/unnamed-2.jpg"
   },
   {
     name: "Unidade Aquidabã",
@@ -19,8 +19,8 @@ const unitsData = [
     phone: "(79) 99999-0002",
     whatsapp: "5579999990002",
     hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 21:00" },
-      { day: "Sábado", time: "08:00 às 12:00" }
+      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
+      { day: "Sábado", time: "08:00 às 17:00" }
     ],
     image: "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80&w=800"
   },
@@ -30,8 +30,8 @@ const unitsData = [
     phone: "(79) 99999-0003",
     whatsapp: "5579999990003",
     hours: [
-      { day: "Segunda a Sexta", time: "08:00 às 21:00" },
-      { day: "Sábado", time: "08:00 às 12:00" }
+      { day: "Segunda a Sexta", time: "08:00 às 17:00" },
+      { day: "Sábado", time: "08:00 às 17:00" }
     ],
     image: "https://images.unsplash.com/photo-1498243639359-2830bcb3c154?auto=format&fit=crop&q=80&w=800"
   }
