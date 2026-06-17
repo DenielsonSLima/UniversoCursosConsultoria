@@ -66,6 +66,20 @@ const Footer: React.FC = () => {
             <ul className="space-y-4 text-slate-400 text-sm font-bold uppercase tracking-widest">
               <li><button onClick={(e) => handleLink(e, 'inicio')} className="hover:text-white transition-colors">Início</button></li>
               <li><button onClick={(e) => handleLink(e, 'cursos')} className="hover:text-white transition-colors">Cursos</button></li>
+              <li>
+                <a 
+                  href="https://universocursos.curso.study/loja_virtual/index.php" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-widest flex items-center gap-1.5 transition-colors"
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  Cursos EAD
+                </a>
+              </li>
               <li><button onClick={(e) => handleLink(e, 'quem-somos')} className="hover:text-white transition-colors">Quem Somos</button></li>
               <li><button onClick={() => navigate('/contato')} className="hover:text-white transition-colors">Fale Conosco</button></li>
               <li><button onClick={() => navigate('/faq')} className="hover:text-white transition-colors">FAQ</button></li>
