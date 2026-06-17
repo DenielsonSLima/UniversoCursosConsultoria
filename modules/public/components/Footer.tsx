@@ -88,19 +88,29 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-xs font-black uppercase tracking-[0.2em] text-blue-400 mb-8">Atendimento</h4>
             <ul className="space-y-6 text-sm">
-              <li className="flex items-start gap-4 group">
-                <a 
-                  href="https://wa.me/557996028316" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-start gap-4"
-                >
-                  <Phone size={18} className="text-blue-500 mt-1 shrink-0" />
-                  <div className="text-slate-400 group-hover:text-white transition-colors">
-                    <p className="font-bold text-white text-[10px] uppercase tracking-widest mb-1">Central de Vendas</p>
-                    <p>+55 (79) 99602-8316</p>
+              <li className="flex items-start gap-4">
+                <Phone size={18} className="text-blue-500 mt-1 shrink-0" />
+                <div>
+                  <p className="font-bold text-white text-[10px] uppercase tracking-widest mb-1">Central de Vendas</p>
+                  <div className="space-y-1">
+                    <a 
+                      href="https://wa.me/557996028316" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="block text-slate-400 hover:text-white transition-colors"
+                    >
+                      +55 (79) 99602-8316
+                    </a>
+                    <a 
+                      href="https://wa.me/5579998617614" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="block text-slate-400 hover:text-white transition-colors"
+                    >
+                      +55 (79) 99861-7614
+                    </a>
                   </div>
-                </a>
+                </div>
               </li>
               <li className="flex items-start gap-4 group">
                 <a 
