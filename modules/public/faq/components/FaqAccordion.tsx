@@ -14,7 +14,7 @@ const faqData = [
   { q: "Qual valor do curso e forma de parcelamento?", a: "Oferecemos opções de parcelamento no boleto bancário ou cartão de crédito em até 12x. Temos condições especiais para pagamento antecipado." },
   { q: "Quais são os documentos necessários para fazer a matrícula?", a: "Geralmente solicitamos RG, CPF, Comprovante de Residência e Histórico Escolar. Para cursos técnicos, documentos adicionais podem ser requeridos." },
   { q: "Quais são os dias e horários das aulas?", a: "Temos turmas nos períodos matutino, vespertino e noturno, além de aulas aos sábados, dependendo do curso escolhido." },
-  { q: "Onde a escola está localizada?", a: "Possuímos unidades estratégicas no Sertão Sergipano, em Japoatã, Aquidabã e Porto da Folha." },
+  { q: "Onde a escola está localizada?", a: "Possuímos atuação nacional através de nossos cursos EAD, além de polos físicos estrategicamente localizados em Japoatã (Sede), Aquidabã e Porto da Folha." },
   { q: "O curso é reconhecido? O certificado é válido?", a: "Sim! Nossos cursos técnicos são autorizados pelos órgãos competentes (CEE/SE) e os certificados possuem validade nacional." },
   { q: "Qual a duração total do curso?", a: "Cursos Livres duram de poucas semanas a meses. Cursos Técnicos geralmente duram entre 18 a 24 meses." },
   { q: "O curso tem estágio obrigatório? A escola ajuda a conseguir estágio?", a: "Muitos de nossos cursos técnicos possuem estágio obrigatório. A Universo possui parcerias com prefeituras e empresas privadas para facilitar o encaminhamento." },

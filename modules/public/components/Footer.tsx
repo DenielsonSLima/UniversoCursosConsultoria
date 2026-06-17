@@ -38,7 +38,7 @@ const Footer: React.FC = () => {
               />
             </div>
             <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
-              Referência em ensino profissional e consultoria estratégica no Sertão Sergipano. Transformando vidas através da educação desde 2011.
+              Referência em ensino profissional (presencial e EAD) e consultoria estratégica com alcance nacional. Transformando vidas através da educação desde 2011.
             </p>
             <div className="flex space-x-4">
               <a 

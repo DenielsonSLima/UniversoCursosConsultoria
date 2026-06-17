@@ -46,7 +46,7 @@ const ContactSection: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-bold text-sm uppercase text-blue-200">Sede Principal</p>
-                  <p className="text-white text-base">Sertão Sergipano - SE</p>
+                  <p className="text-white text-base">Japoatã - SE</p>
                 </div>
               </div>
             </div>
