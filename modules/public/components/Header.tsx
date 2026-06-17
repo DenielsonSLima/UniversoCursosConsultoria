@@ -13,7 +13,6 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { name: 'Cursos', id: 'cursos', path: '/' },
-    { name: 'Cursos EAD', id: 'ead', path: '/ead' },
     { name: 'Quem somos', id: 'quem-somos', path: '/' },
     { name: 'Consultoria', id: 'consultoria', path: '/' },
     { name: 'Fale Conosco', id: 'contato', path: '/contato' },
@@ -23,11 +22,6 @@ const Header: React.FC = () => {
   const handleNavClick = (e: React.MouseEvent, link: { name: string, id: string, path: string }) => {
     e.preventDefault();
     setIsOpen(false);
-    
-    if (link.id === 'ead') {
-      window.open('https://universocursos.curso.study/loja_virtual/index.php', '_blank');
-      return;
-    }
     
     // Se for um link de seção na Home
     if (link.path === '/') {
@@ -86,24 +80,6 @@ const Header: React.FC = () => {
           <nav className="hidden lg:flex items-center space-x-8">
             {navLinks.map((link) => {
               const active = isLinkActive(link);
-              if (link.id === 'ead') {
-                return (
-                  <a
-                    key={link.name}
-                    href="https://universocursos.curso.study/loja_virtual/index.php"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => handleNavClick(e, link)}
-                    className="text-[11px] font-black text-emerald-600 hover:text-emerald-700 transition-all uppercase tracking-[0.15em] flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-full hover:scale-105 active:scale-95 duration-200"
-                  >
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                    </span>
-                    {link.name}
-                  </a>
-                );
-              }
               return (
                 <a
                   key={link.name}
@@ -151,24 +127,6 @@ const Header: React.FC = () => {
           <div className="lg:hidden mt-4 pb-6 space-y-4 animate-fadeIn border-t border-slate-100 pt-4">
             {navLinks.map((link) => {
               const active = isLinkActive(link);
-              if (link.id === 'ead') {
-                return (
-                  <a
-                    key={link.name}
-                    href="https://universocursos.curso.study/loja_virtual/index.php"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => handleNavClick(e, link)}
-                    className="block text-lg font-bold py-3 border-b border-slate-100 uppercase tracking-widest text-emerald-600 flex items-center gap-2"
-                  >
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    {link.name}
-                  </a>
-                );
-              }
               return (
                 <a
                   key={link.name}
@@ -180,8 +138,8 @@ const Header: React.FC = () => {
                 >
                   {link.name}
                 </a>
-              )}
-            )}
+              );
+            })}
             <button 
               onClick={() => {
                 setIsOpen(false);
