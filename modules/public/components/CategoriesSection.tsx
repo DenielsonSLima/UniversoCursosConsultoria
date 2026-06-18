@@ -29,6 +29,15 @@ const CategoriesSection: React.FC = () => {
     }
   };
 
+  const handleOpenTecnicos = () => {
+    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+    if (isDevelopmentMode) {
+      navigate('/cursos-tecnicos');
+    } else {
+      openModal('Cursos Técnicos');
+    }
+  };
+
   return (
     <section className="relative py-16 overflow-hidden">
       <style>{`
@@ -79,7 +88,7 @@ const CategoriesSection: React.FC = () => {
           <CursosLivresCard onClick={() => openModal('Cursos Livres')} />
           <CursosEadCard />
           <EspecializacaoTecnicaCard onClick={() => openModal('Especialização Técnica')} />
-          <CursosTecnicosCard onClick={() => openModal('Cursos Técnicos')} />
+          <CursosTecnicosCard onClick={handleOpenTecnicos} />
           <EnsinoSuperiorCard onClick={handleOpenSuperior} />
         </div>
       </div>

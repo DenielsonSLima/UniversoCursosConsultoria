@@ -14,10 +14,17 @@ export const cursosTecnicosService = {
         result.push({
           id: c.id,
           nome: c.nome,
-          descricao: `Curso técnico profissionalizante regulamentado em ${c.nome}.`,
+          descricao: c.descricao || `Curso técnico profissionalizante regulamentado em ${c.nome}.`,
           cargaHorariaTotal: c.carga_horaria,
-          duracaoMeses: c.carga_horaria >= 1200 ? 24 : 18,
-          area: 'Saúde',
+          duracaoMeses: c.duracao_meses || (c.carga_horaria >= 1200 ? 24 : 18),
+          area: c.area || 'Saúde',
+          status: c.status,
+          versao: c.versao || '1.0',
+          totalTurmas: c.total_turmas,
+          cargaHorariaCadastrada: c.carga_horaria_cadastrada,
+          publicarSite: c.publicar_site,
+          imagemDetalhe1: c.imagem_detalhe_1,
+          imagemDetalhe2: c.imagem_detalhe_2,
           modulos: modulos
         });
       }
@@ -35,7 +42,20 @@ export const cursosTecnicosService = {
   },
 
   async update(curso: CursoTecnico): Promise<void> {
-    // Apenas redireciona a chamada de grade para o novo serviço genérico
+    await cadastrosService.updateCurso({
+      id: curso.id,
+      nome: curso.nome,
+      modalidade: 'TECNICO',
+      carga_horaria: curso.cargaHorariaTotal,
+      status: (curso.status as any) || 'ativo',
+      area: curso.area,
+      descricao: curso.descricao,
+      versao: curso.versao,
+      duracao_meses: curso.duracaoMeses,
+      publicar_site: curso.publicarSite,
+      imagem_detalhe_1: curso.imagemDetalhe1,
+      imagem_detalhe_2: curso.imagemDetalhe2
+    });
     await cadastrosService.saveGrade(curso.id, curso.modulos);
   },
 
@@ -44,7 +64,14 @@ export const cursosTecnicosService = {
       nome: curso.nome,
       carga_horaria: curso.cargaHorariaTotal,
       modalidade: 'TECNICO',
-      status: 'ativo'
+      status: 'ativo',
+      area: curso.area,
+      descricao: curso.descricao,
+      versao: curso.versao || '1.0',
+      duracao_meses: curso.duracaoMeses,
+      publicar_site: curso.publicarSite,
+      imagem_detalhe_1: curso.imagemDetalhe1,
+      imagem_detalhe_2: curso.imagemDetalhe2
     });
 
     await cadastrosService.saveGrade(created.id, curso.modulos);

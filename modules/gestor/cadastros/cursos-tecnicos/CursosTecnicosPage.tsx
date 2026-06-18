@@ -6,6 +6,7 @@ import CursoTecnicoCard from './components/CursoTecnicoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
 import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
+import { supabase } from '../../../../lib/supabase';
 
 const CursosTecnicosPage: React.FC = () => {
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
@@ -22,7 +23,98 @@ const CursosTecnicosPage: React.FC = () => {
   const [newCursoDesc, setNewCursoDesc] = useState('');
   const [newCursoArea, setNewCursoArea] = useState('Saúde');
   const [newCursoVersao, setNewCursoVersao] = useState('1.0');
+  const [newCursoCargaHoraria, setNewCursoCargaHoraria] = useState<number>(1200);
+  const [newCursoDuracaoMeses, setNewCursoDuracaoMeses] = useState<number>(24);
   const [isCreatingCurso, setIsCreatingCurso] = useState(false);
+
+  // Estados para Upload de Imagem e Publicação
+  const [newCursoImagemUrl, setNewCursoImagemUrl] = useState('');
+  const [newCursoPublicarSite, setNewCursoPublicarSite] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Compressão de imagem do card para WebP
+  const compressImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                resolve(file);
+              }
+            },
+            'image/webp',
+            0.8
+          );
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  // Upload de imagem do card
+  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const compressedBlob = await compressImage(file);
+      const compressedFile = new File([compressedBlob], `curso_${Date.now()}.webp`, {
+        type: 'image/webp'
+      });
+
+      const filePath = `cursos/curso_${Date.now()}.webp`;
+
+      const { data, error } = await supabase.storage
+        .from('documentos')
+        .upload(filePath, compressedFile, {
+          cacheControl: '31536000',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('documentos')
+        .getPublicUrl(data.path);
+
+      setNewCursoImagemUrl(urlData.publicUrl);
+    } catch (err: any) {
+      console.error('Erro ao fazer upload da imagem:', err);
+      alert('Erro ao fazer upload da imagem: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Estados para Modal de Duplicação
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -70,24 +162,51 @@ const CursosTecnicosPage: React.FC = () => {
     try {
       await cadastrosService.createCurso({
         nome: newCursoNome,
-        carga_horaria: 0, // Carga horária inicia em 0 e é calculada pela grade curricular
+        carga_horaria: newCursoCargaHoraria,
         modalidade: 'TECNICO',
         status: 'ativo',
         area: newCursoArea,
         descricao: newCursoDesc,
-        versao: newCursoVersao
+        versao: newCursoVersao,
+        duracao_meses: newCursoDuracaoMeses,
+        imagem_url: newCursoImagemUrl || null,
+        publicar_site: newCursoPublicarSite
       });
       setShowCreateModal(false);
       setNewCursoNome('');
       setNewCursoDesc('');
       setNewCursoArea('Saúde');
       setNewCursoVersao('1.0');
+      setNewCursoCargaHoraria(1200);
+      setNewCursoDuracaoMeses(24);
+      setNewCursoImagemUrl('');
+      setNewCursoPublicarSite(true);
       loadCursos();
     } catch (err) {
       console.error(err);
       alert('Erro ao criar curso no Supabase.');
     } finally {
       setIsCreatingCurso(false);
+    }
+  };
+
+  // Exclusão definitiva de curso
+  const handleDeleteCurso = async (curso: Curso, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const totalTurmas = (curso as any).total_turmas || 0;
+    if (Number(totalTurmas) > 0) {
+      alert(`Não é possível excluir o curso "${curso.nome}" porque ele possui ${totalTurmas} turma(s) vinculada(s).`);
+      return;
+    }
+
+    if (confirm(`Tem certeza de que deseja EXCLUIR definitivamente o curso "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`)) {
+      try {
+        await cadastrosService.deleteCurso(curso.id);
+        loadCursos();
+      } catch (err: any) {
+        console.error(err);
+        alert(err.message || 'Erro ao excluir o curso.');
+      }
     }
   };
 
@@ -243,6 +362,7 @@ const CursosTecnicosPage: React.FC = () => {
                     onClick={() => handleSelectCurso(curso)} 
                     onDuplicate={(e) => handleOpenDuplicate(curso, e)}
                     onToggleStatus={(e) => handleToggleStatus(curso, e)}
+                    onDelete={(e) => handleDeleteCurso(curso, e)}
                   />
                 ))}
               </div>
@@ -300,6 +420,82 @@ const CursosTecnicosPage: React.FC = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Carga Horária (Hrs)</label>
+                  <input 
+                    required
+                    type="number" 
+                    value={newCursoCargaHoraria}
+                    onChange={(e) => setNewCursoCargaHoraria(Number(e.target.value))}
+                    placeholder="Ex: 1200"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Duração (Meses)</label>
+                  <input 
+                    required
+                    type="number" 
+                    value={newCursoDuracaoMeses}
+                    onChange={(e) => setNewCursoDuracaoMeses(Number(e.target.value))}
+                    placeholder="Ex: 24"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Imagem de Capa */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Imagem de Capa (Card)</label>
+                <div className="flex items-center gap-4">
+                  {newCursoImagemUrl ? (
+                    <div className="relative w-24 h-16 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0">
+                      <img src={newCursoImagemUrl} alt="Capa" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewCursoImagemUrl('')}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
+                        title="Remover Imagem"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-16 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-400 shrink-0 text-xs font-bold uppercase">
+                      Sem Capa
+                    </div>
+                  )}
+                  <div className="flex-grow">
+                    <label className="inline-block px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-all">
+                      {isUploading ? 'Fazendo Upload...' : newCursoImagemUrl ? 'Alterar Imagem' : 'Upload de Imagem'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadImagem}
+                        disabled={isUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-[9px] text-slate-400 mt-1">Imagens recomendadas: 16:9.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Publicar no site público checkbox */}
+              <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <input 
+                  type="checkbox"
+                  id="newCursoPublicarSite"
+                  checked={newCursoPublicarSite}
+                  onChange={(e) => setNewCursoPublicarSite(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer"
+                />
+                <label htmlFor="newCursoPublicarSite" className="text-xs font-bold text-slate-700 select-none cursor-pointer">
+                  Publicar no site público
+                </label>
               </div>
 
               <div>

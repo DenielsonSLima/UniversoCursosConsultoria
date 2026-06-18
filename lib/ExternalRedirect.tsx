@@ -2,7 +2,7 @@
 // File: lib/ExternalRedirect.tsx
 // Componente que redireciona o navegador para uma URL externa (fora da SPA)
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 interface ExternalRedirectProps {
   url: string;

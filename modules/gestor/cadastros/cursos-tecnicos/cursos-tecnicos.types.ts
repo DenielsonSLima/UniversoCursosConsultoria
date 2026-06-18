@@ -27,5 +27,12 @@ export interface CursoTecnico {
   cargaHorariaTotal: number;
   duracaoMeses: number;
   area: string; 
+  status?: string;
+  versao?: string;
+  totalTurmas?: number;
+  cargaHorariaCadastrada?: number;
+  publicarSite?: boolean;
+  imagemDetalhe1?: string;
+  imagemDetalhe2?: string;
   modulos: Modulo[];
 }

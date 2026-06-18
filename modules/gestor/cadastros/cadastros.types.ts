@@ -34,6 +34,12 @@ export interface Curso {
   parceiro_instituicao?: string;
   parceiro_logo_url?: string;
   imagem_url?: string;
+  duracao_meses?: number;
+  total_turmas?: number;
+  carga_horaria_cadastrada?: number;
+  publicar_site?: boolean;
+  imagem_detalhe_1?: string;
+  imagem_detalhe_2?: string;
   created_at?: string;
   modulos?: Modulo[];
 }

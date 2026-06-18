@@ -5,12 +5,10 @@ import { Curso, Modulo } from './cadastros.types';
 
 export const cadastrosService = {
   // Busca todos os cursos de uma modalidade (ativos e inativos para abas separadas)
+  // Busca todos os cursos de uma modalidade com KPIs agregados (RPC)
   async getCursosByModalidade(modalidade: 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD' | 'SUPERIOR'): Promise<Curso[]> {
     const { data, error } = await supabase
-      .from('cursos')
-      .select('*')
-      .eq('modalidade', modalidade)
-      .order('nome', { ascending: true });
+      .rpc('get_cursos_com_kpis', { p_modalidade: modalidade });
     
     if (error) {
       console.error(`Erro ao buscar cursos da modalidade ${modalidade}:`, error);
@@ -18,6 +16,22 @@ export const cadastrosService = {
     }
     
     return data || [];
+  },
+
+  // Busca um curso pelo ID
+  async getCursoById(id: string): Promise<Curso> {
+    const { data, error } = await supabase
+      .from('cursos')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error(`Erro ao buscar curso com ID ${id}:`, error);
+      throw error;
+    }
+    
+    return data;
   },
 
   // Cria um novo curso
@@ -34,7 +48,11 @@ export const cadastrosService = {
         versao: curso.versao || '1.0',
         parceiro_instituicao: curso.parceiro_instituicao || null,
         parceiro_logo_url: curso.parceiro_logo_url || null,
-        imagem_url: curso.imagem_url || null
+        imagem_url: curso.imagem_url || null,
+        duracao_meses: curso.duracao_meses || null,
+        publicar_site: curso.publicar_site || false,
+        imagem_detalhe_1: curso.imagem_detalhe_1 || null,
+        imagem_detalhe_2: curso.imagem_detalhe_2 || null
       })
       .select()
       .single();
@@ -60,7 +78,11 @@ export const cadastrosService = {
         versao: curso.versao,
         parceiro_instituicao: curso.parceiro_instituicao || null,
         parceiro_logo_url: curso.parceiro_logo_url || null,
-        imagem_url: curso.imagem_url || null
+        imagem_url: curso.imagem_url || null,
+        duracao_meses: curso.duracao_meses || null,
+        publicar_site: curso.publicar_site !== undefined ? curso.publicar_site : false,
+        imagem_detalhe_1: curso.imagem_detalhe_1 !== undefined ? curso.imagem_detalhe_1 : null,
+        imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null
       })
       .eq('id', curso.id);
       
@@ -113,17 +135,57 @@ export const cadastrosService = {
     return novoCurso;
   },
 
-  // Exclui/Desativa um curso (set status = 'inativo')
+  // Exclui/Deleta um curso definitivamente (apenas se não houver turmas vinculadas)
   async deleteCurso(cursoId: string): Promise<void> {
+    // 1. Verificar se há turmas vinculadas
+    const { count, error: countError } = await supabase
+      .from('turmas')
+      .select('*', { count: 'exact', head: true })
+      .eq('curso_id', cursoId);
+
+    if (countError) {
+      console.error('Erro ao verificar turmas vinculadas:', countError);
+      throw countError;
+    }
+    
+    if (count && count > 0) {
+      throw new Error(`Não é possível excluir o curso pois existem ${count} turma(s) vinculada(s) a ele.`);
+    }
+
+    // 2. Realizar a exclusão física do curso (cascata deletará módulos/disciplinas/aulas)
     const { error } = await supabase
       .from('cursos')
-      .update({ status: 'inativo' })
+      .delete()
       .eq('id', cursoId);
       
     if (error) {
-      console.error('Erro ao inativar curso:', error);
+      console.error('Erro ao excluir curso do banco:', error);
       throw error;
     }
+  },
+
+  // Busca os KPIs de carga horária da grade curricular via RPC no Supabase
+  async getCursoGradeKpis(cursoId: string): Promise<{
+    carga_horaria_total: number;
+    carga_horaria_cadastrada: number;
+    carga_horaria_restante: number;
+  }> {
+    const { data, error } = await supabase
+      .rpc('get_curso_grade_kpis', { p_curso_id: cursoId });
+
+    if (error) {
+      console.error('Erro ao buscar KPIs da grade curricular:', error);
+      throw error;
+    }
+
+    // A resposta da RPC retorna uma linha (ou array com 1 item se chamado via query normal)
+    const row = Array.isArray(data) ? data[0] : data;
+
+    return {
+      carga_horaria_total: row?.carga_horaria_total || 0,
+      carga_horaria_cadastrada: row?.carga_horaria_cadastrada || 0,
+      carga_horaria_restante: row?.carga_horaria_restante || 0
+    };
   },
 
   // Altera o status do curso (ativo/inativo)
