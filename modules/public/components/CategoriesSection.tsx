@@ -38,6 +38,24 @@ const CategoriesSection: React.FC = () => {
     }
   };
 
+  const handleOpenLivres = () => {
+    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+    if (isDevelopmentMode) {
+      navigate('/cursos-livres');
+    } else {
+      openModal('Cursos Livres');
+    }
+  };
+
+  const handleOpenEspecializacao = () => {
+    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+    if (isDevelopmentMode) {
+      navigate('/especializacao');
+    } else {
+      openModal('Especialização Técnica');
+    }
+  };
+
   return (
     <section className="relative py-16 overflow-hidden">
       <style>{`
@@ -85,9 +103,9 @@ const CategoriesSection: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 max-w-7xl mx-auto">
-          <CursosLivresCard onClick={() => openModal('Cursos Livres')} />
+          <CursosLivresCard onClick={handleOpenLivres} />
           <CursosEadCard />
-          <EspecializacaoTecnicaCard onClick={() => openModal('Especialização Técnica')} />
+          <EspecializacaoTecnicaCard onClick={handleOpenEspecializacao} />
           <CursosTecnicosCard onClick={handleOpenTecnicos} />
           <EnsinoSuperiorCard onClick={handleOpenSuperior} />
         </div>

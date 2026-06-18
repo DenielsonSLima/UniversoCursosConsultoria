@@ -13,6 +13,10 @@ import TermsPage from './modules/public/terms/TermsPage';
 import EnsinoSuperiorPublicPage from './modules/public/ensino-superior/EnsinoSuperiorPublicPage';
 import CursosTecnicosPublicPage from './modules/public/cursos-tecnicos/CursosTecnicosPublicPage';
 import CursoTecnicoDetailPage from './modules/public/cursos-tecnicos/CursoTecnicoDetailPage';
+import CursosLivresPublicPage from './modules/public/cursos-livres/CursosLivresPublicPage';
+import CursoLivreDetailPage from './modules/public/cursos-livres/CursoLivreDetailPage';
+import EspecializacaoPublicPage from './modules/public/especializacao/EspecializacaoPublicPage';
+import EspecializacaoDetailPage from './modules/public/especializacao/EspecializacaoDetailPage';
 
 // Páginas do Sistema Interno (somente em desenvolvimento)
 import LoginPage from './modules/login/LoginPage';
@@ -53,6 +57,10 @@ const App: React.FC = () => {
         <Route path="/ensino-superior" element={<EnsinoSuperiorPublicPage />} />
         <Route path="/cursos-tecnicos" element={<CursosTecnicosPublicPage />} />
         <Route path="/cursos-tecnicos/detalhes/:id" element={<CursoTecnicoDetailPage />} />
+        <Route path="/cursos-livres" element={<CursosLivresPublicPage />} />
+        <Route path="/cursos-livres/detalhes/:id" element={<CursoLivreDetailPage />} />
+        <Route path="/especializacao" element={<EspecializacaoPublicPage />} />
+        <Route path="/especializacao/detalhes/:id" element={<EspecializacaoDetailPage />} />
 
         {/* ── Login ── */}
         {/* Em produção: redireciona para o Proesc (sistema externo do aluno) */}
