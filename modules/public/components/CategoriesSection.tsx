@@ -21,7 +21,12 @@ const CategoriesSection: React.FC = () => {
   };
 
   const handleOpenSuperior = () => {
-    navigate('/ensino-superior');
+    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+    if (isDevelopmentMode) {
+      navigate('/ensino-superior');
+    } else {
+      openModal('Ensino Superior');
+    }
   };
 
   return (
