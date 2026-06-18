@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, FileText, DollarSign, Briefcase,
-  AlertCircle, ChevronRight, ChevronLeft, CheckCircle2
+  AlertCircle, ChevronRight, ChevronLeft, CheckCircle2, Plus
 } from 'lucide-react';
 
 interface ParceiroPFFormProps {
@@ -19,11 +19,20 @@ const STEPS = [
 ];
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const TIPOS_SERVICO = [
-  'Consultoria', 'Limpeza e Conservação', 'Manutenção Predial', 'Tecnologia da Informação',
-  'Contabilidade', 'Jurídico', 'Marketing / Design', 'Segurança Patrimonial',
-  'Alimentação / Cantina', 'Transporte', 'Fotografia / Audiovisual', 'Outro'
+const PRESET_SERVICOS = [
+  'CONSULTORIA',
+  'LIMPEZA E CONSERVAÇÃO',
+  'MANUTENÇÃO PREDIAL',
+  'TECNOLOGIA DA INFORMAÇÃO',
+  'CONTABILIDADE',
+  'JURÍDICO',
+  'MARKETING / DESIGN',
+  'SEGURANÇA PATRIMONIAL',
+  'ALIMENTAÇÃO / CANTINA',
+  'TRANSPORTE',
+  'FOTOGRAFIA / AUDIOVISUAL',
 ];
+const PRESET_VINCULOS = ['AUTÔNOMO', 'MEI (MICROEMPREENDEDOR INDIVIDUAL)', 'EVENTUAL / AVULSO', 'CONTRATO FIXO'];
 const BANCOS = [
   'Banco do Brasil', 'Caixa Econômica Federal', 'Bradesco', 'Itaú', 'Santander',
   'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'Outro'
@@ -31,6 +40,15 @@ const BANCOS = [
 
 const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Dynamic category states
+  const [showCustomServico, setShowCustomServico] = useState(false);
+  const [customServico, setCustomServico] = useState('');
+  const [selectedServico, setSelectedServico] = useState('');
+
+  const [showCustomVinculo, setShowCustomVinculo] = useState(false);
+  const [customVinculo, setCustomVinculo] = useState('');
+  const [selectedVinculo, setSelectedVinculo] = useState('');
 
   const [formData, setFormData] = useState({
     // Step 1 — Dados Pessoais
@@ -53,9 +71,6 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
     uf: '',
 
     // Step 3 — Serviço & Pagamento
-    tipoServico: '',
-    tipoServicoOutro: '',
-    tipoVinculo: '',
     chavePix: '',
     banco: '',
     agencia: '',
@@ -112,9 +127,12 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalServico = showCustomServico ? customServico.trim().toUpperCase() : selectedServico;
+    const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
     if (onSave) onSave({
       ...formData,
-      tipoServico: formData.tipoServico === 'Outro' ? formData.tipoServicoOutro : formData.tipoServico,
+      tipoServico: finalServico,
+      tipoVinculo: finalVinculo,
       // normalizar campos para compatibilidade com o service
       nomeCompleto: formData.nome,
       endereco: formData.logradouro,
@@ -306,29 +324,66 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
                 <label className={labelCls}>Tipo de Serviço Prestado <span className="text-red-500">*</span></label>
-                <select name="tipoServico" value={formData.tipoServico} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione o tipo de serviço...</option>
-                  {TIPOS_SERVICO.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  {!showCustomServico ? (
+                    <select
+                      value={selectedServico}
+                      onChange={(e) => setSelectedServico(e.target.value)}
+                      className={`${inputCls} flex-grow`}
+                    >
+                      <option value="">Selecione o tipo de serviço...</option>
+                      {PRESET_SERVICOS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customServico}
+                      onChange={(e) => setCustomServico(e.target.value.toUpperCase())}
+                      placeholder="DESCREVA O TIPO DE SERVIÇO PRESTADO"
+                      className={`${inputCls} flex-grow`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomServico(!showCustomServico); setCustomServico(''); }}
+                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
+                    title={showCustomServico ? 'Escolher da lista' : 'Cadastrar novo tipo de serviço'}
+                  >
+                    {showCustomServico ? <X size={16} /> : <Plus size={16} />}
+                  </button>
+                </div>
               </div>
 
-              {formData.tipoServico === 'Outro' && (
-                <div className="md:col-span-2">
-                  <label className={labelCls}>Descreva o Serviço</label>
-                  <input type="text" name="tipoServicoOutro" value={formData.tipoServicoOutro} onChange={handleChange}
-                    className={inputCls} placeholder="Descreva o tipo de serviço prestado" />
-                </div>
-              )}
-
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelCls}>Tipo de Vínculo</label>
-                <select name="tipoVinculo" value={formData.tipoVinculo} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  <option value="Autônomo">Autônomo</option>
-                  <option value="MEI">MEI (Microempreendedor Individual)</option>
-                  <option value="Eventual">Eventual / Avulso</option>
-                  <option value="Contrato">Contrato fixo</option>
-                </select>
+                <div className="flex gap-2">
+                  {!showCustomVinculo ? (
+                    <select
+                      value={selectedVinculo}
+                      onChange={(e) => setSelectedVinculo(e.target.value)}
+                      className={`${inputCls} flex-grow`}
+                    >
+                      <option value="">Selecione...</option>
+                      {PRESET_VINCULOS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customVinculo}
+                      onChange={(e) => setCustomVinculo(e.target.value.toUpperCase())}
+                      placeholder="DESCREVA O TIPO DE VÍNCULO"
+                      className={`${inputCls} flex-grow`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomVinculo(!showCustomVinculo); setCustomVinculo(''); }}
+                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
+                    title={showCustomVinculo ? 'Escolher da lista' : 'Cadastrar novo tipo de vínculo'}
+                  >
+                    {showCustomVinculo ? <X size={16} /> : <Plus size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="md:col-span-2 h-px bg-slate-100 my-1" />

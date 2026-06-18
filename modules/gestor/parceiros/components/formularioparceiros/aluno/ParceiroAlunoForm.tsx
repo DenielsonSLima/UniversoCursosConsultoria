@@ -5,8 +5,9 @@ import React, { useState } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
   CheckCircle2, BookOpen, ChevronRight, ChevronLeft, GraduationCap,
-  Shield, Heart, Home, Accessibility
+  Shield, Heart, Home, Accessibility, Camera, Upload, Loader2
 } from 'lucide-react';
+import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
@@ -29,11 +30,27 @@ const PCD_TIPOS = ['FÍSICA','AUDITIVA','VISUAL','INTELECTUAL','MÚLTIPLA','TRAN
 const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showMatriculaModal, setShowMatriculaModal] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const url = await empresasService.uploadLogo(file);
+      setFormData(prev => ({ ...prev, foto: url }));
+    } catch (err: any) {
+      alert('Erro ao enviar foto: ' + (err.message || err));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     // Step 1 — Dados Pessoais
     polo: 'matriz',
     status: 'ATIVO',
+    foto: '',
     nomeCompleto: '',
     nomeSocial: '',
     cpf: '',
@@ -209,6 +226,43 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
             <div className={sectionHeaderCls('blue')}>
               <User size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Vínculo</h4>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
+              <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
+                {formData.foto ? (
+                  <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400">
+                    <User size={40} />
+                  </div>
+                )}
+                {isUploadingPhoto && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                    <Loader2 size={24} className="animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2 text-left w-full">
+                <h5 className="text-sm font-bold text-[#001a33] uppercase">Foto do Aluno</h5>
+                <p className="text-xs text-slate-400">Envie uma foto recente de identificação (JPG, PNG).</p>
+                <div className="flex gap-2">
+                  <label className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/10">
+                    <Upload size={14} />
+                    Selecionar Foto
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
+                  </label>
+                  {formData.foto && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}
+                      className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

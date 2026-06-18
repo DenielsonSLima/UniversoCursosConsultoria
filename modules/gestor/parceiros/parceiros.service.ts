@@ -44,8 +44,12 @@ function toCamel(s: any) {
     cidade: s.cidade,
     uf: s.uf,
     poloId: s.polo_id,
-    polo: s.polo_id === '44444444-4444-4444-4444-444444444444' ? 'matriz' : 'estancia',
-    poloNome: s.polos?.nome || (s.polo_id === '44444444-4444-4444-4444-444444444444' ? 'Matriz - Aracaju' : 'Polo Estância'),
+    polo: s.polo_id === '44444444-4444-4444-4444-444444444444' 
+      ? 'matriz' 
+      : (s.polo_id === '55555555-5555-5555-5555-555555555555' ? 'estancia' : 'geral'),
+    poloNome: s.polos?.nome || (s.polo_id === '44444444-4444-4444-4444-444444444444' 
+      ? 'Matriz - Aracaju' 
+      : (s.polo_id === '55555555-5555-5555-5555-555555555555' ? 'Polo Estância' : 'Geral (Todos os Polos)')),
     status: s.status,
     observacao: s.observacao,
     foto: s.foto_url,
@@ -88,6 +92,7 @@ function toCamel(s: any) {
     tipoServico: s.tipo_servico,
     tipoPj: s.tipo_pj,
     tipoConvenio: s.tipo_convenio,
+    poloIds: s.polo_ids || [],
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };
@@ -156,6 +161,7 @@ function toSnake(c: any) {
     tipo_servico: c.tipoServico || null,
     tipo_pj: c.tipoPj || null,
     tipo_convenio: c.tipoConvenio || null,
+    polo_ids: c.poloIds || [],
   };
 }
 
@@ -395,6 +401,18 @@ export const parceirosService = {
       turno: t.turno,
       vagasTotais: t.vagas_totais
     }));
+  },
+
+  async getPolos() {
+    const { data, error } = await supabase
+      .from('polos')
+      .select('*')
+      .order('nome', { ascending: true });
+    if (error) {
+      console.error('Erro ao buscar polos:', error);
+      throw error;
+    }
+    return data || [];
   },
 
   async getKpis() {

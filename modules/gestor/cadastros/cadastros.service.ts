@@ -31,17 +31,20 @@ export const cadastrosService = {
         status: curso.status,
         area: curso.area || 'Outros',
         descricao: curso.descricao || '',
-        versao: curso.versao || '1.0'
+        versao: curso.versao || '1.0',
+        parceiro_instituicao: curso.parceiro_instituicao || null,
+        parceiro_logo_url: curso.parceiro_logo_url || null,
+        imagem_url: curso.imagem_url || null
       })
       .select()
       .single();
       
-    if (error) {
-      console.error('Erro ao criar curso:', error);
-      throw error;
-    }
-    
-    return data;
+      if (error) {
+        console.error('Erro ao criar curso:', error);
+        throw error;
+      }
+      
+      return data;
   },
 
   // Atualiza dados do curso
@@ -54,7 +57,10 @@ export const cadastrosService = {
         status: curso.status,
         area: curso.area,
         descricao: curso.descricao,
-        versao: curso.versao
+        versao: curso.versao,
+        parceiro_instituicao: curso.parceiro_instituicao || null,
+        parceiro_logo_url: curso.parceiro_logo_url || null,
+        imagem_url: curso.imagem_url || null
       })
       .eq('id', curso.id);
       

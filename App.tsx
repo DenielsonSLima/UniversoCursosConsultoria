@@ -10,6 +10,7 @@ import FaqPage from './modules/public/faq/FaqPage';
 import ContactPage from './modules/public/contact/ContactPage';
 import PrivacyPage from './modules/public/privacy/PrivacyPage';
 import TermsPage from './modules/public/terms/TermsPage';
+import EnsinoSuperiorPublicPage from './modules/public/ensino-superior/EnsinoSuperiorPublicPage';
 
 // Páginas do Sistema Interno (somente em desenvolvimento)
 import LoginPage from './modules/login/LoginPage';
@@ -47,6 +48,7 @@ const App: React.FC = () => {
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/privacidade" element={<PrivacyPage />} />
         <Route path="/termos" element={<TermsPage />} />
+        <Route path="/ensino-superior" element={<EnsinoSuperiorPublicPage />} />
 
         {/* ── Login ── */}
         {/* Em produção: redireciona para o Proesc (sistema externo do aluno) */}

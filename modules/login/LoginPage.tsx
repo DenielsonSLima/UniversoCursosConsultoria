@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Quote } from 'lucide-react';
+import { ArrowLeft, Clock, Quote, Building2, CheckCircle2, ArrowRight } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
+import { supabase } from '../../lib/supabase';
 
 const quotes = [
   { text: "A educação é a arma mais poderosa que você pode usar para mudar o mundo.", author: "Nelson Mandela" },
@@ -21,6 +22,12 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [dailyQuote, setDailyQuote] = useState(quotes[0]);
+
+  // States para seleção de Polo do Professor
+  const [loginStep, setLoginStep] = useState<'credentials' | 'polo_select'>('credentials');
+  const [professorPolos, setProfessorPolos] = useState<{ id: string; nome: string }[]>([]);
+  const [professorName, setProfessorName] = useState('');
+  const [selectedPoloId, setSelectedPoloId] = useState('');
 
   // Atualiza o relógio a cada segundo
   useEffect(() => {
@@ -39,25 +46,66 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Simulação de delay para feedback visual
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       const email = credentials.email.toLowerCase();
       const password = credentials.password;
-      
+
+      // 1. Tentar buscar no banco se existe um parceiro com esse e-mail
+      const { data: partner } = await supabase
+        .from('parceiros')
+        .select('id, nome, tipo, polo_id, polo_ids')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (partner) {
+        if (partner.tipo === 'Professor') {
+          const poloIds = partner.polo_ids || [];
+          if (poloIds.length > 1) {
+            // Buscar nomes dos polos
+            const { data: polosData } = await supabase
+              .from('polos')
+              .select('id, nome')
+              .in('id', poloIds);
+
+            if (polosData && polosData.length > 1) {
+              setProfessorPolos(polosData);
+              setProfessorName(partner.nome);
+              setSelectedPoloId(polosData[0].id);
+              setLoginStep('polo_select');
+              setIsLoading(false);
+              return;
+            }
+          }
+          
+          // Se tiver 1 ou 0 polos vinculados, loga direto salvando o único polo
+          const activePolo = poloIds[0] || '44444444-4444-4444-4444-444444444444';
+          localStorage.setItem('active_polo_id', activePolo);
+          navigate('/professor');
+          return;
+        }
+
+        if (partner.tipo === 'Aluno') {
+          localStorage.setItem('active_polo_id', partner.polo_id || '44444444-4444-4444-4444-444444444444');
+          navigate('/aluno');
+          return;
+        }
+      }
+
       // Lógica de Acesso Provisória (Hardcoded para demonstração)
       if (email === 'gestor@universo.com' && password === '123456') {
+        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
         navigate('/gestor');
         return;
       }
 
       // Fallback para outros perfis (baseado apenas no email por enquanto)
       if (email.includes('professor')) {
+        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
         navigate('/professor');
       } else if (email.includes('aluno')) {
+        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
         navigate('/aluno');
       } else if (email.includes('gestor')) {
-        // Fallback genérico se o usuário esquecer a senha específica mas usar a palavra gestor
+        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
         navigate('/gestor');
       } else {
         alert('Usuário não encontrado. Tente: gestor@universo.com / 123456');
@@ -67,6 +115,11 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePoloConfirm = () => {
+    localStorage.setItem('active_polo_id', selectedPoloId);
+    navigate('/professor');
   };
 
   // Formatadores de data e hora
@@ -164,24 +217,91 @@ const LoginPage: React.FC = () => {
           <span className="hidden sm:inline">Voltar ao site</span>
         </button>
 
-        <div className="w-full max-w-md">
-          <div className="mb-10 text-center lg:text-left">
-            {/* Logo visível apenas no Mobile */}
-            <div className="lg:hidden mb-8 inline-block">
-              <span className="block text-3xl font-black text-[#001a33] uppercase tracking-tighter">Universo</span>
-              <span className="block text-[10px] tracking-[0.25em] text-blue-600 uppercase font-bold">Cursos e Consultoria</span>
+        {loginStep === 'credentials' ? (
+          <div className="w-full max-w-md">
+            <div className="mb-10 text-center lg:text-left">
+              {/* Logo visível apenas no Mobile */}
+              <div className="lg:hidden mb-8 inline-block">
+                <span className="block text-3xl font-black text-[#001a33] uppercase tracking-tighter">Universo</span>
+                <span className="block text-[10px] tracking-[0.25em] text-blue-600 uppercase font-bold">Cursos e Consultoria</span>
+              </div>
+
+              <h2 className="text-3xl font-black text-[#001a33] mb-3">Bem-vindo de volta!</h2>
+              <p className="text-slate-500">Por favor, insira suas credenciais para acessar o portal.</p>
             </div>
 
-            <h2 className="text-3xl font-black text-[#001a33] mb-3">Bem-vindo de volta!</h2>
-            <p className="text-slate-500">Por favor, insira suas credenciais para acessar o portal.</p>
+            <LoginForm 
+              onSubmit={handleLogin} 
+              isLoading={isLoading} 
+              onBack={() => navigate('/')} 
+            />
           </div>
+        ) : (
+          <div className="w-full max-w-md animate-fadeIn">
+            <div className="mb-8 text-center lg:text-left">
+              <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto lg:mx-0">
+                <Building2 size={24} />
+              </div>
+              <h2 className="text-2xl font-black text-[#001a33] mb-2 uppercase tracking-tight">Escolha a Unidade</h2>
+              <p className="text-slate-500 text-sm">
+                Olá, <strong className="text-purple-700">{professorName}</strong>! Selecione em qual polo deseja realizar seus lançamentos no momento:
+              </p>
+            </div>
 
-          <LoginForm 
-            onSubmit={handleLogin} 
-            isLoading={isLoading} 
-            onBack={() => navigate('/')} 
-          />
-        </div>
+            <div className="space-y-3 mb-8">
+              {professorPolos.map((polo) => {
+                const isSelected = selectedPoloId === polo.id;
+                return (
+                  <button
+                    key={polo.id}
+                    onClick={() => setSelectedPoloId(polo.id)}
+                    className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all text-left group ${
+                      isSelected
+                        ? 'border-purple-500 bg-purple-50/50 shadow-md ring-2 ring-purple-100'
+                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl transition-colors ${isSelected ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                        <Building2 size={18} />
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${isSelected ? 'text-[#001a33]' : 'text-slate-700'}`}>
+                          {polo.nome}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                          {polo.nome.toLowerCase().includes('matriz') ? 'Sede Central' : 'Filial'}
+                        </p>
+                      </div>
+                    </div>
+                    {isSelected ? (
+                      <CheckCircle2 className="text-purple-600" size={18} />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-slate-200" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={handlePoloConfirm}
+                className="w-full bg-gradient-to-r from-purple-600 to-[#001a33] hover:shadow-lg hover:shadow-purple-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 group transform active:scale-[0.98]"
+              >
+                <span>Confirmar e Acessar</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+              
+              <button
+                onClick={() => setLoginStep('credentials')}
+                className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center"
+              >
+                Voltar para Login
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

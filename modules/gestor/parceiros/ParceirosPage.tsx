@@ -18,6 +18,7 @@ import ParceiroPJDetalhes from './components/viewparceiros/pj/ParceiroPJDetalhes
 import ParceiroPFDetalhes from './components/viewparceiros/pf/ParceiroPFDetalhes';
 import ParceirosExportModal from './components/export/ParceirosExportModal';
 import { parceirosService } from './parceiros.service';
+import ToastNotification, { useToast } from './components/shared/ToastNotification';
 
 type TabType = 'todos' | 'professores' | 'alunos' | 'pj' | 'pf';
 
@@ -30,6 +31,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   const [showForm, setShowForm] = useState<'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(activeTabInicial);
+  const { toasts, removeToast, toast } = useToast();
 
   React.useEffect(() => {
     setActiveTab(activeTabInicial);
@@ -89,55 +91,51 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         setCreatedAlunoNome(created.nome);
         setShowEnrollmentModalForAlunoId(created.id);
       } else {
-        alert('Aluno cadastrado com sucesso!');
+        toast.success('Aluno cadastrado!', `${created.nome} foi registrado com sucesso.`);
       }
       setShowForm(null);
     },
-    onError: (err: any) => {
-      alert('Erro ao salvar aluno. Verifique se o CPF já está cadastrado.');
-      console.error(err);
+    onError: () => {
+      toast.error('Erro ao salvar aluno', 'Verifique se o CPF já está cadastrado.');
     }
   });
 
   const saveProfessorMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'Professor' }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-      alert('Professor cadastrado com sucesso!');
+      toast.success('Professor cadastrado!', `${created.nome} foi registrado com sucesso.`);
       setShowForm(null);
     },
-    onError: (err: any) => {
-      alert('Erro ao salvar professor. Verifique se o CPF já está cadastrado.');
-      console.error(err);
+    onError: () => {
+      toast.error('Erro ao salvar professor', 'Verifique se o CPF já está cadastrado.');
     }
   });
 
   const savePFMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PF' }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-      alert('Parceiro Pessoa Física cadastrado com sucesso!');
+      toast.success('Parceiro PF cadastrado!', `${created.nome} foi registrado com sucesso.`);
       setShowForm(null);
     },
-    onError: (err: any) => {
-      alert('Erro ao salvar parceiro Pessoa Física.');
-      console.error(err);
+    onError: () => {
+      toast.error('Erro ao salvar parceiro', 'Verifique os dados e tente novamente.');
     }
   });
 
   const savePJMutation = useMutation({
     mutationFn: (data: any) => parceirosService.create({ ...data, tipo: 'PJ' }),
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-      alert('Parceiro Pessoa Jurídica cadastrado com sucesso!');
+      toast.success('Parceiro PJ cadastrado!', `${created.nome} foi registrado com sucesso.`);
       setShowForm(null);
     },
-    onError: (err: any) => {
-      alert('Erro ao salvar parceiro Pessoa Jurídica.');
-      console.error(err);
+    onError: () => {
+      toast.error('Erro ao salvar parceiro', 'Verifique os dados e tente novamente.');
     }
   });
 
@@ -149,11 +147,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       setShowEnrollmentModalForAlunoId(null);
       setSelectedTurmaIdForEnrollment('');
-      alert('Matrícula efetuada com sucesso!');
+      toast.success('Matrícula efetuada!', `${createdAlunoNome} foi matriculado(a) com sucesso.`);
     },
-    onError: (err: any) => {
-      alert('Erro ao realizar matrícula.');
-      console.error(err);
+    onError: () => {
+      toast.error('Erro na matrícula', 'Não foi possível realizar a matrícula.');
     }
   });
 
@@ -433,6 +430,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
 
   return (
     <div className="animate-fadeIn pb-12">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Header da Página com Design Elevado */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">

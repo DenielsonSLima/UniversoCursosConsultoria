@@ -28,9 +28,12 @@ export interface Curso {
   modalidade: 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD' | 'SUPERIOR';
   carga_horaria: number;
   status: 'ativo' | 'inativo';
-  area: string;
-  descricao: string;
-  versao: string;
+  area?: string;
+  descricao?: string;
+  versao?: string;
+  parceiro_instituicao?: string;
+  parceiro_logo_url?: string;
+  imagem_url?: string;
   created_at?: string;
   modulos?: Modulo[];
 }

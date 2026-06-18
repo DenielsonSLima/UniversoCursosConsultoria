@@ -1,7 +1,8 @@
 // File: modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDados.tsx
 
 import React, { useState } from 'react';
-import { User, Camera, MapPin, Phone, Mail, Edit2, Save, X } from 'lucide-react';
+import { User, Camera, MapPin, Phone, Mail, Edit2, Save, X, Upload, Loader2 } from 'lucide-react';
+import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 
 interface ParceiroAlunoDadosProps {
   aluno: any;
@@ -11,6 +12,21 @@ interface ParceiroAlunoDadosProps {
 const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange }) => {
   const [formData, setFormData] = useState(aluno);
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const url = await empresasService.uploadLogo(file);
+      setFormData((prev: any) => ({ ...prev, foto: url }));
+    } catch (err: any) {
+      alert('Erro ao enviar foto: ' + (err.message || err));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -92,16 +108,34 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
                     <User size={64} />
                 </div>
             )}
-            {isEditing && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+            {isEditing && !isUploadingPhoto && (
+              <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="text-white" size={32} />
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              </label>
+            )}
+            {isUploadingPhoto && (
+              <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white">
+                  <Loader2 className="animate-spin" size={32} />
               </div>
             )}
           </div>
           {isEditing && (
-            <button className="text-[10px] font-bold text-blue-600 uppercase tracking-wider hover:underline">
-              Alterar Foto
-            </button>
+            <div className="flex gap-3">
+              <label className="text-[10px] font-bold text-blue-600 uppercase tracking-wider hover:underline cursor-pointer">
+                Alterar Foto
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
+              </label>
+              {formData.foto && (
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev: any) => ({ ...prev, foto: '' }))}
+                  className="text-[10px] font-bold text-red-500 uppercase tracking-wider hover:underline"
+                >
+                  Remover
+                </button>
+              )}
+            </div>
           )}
         </div>
 

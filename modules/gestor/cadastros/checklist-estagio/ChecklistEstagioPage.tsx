@@ -1,7 +1,7 @@
 // File: modules/gestor/cadastros/checklist-estagio/ChecklistEstagioPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Save, FileText, ChevronRight, Layers, FileCheck, Plus, ClipboardCheck, Loader2, Trash2 } from 'lucide-react';
+import { Save, FileText, ChevronRight, Layers, FileCheck, Plus, ClipboardCheck, Loader2, Trash2, X } from 'lucide-react';
 import { cadastrosService } from '../cadastros.service';
 import { checklistEstagioService } from './checklist-estagio.service';
 import { Curso } from '../cadastros.types';

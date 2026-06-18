@@ -1,5 +1,8 @@
 
+// File: modules/public/components/CategoriesSection.tsx
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Sparkles } from 'lucide-react';
 import CursosLivresCard from '../categories/cursos-livres/CursosLivresCard';
 import CursosEadCard from '../categories/cursos-ead/CursosEadCard';
@@ -10,10 +13,15 @@ import EnsinoSuperiorCard from '../categories/ensino-superior/EnsinoSuperiorCard
 const CategoriesSection: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [categoryName, setCategoryName] = useState('');
+  const navigate = useNavigate();
 
   const openModal = (name: string) => {
     setCategoryName(name);
     setIsOpen(true);
+  };
+
+  const handleOpenSuperior = () => {
+    navigate('/ensino-superior');
   };
 
   return (
@@ -25,6 +33,20 @@ const CategoriesSection: React.FC = () => {
         }
         .animate-scaleIn {
           animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.03);
+          border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
         }
       `}</style>
 
@@ -44,7 +66,7 @@ const CategoriesSection: React.FC = () => {
             Cursos <span className="text-blue-400">Ofertados</span>
           </h2>
           <p className="text-blue-100 text-base max-w-2xl mx-auto font-light">
-            Soluções completas em ensino e capacitação para impulsionar seu sucesso profissional com a quality Universo.
+            Soluções completas em ensino e capacitação para impulsionar seu sucesso profissional com a qualidade Universo.
           </p>
         </div>
 
@@ -53,7 +75,7 @@ const CategoriesSection: React.FC = () => {
           <CursosEadCard />
           <EspecializacaoTecnicaCard onClick={() => openModal('Especialização Técnica')} />
           <CursosTecnicosCard onClick={() => openModal('Cursos Técnicos')} />
-          <EnsinoSuperiorCard onClick={() => openModal('Ensino Superior')} />
+          <EnsinoSuperiorCard onClick={handleOpenSuperior} />
         </div>
       </div>
 

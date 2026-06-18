@@ -56,6 +56,7 @@ const PolosConfig: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polos'] });
+      queryClient.invalidateQueries({ queryKey: ['active_polos'] });
       setIsEditing(null);
       setEditingPolo({});
     },
@@ -66,6 +67,7 @@ const PolosConfig: React.FC = () => {
     mutationFn: (id: string) => polosService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polos'] });
+      queryClient.invalidateQueries({ queryKey: ['active_polos'] });
       if (isEditing) {
         setIsEditing(null);
         setEditingPolo({});

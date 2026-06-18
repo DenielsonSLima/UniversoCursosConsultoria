@@ -1,12 +1,14 @@
 // File: modules/gestor/parceiros/components/formularioparceiros/professor/ParceiroProfessorForm.tsx
 // Formulário completo de Professor em 4 etapas (Wizard)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
   GraduationCap, Briefcase, DollarSign, ChevronRight, ChevronLeft,
-  CheckCircle2, Shield
+  CheckCircle2, Shield, Plus, Camera, Upload, Loader2
 } from 'lucide-react';
+import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroProfessorFormProps {
   onCancel?: () => void;
@@ -21,9 +23,9 @@ const STEPS = [
 ];
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const TITULACOES = ['Graduação', 'Especialização', 'Mestrado', 'Doutorado', 'Pós-Doutorado'];
+const PRESET_TITULACOES = ['GRADUAÇÃO', 'ESPECIALIZAÇÃO', 'MESTRADO', 'DOUTORADO', 'PÓS-DOUTORADO'];
 const REGISTROS = ['CRM','COREN','CRO','CRN','CRP','CRF','CREA','CRC','OAB','CREFITO','Não possui'];
-const TIPOS_VINCULO = ['CLT', 'PJ', 'Autônomo', 'Voluntário', 'Contrato'];
+const PRESET_VINCULOS = ['CLT', 'PJ', 'AUTÔNOMO', 'VOLUNTÁRIO', 'CONTRATO'];
 const BANCOS = [
   'Banco do Brasil', 'Caixa Econômica Federal', 'Bradesco', 'Itaú', 'Santander',
   'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'BTG Pactual', 'Outro'
@@ -31,10 +33,49 @@ const BANCOS = [
 
 const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [polosList, setPolosList] = useState<any[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  useEffect(() => {
+    const fetchPolos = async () => {
+      try {
+        const data = await parceirosService.getPolos();
+        setPolosList(data);
+      } catch (err) {
+        console.error('Erro ao buscar polos:', err);
+      }
+    };
+    fetchPolos();
+  }, []);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const url = await empresasService.uploadLogo(file);
+      setFormData(prev => ({ ...prev, foto: url }));
+    } catch (err: any) {
+      alert('Erro ao enviar foto: ' + (err.message || err));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  // Dynamic category states
+  const [showCustomTitulacao, setShowCustomTitulacao] = useState(false);
+  const [customTitulacao, setCustomTitulacao] = useState('');
+  const [selectedTitulacao, setSelectedTitulacao] = useState('');
+
+  const [showCustomVinculo, setShowCustomVinculo] = useState(false);
+  const [customVinculo, setCustomVinculo] = useState('');
+  const [selectedVinculo, setSelectedVinculo] = useState('');
 
   const [formData, setFormData] = useState({
     // Step 1 — Dados Pessoais
     polo: 'matriz',
+    poloIds: [] as string[],
+    foto: '',
     nomeCompleto: '',
     cpf: '',
     dataNascimento: '',
@@ -121,7 +162,13 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (onSave) onSave(formData);
+    const finalTitulacao = showCustomTitulacao ? customTitulacao.trim().toUpperCase() : selectedTitulacao;
+    const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
+    if (onSave) onSave({
+      ...formData,
+      titulacao: finalTitulacao,
+      tipoVinculo: finalVinculo,
+    });
   };
 
   const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-purple-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
@@ -181,14 +228,126 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
               <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Identificação</h4>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div>
-                <label className={labelCls}>Polo/Unidade <span className="text-red-500">*</span></label>
-                <select name="polo" value={formData.polo} onChange={handleChange} className={inputCls}>
-                  <option value="matriz">Matriz — Aracaju</option>
-                  <option value="estancia">Polo Estância</option>
-                </select>
+            {/* Foto Upload */}
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
+              <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
+                {formData.foto ? (
+                  <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400">
+                    <User size={40} />
+                  </div>
+                )}
+                {isUploadingPhoto && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                    <Loader2 size={24} className="animate-spin" />
+                  </div>
+                )}
               </div>
+              <div className="space-y-2 text-left w-full">
+                <h5 className="text-sm font-bold text-[#001a33] uppercase">Foto do Professor</h5>
+                <p className="text-xs text-slate-400">Envie uma foto recente de identificação (JPG, PNG).</p>
+                <div className="flex gap-2">
+                  <label className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-purple-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-purple-600/10">
+                    <Upload size={14} />
+                    Selecionar Foto
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
+                  </label>
+                  {formData.foto && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}
+                      className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Polo Multi-select */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5">Polos / Unidades Vinculadas (Selecione um ou mais) <span className="text-red-500">*</span></label>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {polosList.length > 0 ? (
+                  polosList.map((poloItem) => {
+                    const isSelected = formData.poloIds.includes(poloItem.id);
+                    return (
+                      <button
+                        type="button"
+                        key={poloItem.id}
+                        onClick={() => {
+                          const isAlreadySelected = formData.poloIds.includes(poloItem.id);
+                          let newPoloIds = [];
+                          if (isAlreadySelected) {
+                            newPoloIds = formData.poloIds.filter(id => id !== poloItem.id);
+                          } else {
+                            newPoloIds = [...formData.poloIds, poloItem.id];
+                          }
+                          const firstPolo = newPoloIds[0] || '';
+                          const poloKey = firstPolo === '44444444-4444-4444-4444-444444444444' 
+                            ? 'matriz' 
+                            : (firstPolo === '55555555-5555-5555-5555-555555555555' ? 'estancia' : 'matriz');
+                          
+                          setFormData(prev => ({
+                            ...prev,
+                            poloIds: newPoloIds,
+                            polo: poloKey
+                          }));
+                        }}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                          isSelected
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-600/10'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {poloItem.nome}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isAlreadySelected = formData.poloIds.includes('44444444-4444-4444-4444-444444444444');
+                        let newPoloIds = isAlreadySelected 
+                          ? formData.poloIds.filter(id => id !== '44444444-4444-4444-4444-444444444444')
+                          : [...formData.poloIds, '44444444-4444-4444-4444-444444444444'];
+                        setFormData(prev => ({ ...prev, poloIds: newPoloIds, polo: 'matriz' }));
+                      }}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                        formData.poloIds.includes('44444444-4444-4444-4444-444444444444')
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      Matriz — Aracaju
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const isAlreadySelected = formData.poloIds.includes('55555555-5555-5555-5555-555555555555');
+                        let newPoloIds = isAlreadySelected 
+                          ? formData.poloIds.filter(id => id !== '55555555-5555-5555-5555-555555555555')
+                          : [...formData.poloIds, '55555555-5555-5555-5555-555555555555'];
+                        setFormData(prev => ({ ...prev, poloIds: newPoloIds, polo: 'estancia' }));
+                      }}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                        formData.poloIds.includes('55555555-5555-5555-5555-555555555555')
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      Polo Estância
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
               <div className="md:col-span-2">
                 <label className={labelCls}>Nome Completo <span className="text-red-500">*</span></label>
@@ -245,10 +404,34 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className={labelCls}>Titulação <span className="text-red-500">*</span></label>
-                <select name="titulacao" value={formData.titulacao} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione a titulação...</option>
-                  {TITULACOES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  {!showCustomTitulacao ? (
+                    <select
+                      value={selectedTitulacao}
+                      onChange={(e) => setSelectedTitulacao(e.target.value)}
+                      className={`${inputCls} flex-grow`}
+                    >
+                      <option value="">Selecione a titulação...</option>
+                      {PRESET_TITULACOES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customTitulacao}
+                      onChange={(e) => setCustomTitulacao(e.target.value.toUpperCase())}
+                      placeholder="EX: TECNOLÓLOGO, LICENCIATURA..."
+                      className={`${inputCls} flex-grow`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomTitulacao(!showCustomTitulacao); setCustomTitulacao(''); }}
+                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
+                    title={showCustomTitulacao ? 'Escolher da lista' : 'Informar outra titulação'}
+                  >
+                    {showCustomTitulacao ? <X size={16} /> : <Plus size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -304,21 +487,33 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
                 <label className={labelCls}>Tipo de Vínculo <span className="text-red-500">*</span></label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-1">
-                  {TIPOS_VINCULO.map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, tipoVinculo: t }))}
-                      className={`py-3 px-4 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all ${
-                        formData.tipoVinculo === t
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300'
-                      }`}
+                <div className="flex gap-2">
+                  {!showCustomVinculo ? (
+                    <select
+                      value={selectedVinculo}
+                      onChange={(e) => setSelectedVinculo(e.target.value)}
+                      className={`${inputCls} flex-grow`}
                     >
-                      {t}
-                    </button>
-                  ))}
+                      <option value="">Selecione...</option>
+                      {PRESET_VINCULOS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={customVinculo}
+                      onChange={(e) => setCustomVinculo(e.target.value.toUpperCase())}
+                      placeholder="DESCREVA O TIPO DE VÍNCULO"
+                      className={`${inputCls} flex-grow`}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomVinculo(!showCustomVinculo); setCustomVinculo(''); }}
+                    className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center shadow-sm"
+                    title={showCustomVinculo ? 'Escolher da lista' : 'Informar outro tipo de vínculo'}
+                  >
+                    {showCustomVinculo ? <X size={16} /> : <Plus size={16} />}
+                  </button>
                 </div>
               </div>
 
