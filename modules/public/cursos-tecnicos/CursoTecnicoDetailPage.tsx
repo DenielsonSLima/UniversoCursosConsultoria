@@ -12,7 +12,8 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
