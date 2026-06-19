@@ -224,6 +224,8 @@ const CursoTecnicoDetailPage: React.FC = () => {
                     src={curso.imagem_url} 
                     alt={curso.nome} 
                     className="w-full h-full object-cover rounded-2xl" 
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div className="w-full h-full bg-blue-950/40 rounded-2xl flex flex-col items-center justify-center text-blue-400/60 gap-3">
@@ -362,14 +364,14 @@ const CursoTecnicoDetailPage: React.FC = () => {
                           {/* Inserir a primeira foto de detalhe após o 2º módulo (idx === 1) */}
                           {idx === 1 && curso.imagem_detalhe_1 && (
                             <div className="bg-white border border-slate-100 p-3 rounded-[2rem] shadow-sm overflow-hidden aspect-[16/9] my-6">
-                              <img src={curso.imagem_detalhe_1} alt={`${curso.nome} - Prática`} className="w-full h-full object-cover rounded-2xl" />
+                              <img src={curso.imagem_detalhe_1} alt={`${curso.nome} - Prática`} className="w-full h-full object-cover rounded-2xl" loading="lazy" decoding="async" />
                             </div>
                           )}
 
                           {/* Inserir a segunda foto de detalhe após o 4º módulo (idx === 3), ou se for o último módulo e tiver menos que 4 módulos */}
                           {((idx === 3 && modulos.length >= 4) || (idx === modulos.length - 1 && modulos.length < 4 && idx !== 1)) && curso.imagem_detalhe_2 && (
                             <div className="bg-white border border-slate-100 p-3 rounded-[2rem] shadow-sm overflow-hidden aspect-[16/9] my-6">
-                              <img src={curso.imagem_detalhe_2} alt={`${curso.nome} - Infraestrutura`} className="w-full h-full object-cover rounded-2xl" />
+                              <img src={curso.imagem_detalhe_2} alt={`${curso.nome} - Infraestrutura`} className="w-full h-full object-cover rounded-2xl" loading="lazy" decoding="async" />
                             </div>
                           )}
                         </React.Fragment>
@@ -379,7 +381,7 @@ const CursoTecnicoDetailPage: React.FC = () => {
                     {/* Caso tenha exatamente 2 módulos, renderizamos a segunda foto após a lista */}
                     {modulos.length === 2 && curso.imagem_detalhe_2 && (
                       <div className="bg-white border border-slate-100 p-3 rounded-[2rem] shadow-sm overflow-hidden aspect-[16/9] mt-6">
-                        <img src={curso.imagem_detalhe_2} alt={`${curso.nome} - Infraestrutura`} className="w-full h-full object-cover rounded-2xl" />
+                        <img src={curso.imagem_detalhe_2} alt={`${curso.nome} - Infraestrutura`} className="w-full h-full object-cover rounded-2xl" loading="lazy" decoding="async" />
                       </div>
                     )}
                   </div>

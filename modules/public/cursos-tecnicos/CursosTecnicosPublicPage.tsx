@@ -218,7 +218,13 @@ const CursosTecnicosPublicPage: React.FC = () => {
                           {/* Imagem de Capa do Curso */}
                           <div className="h-44 w-full bg-slate-50 rounded-2xl overflow-hidden mb-4 border border-slate-100 shrink-0 flex items-center justify-center relative">
                             {curso.imagem_url ? (
-                              <img src={curso.imagem_url} alt={curso.nome} className="w-full h-full object-cover" />
+                              <img 
+                                src={curso.imagem_url} 
+                                alt={curso.nome} 
+                                className="w-full h-full object-cover" 
+                                loading="lazy" 
+                                decoding="async" 
+                              />
                             ) : (
                               <div className="w-full h-full bg-blue-50/50 flex flex-col items-center justify-center text-blue-600 gap-2">
                                 <Briefcase size={36} className="opacity-40" />
