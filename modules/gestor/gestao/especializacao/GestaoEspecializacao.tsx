@@ -3,15 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Award, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaEspecializacaoForm from '../components/forms/TurmaEspecializacaoForm';
+import TurmaEspecializacaoDetalhes from './detalhes/TurmaEspecializacaoDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
 import { cursosEspecializacaoService } from '../../cadastros/cursos-especializacao/cursos-especializacao.service';
 
-const GestaoEspecializacao: React.FC = () => {
+interface GestaoEspecializacaoProps {
+  onToggleDetails?: (isOpen: boolean) => void;
+}
+
+const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails }) => {
   const [activeSubTab, setActiveSubTab] = useState<'andamento' | 'finalizadas'>('andamento');
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
   useEffect(() => {
     loadData();
@@ -32,6 +38,25 @@ const GestaoEspecializacao: React.FC = () => {
   const filteredTurmas = turmas.filter(t => 
     activeSubTab === 'andamento' ? t.status === 'EM_ANDAMENTO' : t.status === 'FINALIZADA'
   );
+
+  const handleSelectTurma = (turma: Turma) => {
+    setSelectedTurma(turma);
+    if (onToggleDetails) onToggleDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedTurma(null);
+    if (onToggleDetails) onToggleDetails(false);
+  };
+
+  if (selectedTurma) {
+    return (
+      <TurmaEspecializacaoDetalhes 
+        turma={selectedTurma} 
+        onBack={handleCloseDetails} 
+      />
+    );
+  }
 
   return (
     <div className="animate-fadeIn">
@@ -84,7 +109,9 @@ const GestaoEspecializacao: React.FC = () => {
             </div>
         ) : (
             filteredTurmas.map(turma => (
-                <TurmaCard key={turma.id} turma={turma} colorTheme="rose" />
+                <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
+                  <TurmaCard turma={turma} colorTheme="rose" />
+                </div>
             ))
         )}
       </div>

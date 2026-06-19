@@ -8,19 +8,23 @@ interface EventModalProps {
   onClose: () => void;
   selectedDate: Date;
   eventsOnDate: CalendarEvent[];
-  eventTypes: EventType[]; // Tipos passados via props
+  eventTypes: EventType[];
+  teachers: any[];
+  turmas: any[];
   onAddEvent: (event: any) => void;
   onDeleteEvent: (id: string) => void;
 }
 
 const EventModal: React.FC<EventModalProps> = ({ 
-  isOpen, onClose, selectedDate, eventsOnDate, eventTypes, onAddEvent, onDeleteEvent 
+  isOpen, onClose, selectedDate, eventsOnDate, eventTypes, teachers, turmas, onAddEvent, onDeleteEvent 
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    typeId: '' // ID do tipo selecionado
+    typeId: '',
+    professorId: '',
+    turmaId: ''
   });
 
   if (!isOpen) return null;
@@ -36,11 +40,13 @@ const EventModal: React.FC<EventModalProps> = ({
 
     onAddEvent({
       ...formData,
-      date: dateStr
+      date: dateStr,
+      professorId: formData.professorId || null,
+      turmaId: formData.turmaId || null
     });
     
     // Reset
-    setFormData({ title: '', description: '', typeId: '' });
+    setFormData({ title: '', description: '', typeId: '', professorId: '', turmaId: '' });
     setShowForm(false);
   };
 
@@ -79,6 +85,9 @@ const EventModal: React.FC<EventModalProps> = ({
 
           {eventsOnDate.map(event => {
             const typeInfo = getTypeInfo(event.typeId);
+            const teacherObj = teachers.find(t => t.id === event.professorId);
+            const turmaObj = turmas.find(t => t.id === event.turmaId);
+
             return (
                 <div key={event.id} className="p-4 rounded-xl border border-slate-100 bg-white shadow-sm flex items-start gap-3 group hover:border-slate-300 transition-all">
                 <div 
@@ -87,17 +96,32 @@ const EventModal: React.FC<EventModalProps> = ({
                 />
                 <div className="flex-1">
                     <h4 className="text-sm font-bold text-[#001a33]">{event.title}</h4>
-                    <p className="text-xs text-slate-500 mt-1">{event.description || 'Sem descrição'}</p>
-                    <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 px-2 py-0.5 rounded">
-                        {typeInfo.label}
-                    </span>
+                    <p className="text-xs text-slate-505 mt-1 text-slate-500">{event.description || 'Sem descrição'}</p>
+                    
+                    <div className="flex flex-wrap gap-1 mt-2">
+                        <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-slate-550 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                            {typeInfo.label}
+                        </span>
+                        {teacherObj && (
+                            <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                Prof: {teacherObj.nome}
+                            </span>
+                        )}
+                        {turmaObj && (
+                            <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                Turma: {turmaObj.nome}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <button 
-                    onClick={() => onDeleteEvent(event.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all"
-                >
-                    <Trash2 size={16} />
-                </button>
+                {!event.id.startsWith('class-') && (
+                  <button 
+                      onClick={() => onDeleteEvent(event.id)}
+                      className="opacity-0 group-hover:opacity-100 p-2 text-slate-350 hover:text-red-500 transition-all"
+                  >
+                      <Trash2 size={16} />
+                  </button>
+                )}
                 </div>
             );
           })}
@@ -105,17 +129,20 @@ const EventModal: React.FC<EventModalProps> = ({
 
         {/* Formulário */}
         {showForm ? (
-          <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 animate-fadeIn">
+          <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 animate-fadeIn overflow-y-auto max-h-[50vh] custom-scrollbar">
             <div className="space-y-3">
-              <input 
-                type="text" 
-                placeholder="Título da Observação"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-[#001a33] outline-none focus:border-blue-500 bg-white"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                autoFocus
-                required
-              />
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Título</label>
+                <input 
+                  type="text" 
+                  placeholder="Título da Observação"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold text-[#001a33] outline-none focus:border-blue-500 bg-white"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  autoFocus
+                  required
+                />
+              </div>
               
               {/* Seleção de Tipo Dinâmico */}
               <div className="space-y-1">
@@ -142,14 +169,47 @@ const EventModal: React.FC<EventModalProps> = ({
                 </div>
               </div>
 
-              <textarea 
-                placeholder="Detalhes adicionais..."
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 outline-none focus:border-blue-500 resize-none h-20 bg-white"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-              />
+              {/* Turma Dropdown (Opcional) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Turma (Opcional)</label>
+                <select
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 bg-white cursor-pointer"
+                  value={formData.turmaId}
+                  onChange={(e) => setFormData({...formData, turmaId: e.target.value})}
+                >
+                  <option value="">-- Nenhuma (Geral) --</option>
+                  {turmas.map(t => (
+                    <option key={t.id} value={t.id}>{t.nome} ({t.codigo})</option>
+                  ))}
+                </select>
+              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {/* Professor Dropdown (Opcional) */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Professor (Opcional)</label>
+                <select
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 bg-white cursor-pointer"
+                  value={formData.professorId}
+                  onChange={(e) => setFormData({...formData, professorId: e.target.value})}
+                >
+                  <option value="">-- Nenhum (Geral) --</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Detalhes</label>
+                <textarea 
+                  placeholder="Detalhes adicionais..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-600 outline-none focus:border-blue-500 resize-none h-16 bg-white"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button 
                   type="button" 
                   onClick={() => setShowForm(false)}
@@ -175,7 +235,6 @@ const EventModal: React.FC<EventModalProps> = ({
             <Plus size={16} /> Adicionar Observação
           </button>
         )}
-
       </div>
     </div>
   );

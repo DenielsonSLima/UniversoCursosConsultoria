@@ -1,25 +1,53 @@
-import React from 'react';
-import { Briefcase, Save } from 'lucide-react';
+// File: modules/gestor/cadastros/modelos-documentos/estagio/EstagioPage.tsx
+
+import React, { useState } from 'react';
+import { Briefcase } from 'lucide-react';
+import EstagioList from './components/EstagioList';
+import EstagioEditor from './components/EstagioEditor';
+import EstagioQrConfig from './components/EstagioQrConfig';
 
 const EstagioPage: React.FC = () => {
+  const [selectedPolo, setSelectedPolo] = useState<any | null>(null);
+  const [isConfiguringQr, setIsConfiguringQr] = useState(false);
+
+  // Se estiver configurando QR Code
+  if (isConfiguringQr) {
+    return <EstagioQrConfig onBack={() => setIsConfiguringQr(false)} />;
+  }
+
+  // Se um polo foi selecionado para edição
+  if (selectedPolo) {
+    return (
+      <EstagioEditor 
+        polo={selectedPolo} 
+        onBack={() => setSelectedPolo(null)} 
+      />
+    );
+  }
+
+  // Visualização padrão (Lista)
   return (
-    <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fadeIn">
-      <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-6">
-        <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl">
-          <Briefcase size={32} />
-        </div>
+    <div className="animate-fadeIn">
+      {/* Header Comum */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
-          <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Termo de Estágio</h3>
-          <p className="text-slate-500 text-sm">Contratos e planos de atividades para estagiários.</p>
+            <div className="flex items-center gap-2 mb-2 text-teal-600">
+                <Briefcase size={20} />
+                <span className="text-xs font-bold uppercase tracking-[0.2em]">Modelos de Documentos</span>
+            </div>
+            <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">
+                Termo de Estágio
+            </h2>
+            <p className="text-slate-500 font-medium mt-1">
+                Configure os modelos de termo de compromisso de estágio supervisionado para cada unidade.
+            </p>
         </div>
       </div>
 
-      <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-        <p className="text-slate-500 font-bold mb-4">Cláusulas e campos do contrato de estágio...</p>
-        <button className="px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider flex items-center gap-2 mx-auto">
-          <Save size={16} /> Salvar Modelo
-        </button>
-      </div>
+      <EstagioList 
+        onSelectPolo={setSelectedPolo} 
+        onConfigureQr={() => setIsConfiguringQr(true)}
+      />
     </div>
   );
 };

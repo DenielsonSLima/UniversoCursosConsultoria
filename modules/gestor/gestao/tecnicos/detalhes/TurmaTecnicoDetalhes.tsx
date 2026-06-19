@@ -1,7 +1,7 @@
 
 // File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign, Activity } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
@@ -10,6 +10,7 @@ import TurmaGrade from './components/TurmaGrade';
 import TurmaDiarios from './components/diarios/TurmaDiarios';
 import TurmaFinanceiro from './components/TurmaFinanceiro';
 import TurmaConfiguracoes from './components/TurmaConfiguracoes';
+import TurmaEstagio from './components/TurmaEstagio';
 
 interface TurmaTecnicoDetalhesProps {
   turma: Turma;
@@ -19,11 +20,16 @@ interface TurmaTecnicoDetalhesProps {
 const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBack }) => {
   const [activeTab, setActiveTab] = useState('resumo');
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [turma.id]);
+
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <PieChart size={18} /> },
     { id: 'alunos', label: 'Alunos', icon: <Users size={18} /> },
     { id: 'grade', label: 'Grade & Profs', icon: <BookOpen size={18} /> },
     { id: 'diarios', label: 'Diários', icon: <Book size={18} /> },
+    { id: 'estagio', label: 'Estágio', icon: <Activity size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
   ];
@@ -34,6 +40,7 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
       case 'alunos': return <TurmaAlunos turma={turma} />;
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'diarios': return <TurmaDiarios turma={turma} />;
+      case 'estagio': return <TurmaEstagio turma={turma} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;
       default: return null;

@@ -1,26 +1,110 @@
 
 // File: modules/gestor/secretaria/alunos/SecretariaAlunosPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, User, DollarSign, FileText, GraduationCap, X } from 'lucide-react';
-
-// Mock Data
-const MOCK_ALUNOS = [
-  { id: '1', nome: 'Ana Clara Souza', matricula: '2024001', curso: 'Técnico em Enfermagem', status: 'Ativo' },
-  { id: '2', nome: 'João Pedro Alves', matricula: '2024002', curso: 'Técnico em Radiologia', status: 'Inadimplente' },
-  { id: '3', nome: 'Maria Eduarda Costa', matricula: '2024003', curso: 'Especialização Instr. Cirúrgica', status: 'Ativo' },
-];
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../../../lib/supabase';
 
 const SecretariaAlunosPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'geral' | 'financeiro' | 'academico'>('geral');
+  const queryClient = useQueryClient();
 
-  const filteredAlunos = searchTerm 
-    ? MOCK_ALUNOS.filter(a => a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || a.matricula.includes(searchTerm))
-    : [];
+  const { data: filteredAlunos = [], isLoading: isSearching } = useQuery({
+    queryKey: ['secretaria-alunos-search', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm) return [];
+      const { data, error } = await supabase
+        .from('parceiros')
+        .select('*, polos(nome)')
+        .eq('tipo', 'Aluno')
+        .or(`nome.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`)
+        .order('nome', { ascending: true });
+      
+      if (error) {
+        console.error('Erro ao buscar alunos:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: searchTerm.length >= 2,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery({
+    queryKey: ['aluno-matriculas', selectedAluno?.id],
+    queryFn: async () => {
+      if (!selectedAluno?.id) return [];
+      const { data, error } = await supabase
+        .from('matriculas')
+        .select('*, turmas(*, cursos(*), polos(nome))')
+        .eq('aluno_id', selectedAluno.id);
+      
+      if (error) {
+        console.error('Erro ao buscar matrículas do aluno:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: !!selectedAluno?.id,
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('secretaria-alunos-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'parceiros' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['secretaria-alunos-search'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matriculas' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['aluno-matriculas'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const formatBrDate = (dateStr?: string) => {
+    if (!dateStr) return 'Não informado';
+    const clean = dateStr.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+
+  // Obter cronograma financeiro da primeira matrícula
+  const cronograma = matriculas[0]?.turmas?.cronograma_financeiro || [];
+  
+  // Próximo vencimento no cronograma
+  const nextInstallment = Array.isArray(cronograma) 
+    ? cronograma
+        .filter((item: any) => {
+          if (!item.dataVencimento) return false;
+          const cleanDate = item.dataVencimento.split('T')[0];
+          return new Date(cleanDate) >= new Date(new Date().setHours(0, 0, 0, 0));
+        })
+        .sort((a: any, b: any) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime())[0]
+    : null;
+
+  const proximoVencimento = nextInstallment 
+    ? formatBrDate(nextInstallment.dataVencimento)
+    : 'Nenhum';
 
   if (selectedAluno) {
+    const cursoNome = matriculas[0]?.turmas?.cursos?.nome || 'Nenhum curso registrado';
+    const matriculaFormatada = matriculas[0]?.id ? matriculas[0].id.substring(0, 8).toUpperCase() : 'Não gerada';
+
     return (
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden animate-fadeIn min-h-[600px]">
         {/* Profile Header */}
@@ -32,10 +116,10 @@ const SecretariaAlunosPage: React.FC = () => {
             <div>
                 <h3 className="text-2xl font-black text-[#001a33]">{selectedAluno.nome}</h3>
                 <p className="text-slate-500 font-bold uppercase text-xs tracking-wider mt-1">
-                    Matrícula: {selectedAluno.matricula} • <span className={selectedAluno.status === 'Ativo' ? 'text-emerald-600' : 'text-red-500'}>{selectedAluno.status}</span>
+                    Matrícula: {matriculaFormatada} • <span className={selectedAluno.status === 'ATIVO' ? 'text-emerald-600' : 'text-red-500'}>{selectedAluno.status}</span>
                 </p>
                 <div className="flex items-center gap-2 mt-3">
-                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{selectedAluno.curso}</span>
+                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{cursoNome}</span>
                 </div>
             </div>
           </div>
@@ -78,19 +162,19 @@ const SecretariaAlunosPage: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">CPF</p>
-                                <p className="text-slate-700 font-medium">000.000.000-00</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.cpf_cnpj || 'Não informado'}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Identidade (CIN/CNH)</p>
-                                <p className="text-slate-700 font-medium">00.000.000-0</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.rg || 'Não informado'}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Data Nasc.</p>
-                                <p className="text-slate-700 font-medium">01/01/2000</p>
+                                <p className="text-slate-700 font-medium">{formatBrDate(selectedAluno.data_nascimento)}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Sexo</p>
-                                <p className="text-slate-700 font-medium">Feminino</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.sexo || 'Não informado'}</p>
                             </div>
                         </div>
                     </div>
@@ -99,15 +183,15 @@ const SecretariaAlunosPage: React.FC = () => {
                         <div className="space-y-3 text-sm">
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">E-mail</p>
-                                <p className="text-slate-700 font-medium">aluno@email.com</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.email || 'Não informado'}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Telefone</p>
-                                <p className="text-slate-700 font-medium">(79) 99999-9999</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.telefone || 'Não informado'}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Endereço</p>
-                                <p className="text-slate-700 font-medium">Rua Principal, 123, Centro - Japoatã/SE</p>
+                                <p className="text-slate-700 font-medium">{selectedAluno.endereco || 'Não informado'}</p>
                             </div>
                         </div>
                     </div>
@@ -123,51 +207,71 @@ const SecretariaAlunosPage: React.FC = () => {
                         </div>
                         <div className="flex-1 bg-white border border-slate-200 p-4 rounded-xl">
                             <p className="text-slate-400 text-xs font-bold uppercase">Próximo Vencimento</p>
-                            <p className="text-2xl font-black text-[#001a33]">10/04</p>
+                            <p className="text-2xl font-black text-[#001a33]">{proximoVencimento}</p>
                         </div>
                     </div>
-                    <table className="w-full text-left border border-slate-100 rounded-xl overflow-hidden">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th className="p-3 text-xs font-bold text-slate-500 uppercase">Referência</th>
-                                <th className="p-3 text-xs font-bold text-slate-500 uppercase">Vencimento</th>
-                                <th className="p-3 text-xs font-bold text-slate-500 uppercase">Valor</th>
-                                <th className="p-3 text-xs font-bold text-slate-500 uppercase">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            <tr>
-                                <td className="p-3 text-sm text-slate-700">Mensalidade 03/2024</td>
-                                <td className="p-3 text-sm text-slate-700">10/03/2024</td>
-                                <td className="p-3 text-sm text-slate-700">R$ 350,00</td>
-                                <td className="p-3"><span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase">Pago</span></td>
-                            </tr>
-                            <tr>
-                                <td className="p-3 text-sm text-slate-700">Mensalidade 04/2024</td>
-                                <td className="p-3 text-sm text-slate-700">10/04/2024</td>
-                                <td className="p-3 text-sm text-slate-700">R$ 350,00</td>
-                                <td className="p-3"><span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold uppercase">Aberto</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    
+                    {Array.isArray(cronograma) && cronograma.length > 0 ? (
+                      <table className="w-full text-left border border-slate-100 rounded-xl overflow-hidden">
+                          <thead className="bg-slate-50">
+                              <tr>
+                                  <th className="p-3 text-xs font-bold text-slate-500 uppercase">Referência</th>
+                                  <th className="p-3 text-xs font-bold text-slate-500 uppercase">Vencimento</th>
+                                  <th className="p-3 text-xs font-bold text-slate-500 uppercase">Valor</th>
+                                  <th className="p-3 text-xs font-bold text-slate-500 uppercase">Status</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                              {cronograma.map((item: any, index: number) => {
+                                  const itemDate = item.dataVencimento ? item.dataVencimento.split('T')[0] : '';
+                                  const isPago = itemDate ? new Date(itemDate) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
+                                  return (
+                                      <tr key={item.id || index}>
+                                          <td className="p-3 text-sm text-slate-700">{item.label}</td>
+                                          <td className="p-3 text-sm text-slate-700">{formatBrDate(item.dataVencimento)}</td>
+                                          <td className="p-3 text-sm text-slate-700">R$ {Number(item.valor || 0).toFixed(2)}</td>
+                                          <td className="p-3">
+                                              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${isPago ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                  {isPago ? 'Pago' : 'Aberto'}
+                                              </span>
+                                          </td>
+                                      </tr>
+                                  );
+                              })}
+                          </tbody>
+                      </table>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400 border border-slate-100 rounded-xl">
+                          Nenhum cronograma financeiro configurado para a turma deste aluno.
+                      </div>
+                    )}
                 </div>
             )}
 
             {activeTab === 'academico' && (
                 <div className="animate-fadeIn">
                     <h4 className="text-sm font-black text-[#001a33] uppercase mb-4">Histórico de Turmas</h4>
-                    <div className="space-y-3">
-                        <div className="p-4 border border-slate-200 rounded-xl flex justify-between items-center bg-slate-50">
-                            <div>
-                                <p className="font-bold text-[#001a33] text-sm">Turma 2024.1 - Enfermagem Noturno</p>
-                                <p className="text-xs text-slate-500">Status: Cursando</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Frequência</p>
-                                <p className="font-black text-blue-600">92%</p>
-                            </div>
-                        </div>
-                    </div>
+                    
+                    {matriculas.length > 0 ? (
+                      <div className="space-y-3">
+                          {matriculas.map((m: any) => (
+                              <div key={m.id} className="p-4 border border-slate-200 rounded-xl flex justify-between items-center bg-slate-50">
+                                  <div>
+                                      <p className="font-bold text-[#001a33] text-sm">{m.turmas?.nome || 'Turma Sem Nome'}</p>
+                                      <p className="text-xs text-slate-500">Status: {m.status || 'ATIVO'}</p>
+                                  </div>
+                                  <div className="text-right">
+                                      <p className="text-xs font-bold text-slate-400 uppercase">Frequência</p>
+                                      <p className="font-black text-blue-600">100%</p>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400 border border-slate-100 rounded-xl">
+                          Nenhuma matrícula ativa registrada.
+                      </div>
+                    )}
                     
                     <div className="mt-8 flex gap-3">
                         <button className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 uppercase hover:bg-slate-50 flex items-center gap-2">
@@ -203,10 +307,14 @@ const SecretariaAlunosPage: React.FC = () => {
             />
         </div>
 
-        {searchTerm && (
+        {searchTerm && searchTerm.length >= 2 && (
             <div className="max-w-2xl mx-auto text-left space-y-3 animate-fadeIn">
-                {filteredAlunos.length > 0 ? (
-                    filteredAlunos.map(aluno => (
+                {isSearching ? (
+                    <div className="text-center py-8 text-slate-400">
+                        Buscando alunos...
+                    </div>
+                ) : filteredAlunos.length > 0 ? (
+                    filteredAlunos.map((aluno: any) => (
                         <div 
                             key={aluno.id}
                             onClick={() => setSelectedAluno(aluno)}
@@ -218,10 +326,10 @@ const SecretariaAlunosPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-[#001a33] text-sm group-hover:text-blue-700">{aluno.nome}</h4>
-                                    <p className="text-xs text-slate-500">{aluno.curso} • Matr: {aluno.matricula}</p>
+                                    <p className="text-xs text-slate-500">CPF: {aluno.cpf_cnpj || 'Não informado'} • Contato: {aluno.telefone || 'Não informado'}</p>
                                 </div>
                             </div>
-                            <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full ${aluno.status === 'Ativo' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                            <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full ${aluno.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                                 {aluno.status}
                             </span>
                         </div>

@@ -1,8 +1,11 @@
 
 // File: modules/gestor/gestao/GestaoPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Briefcase, Zap, Award, MonitorPlay, Activity, Users, BookOpen } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { gestaoService } from './gestao.service';
+import { supabase } from '../../../lib/supabase';
 import GestaoTecnicos from './tecnicos/GestaoTecnicos';
 import GestaoLivres from './livres/GestaoLivres';
 import GestaoEspecializacao from './especializacao/GestaoEspecializacao';
@@ -11,6 +14,37 @@ import GestaoEad from './ead/GestaoEad';
 const GestaoPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tecnicos' | 'livres' | 'especializacao' | 'ead'>('tecnicos');
   const [isDetailView, setIsDetailView] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: kpis } = useQuery({
+    queryKey: ['gestao-kpis'],
+    queryFn: gestaoService.getGestaoKpis,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('gestao-kpis-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'turmas' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matriculas' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const tabs = [
     { id: 'tecnicos', label: 'Cursos Técnicos', icon: <Briefcase size={18} /> },
@@ -40,18 +74,18 @@ const GestaoPage: React.FC = () => {
                   </div>
                   <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-2">Gestão de Turmas</h2>
                   <p className="text-blue-200 font-medium max-w-lg text-sm leading-relaxed">
-                    Acompanhamento operacional das turmas, histórico acadêmico, controle de vagas, notas, presenças e relatórios financeiros por núcleo.
+                    Acompanhamento operational das turmas, histórico acadêmico, controle de vagas, notas, presenças e relatórios financeiros por núcleo.
                   </p>
                 </div>
                 
                 <div className="flex gap-4">
                   <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col gap-1 min-w-[120px]">
                      <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> Turmas Ativas</span>
-                     <span className="text-3xl font-black text-white">42</span>
+                     <span className="text-3xl font-black text-white">{kpis?.activeTurmas ?? 0}</span>
                   </div>
                   <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col gap-1 min-w-[120px]">
                      <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><BookOpen size={12} /> Matrículas</span>
-                     <span className="text-3xl font-black text-emerald-400">1.2k</span>
+                     <span className="text-3xl font-black text-emerald-400">{kpis?.activeMatriculas ?? 0}</span>
                   </div>
                 </div>
              </div>
@@ -82,8 +116,12 @@ const GestaoPage: React.FC = () => {
         {activeTab === 'tecnicos' && (
           <GestaoTecnicos onToggleDetails={setIsDetailView} />
         )}
-        {activeTab === 'livres' && <GestaoLivres />}
-        {activeTab === 'especializacao' && <GestaoEspecializacao />}
+        {activeTab === 'livres' && (
+          <GestaoLivres onToggleDetails={setIsDetailView} />
+        )}
+        {activeTab === 'especializacao' && (
+          <GestaoEspecializacao onToggleDetails={setIsDetailView} />
+        )}
         {activeTab === 'ead' && <GestaoEad />}
       </div>
 

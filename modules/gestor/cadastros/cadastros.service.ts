@@ -232,6 +232,9 @@ export const cadastrosService = {
             id: d.id,
             nome: d.nome,
             cargaHoraria: d.carga_horaria,
+            cargaHorariaTeoria: d.carga_horaria_teoria || 0,
+            cargaHorariaPratica: d.carga_horaria_pratica || 0,
+            cargaHorariaEstagio: d.carga_horaria_estagio || 0,
             descricao: d.descricao || '',
             aulas: aulasSorted.map((a: any) => ({
               id: a.id,
@@ -281,6 +284,9 @@ export const cadastrosService = {
             modulo_id: insertedModulo.id,
             nome: disc.nome,
             carga_horaria: disc.cargaHoraria,
+            carga_horaria_teoria: disc.cargaHorariaTeoria || 0,
+            carga_horaria_pratica: disc.cargaHorariaPratica || 0,
+            carga_horaria_estagio: disc.cargaHorariaEstagio || 0,
             descricao: disc.descricao || ''
           })
           .select()

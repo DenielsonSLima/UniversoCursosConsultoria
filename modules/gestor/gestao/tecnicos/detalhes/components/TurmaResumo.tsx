@@ -65,17 +65,30 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
         const { data: aulasData } = await supabase
           .from('aulas_turma')
           .select('*, disciplinas(nome)')
-          .eq('turma_id', turma.id)
-          .order('created_at', { ascending: false })
-          .limit(3);
+          .eq('turma_id', turma.id);
 
-        const mappedAulas = (aulasData || []).map((a: any) => ({
-          id: a.id,
-          titulo: a.titulo,
-          disciplinaNome: a.disciplinas?.nome || 'Disciplina Geral',
-          cargaHoraria: parseFloat(a.carga_horaria),
-          dataLabel: a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).toUpperCase() : 'AULA'
-        }));
+        // Ordenar por data_aula DESC (mais recente primeiro), fallback para created_at DESC
+        const sortedAulas = (aulasData || [])
+          .sort((a: any, b: any) => {
+            if (a.data_aula && b.data_aula) return b.data_aula.localeCompare(a.data_aula);
+            if (a.data_aula) return -1;
+            if (b.data_aula) return 1;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          })
+          .slice(0, 3);
+
+        const mappedAulas = sortedAulas.map((a: any) => {
+          const dateToUse = a.data_aula ? new Date(a.data_aula + 'T00:00:00') : (a.created_at ? new Date(a.created_at) : null);
+          return {
+            id: a.id,
+            titulo: a.titulo,
+            disciplinaNome: a.disciplinas?.nome || 'Disciplina Geral',
+            cargaHoraria: parseFloat(a.carga_horaria),
+            dataLabel: dateToUse 
+              ? dateToUse.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).toUpperCase()
+              : 'AULA'
+          };
+        });
         setAulasSemana(mappedAulas);
 
       } catch (err) {

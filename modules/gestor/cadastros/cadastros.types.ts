@@ -11,6 +11,9 @@ export interface Disciplina {
   id: string;
   nome: string;
   cargaHoraria: number;
+  cargaHorariaTeoria?: number;
+  cargaHorariaPratica?: number;
+  cargaHorariaEstagio?: number;
   descricao?: string;
   aulas: Aula[];
 }

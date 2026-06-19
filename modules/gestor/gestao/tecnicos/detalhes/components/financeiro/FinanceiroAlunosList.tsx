@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Download, Loader2 } from 'lucide-react';
-import { Turma } from '../../../../../gestao.types';
+import { Turma } from '../../../../gestao.types';
 import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 

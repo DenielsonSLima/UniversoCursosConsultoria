@@ -6,31 +6,86 @@ import {
   UserCheck, CheckCircle2, X, Plus, Trash2, CornerDownRight, Loader2
 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
-import { cursosTecnicosService } from '../../../../cadastros/cursos-tecnicos/cursos-tecnicos.service';
-import { CursoTecnico } from '../../../../cadastros/cursos-tecnicos/cursos-tecnicos.types';
+import { cadastrosService } from '../../../../cadastros/cadastros.service';
+import { Curso } from '../../../../cadastros/cadastros.types';
 import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 
 
 interface TurmaGradeProps {
   turma: Turma;
+  singleProfessor?: boolean;
+  colorTheme?: 'emerald' | 'amber' | 'rose';
 }
 
-const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
+const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false, colorTheme = 'emerald' }) => {
   const { toasts, removeToast, toast } = useToast();
-  const [cursoBase, setCursoBase] = useState<CursoTecnico | null>(null);
+  const [cursoBase, setCursoBase] = useState<Curso | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedDisciplines, setExpandedDisciplines] = useState<Set<string>>(new Set());
   
   // State for database data
   const [disciplinasConfig, setDisciplinasConfig] = useState<Record<string, { professor: string | null; concluida: boolean }>>({});
-  const [aulas, setAulas] = useState<Record<string, { id: string; titulo: string; cargaHoraria: number }[]>>({});
+  const [aulas, setAulas] = useState<Record<string, { id: string; titulo: string; cargaHoraria: number; dataAula?: string }[]>>({});
   const [professores, setProfessores] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getThemeColors = () => {
+    switch (colorTheme) {
+      case 'rose':
+        return {
+          text: 'text-rose-600',
+          textDark: 'text-rose-700',
+          bg: 'bg-rose-50',
+          border: 'border-rose-100',
+          focusBorder: 'focus:border-rose-500',
+          hoverBg: 'hover:bg-rose-600',
+          hoverText: 'hover:text-rose-600',
+          hoverBorder: 'hover:border-rose-300',
+          hoverBgSubtle: 'hover:bg-rose-50',
+          fill: 'bg-rose-500',
+          loader: 'text-rose-600',
+          hoverBorderDark: 'hover:border-rose-400'
+        };
+      case 'amber':
+        return {
+          text: 'text-amber-600',
+          textDark: 'text-amber-700',
+          bg: 'bg-amber-50',
+          border: 'border-amber-100',
+          focusBorder: 'focus:border-amber-500',
+          hoverBg: 'hover:bg-amber-600',
+          hoverText: 'hover:text-amber-600',
+          hoverBorder: 'hover:border-amber-300',
+          hoverBgSubtle: 'hover:bg-amber-50',
+          fill: 'bg-amber-500',
+          loader: 'text-amber-600',
+          hoverBorderDark: 'hover:border-amber-400'
+        };
+      case 'emerald':
+      default:
+        return {
+          text: 'text-emerald-600',
+          textDark: 'text-emerald-700',
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-100',
+          focusBorder: 'focus:border-emerald-500',
+          hoverBg: 'hover:bg-emerald-600',
+          hoverText: 'hover:text-emerald-600',
+          hoverBorder: 'hover:border-emerald-300',
+          hoverBgSubtle: 'hover:bg-emerald-50',
+          fill: 'bg-emerald-500',
+          loader: 'text-emerald-600',
+          hoverBorderDark: 'hover:border-emerald-400'
+        };
+    }
+  };
+  const theme = getThemeColors();
 
   // Form inputs for adding lessons
   const [newAulaTitulo, setNewAulaTitulo] = useState<Record<string, string>>({});
   const [newAulaHoras, setNewAulaHoras] = useState<Record<string, string>>({});
+  const [newAulaData, setNewAulaData] = useState<Record<string, string>>({});
 
   // Modal states
   const [showDocenteModal, setShowDocenteModal] = useState<{ isOpen: boolean; disciplinaId: string }>({ isOpen: false, disciplinaId: '' });
@@ -40,18 +95,22 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
       setLoading(true);
       try {
         // 1. Fetch Course Base
-        const cursos = await cursosTecnicosService.getAll();
-        const cursoEncontrado = cursos.find(c => c.id === turma.cursoId) || cursos[0];
-        setCursoBase(cursoEncontrado);
+        const cursoEncontrado = await cadastrosService.getCursoById(turma.cursoId);
+        const modulos = await cadastrosService.getGrade(turma.cursoId);
+        const cursoCompleto: Curso = {
+          ...cursoEncontrado,
+          modulos
+        };
+        setCursoBase(cursoCompleto);
         
-        if (cursoEncontrado) {
-          if (cursoEncontrado.modulos.length > 0) {
-            setExpandedModules(new Set([cursoEncontrado.modulos[0].id]));
+        if (cursoCompleto) {
+          if (cursoCompleto.modulos && cursoCompleto.modulos.length > 0) {
+            setExpandedModules(new Set([cursoCompleto.modulos[0].id]));
           }
 
           // Initialize defaults in local state for all disciplines
           const defaultConfigs: Record<string, { professor: string | null; concluida: boolean }> = {};
-          cursoEncontrado.modulos.forEach(mod => {
+          (cursoCompleto.modulos || []).forEach(mod => {
             mod.disciplinas.forEach(disc => {
               defaultConfigs[disc.id] = { professor: null, concluida: false };
             });
@@ -79,20 +138,30 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
           const { data: aulasData, error: aulasError } = await supabase
             .from('aulas_turma')
             .select('*')
-            .eq('turma_id', turma.id)
-            .order('created_at', { ascending: true });
+            .eq('turma_id', turma.id);
 
           if (aulasError) throw aulasError;
 
-          const dbAulas: Record<string, { id: string; titulo: string; cargaHoraria: number }[]> = {};
-          aulasData?.forEach(a => {
+          // Ordenação: data da aula (mais antiga primeiro), fallback para data de criação
+          const sortedAulasData = (aulasData || []).sort((a: any, b: any) => {
+            if (a.data_aula && b.data_aula) {
+              return a.data_aula.localeCompare(b.data_aula);
+            }
+            if (a.data_aula) return -1;
+            if (b.data_aula) return 1;
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          });
+
+          const dbAulas: Record<string, { id: string; titulo: string; cargaHoraria: number; dataAula?: string }[]> = {};
+          sortedAulasData.forEach(a => {
             if (!dbAulas[a.disciplina_id]) {
               dbAulas[a.disciplina_id] = [];
             }
             dbAulas[a.disciplina_id].push({
               id: a.id,
               titulo: a.titulo,
-              cargaHoraria: parseFloat(a.carga_horaria)
+              cargaHoraria: parseFloat(a.carga_horaria),
+              dataAula: a.data_aula
             });
           });
           setAulas(dbAulas);
@@ -160,6 +229,52 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
     }
     setShowDocenteModal({ isOpen: false, disciplinaId: '' });
   };
+
+  const handleAssignProfessorToAll = async (professorName: string) => {
+    if (!cursoBase) return;
+    try {
+      const disciplineIds: string[] = [];
+      (cursoBase.modulos || []).forEach(m => {
+        m.disciplinas.forEach(d => {
+          disciplineIds.push(d.id);
+        });
+      });
+
+      if (disciplineIds.length === 0) return;
+
+      const rows = disciplineIds.map(dId => {
+        const currentConfig = disciplinasConfig[dId] || { professor: null, concluida: false };
+        return {
+          turma_id: turma.id,
+          disciplina_id: dId,
+          professor_nome: professorName || null,
+          concluida: currentConfig.concluida
+        };
+      });
+
+      const { error } = await supabase
+        .from('turmas_disciplinas')
+        .upsert(rows, { onConflict: 'turma_id,disciplina_id' });
+
+      if (error) throw error;
+
+      setDisciplinasConfig(prev => {
+        const next = { ...prev };
+        disciplineIds.forEach(dId => {
+          next[dId] = {
+            ...next[dId],
+            professor: professorName || null
+          };
+        });
+        return next;
+      });
+
+      toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.');
+    } catch (err) {
+      console.error('Erro ao atribuir docente para a turma:', err);
+      toast.error('Erro', 'Erro ao salvar docente da turma.');
+    }
+  };
   
   const toggleConcluida = async (disciplinaId: string) => {
     try {
@@ -189,7 +304,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
   const handleAddAula = async (disciplinaId: string) => {
     const titulo = newAulaTitulo[disciplinaId]?.trim();
     const horasStr = newAulaHoras[disciplinaId]?.trim();
-    if (!titulo || !horasStr) return;
+    const dataStr = newAulaData[disciplinaId]?.trim();
+    if (!titulo || !horasStr || !dataStr) return;
 
     const horas = parseFloat(horasStr);
     if (isNaN(horas) || horas <= 0) return;
@@ -201,7 +317,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
           turma_id: turma.id,
           disciplina_id: disciplinaId,
           titulo,
-          carga_horaria: horas
+          carga_horaria: horas,
+          data_aula: dataStr
         })
         .select()
         .single();
@@ -211,17 +328,29 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
       const novaAula = {
         id: data.id,
         titulo: data.titulo,
-        cargaHoraria: parseFloat(data.carga_horaria)
+        cargaHoraria: parseFloat(data.carga_horaria),
+        dataAula: data.data_aula
       };
 
-      setAulas(prev => ({
-        ...prev,
-        [disciplinaId]: [...(prev[disciplinaId] || []), novaAula]
-      }));
+      setAulas(prev => {
+        const updatedList = [...(prev[disciplinaId] || []), novaAula];
+        // Reordenar após inserção
+        updatedList.sort((a, b) => {
+          if (a.dataAula && b.dataAula) return a.dataAula.localeCompare(b.dataAula);
+          if (a.dataAula) return -1;
+          if (b.dataAula) return 1;
+          return 0;
+        });
+        return {
+          ...prev,
+          [disciplinaId]: updatedList
+        };
+      });
 
       // Reset locally
       setNewAulaTitulo(prev => ({ ...prev, [disciplinaId]: '' }));
       setNewAulaHoras(prev => ({ ...prev, [disciplinaId]: '' }));
+      setNewAulaData(prev => ({ ...prev, [disciplinaId]: '' }));
     } catch (err) {
       console.error('Erro ao adicionar aula:', err);
       toast.error('Erro', 'Erro ao salvar aula no banco.');
@@ -251,7 +380,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <Loader2 className="animate-spin text-emerald-600" size={32} />
+        <Loader2 className={`animate-spin ${theme.loader}`} size={32} />
         <span className="text-slate-500 font-bold ml-3">Carregando estrutura e aulas...</span>
       </div>
     );
@@ -266,13 +395,36 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
         <span className="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">Baseado em: {cursoBase.nome}</span>
       </div>
 
-      {cursoBase.modulos.length === 0 && (
+      {singleProfessor && (
+        <div className="bg-indigo-50/70 border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shadow-sm">
+          <div>
+            <h4 className="text-sm font-black text-indigo-900 uppercase tracking-tight">Docente Responsável pela Turma</h4>
+            <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">Estes cursos possuem apenas um docente para toda a grade curricular.</p>
+          </div>
+          <div className="w-full md:w-64">
+            <select
+              value={
+                (Object.values(disciplinasConfig) as any[]).find((c) => c.professor)?.professor || ''
+              }
+              onChange={(e) => handleAssignProfessorToAll(e.target.value)}
+              className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
+            >
+              <option value="">Selecione um professor...</option>
+              {professores.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {(!cursoBase.modulos || cursoBase.modulos.length === 0) && (
         <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
           <p className="text-slate-500">A grade deste curso ainda não foi configurada no cadastro.</p>
         </div>
       )}
 
-      {cursoBase.modulos.map((modulo, index) => {
+      {(cursoBase.modulos || []).map((modulo, index) => {
         // progress for module calculated from completed disciplines
         const totalDiscs = modulo.disciplinas.length;
         const completedDiscs = modulo.disciplinas.filter(d => disciplinasConfig[d.id]?.concluida).length;
@@ -285,7 +437,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
               className="w-full flex items-center justify-between p-5 bg-slate-50/50 hover:bg-slate-100/50 transition-colors"
             >
               <div className="flex items-center gap-4 flex-1">
-                <div className="p-3 shadow-sm bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl flex shrink-0">
+                <div className={`p-3 shadow-sm ${theme.bg} ${theme.text} border ${theme.border} rounded-xl flex shrink-0`}>
                   <Layers size={20} />
                 </div>
                 <div className="text-left flex-1">
@@ -297,9 +449,9 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                     {totalDiscs > 0 && (
                       <div className="flex items-center gap-2 flex-1 max-w-[200px]">
                         <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${moduloProgress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${moduloProgress}%` }}></div>
+                          <div className={`h-full rounded-full ${moduloProgress === 100 ? theme.fill : 'bg-blue-500'}`} style={{ width: `${moduloProgress}%` }}></div>
                         </div>
-                        <span className={`text-[10px] font-black ${moduloProgress === 100 ? 'text-emerald-600' : 'text-blue-600'}`}>{moduloProgress}%</span>
+                        <span className={`text-[10px] font-black ${moduloProgress === 100 ? theme.text : 'text-blue-600'}`}>{moduloProgress}%</span>
                       </div>
                     )}
                   </div>
@@ -328,8 +480,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                       let progressColor = 'bg-blue-500';
                       let progressTextClass = 'text-blue-600';
                       if (sumHoras === disc.cargaHoraria) {
-                        progressColor = 'bg-emerald-500';
-                        progressTextClass = 'text-emerald-600';
+                        progressColor = theme.fill;
+                        progressTextClass = theme.text;
                       } else if (sumHoras > disc.cargaHoraria) {
                         progressColor = 'bg-red-500';
                         progressTextClass = 'text-red-600';
@@ -343,7 +495,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                               <button 
                                 onClick={() => toggleConcluida(disc.id)}
                                 title={isComplete ? "Marcar como não concluída" : "Marcar como concluída"}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 cursor-pointer transition-colors ${isComplete ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 cursor-pointer transition-colors ${isComplete ? `${theme.bg} ${theme.text} hover:bg-opacity-80` : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                               >
                                 {isComplete ? <CheckCircle2 size={16} /> : <BookOpen size={16} />}
                               </button>
@@ -353,7 +505,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                 className="flex-1 min-w-0 cursor-pointer text-left"
                               >
                                 <div className="flex items-center gap-2">
-                                  <p className={`text-sm font-bold truncate ${isComplete ? 'text-emerald-700' : 'text-[#001a33]'}`}>{disc.nome}</p>
+                                  <p className={`text-sm font-bold truncate ${isComplete ? theme.textDark : 'text-[#001a33]'}`}>{disc.nome}</p>
                                   {isExpanded ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
                                 </div>
                                 <p className="text-[11px] text-slate-500 font-medium mt-0.5">
@@ -376,7 +528,19 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                 </div>
                               </div>
 
-                              {discConfig.professor ? (
+                              {singleProfessor ? (
+                                discConfig.professor ? (
+                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
+                                    <UserCheck size={14} className="text-indigo-600" />
+                                    <div className="flex flex-col">
+                                      <span className="text-[9px] text-indigo-400 uppercase font-black tracking-widest text-left">Docente</span>
+                                      <span className="text-xs font-bold text-indigo-900">{discConfig.professor}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400 italic font-semibold">Sem docente</span>
+                                )
+                              ) : discConfig.professor ? (
                                 <div 
                                   onClick={() => setShowDocenteModal({ isOpen: true, disciplinaId: disc.id })}
                                   className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors"
@@ -392,7 +556,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                               ) : (
                                 <button 
                                   onClick={() => setShowDocenteModal({ isOpen: true, disciplinaId: disc.id })}
-                                  className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 transition-all text-xs font-bold uppercase tracking-wide"
+                                  className={`flex items-center gap-2 px-4 py-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:${theme.text} hover:${theme.hoverBorder} hover:${theme.bg} transition-all text-xs font-bold uppercase tracking-wide`}
                                 >
                                   <UserPlus size={14} /> Atribuir Docente
                                 </button>
@@ -408,7 +572,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                 <span className="text-xs font-bold text-slate-500">Planejamento das Aulas:</span>
                                 <div className="flex items-center gap-2">
                                   {sumHoras === disc.cargaHoraria ? (
-                                    <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-emerald-100 uppercase tracking-wider flex items-center gap-1">
+                                    <span className={`${theme.bg} ${theme.text} text-[10px] font-bold px-2.5 py-1 rounded-lg border ${theme.border} uppercase tracking-wider flex items-center gap-1`}>
                                       <CheckCircle2 size={12} /> Grade Concluída e Exata
                                     </span>
                                   ) : sumHoras > disc.cargaHoraria ? (
@@ -429,10 +593,12 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                   <p className="text-xs text-slate-400 italic py-2">Nenhuma aula cadastrada nesta turma ainda.</p>
                                 ) : (
                                   discAulas.map((aula, idx) => (
-                                    <div key={aula.id} className="flex items-center justify-between group pl-4 border-l-2 border-slate-200 hover:border-emerald-400 transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm">
+                                    <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-200 ${theme.hoverBorderDark} transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm`}>
                                       <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
                                         <CornerDownRight size={12} className="text-slate-400 shrink-0" />
-                                        <span className="font-semibold text-xs text-slate-500 shrink-0">Aula {idx + 1}:</span>
+                                        <span className="font-semibold text-xs text-slate-500 shrink-0">
+                                          Aula {idx + 1} {aula.dataAula ? `(${new Date(aula.dataAula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
+                                        </span>
                                         <span className="truncate text-slate-600">{aula.titulo}</span>
                                       </div>
                                       <div className="flex items-center gap-3 shrink-0">
@@ -451,16 +617,27 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                               </div>
 
                               {/* Form para Adicionar Aula */}
-                              <div className="mt-3 pl-4 flex gap-3 items-center">
-                                <CornerDownRight size={14} className="text-emerald-500 shrink-0" />
+                              <div className="mt-3 pl-4 flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                                <CornerDownRight size={14} className={`${theme.text} shrink-0`} />
                                 <input 
                                   type="text" 
                                   placeholder="Título da aula / conteúdo..."
-                                  className="flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500 px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400"
+                                  className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
                                   value={newAulaTitulo[disc.id] || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     setNewAulaTitulo(prev => ({ ...prev, [disc.id]: val }));
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById(`turma-data-input-${disc.id}`)?.focus(); }}
+                                />
+                                <input 
+                                  id={`turma-data-input-${disc.id}`}
+                                  type="date" 
+                                  className={`w-36 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700`}
+                                  value={newAulaData[disc.id] || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setNewAulaData(prev => ({ ...prev, [disc.id]: val }));
                                   }}
                                   onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById(`turma-horas-input-${disc.id}`)?.focus(); }}
                                 />
@@ -468,7 +645,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                   id={`turma-horas-input-${disc.id}`}
                                   type="number" 
                                   placeholder="Hrs"
-                                  className="w-20 text-xs bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500 px-2 py-2.5 transition-colors text-center font-bold text-slate-700 placeholder-slate-400"
+                                  className={`w-16 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-2 py-2.5 transition-colors text-center font-bold text-slate-700 placeholder-slate-400`}
                                   value={newAulaHoras[disc.id] || ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
@@ -478,8 +655,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma }) => {
                                 />
                                 <button 
                                   onClick={() => handleAddAula(disc.id)}
-                                  className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-colors border border-emerald-100 flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50"
-                                  disabled={!newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim()}
+                                  className={`p-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50`}
+                                  disabled={!newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
                                 >
                                   <Plus size={16} />
                                 </button>

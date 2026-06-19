@@ -9,7 +9,7 @@ import {
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { supabase } from '../../../../../../../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Turma } from '../../../../../gestao.types';
+import { Turma } from '../../../../gestao.types';
 import { gestaoService } from '../../../../gestao.service';
 
 
@@ -21,6 +21,7 @@ interface CronogramaItem {
   label: string;
   valor: number;
   numero?: number; // Número da parcela se for parcela
+  dataVencimento?: string;
 }
 
 interface FinanceiroConfigProps {
@@ -40,11 +41,45 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
     valorParcela: 350.00,
     descontoPontualidade: 20.00,
     jurosAtraso: 2.0,
-    multaAtraso: 5.00
+    multaAtraso: 5.00,
+    diaVencimentoPadrao: 10,
+    cronogramaFinanceiro: [] as any[]
   });
 
   const [formData, setFormData] = useState({ ...config });
   const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
+
+  // Helper para calcular a data de vencimento sequencial por mês
+  const calcularDataVencimento = (dataInicio: string, diaVencimento: number, offsetMeses: number): string => {
+    if (!dataInicio) return '';
+    const date = new Date(dataInicio + 'T00:00:00');
+    
+    // Adiciona o offset de meses
+    date.setMonth(date.getMonth() + offsetMeses);
+    
+    const ano = date.getFullYear();
+    const mes = date.getMonth();
+    
+    // Evita extrapolar dias do mês (ex: 31 de fevereiro)
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    const diaFinal = Math.min(diaVencimento, ultimoDia);
+    
+    const dateFinal = new Date(ano, mes, diaFinal);
+    
+    const y = dateFinal.getFullYear();
+    const m = String(dateFinal.getMonth() + 1).padStart(2, '0');
+    const d = String(dateFinal.getDate()).padStart(2, '0');
+    
+    return `${y}-${m}-${d}`;
+  };
+
+  const handleUpdateItemDate = (itemId: string, newDate: string) => {
+    setCronograma(prev => 
+      prev.map(item => 
+        item.id === itemId ? { ...item, dataVencimento: newDate } : item
+      )
+    );
+  };
 
   // Carregar as configurações financeiras específicas desta turma do banco
   const { data: configDb, isLoading } = useQuery({
@@ -52,7 +87,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('turmas')
-        .select('valor_matricula, valor_rematricula, qtd_parcelas, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso')
+        .select('valor_matricula, valor_rematricula, qtd_parcelas, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, dia_vencimento_padrao, cronograma_financeiro')
         .eq('id', turma.id)
         .single();
 
@@ -65,7 +100,9 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
         valorParcela: Number(data.valor_parcela),
         descontoPontualidade: Number(data.desconto_pontualidade),
         jurosAtraso: Number(data.juros_atraso),
-        multaAtraso: Number(data.multa_atraso)
+        multaAtraso: Number(data.multa_atraso),
+        diaVencimentoPadrao: Number(data.dia_vencimento_padrao || 10),
+        cronogramaFinanceiro: data.cronograma_financeiro || []
       };
     }
   });
@@ -89,36 +126,51 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
       setConfig(configDb);
       setFormData(configDb);
 
-      // Gerar cronograma automaticamente
-      const novoCronograma: CronogramaItem[] = [];
-      novoCronograma.push({
-        id: 'matr',
-        tipo: 'MATRICULA',
-        label: 'Matrícula Inicial',
-        valor: configDb.valorMatricula
-      });
-      for (let i = 1; i <= configDb.qtdParcelas; i++) {
-        const isRematricula = i === 12;
-        if (isRematricula) {
-          novoCronograma.push({
-            id: `rem-${i}`,
-            tipo: 'REMATRICULA',
-            label: 'Rematrícula Semestral',
-            valor: configDb.valorRematricula
-          });
-        } else {
-          novoCronograma.push({
-            id: `parc-${i}`,
-            tipo: 'PARCELA',
-            label: `Parcela ${i}`,
-            valor: configDb.valorParcela,
-            numero: i
-          });
+      // Carregar cronograma salvo se existir, senão gerar o padrão
+      if (configDb.cronogramaFinanceiro && Array.isArray(configDb.cronogramaFinanceiro) && configDb.cronogramaFinanceiro.length > 0) {
+        const loadedCronograma: CronogramaItem[] = configDb.cronogramaFinanceiro.map((item: any) => ({
+          id: item.id,
+          tipo: item.tipo,
+          label: item.label,
+          valor: Number(item.valor),
+          numero: item.numero,
+          dataVencimento: item.dataVencimento
+        }));
+        setCronograma(loadedCronograma);
+      } else {
+        const novoCronograma: CronogramaItem[] = [];
+        novoCronograma.push({
+          id: 'matr',
+          tipo: 'MATRICULA',
+          label: 'Matrícula Inicial',
+          valor: configDb.valorMatricula,
+          dataVencimento: turma.dataInicio || ''
+        });
+        for (let i = 1; i <= configDb.qtdParcelas; i++) {
+          const isRematricula = i === 12;
+          if (isRematricula) {
+            novoCronograma.push({
+              id: `rem-${i}`,
+              tipo: 'REMATRICULA',
+              label: 'Rematrícula Semestral',
+              valor: configDb.valorRematricula,
+              dataVencimento: calcularDataVencimento(turma.dataInicio, configDb.diaVencimentoPadrao, i)
+            });
+          } else {
+            novoCronograma.push({
+              id: `parc-${i}`,
+              tipo: 'PARCELA',
+              label: `Parcela ${i}`,
+              valor: configDb.valorParcela,
+              numero: i,
+              dataVencimento: calcularDataVencimento(turma.dataInicio, configDb.diaVencimentoPadrao, i)
+            });
+          }
         }
+        setCronograma(novoCronograma);
       }
-      setCronograma(novoCronograma);
     }
-  }, [configDb]);
+  }, [configDb, turma.dataInicio]);
 
   // Realtime Subscription para atualizar em tempo real quando alterado por outro usuário
   useEffect(() => {
@@ -199,7 +251,6 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
 
   // Gera o cronograma com base nas configurações
   const gerarCronograma = () => {
-    const totalMeses = formData.qtdParcelas + 1; // +1 para matrícula
     const novoCronograma: CronogramaItem[] = [];
 
     // Mês 1: Matrícula
@@ -207,12 +258,12 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
       id: 'matr',
       tipo: 'MATRICULA',
       label: 'Matrícula Inicial',
-      valor: formData.valorMatricula
+      valor: formData.valorMatricula,
+      dataVencimento: turma.dataInicio || ''
     });
 
     // Meses seguintes: Parcelas
     for (let i = 1; i <= formData.qtdParcelas; i++) {
-      // Exemplo simples: Rematrícula no mês 12 se houver
       const isRematricula = i === 12; 
       
       if (isRematricula) {
@@ -220,7 +271,8 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
           id: `rem-${i}`,
           tipo: 'REMATRICULA',
           label: 'Rematrícula Semestral',
-          valor: formData.valorRematricula
+          valor: formData.valorRematricula,
+          dataVencimento: calcularDataVencimento(turma.dataInicio, formData.diaVencimentoPadrao, i)
         });
       } else {
         novoCronograma.push({
@@ -228,7 +280,8 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
           tipo: 'PARCELA',
           label: `Parcela ${i}`,
           valor: formData.valorParcela,
-          numero: i
+          numero: i,
+          dataVencimento: calcularDataVencimento(turma.dataInicio, formData.diaVencimentoPadrao, i)
         });
       }
     }
@@ -248,7 +301,10 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   };
 
   const handleSave = () => {
-    saveMutation.mutate(formData);
+    saveMutation.mutate({
+      ...formData,
+      cronogramaFinanceiro: cronograma
+    });
   };
 
   // --- Renderização dos Itens Arrastáveis ---
@@ -280,13 +336,13 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
         onDragEnter={() => (dragOverItem.current = index)}
         onDragEnd={handleSort}
         onDragOver={(e) => e.preventDefault()}
-        className={`flex items-center justify-between p-3 rounded-xl border mb-2 cursor-move transition-all shadow-sm ${colorClass} active:scale-[0.98] active:shadow-lg`}
+        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border mb-2 cursor-move transition-all shadow-sm ${colorClass} active:scale-[0.98] active:shadow-lg gap-2`}
       >
         <div className="flex items-center gap-3">
           <div className="cursor-grab text-slate-400 hover:text-slate-600">
             <GripVertical size={18} />
           </div>
-          <span className="font-bold text-[10px] uppercase bg-white/50 px-2 py-1 rounded border border-black/5">
+          <span className="font-bold text-[10px] uppercase bg-white/50 px-2 py-1 rounded border border-black/5 shrink-0">
             Mês {index + 1}
           </span>
           <div className="flex items-center gap-2">
@@ -294,8 +350,16 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
             <span className="font-bold text-sm">{item.label}</span>
           </div>
         </div>
-        <div className="font-mono font-bold text-sm opacity-80">
-          {formatCurrencyBRL(item.valor)}
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <input 
+            type="date"
+            value={item.dataVencimento || ''}
+            onChange={(e) => handleUpdateItemDate(item.id, e.target.value)}
+            className="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-500 text-slate-700 shadow-sm"
+          />
+          <div className="font-mono font-bold text-sm opacity-80 min-w-[90px] text-right">
+            {formatCurrencyBRL(item.valor)}
+          </div>
         </div>
       </div>
     );
@@ -351,6 +415,19 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
                   value={formatCurrencyBRL(formData.valorParcela)} onChange={handleCurrencyChange} 
                   className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white" 
                 />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Dia de Vencimento Padrão</label>
+                <select
+                  name="diaVencimentoPadrao"
+                  value={formData.diaVencimentoPadrao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, diaVencimentoPadrao: parseInt(e.target.value) || 10 }))}
+                  className="w-full p-3 rounded-xl border border-slate-300 outline-none focus:border-blue-500 font-bold text-slate-700 bg-white"
+                >
+                  {[5, 10, 15, 20, 25, 28].map(d => (
+                    <option key={d} value={d}>Todo dia {String(d).padStart(2, '0')}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -481,96 +558,149 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   // Modo Visualização (Card Resumo)
   return (
     <>
-    <div className="bg-white border border-slate-100 rounded-[2rem] p-8 mb-8 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      {/* Coluna Esquerda: Regras e Simulações (ocupa 2/3) */}
+      <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
         <div>
-          <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Regras Financeiras</h3>
-          <p className="text-slate-500 text-sm">Parâmetros aplicados a todos os alunos desta turma.</p>
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Regras Financeiras</h3>
+              <p className="text-slate-500 text-sm">Parâmetros aplicados a todos os alunos desta turma.</p>
+            </div>
+            <button 
+              onClick={() => {
+                setIsEditing(true);
+                setFormData({ ...config });
+                if(cronograma.length === 0) gerarCronograma();
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-blue-600 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-blue-50 transition-colors border border-slate-100"
+            >
+              <Edit2 size={14} /> Editar
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <DollarSign size={10} /> Matrícula
+              </p>
+              <p className="text-lg font-black text-[#001a33]">{formatCurrencyBRL(config.valorMatricula)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <Calendar size={10} /> Plano
+              </p>
+              <p className="text-lg font-black text-[#001a33]">
+                {config.qtdParcelas}x + Remat.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <Calendar size={10} /> Vencimento Padrão
+              </p>
+              <p className="text-lg font-black text-[#001a33]">Dia {String(config.diaVencimentoPadrao).padStart(2, '0')}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <DollarSign size={10} /> Mensalidade
+              </p>
+              <p className="text-lg font-black text-[#001a33]">{formatCurrencyBRL(config.valorParcela)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-amber-600 font-bold uppercase flex items-center gap-1">
+                <RefreshCw size={10} /> Rematrícula
+              </p>
+              <p className="text-lg font-black text-amber-600">{formatCurrencyBRL(config.valorRematricula)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
+                <Percent size={10} /> Desconto
+              </p>
+              <p className="text-lg font-black text-emerald-600">- {formatCurrencyBRL(config.descontoPontualidade)}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
+                <AlertCircle size={10} /> Juros/Mês
+              </p>
+              <p className="text-lg font-black text-red-500">{config.jurosAtraso}%</p>
+            </div>
+          </div>
         </div>
-        <button 
-          onClick={() => {
-            setIsEditing(true);
-            setFormData({ ...config });
-            if(cronograma.length === 0) gerarCronograma(); // Auto gera se estiver vazio na primeira edição
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-blue-600 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-blue-50 transition-colors border border-slate-100"
-        >
-          <Edit2 size={14} /> Editar
-        </button>
+
+        {/* Simulação de Valores */}
+        <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block mb-1">Se pago até o vencimento (Com Desconto - RPC)</span>
+              <p className="text-slate-500 text-xs font-medium">Valor da parcela com desconto de pontualidade aplicado</p>
+            </div>
+            <div className="mt-4 flex justify-between items-baseline">
+              <span className="text-xs text-slate-400 font-bold">VALOR FINAL</span>
+              <span className="text-xl font-black text-emerald-700">
+                {calculoConfig ? formatCurrencyBRL(calculoConfig.valor_com_desconto) : formatCurrencyBRL(Math.max(0, config.valorParcela - config.descontoPontualidade))}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 1 mês de atraso - RPC)</span>
+              <p className="text-slate-500 text-xs font-medium">Parcela + juros de {config.jurosAtraso}% ({calculoConfig ? formatCurrencyBRL(calculoConfig.juros_calculados) : formatCurrencyBRL(config.valorParcela * (config.jurosAtraso / 100))}) + multa de {formatCurrencyBRL(config.multaAtraso)}</p>
+            </div>
+            <div className="mt-4 flex justify-between items-baseline">
+              <span className="text-xs text-slate-400 font-bold">VALOR FINAL</span>
+              <span className="text-xl font-black text-rose-700">
+                {calculoConfig ? formatCurrencyBRL(calculoConfig.valor_com_atraso) : formatCurrencyBRL(config.valorParcela + (config.valorParcela * (config.jurosAtraso / 100)) + config.multaAtraso)}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-        <div className="space-y-1">
-          <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-            <DollarSign size={10} /> Matrícula
-          </p>
-          <p className="text-lg font-black text-[#001a33]">{formatCurrencyBRL(config.valorMatricula)}</p>
+      {/* Coluna Direita: Cronograma Cronológico de Cobrança (ocupa 1/3) */}
+      <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col max-h-[500px]">
+        <div className="mb-4">
+          <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Cronograma de Cobrança</h3>
+          <p className="text-slate-500 text-xs mt-0.5">Datas de vencimento estimadas por parcela.</p>
         </div>
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2.5">
+          {cronograma.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+              <Calendar size={32} className="mb-2 opacity-50" />
+              <p className="text-xs font-semibold text-center">Nenhum cronograma gerado. Clique em Editar para criar.</p>
+            </div>
+          ) : (
+            cronograma.map((item, index) => {
+              let badgeColor = 'bg-slate-100 text-slate-600';
+              if (item.tipo === 'MATRICULA') badgeColor = 'bg-emerald-100 text-emerald-800';
+              if (item.tipo === 'REMATRICULA') badgeColor = 'bg-amber-100 text-amber-800';
+              
+              const formattedDate = item.dataVencimento 
+                ? new Date(item.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : 'Sem data';
 
-        <div className="space-y-1">
-          <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-            <Calendar size={10} /> Plano
-          </p>
-          <p className="text-lg font-black text-[#001a33]">
-            {config.qtdParcelas}x + Remat.
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-            <DollarSign size={10} /> Mensalidade
-          </p>
-          <p className="text-lg font-black text-[#001a33]">{formatCurrencyBRL(config.valorParcela)}</p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] text-amber-600 font-bold uppercase flex items-center gap-1">
-            <RefreshCw size={10} /> Rematrícula
-          </p>
-          <p className="text-lg font-black text-amber-600">{formatCurrencyBRL(config.valorRematricula)}</p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
-            <Percent size={10} /> Desconto
-          </p>
-          <p className="text-lg font-black text-emerald-600">- {formatCurrencyBRL(config.descontoPontualidade)}</p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
-            <AlertCircle size={10} /> Juros/Mês
-          </p>
-          <p className="text-lg font-black text-red-500">{config.jurosAtraso}%</p>
-        </div>
-      </div>
-
-      {/* Simulação de Valores */}
-      <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider block mb-1">Se pago até o vencimento (Com Desconto - RPC)</span>
-            <p className="text-slate-500 text-xs font-medium">Valor da parcela com desconto de pontualidade aplicado</p>
-          </div>
-          <div className="mt-4 flex justify-between items-baseline">
-            <span className="text-xs text-slate-400 font-bold">VALOR FINAL</span>
-            <span className="text-xl font-black text-emerald-700">
-              {calculoConfig ? formatCurrencyBRL(calculoConfig.valor_com_desconto) : formatCurrencyBRL(Math.max(0, config.valorParcela - config.descontoPontualidade))}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 1 mês de atraso - RPC)</span>
-            <p className="text-slate-500 text-xs font-medium">Parcela + juros de {config.jurosAtraso}% ({calculoConfig ? formatCurrencyBRL(calculoConfig.juros_calculados) : formatCurrencyBRL(config.valorParcela * (config.jurosAtraso / 100))}) + multa de {formatCurrencyBRL(config.multaAtraso)}</p>
-          </div>
-          <div className="mt-4 flex justify-between items-baseline">
-            <span className="text-xs text-slate-400 font-bold">VALOR FINAL</span>
-            <span className="text-xl font-black text-rose-700">
-              {calculoConfig ? formatCurrencyBRL(calculoConfig.valor_com_atraso) : formatCurrencyBRL(config.valorParcela + (config.valorParcela * (config.jurosAtraso / 100)) + config.multaAtraso)}
-            </span>
-          </div>
+              return (
+                <div key={item.id} className="flex justify-between items-center p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors shadow-sm">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="text-xs font-bold text-[#001a33] truncate">{item.label}</p>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5 flex items-center gap-1.5">
+                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${badgeColor}`}>Mês {index + 1}</span>
+                      <span>Vencimento: {formattedDate}</span>
+                    </p>
+                  </div>
+                  <span className="font-mono font-bold text-xs text-slate-700 shrink-0">
+                    {formatCurrencyBRL(item.valor)}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

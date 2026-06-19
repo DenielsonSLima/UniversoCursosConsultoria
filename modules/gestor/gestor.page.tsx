@@ -204,7 +204,7 @@ const GestorPage: React.FC = () => {
 
   const renderContent = () => {
     switch (activeModule) {
-      case 'inicio': return <DashboardPage />;
+      case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
       case 'parceiros': return <ParceirosPage />;
       case 'cadastros': return <CadastrosPage onNavigate={(id) => setActiveModule(id)} />;
@@ -247,7 +247,7 @@ const GestorPage: React.FC = () => {
             </div>
           );
         }
-        return <DashboardPage />;
+        return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
     }
   };
 

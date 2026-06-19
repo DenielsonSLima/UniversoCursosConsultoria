@@ -139,6 +139,8 @@ export const gestaoService = {
       descontoPontualidade: number;
       jurosAtraso: number;
       multaAtraso: number;
+      diaVencimentoPadrao: number;
+      cronogramaFinanceiro: any[];
     }
   ): Promise<void> {
     const { error } = await supabase
@@ -150,7 +152,9 @@ export const gestaoService = {
         valor_parcela: config.valorParcela,
         desconto_pontualidade: config.descontoPontualidade,
         juros_atraso: config.jurosAtraso,
-        multa_atraso: config.multaAtraso
+        multa_atraso: config.multaAtraso,
+        dia_vencimento_padrao: config.diaVencimentoPadrao,
+        cronograma_financeiro: config.cronogramaFinanceiro
       })
       .eq('id', id);
 
@@ -158,5 +162,32 @@ export const gestaoService = {
       console.error('Erro ao salvar configurações financeiras da turma:', error);
       throw error;
     }
+  },
+
+  async getGestaoKpis(): Promise<{ activeTurmas: number; activeMatriculas: number }> {
+    const { count: activeTurmas, error: turmasError } = await supabase
+      .from('turmas')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'EM_ANDAMENTO');
+
+    if (turmasError) {
+      console.error('Erro ao contar turmas ativas:', turmasError);
+      throw turmasError;
+    }
+
+    const { count: activeMatriculas, error: matriculasError } = await supabase
+      .from('matriculas')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'ativo');
+
+    if (matriculasError) {
+      console.error('Erro ao contar matrículas ativas:', matriculasError);
+      throw matriculasError;
+    }
+
+    return {
+      activeTurmas: activeTurmas || 0,
+      activeMatriculas: activeMatriculas || 0
+    };
   }
 };

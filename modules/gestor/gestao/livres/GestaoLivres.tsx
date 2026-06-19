@@ -3,15 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Zap, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaLivreForm from '../components/forms/TurmaLivreForm';
+import TurmaLivreDetalhes from './detalhes/TurmaLivreDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
 import { cursosLivresService } from '../../cadastros/cursos-livres/cursos-livres.service';
 
-const GestaoLivres: React.FC = () => {
+interface GestaoLivresProps {
+  onToggleDetails?: (isOpen: boolean) => void;
+}
+
+const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails }) => {
   const [activeSubTab, setActiveSubTab] = useState<'andamento' | 'finalizadas'>('andamento');
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
   useEffect(() => {
     loadData();
@@ -32,6 +38,25 @@ const GestaoLivres: React.FC = () => {
   const filteredTurmas = turmas.filter(t => 
     activeSubTab === 'andamento' ? t.status === 'EM_ANDAMENTO' : t.status === 'FINALIZADA'
   );
+
+  const handleSelectTurma = (turma: Turma) => {
+    setSelectedTurma(turma);
+    if (onToggleDetails) onToggleDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedTurma(null);
+    if (onToggleDetails) onToggleDetails(false);
+  };
+
+  if (selectedTurma) {
+    return (
+      <TurmaLivreDetalhes 
+        turma={selectedTurma} 
+        onBack={handleCloseDetails} 
+      />
+    );
+  }
 
   return (
     <div className="animate-fadeIn">
@@ -84,7 +109,9 @@ const GestaoLivres: React.FC = () => {
             </div>
         ) : (
             filteredTurmas.map(turma => (
-                <TurmaCard key={turma.id} turma={turma} colorTheme="amber" />
+                <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
+                  <TurmaCard turma={turma} colorTheme="amber" />
+                </div>
             ))
         )}
       </div>

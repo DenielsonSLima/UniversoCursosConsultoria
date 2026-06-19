@@ -1,10 +1,9 @@
-// File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/TurmaDiarios.tsx
-
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Layers, BookOpen, Loader2 } from 'lucide-react';
 import DiarioClasse from './DiarioClasse';
 import { Turma } from '../../../../gestao.types';
 import { supabase } from '../../../../../../../lib/supabase';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Disciplina {
   id: string;
@@ -27,16 +26,11 @@ interface TurmaDiariosProps {
 const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
   const [activeModuloNome, setActiveModuloNome] = useState('');
   const [activeDisciplina, setActiveDisciplina] = useState<Disciplina | null>(null);
-  const [modulos, setModulos] = useState<Modulo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadDiariosData();
-  }, [turma.id, turma.cursoId]);
-
-  const loadDiariosData = async () => {
-    setLoading(true);
-    try {
+  const { data: modulos = [], isLoading: loading } = useQuery<Modulo[]>({
+    queryKey: ['diarios-list', turma.id, turma.cursoId],
+    queryFn: async () => {
       // 1. Módulos do Curso
       const { data: modulosData, error: modulosError } = await supabase
         .from('modulos')
@@ -46,8 +40,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
       if (modulosError) throw modulosError;
 
       if (!modulosData || modulosData.length === 0) {
-        setModulos([]);
-        return;
+        return [];
       }
 
       const moduloIds = modulosData.map(m => m.id);
@@ -107,13 +100,9 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
         };
       });
 
-      setModulos(structuredModulos);
-    } catch (err) {
-      console.error('Erro ao buscar dados dos diários:', err);
-    } finally {
-      setLoading(false);
+      return structuredModulos;
     }
-  };
+  });
 
   const handleOpenDiario = (disciplina: Disciplina, moduloNome: string) => {
     setActiveModuloNome(moduloNome);
@@ -122,7 +111,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
 
   const handleBack = () => {
     setActiveDisciplina(null);
-    loadDiariosData();
+    queryClient.invalidateQueries({ queryKey: ['diarios-list', turma.id, turma.cursoId] });
   };
 
   if (loading) {

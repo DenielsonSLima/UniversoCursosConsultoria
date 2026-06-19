@@ -1,10 +1,10 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface DiarioClasseProps {
   disciplina: any;
@@ -16,38 +16,20 @@ interface DiarioClasseProps {
 const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, turma, onBack }) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'frequencia' | 'resultado' | 'conteudo' | 'observacoes'>('frequencia');
-  const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<any[]>([]);
-  const [aulas, setAulas] = useState<any[]>([]);
+  const queryClient = useQueryClient();
 
-  // Frequência: studentId -> classId -> 'P' | 'F'
-  const [attendance, setAttendance] = useState<Record<string, Record<string, 'P' | 'F'>>>({});
-  
-  // Notas: studentId -> { p, ti, tg, s, cq, o, rec }
-  const [grades, setGrades] = useState<Record<string, any>>({});
-  
-  // Observações
-  const [observacoes, setObservacoes] = useState('');
-
-  // Práticas Pedagógicas das Aulas (aulaId -> texto)
-  const [aulaPraticas, setAulaPraticas] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    loadDiarioDetails();
-  }, [turma.id, disciplina.id]);
-
-  const loadDiarioDetails = async () => {
-    setLoading(true);
-    try {
-      // 1. Alunos matriculados
-      const { data: matriculasData, error: matriculasError } = await supabase
+  // 1. Alunos matriculados
+  const { data: students = [], isLoading: loadingStudents } = useQuery({
+    queryKey: ['diario-alunos', turma.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('matriculas')
         .select('id, status, parceiros(*)')
         .eq('turma_id', turma.id);
 
-      if (matriculasError) throw matriculasError;
+      if (error) throw error;
 
-      const mappedStudents = (matriculasData || [])
+      return (data || [])
         .filter((m: any) => m.parceiros)
         .map((m: any) => ({
           id: m.parceiros.id,
@@ -55,111 +37,390 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
           matricula: m.id.substring(0, 8).toUpperCase(),
           status: m.status
         }));
-      setStudents(mappedStudents);
+    }
+  });
 
-      // Inicializa notas vazias/padrão
-      const initialGrades: Record<string, any> = {};
-      mappedStudents.forEach(s => {
-        initialGrades[s.id] = { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
-      });
-      setGrades(initialGrades);
-
-      // 2. Aulas lançadas na turma para esta disciplina
-      const { data: aulasData, error: aulasError } = await supabase
+  // 2. Aulas lançadas na turma para esta disciplina
+  const { data: aulas = [], isLoading: loadingAulas } = useQuery({
+    queryKey: ['diario-aulas', turma.id, disciplina.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('aulas_turma')
         .select('*')
         .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id)
-        .order('created_at', { ascending: true });
+        .eq('disciplina_id', disciplina.id);
 
-      if (aulasError) throw aulasError;
+      if (error) throw error;
 
-      const mappedAulas = (aulasData || []).map((a: any, idx: number) => ({
+      // Ordenar por data_aula ASC, fallback para created_at ASC
+      const sortedAulasData = (data || []).sort((a: any, b: any) => {
+        if (a.data_aula && b.data_aula) return a.data_aula.localeCompare(b.data_aula);
+        if (a.data_aula) return -1;
+        if (b.data_aula) return 1;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+      return sortedAulasData.map((a: any, idx: number) => ({
         id: a.id,
         titulo: a.titulo,
         cargaHoraria: parseFloat(a.carga_horaria),
-        dataLabel: a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : `Aula ${idx + 1}`
+        dataLabel: a.data_aula 
+          ? new Date(a.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+          : (a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : `Aula ${idx + 1}`)
       }));
-      setAulas(mappedAulas);
-
-      // Inicializa presença 'P' (Presença) padrão
-      const initialAttendance: Record<string, Record<string, 'P' | 'F'>> = {};
-      mappedStudents.forEach(s => {
-        initialAttendance[s.id] = {};
-        mappedAulas.forEach(a => {
-          initialAttendance[s.id][a.id] = 'P';
-        });
-      });
-      setAttendance(initialAttendance);
-
-      // Inicializa campos de práticas
-      const initialPraticas: Record<string, string> = {};
-      mappedAulas.forEach(a => {
-        initialPraticas[a.id] = 'Aula expositiva / Prática padrão';
-      });
-      setAulaPraticas(initialPraticas);
-
-    } catch (err) {
-      console.error('Erro ao buscar dados do diário de classe:', err);
-    } finally {
-      setLoading(false);
     }
+  });
+
+  // 3. Frequência lançada no banco
+  const { data: dbAttendance = [], isLoading: loadingAttendance } = useQuery({
+    queryKey: ['diario-frequencia', turma.id, disciplina.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('diario_frequencia')
+        .select('*')
+        .eq('turma_id', turma.id)
+        .eq('disciplina_id', disciplina.id);
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // 4. Notas lançadas (View calculada no banco de dados!)
+  const { data: dbGrades = [], isLoading: loadingGrades } = useQuery({
+    queryKey: ['diario-notas-resultados', turma.id, disciplina.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_diario_notas_resultados')
+        .select('*')
+        .eq('turma_id', turma.id)
+        .eq('disciplina_id', disciplina.id);
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // 5. Práticas Pedagógicas
+  const { data: dbPraticas = [], isLoading: loadingPraticas } = useQuery({
+    queryKey: ['diario-praticas', turma.id, disciplina.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('diario_praticas')
+        .select('*')
+        .eq('turma_id', turma.id)
+        .eq('disciplina_id', disciplina.id);
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // 6. Observações do docente
+  const { data: dbObservacoes = '', isLoading: loadingObservacoes } = useQuery({
+    queryKey: ['diario-observacoes', turma.id, disciplina.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('diario_observacoes')
+        .select('observacoes')
+        .eq('turma_id', turma.id)
+        .eq('disciplina_id', disciplina.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.observacoes || '';
+    }
+  });
+
+  // Mapeamentos computados (Memo)
+  const attendanceMap = useMemo(() => {
+    const map: Record<string, Record<string, 'P' | 'F'>> = {};
+    students.forEach(s => {
+      map[s.id] = {};
+      aulas.forEach(a => {
+        map[s.id][a.id] = 'P';
+      });
+    });
+    dbAttendance.forEach((f: any) => {
+      if (map[f.aluno_id]) {
+        map[f.aluno_id][f.aula_id] = f.status as 'P' | 'F';
+      }
+    });
+    return map;
+  }, [students, aulas, dbAttendance]);
+
+  const gradesMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    students.forEach(s => {
+      map[s.id] = {
+        p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null,
+        total_aulas: aulas.length,
+        total_faltas: 0,
+        frequencia_percent: 100,
+        media_parcial: 0,
+        media_final: 0,
+        resultado_final: 'REPROVADO'
+      };
+    });
+    dbGrades.forEach((g: any) => {
+      if (map[g.aluno_id]) {
+        map[g.aluno_id] = {
+          p: parseFloat(g.nota_p || 0),
+          ti: parseFloat(g.nota_ti || 0),
+          tg: parseFloat(g.nota_tg || 0),
+          s: parseFloat(g.nota_s || 0),
+          cq: parseFloat(g.nota_cq || 0),
+          o: parseFloat(g.nota_o || 0),
+          rec: g.nota_rec !== null ? parseFloat(g.nota_rec) : null,
+          total_aulas: parseInt(g.total_aulas || 0),
+          total_faltas: parseInt(g.total_faltas || 0),
+          frequencia_percent: parseInt(g.frequencia_percent || 100),
+          media_parcial: parseFloat(g.media_parcial || 0),
+          media_final: parseFloat(g.media_final || 0),
+          resultado_final: g.resultado_final || 'REPROVADO'
+        };
+      }
+    });
+
+    // Ajusta faltas e frequências em tempo real antes de salvar notas para reatividade perfeita
+    students.forEach(s => {
+      const g = map[s.id];
+      const studentAttendance = attendanceMap[s.id] || {};
+      const totalAulas = aulas.length;
+      const faltas = Object.values(studentAttendance).filter(v => v === 'F').length;
+      const freq = totalAulas > 0 ? Math.round(((totalAulas - faltas) / totalAulas) * 100) : 100;
+      
+      g.total_aulas = totalAulas;
+      g.total_faltas = faltas;
+      g.frequencia_percent = freq;
+      g.resultado_final = (g.media_final >= 6.0 && freq >= 75) ? 'APROVADO' : 'REPROVADO';
+    });
+
+    return map;
+  }, [students, aulas, dbGrades, attendanceMap]);
+
+  const praticasMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    aulas.forEach(a => {
+      map[a.id] = 'Aula expositiva / Prática padrão';
+    });
+    dbPraticas.forEach((p: any) => {
+      map[p.aula_id] = p.pratica_pedagogica;
+    });
+    return map;
+  }, [aulas, dbPraticas]);
+
+  // Estados locais para inputs que necessitam de digitação livre (salvamento onBlur)
+  const [localGrades, setLocalGrades] = useState<Record<string, any>>({});
+  const [localPraticas, setLocalPraticas] = useState<Record<string, string>>({});
+  const [localObservacoes, setLocalObservacoes] = useState('');
+
+  useEffect(() => {
+    if (Object.keys(gradesMap).length > 0) {
+      setLocalGrades(prev => {
+        const next = { ...gradesMap };
+        return next;
+      });
+    }
+  }, [gradesMap]);
+
+  useEffect(() => {
+    setLocalPraticas(praticasMap);
+  }, [praticasMap]);
+
+  useEffect(() => {
+    if (dbObservacoes !== undefined) {
+      setLocalObservacoes(dbObservacoes);
+    }
+  }, [dbObservacoes]);
+
+  // Supabase Realtime para sincronização multiusuário em tempo real (Egress otimizado)
+  useEffect(() => {
+    const channel = supabase
+      .channel(`diario-${turma.id}-${disciplina.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'diario_frequencia',
+          filter: `turma_id=eq.${turma.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['diario-frequencia', turma.id, disciplina.id] });
+          queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'diario_notas',
+          filter: `turma_id=eq.${turma.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'diario_praticas',
+          filter: `turma_id=eq.${turma.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['diario-praticas', turma.id, disciplina.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'diario_observacoes',
+          filter: `turma_id=eq.${turma.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['diario-observacoes', turma.id, disciplina.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [turma.id, disciplina.id, queryClient]);
+
+  // Mutações (Mutations)
+  const toggleAttendanceMutation = useMutation({
+    mutationFn: async ({ aulaId, alunoId, nextStatus }: { aulaId: string, alunoId: string, nextStatus: 'P' | 'F' }) => {
+      const { error } = await supabase
+        .from('diario_frequencia')
+        .upsert({
+          turma_id: turma.id,
+          disciplina_id: disciplina.id,
+          aula_id: aulaId,
+          aluno_id: alunoId,
+          status: nextStatus
+        }, { onConflict: 'aula_id,aluno_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diario-frequencia', turma.id, disciplina.id] });
+      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
+    }
+  });
+
+  const saveStudentGradesMutation = useMutation({
+    mutationFn: async ({ alunoId, fields }: { alunoId: string, fields: any }) => {
+      const { error } = await supabase
+        .from('diario_notas')
+        .upsert({
+          turma_id: turma.id,
+          disciplina_id: disciplina.id,
+          aluno_id: alunoId,
+          nota_p: fields.p,
+          nota_ti: fields.ti,
+          nota_tg: fields.tg,
+          nota_s: fields.s,
+          nota_cq: fields.cq,
+          nota_o: fields.o,
+          nota_rec: fields.rec
+        }, { onConflict: 'turma_id,disciplina_id,aluno_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
+    }
+  });
+
+  const savePraticaMutation = useMutation({
+    mutationFn: async ({ aulaId, text }: { aulaId: string, text: string }) => {
+      const { error } = await supabase
+        .from('diario_praticas')
+        .upsert({
+          turma_id: turma.id,
+          disciplina_id: disciplina.id,
+          aula_id: aulaId,
+          pratica_pedagogica: text
+        }, { onConflict: 'aula_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diario-praticas', turma.id, disciplina.id] });
+    }
+  });
+
+  const saveObservacoesMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const { error } = await supabase
+        .from('diario_observacoes')
+        .upsert({
+          turma_id: turma.id,
+          disciplina_id: disciplina.id,
+          observacoes: text
+        }, { onConflict: 'turma_id,disciplina_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['diario-observacoes', turma.id, disciplina.id] });
+    }
+  });
+
+  // Funções controladoras locais
+  const handleToggleAttendance = (studentId: string, classId: string) => {
+    const current = attendanceMap[studentId]?.[classId] || 'P';
+    const nextStatus = current === 'P' ? 'F' : 'P';
+    toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });
   };
 
-  const handleToggleAttendance = (studentId: string, classId: string) => {
-    setAttendance(prev => {
-      const current = prev[studentId]?.[classId] || 'P';
-      const next = current === 'P' ? 'F' : 'P';
+  const handleLocalGradeChange = (studentId: string, field: string, value: string) => {
+    setLocalGrades(prev => {
+      const studentFields = prev[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
+      
+      let numeric: number | null = parseFloat(value);
+      if (isNaN(numeric)) {
+        numeric = field === 'rec' ? null : 0;
+      } else {
+        numeric = Math.min(10, Math.max(0, numeric)); // limita entre 0 e 10
+      }
+      
       return {
         ...prev,
         [studentId]: {
-          ...prev[studentId],
-          [classId]: next
+          ...studentFields,
+          [field]: numeric
         }
       };
     });
   };
 
-  const handleGradeChange = (studentId: string, field: string, value: string) => {
-    const numeric = parseFloat(value) || 0;
-    setGrades(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        [field]: field === 'rec' ? (value === '' ? null : numeric) : numeric
-      }
-    }));
+  const handleSaveGrade = (studentId: string) => {
+    const fields = localGrades[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
+    saveStudentGradesMutation.mutate({ alunoId: studentId, fields });
   };
 
   const handleSave = () => {
-    toast.success("Sucesso", "Alterações salvas com sucesso! (Salvo no estado local da aplicação - tabelas de avaliações individuais pendentes nas próximas fases do projeto).");
+    toast.success("Sucesso", "Todas as alterações foram sincronizadas em tempo real com o banco de dados.");
   };
 
   const calculateStudentStats = (studentId: string) => {
-    const studentGrades = grades[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
-    const studentAttendance = attendance[studentId] || {};
-    
-    // Faltas
-    const totalAulas = aulas.length;
-    const faltas = Object.values(studentAttendance).filter(v => v === 'F').length;
-    const frequencia = totalAulas > 0 ? Math.round(((totalAulas - faltas) / totalAulas) * 100) : 100;
-
-    // Média Parcial
-    const { p, ti, tg, s, cq, o, rec } = studentGrades;
-    const mediaParcial = Math.min(10, Math.round(((p + ti + tg + s) / 4 + cq + o) * 10) / 10);
-    
-    // Média Final
-    const mediaFinal = rec !== null && rec > mediaParcial ? rec : mediaParcial;
-    const aprovado = mediaFinal >= 6.0 && frequencia >= 75;
-
+    const g = gradesMap[studentId] || {
+      total_faltas: 0,
+      frequencia_percent: 100,
+      media_parcial: 0,
+      media_final: 0,
+      resultado_final: 'REPROVADO'
+    };
     return {
-      faltas,
-      frequencia,
-      mediaParcial,
-      mediaFinal,
-      resultado: aprovado ? 'APROVADO' : 'REPROVADO'
+      faltas: g.total_faltas,
+      frequencia: g.frequencia_percent,
+      mediaParcial: g.media_parcial,
+      mediaFinal: g.media_final,
+      resultado: g.resultado_final
     };
   };
+
+  const loading = loadingStudents || loadingAulas || loadingAttendance || loadingGrades || loadingPraticas || loadingObservacoes;
 
   if (loading) {
     return (
@@ -303,7 +564,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                   <td className="p-3 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
                                   <td className="p-3 border-r border-slate-100 font-bold text-sm text-[#001a33] truncate max-w-[250px]">{aluno.nome}</td>
                                   {aulas.map((aula) => {
-                                     const foiFalta = attendance[aluno.id]?.[aula.id] === 'F';
+                                     const foiFalta = attendanceMap[aluno.id]?.[aula.id] === 'F';
                                      return (
                                         <td key={aula.id} className="p-2 border-r border-slate-100 text-center">
                                            <button 
@@ -314,7 +575,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                                    : 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
                                              }`}
                                            >
-                                              {foiFalta ? 'F' : 'P'}
+                                               {foiFalta ? 'F' : 'P'}
                                            </button>
                                         </td>
                                      );
@@ -371,7 +632,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                       <tbody className="divide-y divide-slate-100">
                          {students.map((aluno, idx) => {
                             const stats = calculateStudentStats(aluno.id);
-                            const studentGrades = grades[aluno.id] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
+                            const studentGrades = localGrades[aluno.id] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
                             return (
                                <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
@@ -380,48 +641,60 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.p} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 'p', e.target.value)}
+                                      value={studentGrades.p ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'p', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.ti} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 'ti', e.target.value)}
+                                      value={studentGrades.ti ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'ti', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.tg} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 'tg', e.target.value)}
+                                      value={studentGrades.tg ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'tg', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.s} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 's', e.target.value)}
+                                      value={studentGrades.s ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 's', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.cq} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 'cq', e.target.value)}
+                                      value={studentGrades.cq ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'cq', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.o} 
-                                      onChange={(e) => handleGradeChange(aluno.id, 'o', e.target.value)}
+                                      value={studentGrades.o ?? 0} 
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'o', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   
@@ -430,9 +703,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-blue-600 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.rec === null ? '' : studentGrades.rec} 
+                                      value={studentGrades.rec === null || studentGrades.rec === undefined ? '' : studentGrades.rec} 
                                       placeholder="—"
-                                      onChange={(e) => handleGradeChange(aluno.id, 'rec', e.target.value)}
+                                      onChange={(e) => handleLocalGradeChange(aluno.id, 'rec', e.target.value)}
+                                      onBlur={() => handleSaveGrade(aluno.id)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">{stats.mediaFinal.toFixed(1)}</td>
@@ -500,11 +775,12 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                <td className="p-3">
                                   <textarea 
                                     className="w-full bg-transparent outline-none text-xs text-slate-700 resize-none h-12 focus:bg-blue-50/20 p-1.5 rounded border border-transparent focus:border-slate-200" 
-                                    value={aulaPraticas[aula.id] || ''}
+                                    value={localPraticas[aula.id] || ''}
                                     onChange={(e) => {
                                       const text = e.target.value;
-                                      setAulaPraticas(prev => ({ ...prev, [aula.id]: text }));
+                                      setLocalPraticas(prev => ({ ...prev, [aula.id]: text }));
                                     }}
+                                    onBlur={(e) => savePraticaMutation.mutate({ aulaId: aula.id, text: e.target.value })}
                                     placeholder="Descreva a prática pedagógica executada..."
                                   ></textarea>
                                </td>
@@ -525,8 +801,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                      <label className="text-xs font-bold tracking-wider uppercase text-slate-500 mb-2 block">Anotações do Docente:</label>
                      <textarea 
                         className="w-full rounded-2xl border border-slate-200 p-5 text-sm font-medium text-slate-700 min-h-[300px] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all bg-slate-50 focus:bg-white resize-none" 
-                        value={observacoes}
-                        onChange={(e) => setObservacoes(e.target.value)}
+                        value={localObservacoes}
+                        onChange={(e) => setLocalObservacoes(e.target.value)}
+                        onBlur={(e) => saveObservacoesMutation.mutate(e.target.value)}
                         placeholder="Digite aqui as observações gerais sobre a unidade educacional, ocorrências em sala, rendimento da turma, etc..."
                      ></textarea>
                   </div>

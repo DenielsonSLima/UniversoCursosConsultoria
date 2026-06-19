@@ -6,11 +6,13 @@ import { EventType, CalendarEvent } from '../calendario.types';
 interface CalendarSidebarProps {
   types: EventType[];
   events: CalendarEvent[];
+  teachers: any[];
+  turmas: any[];
   onManageTypes: () => void;
   currentYear: number;
 }
 
-const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, onManageTypes, currentYear }) => {
+const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, teachers, turmas, onManageTypes, currentYear }) => {
   
   // Ordenar eventos por data
   const sortedEvents = useMemo(() => {
@@ -61,6 +63,8 @@ const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, onMana
             <div className="space-y-3">
                 {sortedEvents.map(event => {
                     const type = getTypeInfo(event.typeId);
+                    const teacherObj = teachers.find(t => t.id === event.professorId);
+                    const turmaObj = turmas.find(t => t.id === event.turmaId);
                     return (
                         <div key={event.id} className="flex gap-3 items-start p-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-100 group">
                             <div className="flex flex-col items-center min-w-[36px]">
@@ -73,9 +77,21 @@ const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, onMana
                                 <p className="text-xs font-bold text-[#001a33] truncate" title={event.title}>
                                     {event.title}
                                 </p>
-                                <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                                    {type.label}
-                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    <span className="text-[8px] font-black text-slate-500 bg-slate-100 px-1 py-0.5 rounded">
+                                        {type.label}
+                                    </span>
+                                    {teacherObj && (
+                                        <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Prof: ${teacherObj.nome}`}>
+                                            Prof: {teacherObj.nome}
+                                        </span>
+                                    )}
+                                    {turmaObj && (
+                                        <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Turma: ${turmaObj.nome}`}>
+                                            Turma: {turmaObj.nome}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     );

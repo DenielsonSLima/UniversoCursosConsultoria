@@ -1,8 +1,9 @@
-
 // File: modules/gestor/secretaria/documentos/SecretariaDocumentosPage.tsx
 
 import React, { useState } from 'react';
 import { FileText, ArrowRightLeft, Search, Printer, CheckCircle2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../../../lib/supabase';
 
 interface SecretariaDocumentosPageProps {
   initialType: string;
@@ -13,16 +14,53 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
     initialType === 'transferencia' ? 'transferencia' : 'declaracao'
   );
   const [step, setStep] = useState(1); // 1: Busca Aluno, 2: Configuração, 3: Impressão
-  const [selectedAluno, setSelectedAluno] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAlunoObj, setSelectedAlunoObj] = useState<any | null>(null);
+  const [selectedTurmaId, setSelectedTurmaId] = useState<string>('');
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simula encontrar aluno
+  const { data: searchResults = [], isLoading: isSearching } = useQuery({
+    queryKey: ['secretaria-documentos-search', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm) return [];
+      const { data, error } = await supabase
+        .from('parceiros')
+        .select('*')
+        .eq('tipo', 'Aluno')
+        .or(`nome.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`)
+        .order('nome', { ascending: true });
+      if (error) {
+        console.error('Erro ao buscar alunos para documentos:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: searchTerm.length >= 2,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: matriculas = [] } = useQuery({
+    queryKey: ['documentos-aluno-matriculas', selectedAlunoObj?.id],
+    queryFn: async () => {
+      if (!selectedAlunoObj?.id) return [];
+      const { data, error } = await supabase
+        .from('matriculas')
+        .select('*, turmas(*, cursos(*))')
+        .eq('aluno_id', selectedAlunoObj.id);
+      if (error) {
+        console.error('Erro ao buscar matrículas para documentos:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: !!selectedAlunoObj?.id,
+  });
+
+  const handleSelectAluno = (aluno: any) => {
+    setSelectedAlunoObj(aluno);
     setStep(2);
   };
 
   const handleGenerate = () => {
-    // Simula geração
     setStep(3);
   };
 
@@ -31,13 +69,13 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
       {/* Tab Switcher */}
       <div className="bg-white p-1 rounded-2xl border border-slate-200 inline-flex mb-8 shadow-sm">
         <button
-          onClick={() => { setDocType('declaracao'); setStep(1); }}
+          onClick={() => { setDocType('declaracao'); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
           className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${docType === 'declaracao' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <FileText size={16} /> Declarações
         </button>
         <button
-          onClick={() => { setDocType('transferencia'); setStep(1); }}
+          onClick={() => { setDocType('transferencia'); setStep(1); setSelectedAlunoObj(null); setSearchTerm(''); }}
           className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${docType === 'transferencia' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           <ArrowRightLeft size={16} /> Transferência
@@ -54,18 +92,42 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
             </h3>
             <p className="text-slate-500 mb-6 text-sm">Busque o aluno para iniciar o processo de emissão do documento.</p>
             
-            <form onSubmit={handleSearch} className="relative">
+            <div className="relative mb-6">
                 <input 
                     type="text" 
-                    placeholder="Nome, CPF ou Matrícula..."
+                    placeholder="Digite o nome, CPF ou Matrícula..."
                     className="w-full pl-6 pr-14 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white transition-all text-slate-700 font-medium"
-                    onChange={(e) => setSelectedAluno(e.target.value)}
-                    required
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button type="submit" className="absolute right-2 top-2 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20">
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
                     <Search size={20} />
-                </button>
-            </form>
+                </div>
+            </div>
+
+            {searchTerm && searchTerm.length >= 2 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto mb-6">
+                    {isSearching ? (
+                        <div className="text-center py-4 text-slate-400 text-sm">Buscando...</div>
+                    ) : searchResults.length > 0 ? (
+                        searchResults.map((aluno: any) => (
+                            <div 
+                                key={aluno.id}
+                                onClick={() => handleSelectAluno(aluno)}
+                                className="p-3 bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-xl cursor-pointer transition-all flex justify-between items-center"
+                            >
+                                <div>
+                                    <p className="font-bold text-slate-800 text-sm">{aluno.nome}</p>
+                                    <p className="text-xs text-slate-500">CPF: {aluno.cpf_cnpj || 'Não informado'}</p>
+                                </div>
+                                <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold uppercase">Selecionar</span>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-4 text-slate-400 text-sm">Nenhum aluno encontrado.</div>
+                    )}
+                </div>
+            )}
 
             <div className="mt-8 pt-8 border-t border-slate-100 text-center">
                 <p className="text-xs text-slate-400 uppercase font-bold tracking-widest mb-4">Documentos Disponíveis</p>
@@ -83,9 +145,26 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
         {step === 2 && (
           <div className="animate-fadeIn">
              <h3 className="text-xl font-black text-[#001a33] mb-2 uppercase tracking-tight">Confirmar Dados</h3>
-             <p className="text-slate-500 mb-6 text-sm">Aluno selecionado: <strong className="text-[#001a33]">João Pedro Alves</strong></p>
+             <p className="text-slate-500 mb-6 text-sm">Aluno selecionado: <strong className="text-[#001a33]">{selectedAlunoObj?.nome}</strong></p>
 
              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-6">
+                <div className="mb-4">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Curso / Turma Relacionada</label>
+                    <select 
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                      value={selectedTurmaId}
+                      onChange={(e) => setSelectedTurmaId(e.target.value)}
+                    >
+                        {matriculas.map((m: any) => (
+                            <option key={m.id} value={m.turmas?.id}>
+                                {m.turmas?.cursos?.nome} ({m.turmas?.nome})
+                            </option>
+                        ))}
+                        {matriculas.length === 0 && (
+                            <option value="">Nenhum curso/turma ativa encontrada</option>
+                        )}
+                    </select>
+                </div>
                 <div className="mb-4">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Documento</label>
                     <select className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500">
@@ -114,7 +193,7 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
 
              <div className="flex gap-3">
                 <button 
-                    onClick={() => setStep(1)}
+                    onClick={() => { setStep(1); setSelectedAlunoObj(null); setSelectedTurmaId(''); }}
                     className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-slate-50"
                 >
                     Voltar
@@ -143,7 +222,7 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
                         <Printer size={16} /> Imprimir PDF
                     </button>
                     <button 
-                        onClick={() => setStep(1)}
+                        onClick={() => { setStep(1); setSelectedAlunoObj(null); setSelectedTurmaId(''); setSearchTerm(''); }}
                         className="px-8 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-slate-50"
                     >
                         Novo Documento

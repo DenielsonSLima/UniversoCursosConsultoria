@@ -125,6 +125,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [addingDiscToModId, setAddingDiscToModId] = useState<string | null>(null);
   const [newDiscName, setNewDiscName] = useState('');
   const [newDiscHoras, setNewDiscHoras] = useState('');
+  const [newDiscTeoria, setNewDiscTeoria] = useState('');
+  const [newDiscPratica, setNewDiscPratica] = useState('');
+  const [newDiscEstagio, setNewDiscEstagio] = useState('');
   const [newDiscDesc, setNewDiscDesc] = useState('');
 
   // Obter configurações visuais com base no tipo de curso
@@ -392,11 +395,28 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   // --- DISCIPLINAS ---
   const handleAddDisciplina = (moduloId: string) => {
     if (!newDiscName.trim()) return;
-    const horas = parseInt(newDiscHoras) || 0;
+    
+    let horas = 0;
+    let t = 0;
+    let p = 0;
+    let e = 0;
+    
+    if (curso.modalidade === 'TECNICO') {
+      t = parseInt(newDiscTeoria) || 0;
+      p = parseInt(newDiscPratica) || 0;
+      e = parseInt(newDiscEstagio) || 0;
+      horas = t + p + e;
+    } else {
+      horas = parseInt(newDiscHoras) || 0;
+    }
+
     const novaDisciplina: Disciplina = {
       id: `temp-disc-${Math.random().toString(36).substr(2, 9)}`,
       nome: newDiscName,
       cargaHoraria: horas,
+      cargaHorariaTeoria: t,
+      cargaHorariaPratica: p,
+      cargaHorariaEstagio: e,
       descricao: newDiscDesc.trim() || undefined,
       aulas: []
     };
@@ -407,6 +427,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     }));
     setNewDiscName('');
     setNewDiscHoras('');
+    setNewDiscTeoria('');
+    setNewDiscPratica('');
+    setNewDiscEstagio('');
     setNewDiscDesc('');
     setAddingDiscToModId(null);
   };
@@ -930,6 +953,15 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                             <BookOpen size={16} className={config.textColor} />
                             <span className="font-bold text-sm">{disc.nome}</span>
                           </div>
+                          {curso.modalidade === 'TECNICO' && (
+                            <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider pl-6 mt-1.5">
+                              <span>Teoria: <strong className="text-slate-700">{disc.cargaHorariaTeoria || 0}h</strong></span>
+                              <span>•</span>
+                              <span>Prática: <strong className="text-slate-700">{disc.cargaHorariaPratica || 0}h</strong></span>
+                              <span>•</span>
+                              <span>Estágio: <strong className="text-slate-700">{disc.cargaHorariaEstagio || 0}h</strong></span>
+                            </div>
+                          )}
                           {disc.descricao && (
                             <p className="text-xs text-slate-400 font-medium pl-6 mt-1">
                               {disc.descricao}
@@ -938,30 +970,143 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1.5">
-                            <input 
-                              type="number"
-                              title="Carga Horária"
-                              className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                              value={disc.cargaHoraria || 0}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value) || 0;
-                                setModulos(prev => prev.map(m => {
-                                  if (m.id === modulo.id) {
-                                    return {
-                                      ...m,
-                                      disciplinas: m.disciplinas.map(d => {
-                                        if (d.id === disc.id) {
-                                          return { ...d, cargaHoraria: val };
+                            {curso.modalidade === 'TECNICO' ? (
+                              <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm">
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[9px] font-black text-slate-400 select-none">T</span>
+                                  <input 
+                                    type="number"
+                                    title="Teoria"
+                                    className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
+                                    value={disc.cargaHorariaTeoria || 0}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      setModulos(prev => prev.map(m => {
+                                        if (m.id === modulo.id) {
+                                          return {
+                                            ...m,
+                                            disciplinas: m.disciplinas.map(d => {
+                                              if (d.id === disc.id) {
+                                                const newT = val;
+                                                const newP = d.cargaHorariaPratica || 0;
+                                                const newE = d.cargaHorariaEstagio || 0;
+                                                return { 
+                                                  ...d, 
+                                                  cargaHorariaTeoria: newT,
+                                                  cargaHoraria: newT + newP + newE 
+                                                };
+                                              }
+                                              return d;
+                                            })
+                                          };
                                         }
-                                        return d;
-                                      })
-                                    };
-                                  }
-                                  return m;
-                                }));
-                              }}
-                            />
-                            <span className="text-xs font-bold text-slate-400">h</span>
+                                        return m;
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-slate-300 font-bold select-none">|</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[9px] font-black text-slate-400 select-none">P</span>
+                                  <input 
+                                    type="number"
+                                    title="Prática"
+                                    className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
+                                    value={disc.cargaHorariaPratica || 0}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      setModulos(prev => prev.map(m => {
+                                        if (m.id === modulo.id) {
+                                          return {
+                                            ...m,
+                                            disciplinas: m.disciplinas.map(d => {
+                                              if (d.id === disc.id) {
+                                                const newT = d.cargaHorariaTeoria || 0;
+                                                const newP = val;
+                                                const newE = d.cargaHorariaEstagio || 0;
+                                                return { 
+                                                  ...d, 
+                                                  cargaHorariaPratica: newP,
+                                                  cargaHoraria: newT + newP + newE 
+                                                };
+                                              }
+                                              return d;
+                                            })
+                                          };
+                                        }
+                                        return m;
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-slate-300 font-bold select-none">|</span>
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[9px] font-black text-slate-400 select-none">E</span>
+                                  <input 
+                                    type="number"
+                                    title="Estágio"
+                                    className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
+                                    value={disc.cargaHorariaEstagio || 0}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value) || 0;
+                                      setModulos(prev => prev.map(m => {
+                                        if (m.id === modulo.id) {
+                                          return {
+                                            ...m,
+                                            disciplinas: m.disciplinas.map(d => {
+                                              if (d.id === disc.id) {
+                                                const newT = d.cargaHorariaTeoria || 0;
+                                                const newP = d.cargaHorariaPratica || 0;
+                                                const newE = val;
+                                                return { 
+                                                  ...d, 
+                                                  cargaHorariaEstagio: newE,
+                                                  cargaHoraria: newT + newP + newE 
+                                                };
+                                              }
+                                              return d;
+                                            })
+                                          };
+                                        }
+                                        return m;
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-slate-300 font-bold select-none">|</span>
+                                <div className="flex flex-col items-center bg-[#001a33] text-white px-2 py-0.5 rounded-lg select-none">
+                                  <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">Total</span>
+                                  <span className="text-xs font-black">{disc.cargaHoraria || 0}h</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <input 
+                                  type="number"
+                                  title="Carga Horária"
+                                  className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                  value={disc.cargaHoraria || 0}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    setModulos(prev => prev.map(m => {
+                                      if (m.id === modulo.id) {
+                                        return {
+                                          ...m,
+                                          disciplinas: m.disciplinas.map(d => {
+                                            if (d.id === disc.id) {
+                                              return { ...d, cargaHoraria: val };
+                                            }
+                                            return d;
+                                          })
+                                        };
+                                      }
+                                      return m;
+                                    }));
+                                  }}
+                                />
+                                <span className="text-xs font-bold text-slate-400">h</span>
+                              </>
+                            )}
                           </div>
                           <button onClick={() => handleRemoveDisciplina(modulo.id, disc.id)} className="text-slate-300 hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
@@ -975,22 +1120,48 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   <div className="mt-4 pt-4 border-t border-slate-100 border-dashed">
                     {addingDiscToModId === modulo.id ? (
                       <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <input 
                             autoFocus
                             type="text" 
                             placeholder={`Nome da Nova ${config.labelDisciplina} *`}
-                            className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold"
+                            className="flex-grow px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold animate-fadeIn"
                             value={newDiscName}
                             onChange={(e) => setNewDiscName(e.target.value)}
                           />
-                          <input 
-                            type="number" 
-                            placeholder="Horas *"
-                            className="w-24 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold text-center"
-                            value={newDiscHoras}
-                            onChange={(e) => setNewDiscHoras(e.target.value)}
-                          />
+                          {curso.modalidade === 'TECNICO' ? (
+                            <div className="flex gap-2">
+                              <input 
+                                type="number" 
+                                placeholder="Teoria (T) *"
+                                className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
+                                value={newDiscTeoria}
+                                onChange={(e) => setNewDiscTeoria(e.target.value)}
+                              />
+                              <input 
+                                type="number" 
+                                placeholder="Prática (P) *"
+                                className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
+                                value={newDiscPratica}
+                                onChange={(e) => setNewDiscPratica(e.target.value)}
+                              />
+                              <input 
+                                type="number" 
+                                placeholder="Estágio (E) *"
+                                className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
+                                value={newDiscEstagio}
+                                onChange={(e) => setNewDiscEstagio(e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <input 
+                              type="number" 
+                              placeholder="Horas *"
+                              className="w-24 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold text-center"
+                              value={newDiscHoras}
+                              onChange={(e) => setNewDiscHoras(e.target.value)}
+                            />
+                          )}
                         </div>
                         <input 
                           type="text" 
