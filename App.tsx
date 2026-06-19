@@ -2,7 +2,7 @@
 // File: App.tsx
 
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Páginas Públicas (sempre disponíveis)
 import PublicPage from './modules/public/public.page';
@@ -17,6 +17,9 @@ import CursosLivresPublicPage from './modules/public/cursos-livres/CursosLivresP
 import CursoLivreDetailPage from './modules/public/cursos-livres/CursoLivreDetailPage';
 import EspecializacaoPublicPage from './modules/public/especializacao/EspecializacaoPublicPage';
 import EspecializacaoDetailPage from './modules/public/especializacao/EspecializacaoDetailPage';
+import SeoManager from './modules/public/components/SeoManager';
+import EadPublicPage from './modules/public/ead/EadPublicPage';
+import AlunoLoginPublicPage from './modules/public/login/AlunoLoginPublicPage';
 
 // Páginas do Sistema Interno (somente em desenvolvimento)
 import LoginPage from './modules/login/LoginPage';
@@ -24,17 +27,6 @@ import GestorPage from './modules/gestor/gestor.page';
 import ProfessorPage from './modules/professor/professor.page';
 import AlunoPage from './modules/aluno/aluno.page';
 import CadAedPage from './modules/cad-aed/cad-aed.page';
-
-// Helper para redirecionamento externo (usado em produção)
-import ExternalRedirect from './lib/ExternalRedirect';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// URLs externas para redirecionamento em modo de produção
-// ─────────────────────────────────────────────────────────────────────────────
-const EXTERNAL_URLS = {
-  loginAluno: 'https://app.proesc.com/universo-cursos-e-consultoria/login',
-  cursosEad: 'https://universocursos.curso.study/loja_virtual/index.php',
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Modo da aplicação controlado por variável de ambiente
@@ -45,7 +37,8 @@ const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <BrowserRouter>
+      <SeoManager />
       <Routes>
 
         {/* ── Rotas Públicas (sempre disponíveis) ── */}
@@ -70,7 +63,7 @@ const App: React.FC = () => {
           element={
             isDevelopmentMode
               ? <LoginPage />
-              : <ExternalRedirect url={EXTERNAL_URLS.loginAluno} />
+              : <AlunoLoginPublicPage />
           }
         />
 
@@ -79,7 +72,7 @@ const App: React.FC = () => {
         {/* Em desenvolvimento: idem (não há um painel EAD local ainda) */}
         <Route
           path="/ead"
-          element={<ExternalRedirect url={EXTERNAL_URLS.cursosEad} />}
+          element={<EadPublicPage />}
         />
 
         {/* ── Rotas do Sistema Interno ── */}
@@ -108,7 +101,7 @@ const App: React.FC = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

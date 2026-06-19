@@ -11,15 +11,6 @@ const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
 const Footer: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleLink = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    navigate(`/#${id}`);
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
     <footer className="bg-[#001a33] text-white pt-20 pb-8 border-t border-white/5">
       <div className="container mx-auto px-6">
@@ -64,11 +55,13 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-xs font-black uppercase tracking-[0.2em] text-blue-400 mb-8">Navegação</h4>
             <ul className="space-y-4 text-slate-400 text-sm font-bold uppercase tracking-widest">
-              <li><button onClick={(e) => handleLink(e, 'inicio')} className="hover:text-white transition-colors">Início</button></li>
-              <li><button onClick={(e) => handleLink(e, 'cursos')} className="hover:text-white transition-colors">Cursos</button></li>
-              <li><button onClick={(e) => handleLink(e, 'quem-somos')} className="hover:text-white transition-colors">Quem Somos</button></li>
-              <li><button onClick={() => navigate('/contato')} className="hover:text-white transition-colors">Fale Conosco</button></li>
-              <li><button onClick={() => navigate('/faq')} className="hover:text-white transition-colors">FAQ</button></li>
+              <li><a href="/" className="hover:text-white transition-colors">Início</a></li>
+              <li><a href="/ead" className="hover:text-white transition-colors">Cursos EAD</a></li>
+              <li><a href="/cursos-tecnicos" className="hover:text-white transition-colors">Cursos Técnicos</a></li>
+              <li><a href="/ensino-superior" className="hover:text-white transition-colors">Ensino Superior</a></li>
+              <li><a href="/login" className="hover:text-white transition-colors">Login do Aluno</a></li>
+              <li><a href="/contato" className="hover:text-white transition-colors">Fale Conosco</a></li>
+              <li><a href="/faq" className="hover:text-white transition-colors">FAQ</a></li>
               {/* Validador de Documentos: apenas em modo desenvolvimento (local) */}
               {isDevelopmentMode && (
                 <li>
