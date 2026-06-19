@@ -1,11 +1,9 @@
-
 // File: modules/gestor/cadastros/modelos-documentos/declaracao/declaracao.service.ts
 
-// Mock Storage: Chave é o ID do Polo
-let templatesStore: Record<string, any> = {};
+const STORAGE_KEY_PREFIX = 'universo_template_declaracao_';
+const QR_CONFIG_KEY = 'universo_qr_config_declaracao';
 
-// Mock Storage: Configuração Global do QR Code
-let qrCodeConfig = {
+const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{CURSO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
   separator: '-'
 };
@@ -15,48 +13,78 @@ const defaultTemplate = {
   absoluteFields: [
     { 
         id: 'data_field', 
-        type: 'variable', 
+        type: 'text', 
         value: '{{CIDADE_POLO}}, {{DATA_ATUAL}}', 
         x: 400, 
         y: 800, 
         style: { textAlign: 'right', fontWeight: 'bold' } 
     }
   ],
+  validityDays: 30,
+};
+
+const getLocalStorageTemplate = (poloId: string) => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${poloId}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Erro ao ler template do localStorage:', e);
+      }
+    }
+  }
+  return JSON.parse(JSON.stringify(defaultTemplate));
+};
+
+const getLocalStorageQrConfig = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(QR_CONFIG_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Erro ao ler QR config do localStorage:', e);
+      }
+    }
+  }
+  return DEFAULT_QR_CONFIG;
 };
 
 export const declaracaoService = {
   async getTemplate(poloId: string) {
     return new Promise<any>((resolve) => {
       setTimeout(() => {
-        const template = templatesStore[poloId] || JSON.parse(JSON.stringify(defaultTemplate));
-        resolve(template);
-      }, 500);
+        resolve(getLocalStorageTemplate(poloId));
+      }, 300);
     });
   },
 
   async saveTemplate(poloId: string, data: any) {
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        templatesStore[poloId] = data;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}${poloId}`, JSON.stringify(data));
+        }
         resolve(true);
-      }, 800);
+      }, 350);
     });
   },
 
-  // --- Novos métodos para Configuração de QR Code ---
-
   async getQrConfig() {
     return new Promise<any>((resolve) => {
-      setTimeout(() => resolve(qrCodeConfig), 300);
+      setTimeout(() => resolve(getLocalStorageQrConfig()), 300);
     });
   },
 
   async saveQrConfig(config: any) {
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        qrCodeConfig = config;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(QR_CONFIG_KEY, JSON.stringify(config));
+        }
         resolve(true);
-      }, 600);
+      }, 350);
     });
   }
 };

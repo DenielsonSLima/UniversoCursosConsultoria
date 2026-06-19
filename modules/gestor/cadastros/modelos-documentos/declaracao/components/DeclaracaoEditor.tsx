@@ -3,10 +3,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic, 
-  GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Building2
+  GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Building2, Sliders,
+  CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { declaracaoService } from '../declaracao.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
+import DocumentHeader from '../../../../components/DocumentHeader';
 
 interface DeclaracaoEditorProps {
   polo: any;
@@ -25,6 +27,8 @@ const VARIABLES = [
   { code: '{{CIDADE_POLO}}', label: 'Cidade do Polo' },
   { code: '{{DATA_ATUAL}}', label: 'Data Atual (Extenso)' },
   { code: '{{HORA_ATUAL}}', label: 'Hora Atual' },
+  { code: '{{VALIDADE_DIAS}}', label: 'Dias de Validade' },
+  { code: '{{VALIDADE_DATA}}', label: 'Data de Validade (Limite)' },
 ];
 
 interface AbsoluteField {
@@ -47,6 +51,42 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
   // Estado do Documento
   const [textContent, setTextContent] = useState('');
   const [absoluteFields, setAbsoluteFields] = useState<AbsoluteField[]>([]);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [validityDays, setValidityDays] = useState<number>(30);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+  
+  const selectedField = absoluteFields.find(f => f.id === selectedFieldId);
+
+  // --- Helpers de Edição de Campos Absolutos ---
+  const updateSelectedField = (updates: Partial<AbsoluteField>) => {
+    if (!selectedFieldId) return;
+    setAbsoluteFields(prev => prev.map(f => 
+      f.id === selectedFieldId ? { ...f, ...updates } : f
+    ));
+  };
+
+  const updateSelectedFieldStyle = (styleUpdates: React.CSSProperties) => {
+    if (!selectedFieldId) return;
+    setAbsoluteFields(prev => prev.map(f => {
+      if (f.id === selectedFieldId) {
+        return {
+          ...f,
+          style: {
+            ...(f.style || {}),
+            ...styleUpdates
+          }
+        };
+      }
+      return f;
+    }));
+  };
   
   // Drag & Drop
   const [draggedItem, setDraggedItem] = useState<any>(null);
@@ -63,6 +103,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
     // 1. Carrega Template Específico do Polo
     const template = await declaracaoService.getTemplate(polo.id);
     setTextContent(template.textContent);
+    setValidityDays(template.validityDays || 30);
     
     const fieldsWithTypes = (template.absoluteFields || []).map((f: any) => ({
         ...f,
@@ -101,16 +142,18 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
+        const generatedId = Math.random().toString(36).substr(2, 9);
         const newField: AbsoluteField = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: generatedId,
             type: 'image',
             value: event.target?.result as string,
             x: 250, 
             y: 850, 
             width: 200,
-            style: { zIndex: 50 }
+            style: { zIndex: 50, mixBlendMode: 'multiply' }
         };
         setAbsoluteFields(prev => [...prev, newField]);
+        setSelectedFieldId(generatedId);
       };
       reader.readAsDataURL(file);
     }
@@ -165,6 +208,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
   // --- Movimentação de campos no Canvas ---
   const handleFieldMouseDown = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    setSelectedFieldId(id);
     const field = absoluteFields.find(f => f.id === id);
     if (!field || !canvasRef.current) return;
 
@@ -193,23 +237,29 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
 
   const handleRemoveField = (id: string) => {
     setAbsoluteFields(prev => prev.filter(f => f.id !== id));
+    if (selectedFieldId === id) {
+      setSelectedFieldId(null);
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
-    await declaracaoService.saveTemplate(polo.id, {
-        textContent,
-        absoluteFields
-    });
-    setSaving(false);
-    alert(`Modelo para ${polo.nomeFantasia} salvo com sucesso!`);
+    try {
+      await declaracaoService.saveTemplate(polo.id, {
+          textContent,
+          absoluteFields,
+          validityDays
+      });
+      showToast(`Modelo para ${polo.nomeFantasia} salvo com sucesso!`, 'success');
+    } catch (error) {
+      showToast('Erro ao salvar as alterações do modelo.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Retorna a URL completa para o validador
-  const getQrCodeExampleUrl = () => {
-    const baseUrl = window.location.origin + window.location.pathname + '#/validador?q=';
+  const getValidationCode = () => {
     let codeStr = 'VALIDACAO-PADRAO';
-    
     if (qrConfig && qrConfig.pattern) {
       codeStr = qrConfig.pattern.map((token: string) => {
           if (token === '{POLO_ID}') return polo.id.slice(0,3).toUpperCase();
@@ -217,9 +267,16 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
           return token.replace(/[{}]/g, '').substring(0, 4);
       }).join(qrConfig.separator || '-');
     }
-    
-    // Adiciona DEC para diferenciar no validador
-    return baseUrl + 'DEC-' + codeStr;
+    return 'DEC-' + codeStr;
+  };
+
+  const getValidationUrl = () => {
+    return 'https://www.universocc.com.br/#/validador';
+  };
+
+  // Retorna a URL completa para o validador
+  const getQrCodeExampleUrl = () => {
+    return `${getValidationUrl()}?q=${getValidationCode()}`;
   };
 
   if (loading) return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
@@ -257,6 +314,32 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
         
         {/* Sidebar: Ferramentas */}
         <div className="w-72 flex flex-col gap-6 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden h-full shrink-0">
+            
+            {/* Seção de Validade do Documento */}
+            <div className="border-b border-slate-100 pb-4 flex flex-col gap-2 shrink-0">
+                <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2 mb-1">
+                    <Building2 size={14} className="text-blue-600" /> Validade do Documento
+                </h4>
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                    {([30, 60, 90] as const).map((days) => (
+                        <button
+                            key={days}
+                            onClick={() => setValidityDays(days)}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider ${
+                                validityDays === days
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            {days} Dias
+                        </button>
+                    ))}
+                </div>
+                <p className="text-[9px] text-slate-400 font-medium leading-normal">
+                    Define o prazo padrão que será impresso no documento e usado na verificação do QR Code.
+                </p>
+            </div>
+
             {/* Seção de Variáveis de Texto */}
             <div className="flex flex-col gap-2 flex-1 overflow-hidden">
                 <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2 mb-1">
@@ -328,10 +411,174 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                     />
                 </div>
             </div>
+
+            {/* Seção de Ajustes do Elemento Selecionado */}
+            {selectedField && (
+                <div className="border-t border-slate-100 pt-4 flex flex-col gap-3 shrink-0 animate-fadeIn">
+                    <div className="flex justify-between items-center mb-1">
+                        <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2">
+                            <Sliders size={14} className="text-blue-600" /> Ajustar Elemento
+                        </h4>
+                        <button 
+                            onClick={() => setSelectedFieldId(null)}
+                            className="text-[10px] font-bold text-slate-400 hover:text-slate-650 uppercase hover:text-slate-655"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-3 flex flex-col gap-3">
+                        {/* Controles para imagem (assinatura) */}
+                        {selectedField.type === 'image' && (
+                            <div className="space-y-3">
+                                {/* Slider de Largura */}
+                                <div>
+                                    <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                        <span>Largura</span>
+                                        <span>{selectedField.width || 200}px</span>
+                                    </div>
+                                    <input 
+                                        type="range"
+                                        min="40"
+                                        max="500"
+                                        value={selectedField.width || 200}
+                                        onChange={(e) => updateSelectedField({ width: parseInt(e.target.value) })}
+                                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                </div>
+
+                                {/* Efeito Mesclar (Multiply) */}
+                                <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-700 leading-tight">Efeito Caneta (Mesclar)</p>
+                                        <p className="text-[8px] text-slate-500 leading-tight">Remove o fundo branco</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const currentBlend = selectedField.style?.mixBlendMode;
+                                            const nextBlend = currentBlend === 'multiply' ? 'normal' : 'multiply';
+                                            updateSelectedFieldStyle({ mixBlendMode: nextBlend });
+                                        }}
+                                        className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-300 focus:outline-none ${
+                                            selectedField.style?.mixBlendMode === 'multiply' ? 'bg-emerald-500 justify-end' : 'bg-slate-300 justify-start'
+                                        }`}
+                                    >
+                                        <span className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Controles para QR Code */}
+                        {selectedField.type === 'qrcode' && (
+                            <div>
+                                <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                    <span>Tamanho</span>
+                                    <span>{selectedField.width || 100}px</span>
+                                </div>
+                                <input 
+                                    type="range"
+                                    min="60"
+                                    max="250"
+                                    value={selectedField.width || 100}
+                                    onChange={(e) => updateSelectedField({ width: parseInt(e.target.value) })}
+                                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                />
+                            </div>
+                        )}
+
+                        {/* Controles para Texto Dinâmico */}
+                        {selectedField.type === 'text' && (
+                            <div className="space-y-3">
+                                {/* Tamanho da Fonte */}
+                                <div>
+                                    <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                        <span>Tamanho da Fonte</span>
+                                        <span>{selectedField.style?.fontSize ? parseInt(selectedField.style.fontSize.toString()) : 14}px</span>
+                                    </div>
+                                    <input 
+                                        type="range"
+                                        min="10"
+                                        max="36"
+                                        value={selectedField.style?.fontSize ? parseInt(selectedField.style.fontSize.toString()) : 14}
+                                        onChange={(e) => updateSelectedFieldStyle({ fontSize: `${e.target.value}px` })}
+                                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                </div>
+
+                                {/* Estilos de Fonte (Bold, Italic) */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const currentWeight = selectedField.style?.fontWeight;
+                                            updateSelectedFieldStyle({ fontWeight: currentWeight === 'bold' ? 'normal' : 'bold' });
+                                        }}
+                                        className={`flex-1 flex items-center justify-center p-1.5 border rounded-xl transition-colors ${
+                                            selectedField.style?.fontWeight === 'bold'
+                                            ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                        }`}
+                                        title="Negrito"
+                                    >
+                                        <Bold size={12} />
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            const currentStyle = selectedField.style?.fontStyle;
+                                            updateSelectedFieldStyle({ fontStyle: currentStyle === 'italic' ? 'normal' : 'italic' });
+                                        }}
+                                        className={`flex-1 flex items-center justify-center p-1.5 border rounded-xl transition-colors ${
+                                            selectedField.style?.fontStyle === 'italic'
+                                            ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                        }`}
+                                        title="Itálico"
+                                    >
+                                        <Italic size={12} />
+                                    </button>
+                                </div>
+
+                                {/* Alinhamento de Texto */}
+                                <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
+                                    {(['left', 'center', 'right'] as const).map((align) => {
+                                        const Icon = align === 'left' ? AlignLeft : align === 'center' ? AlignCenter : AlignRight;
+                                        const isAligned = selectedField.style?.textAlign === align || (!selectedField.style?.textAlign && align === 'left');
+                                        return (
+                                            <button
+                                                key={align}
+                                                onClick={() => updateSelectedFieldStyle({ textAlign: align })}
+                                                className={`flex-1 flex items-center justify-center py-1 rounded-lg transition-colors ${
+                                                    isAligned
+                                                    ? 'bg-white text-blue-600 shadow-sm font-bold'
+                                                    : 'text-slate-400 hover:text-slate-650 hover:text-slate-600'
+                                                }`}
+                                            >
+                                                <Icon size={12} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Botão de Exclusão Direta */}
+                        <button
+                            onClick={() => handleRemoveField(selectedField.id)}
+                            className="w-full mt-1 flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors border border-red-200"
+                        >
+                            <Trash2 size={12} /> Excluir Elemento
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
 
         {/* Área Central: Canvas A4 Scrollável */}
-        <div className="flex-1 bg-slate-200/50 rounded-[2rem] border border-slate-300/50 overflow-auto flex justify-center p-8 custom-scrollbar shadow-inner relative">
+        <div 
+            onClick={() => setSelectedFieldId(null)}
+            className="flex-1 bg-slate-200/50 rounded-[2rem] border border-slate-300/50 overflow-auto flex justify-center p-8 custom-scrollbar shadow-inner relative animate-fadeIn"
+        >
             
             <div 
                 ref={canvasRef}
@@ -345,6 +592,11 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                 }}
                 onDrop={handleDropOnCanvas}
                 onDragOver={handleDragOver}
+                onClick={(e) => {
+                    if (e.target === canvasRef.current) {
+                        setSelectedFieldId(null);
+                    }
+                }}
             >
                 {/* 1. Marca D'água */}
                 {watermark?.watermarkUrl && (
@@ -355,27 +607,14 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                             style={{
                                 opacity: watermark.watermarkOpacity || 0.1,
                                 width: `${watermark.watermarkScale || 50}%`,
-                                transform: 'rotate(-45deg)'
+                                transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none'
                             }}
                         />
                     </div>
                 )}
 
                 {/* 2. Cabeçalho */}
-                <div className="flex flex-col items-center border-b-2 border-blue-900/10 pb-6 mb-10 relative z-10 select-none pointer-events-none text-center">
-                    {polo.logoUrl ? (
-                        <img src={polo.logoUrl} alt="Logo" className="h-24 mb-4 object-contain" />
-                    ) : (
-                        <div className="h-20 w-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border border-slate-200">
-                            <Building2 size={32} className="text-slate-300" />
-                        </div>
-                    )}
-                    <h1 className="text-xl font-black text-[#001a33] uppercase tracking-wide">{polo.nomeFantasia}</h1>
-                    <p className="text-xs text-slate-600 font-medium mt-1">
-                        {polo.endereco}, {polo.numero} - {polo.cidade}/{polo.uf}
-                    </p>
-                    <p className="text-xs text-slate-500 font-medium">CNPJ: {polo.cnpj}</p>
-                </div>
+                <DocumentHeader polo={polo} orientation="portrait" />
 
                 {/* Título */}
                 <div className="text-center mb-12 relative z-10">
@@ -398,60 +637,76 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                 </div>
 
                 {/* 4. Campos Absolutos */}
-                {absoluteFields.map(field => (
-                    <div 
-                        key={field.id}
-                        onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
-                        className={`absolute z-30 cursor-move group flex items-center justify-center ${
-                            field.type === 'text' 
-                            ? 'bg-yellow-50/20 border border-yellow-200/50 hover:bg-yellow-100 hover:border-yellow-400 px-2 py-1 rounded' 
-                            : 'border-2 border-transparent hover:border-blue-400'
-                        }`}
-                        style={{ 
-                            left: field.x, 
-                            top: field.y,
-                            color: '#000',
-                            width: field.width ? `${field.width}px` : 'auto',
-                            ...field.style
-                        }}
-                    >
-                        {field.type === 'qrcode' && (
-                            <div className="w-full h-full bg-white p-1 shadow-sm">
-                                <img 
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
-                                    alt="QR Code"
-                                    className="w-full h-full object-contain pointer-events-none"
-                                />
-                                <div className="absolute -bottom-5 left-0 w-full text-center text-[8px] font-mono text-slate-500 bg-white/80">
-                                    Validação
-                                </div>
-                            </div>
-                        )}
-
-                        {field.type === 'image' && (
-                            <img 
-                                src={field.value} 
-                                alt="Assinatura" 
-                                className="w-full h-full object-contain pointer-events-none"
-                            />
-                        )}
-
-                        {field.type === 'text' && (
-                            <>
-                                <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1" />
-                                {field.value}
-                            </>
-                        )}
-
-                        <button 
-                            onClick={() => handleRemoveField(field.id)}
-                            className="absolute -top-3 -right-3 ml-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-md border border-slate-100 z-50"
-                            title="Remover"
+                {absoluteFields.map(field => {
+                    const isSelected = selectedFieldId === field.id;
+                    return (
+                        <div 
+                            key={field.id}
+                            onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`absolute z-30 cursor-move group flex items-center justify-center transition-all ${
+                                isSelected 
+                                ? 'border-2 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+                                : field.type === 'text' 
+                                  ? 'bg-yellow-50/20 border border-yellow-200/50 hover:bg-yellow-100 hover:border-yellow-400 px-2 py-1 rounded' 
+                                  : 'border-2 border-transparent hover:border-blue-400 hover:bg-slate-50/5'
+                            }`}
+                            style={{ 
+                                left: field.x, 
+                                top: field.y,
+                                color: '#000',
+                                width: field.width ? `${field.width}px` : 'auto',
+                                height: 'auto',
+                                ...field.style
+                            }}
                         >
-                            <Trash2 size={12} />
-                        </button>
-                    </div>
-                ))}
+                            {field.type === 'qrcode' && (
+                                <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
+                                    <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
+                                        <img 
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
+                                            alt="QR Code"
+                                            className="w-full h-full object-contain pointer-events-none"
+                                        />
+                                    </div>
+                                    <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
+                                        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none">CÓD. VALIDAÇÃO</p>
+                                        <p className="text-[9px] font-mono font-black text-blue-600 tracking-wider mt-1 leading-none">
+                                            {getValidationCode()}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {field.type === 'image' && (
+                                <img 
+                                    src={field.value} 
+                                    alt="Assinatura" 
+                                    className="w-full h-auto object-contain pointer-events-none"
+                                />
+                            )}
+
+                            {field.type === 'text' && (
+                                <>
+                                    <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1" />
+                                    {field.value}
+                                </>
+                            )}
+
+                            <button 
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveField(field.id);
+                                }}
+                                className="absolute -top-3 -right-3 ml-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-md border border-slate-100 z-50"
+                                title="Remover"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
+                    );
+                })}
 
                 {/* Footer Fixo */}
                 <div className="absolute bottom-24 left-0 w-full px-20 text-center pointer-events-none">
@@ -460,8 +715,28 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                     <p className="text-xs text-slate-600">{polo.nomeFantasia}</p>
                 </div>
 
+                {/* Aviso de Validade e Autenticidade do Documento */}
+                <div className="absolute bottom-10 left-0 w-full text-center text-[9px] text-slate-400 font-bold uppercase tracking-wider select-none pointer-events-none flex flex-col gap-1">
+                    <p>Para verificar a autenticidade deste documento acesse: <span className="text-blue-600 font-black">www.universocc.com.br/#/validador</span></p>
+                    <p>Validade deste documento: {validityDays} dias a partir da data de emissão.</p>
+                </div>
+
             </div>
         </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[9999] animate-fadeIn">
+          <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 ${
+            toast.type === 'success' 
+            ? 'bg-emerald-500/95 border-emerald-400 text-white' 
+            : 'bg-red-500/95 border-red-400 text-white'
+          }`}>
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span className="text-xs font-black uppercase tracking-wider">{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

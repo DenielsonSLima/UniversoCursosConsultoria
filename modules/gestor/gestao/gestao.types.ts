@@ -19,4 +19,11 @@ export interface Turma {
   alunosAtivos?: number;
   alunosInativos?: number;
   vagasTotais: number;
+  valorMatricula: number;
+  valorRematricula: number;
+  qtdParcelas: number;
+  valorParcela: number;
+  descontoPontualidade: number;
+  jurosAtraso: number;
+  multaAtraso: number;
 }

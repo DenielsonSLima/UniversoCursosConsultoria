@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Globe, MapPin, Users, Lock, FileText, Check } from 'lucide-react';
 import { TargetAudience, Scope } from '../biblioteca.types';
-import { empresasService } from '../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../configuracoes/polos/polos.service';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
   });
 
   useEffect(() => {
-    empresasService.getAll().then(setPolos);
+    polosService.getAll().then(setPolos);
   }, []);
 
   if (!isOpen) return null;

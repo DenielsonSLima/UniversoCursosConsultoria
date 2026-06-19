@@ -22,18 +22,28 @@ const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDupli
     <div 
       className="group bg-white rounded-[2rem] border border-slate-100 p-6 hover:shadow-xl hover:shadow-amber-900/10 hover:border-amber-200 transition-all duration-300 flex flex-col h-full relative overflow-hidden"
     >
-      <div className="flex items-start justify-between mb-6 relative z-10">
-        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-          <Zap size={28} />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-slate-100">
-            {area}
-          </span>
-          <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full border border-amber-100">
-            v{curso.versao}
-          </span>
-        </div>
+      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 mb-4 relative z-10">
+        {curso.imagem_url ? (
+          <img
+            src={curso.imagem_url}
+            alt={`Capa do curso ${curso.nome}`}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Zap size={38} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-1.5 mb-5 relative z-10">
+        <span className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase px-3 py-1 rounded-full border border-slate-100">
+          {area}
+        </span>
+        <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full border border-amber-100">
+          v{curso.versao}
+        </span>
       </div>
 
       <h3 className="text-lg font-black text-[#001a33] mb-2 group-hover:text-amber-600 transition-colors relative z-10">

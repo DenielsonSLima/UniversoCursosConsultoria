@@ -192,10 +192,17 @@ export const empresasService = {
 
       const poloData = {
         company_id: resultCompany.id,
-        nome: `Matriz - ${resultCompany.nomeFantasia}`,
+        nome: resultCompany.nomeFantasia,
         cnpj: resultCompany.cnpj,
         cidade: resultCompany.cidade || 'Aracaju',
         estado: resultCompany.uf || 'SE',
+        endereco: resultCompany.endereco || '',
+        numero: resultCompany.numero || '',
+        bairro: resultCompany.bairro || '',
+        cep: resultCompany.cep || '',
+        telefone: resultCompany.telefone || '',
+        email: resultCompany.email || '',
+        logo_url: resultCompany.logoUrl || '',
         status: 'ativo',
         is_matriz: true
       };

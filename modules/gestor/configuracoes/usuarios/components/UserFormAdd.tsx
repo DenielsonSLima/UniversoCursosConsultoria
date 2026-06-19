@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Handshake, UserPlus, Briefcase, FileText, ShoppingCart, 
   TrendingUp, BookOpen, BarChart, Settings
 } from 'lucide-react';
-import { empresasService } from '../../empresas/empresas.service';
+import { polosService } from '../../polos/polos.service';
 
 interface UserFormAddProps {
   onSave: (data: any) => void;
@@ -48,7 +48,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
   }, []);
 
   const loadCompanies = async () => {
-    const data = await empresasService.getAll();
+    const data = await polosService.getAll();
     setCompanies(data);
   };
 

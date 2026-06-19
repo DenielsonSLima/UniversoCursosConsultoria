@@ -12,6 +12,7 @@ const CursosTecnicosPublicPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+  const isPublicCatalogAvailable = true;
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +43,7 @@ const CursosTecnicosPublicPage: React.FC = () => {
     };
   }, [queryClient, isDevelopmentMode]);
 
-  // Caching com TanStack Query para carregar os cursos do catálogo (apenas em desenvolvimento)
+  // Caching com TanStack Query para carregar os cursos do catálogo público.
   const { data: cursos = [], isLoading: loading } = useQuery<any[]>({
     queryKey: ['cursosTecnicosPublic'],
     queryFn: async () => {
@@ -57,11 +58,11 @@ const CursosTecnicosPublicPage: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: isDevelopmentMode,
+    enabled: isPublicCatalogAvailable,
   });
 
-  // Se não estiver em modo de desenvolvimento (ex: online no Vercel), exibe o aviso "Em Breve"
-  if (!isDevelopmentMode) {
+  // Mantém a tela de indisponibilidade pronta para uma eventual pausa do catálogo.
+  if (!isPublicCatalogAvailable) {
     return (
       <div className="flex flex-col min-h-screen bg-white font-sans">
         <Header />
@@ -325,8 +326,8 @@ const CursosTecnicosPublicPage: React.FC = () => {
                     <CheckCircle2 size={12} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">RG</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Xerox Simples</p>
+                    <p className="text-xs font-bold text-slate-800">Carteira Nacional de Identificação (CIN)</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Xerox Simples — CNH também é aceita</p>
                   </div>
                 </li>
 

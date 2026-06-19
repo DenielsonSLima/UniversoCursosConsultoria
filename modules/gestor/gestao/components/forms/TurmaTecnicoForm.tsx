@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Layers, MapPin, Calendar, Clock, Lock } from 'lucide-react';
 import { Turno } from '../../gestao.types';
-import { empresasService } from '../../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../../configuracoes/polos/polos.service';
 
 interface TurmaTecnicoFormProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
   // Carregar Polos
   useEffect(() => {
-    empresasService.getAll().then(setPolos);
+    polosService.getAll().then(setPolos);
   }, []);
 
   // Lógica de Automação

@@ -26,7 +26,7 @@ const CursoTecnicoDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+  const isPublicCatalogAvailable = true;
 
   // Força o scroll para o topo ao carregar a página
   useEffect(() => {
@@ -37,14 +37,14 @@ const CursoTecnicoDetailPage: React.FC = () => {
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
     queryKey: ['cursoTecnicoPublicDetail', id],
     queryFn: () => cadastrosService.getCursoById(id!),
-    enabled: !!id && isDevelopmentMode,
+    enabled: !!id && isPublicCatalogAvailable,
   });
 
   // Query da Grade Curricular
   const { data: modulos = [], isLoading: loadingGrade } = useQuery<Modulo[]>({
     queryKey: ['cursoTecnicoPublicGrade', id],
     queryFn: () => cadastrosService.getGrade(id!),
-    enabled: !!id && isDevelopmentMode,
+    enabled: !!id && isPublicCatalogAvailable,
   });
 
   // Estado dos Módulos Expandidos (Accordion)
@@ -112,8 +112,8 @@ const CursoTecnicoDetailPage: React.FC = () => {
     }, 800);
   };
 
-  // Se não estiver em modo de desenvolvimento, renderiza tela "Em Breve"
-  if (!isDevelopmentMode) {
+  // Mantém a tela de indisponibilidade pronta para uma eventual pausa do catálogo.
+  if (!isPublicCatalogAvailable) {
     return (
       <div className="flex flex-col min-h-screen bg-white font-sans">
         <Header />

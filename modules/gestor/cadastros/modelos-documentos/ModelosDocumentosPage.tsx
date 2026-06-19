@@ -9,11 +9,13 @@ import {
   Briefcase, 
   Award,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  Contact
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
 import CarteirinhaPage from './carteirinha/CarteirinhaPage';
+import CrachaPage from './cracha/CrachaPage';
 import DeclaracaoPage from './declaracao/DeclaracaoPage';
 import TransferenciaPage from './transferencia/TransferenciaPage';
 import DiariosPage from './diarios/DiariosPage';
@@ -26,6 +28,7 @@ const ModelosDocumentosPage: React.FC = () => {
 
   const models = [
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
+    { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
     { id: 'transferencia', title: 'Modelo de Transferência', desc: 'Documentação para trâmite externo.', icon: <ArrowRightLeft size={24} />, color: 'bg-orange-500' },
     { id: 'diarios', title: 'Modelos Diários', desc: 'Pautas de frequência e conteúdo programático.', icon: <Calendar size={24} />, color: 'bg-indigo-600' },
@@ -37,6 +40,7 @@ const ModelosDocumentosPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'carteirinha': return <CarteirinhaPage />;
+      case 'cracha': return <CrachaPage />;
       case 'declaracao': return <DeclaracaoPage />;
       case 'transferencia': return <TransferenciaPage />;
       case 'diarios': return <DiariosPage />;

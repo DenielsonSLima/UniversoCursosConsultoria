@@ -1,20 +1,62 @@
-
 // File: modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx
 
-import React, { useState } from 'react';
-import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Download } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Download, Loader2 } from 'lucide-react';
+import { Turma } from '../../../../../gestao.types';
+import { supabase } from '../../../../../../../lib/supabase';
+import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 
-const FinanceiroAlunosList: React.FC = () => {
+
+interface FinanceiroAlunosListProps {
+  turma: Turma;
+}
+
+interface AlunoFinanceiro {
+  id: string;
+  nome: string;
+  matricula: string;
+  status: 'em_dia' | 'atrasado' | 'inadimplente';
+  parcelasPagas: number;
+  totalParcelas: number;
+}
+
+const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) => {
+  const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [alunos, setAlunos] = useState<AlunoFinanceiro[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock de Alunos
-  const alunos = [
-    { id: 1, nome: 'Ana Clara Souza', matricula: '2024001', status: 'em_dia', parcelasPagas: 5, totalParcelas: 24 },
-    { id: 2, nome: 'João Pedro Alves', matricula: '2024002', status: 'atrasado', parcelasPagas: 3, totalParcelas: 24 },
-    { id: 3, nome: 'Maria Eduarda Costa', matricula: '2024003', status: 'em_dia', parcelasPagas: 5, totalParcelas: 24 },
-    { id: 4, nome: 'Lucas Oliveira', matricula: '2024004', status: 'inadimplente', parcelasPagas: 1, totalParcelas: 24 },
-    { id: 5, nome: 'Fernanda Lima', matricula: '2024005', status: 'em_dia', parcelasPagas: 5, totalParcelas: 24 },
-  ];
+  useEffect(() => {
+    const fetchFinanceiroAlunos = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('matriculas')
+          .select('id, status, parceiros(*)')
+          .eq('turma_id', turma.id);
+
+        if (error) throw error;
+
+        const mapped: AlunoFinanceiro[] = (data || [])
+          .filter((m: any) => m.parceiros)
+          .map((m: any) => ({
+            id: m.id,
+            nome: m.parceiros.nome,
+            matricula: m.id.substring(0, 8).toUpperCase(),
+            status: 'em_dia', // default status pois a tabela de cobrança não está implementada
+            parcelasPagas: 0, // 0 parcelas pagas no início do plano
+            totalParcelas: 22 // total de parcelas padrão da configuração
+          }));
+
+        setAlunos(mapped);
+      } catch (err) {
+        console.error('Erro ao buscar dados financeiros dos alunos:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFinanceiroAlunos();
+  }, [turma.id]);
 
   const filteredAlunos = alunos.filter(a => 
     a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -34,12 +76,28 @@ const FinanceiroAlunosList: React.FC = () => {
     }
   };
 
+  const handleAction = (alunoName: string) => {
+    toast.info("Aviso", `Extrato financeiro de ${alunoName}: Módulo de conciliação e emissão de boletos está aguardando a próxima etapa (integração Asaas).`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-10 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+        <Loader2 className="animate-spin text-[#001a33]" size={24} />
+        <span className="text-slate-500 font-bold ml-2 text-sm">Carregando listagem financeira...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
       
       {/* Header da Lista */}
       <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-        <h3 className="text-lg font-bold text-[#001a33]">Situação Financeira dos Alunos</h3>
+        <div>
+          <h3 className="text-lg font-bold text-[#001a33]">Situação Financeira dos Alunos</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de mensalidades e conciliação.</p>
+        </div>
         
         <div className="flex gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
@@ -73,8 +131,10 @@ const FinanceiroAlunosList: React.FC = () => {
           <tbody className="divide-y divide-slate-50">
             {filteredAlunos.length === 0 ? (
                 <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm">
-                        Nenhum aluno encontrado.
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                        <XCircle size={32} className="mx-auto mb-2 opacity-50 text-slate-300" />
+                        <p className="font-bold">Nenhum aluno matriculado na turma.</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Vincule alunos na aba "Alunos" para gerar lançamentos financeiros.</p>
                     </td>
                 </tr>
             ) : (
@@ -105,7 +165,7 @@ const FinanceiroAlunosList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                        <button title="Extrato Financeiro" className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors border border-blue-100">
+                        <button onClick={() => handleAction(aluno.nome)} title="Extrato Financeiro" className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors border border-blue-100">
                             <FileText size={16} />
                         </button>
                         <button title="Mais opções" className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-lg transition-colors border border-transparent hover:border-slate-200">
@@ -119,6 +179,7 @@ const FinanceiroAlunosList: React.FC = () => {
           </tbody>
         </table>
       </div>
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

@@ -81,7 +81,7 @@ const SecretariaAlunosPage: React.FC = () => {
                                 <p className="text-slate-700 font-medium">000.000.000-00</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-xs uppercase font-bold">RG</p>
+                                <p className="text-slate-400 text-xs uppercase font-bold">Identidade (CIN/CNH)</p>
                                 <p className="text-slate-700 font-medium">00.000.000-0</p>
                             </div>
                             <div>

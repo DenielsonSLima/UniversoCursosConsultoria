@@ -1,0 +1,44 @@
+TÉCNICO EM ENFERMAGEM 
+
+
+--- TABLE ---
+MÓDULOS | UNIDADES CURRICULARES | CARGA HORÁRIA
+ |  | T | P | E | TOTAL
+IAmbientação Profissional | Relações Humanas no Trabalho | 20 | - | - | 20
+ | Informática Básica | 20 | 10 | - | 30
+ | História da Enfermagem | 30 | - | - | 30
+ | Anatomia e Fisiologia Humana | 60 | 20 | - | 80
+ | Princípios de Nutrição e Dietético | 30 | - | - | 30
+ | Microbiologia, Parasitologia e Patologia | 30 | 10 | - | 40
+ | Noções de Primeiros Socorros | 30 | 10 | - | 40
+SUBTOTAL | 220 | 50 | - | 270
+IIIntrodução às Especialidades Técnicas em Enfermagem | Psicologia | 20 | - | - | 20
+ | Ética Profissional e Legislação em Enfermagem | 20 | - | - | 20
+ | Fundamentos da Enfermagem | 80 | 40 | 90 | 210
+ | Técnicas Básicas | 40 | - | - | 40
+ | Teoria do Cuidado  | 20 | - | - | 20
+ | Princípios de Farmacologia  | 50 |  | - | 50
+ | Enfermagem Médica | 40 | 10 | 60 | 110
+ | Enfermagem Cirúrgica e em Centro Cirúrgico | 40 | 20 | 50 | 110
+ | Enfermagem em Saúde Mental | 30 | - | 30 | 60
+ | Enfermagem em Saúde Coletiva | 40 | 10 | 40 | 90
+ | Assistência à Saúde do Idoso | 30 | - | 30 | 60
+ | Enfermagem em Saúde da Mulher, Obstetrícia e Neonatologia | 50 | 20 | 60 | 130
+ | Enfermagem em Urgência e Emergência | 30 | 10 | 40 | 80
+SUBTOTAL | 490 | 110 | 400 | 1000
+CERTIFICADO DE QUALIFICAÇÃO PROFISSIONAL EM AUXILIAR DE ENFERMAGEM
+IIIGerenciamento de Enfermagem | Administração em Enfermagem | 30 | 30 | 60 | 120
+ | Técnicas no Controle de Infecção Hospitalar | 20 | 10 | - | 30
+ | Técnicas Especializadas em Enfermagem a Pacientes na UTI | 30 | 20 | 40 | 90
+ | Humanização da Assistência. | 20 | 10 | - | 30
+ | Enfermagem em Saúde da Criança e do Adolescente  | 40 | 20 | 50 | 110
+ | Assistência de Enfermagem em Oncologia | 30 | 20 | 50 | 100
+ | Projeto Cientifico em Enfermagem - PCE | 20 | 30 | - | 50
+SUBTOTAL | 190 | 140 | 200 | 530
+TOTAL | 920 | 280 | 600 | 1800
+DIPLOMA DE TÉCNICO EM ENFERMAGEM
+--- END TABLE ---
+
+
+
+

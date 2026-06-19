@@ -1,0 +1,50 @@
+
+
+
+UNIVERSO CURSOS E CONSULTORIA
+TÉCNICO EM SEGURANÇA DO TRABALHO
+MATRIZ CURRICULAR
+
+--- TABLE ---
+MÓDULO BÁSICO 
+DISCIPLINA  | T  | P  | E  | TOTAL 
+Redação Oficial  | 60  | -  | -  | 60 
+Informática básica  | 10  | 30  | -  | 40 
+Psicologia Aplicada a segurança do trabalho  | 40  | -  | -  | 40 
+Normas técnicas aplicadas a segurança do trabalho  | 80  | -  | -  | 80 
+Princípio de segurança do trabalho  | 40  | -  | -  | 40 
+Técnicas de treinamento  | 20  | 20  | -  | 40 
+Metodologia do ensino  | 20  | -  | -  | 20 
+Inglês Técnico  | 40  | -  | -  | 40 
+TOTAL MODULO   | 310  | 50  | 00  | 360 
+MÓDULO II - AUXILIAR DE SEG URANÇA DO TRABALHO 
+DISCIPLINA | T  | P  | E  | TOTAL 
+Ergonomia Aplicada a segurança do Trabalho  | 20  | 20  | -  | 40 
+Prevenção e controle de riscos em maquinas e equipamentos  | 32  | 08  | -  | 40 
+Proteção Contra Incêndio e Explosões  | 40  | 20  | -  | 60 
+Análise & Guernica de Riscos  | 60  | 20  | -  | 80 
+Computação Gráfica Aplicada  | 20  | 20  | -  | 40 
+Segurança na construção civil  | 40  | 20  | -  | 60 
+TOTAL MODULO   | 212  | 108  | 00  | 320 
+MÓDULO III – MODUL O ESPECIFICO 
+DISCIPLINA | T  | P  | E  | TOTAL 
+Técnicas de uso em equipamentos de medição   | 40  | 20  | -  | 60 
+Educação Ambiental  | 20  | 20  | -  | 40 
+Doenças Ocupacionais  | 60  | -  | -  | 60 
+Primeiros Socorros  | 40  | 20  | -  | 60 
+Higiene do Trabalho  | 60  | -  | -  | 60 
+TCC I  | 40  | -  | -  | 40 
+TOTAL MODULO   | 260  | 60  | 00  | 320 
+MÓDULO IV – FORMA ÇÃO TÉCNICA 
+DISCIPLINA | T  | P  | E  | TOTAL 
+Legislação Aplicada a Segurança do Trabalho  | 60  | -  | -  | 60 
+EPI & EPC  | 40  | -  | -  | 40 
+Estatística aplicada a Segurança do Trabalho  | 40  | -  | -  | 40 
+Administração e Urbanização do Trabalho  | 40  | -  | -  | 40 
+Programas de segurança do trabalho  | 40  | 20  | -  | 60 
+TCC II  | 40  | -  | -  | 40 
+TOTAL MODULO  | 260  | 20  | 00  | 280 
+TOTAL DO CURSO  | 1280 
+--- END TABLE ---
+
+

@@ -31,10 +31,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
   const renderContent = () => {
     switch (activeTab) {
       case 'resumo': return <TurmaResumo turma={turma} />;
-      case 'alunos': return <TurmaAlunos />;
+      case 'alunos': return <TurmaAlunos turma={turma} />;
       case 'grade': return <TurmaGrade turma={turma} />;
-      case 'diarios': return <TurmaDiarios />;
-      case 'financeiro': return <TurmaFinanceiro />;
+      case 'diarios': return <TurmaDiarios turma={turma} />;
+      case 'financeiro': return <TurmaFinanceiro turma={turma} />;
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;
       default: return null;
     }

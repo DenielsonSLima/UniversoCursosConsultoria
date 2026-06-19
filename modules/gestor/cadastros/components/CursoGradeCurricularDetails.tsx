@@ -124,10 +124,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [newModuloName, setNewModuloName] = useState('');
   const [addingDiscToModId, setAddingDiscToModId] = useState<string | null>(null);
   const [newDiscName, setNewDiscName] = useState('');
+  const [newDiscHoras, setNewDiscHoras] = useState('');
   const [newDiscDesc, setNewDiscDesc] = useState('');
-  const [addingAulaToDiscId, setAddingAulaToDiscId] = useState<string | null>(null);
-  const [newAulaTitulo, setNewAulaTitulo] = useState('');
-  const [newAulaHoras, setNewAulaHoras] = useState('');
 
   // Obter configurações visuais com base no tipo de curso
   const config = getModalidadeConfig(curso.modalidade);
@@ -394,10 +392,11 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   // --- DISCIPLINAS ---
   const handleAddDisciplina = (moduloId: string) => {
     if (!newDiscName.trim()) return;
+    const horas = parseInt(newDiscHoras) || 0;
     const novaDisciplina: Disciplina = {
       id: `temp-disc-${Math.random().toString(36).substr(2, 9)}`,
       nome: newDiscName,
-      cargaHoraria: 0,
+      cargaHoraria: horas,
       descricao: newDiscDesc.trim() || undefined,
       aulas: []
     };
@@ -407,70 +406,18 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
       return m;
     }));
     setNewDiscName('');
+    setNewDiscHoras('');
     setNewDiscDesc('');
     setAddingDiscToModId(null);
   };
 
   const handleRemoveDisciplina = (moduloId: string, disciplinaId: string) => {
-    if (confirm(`Remover ${config.labelDisciplina.toLowerCase()} e suas aulas?`)) {
+    if (confirm(`Remover ${config.labelDisciplina.toLowerCase()}?`)) {
       setModulos(prev => prev.map(m => {
         if (m.id === moduloId) return { ...m, disciplinas: m.disciplinas.filter(d => d.id !== disciplinaId) };
         return m;
       }));
     }
-  };
-
-  // --- AULAS ---
-  const handleAddAula = (moduloId: string, disciplinaId: string) => {
-    if (!newAulaTitulo.trim() || !newAulaHoras.trim()) return;
-
-    const horas = parseFloat(newAulaHoras);
-    if (isNaN(horas) || horas <= 0) return;
-
-    const novaAula: Aula = {
-      id: `temp-aula-${Math.random().toString(36).substr(2, 9)}`,
-      titulo: newAulaTitulo,
-      cargaHoraria: horas
-    };
-
-    setModulos(prev => prev.map(m => {
-      if (m.id === moduloId) {
-        return {
-          ...m,
-          disciplinas: m.disciplinas.map(d => {
-            if (d.id === disciplinaId) {
-              const novasAulas = [...(d.aulas || []), novaAula];
-              const novaCarga = novasAulas.reduce((acc, a) => acc + a.cargaHoraria, 0);
-              return { ...d, aulas: novasAulas, cargaHoraria: novaCarga };
-            }
-            return d;
-          })
-        };
-      }
-      return m;
-    }));
-
-    setNewAulaTitulo('');
-    setNewAulaHoras('');
-  };
-
-  const handleRemoveAula = (moduloId: string, disciplinaId: string, aulaId: string) => {
-    setModulos(prev => prev.map(m => {
-      if (m.id === moduloId) {
-        return {
-          ...m,
-          disciplinas: m.disciplinas.map(d => {
-            if (d.id === disciplinaId) {
-              const novasAulas = d.aulas.filter(a => a.id !== aulaId);
-              const novaCarga = novasAulas.reduce((acc, a) => acc + a.cargaHoraria, 0);
-              return { ...d, aulas: novasAulas, cargaHoraria: novaCarga };
-            }
-            return d;
-          })
-        };
-      }
-      return m;
-    }));
   };
 
   // --- PERSISTÊNCIA ---
@@ -975,9 +922,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   )}
 
                   {modulo.disciplinas.map((disc) => (
-                    <div key={disc.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div key={disc.id} className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-slate-50/30">
                       {/* Cabeçalho da Disciplina */}
-                      <div className="bg-slate-50 px-5 py-3 flex justify-between items-center border-b border-slate-100">
+                      <div className="px-5 py-4 flex justify-between items-center">
                         <div className="flex flex-col text-slate-700">
                           <div className="flex items-center gap-2">
                             <BookOpen size={16} className={config.textColor} />
@@ -990,66 +937,34 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                           )}
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-100">
-                            {disc.cargaHoraria}h
+                          <div className="flex items-center gap-1.5">
+                            <input 
+                              type="number"
+                              title="Carga Horária"
+                              className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              value={disc.cargaHoraria || 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                setModulos(prev => prev.map(m => {
+                                  if (m.id === modulo.id) {
+                                    return {
+                                      ...m,
+                                      disciplinas: m.disciplinas.map(d => {
+                                        if (d.id === disc.id) {
+                                          return { ...d, cargaHoraria: val };
+                                        }
+                                        return d;
+                                      })
+                                    };
+                                  }
+                                  return m;
+                                }));
+                              }}
+                            />
+                            <span className="text-xs font-bold text-slate-400">h</span>
                           </div>
                           <button onClick={() => handleRemoveDisciplina(modulo.id, disc.id)} className="text-slate-300 hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Lista de Aulas */}
-                      <div className="bg-white p-4">
-                        <div className="space-y-2">
-                          {disc.aulas?.map((aula) => (
-                            <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-100 hover:border-${config.themeColor}-400 transition-colors py-1`}>
-                              <div className="flex items-center gap-2 text-sm text-slate-600">
-                                <CornerDownRight size={12} className="text-slate-300" />
-                                <span>{aula.titulo}</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded">{aula.cargaHoraria}h</span>
-                                <button 
-                                  onClick={() => handleRemoveAula(modulo.id, disc.id, aula.id)}
-                                  className="text-slate-200 hover:text-red-500 transition-colors"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Adicionar Aula Input */}
-                        <div className="mt-3 pl-4 flex gap-2 items-center">
-                          <CornerDownRight size={12} className="text-emerald-500" />
-                          <input 
-                            type="text" 
-                            placeholder={`Nova ${config.labelAula.toLowerCase()}...`}
-                            className="flex-1 text-sm bg-slate-50 border-b border-transparent focus:border-emerald-500 outline-none px-2 py-1 transition-colors"
-                            value={addingAulaToDiscId === disc.id ? newAulaTitulo : ''}
-                            onChange={(e) => {
-                              setAddingAulaToDiscId(disc.id);
-                              setNewAulaTitulo(e.target.value);
-                            }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById(`horas-input-${disc.id}`)?.focus(); }}
-                          />
-                          <input 
-                            id={`horas-input-${disc.id}`}
-                            type="number" 
-                            placeholder="Hrs"
-                            className="w-16 text-sm bg-slate-50 border-b border-transparent focus:border-emerald-500 outline-none px-2 py-1 transition-colors text-center"
-                            value={addingAulaToDiscId === disc.id ? newAulaHoras : ''}
-                            onChange={(e) => setNewAulaHoras(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddAula(modulo.id, disc.id); }}
-                          />
-                          <button 
-                            onClick={() => handleAddAula(modulo.id, disc.id)}
-                            className="p-1 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors"
-                            disabled={addingAulaToDiscId !== disc.id || !newAulaTitulo || !newAulaHoras}
-                          >
-                            <Plus size={14} />
                           </button>
                         </div>
                       </div>
@@ -1060,14 +975,23 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   <div className="mt-4 pt-4 border-t border-slate-100 border-dashed">
                     {addingDiscToModId === modulo.id ? (
                       <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                        <input 
-                          autoFocus
-                          type="text" 
-                          placeholder={`Nome da Nova ${config.labelDisciplina} *`}
-                          className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold"
-                          value={newDiscName}
-                          onChange={(e) => setNewDiscName(e.target.value)}
-                        />
+                        <div className="flex gap-3">
+                          <input 
+                            autoFocus
+                            type="text" 
+                            placeholder={`Nome da Nova ${config.labelDisciplina} *`}
+                            className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold"
+                            value={newDiscName}
+                            onChange={(e) => setNewDiscName(e.target.value)}
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="Horas *"
+                            className="w-24 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold text-center"
+                            value={newDiscHoras}
+                            onChange={(e) => setNewDiscHoras(e.target.value)}
+                          />
+                        </div>
                         <input 
                           type="text" 
                           placeholder={`Descrição da ${config.labelDisciplina} (Opcional)`}

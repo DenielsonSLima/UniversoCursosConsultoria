@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Zap, MapPin, Calendar, Clock, Lock } from 'lucide-react';
 import { Turno } from '../../gestao.types';
-import { empresasService } from '../../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../../configuracoes/polos/polos.service';
 
 interface TurmaLivreFormProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ const TurmaLivreForm: React.FC<TurmaLivreFormProps> = ({
   });
 
   useEffect(() => {
-    empresasService.getAll().then(setPolos);
+    polosService.getAll().then(setPolos);
   }, []);
 
   useEffect(() => {

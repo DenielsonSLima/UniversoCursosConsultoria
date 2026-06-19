@@ -3,6 +3,7 @@ import { X, Printer, User, CheckCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { empresasService } from '../../../../../configuracoes/empresas/empresas.service';
 import { polosService } from '../../../../../configuracoes/polos/polos.service';
+import DocumentHeader from '../../../../../components/DocumentHeader';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -82,37 +83,20 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
             )}
 
             {/* Header com Logo e Info da Empresa e Polo */}
-            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#001a33] rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shrink-0">
-                  {company?.logoUrl ? (
-                    <img src={company.logoUrl} alt="Logo" className="w-full h-full object-contain p-1 bg-white" />
-                  ) : (
-                    <span className="text-white text-xl font-black">
-                      {(company?.nomeFantasia || 'U')[0].toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="text-left">
-                  <h1 className="text-lg font-black text-[#001a33] uppercase tracking-tight">
-                    {company?.nomeFantasia || company?.razaoSocial || 'Universidade Universo'}
-                  </h1>
-                  <div className="text-[10px] text-slate-600 space-y-0.5 font-medium">
-                    <p className="font-bold">Unidade: {polo?.nome || aluno?.poloNome || 'Matriz - Aracaju'}</p>
-                    <p>CNPJ: {company?.cnpj || '00.000.000/0001-00'}</p>
-                    <p>Endereço: {company?.endereco ? `${company.endereco}, ${company.numero || 'S/N'} - ${company.bairro || ''}, ${company.cidade || ''}/${company.uf || ''}` : ''}</p>
-                    <p>Contato: {company?.telefone || ''} | {company?.email || ''}</p>
+            <DocumentHeader 
+              company={company} 
+              polo={polo} 
+              orientation="portrait" 
+              rightContent={
+                <div className="text-right">
+                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ficha Cadastral</h2>
+                  <div className="px-3 py-1 bg-slate-100 rounded-lg inline-block mt-2">
+                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula</p>
+                     <p className="text-sm font-bold text-[#001a33]">{aluno?.id || 'NOVA_MATRICULA'}</p>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ficha Cadastral</h2>
-                <div className="px-3 py-1 bg-slate-100 rounded-lg inline-block mt-2">
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula</p>
-                   <p className="text-sm font-bold text-[#001a33]">{aluno?.id || 'NOVA_MATRICULA'}</p>
-                </div>
-              </div>
-            </div>
+              }
+            />
 
             {/* Foto e Resumo */}
             <div className="flex gap-6 mb-4 items-center border border-slate-300 p-3 rounded-xl relative z-10 bg-white/90">

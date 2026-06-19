@@ -63,6 +63,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
     pcdTipo: '',
 
     // Step 2 — Documentação
+    tipoDocumento: 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
     rg: '',
     orgaoEmissor: '',
     rgUfEmissao: '',
@@ -373,16 +374,27 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="md:col-span-3">
+                <label className={labelCls}>Tipo de Documento de Identificação <span className="text-red-500">*</span></label>
+                <select name="tipoDocumento" value={formData.tipoDocumento} onChange={handleChange} className={inputCls}>
+                  <option value="CARTEIRA NACIONAL DE IDENTIFICAÇÃO">CARTEIRA NACIONAL DE IDENTIFICAÇÃO (CIN)</option>
+                  <option value="CNH">CNH — Carteira Nacional de Habilitação</option>
+                  <option value="PASSAPORTE">PASSAPORTE</option>
+                  <option value="CARTEIRA PROFISSIONAL">CARTEIRA PROFISSIONAL (CRM, CREA, OAB...)</option>
+                  <option value="RG (ANTIGO)">RG — Registro Geral (Antigo)</option>
+                </select>
+              </div>
+
               <div className="md:col-span-2">
-                <label className={labelCls}>RG (Número) <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Número do Documento <span className="text-red-500">*</span></label>
                 <input type="text" name="rg" value={formData.rg} onChange={handleChange}
-                  className={inputCls} placeholder="0000000-0" />
+                  className={inputCls} placeholder="Número do documento de identificação" />
               </div>
 
               <div>
-                <label className={labelCls}>Órgão Emissor <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Órgão Emissor</label>
                 <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={handleChange}
-                  className={inputCls} placeholder="SSP, IFP, PM..." />
+                  className={inputCls} placeholder="SSP, IFP, DETRAN..." />
               </div>
 
               <div>
@@ -394,7 +406,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
               </div>
 
               <div>
-                <label className={labelCls}>Data de Emissão do RG</label>
+                <label className={labelCls}>Data de Emissão do Documento</label>
                 <input type="text" name="rgDataEmissao" value={formData.rgDataEmissao} onChange={handleChange}
                   maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
               </div>
@@ -420,7 +432,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
             <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
               <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-indigo-700 font-medium leading-relaxed">
-                Os documentos físicos serão solicitados no momento da matrícula. O checklist de documentos será gerado automaticamente no perfil do aluno após o cadastro.
+                A <strong>Carteira Nacional de Identificação (CIN)</strong> é o novo documento oficial de identidade no Brasil, em substituição ao antigo RG. Também são aceitos CNH e outros documentos com foto. Os originais serão solicitados no momento da matrícula.
               </p>
             </div>
           </div>

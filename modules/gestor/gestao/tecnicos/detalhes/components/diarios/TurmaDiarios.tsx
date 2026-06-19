@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { Layers, ChevronRight, BookOpen, Clock, CalendarCheck } from 'lucide-react';
+// File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/TurmaDiarios.tsx
+
+import React, { useEffect, useState } from 'react';
+import { Layers, BookOpen, Loader2 } from 'lucide-react';
 import DiarioClasse from './DiarioClasse';
+import { Turma } from '../../../../gestao.types';
+import { supabase } from '../../../../../../../lib/supabase';
 
 interface Disciplina {
-  id: number;
+  id: string;
   nome: string;
   professor: string;
   horasRealizadas: number;
@@ -11,50 +15,105 @@ interface Disciplina {
 }
 
 interface Modulo {
-  id: number;
+  id: string;
   nome: string;
   disciplinas: Disciplina[];
 }
 
-const modulosMock: Modulo[] = [
-  {
-    id: 1,
-    nome: 'Módulo 1 - Fundamentos',
-    disciplinas: [
-      { 
-        id: 101, 
-        nome: 'Anatomia e Fisiologia', 
-        professor: 'Dr. Ricardo Silva', 
-        horasRealizadas: 8, 
-        cargaHoraria: 40
-      },
-      { 
-        id: 102, 
-        nome: 'Ética Profissional', 
-        professor: 'Profa. Ana Costa', 
-        horasRealizadas: 2, 
-        cargaHoraria: 20
-      },
-    ]
-  },
-  {
-    id: 2,
-    nome: 'Módulo 2 - Procedimentos',
-    disciplinas: [
-      { 
-        id: 201, 
-        nome: 'Técnicas Básicas', 
-        professor: 'Me. Carlos Mendes', 
-        horasRealizadas: 0, 
-        cargaHoraria: 60
-      }
-    ]
-  }
-];
+interface TurmaDiariosProps {
+  turma: Turma;
+}
 
-const TurmaDiarios: React.FC = () => {
+const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
   const [activeModuloNome, setActiveModuloNome] = useState('');
   const [activeDisciplina, setActiveDisciplina] = useState<Disciplina | null>(null);
+  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDiariosData();
+  }, [turma.id, turma.cursoId]);
+
+  const loadDiariosData = async () => {
+    setLoading(true);
+    try {
+      // 1. Módulos do Curso
+      const { data: modulosData, error: modulosError } = await supabase
+        .from('modulos')
+        .select('*')
+        .eq('curso_id', turma.cursoId);
+
+      if (modulosError) throw modulosError;
+
+      if (!modulosData || modulosData.length === 0) {
+        setModulos([]);
+        return;
+      }
+
+      const moduloIds = modulosData.map(m => m.id);
+
+      // 2. Disciplinas desses Módulos
+      const { data: discData, error: discError } = await supabase
+        .from('disciplinas')
+        .select('*')
+        .in('modulo_id', moduloIds);
+
+      if (discError) throw discError;
+
+      // 3. Atribuições de professores
+      const { data: configsData, error: configsError } = await supabase
+        .from('turmas_disciplinas')
+        .select('*')
+        .eq('turma_id', turma.id);
+
+      if (configsError) throw configsError;
+
+      const teacherMap: Record<string, string> = {};
+      configsData?.forEach(c => {
+        if (c.professor_nome) {
+          teacherMap[c.disciplina_id] = c.professor_nome;
+        }
+      });
+
+      // 4. Aulas lançadas (para compor horas realizadas)
+      const { data: aulasData, error: aulasError } = await supabase
+        .from('aulas_turma')
+        .select('*')
+        .eq('turma_id', turma.id);
+
+      if (aulasError) throw aulasError;
+
+      const hoursMap: Record<string, number> = {};
+      aulasData?.forEach(a => {
+        hoursMap[a.disciplina_id] = (hoursMap[a.disciplina_id] || 0) + parseFloat(a.carga_horaria);
+      });
+
+      // 5. Agrupamento
+      const structuredModulos: Modulo[] = modulosData.map(m => {
+        const moduloDisciplines = (discData || [])
+          .filter(d => d.modulo_id === m.id)
+          .map(d => ({
+            id: d.id,
+            nome: d.nome,
+            professor: teacherMap[d.id] || 'Não atribuído',
+            horasRealizadas: hoursMap[d.id] || 0,
+            cargaHoraria: d.carga_horaria
+          }));
+
+        return {
+          id: m.id,
+          nome: m.nome,
+          disciplinas: moduloDisciplines
+        };
+      });
+
+      setModulos(structuredModulos);
+    } catch (err) {
+      console.error('Erro ao buscar dados dos diários:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenDiario = (disciplina: Disciplina, moduloNome: string) => {
     setActiveModuloNome(moduloNome);
@@ -63,64 +122,93 @@ const TurmaDiarios: React.FC = () => {
 
   const handleBack = () => {
     setActiveDisciplina(null);
+    loadDiariosData();
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="animate-spin text-[#001a33]" size={32} />
+        <span className="text-slate-500 font-bold ml-3">Carregando diários de classe...</span>
+      </div>
+    );
+  }
+
   if (activeDisciplina) {
-    return <DiarioClasse disciplina={activeDisciplina} moduloNome={activeModuloNome} onBack={handleBack} />;
+    return <DiarioClasse disciplina={activeDisciplina} moduloNome={activeModuloNome} turma={turma} onBack={handleBack} />;
   }
 
   return (
     <div className="animate-fadeIn">
-      <h3 className="text-lg font-bold text-[#001a33] mb-6">Diários de Classe</h3>
-      
-      <div className="space-y-10">
-        {modulosMock.map((modulo) => (
-          <div key={modulo.id} className="animate-fadeIn">
-            <div className="flex items-center gap-3 mb-5 px-2">
-              <div className="p-2 bg-slate-200/50 text-slate-500 rounded-lg">
-                 <Layers size={16} />
-              </div>
-              <h4 className="font-bold text-slate-700 text-sm uppercase tracking-widest">{modulo.nome}</h4>
-            </div>
+      <div className="mb-6">
+        <h3 className="text-lg font-bold text-[#001a33] mb-1">Diários de Classe</h3>
+        <p className="text-slate-500 text-xs">Gerencie a frequência, notas e conteúdos programáticos das disciplinas.</p>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-               {modulo.disciplinas.map(disc => (
-                  <div key={disc.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col group">
-                     <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
-                           <BookOpen size={24} />
+      {modulos.length === 0 || !modulos.some(m => m.disciplinas.length > 0) ? (
+        <div className="py-20 text-center text-slate-400 bg-white border border-slate-100 rounded-[2rem] shadow-sm flex flex-col items-center">
+          <BookOpen size={48} className="mb-4 opacity-50 text-slate-300" />
+          <p className="font-bold text-sm">Nenhuma disciplina cadastrada na grade deste curso.</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm">Configure a grade curricular do curso na aba de Cadastros para listar os diários aqui.</p>
+        </div>
+      ) : (
+        <div className="space-y-10">
+          {modulos.map((modulo) => {
+            if (modulo.disciplinas.length === 0) return null;
+            return (
+              <div key={modulo.id} className="animate-fadeIn">
+                <div className="flex items-center gap-3 mb-5 px-2">
+                  <div className="p-2 bg-slate-200/50 text-slate-500 rounded-lg">
+                    <Layers size={16} />
+                  </div>
+                  <h4 className="font-bold text-slate-700 text-sm uppercase tracking-widest">{modulo.nome}</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {modulo.disciplinas.map(disc => {
+                    const progressPercent = disc.cargaHoraria > 0 ? Math.min((disc.horasRealizadas / disc.cargaHoraria) * 100, 100) : 0;
+                    return (
+                      <div key={disc.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col group">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
+                            <BookOpen size={24} />
+                          </div>
+                          <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-100">
+                            {disc.horasRealizadas}H / {disc.cargaHoraria}H Realizadas
+                          </span>
                         </div>
-                        <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-100">
-                           {disc.horasRealizadas}H / {disc.cargaHoraria}H Realizadas
-                        </span>
-                     </div>
-                     
-                     <h5 className="font-black text-[#001a33] text-lg mb-1 leading-tight">{disc.nome}</h5>
-                     <p className="text-sm font-medium text-slate-500 mb-6">Docente: <span className="text-slate-700 font-bold">{disc.professor}</span></p>
-                     
-                     <div className="mt-auto space-y-3">
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                           <div 
-                              className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
-                              style={{ width: `${(disc.horasRealizadas / disc.cargaHoraria) * 100}%` }}
-                           ></div>
-                        </div>
-                        
-                        <div className="flex pt-4">
-                           <button 
+
+                        <h5 className="font-black text-[#001a33] text-lg mb-1 leading-tight">{disc.nome}</h5>
+                        <p className="text-sm font-medium text-slate-500 mb-6">
+                          Docente: <span className={`font-bold ${disc.professor === 'Não atribuído' ? 'text-rose-500' : 'text-slate-700'}`}>{disc.professor}</span>
+                        </p>
+
+                        <div className="mt-auto space-y-3">
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-1000 ${disc.horasRealizadas > disc.cargaHoraria ? 'bg-rose-500' : 'bg-indigo-500'}`}
+                              style={{ width: `${progressPercent}%` }}
+                            ></div>
+                          </div>
+
+                          <div className="flex pt-4">
+                            <button
                               onClick={() => handleOpenDiario(disc, modulo.nome)}
                               className="w-full py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-                           >
+                            >
                               <BookOpen size={14} /> Acessar Diário
-                           </button>
+                            </button>
+                          </div>
                         </div>
-                     </div>
-                  </div>
-               ))}
-            </div>
-          </div>
-        ))}
-      </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

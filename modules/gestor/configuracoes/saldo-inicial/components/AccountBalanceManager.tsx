@@ -25,7 +25,7 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
       .channel(`saldo_inicial_realtime_${company.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_bancarias', filter: `company_id=eq.${company.id}` },
+        { event: '*', schema: 'public', table: 'contas_bancarias', filter: `polo_id=eq.${company.id}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts', company.id] });
         }

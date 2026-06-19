@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Award, MapPin, Calendar, Clock, Lock } from 'lucide-react';
 import { Turno } from '../../gestao.types';
-import { empresasService } from '../../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../../configuracoes/polos/polos.service';
 
 interface TurmaEspecializacaoFormProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = ({
   });
 
   useEffect(() => {
-    empresasService.getAll().then(setPolos);
+    polosService.getAll().then(setPolos);
   }, []);
 
   useEffect(() => {

@@ -1,0 +1,91 @@
+
+--- TABLE ---
+ UNIVERSO CURSOS E CONSULTORIADe acordo com o artigo 24, inciso VII da Lei nº 9.394 de 20 de dezembro de 1996. Credenciado pela Resolução Nº 318/CEE de 14/09/2017 e Autorizado pela Resolução Nº 319/CEE de 14/09/2017. Parecer Nº 458/CEE. | HISTÓRICO ESCOLAR
+ | TÉCNICO EM ENFERMAGEM
+ | DATA DE EMISSÃO | INÍCIO DO CURSO | CONCLUSÃO DO CURSO | EXPEDIÇÃO DO DIPLOMA
+ |  |  |  | 
+MATRÍCULA | NOME DO ALUNO | SEXO | DATA NASCIMENTO
+ |  |  | 
+NATURALIDADE | NACIONALIDADE | PAI | MÃE
+ |  |  | Ivanildes Gomes Gonçalves
+Nº CARTEIRA IDENTIDADE | ORG. EXP. | CPF | TÍTULO ELEITOR | ZONA | SEÇÃO | CERT. MILITAR
+ |  |  |  |  |  | xxx-xxx
+ESCOLA ONDE CONCLUIU ENSINO MÉDIO | ANO DE CONCLUSÃO
+ | 
+--- END TABLE ---
+
+UNIDADES CURRICULARES
+
+--- TABLE ---
+MODULO I | Carga Horária | Nota | Frequência | Situação
+ | T | P | E | T/P | E | T/P | E | 
+Relações Humanas no Trabalho | 20 | - | - |  | - |  | - | Aprovada
+Informática Básica | 20 | 10 | - |  | - |  | - | Aprovada
+História da Enfermagem | 30 | - | - |  | - |  | - | Aprovada
+Anatomia e Fisiologia Humana | 60 | 20 | - |  | - |  | - | Aprovada
+Princípios de Nutrição e Dietético | 30 | - | - |  | - |  | - | Aprovada
+Microbiologia, Parasitologia e Patologia | 30 | 10 | - |  | - |  | - | Aprovada
+Noções de Primeiros Socorros | 30 | 10 | - |  | - |  | - | Aprovada
+MODULO II | Carga Horária | Nota | Frequência | Situação
+ | T | P | E | T/P | E | T/P | E | 
+Psicologia | 20 | - | - |  | - |  | - | Aprovada
+Ética Profissional e Legislação em Enfermagem | 20 | - | - |  | - |  | - | Aprovada
+Fundamentos da Enfermagem | 80 | 40 | 90 |  |  |  |  | Aprovada
+Técnicas Básicas | 40 | - | - |  | - |  | - | Aprovada
+Teoria do Cuidado  | 20 | - | - |  | - |  | - | Aprovada
+Princípios de Farmacologia  | 50 | - | - |  | - |  | - | Aprovada
+Enfermagem Médica | 40 | 10 | 60 |  |  |  |  | Aprovada
+Enfermagem Cirúrgica e em Centro Cirúrgico | 40 | 20 | 50 |  |  |  |  | Aprovada
+Enfermagem em Saúde Mental | 30 | - | 30 |  |  |  |  | Aprovada
+Enfermagem em Saúde Coletiva | 40 | 10 | 40 |  |  |  |  | Aprovada
+Assistência à Saúde do Idoso | 30 | - | 30 |  |  |  |  | Aprovada
+Enfermagem em Saúde da Mulher, Obstetrícia e Neonatologia | 50 | 20 | 60 |  |  |  |  | Aprovada
+Enfermagem em Urgência e Emergência | 30 | 10 | 40 |  |  |  |  | Aprovada
+MODULO III | Carga Horária | Nota | Frequência | Situação
+ | T | P | E | T/P | E | T/P | E | 
+Administração em Enfermagem | 30 | 30 | 60 |  |  |  |  | Aprovada
+Técnicas no Controle de Infecção Hospitalar | 20 | 10 | - |  | - |  | - | Aprovada
+Técnicas Especializadas em Enfermagem a Pacientes na UTI | 30 | 20 | 40 |  |  |  |  | Aprovada
+Humanização da Assistência | 20 | 10 | - |  | - |  | - | Aprovada
+Enfermagem em Saúde da Criança e do Adolescente  | 40 | 20 | 50 |  |  |  |  | Aprovada
+Assistência de Enfermagem em Oncologia | 30 | 20 | 50 |  |  |  |  | Aprovada
+Projeto Cientifico em Enfermagem - PCE | 20 | 30 | - |  | - |  | - | Aprovada
+--- END TABLE ---
+
+Legenda:Carga Horária Total do Curso: 1800
+T – Teoria
+P – Prática
+E – Estágio 
+T/P – Teoria / Prática
+Japoatã/SE,       de        de 2025.
+
+__________________________      _________________________
+Secretária Escolar        Diretora Geral
+
+
+UNIVERSO CURSOS E CONSULTORIA
+De acordo com o artigo 24, inciso VII da Lei nº 9.394 de 20 de dezembro de 1996
+Credenciado pela Resolução Nº 318/CEE de 14/09/2017
+Autorizado pela Resolução Nº 319/CEE de 14/09/2017
+Parecer Nº 458/CEE
+
+Titular: 
+
+EIXO TECNOLÓGICO: AMBIENTE E SAÚDE
+
+CURSO DE NÍVEL TÉCNICO EM ENFERMAGEM
+
+
+--- TABLE ---
+PERFIL PROFISSIONAL DE CONCLUSÃO
+Realiza curativos, administração de medicamentos e vacinas, nebulizações, banho de leito, mensuração antropométrica e verificação de sinais vitais. Auxilia a promoção, prevenção, recuperação e reabilitação no processo saúde-doença. Prepara o paciente para os procedimentos de saúde. Presta assistência de enfermagem a pacientes clínicos e cirúrgicos e gravemente enfermos. Aplica as normas de biossegurança.
+RESERVADO AO ESTABELECIMENTO
+
+--- END TABLE ---
+
+
+
+
+Japoatã/SE,       de         de 2025.
+
+

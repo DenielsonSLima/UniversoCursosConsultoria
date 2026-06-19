@@ -8,6 +8,7 @@ export interface CompanyWatermark {
   watermarkUrl: string | null;
   watermarkOpacity: number;
   watermarkScale: number;
+  watermarkRotate?: boolean;
 }
 
 export const marcaDaguaService = {
@@ -17,7 +18,7 @@ export const marcaDaguaService = {
   async getCompaniesWithWatermark(): Promise<CompanyWatermark[]> {
     const { data, error } = await supabase
       .from('polos')
-      .select('id, nome, cidade, estado, watermark_url, watermark_opacity, watermark_scale')
+      .select('id, nome, cidade, estado, watermark_url, watermark_opacity, watermark_scale, watermark_rotate')
       .order('nome', { ascending: true });
 
     if (error) {
@@ -32,7 +33,8 @@ export const marcaDaguaService = {
       uf: p.estado,
       watermarkUrl: p.watermark_url,
       watermarkOpacity: Number(p.watermark_opacity ?? 0.1),
-      watermarkScale: Number(p.watermark_scale ?? 50)
+      watermarkScale: Number(p.watermark_scale ?? 50),
+      watermarkRotate: p.watermark_rotate !== false
     }));
   },
 
@@ -45,7 +47,8 @@ export const marcaDaguaService = {
       .update({
         watermark_url: data.watermarkUrl,
         watermark_opacity: data.watermarkOpacity,
-        watermark_scale: data.watermarkScale
+        watermark_scale: data.watermarkScale,
+        watermark_rotate: data.watermarkRotate !== false
       })
       .eq('id', data.id);
 

@@ -3,9 +3,11 @@ import { Save, Percent, AlertCircle, RefreshCw, Calculator } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { configuracoesService, RegrasCobranca } from '../configuracoes.service';
 import { supabase } from '../../../../lib/supabase';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
 
 const RegrasCobrancaConfig: React.FC = () => {
   const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
 
   // 1. Carregar as regras de cobrança do Supabase
   const { data: regras, isLoading, isError, error } = useQuery<RegrasCobranca>({
@@ -53,10 +55,10 @@ const RegrasCobrancaConfig: React.FC = () => {
     mutationFn: (newRegras: RegrasCobranca) => configuracoesService.saveRegrasCobranca(newRegras),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['regras_cobranca'] });
-      alert('Regras de cobrança salvas com sucesso!');
+      toast.success('Regras salvas', 'Regras de cobrança salvas com sucesso!');
     },
     onError: (err: any) => {
-      alert(`Erro ao salvar regras: ${err.message}`);
+      toast.error('Erro ao salvar', `Erro ao salvar regras: ${err.message}`);
     }
   });
 
@@ -106,6 +108,7 @@ const RegrasCobrancaConfig: React.FC = () => {
 
   return (
     <div className="max-w-4xl space-y-12">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       {/* Formulário Principal */}
       <div className="bg-white rounded-3xl space-y-6">
         <div>

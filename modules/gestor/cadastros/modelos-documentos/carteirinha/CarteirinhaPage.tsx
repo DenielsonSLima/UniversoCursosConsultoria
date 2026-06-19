@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Plus } from 'lucide-react';
 import CarteirinhaCard from './components/CarteirinhaCard';
 import CarteirinhaEditor from './components/CarteirinhaEditor';
+import { carteirinhaService } from './carteirinha.service';
 
 const INITIAL_MODELOS = [
   {
@@ -13,29 +14,29 @@ const INITIAL_MODELOS = [
     corPrimaria: '#0284c7', // Sky 600
     corSecundaria: '#e0f2fe',
     textoFrente: 'DOCUMENTO DO ESTUDANTE',
-    textoVerso: 'Este documento é padronizado nacionalmente nos termos da Lei nº 12.933/2013 e garante o direito de meia-entrada em eventos artísticos-culturais e esportivos.\\n\\nUso pessoal e intransferível.\\nVerifique a validade via QR Code.',
+    textoVerso: 'Este documento é padronizado nacionalmente nos termos da Lei nº 12.933/2013 e garante o direito de meia-entrada em eventos artísticos-culturais e esportivos.\n\nUso pessoal e intransferível.\nVerifique a validade via QR Code.',
   },
   {
     id: '2',
     nome: 'Carteirinha Superior',
     tipoCurso: 'Ensino Superior',
-    status: 'ativo',
+    status: 'inativo',
     hasVerso: true,
     corPrimaria: '#7c3aed', // Violet 600
     corSecundaria: '#ede9fe',
     textoFrente: 'C. I. E. UNIVERSITÁRIA',
-    textoVerso: 'Válido em todo território nacional para estudantes de graduação e pós-graduação.\\nLei da Meia-Entrada - 12.933/13.',
+    textoVerso: 'Válido em todo território nacional para estudantes de graduação e pós-graduação.\nLei da Meia-Entrada - 12.933/13.',
   },
   {
     id: '3',
     nome: 'Identificação Interna - Cursos Livres',
     tipoCurso: 'Cursos Livres',
-    status: 'ativo',
+    status: 'inativo',
     hasVerso: true,
     corPrimaria: '#475569', // Slate 600
     corSecundaria: '#f1f5f9',
     textoFrente: 'IDENTIFICAÇÃO DE ACESSO',
-    textoVerso: 'ATENÇÃO: Este documento é para uso exclusivamente interno da instituição para controle de acessos corporativos, biblioteca e laboratórios.\\n\\nNão possui validade como Documento do Estudante (CIE) nos termos da legislação federal de meia-entrada.',
+    textoVerso: 'ATENÇÃO: Este documento é para uso exclusivamente interno da instituição para controle de acessos corporativos, biblioteca e laboratórios.\n\nNão possui validade como Documento do Estudante (CIE) nos termos da legislação federal de meia-entrada.',
   }
 ];
 
@@ -43,6 +44,20 @@ const CarteirinhaPage: React.FC = () => {
   const [modelos, setModelos] = useState(INITIAL_MODELOS);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    const loadPersisted = async () => {
+      try {
+        const persisted = await carteirinhaService.getTemplate();
+        if (persisted && persisted.id) {
+          setModelos(prev => prev.map(m => m.id === persisted.id ? persisted : m));
+        }
+      } catch (err) {
+        console.error('Erro ao carregar template persistido:', err);
+      }
+    };
+    loadPersisted();
+  }, []);
 
   const handleEdit = (modelo: any) => {
     setEditingModelo(modelo);
@@ -55,11 +70,17 @@ const CarteirinhaPage: React.FC = () => {
     }
   };
 
-  const handleSave = (savedModelo: any) => {
-    if (isCreating) {
-      setModelos([...modelos, savedModelo]);
-    } else {
-      setModelos(modelos.map(m => m.id === savedModelo.id ? savedModelo : m));
+  const handleSave = async (savedModelo: any) => {
+    try {
+      await carteirinhaService.saveTemplate(savedModelo);
+      if (isCreating) {
+        setModelos([...modelos, savedModelo]);
+      } else {
+        setModelos(modelos.map(m => m.id === savedModelo.id ? savedModelo : m));
+      }
+    } catch (err) {
+      console.error('Erro ao salvar template:', err);
+      alert('Erro ao salvar o modelo.');
     }
     setEditingModelo(null);
     setIsCreating(false);

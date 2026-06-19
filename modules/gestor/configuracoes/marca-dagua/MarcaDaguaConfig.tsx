@@ -5,10 +5,12 @@ import WatermarkEditor from './components/WatermarkEditor';
 import { marcaDaguaService, CompanyWatermark } from './marca-dagua.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
 
 const MarcaDaguaConfig: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<CompanyWatermark | null>(null);
   const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
 
   // 1. Carregar as empresas e suas marcas d'água do Supabase
   const { data: companies = [], isLoading, isError, error } = useQuery<CompanyWatermark[]>({
@@ -40,9 +42,9 @@ const MarcaDaguaConfig: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies_watermarks'] });
       setSelectedCompany(null);
-      alert('Configuração de marca dágua salva com sucesso!');
+      toast.success('Marca d\'água salva', 'Configuração de marca dágua salva com sucesso!');
     },
-    onError: (err: any) => alert(`Erro ao salvar marca dágua: ${err.message}`),
+    onError: (err: any) => toast.error('Erro ao salvar', `Erro ao salvar marca dágua: ${err.message}`),
   });
 
   const handleSave = async (data: CompanyWatermark) => {
@@ -54,14 +56,17 @@ const MarcaDaguaConfig: React.FC = () => {
     const activeCompany = companies.find(c => c.id === selectedCompany.id) || selectedCompany;
 
     return (
-      <div className="max-w-6xl mx-auto h-[800px]">
-        <WatermarkEditor 
-          company={activeCompany}
-          onSave={handleSave}
-          onCancel={() => setSelectedCompany(null)}
-          isSaving={saveWatermarkMutation.isPending}
-        />
-      </div>
+      <>
+        <ToastNotification toasts={toasts} onRemove={removeToast} />
+        <div className="max-w-6xl mx-auto h-[800px]">
+          <WatermarkEditor 
+            company={activeCompany}
+            onSave={handleSave}
+            onCancel={() => setSelectedCompany(null)}
+            isSaving={saveWatermarkMutation.isPending}
+          />
+        </div>
+      </>
     );
   }
 
@@ -85,6 +90,7 @@ const MarcaDaguaConfig: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       <div className="border-b border-slate-100 pb-4 mb-8">
         <h3 className="text-2xl font-bold text-[#001a33]">Marca D'água por Unidade</h3>
         <p className="text-slate-500 text-sm">Selecione uma unidade para configurar a personalização dos documentos.</p>

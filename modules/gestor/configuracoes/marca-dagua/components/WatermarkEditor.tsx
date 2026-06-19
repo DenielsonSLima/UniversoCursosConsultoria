@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Save, X, ZoomIn, Sun, Move, Trash2 } from 'lucide-react';
+import { Upload, Save, X, ZoomIn, Sun, Move, Trash2, RotateCw } from 'lucide-react';
 import ConfirmModal from '../../../components/ConfirmModal';
 
 interface WatermarkEditorProps {
@@ -14,6 +14,7 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
   const [opacity, setOpacity] = useState(company.watermarkOpacity || 0.1);
   const [scale, setScale] = useState(company.watermarkScale || 50); // Porcentagem
   const [image, setImage] = useState<string | null>(company.watermarkUrl || null);
+  const [rotate, setRotate] = useState(company.watermarkRotate !== false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Estado Modal Remoção
@@ -35,7 +36,8 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
       ...company,
       watermarkUrl: image,
       watermarkOpacity: opacity,
-      watermarkScale: scale
+      watermarkScale: scale,
+      watermarkRotate: rotate
     });
   };
 
@@ -162,6 +164,30 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
             />
           </div>
 
+          {/* Rotação (Toggle) */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <label className="flex items-center gap-2 text-xs font-bold text-[#001a33] uppercase tracking-wider">
+                <RotateCw size={14} /> Rotacionar Marca (-45°)
+              </label>
+              <button
+                type="button"
+                onClick={() => setRotate(!rotate)}
+                disabled={!image}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                  rotate ? 'bg-blue-600' : 'bg-slate-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    rotate ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400">Rotaciona diagonalmente a marca d'água no centro da folha.</p>
+          </div>
+
           <div className="mt-auto pt-6 border-t border-slate-100">
             <button 
               onClick={handleSave}
@@ -227,7 +253,7 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
                     style={{
                       width: `${scale}%`,
                       opacity: opacity,
-                      transform: 'rotate(-45deg)' // Opcional, mas comum em marcas d'agua
+                      transform: rotate ? 'rotate(-45deg)' : 'none'
                     }}
                     className="object-contain transition-all duration-200"
                   />

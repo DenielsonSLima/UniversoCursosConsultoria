@@ -3,8 +3,7 @@
 
 import { supabase } from '../../../../../lib/supabase';
 
-// Mock Storage para o Template
-let mockTemplate = {
+const DEFAULT_TEMPLATE = {
   widthCm: 8.5,
   heightCm: 5.5,
   startNumber: 1000,
@@ -13,25 +12,42 @@ let mockTemplate = {
   fields: []
 };
 
+const STORAGE_KEY = 'universo_template_carteirinha';
+
+const getLocalStorageTemplate = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Erro ao ler template do localStorage:', e);
+      }
+    }
+  }
+  return DEFAULT_TEMPLATE;
+};
+
 export const carteirinhaService = {
   async getTemplate() {
-    // Simula delay de rede
     return new Promise<any>((resolve) => {
-      setTimeout(() => resolve(mockTemplate), 500);
+      setTimeout(() => resolve(getLocalStorageTemplate()), 300);
     });
   },
 
   async saveTemplate(data: any) {
-    // Simula salvamento
     return new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        mockTemplate = data;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
         resolve(true);
-      }, 800);
+      }, 350);
     });
   },
 
   async getNextNumber() {
-    return mockTemplate.startNumber;
+    const temp = getLocalStorageTemplate();
+    return temp.startNumber || 1000;
   }
 };

@@ -135,6 +135,13 @@ const PolosConfig: React.FC = () => {
         cidade: editingPolo.cidade || '',
         estado: editingPolo.estado || '',
         status: editingPolo.status || 'ativo',
+        endereco: editingPolo.endereco || '',
+        numero: editingPolo.numero || '',
+        bairro: editingPolo.bairro || '',
+        cep: editingPolo.cep || '',
+        telefone: editingPolo.telefone || '',
+        email: editingPolo.email || '',
+        logoUrl: editingPolo.logoUrl || '',
       }
     });
   };
@@ -326,6 +333,81 @@ const PolosConfig: React.FC = () => {
                     value={editingPolo.estado || ''}
                     onChange={e => setEditingPolo({...editingPolo, estado: e.target.value.toUpperCase()})}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Endereço / Logradouro</label>
+                  <input
+                    type="text"
+                    value={editingPolo.endereco || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, endereco: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: Rua Principal"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Número</label>
+                  <input
+                    type="text"
+                    value={editingPolo.numero || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, numero: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: 100"}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Bairro</label>
+                  <input
+                    type="text"
+                    value={editingPolo.bairro || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, bairro: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: Centro"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">CEP</label>
+                  <input
+                    type="text"
+                    value={editingPolo.cep || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, cep: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: 49950-000"}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Telefone / Contato</label>
+                  <input
+                    type="text"
+                    value={editingPolo.telefone || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, telefone: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: (79) 99999-0000"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">E-mail</label>
+                  <input
+                    type="email"
+                    value={editingPolo.email || ''}
+                    disabled={editingPolo.is_matriz}
+                    onChange={e => setEditingPolo({...editingPolo, email: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: polo@exemplo.com"}
                   />
                 </div>
               </div>

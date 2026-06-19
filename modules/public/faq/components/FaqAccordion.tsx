@@ -12,7 +12,7 @@ const faqData = [
   { q: "Quais cursos vocês oferecem?", a: "Oferecemos uma ampla gama de cursos técnicos (Saúde, Estética, Segurança), Cursos Livres, EAD e Ensino Superior em parceria com grandes instituições." },
   { q: "Qual o valor do curso?", a: "Os valores variam conforme a modalidade e duração. Entre em contato com nossa equipe comercial para obter a tabela de preços atualizada." },
   { q: "Qual valor do curso e forma de parcelamento?", a: "Oferecemos opções de parcelamento no boleto bancário ou cartão de crédito em até 12x. Temos condições especiais para pagamento antecipado." },
-  { q: "Quais são os documentos necessários para fazer a matrícula?", a: "Geralmente solicitamos RG, CPF, Comprovante de Residência e Histórico Escolar. Para cursos técnicos, documentos adicionais podem ser requeridos." },
+  { q: "Quais são os documentos necessários para fazer a matrícula?", a: "Geralmente solicitamos a Carteira Nacional de Identificação (CIN), CPF, Comprovante de Residência e Histórico Escolar. Também é aceita CNH como documento de identidade. Para cursos técnicos, documentos adicionais podem ser requeridos." },
   { q: "Quais são os dias e horários das aulas?", a: "Temos turmas nos períodos matutino, vespertino e noturno, além de aulas aos sábados, dependendo do curso escolhido." },
   { q: "Onde a escola está localizada?", a: "Possuímos atuação nacional através de nossos cursos EAD, além de polos físicos estrategicamente localizados em Japoatã (Sede), Aquidabã e Porto da Folha." },
   { q: "O curso é reconhecido? O certificado é válido?", a: "Sim! Nossos cursos técnicos são autorizados pelos órgãos competentes (CEE/SE) e os certificados possuem validade nacional." },

@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Building2, ArrowRight, FileText, CheckCircle2, Settings } from 'lucide-react';
-import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { polosService } from '../../../../configuracoes/polos/polos.service';
 
 interface DeclaracaoListProps {
   onSelectPolo: (polo: any) => void;
@@ -19,7 +19,7 @@ const DeclaracaoList: React.FC<DeclaracaoListProps> = ({ onSelectPolo, onConfigu
   }, []);
 
   const loadPolos = async () => {
-    const data = await empresasService.getAll();
+    const data = await polosService.getAll();
     setPolos(data);
     setLoading(false);
   };

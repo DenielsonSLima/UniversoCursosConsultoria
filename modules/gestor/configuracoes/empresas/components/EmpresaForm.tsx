@@ -1,6 +1,5 @@
-
 import React, { useState, useRef } from 'react';
-import { Upload, Save, X, Building, MapPin, Phone, Mail, FileText, RefreshCw } from 'lucide-react';
+import { Upload, Save, X, Building, MapPin, Phone, Mail, FileText, RefreshCw, Search, Loader2, AlertCircle } from 'lucide-react';
 import { empresasService } from '../empresas.service';
 
 interface EmpresaFormProps {
@@ -10,26 +9,55 @@ interface EmpresaFormProps {
 }
 
 const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(initialData || {
-    nomeFantasia: '',
-    razaoSocial: '',
-    cnpj: '',
-    inscricaoMunicipal: '',
-    cep: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
-    telefone: '',
-    email: '',
-    site: '',
-    tipo: 'Filial',
-    logoUrl: ''
+  const maskCNPJ = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+  const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
+  const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+
+  const [formData, setFormData] = useState(() => {
+    if (initialData) {
+      return {
+        nomeFantasia: initialData.nomeFantasia || '',
+        razaoSocial: initialData.razaoSocial || '',
+        cnpj: initialData.cnpj ? maskCNPJ(initialData.cnpj) : '',
+        inscricaoMunicipal: initialData.inscricaoMunicipal || '',
+        cep: initialData.cep ? maskCEP(initialData.cep) : '',
+        endereco: initialData.endereco || '',
+        numero: initialData.numero || '',
+        complemento: initialData.complemento || '',
+        bairro: initialData.bairro || '',
+        cidade: initialData.cidade || '',
+        uf: initialData.uf || '',
+        telefone: initialData.telefone ? maskPhone(initialData.telefone) : '',
+        email: initialData.email || '',
+        site: initialData.site || '',
+        tipo: initialData.tipo || 'Filial',
+        logoUrl: initialData.logoUrl || '',
+        id: initialData.id
+      };
+    }
+    return {
+      nomeFantasia: '',
+      razaoSocial: '',
+      cnpj: '',
+      inscricaoMunicipal: '',
+      cep: '',
+      endereco: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+      telefone: '',
+      email: '',
+      site: '',
+      tipo: 'Filial',
+      logoUrl: ''
+    };
   });
 
   const [uploading, setUploading] = useState(false);
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
+  const [cnpjError, setCnpjError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,9 +75,101 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
     }
   };
 
+  const consultarCNPJ = async () => {
+    const cleanCnpj = formData.cnpj.replace(/\D/g, '');
+    if (cleanCnpj.length !== 14) {
+      setCnpjError('O CNPJ deve conter 14 dígitos.');
+      return;
+    }
+    
+    setIsSearchingCnpj(true);
+    setCnpjError('');
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+      if (!res.ok) {
+        throw new Error('CNPJ não encontrado ou indisponível.');
+      }
+      const data = await res.json();
+      
+      const logradouroCompleto = [data.descricao_tipo_de_logradouro, data.logradouro]
+        .filter(Boolean)
+        .join(' ');
+
+      let phoneVal = '';
+      if (data.ddd_telefone_1) {
+        phoneVal = data.ddd_telefone_1;
+      } else if (data.ddd_telefone_2) {
+        phoneVal = data.ddd_telefone_2;
+      }
+      
+      if (phoneVal && /^\d+$/.test(phoneVal)) {
+        if (phoneVal.length === 10) {
+          phoneVal = `(${phoneVal.substring(0, 2)}) ${phoneVal.substring(2, 6)}-${phoneVal.substring(6)}`;
+        } else if (phoneVal.length === 11) {
+          phoneVal = `(${phoneVal.substring(0, 2)}) ${phoneVal.substring(2, 7)}-${phoneVal.substring(7)}`;
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        razaoSocial: (data.razao_social || '').toUpperCase(),
+        nomeFantasia: (data.nome_fantasia || '').toUpperCase(),
+        cep: data.cep ? maskCEP(data.cep) : prev.cep,
+        endereco: logradouroCompleto ? logradouroCompleto.toUpperCase() : prev.endereco,
+        numero: (data.numero || '').toUpperCase(),
+        complemento: (data.complemento || '').toUpperCase(),
+        bairro: (data.bairro || '').toUpperCase(),
+        cidade: (data.municipio || '').toUpperCase(),
+        uf: (data.uf || '').toUpperCase(),
+        email: (data.email || '').toLowerCase(),
+        telefone: phoneVal ? maskPhone(phoneVal) : prev.telefone,
+      }));
+    } catch (err: any) {
+      console.error(err);
+      setCnpjError('CNPJ não encontrado ou erro na busca.');
+    } finally {
+      setIsSearchingCnpj(false);
+    }
+  };
+
+  const handleCepBlur = async () => {
+    const cep = formData.cep.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          endereco: (data.logradouro || '').toUpperCase(),
+          bairro: (data.bairro || '').toUpperCase(),
+          cidade: (data.localidade || '').toUpperCase(),
+          uf: (data.uf || '').toUpperCase(),
+        }));
+      }
+    } catch (err) {
+      console.error('Erro ao consultar CEP:', err);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (e.target.tagName === 'INPUT') {
+      const type = (e.target as HTMLInputElement).type;
+      if (type === 'text') {
+        if (name !== 'email' && name !== 'logoUrl' && name !== 'site') {
+          finalValue = value.toUpperCase();
+        }
+      }
+    }
+
+    if (name === 'cnpj') finalValue = maskCNPJ(finalValue);
+    if (name === 'cep') finalValue = maskCEP(finalValue);
+    if (name === 'telefone') finalValue = maskPhone(finalValue);
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -150,14 +270,37 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CNPJ</label>
-                <input 
-                  type="text" 
-                  name="cnpj"
-                  value={formData.cnpj}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all"
-                  placeholder="00.000.000/0000-00"
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    name="cnpj"
+                    value={formData.cnpj}
+                    onChange={handleChange}
+                    maxLength={18}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all font-mono"
+                    placeholder="00.000.000/0000-00"
+                  />
+                  <button
+                    type="button"
+                    onClick={consultarCNPJ}
+                    disabled={isSearchingCnpj || formData.cnpj.replace(/\D/g, '').length !== 14}
+                    className="px-4 bg-slate-900 hover:bg-[#001a33] disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold uppercase transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+                    title="Consultar dados da empresa na Receita Federal"
+                  >
+                    {isSearchingCnpj ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : (
+                      <Search size={14} />
+                    )}
+                    <span>Consultar</span>
+                  </button>
+                </div>
+                {cnpjError && (
+                  <p className="text-[11px] font-bold text-red-500 mt-1 ml-0.5 flex items-center gap-1 animate-fadeIn">
+                    <AlertCircle size={10} />
+                    {cnpjError}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Unidade</label>
@@ -188,6 +331,9 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
                   name="cep"
                   value={formData.cep}
                   onChange={handleChange}
+                  onBlur={handleCepBlur}
+                  maxLength={9}
+                  placeholder="00000-000"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all"
                 />
               </div>
@@ -259,6 +405,8 @@ const EmpresaForm: React.FC<EmpresaFormProps> = ({ initialData, onSave, onCancel
                   name="telefone"
                   value={formData.telefone}
                   onChange={handleChange}
+                  maxLength={15}
+                  placeholder="(00) 00000-0000"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:border-blue-500 outline-none transition-all"
                 />
               </div>

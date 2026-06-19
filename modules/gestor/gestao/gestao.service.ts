@@ -37,7 +37,14 @@ export const gestaoService = {
         alunosMatriculados,
         alunosAtivos,
         alunosInativos,
-        vagasTotais: t.vagas_totais
+        vagasTotais: t.vagas_totais,
+        valorMatricula: Number(t.valor_matricula),
+        valorRematricula: Number(t.valor_rematricula),
+        qtdParcelas: Number(t.qtd_parcelas),
+        valorParcela: Number(t.valor_parcela),
+        descontoPontualidade: Number(t.desconto_pontualidade),
+        jurosAtraso: Number(t.juros_atraso),
+        multaAtraso: Number(t.multa_atraso)
       };
     });
   },
@@ -82,7 +89,14 @@ export const gestaoService = {
       alunosMatriculados: 0,
       alunosAtivos: 0,
       alunosInativos: 0,
-      vagasTotais: data.vagas_totais
+      vagasTotais: data.vagas_totais,
+      valorMatricula: Number(data.valor_matricula),
+      valorRematricula: Number(data.valor_rematricula),
+      qtdParcelas: Number(data.qtd_parcelas),
+      valorParcela: Number(data.valor_parcela),
+      descontoPontualidade: Number(data.desconto_pontualidade),
+      jurosAtraso: Number(data.juros_atraso),
+      multaAtraso: Number(data.multa_atraso)
     };
   },
 
@@ -113,5 +127,36 @@ export const gestaoService = {
     }
 
     return data || [];
+  },
+
+  async saveTurmaFinanceiroConfig(
+    id: string,
+    config: {
+      valorMatricula: number;
+      valorRematricula: number;
+      qtdParcelas: number;
+      valorParcela: number;
+      descontoPontualidade: number;
+      jurosAtraso: number;
+      multaAtraso: number;
+    }
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('turmas')
+      .update({
+        valor_matricula: config.valorMatricula,
+        valor_rematricula: config.valorRematricula,
+        qtd_parcelas: config.qtdParcelas,
+        valor_parcela: config.valorParcela,
+        desconto_pontualidade: config.descontoPontualidade,
+        juros_atraso: config.jurosAtraso,
+        multa_atraso: config.multaAtraso
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao salvar configurações financeiras da turma:', error);
+      throw error;
+    }
   }
 };
