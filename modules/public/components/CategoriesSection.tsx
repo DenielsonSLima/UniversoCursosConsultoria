@@ -21,21 +21,11 @@ const CategoriesSection: React.FC = () => {
   };
 
   const handleOpenSuperior = () => {
-    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
-    if (isDevelopmentMode) {
-      navigate('/ensino-superior');
-    } else {
-      openModal('Ensino Superior');
-    }
+    navigate('/ensino-superior');
   };
 
   const handleOpenTecnicos = () => {
-    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
-    if (isDevelopmentMode) {
-      navigate('/cursos-tecnicos');
-    } else {
-      openModal('Cursos Técnicos');
-    }
+    navigate('/cursos-tecnicos');
   };
 
   const handleOpenLivres = () => {

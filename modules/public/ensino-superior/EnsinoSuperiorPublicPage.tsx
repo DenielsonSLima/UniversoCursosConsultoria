@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Building, Phone, ArrowUpRight, Loader2, Search, Filter, X, Sparkles } from 'lucide-react';
+import { GraduationCap, Building, Phone, ArrowUpRight, Loader2, Search, Filter, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -12,7 +12,6 @@ const EnsinoSuperiorPublicPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
-  const isPublicCatalogAvailable = true;
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,62 +57,8 @@ const EnsinoSuperiorPublicPage: React.FC = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: isPublicCatalogAvailable,
+    enabled: true,
   });
-
-  // Mantém a tela de indisponibilidade pronta para uma eventual pausa do catálogo.
-  if (!isPublicCatalogAvailable) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white font-sans">
-        <Header />
-
-        {/* Banner Superior */}
-        <div className="bg-gradient-to-b from-[#001a33] to-[#003366] py-24 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
-            <img
-              src="/ensino-superior-bg.png"
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="container mx-auto px-6 relative z-10 text-center">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 uppercase tracking-tighter">
-              Ensino <span className="text-blue-400">Superior</span>
-            </h1>
-            <p className="text-blue-100 text-lg max-w-2xl mx-auto font-light leading-relaxed">
-              Graduações e pós-graduações com qualidade, flexibilidade e diploma reconhecido pelo MEC, oferecidas em parceria com a Anhanguera.
-            </p>
-          </div>
-        </div>
-
-        {/* Central Em Desenvolvimento */}
-        <main className="flex-grow flex items-center justify-center py-20 px-6 bg-slate-50">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-lg shadow-blue-500/10">
-              <Sparkles size={30} />
-            </div>
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
-              Em Breve!
-            </h3>
-            <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-4">
-              Ensino Superior
-            </p>
-            <p className="text-slate-300 text-sm leading-relaxed mb-8 font-light">
-              Estamos preparando uma experiência completa de ensino para a área de <strong className="text-white font-bold">Ensino Superior</strong>. Em breve, esta seção estará totalmente disponível com matrículas abertas e certificação reconhecida!
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/40 uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95"
-            >
-              Voltar para a Home
-            </button>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
-  }
 
   // Lógica de filtragem combinada
   const filteredCursos = cursos.filter((curso) => {
