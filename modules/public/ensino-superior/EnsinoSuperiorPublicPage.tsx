@@ -44,7 +44,7 @@ const EnsinoSuperiorPublicPage: React.FC = () => {
   }, [queryClient, isDevelopmentMode]);
 
   // Caching com TanStack Query para carregar os cursos do catálogo público.
-  const { data: cursos = [], isLoading: loading } = useQuery<any[]>({
+  const { data: cursos = [], isLoading: loading, isError } = useQuery<any[]>({
     queryKey: ['cursosSuperiorPublic'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -246,6 +246,14 @@ const EnsinoSuperiorPublicPage: React.FC = () => {
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-20 flex flex-col justify-center items-center gap-4">
               <Loader2 className="animate-spin text-blue-600" size={40} />
               <p className="text-slate-500 font-bold uppercase tracking-wider text-xs">Carregando catálogo de cursos...</p>
+            </div>
+          ) : isError ? (
+            <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-20 text-center animate-fadeIn">
+              <X className="text-red-500 mx-auto mb-4" size={56} />
+              <p className="text-slate-600 font-bold mb-2">Erro ao carregar o catálogo de cursos.</p>
+              <p className="text-slate-400 text-sm mb-6">
+                Não foi possível obter os dados do servidor. Por favor, verifique a conexão ou tente novamente mais tarde.
+              </p>
             </div>
           ) : filteredCursos.length === 0 ? (
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-20 text-center">
