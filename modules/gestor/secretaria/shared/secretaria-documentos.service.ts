@@ -30,7 +30,7 @@ export const secretariaDocumentosService = {
       .from('parceiros')
       .select('id, nome, cpf_cnpj, email, telefone, foto_url')
       .eq('tipo', 'Aluno')
-      .eq('polo_id', poloId)
+      .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .or(`nome.ilike.%${safeTerm}%,cpf_cnpj.ilike.%${safeTerm}%`)
       .order('nome', { ascending: true })
       .limit(20);
@@ -55,7 +55,7 @@ export const secretariaDocumentosService = {
       .from('matriculas')
       .select('id, status, turma_id, turmas!inner(id, nome, codigo, polo_id, cursos!inner(nome, modalidade))')
       .eq('aluno_id', alunoId)
-      .eq('turmas.polo_id', poloId);
+      .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
 
@@ -78,7 +78,7 @@ export const secretariaDocumentosService = {
     let query = supabase
       .from('turmas')
       .select('id, nome, codigo, turno, status, cursos!inner(nome, modalidade)')
-      .eq('polo_id', poloId)
+      .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .eq('status', 'EM_ANDAMENTO')
       .order('nome', { ascending: true });
 
@@ -127,7 +127,7 @@ export const secretariaDocumentosService = {
         parceiros!inner(nome, cpf_cnpj, data_nascimento),
         turmas!inner(nome, codigo, polo_id, cursos!inner(nome), polos!inner(nome))
       `)
-      .eq('turmas.polo_id', input.context.poloId);
+      .or(`polo_id.eq.${input.context.poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (input.modo === 'individual') query = query.eq('id', input.matriculaId!);
     else query = query.eq('turma_id', input.turmaId!).eq('status', 'ativo');
