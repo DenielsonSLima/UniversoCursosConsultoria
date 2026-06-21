@@ -9,12 +9,12 @@ const DEFAULT_QR_CONFIG = {
 };
 
 const defaultTemplate = {
-  textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
   absoluteFields: [
     {
       id: 'data_field',
       type: 'text',
-      value: '{{CIDADE_POLO}}, {{DATA_ATUAL}}',
+      value: '{{CIDADE_POLO}}, {{DATA_ATUAL}} às {{HORA_ATUAL}}',
       x: 400,
       y: 780,
       style: { textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }

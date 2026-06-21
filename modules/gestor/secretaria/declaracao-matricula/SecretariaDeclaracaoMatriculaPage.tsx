@@ -33,7 +33,7 @@ interface Aluno {
 }
 
 const TEMPLATE_DEFAULT = {
-  textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
   absoluteFields: [],
   validityDays: 30,
   v: 2
@@ -111,7 +111,12 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
             tipoDocumento: p.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
             turmaIds,
             poloNome: activeMat?.turmas?.polos?.nome || poloData?.nome || 'Universo Cursos e Consultoria',
-            cidadePolo: activeMat?.turmas?.polos?.cidade || poloData?.cidade || 'Aracaju',
+            cidadePolo: (() => {
+              const rawCidade = activeMat?.turmas?.polos?.cidade || poloData?.cidade || 'Aracaju';
+              const rawUf = activeMat?.turmas?.polos?.estado || poloData?.estado || 'SE';
+              if (rawCidade.includes('/')) return rawCidade;
+              return `${rawCidade}/${rawUf}`;
+            })(),
           };
         })
       );
@@ -214,6 +219,120 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
     }
   };
 
+  const removeWhiteBackground = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        
+        // key out white pixels (R, G, B > 200) with a smooth alpha transition
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const whiteness = Math.min(r, g, b);
+          if (whiteness > 200) {
+            // Smoothly fade out pixels close to white
+            const alphaFactor = (255 - whiteness) / (255 - 200);
+            data[i + 3] = Math.round(data[i + 3] * alphaFactor);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  const inlinePrintImages = async () => {
+    const container = printContentRef.current;
+    if (!container) return () => {};
+
+    const images = Array.from(
+      container.querySelectorAll<HTMLImageElement>('img')
+    ) as HTMLImageElement[];
+    const originals = images.map((image) => ({ image, src: image.src }));
+    const dataUrlCache = new Map<string, string>();
+
+    const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+    await Promise.all(images.map(async (image) => {
+      const source = image.currentSrc || image.src;
+      if (!source || source.startsWith('data:') || source.startsWith('blob:')) return;
+
+      try {
+        let dataUrl = dataUrlCache.get(source);
+        if (!dataUrl) {
+          const response = await fetch(source, { cache: 'force-cache', mode: 'cors' });
+          if (!response.ok) throw new Error(`Falha ao carregar imagem: ${response.status}`);
+          dataUrl = await blobToDataUrl(await response.blob());
+          dataUrlCache.set(source, dataUrl);
+        }
+
+        const computedStyle = window.getComputedStyle(image);
+        const parentStyle = image.parentElement ? window.getComputedStyle(image.parentElement) : null;
+        const needsMultiply = 
+          computedStyle.mixBlendMode === 'multiply' || 
+          (parentStyle && parentStyle.mixBlendMode === 'multiply') ||
+          image.style.mixBlendMode === 'multiply' ||
+          (image.parentElement && image.parentElement.style.mixBlendMode === 'multiply') ||
+          image.alt === 'Assinatura Diretor' ||
+          image.alt === 'Assinatura' ||
+          image.src.includes('signature');
+
+        if (needsMultiply) {
+          dataUrl = await removeWhiteBackground(dataUrl);
+        }
+
+        image.src = dataUrl;
+        await image.decode().catch(() => undefined);
+      } catch (error) {
+        console.warn('[SecretariaDeclaracao] Imagem mantida pela URL original:', source, error);
+      }
+    }));
+
+    return () => {
+      originals.forEach(({ image, src }) => {
+        image.src = src;
+      });
+    };
+  };
+
+  const waitForPrintAssets = async () => {
+    const container = printContentRef.current;
+    if (!container) return;
+
+    const images = Array.from(
+      container.querySelectorAll<HTMLImageElement>('img')
+    ) as HTMLImageElement[];
+    await Promise.all(images.map((image) => {
+      if (image.complete && image.naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => resolve(), { once: true });
+      });
+    }));
+
+    if (document.fonts?.ready) await document.fonts.ready;
+  };
+
   const handleDownload = async () => {
     const pages = Array.from(
       printContentRef.current?.querySelectorAll<HTMLElement>('.print-page') || []
@@ -221,7 +340,11 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
     if (!pages.length) return;
 
     setIsDownloading(true);
+    let restoreImages = () => {};
     try {
+      await waitForPrintAssets();
+      restoreImages = await inlinePrintImages();
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -246,6 +369,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
       console.error('Erro ao baixar declaração:', error);
       alert('Não foi possível gerar o PDF da declaração.');
     } finally {
+      restoreImages();
       setIsDownloading(false);
     }
   };
