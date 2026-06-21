@@ -5,6 +5,7 @@ import { Search, MoreHorizontal, FileText, DollarSign, UserX, UserPlus, X, Check
 import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
+import { formatMatricula } from '../../../../../../lib/academicUtils';
 
 
 type StatusTurma = 'ATIVO' | 'DESISTENTE' | 'TRANCADO' | 'CONCLUÍDO';
@@ -55,7 +56,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         id: m.id,
         alunoId: m.parceiros?.id || '',
         nome: m.parceiros?.nome || 'Estudante sem Nome',
-        matricula: m.id.substring(0, 8).toUpperCase(),
+        matricula: formatMatricula(m.id, m.data_matricula, m.parceiros?.polo_id),
         cpf: m.parceiros?.cpf_cnpj || '000.000.000-00',
         dataNasc: m.parceiros?.data_nascimento
           ? new Date(m.parceiros.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR')
@@ -99,10 +100,10 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   }, [showMatricularModal, alunos]);
 
   const handleStatusChange = async (matriculaId: string, selectValue: string) => {
-    let dbStatus = 'ativo';
-    if (selectValue === 'DESISTENTE') dbStatus = 'cancelado';
-    if (selectValue === 'TRANCADO') dbStatus = 'trancado';
-    if (selectValue === 'CONCLUÍDO') dbStatus = 'concluido';
+    let dbStatus = 'ATIVO';
+    if (selectValue === 'DESISTENTE') dbStatus = 'CANCELADO';
+    if (selectValue === 'TRANCADO') dbStatus = 'TRANCADO';
+    if (selectValue === 'CONCLUÍDO') dbStatus = 'CONCLUIDO';
 
     try {
       const { error } = await supabase
@@ -126,7 +127,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         .insert({
           aluno_id: alunoId,
           turma_id: turma.id,
-          status: 'ativo'
+          status: 'ATIVO'
         });
 
       if (error) throw error;
@@ -167,11 +168,11 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
 
   const getDisplayStatus = (dbStatus: string) => {
-    const s = (dbStatus || 'ativo').toLowerCase();
-    if (s === 'ativo') return 'ATIVO';
-    if (s === 'cancelado') return 'DESISTENTE';
-    if (s === 'trancado') return 'TRANCADO';
-    if (s === 'concluido') return 'CONCLUÍDO';
+    const s = (dbStatus || 'ATIVO').toUpperCase();
+    if (s === 'ATIVO') return 'ATIVO';
+    if (s === 'CANCELADO' || s === 'DESISTENTE') return 'DESISTENTE';
+    if (s === 'TRANCADO') return 'TRANCADO';
+    if (s === 'CONCLUIDO' || s === 'CONCLUÍDO') return 'CONCLUÍDO';
     return 'ATIVO';
   };
 

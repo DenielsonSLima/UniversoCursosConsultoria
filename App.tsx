@@ -19,7 +19,9 @@ import EspecializacaoPublicPage from './modules/public/especializacao/Especializ
 import EspecializacaoDetailPage from './modules/public/especializacao/EspecializacaoDetailPage';
 import SeoManager from './modules/public/components/SeoManager';
 import EadPublicPage from './modules/public/ead/EadPublicPage';
+import EadDetailPage from './modules/public/ead/EadDetailPage';
 import AlunoLoginPublicPage from './modules/public/login/AlunoLoginPublicPage';
+import ValidatorPage from './modules/public/validator/ValidatorPage';
 
 // Páginas do Sistema Interno (somente em desenvolvimento)
 import LoginPage from './modules/login/LoginPage';
@@ -74,6 +76,10 @@ const App: React.FC = () => {
           path="/ead"
           element={<EadPublicPage />}
         />
+        <Route
+          path="/ead/detalhes/:id"
+          element={<EadDetailPage />}
+        />
 
         {/* ── Rotas do Sistema Interno ── */}
         {/* Completamente ocultas em produção — qualquer acesso vai para a home */}
@@ -83,8 +89,8 @@ const App: React.FC = () => {
             <Route path="/professor/*" element={<ProfessorPage />} />
             <Route path="/aluno/*" element={<AlunoPage />} />
             <Route path="/cad-aed" element={<CadAedPage />} />
-            {/* Validador — será implementado na Fase 3 */}
-            <Route path="/validador" element={<Navigate to="/" replace />} />
+            <Route path="/validador" element={<ValidatorPage />} />
+            <Route path="/validator" element={<Navigate to={`/validador${window.location.search}`} replace />} />
           </>
         ) : (
           <>

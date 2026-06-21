@@ -7,6 +7,10 @@ import { declaracaoService } from '../declaracao.service';
 
 interface DeclaracaoQrConfigProps {
   onBack: () => void;
+  service?: {
+    getQrConfig: () => Promise<any>;
+    saveQrConfig: (config: any) => Promise<boolean>;
+  };
 }
 
 const TOKENS = [
@@ -20,7 +24,7 @@ const TOKENS = [
   { id: '{RANDOM_HASH}', label: 'Hash Aleatório', desc: 'String segura de 6 dígitos' },
 ];
 
-const DeclaracaoQrConfig: React.FC<DeclaracaoQrConfigProps> = ({ onBack }) => {
+const DeclaracaoQrConfig: React.FC<DeclaracaoQrConfigProps> = ({ onBack, service = declaracaoService }) => {
   const [pattern, setPattern] = useState<string[]>([]);
   const [separator, setSeparator] = useState('-');
   const [loading, setLoading] = useState(false);
@@ -30,7 +34,7 @@ const DeclaracaoQrConfig: React.FC<DeclaracaoQrConfigProps> = ({ onBack }) => {
   }, []);
 
   const loadConfig = async () => {
-    const config = await declaracaoService.getQrConfig();
+    const config = await service.getQrConfig();
     if (config) {
       setPattern(config.pattern || []);
       setSeparator(config.separator || '-');
@@ -49,7 +53,7 @@ const DeclaracaoQrConfig: React.FC<DeclaracaoQrConfigProps> = ({ onBack }) => {
 
   const handleSave = async () => {
     setLoading(true);
-    await declaracaoService.saveQrConfig({ pattern, separator });
+    await service.saveQrConfig({ pattern, separator });
     setLoading(false);
     alert('Padrão de validação salvo com sucesso!');
     onBack();

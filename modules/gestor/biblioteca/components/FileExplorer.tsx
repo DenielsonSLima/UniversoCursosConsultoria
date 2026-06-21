@@ -9,20 +9,24 @@ import {
   Copy, Lock
 } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
-import { LibraryFolder, LibraryDocument } from '../biblioteca.types';
+import { TargetAudience, Scope, LibraryFolder, LibraryDocument } from '../biblioteca.types';
 import { supabase } from '../../../../lib/supabase';
 import DocumentPermissionsModal from './DocumentPermissionsModal';
 
 interface FileExplorerProps {
   teacherId?: string | null;
   onPreviewClick: (doc: LibraryDocument) => void;
-  onNewUploadClick: (pastaId: string | null) => void;
+  onNewUploadClick?: (pastaId: string | null) => void;
+  readOnly?: boolean;
+  allowedAudiences?: TargetAudience[];
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ 
   teacherId = null, 
   onPreviewClick,
-  onNewUploadClick
+  onNewUploadClick,
+  readOnly = false,
+  allowedAudiences
 }) => {
   const queryClient = useQueryClient();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -49,6 +53,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     queryKey: ['library-documents', teacherId, currentFolderId],
     queryFn: () => bibliotecaService.getDocuments({ pastaId: currentFolderId, teacherId })
   });
+
+  const filteredDocs = allowedAudiences 
+    ? documents.filter(d => allowedAudiences.includes(d.targetAudience))
+    : documents;
 
   // Query to get all folders for moving destination dropdown
   const { data: allFolders = [] } = useQuery({
@@ -228,20 +236,22 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button 
-            onClick={() => setIsNewFolderOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
-          >
-            <FolderPlus size={14} /> Nova Pasta
-          </button>
-          <button 
-            onClick={() => onNewUploadClick(currentFolderId)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/10"
-          >
-            <ArrowUp size={14} /> Enviar Arquivo
-          </button>
-        </div>
+        {!readOnly && onNewUploadClick && (
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button 
+              onClick={() => setIsNewFolderOpen(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
+            >
+              <FolderPlus size={14} /> Nova Pasta
+            </button>
+            <button 
+              onClick={() => onNewUploadClick(currentFolderId)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/10"
+            >
+              <ArrowUp size={14} /> Enviar Arquivo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Explorer Grid */}
@@ -273,36 +283,38 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                     </div>
 
                     {/* Folder actions dropdown/buttons */}
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => {
-                          setRenamingFolder(folder);
-                          setRenamedName(folder.nome);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded"
-                        title="Renomear"
-                      >
-                        <Edit size={12} />
-                      </button>
-                      <button 
-                        onClick={() => setMovingItem({ id: folder.id, type: 'folder' })}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded"
-                        title="Mover"
-                      >
-                        <ArrowRight size={12} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (confirm('Tem certeza que deseja excluir esta pasta e todos os seus arquivos?')) {
-                            deleteFolderMutation.mutate(folder.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded"
-                        title="Excluir"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => {
+                            setRenamingFolder(folder);
+                            setRenamedName(folder.nome);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded"
+                          title="Renomear"
+                        >
+                          <Edit size={12} />
+                        </button>
+                        <button 
+                          onClick={() => setMovingItem({ id: folder.id, type: 'folder' })}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded"
+                          title="Mover"
+                        >
+                          <ArrowRight size={12} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (confirm('Tem certeza que deseja excluir esta pasta e todos os seus arquivos?')) {
+                              deleteFolderMutation.mutate(folder.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded"
+                          title="Excluir"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -313,7 +325,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           <div className="space-y-3">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Arquivos</span>
             
-            {documents.length === 0 && folders.length === 0 ? (
+            {filteredDocs.length === 0 && folders.length === 0 ? (
               <div className="p-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] text-slate-400 space-y-2">
                 <FolderOpen size={32} className="mx-auto text-slate-350" />
                 <h4 className="font-bold text-xs uppercase tracking-wider">Diretório Vazio</h4>
@@ -321,7 +333,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {documents.map((doc) => (
+                {filteredDocs.map((doc) => (
                   <div 
                     key={doc.id}
                     className="p-5 bg-white border border-slate-150 rounded-[2rem] hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-full group relative"
@@ -346,7 +358,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                       <div className="flex gap-1">
                         <button 
                           onClick={() => {
-                            // Increment visual count
                             bibliotecaService.incrementAcessos(doc.id);
                             onPreviewClick(doc);
                           }}
@@ -355,44 +366,64 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                         >
                           <Eye size={14} />
                         </button>
-                        <button 
-                          onClick={() => {
-                            setMovingItem({ id: doc.id, type: 'document' });
-                            setActionType('copy');
-                          }}
-                          className="p-2 bg-slate-50 hover:bg-purple-50 text-slate-400 hover:text-purple-600 rounded-lg transition-colors border border-slate-100"
-                          title="Copiar"
-                        >
-                          <Copy size={14} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setMovingItem({ id: doc.id, type: 'document' });
-                            setActionType('move');
-                          }}
-                          className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-lg transition-colors border border-slate-100"
-                          title="Mover"
-                        >
-                          <ArrowRight size={14} />
-                        </button>
-                        <button 
-                          onClick={() => setPermissionsDoc(doc)}
-                          className="p-2 bg-slate-50 hover:bg-amber-50 text-slate-450 hover:text-amber-600 rounded-lg transition-colors border border-slate-100"
-                          title="Regras de Liberação"
-                        >
-                          <Lock size={14} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm('Deseja excluir permanentemente este documento?')) {
-                              deleteDocumentMutation.mutate(doc.id);
+                        <a
+                          href={doc.url === '#' ? undefined : doc.url}
+                          download={doc.title}
+                          onClick={(e) => {
+                            if (doc.url === '#') {
+                              e.preventDefault();
+                              alert('Download não disponível.');
+                            } else {
+                              bibliotecaService.incrementAcessos(doc.id);
                             }
                           }}
-                          className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-650 rounded-lg transition-colors border border-slate-100"
-                          title="Excluir"
+                          className="p-2 bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors border border-slate-100 flex items-center justify-center"
+                          title="Baixar Arquivo"
                         >
-                          <Trash2 size={14} />
-                        </button>
+                          <Download size={14} />
+                        </a>
+                        {!readOnly && (
+                          <>
+                            <button 
+                              onClick={() => {
+                                setMovingItem({ id: doc.id, type: 'document' });
+                                setActionType('copy');
+                              }}
+                              className="p-2 bg-slate-50 hover:bg-purple-50 text-slate-400 hover:text-purple-600 rounded-lg transition-colors border border-slate-100"
+                              title="Copiar"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setMovingItem({ id: doc.id, type: 'document' });
+                                setActionType('move');
+                              }}
+                              className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-400 rounded-lg transition-colors border border-slate-100"
+                              title="Mover"
+                            >
+                              <ArrowRight size={14} />
+                            </button>
+                            <button 
+                              onClick={() => setPermissionsDoc(doc)}
+                              className="p-2 bg-slate-50 hover:bg-amber-50 text-slate-450 hover:text-amber-600 rounded-lg transition-colors border border-slate-100"
+                              title="Regras de Liberação"
+                            >
+                              <Lock size={14} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (confirm('Deseja excluir permanentemente este documento?')) {
+                                  deleteDocumentMutation.mutate(doc.id);
+                                }
+                              }}
+                              className="p-2 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-650 rounded-lg transition-colors border border-slate-100"
+                              title="Excluir"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

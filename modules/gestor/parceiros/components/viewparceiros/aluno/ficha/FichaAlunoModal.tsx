@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { empresasService } from '../../../../../configuracoes/empresas/empresas.service';
 import { polosService } from '../../../../../configuracoes/polos/polos.service';
 import DocumentHeader from '../../../../../components/DocumentHeader';
+import { formatMatricula } from '../../../../../../../lib/academicUtils';
 
 interface FichaAlunoModalProps {
   aluno: any;
@@ -18,7 +19,8 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
     queryFn: () => empresasService.getCompanyPrincipal(),
   });
 
-  const poloId = aluno?.poloId || localStorage.getItem('current_polo_id');
+  // current_polo_id é estado de sessão UI — sessionStorage é adequado
+  const poloId = aluno?.poloId || sessionStorage.getItem('current_polo_id');
   const { data: polo } = useQuery<any>({
     queryKey: ['polo_detalhes', poloId],
     queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
@@ -92,7 +94,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
                   <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Ficha Cadastral</h2>
                   <div className="px-3 py-1 bg-slate-100 rounded-lg inline-block mt-2">
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula</p>
-                     <p className="text-sm font-bold text-[#001a33]">{aluno?.id || 'NOVA_MATRICULA'}</p>
+                     <p className="text-sm font-bold text-[#001a33]">{aluno?.id ? formatMatricula(aluno.id, aluno.created_at, aluno.polo_id) : 'NOVA_MATRICULA'}</p>
                   </div>
                 </div>
               }

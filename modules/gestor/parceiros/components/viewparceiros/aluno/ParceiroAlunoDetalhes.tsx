@@ -2,7 +2,7 @@
 // File: modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoDetalhes.tsx
 
 import React, { useState } from 'react';
-import { ArrowLeft, User, Users, FileText, DollarSign, KeyRound, FileBadge } from 'lucide-react';
+import { ArrowLeft, User, Users, FileText, DollarSign, KeyRound, FileBadge, ScrollText } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAlunoDados from './ParceiroAlunoDados';
 import ParceiroAlunoCursos from './ParceiroAlunoCursos';
@@ -10,7 +10,9 @@ import ParceiroAlunoDocumentos from './ParceiroAlunoDocumentos';
 import ParceiroAlunoFinanceiro from './ParceiroAlunoFinanceiro';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import FichaAlunoModal from './ficha/FichaAlunoModal';
+import ParceiroAlunoSecretaria from './ParceiroAlunoSecretaria';
 import { parceirosService } from '../../../parceiros.service';
+import { formatMatricula } from '../../../../../../lib/academicUtils';
 
 interface ParceiroAlunoDetalhesProps {
   alunoInicial: any;
@@ -19,7 +21,7 @@ interface ParceiroAlunoDetalhesProps {
 
 const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'docs' | 'financeiro' | 'acesso'>('dados');
+  const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'docs' | 'financeiro' | 'secretaria' | 'acesso'>('dados');
   const [isFichaOpen, setIsFichaOpen] = useState(false);
 
   // Carregar dados reais usando React Query com initialData do parceiro selecionado
@@ -50,8 +52,9 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
   const tabs = [
     { id: 'dados', label: 'Dados do Aluno', icon: <User size={18} /> },
     { id: 'cursos', label: 'Cursos', icon: <Users size={18} /> },
-    { id: 'docs', label: 'Documentos', icon: <FileText size={18} /> },
+    { id: 'docs', label: 'Documentos Checklist', icon: <FileText size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
+    { id: 'secretaria', label: 'Secretaria', icon: <ScrollText size={18} /> },
     { id: 'acesso', label: 'Acesso', icon: <KeyRound size={18} /> },
   ];
 
@@ -74,7 +77,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                           {alunoData.nome}
                       </h2>
                       <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
-                          Matrícula: {alunoData.id || 'Nova'} • Status: <span className={alunoData.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{alunoData.status || 'ATIVO'}</span>
+                          Matrícula: {formatMatricula(alunoData.id, alunoData.created_at, alunoData.polo_id)} • Status: <span className={alunoData.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{alunoData.status || 'ATIVO'}</span>
                       </p>
                   </div>
                 </div>
@@ -121,6 +124,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         )}
         {activeTab === 'docs' && <ParceiroAlunoDocumentos alunoId={alunoData.id} />}
         {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro />}
+        {activeTab === 'secretaria' && <ParceiroAlunoSecretaria alunoId={alunoData.id} />}
         {activeTab === 'acesso' && <ParceiroAcesso email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
       </div>
 

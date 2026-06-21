@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, User, DollarSign, FileText, GraduationCap, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { formatMatricula } from '../../../../lib/academicUtils';
 
 const SecretariaAlunosPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,7 +104,7 @@ const SecretariaAlunosPage: React.FC = () => {
 
   if (selectedAluno) {
     const cursoNome = matriculas[0]?.turmas?.cursos?.nome || 'Nenhum curso registrado';
-    const matriculaFormatada = matriculas[0]?.id ? matriculas[0].id.substring(0, 8).toUpperCase() : 'Não gerada';
+    const matriculaFormatada = matriculas[0]?.id ? formatMatricula(matriculas[0].id, matriculas[0].data_matricula, matriculas[0].polo_id) : 'Não gerada';
 
     return (
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden animate-fadeIn min-h-[600px]">

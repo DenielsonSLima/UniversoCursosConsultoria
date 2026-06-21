@@ -47,7 +47,7 @@ description: >
 
 ---
 
-## ⚡ As 15 Regras de Ouro (Imutáveis — Nunca Quebre)
+## ⚡ As 18 Regras de Ouro (Imutáveis — Nunca Quebre)
 
 ```
 REGRA 1  → Componentes NUNCA fazem chamadas de API diretas
@@ -61,10 +61,13 @@ REGRA 8  → Erros SEMPRE tratados com mensagem amigável ao usuário
 REGRA 9  → Realtime APENAS onde a UX exige — não em todas as tabelas (economize egress)
 REGRA 10 → DRY — se repetiu 2x, extraia para função/hook/service
 REGRA 11 → TanStack Query SEMPRE para sincronização e cache de dados do servidor
-REGRA 12 → Front-end é burro: NUNCA execute cálculos de negócio complexos ou financeiros no cliente
+REGRA 12 → Front-end é burro: NUNCA execute cálculos de negócio complexos, financeiros ou lógicas críticas no cliente. Delegue tudo ao banco de dados via Supabase RPC (Stored Procedures e Database Functions).
 REGRA 13 → Economia de egress: evite pooling constante de rede; prefira realtime reativo com invalidação precisa de cache
 REGRA 14 → Arquitetura modular: separe visualização, formulários, cartões e lógica de hooks/serviços de forma isolada
 REGRA 15 → Invalidação inteligente: revalide apenas chaves de cache afetadas e com cleanup de realtime adequado
+REGRA 16 → Persistência segura em multi-usuários: EM HIPÓTESE ALGUMA utilize localStorage para salvar configurações, templates, assinaturas, dados estruturais ou de negócio. Utilize exclusivamente o Supabase para sincronizar e persistir esses dados globalmente.
+REGRA 17 → Notificações do Sistema: NUNCA utilize mensagens ou diálogos nativos e genéricos do próprio navegador (como alert(), confirm() ou prompt()). Siga rigorosamente o padrão visual do sistema utilizando o hook useToast ou componentes customizados.
+REGRA 18 → Agentes e Handoff: Delegue tarefas complexas de desenvolvimento a subagentes autônomos dedicados, mantendo sempre o RAG (PROJETO_CONTEXTO.md e PROJETO_ALTERACOES.md) atualizado para continuidade do fluxo de trabalho.
 ```
 
 ---

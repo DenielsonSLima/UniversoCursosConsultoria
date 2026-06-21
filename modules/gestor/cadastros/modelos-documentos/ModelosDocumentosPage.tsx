@@ -10,7 +10,8 @@ import {
   Award,
   Download,
   ArrowLeft,
-  Contact
+  Contact,
+  ClipboardCheck
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -22,6 +23,8 @@ import DiariosPage from './diarios/DiariosPage';
 import HistoricoPage from './historico/HistoricoPage';
 import EstagioPage from './estagio/EstagioPage';
 import DiplomaPage from './diploma/DiplomaPage';
+import IRPFPage from './irpf/IRPFPage';
+import BoletimPage from './boletim/BoletimPage';
 
 const ModelosDocumentosPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
@@ -33,8 +36,10 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'transferencia', title: 'Modelo de Transferência', desc: 'Documentação para trâmite externo.', icon: <ArrowRightLeft size={24} />, color: 'bg-orange-500' },
     { id: 'diarios', title: 'Modelos Diários', desc: 'Pautas de frequência e conteúdo programático.', icon: <Calendar size={24} />, color: 'bg-indigo-600' },
     { id: 'historico', title: 'Modelo Histórico Escolar', desc: 'Registro acadêmico de notas e faltas.', icon: <ScrollText size={24} />, color: 'bg-slate-700' },
+    { id: 'boletim', title: 'Modelo Boletim Escolar', desc: 'Notas e frequência dos cursos técnicos.', icon: <ClipboardCheck size={24} />, color: 'bg-cyan-600' },
     { id: 'estagio', title: 'Termo de Estágio', desc: 'Contrato e plano de atividades do estagiário.', icon: <Briefcase size={24} />, color: 'bg-teal-600' },
     { id: 'diploma', title: 'Modelo Diploma', desc: 'Certificado de conclusão de curso.', icon: <Award size={24} />, color: 'bg-purple-600' },
+    { id: 'irpf', title: 'Declaração de IRPF', desc: 'Modelo de declaração financeira para fins de Imposto de Renda.', icon: <FileText size={24} />, color: 'bg-emerald-700' },
   ];
 
   const renderContent = () => {
@@ -45,8 +50,10 @@ const ModelosDocumentosPage: React.FC = () => {
       case 'transferencia': return <TransferenciaPage />;
       case 'diarios': return <DiariosPage />;
       case 'historico': return <HistoricoPage />;
+      case 'boletim': return <BoletimPage />;
       case 'estagio': return <EstagioPage />;
       case 'diploma': return <DiplomaPage />;
+      case 'irpf': return <IRPFPage />;
       default: return null;
     }
   };

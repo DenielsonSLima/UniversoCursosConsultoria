@@ -289,6 +289,19 @@ const CursosLivresPublicPage: React.FC = () => {
                         <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed font-medium">
                           {curso.descricao || 'Fale com nossa equipe comercial para saber mais detalhes sobre este curso e a grade curricular.'}
                         </p>
+
+                        {/* Preço (se cadastrado) */}
+                        {curso.valor && curso.valor > 0 && (
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between items-center animate-fadeIn">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
+                              <span className="text-[9px] text-emerald-800 font-bold uppercase tracking-wider">A partir de</span>
+                              <span className="text-sm font-black text-emerald-600">
+                                R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* CTA Button */}

@@ -52,7 +52,9 @@ export const cadastrosService = {
         duracao_meses: curso.duracao_meses || null,
         publicar_site: curso.publicar_site || false,
         imagem_detalhe_1: curso.imagem_detalhe_1 || null,
-        imagem_detalhe_2: curso.imagem_detalhe_2 || null
+        imagem_detalhe_2: curso.imagem_detalhe_2 || null,
+        valor: curso.valor !== undefined ? curso.valor : null,
+        ead_config: curso.ead_config || {}
       })
       .select()
       .single();
@@ -82,7 +84,9 @@ export const cadastrosService = {
         duracao_meses: curso.duracao_meses || null,
         publicar_site: curso.publicar_site !== undefined ? curso.publicar_site : false,
         imagem_detalhe_1: curso.imagem_detalhe_1 !== undefined ? curso.imagem_detalhe_1 : null,
-        imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null
+        imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null,
+        valor: curso.valor !== undefined ? curso.valor : null,
+        ead_config: curso.ead_config !== undefined ? curso.ead_config : null
       })
       .eq('id', curso.id);
       
@@ -90,6 +94,67 @@ export const cadastrosService = {
       console.error('Erro ao atualizar curso:', error);
       throw error;
     }
+  },
+
+  // Cria uma turma única automática para o curso EAD, caso ela não exista
+  async autoCreateEadTurma(curso: Curso): Promise<void> {
+    if (curso.modalidade !== 'EAD') return;
+
+    // 1. Busca se já existe uma turma EAD para este curso
+    const { data: existingTurmas, error: searchError } = await supabase
+      .from('turmas')
+      .select('id')
+      .eq('curso_id', curso.id)
+      .limit(1);
+
+    if (searchError) {
+      console.error('Erro ao verificar existência de turma EAD:', searchError);
+      throw searchError;
+    }
+
+    if (existingTurmas && existingTurmas.length > 0) {
+      // Turma já existe, nada a fazer
+      return;
+    }
+
+    // 2. Busca o primeiro polo cadastrado para associar à turma (geralmente Universo Sede)
+    const { data: polos, error: poloError } = await supabase
+      .from('polos')
+      .select('id')
+      .limit(1);
+
+    if (poloError) {
+      console.error('Erro ao buscar polo para criar turma EAD:', poloError);
+      throw poloError;
+    }
+
+    const defaultPoloId = polos && polos.length > 0 
+      ? polos[0].id 
+      : '44444444-4444-4444-4444-444444444444'; // fallback
+
+    // 3. Insere a turma única para o curso EAD
+    const formattedName = curso.nome.substring(0, 15).toUpperCase().replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '');
+    const cleanId = curso.id.substring(0, 4).toUpperCase();
+    const codigoTurma = `EAD-${formattedName}-${cleanId}`;
+
+    const { error: insertError } = await supabase
+      .from('turmas')
+      .insert({
+        codigo: codigoTurma,
+        nome: `${curso.nome} - EAD Turma Única`,
+        curso_id: curso.id,
+        polo_id: defaultPoloId,
+        turno: 'EAD',
+        status: 'EM_ANDAMENTO',
+        vagas_totais: 999999
+      });
+
+    if (insertError) {
+      console.error('Erro ao criar turma única EAD:', insertError);
+      throw insertError;
+    }
+
+    console.log(`[EAD Auto-Turma] Turma única criada com sucesso: ${codigoTurma}`);
   },
 
   // Duplica um curso com toda a sua grade curricular
@@ -131,6 +196,48 @@ export const cadastrosService = {
 
     // 4. Copia os módulos, disciplinas e aulas para o novo curso
     await this.saveGrade(novoCurso.id, gradeOriginal);
+
+    return novoCurso;
+  },
+
+  // Duplica um curso EAD com toda a sua configuração EAD (ead_config)
+  async duplicateEadCurso(cursoId: string, novoNome: string, novaVersao: string): Promise<Curso> {
+    // 1. Busca o curso original
+    const { data: curso, error: cursoError } = await supabase
+      .from('cursos')
+      .select('*')
+      .eq('id', cursoId)
+      .single();
+      
+    if (cursoError) {
+      console.error('Erro ao buscar curso original para duplicar:', cursoError);
+      throw cursoError;
+    }
+
+    // 2. Cria o novo curso clonado com ead_config e valor
+    const { data: novoCurso, error: insertError } = await supabase
+      .from('cursos')
+      .insert({
+        nome: novoNome,
+        carga_horaria: curso.carga_horaria,
+        modalidade: 'EAD',
+        status: 'ativo',
+        area: curso.area,
+        descricao: curso.descricao,
+        versao: novaVersao,
+        imagem_url: curso.imagem_url,
+        valor: curso.valor,
+        ead_config: curso.ead_config || {},
+        duracao_meses: curso.duracao_meses || 12,
+        publicar_site: false // Começa como rascunho (não publicado) ao duplicar
+      })
+      .select()
+      .single();
+      
+    if (insertError) {
+      console.error('Erro ao clonar curso EAD:', insertError);
+      throw insertError;
+    }
 
     return novoCurso;
   },

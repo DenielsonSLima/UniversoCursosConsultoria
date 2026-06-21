@@ -8,11 +8,25 @@ import {
 } from 'lucide-react';
 import { declaracaoService } from '../declaracao.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
+import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
+import { academicosService } from '../../../../configuracoes/academicos/academicos.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
 
 interface DeclaracaoEditorProps {
   polo: any;
   onBack: () => void;
+  service?: {
+    getTemplate: (poloId: string) => Promise<any>;
+    saveTemplate: (poloId: string, data: any) => Promise<boolean>;
+    getQrConfig: () => Promise<any>;
+  };
+  editorTitle?: string;
+  documentTitle?: string;
+  variables?: Array<{ code: string; label: string }>;
+  validationPrefix?: string;
+  defaultValidityDays?: number;
+  showValidity?: boolean;
+  migrateDeclarationDefaults?: boolean;
 }
 
 // Variáveis de Texto
@@ -42,17 +56,29 @@ interface AbsoluteField {
   style?: React.CSSProperties;
 }
 
-const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => {
+const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
+  polo,
+  onBack,
+  service = declaracaoService,
+  editorTitle = 'Editor de Declaração',
+  documentTitle = 'Declaração de Matrícula',
+  variables = VARIABLES,
+  validationPrefix = 'DEC',
+  defaultValidityDays = 30,
+  showValidity = true,
+  migrateDeclarationDefaults = true
+}) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [watermark, setWatermark] = useState<any>(null);
   const [qrConfig, setQrConfig] = useState<any>(null);
+  const [academicConfigs, setAcademicConfigs] = useState<any>(null);
 
   // Estado do Documento
   const [textContent, setTextContent] = useState('');
   const [absoluteFields, setAbsoluteFields] = useState<AbsoluteField[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [validityDays, setValidityDays] = useState<number>(30);
+  const [validityDays, setValidityDays] = useState<number>(defaultValidityDays);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -101,15 +127,70 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
   const loadData = async () => {
     setLoading(true);
     // 1. Carrega Template Específico do Polo
-    const template = await declaracaoService.getTemplate(polo.id);
+    const template = await service.getTemplate(polo.id);
     setTextContent(template.textContent);
-    setValidityDays(template.validityDays || 30);
+    setValidityDays(template.validityDays || defaultValidityDays);
     
-    const fieldsWithTypes = (template.absoluteFields || []).map((f: any) => ({
+    let loadedFields = (template.absoluteFields || []).map((f: any) => ({
         ...f,
         type: f.type || 'text'
     }));
-    setAbsoluteFields(fieldsWithTypes);
+
+    // Migração de templates antigos para v: 2 (adicionando os novos campos do rodapé e assinatura)
+    if (migrateDeclarationDefaults && (!template.v || template.v < 2)) {
+      const defaultFields = [
+        {
+          id: 'sig_line',
+          type: 'text',
+          value: '___________________________________________',
+          x: 200,
+          y: 880,
+          width: 394,
+          style: { textAlign: 'center', fontSize: '14px' }
+        },
+        {
+          id: 'sig_title',
+          type: 'text',
+          value: 'Secretaria Acadêmica',
+          x: 200,
+          y: 910,
+          width: 394,
+          style: { textAlign: 'center', fontWeight: 'bold', fontSize: '14px', textTransform: 'uppercase' }
+        },
+        {
+          id: 'sig_sub',
+          type: 'text',
+          value: '{{POLO_NOME}}',
+          x: 200,
+          y: 935,
+          width: 394,
+          style: { textAlign: 'center', fontSize: '12px', color: '#475569' }
+        },
+        {
+          id: 'footer_url',
+          type: 'text',
+          value: 'Para verificar a autenticidade deste documento acesse: www.universocc.com.br/#/validador',
+          x: 50,
+          y: 995,
+          width: 694,
+          style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+        },
+        {
+          id: 'footer_validity',
+          type: 'text',
+          value: 'Validade deste documento: {{VALIDADE_DIAS}} dias a partir da data de emissão.',
+          x: 50,
+          y: 1015,
+          width: 694,
+          style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+        }
+      ];
+
+      // Adiciona apenas se não existir nenhum campo com esse ID
+      const fieldsToAdd = defaultFields.filter(df => !loadedFields.some((lf: any) => lf.id === df.id));
+      loadedFields = [...loadedFields, ...fieldsToAdd];
+    }
+    setAbsoluteFields(loadedFields);
 
     // 2. Carrega Marca D'água
     const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
@@ -117,8 +198,12 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
     setWatermark(wm);
 
     // 3. Carrega Configuração de QR Code
-    const qrData = await declaracaoService.getQrConfig();
+    const qrData = await service.getQrConfig();
     setQrConfig(qrData);
+
+    // 4. Carrega Configurações Acadêmicas Globais
+    const academicData = await academicosService.getConfigs();
+    setAcademicConfigs(academicData);
 
     setLoading(false);
   };
@@ -245,11 +330,13 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await declaracaoService.saveTemplate(polo.id, {
+      const saved = await service.saveTemplate(polo.id, {
           textContent,
           absoluteFields,
-          validityDays
+          validityDays,
+          v: 2
       });
+      if (!saved) throw new Error('Não foi possível salvar o modelo.');
       showToast(`Modelo para ${polo.nomeFantasia} salvo com sucesso!`, 'success');
     } catch (error) {
       showToast('Erro ao salvar as alterações do modelo.', 'error');
@@ -267,11 +354,11 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
           return token.replace(/[{}]/g, '').substring(0, 4);
       }).join(qrConfig.separator || '-');
     }
-    return 'DEC-' + codeStr;
+    return `${validationPrefix}-${codeStr}`;
   };
 
   const getValidationUrl = () => {
-    return 'https://www.universocc.com.br/#/validador';
+    return academicConfigs?.validacaoUrl || 'https://www.universocc.com.br/validador';
   };
 
   // Retorna a URL completa para o validador
@@ -294,7 +381,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                 <ArrowLeft size={20} />
             </button>
             <div>
-                <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Editor de Declaração</h3>
+                <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">{editorTitle}</h3>
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
                     Unidade: <span className="text-blue-600">{polo.nomeFantasia}</span>
                 </p>
@@ -316,7 +403,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
         <div className="w-72 flex flex-col gap-6 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden h-full shrink-0">
             
             {/* Seção de Validade do Documento */}
-            <div className="border-b border-slate-100 pb-4 flex flex-col gap-2 shrink-0">
+            {showValidity && <div className="border-b border-slate-100 pb-4 flex flex-col gap-2 shrink-0">
                 <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2 mb-1">
                     <Building2 size={14} className="text-blue-600" /> Validade do Documento
                 </h4>
@@ -338,7 +425,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                 <p className="text-[9px] text-slate-400 font-medium leading-normal">
                     Define o prazo padrão que será impresso no documento e usado na verificação do QR Code.
                 </p>
-            </div>
+            </div>}
 
             {/* Seção de Variáveis de Texto */}
             <div className="flex flex-col gap-2 flex-1 overflow-hidden">
@@ -346,7 +433,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                     <Type size={14} className="text-blue-600" /> Texto Dinâmico
                 </h4>
                 <div className="overflow-y-auto custom-scrollbar space-y-2 pr-1 pb-2">
-                    {VARIABLES.map(variable => (
+                    {variables.map(variable => (
                         <div 
                             key={variable.code}
                             draggable
@@ -409,6 +496,47 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                         accept="image/png"
                         onChange={handleImageUpload}
                     />
+                </div>
+
+                {/* Usar Assinatura Centralizada */}
+                <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">Usar Assinatura Central</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { id: 'diretoriaGeral', label: 'Diretoria' },
+                      { id: 'secretaria', label: 'Secretaria' },
+                      { id: 'coordenacao', label: 'Coordenação' },
+                      { id: 'financeiro', label: 'Financeiro' },
+                    ] as const).map((role) => (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={async () => {
+                          const sigs = await assinaturasService.getSignatures();
+                          const url = sigs[role.id];
+                          if (!url) {
+                            showToast(`Assinatura de ${role.label} não cadastrada nas Configurações.`, 'error');
+                            return;
+                          }
+                          const generatedId = Math.random().toString(36).substr(2, 9);
+                          const newField: AbsoluteField = {
+                              id: generatedId,
+                              type: 'image',
+                              value: url,
+                              x: 250, 
+                              y: 850, 
+                              width: 200,
+                              style: { zIndex: 50, mixBlendMode: 'multiply' }
+                          };
+                          setAbsoluteFields(prev => [...prev, newField]);
+                          setSelectedFieldId(generatedId);
+                        }}
+                        className="py-1.5 px-2 bg-slate-50 hover:bg-pink-50 hover:text-pink-600 rounded-xl border border-slate-200 hover:border-pink-200 text-[10px] font-bold text-slate-600 transition-colors truncate"
+                      >
+                        {role.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
             </div>
 
@@ -490,6 +618,18 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                         {/* Controles para Texto Dinâmico */}
                         {selectedField.type === 'text' && (
                             <div className="space-y-3">
+                                {/* Conteúdo do Texto */}
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">
+                                        Conteúdo do Texto
+                                    </label>
+                                    <textarea 
+                                        value={selectedField.value}
+                                        onChange={(e) => updateSelectedField({ value: e.target.value })}
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 outline-none focus:border-blue-500 text-xs font-bold resize-y min-h-[60px] custom-scrollbar"
+                                    />
+                                </div>
+
                                 {/* Tamanho da Fonte */}
                                 <div>
                                     <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
@@ -504,6 +644,28 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                                         onChange={(e) => updateSelectedFieldStyle({ fontSize: `${e.target.value}px` })}
                                         className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                                     />
+                                </div>
+
+                                {/* Largura do Bloco de Texto */}
+                                <div>
+                                    <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                        <span>Largura do Bloco</span>
+                                        <span>{selectedField.width ? `${selectedField.width}px` : 'Automático'}</span>
+                                    </div>
+                                    <input 
+                                        type="range"
+                                        min="50"
+                                        max="700"
+                                        value={selectedField.width || 300}
+                                        onChange={(e) => updateSelectedField({ width: parseInt(e.target.value) })}
+                                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <button 
+                                        onClick={() => updateSelectedField({ width: undefined })}
+                                        className="text-[9px] font-bold text-slate-400 mt-1 hover:text-blue-600 block text-left"
+                                    >
+                                        Limpar Largura (Auto)
+                                    </button>
                                 </div>
 
                                 {/* Estilos de Fonte (Bold, Italic) */}
@@ -619,7 +781,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                 {/* Título */}
                 <div className="text-center mb-12 relative z-10">
                     <h2 className="text-2xl font-bold text-[#001a33] uppercase underline decoration-2 decoration-blue-600 underline-offset-4">
-                        Declaração de Matrícula
+                        {documentTitle}
                     </h2>
                 </div>
 
@@ -708,18 +870,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({ polo, onBack }) => 
                     );
                 })}
 
-                {/* Footer Fixo */}
-                <div className="absolute bottom-24 left-0 w-full px-20 text-center pointer-events-none">
-                    <div className="w-72 border-t border-black mx-auto mb-2"></div>
-                    <p className="font-bold text-black uppercase text-sm">Secretaria Acadêmica</p>
-                    <p className="text-xs text-slate-600">{polo.nomeFantasia}</p>
-                </div>
 
-                {/* Aviso de Validade e Autenticidade do Documento */}
-                <div className="absolute bottom-10 left-0 w-full text-center text-[9px] text-slate-400 font-bold uppercase tracking-wider select-none pointer-events-none flex flex-col gap-1">
-                    <p>Para verificar a autenticidade deste documento acesse: <span className="text-blue-600 font-black">www.universocc.com.br/#/validador</span></p>
-                    <p>Validade deste documento: {validityDays} dias a partir da data de emissão.</p>
-                </div>
 
             </div>
         </div>

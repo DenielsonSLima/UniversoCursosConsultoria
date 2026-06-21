@@ -43,6 +43,51 @@ export interface Curso {
   publicar_site?: boolean;
   imagem_detalhe_1?: string;
   imagem_detalhe_2?: string;
+  valor?: number | null;
   created_at?: string;
   modulos?: Modulo[];
+  ead_config?: EadConfig;
+}
+
+export interface EadCronogramaItem {
+  id: string;
+  titulo: string;
+  cargaHoraria: number;
+}
+
+export interface EadConteudoItem {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  videoUrl?: string; // Links do YouTube/Vimeo
+  apostilaUrl?: string; // Anexo da apostila
+  tipo: 'video' | 'material' | 'ambos';
+}
+
+export interface EadQuestao {
+  id: string;
+  pergunta: string;
+  opcoes: string[];
+  respostaCorreta: number; // 0-3 (índice da opção correta)
+}
+
+export interface EadProva {
+  id: string;
+  titulo: string;
+  notaMinima: number; // percentual de acertos necessário para aprovação, ex: 70%
+  questoes: EadQuestao[];
+}
+
+export interface EadCertificacao {
+  emitirAutomatico: boolean;
+  minimoAproveitamento: number; // percentual de aprovação necessário, ex: 70
+  assinaturaUrl?: string;
+  textoCustomizado?: string;
+}
+
+export interface EadConfig {
+  cronograma: EadCronogramaItem[];
+  conteudos: EadConteudoItem[];
+  provas: EadProva[];
+  certificacao: EadCertificacao;
 }

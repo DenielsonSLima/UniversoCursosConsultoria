@@ -1,7 +1,7 @@
 // File: modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Loader2, X, Copy, Power, Check } from 'lucide-react';
+import { Briefcase, Plus, Loader2, X, Copy, Power, Check, CheckCircle2, AlertTriangle } from 'lucide-react';
 import CursoTecnicoCard from './components/CursoTecnicoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
 import { cadastrosService } from '../cadastros.service';
@@ -110,7 +110,7 @@ const CursosTecnicosPage: React.FC = () => {
       setNewCursoImagemUrl(urlData.publicUrl);
     } catch (err: any) {
       console.error('Erro ao fazer upload da imagem:', err);
-      alert('Erro ao fazer upload da imagem: ' + err.message);
+      showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
     } finally {
       setIsUploading(false);
     }
@@ -122,6 +122,22 @@ const CursosTecnicosPage: React.FC = () => {
   const [duplicateNome, setDuplicateNome] = useState('');
   const [duplicateVersao, setDuplicateVersao] = useState('2.0');
   const [isDuplicating, setIsDuplicating] = useState(false);
+
+  // Estados para Modal de Confirmação Customizado
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  // Estados para Toast Customizado
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const areasDisponiveis = ['Saúde', 'Gestão', 'Tecnologia', 'Educação', 'Outros'];
 
@@ -136,7 +152,7 @@ const CursosTecnicosPage: React.FC = () => {
       setCursos(data);
     } catch (err) {
       console.error(err);
-      alert('Erro ao carregar cursos técnicos.');
+      showToast('Erro ao carregar cursos técnicos.', 'error');
     } finally {
       setLoading(false);
     }
@@ -182,9 +198,10 @@ const CursosTecnicosPage: React.FC = () => {
       setNewCursoImagemUrl('');
       setNewCursoPublicarSite(true);
       loadCursos();
+      showToast('Curso técnico criado com sucesso!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Erro ao criar curso no Supabase.');
+      showToast('Erro ao criar curso no Supabase.', 'error');
     } finally {
       setIsCreatingCurso(false);
     }
@@ -195,19 +212,25 @@ const CursosTecnicosPage: React.FC = () => {
     e.stopPropagation();
     const totalTurmas = (curso as any).total_turmas || 0;
     if (Number(totalTurmas) > 0) {
-      alert(`Não é possível excluir o curso "${curso.nome}" porque ele possui ${totalTurmas} turma(s) vinculada(s).`);
+      showToast(`Não é possível excluir o curso "${curso.nome}" porque ele possui ${totalTurmas} turma(s) vinculada(s).`, 'warning');
       return;
     }
 
-    if (confirm(`Tem certeza de que deseja EXCLUIR definitivamente o curso "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`)) {
-      try {
-        await cadastrosService.deleteCurso(curso.id);
-        loadCursos();
-      } catch (err: any) {
-        console.error(err);
-        alert(err.message || 'Erro ao excluir o curso.');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Curso Técnico',
+      message: `Tem certeza de que deseja EXCLUIR definitivamente o curso "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`,
+      onConfirm: async () => {
+        try {
+          await cadastrosService.deleteCurso(curso.id);
+          loadCursos();
+          showToast('Curso técnico excluído com sucesso!', 'success');
+        } catch (err: any) {
+          console.error(err);
+          showToast(err.message || 'Erro ao excluir o curso.', 'error');
+        }
       }
-    }
+    });
   };
 
   // Duplicação de Curso
@@ -231,10 +254,10 @@ const CursosTecnicosPage: React.FC = () => {
       setShowDuplicateModal(false);
       setDuplicateTargetId(null);
       loadCursos();
-      alert('Curso e grade curricular duplicados com sucesso!');
+      showToast('Curso e grade curricular duplicados com sucesso!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Erro ao duplicar curso.');
+      showToast('Erro ao duplicar curso.', 'error');
     } finally {
       setIsDuplicating(false);
     }
@@ -248,15 +271,21 @@ const CursosTecnicosPage: React.FC = () => {
       ? 'Tem certeza de que deseja INATIVAR este curso? Ele não ficará visível para novas matrículas.' 
       : 'Deseja reativar este curso?';
     
-    if (confirm(confirmMsg)) {
-      try {
-        await cadastrosService.toggleStatus(curso.id, novoStatus);
-        loadCursos();
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao alterar status do curso.');
+    setConfirmModal({
+      isOpen: true,
+      title: novoStatus === 'inativo' ? 'Pausar Curso' : 'Reativar Curso',
+      message: confirmMsg,
+      onConfirm: async () => {
+        try {
+          await cadastrosService.toggleStatus(curso.id, novoStatus);
+          loadCursos();
+          showToast(`Curso ${novoStatus === 'inativo' ? 'inativado' : 'ativado'} com sucesso!`, 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('Erro ao alterar status do curso.', 'error');
+        }
       }
-    }
+    });
   };
 
   // Filtra cursos pelo status
@@ -590,6 +619,54 @@ const CursosTecnicosPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Custom Confirmation Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative animate-slideUp">
+            <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight mb-2">
+              {confirmModal.title}
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mb-6 leading-relaxed">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal(null);
+                }}
+                className="flex-1 py-3 bg-red-650 hover:bg-red-750 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all shadow-md animate-none"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification Container */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[99999] animate-fadeIn">
+          <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 ${
+            toast.type === 'success' 
+            ? 'bg-emerald-500/95 border-emerald-400 text-white' 
+            : toast.type === 'warning'
+            ? 'bg-amber-500/95 border-amber-400 text-white'
+            : 'bg-red-500/95 border-red-400 text-white'
+          }`}>
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+            <span className="text-xs font-black uppercase tracking-wider">{toast.message}</span>
           </div>
         </div>
       )}

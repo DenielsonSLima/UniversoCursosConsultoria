@@ -4,13 +4,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
+import { formatMatricula } from '../../../../../lib/academicUtils';
 
 interface AlunoCardProps {
   data: any;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick }) => {
+const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -33,13 +35,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick }) => {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => parceirosService.delete(data.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-    },
-  });
+
 
   // Cor de status para alunos tem mais variações
   const statusConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -59,7 +55,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick }) => {
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       {/* Header */}
-      <div className="flex justify-between items-start mb-4 relative z-10">
+      <div className="flex justify-between items-start mb-4 relative z-20">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center overflow-hidden border border-blue-100 shadow-sm shrink-0">
             <img
@@ -72,9 +68,13 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick }) => {
             <h3 className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors" title={data.nome}>
               {data.nome}
             </h3>
-            {data.cpf && (
-              <div className="text-[11px] text-slate-400 font-medium font-mono">{data.cpf}</div>
-            )}
+            <div className="text-[11px] text-slate-400 font-medium font-mono flex items-center gap-1.5 flex-wrap">
+              {data.cpf && <span>{data.cpf}</span>}
+              {data.cpf && <span className="text-slate-300">•</span>}
+              <span className="text-purple-650 font-bold uppercase tracking-wide">
+                {formatMatricula(data.id, data.createdAt, data.poloId)}
+              </span>
+            </div>
             {data.nomeSocial && (
               <div className="text-[10px] text-blue-500 font-bold mt-0.5 truncate">Social: {data.nomeSocial}</div>
             )}
@@ -107,7 +107,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick }) => {
               </button>
               <div className="h-px bg-slate-100 mx-3" />
               <button
-                onClick={() => { if (window.confirm(`Excluir "${data.nome}"?`)) { setMenuOpen(false); deleteMutation.mutate(); } }}
+                onClick={() => { setMenuOpen(false); onDelete?.(); }}
                 className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors uppercase tracking-wide"
               >
                 <Trash2 size={13} /> Excluir

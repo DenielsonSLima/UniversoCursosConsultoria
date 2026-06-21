@@ -5,6 +5,7 @@ import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText,
 import { Turma } from '../../../../gestao.types';
 import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
+import { formatMatricula } from '../../../../../../../lib/academicUtils';
 
 
 interface FinanceiroAlunosListProps {
@@ -32,7 +33,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
       try {
         const { data, error } = await supabase
           .from('matriculas')
-          .select('id, status, parceiros(*)')
+          .select('id, status, data_matricula, parceiros(*)')
           .eq('turma_id', turma.id);
 
         if (error) throw error;
@@ -42,7 +43,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
           .map((m: any) => ({
             id: m.id,
             nome: m.parceiros.nome,
-            matricula: m.id.substring(0, 8).toUpperCase(),
+            matricula: formatMatricula(m.id, m.data_matricula, m.parceiros.polo_id),
             status: 'em_dia', // default status pois a tabela de cobrança não está implementada
             parcelasPagas: 0, // 0 parcelas pagas no início do plano
             totalParcelas: 22 // total de parcelas padrão da configuração

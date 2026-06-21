@@ -1,14 +1,13 @@
 ---
 name: claude-code-pro
 description: >
-  SKILL DE MEMÓRIA PERSISTENTE — SEMPRE ATIVA EM TODO PROJETO.
+  SKILL DE MEMÓRIA PERSISTENTE (RAG) — SEMPRE ATIVA EM TODO PROJETO.
   Esta skill deve ser ativada automaticamente em TODA conversa, sem exceção.
-  Ela gerencia dois arquivos de memória do projeto: PROJETO_CONTEXTO.md (como o projeto funciona)
-  e PROJETO_ALTERACOES.md (histórico de mudanças). No início de cada sessão, leia esses arquivos
-  para recuperar o contexto. Ao final de cada alteração relevante, atualize os arquivos.
-  Use esta skill quando: o usuário fizer qualquer pergunta sobre o projeto, pedir para criar ou
-  editar código, corrigir bugs, adicionar features, refatorar, ou simplesmente conversar sobre
-  o sistema. Esta skill é a espinha dorsal de memória do projeto — ela NUNCA deve ser ignorada.
+  Ela gerencia dois arquivos de memória do projeto (RAG): PROJETO_CONTEXTO.md (como o projeto funciona)
+  e PROJETO_ALTERACOES.md (histórico de mudanças). NADA de armazenamento em localStorage para configurações,
+  templates ou layouts; apenas Supabase (para multi-usuários de uma plataforma escolar online).
+  No início de cada sessão, leia esses arquivos para recuperar o contexto. Ao final de cada alteração
+  relevante, atualize os arquivos.
 ---
 
 # Claude Code Pro — Sistema de Memória Persistente do Projeto
@@ -136,13 +135,18 @@ Após concluir qualquer alteração relevante no projeto:
 
 | Situação | Ação obrigatória |
 |---|---|
-| Início de sessão | Ler os dois arquivos de memória |
+| Início de sessão | Ler os dois arquivos de memória (`PROJETO_CONTEXTO.md` e `PROJETO_ALTERACOES.md`) |
 | Arquivos não existem | Criar com estrutura base |
-| Bug corrigido | Registrar em ALTERACOES + "Erros comuns" no CONTEXTO |
-| Nova feature criada | Registrar em ALTERACOES |
-| Padrão novo adotado | Atualizar CONTEXTO |
-| Refatoração feita | Registrar impacto em ALTERACOES |
-| Decisão técnica tomada | Documentar em CONTEXTO |
+| Bug corrigido | Registrar em `PROJETO_ALTERACOES.md` + "Erros comuns" no `PROJETO_CONTEXTO.md` |
+| Nova feature criada | Registrar em `PROJETO_ALTERACOES.md` |
+| Padrão novo adotado | Atualizar `PROJETO_CONTEXTO.md` |
+| Refatoração feita | Registrar impacto em `PROJETO_ALTERACOES.md` |
+| Decisão técnica tomada | Documentar em `PROJETO_CONTEXTO.md` |
+| Armazenamento e RAG | EM HIPÓTESE ALGUMA utilizar `localStorage` para templates/configs/layouts/dados de negócio; usar apenas Supabase (multi-usuário). |
+| Regras de Cálculo | O frontend NÃO executa cálculos matemáticos, financeiros ou regras acadêmicas críticas. Delegue tudo via Supabase RPC (stored procedures). |
+| Notificações de UI | NUNCA usar `alert()`, `confirm()` ou popups nativos do navegador. Usar exclusivamente o padrão visual do sistema (como hook `useToast`). |
+| Sincronização de Dados | Utilizar atualizações em tempo real (Supabase realtime/subscriptions) e TanStack Query para sincronizar e gerenciar o cache de dados. |
+| Agentes e Handoff | Criar subagentes especializados para tarefas computacionalmente complexas e manter o histórico RAG atualizado. |
 
 ---
 

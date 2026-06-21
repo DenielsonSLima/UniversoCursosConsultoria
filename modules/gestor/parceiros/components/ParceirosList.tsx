@@ -14,12 +14,14 @@ interface ParceirosListProps {
   items: any[];
   isLoading: boolean;
   onSelectParceiro?: (parceiro: any) => void;
+  onDeleteParceiro?: (parceiro: any) => void;
 }
 
 const ParceirosList: React.FC<ParceirosListProps> = ({ 
   items, 
   isLoading,
-  onSelectParceiro 
+  onSelectParceiro,
+  onDeleteParceiro
 }) => {
   const [page, setPage] = useState(1);
 
@@ -35,17 +37,18 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
 
   const renderCard = (item: any) => {
     const handleSelect = () => onSelectParceiro && onSelectParceiro(item);
+    const handleDelete = () => onDeleteParceiro && onDeleteParceiro(item);
     
     switch (item.tipo) {
       case 'Aluno':
-        return <AlunoCard key={item.id} data={item} onClick={handleSelect} />;
+        return <AlunoCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'Professor':
-        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} />;
+        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'PJ':
-        return <PJCard key={item.id} data={item} onClick={handleSelect} />;
+        return <PJCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
       case 'PF':
       default:
-        return <PFCard key={item.id} data={item} onClick={handleSelect} />;
+        return <PFCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
     }
   };
 

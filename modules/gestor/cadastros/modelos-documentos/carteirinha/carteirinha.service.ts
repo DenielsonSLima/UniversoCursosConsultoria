@@ -1,5 +1,5 @@
-
 // File: modules/gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service.ts
+// REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
 import { supabase } from '../../../../../lib/supabase';
 
@@ -12,42 +12,45 @@ const DEFAULT_TEMPLATE = {
   fields: []
 };
 
-const STORAGE_KEY = 'universo_template_carteirinha';
-
-const getLocalStorageTemplate = () => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao ler template do localStorage:', e);
-      }
-    }
-  }
-  return DEFAULT_TEMPLATE;
-};
-
 export const carteirinhaService = {
   async getTemplate() {
-    return new Promise<any>((resolve) => {
-      setTimeout(() => resolve(getLocalStorageTemplate()), 300);
-    });
+    try {
+      const { data, error } = await supabase
+        .from('documentos_templates')
+        .select('conteudo')
+        .eq('id', 'carteirinha')
+        .maybeSingle();
+
+      if (!error && data && data.conteudo) {
+        return data.conteudo;
+      }
+    } catch (e) {
+      console.error('[carteirinhaService] Erro ao buscar template do Supabase:', e);
+    }
+
+    return DEFAULT_TEMPLATE;
   },
 
   async saveTemplate(data: any) {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        }
-        resolve(true);
-      }, 350);
-    });
+    try {
+      const { error } = await supabase
+        .from('documentos_templates')
+        .upsert({
+          id: 'carteirinha',
+          conteudo: data,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[carteirinhaService] Erro ao salvar template no Supabase:', e);
+      return false;
+    }
   },
 
   async getNextNumber() {
-    const temp = getLocalStorageTemplate();
+    const temp = await this.getTemplate();
     return temp.startNumber || 1000;
   }
 };

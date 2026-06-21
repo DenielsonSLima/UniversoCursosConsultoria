@@ -4,7 +4,7 @@ import { CreditCard, Edit, Trash2, FileText, CheckCircle2, Shield } from 'lucide
 interface CrachaCardProps {
   modelo: any;
   onEdit: (modelo: any) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const CrachaCard: React.FC<CrachaCardProps> = ({ modelo, onEdit, onDelete }) => {
@@ -24,12 +24,14 @@ const CrachaCard: React.FC<CrachaCardProps> = ({ modelo, onEdit, onDelete }) => 
           >
             <Edit size={16} />
           </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
-            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
+          {onDelete && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
 

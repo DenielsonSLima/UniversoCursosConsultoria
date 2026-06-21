@@ -1,10 +1,13 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MonitorPlay } from 'lucide-react';
 
 const CursosEadCard: React.FC = () => {
+  const navigate = useNavigate();
+
   const handleClick = () => {
-    window.location.href = 'https://universocursos.curso.study/loja_virtual/index.php';
+    navigate('/ead');
   };
 
   return (

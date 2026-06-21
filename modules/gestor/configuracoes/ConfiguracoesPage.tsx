@@ -14,7 +14,8 @@ import {
   Percent,
   Calculator,
   MessageCircle,
-  FileCode2
+  FileCode2,
+  GraduationCap
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -31,6 +32,8 @@ import TaxasPagamentoConfig from './taxas-pagamento/TaxasPagamentoConfig';
 import MensageriaConfig from './mensageria/MensageriaConfig';
 import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensConfig';
 import PolosConfig from './polos/PolosConfig';
+import AcademicosConfig from './academicos/AcademicosConfig';
+import AssinaturasConfig from './assinaturas/AssinaturasConfig';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -38,9 +41,11 @@ const ConfiguracoesPage: React.FC = () => {
   const menuItems = [
     { id: 'empresas', title: 'Dados da Empresa', desc: 'CNPJ, Endereço e Logo', icon: <Building2 size={24} />, color: 'bg-blue-500' },
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
+    { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
+    { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
     { id: 'saldo', title: 'Saldo Inicial', desc: 'Ajuste de caixa inicial', icon: <Wallet size={24} />, color: 'bg-teal-500' },
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
@@ -56,9 +61,11 @@ const ConfiguracoesPage: React.FC = () => {
     switch (activeSection) {
       case 'empresas': return <EmpresasConfig />;
       case 'polos': return <PolosConfig />;
+      case 'academicos': return <AcademicosConfig />;
       case 'categorias': return <CategoriasConfig />;
       case 'usuarios': return <UsuariosConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
+      case 'assinaturas': return <AssinaturasConfig />;
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
       case 'regras-cobranca': return <RegrasCobrancaConfig />;

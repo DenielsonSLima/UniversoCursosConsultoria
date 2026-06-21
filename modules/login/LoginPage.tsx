@@ -28,6 +28,8 @@ const LoginPage: React.FC = () => {
   const [professorPolos, setProfessorPolos] = useState<{ id: string; nome: string }[]>([]);
   const [professorName, setProfessorName] = useState('');
   const [selectedPoloId, setSelectedPoloId] = useState('');
+  const [professorId, setProfessorId] = useState('');
+  const [professorEmail, setProfessorEmail] = useState('');
 
   // Atualiza o relógio a cada segundo
   useEffect(() => {
@@ -69,6 +71,8 @@ const LoginPage: React.FC = () => {
             if (polosData && polosData.length > 1) {
               setProfessorPolos(polosData);
               setProfessorName(partner.nome);
+              setProfessorId(partner.id);
+              setProfessorEmail(email);
               setSelectedPoloId(polosData[0].id);
               setLoginStep('polo_select');
               setIsLoading(false);
@@ -78,13 +82,21 @@ const LoginPage: React.FC = () => {
           
           // Se tiver 1 ou 0 polos vinculados, loga direto salvando o único polo
           const activePolo = poloIds[0] || '44444444-4444-4444-4444-444444444444';
-          localStorage.setItem('active_polo_id', activePolo);
+          sessionStorage.setItem('active_polo_id', activePolo);
+          sessionStorage.setItem('logged_user_id', partner.id);
+          sessionStorage.setItem('logged_user_name', partner.nome);
+          sessionStorage.setItem('logged_user_email', email);
+          sessionStorage.setItem('logged_user_tipo', 'Professor');
           navigate('/professor');
           return;
         }
 
         if (partner.tipo === 'Aluno') {
-          localStorage.setItem('active_polo_id', partner.polo_id || '44444444-4444-4444-4444-444444444444');
+          sessionStorage.setItem('active_polo_id', partner.polo_id || '44444444-4444-4444-4444-444444444444');
+          sessionStorage.setItem('logged_user_id', partner.id);
+          sessionStorage.setItem('logged_user_name', partner.nome);
+          sessionStorage.setItem('logged_user_email', email);
+          sessionStorage.setItem('logged_user_tipo', 'Aluno');
           navigate('/aluno');
           return;
         }
@@ -92,20 +104,36 @@ const LoginPage: React.FC = () => {
 
       // Lógica de Acesso Provisória (Hardcoded para demonstração)
       if (email === 'gestor@universo.com' && password === '123456') {
-        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('logged_user_id', 'f1111111-1111-1111-1111-111111111111');
+        sessionStorage.setItem('logged_user_name', 'Administrador Master');
+        sessionStorage.setItem('logged_user_email', email);
+        sessionStorage.setItem('logged_user_tipo', 'Gestor');
         navigate('/gestor');
         return;
       }
 
       // Fallback para outros perfis (baseado apenas no email por enquanto)
       if (email.includes('professor')) {
-        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('logged_user_id', 'b0000000-0000-0000-0000-000000000001'); // Prof. Carlos Silva's ID
+        sessionStorage.setItem('logged_user_name', 'Prof. Carlos Silva (Demonstração)');
+        sessionStorage.setItem('logged_user_email', 'carlos.silva@email.com');
+        sessionStorage.setItem('logged_user_tipo', 'Professor');
         navigate('/professor');
       } else if (email.includes('aluno')) {
-        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('logged_user_id', 'a0000000-0000-0000-0000-000000000001'); // Ana Clara Souza's id
+        sessionStorage.setItem('logged_user_name', 'Ana Clara Souza (Demonstração)');
+        sessionStorage.setItem('logged_user_email', 'anaclara@email.com');
+        sessionStorage.setItem('logged_user_tipo', 'Aluno');
         navigate('/aluno');
       } else if (email.includes('gestor')) {
-        localStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('active_polo_id', '44444444-4444-4444-4444-444444444444');
+        sessionStorage.setItem('logged_user_id', 'f1111111-1111-1111-1111-111111111111');
+        sessionStorage.setItem('logged_user_name', 'Administrador Master');
+        sessionStorage.setItem('logged_user_email', email);
+        sessionStorage.setItem('logged_user_tipo', 'Gestor');
         navigate('/gestor');
       } else {
         alert('Usuário não encontrado. Tente: gestor@universo.com / 123456');
@@ -118,7 +146,11 @@ const LoginPage: React.FC = () => {
   };
 
   const handlePoloConfirm = () => {
-    localStorage.setItem('active_polo_id', selectedPoloId);
+    sessionStorage.setItem('active_polo_id', selectedPoloId);
+    sessionStorage.setItem('logged_user_id', professorId);
+    sessionStorage.setItem('logged_user_name', professorName);
+    sessionStorage.setItem('logged_user_email', professorEmail);
+    sessionStorage.setItem('logged_user_tipo', 'Professor');
     navigate('/professor');
   };
 

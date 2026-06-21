@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, MoreVertical, Filter, Tag, Settings, Sparkles } from 'lucide-react';
+import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, MoreVertical, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import ComunicacaoConfig from './components/ComunicacaoConfig';
+import ToastNotification, { useToast } from '../components/ToastNotification';
 
 interface Chat {
   id: string;
@@ -37,6 +38,7 @@ interface Category {
 }
 
 const ComunicacaoPage: React.FC = () => {
+  const { toasts, removeToast, toast } = useToast();
   const [mainTab, setMainTab] = useState<'tickets' | 'config'>('tickets');
   const [activeTicketStatus, setActiveTicketStatus] = useState<'pendente' | 'solucionada'>('pendente');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
@@ -47,11 +49,21 @@ const ComunicacaoPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
   
   // Input State
   const [messageText, setMessageText] = useState('');
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  // Attachment state
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Delete confirm
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingChat, setDeletingChat] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -60,26 +72,77 @@ const ComunicacaoPage: React.FC = () => {
     loadInitialData();
   }, []);
 
-  // 2. Realtime Subscription: Chats
+  // 1.1 Realtime: manter o estado global de chats não lidos atualizado
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const { data } = await supabase
+          .from('comunicacao_mensagens')
+          .select('chat_id')
+          .eq('lida', false)
+          .in('remetente_tipo', ['aluno', 'professor']);
+        setUnreadChatIds(new Set(data?.map(m => m.chat_id) || []));
+      } catch (err) {
+        console.error('Erro ao buscar chats não lidos:', err);
+      }
+    };
+
+    fetchUnread();
+
+    const msgsGlobalChannel = supabase
+      .channel('comunicacao_msgs_global_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comunicacao_mensagens' },
+        () => {
+          fetchUnread();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(msgsGlobalChannel);
+    };
+  }, []);
+
+  // 2. Realtime Subscription: Chats — robusto, busca o registro completo em cada evento
   useEffect(() => {
     const chatsChannel = supabase
       .channel('comunicacao_chats_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'comunicacao_chats' },
-        (payload) => {
+        async (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const oldId = (payload.old as { id: string }).id;
+            setChats(prev => prev.filter(c => c.id !== oldId));
+            return;
+          }
+
+          // Para INSERT e UPDATE, busca o registro completo para garantir dados corretos
+          const changedId = (payload.new as { id: string }).id;
+          const { data: freshChat } = await supabase
+            .from('comunicacao_chats')
+            .select('*')
+            .eq('id', changedId)
+            .single();
+
+          if (!freshChat) return;
+
           if (payload.eventType === 'INSERT') {
-            const newChat = payload.new as Chat;
             setChats(prev => {
-              if (prev.some(c => c.id === newChat.id)) return prev;
-              return [newChat, ...prev];
+              if (prev.some(c => c.id === freshChat.id)) return prev;
+              // Novo chat vai pro topo (mais recente primeiro)
+              return [freshChat, ...prev];
             });
           } else if (payload.eventType === 'UPDATE') {
-            const updatedChat = payload.new as Chat;
-            setChats(prev => prev.map(c => c.id === updatedChat.id ? updatedChat : c));
-          } else if (payload.eventType === 'DELETE') {
-            const oldChat = payload.old as { id: string };
-            setChats(prev => prev.filter(c => c.id !== oldChat.id));
+            setChats(prev => {
+              const updated = prev.map(c => c.id === freshChat.id ? freshChat : c);
+              // Reordena por ultima_data para que chats com nova mensagem subam
+              return [...updated].sort((a, b) =>
+                new Date(b.ultima_data).getTime() - new Date(a.ultima_data).getTime()
+              );
+            });
           }
         }
       )
@@ -89,6 +152,20 @@ const ComunicacaoPage: React.FC = () => {
       supabase.removeChannel(chatsChannel);
     };
   }, []);
+
+  // Helper: marcar mensagens do chat ativo como lidas
+  const markMessagesAsRead = async (chatId: string) => {
+    try {
+      await supabase
+        .from('comunicacao_mensagens')
+        .update({ lida: true })
+        .eq('chat_id', chatId)
+        .in('remetente_tipo', ['aluno', 'professor'])
+        .eq('lida', false);
+    } catch (err) {
+      console.error('Erro ao marcar mensagens como lidas:', err);
+    }
+  };
 
   // 3. Realtime Subscription: Messages of the Active Chat
   useEffect(() => {
@@ -115,9 +192,14 @@ const ComunicacaoPage: React.FC = () => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          if (newMsg.remetente_tipo === 'aluno' || newMsg.remetente_tipo === 'professor') {
+            markMessagesAsRead(activeChatId);
+          }
         }
       )
       .subscribe();
+
+    markMessagesAsRead(activeChatId);
 
     return () => {
       supabase.removeChannel(msgsChannel);
@@ -147,6 +229,14 @@ const ComunicacaoPage: React.FC = () => {
         .order('ultima_data', { ascending: false });
       
       setChats(chatData || []);
+
+      // Fetch initial unread message chat IDs
+      const { data: unreadData } = await supabase
+        .from('comunicacao_mensagens')
+        .select('chat_id')
+        .eq('lida', false)
+        .in('remetente_tipo', ['aluno', 'professor']);
+      setUnreadChatIds(new Set(unreadData?.map(m => m.chat_id) || []));
 
       if (chatData && chatData.length > 0) {
         // Find first pending chat to set active by default
@@ -182,46 +272,73 @@ const ComunicacaoPage: React.FC = () => {
     }
   };
 
+  // ── Upload helper ──
+  const uploadAttachment = async (file: File): Promise<string | null> => {
+    const ext = file.name.split('.').pop();
+    const path = `comunicacao/gestor/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('anexos').upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('anexos').getPublicUrl(path);
+    return urlData?.publicUrl || null;
+  };
+
+  // ── File icon helper ──
+  const getFileIcon = (url: string | null, type?: string) => {
+    const lower = (url || type || '').toLowerCase();
+    if (/\.(jpe?g|png|gif|webp|svg)/.test(lower) || (type || '').startsWith('image/'))
+      return <Image size={14} className="text-blue-500" />;
+    if (/\.pdf/.test(lower)) return <FileText size={14} className="text-red-500" />;
+    if (/\.(ppt|pptx)/.test(lower)) return <File size={14} className="text-orange-500" />;
+    if (/\.(xls|xlsx)/.test(lower)) return <FileSpreadsheet size={14} className="text-emerald-600" />;
+    if (/\.(doc|docx)/.test(lower)) return <FileText size={14} className="text-blue-600" />;
+    return <File size={14} className="text-slate-500" />;
+  };
+
+  const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url);
+
   // Send Message
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !activeChatId) return;
-    const text = messageText;
+    if (!activeChatId) return;
+    const text = messageText.trim();
+    const fileToSend = pendingFile;
+    if (!text && !fileToSend) return;
+
     setMessageText('');
+    setPendingFile(null);
+    setUploadingFile(!!fileToSend);
 
     try {
-      // 1. Insert message
-      const { data: newMsg, error: msgErr } = await supabase
-        .from('comunicacao_mensagens')
-        .insert({
-          chat_id: activeChatId,
-          remetente_nome: 'Gestor (Escola)',
-          remetente_tipo: 'gestor',
-          conteudo: text
-        })
-        .select()
-        .single();
+      let anexoUrl: string | null = null;
+      if (fileToSend) {
+        anexoUrl = await uploadAttachment(fileToSend);
+      }
 
+      const msgPayload: any = {
+        chat_id: activeChatId,
+        remetente_nome: 'Gestor (Escola)',
+        remetente_tipo: 'gestor',
+        conteudo: text || (fileToSend ? `📎 ${fileToSend.name}` : ''),
+        anexo_url: anexoUrl,
+      };
+
+      const { data: newMsg, error: msgErr } = await supabase
+        .from('comunicacao_mensagens').insert(msgPayload).select().single();
       if (msgErr) throw msgErr;
 
-      // 2. Update chat's last message text and date
-      const { error: chatErr } = await supabase
-        .from('comunicacao_chats')
-        .update({
-          ultimo_texto: text,
-          ultima_data: new Date().toISOString()
-        })
-        .eq('id', activeChatId);
+      await supabase.from('comunicacao_chats').update({
+        ultimo_texto: text || `📎 ${fileToSend?.name}`,
+        ultima_data: new Date().toISOString()
+      }).eq('id', activeChatId);
 
-      if (chatErr) throw chatErr;
-
-      // Optimistically append locally if subscription hasn't caught it yet
       setMessages(prev => {
         if (prev.some(m => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
-      alert('Erro ao enviar mensagem.');
+      toast.error('Erro ao enviar', 'Não foi possível enviar sua resposta.');
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -250,10 +367,76 @@ const ComunicacaoPage: React.FC = () => {
 
       if (msgErr) throw msgErr;
 
-      alert('Atendimento finalizado com sucesso!');
+      toast.success('Atendimento finalizado', 'O atendimento foi finalizado com sucesso!');
     } catch (err) {
       console.error('Erro ao finalizar atendimento:', err);
-      alert('Erro ao finalizar atendimento.');
+      toast.error('Erro ao finalizar', 'Não foi possível finalizar o atendimento.');
+    }
+  };
+
+  // ── Hard-delete chat (gestor) ──────────────────────────────────────────────────────────
+  // 1. Busca todas as mensagens com anexo do chat
+  // 2. Deleta cada arquivo do Supabase Storage
+  // 3. Deleta o chat (CASCADE apaga as mensagens automaticamente)
+  // 4. Chat some da lista de ambos (aluno e gestor)
+  const handleDeleteChat = async () => {
+    if (!activeChatId) return;
+    setDeletingChat(true);
+
+    try {
+      // 1. Busca mensagens com anexo
+      const { data: msgsWithAnexo } = await supabase
+        .from('comunicacao_mensagens')
+        .select('anexo_url')
+        .eq('chat_id', activeChatId)
+        .not('anexo_url', 'is', null);
+
+      // 2. Deleta arquivos do Storage
+      if (msgsWithAnexo && msgsWithAnexo.length > 0) {
+        const paths = msgsWithAnexo
+          .map((m: any) => {
+            try {
+              // Extrai o path relativo da URL pública
+              // Ex: https://xxx.supabase.co/storage/v1/object/public/anexos/comunicacao/gestor/123.pdf
+              const url = new URL(m.anexo_url);
+              const pathParts = url.pathname.split('/object/public/anexos/');
+              return pathParts[1] || null;
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean) as string[];
+
+        if (paths.length > 0) {
+          const { error: storageErr } = await supabase.storage
+            .from('anexos')
+            .remove(paths);
+          if (storageErr) {
+            console.warn('Alguns arquivos não puderam ser removidos:', storageErr);
+          }
+        }
+      }
+
+      // 3. Deleta o chat (CASCADE remove as mensagens)
+      const { error: deleteErr } = await supabase
+        .from('comunicacao_chats')
+        .delete()
+        .eq('id', activeChatId);
+
+      if (deleteErr) throw deleteErr;
+
+      // 4. Atualiza o estado local
+      setChats(prev => prev.filter(c => c.id !== activeChatId));
+      setActiveChatId(null);
+      setMessages([]);
+      setShowDeleteConfirm(false);
+
+      toast.success('Atendimento excluído', 'O atendimento e todos os arquivos foram removidos.');
+    } catch (err) {
+      console.error('Erro ao excluir atendimento:', err);
+      toast.error('Erro ao excluir', 'Não foi possível excluir o atendimento.');
+    } finally {
+      setDeletingChat(false);
     }
   };
 
@@ -287,6 +470,7 @@ const ComunicacaoPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Top Header & Navigation Tabs */}
       <div className="bg-white px-6 py-4 border-b border-slate-150 flex justify-between items-center shrink-0">
@@ -422,8 +606,11 @@ const ComunicacaoPage: React.FC = () => {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-baseline mb-0.5">
-                            <h4 className="font-bold truncate text-xs text-[#001a33]">
+                            <h4 className="font-bold truncate text-xs text-[#001a33] flex items-center gap-1.5">
                               {chat.remetente_nome}
+                              {unreadChatIds.has(chat.id) && (
+                                <span className="w-2 h-2 bg-red-500 rounded-full shrink-0 animate-pulse" />
+                              )}
                             </h4>
                             <span className="text-[9px] text-slate-400 font-bold shrink-0">{formatTime(chat.ultima_data)}</span>
                           </div>
@@ -495,8 +682,12 @@ const ComunicacaoPage: React.FC = () => {
                         <CheckCircle size={12} /> Finalizar Atendimento
                       </button>
                     )}
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
-                      <MoreVertical size={16} />
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      title="Excluir atendimento e arquivos"
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -536,22 +727,51 @@ const ComunicacaoPage: React.FC = () => {
                           )}
                           
                           <div 
-                            className={`p-3 rounded-2xl max-w-md shadow-sm border ${
+                            className={`rounded-2xl max-w-md shadow-sm border overflow-hidden ${
                               isGestor 
                                 ? 'bg-[#001a33] text-white border-transparent rounded-br-sm' 
                                 : 'bg-white text-slate-700 border-slate-100 rounded-bl-sm'
                             }`}
                           >
-                            <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
-                              isGestor ? 'text-blue-300' : 'text-blue-600'
-                            }`}>
-                              {msg.remetente_nome}
-                            </p>
-                            <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
-                            <div className="flex items-center justify-end mt-1">
-                              <span className={`text-[8px] font-bold ${
-                                isGestor ? 'text-slate-400' : 'text-slate-400'
-                              }`}>{formatTime(msg.created_at)}</span>
+                            {/* Attachment preview */}
+                            {msg.anexo_url && (
+                              <div className="p-2 border-b border-white/10">
+                                {isImageUrl(msg.anexo_url) ? (
+                                  <img
+                                    src={msg.anexo_url}
+                                    alt="anexo"
+                                    className="max-w-[220px] max-h-[160px] rounded-xl object-cover cursor-pointer"
+                                    onClick={() => window.open(msg.anexo_url, '_blank')}
+                                  />
+                                ) : (
+                                  <a
+                                    href={msg.anexo_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+                                      isGestor ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                                    }`}
+                                  >
+                                    {getFileIcon(msg.anexo_url)}
+                                    <span className="truncate max-w-[160px]">{msg.anexo_url.split('/').pop()}</span>
+                                    <Download size={12} className="shrink-0" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {/* Text */}
+                            {msg.conteudo && !msg.conteudo.startsWith('📎') && (
+                              <div className="px-3 pt-2 pb-1">
+                                <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
+                                  isGestor ? 'text-blue-300' : 'text-blue-600'
+                                }`}>
+                                  {msg.remetente_nome}
+                                </p>
+                                <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
+                              </div>
+                            )}
+                            <div className={`flex items-center justify-end px-3 pb-1.5 ${ msg.conteudo && !msg.conteudo.startsWith('📎') ? '' : 'pt-1.5' }`}>
+                              <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
                             </div>
                           </div>
                         </div>
@@ -562,35 +782,69 @@ const ComunicacaoPage: React.FC = () => {
                 </div>
 
                 {/* Messages Input Box */}
-                <div className="p-3 bg-white border-t border-slate-200">
+                <div className="shrink-0 border-t border-slate-200 bg-white">
                   {currentChat.status === 'solucionada' ? (
-                    <div className="text-center py-3 bg-slate-50 rounded-xl border border-slate-150 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                      Esta solicitação já foi finalizada.
+                    <div className="px-4 py-4">
+                      <div className="text-center bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                        <CheckCircle size={12} /> Esta solicitação já foi finalizada.
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <button className="p-2.5 text-slate-450 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
-                        <Paperclip size={18} />
-                      </button>
-                      
-                      <div className="flex-1 bg-slate-50 rounded-xl overflow-hidden flex items-center px-4.5 py-1.5 border border-slate-150 focus-within:border-blue-500 focus-within:bg-white transition-all shadow-inner">
-                        <input 
-                          type="text" 
-                          value={messageText}
-                          onChange={(e) => setMessageText(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          placeholder="Escreva sua resposta..."
-                          className="w-full bg-transparent border-none outline-none text-xs text-slate-700 py-1.5 font-medium"
-                        />
-                      </div>
+                    <div className="p-3 space-y-2">
+                      {/* Pending file preview */}
+                      {pendingFile && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
+                          {getFileIcon(null, pendingFile.type)}
+                          <span className="text-xs font-bold text-slate-700 truncate flex-1">{pendingFile.name}</span>
+                          <button onClick={() => setPendingFile(null)} className="p-0.5 hover:bg-blue-200 rounded-full transition-colors">
+                            <X size={12} className="text-slate-500" />
+                          </button>
+                        </div>
+                      )}
 
-                      <button 
-                        onClick={handleSendMessage}
-                        disabled={!messageText.trim()}
-                        className="p-2.5 bg-[#001a33] text-white rounded-xl hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-50"
-                      >
-                        <Send size={16} />
-                      </button>
+                      {/* Input row */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0"
+                          title="Anexar arquivo"
+                        >
+                          <Paperclip size={18} />
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0] || null;
+                            setPendingFile(f);
+                            e.target.value = '';
+                          }}
+                        />
+
+                        <div className="flex-1 bg-slate-50 rounded-xl flex items-center px-4 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
+                          <input 
+                            type="text" 
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                            placeholder="Escreva sua resposta..."
+                            className="w-full bg-transparent border-none outline-none text-xs text-slate-700 py-3 font-medium"
+                          />
+                        </div>
+
+                        <button 
+                          onClick={handleSendMessage}
+                          disabled={!messageText.trim() && !pendingFile || uploadingFile}
+                          className="p-2.5 bg-[#001a33] text-white rounded-xl hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-40 shrink-0"
+                        >
+                          {uploadingFile
+                            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            : <Send size={16} />}
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-slate-400 pl-12 font-medium">Aceita: imagens, PDF, Word, Excel, PowerPoint</p>
                     </div>
                   )}
                 </div>
@@ -611,6 +865,48 @@ const ComunicacaoPage: React.FC = () => {
         )}
 
       </div>
+
+      {/* ── Hard-Delete Confirmation Modal (Gestor) ── */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fadeIn">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
+                <AlertTriangle size={28} />
+              </div>
+
+              <div>
+                <h4 className="text-base font-black text-[#001a33] uppercase tracking-tight">Excluir Atendimento</h4>
+                <p className="text-slate-500 text-xs mt-2 leading-relaxed">
+                  Esta ação é <strong>irreversível</strong>. O atendimento, todas as mensagens
+                  e <strong>todos os arquivos anexados</strong> serão permanentemente deletados.
+                  O aluno também perderá acesso ao histórico.
+                </p>
+              </div>
+
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deletingChat}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-widest rounded-xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteChat}
+                  disabled={deletingChat}
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deletingChat
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <><Trash2 size={13} /> Excluir Tudo</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

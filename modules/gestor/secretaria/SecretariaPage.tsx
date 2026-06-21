@@ -8,6 +8,15 @@ import SecretariaAlunosPage from './alunos/SecretariaAlunosPage';
 import SecretariaDocumentosPage from './documentos/SecretariaDocumentosPage';
 import SecretariaBoletinsPage from './boletins/SecretariaBoletinsPage';
 import SecretariaCarteirinhasPage from './carteirinhas/SecretariaCarteirinhasPage';
+import SecretariaSolicitacoesPage from './solicitacoes/SecretariaSolicitacoesPage';
+import SecretariaDeclaracaoMatriculaPage from './declaracao-matricula/SecretariaDeclaracaoMatriculaPage';
+import SecretariaDeclaracaoFrequenciaPage from './declaracao-frequencia/SecretariaDeclaracaoFrequenciaPage';
+import SecretariaDeclaracaoIrpfPage from './declaracao-irpf/SecretariaDeclaracaoIrpfPage';
+import SecretariaHistoricoEscolarPage from './historico-escolar/SecretariaHistoricoEscolarPage';
+import SecretariaCrachaEstagioPage from './cracha-estagio/SecretariaCrachaEstagioPage';
+import SecretariaRematriculaPage from './rematricula/SecretariaRematriculaPage';
+import SecretariaTermoEstagioPage from './termo-estagio/SecretariaTermoEstagioPage';
+import SecretariaConsultaFinanceiraPage from './consulta-financeira/SecretariaConsultaFinanceiraPage';
 
 const SecretariaPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string>('dashboard');
@@ -16,14 +25,30 @@ const SecretariaPage: React.FC = () => {
     switch (activeModule) {
       case 'alunos':
         return <SecretariaAlunosPage />;
-      case 'declaracao':
+      case 'declaracao-matricula':
+        return <SecretariaDeclaracaoMatriculaPage />;
+      case 'declaracao-frequencia':
+        return <SecretariaDeclaracaoFrequenciaPage />;
+      case 'declaracao-irpf':
+        return <SecretariaDeclaracaoIrpfPage />;
+      case 'historico-escolar':
+        return <SecretariaHistoricoEscolarPage />;
+      case 'cracha-estagio':
+        return <SecretariaCrachaEstagioPage />;
+      case 'rematricula':
+        return <SecretariaRematriculaPage />;
+      case 'termo-estagio':
+        return <SecretariaTermoEstagioPage />;
+      case 'consulta-financeira':
+        return <SecretariaConsultaFinanceiraPage />;
       case 'transferencia':
-        // Passamos o tipo inicial para a página de documentos saber o que abrir
         return <SecretariaDocumentosPage initialType={activeModule} />;
       case 'boletim':
         return <SecretariaBoletinsPage />;
       case 'carteirinha':
         return <SecretariaCarteirinhasPage />;
+      case 'solicitacoes':
+        return <SecretariaSolicitacoesPage />;
       default:
         return <SecretariaDashboard onNavigate={setActiveModule} />;
     }
@@ -54,7 +79,7 @@ const SecretariaPage: React.FC = () => {
             <p className="text-slate-500 font-medium">Selecione uma operação abaixo.</p>
           ) : (
             <p className="text-slate-500 font-medium capitalize">
-                Gerenciamento de {activeModule.replace('declaracao', 'Documentos').replace('transferencia', 'Transferências')}
+                Operação: {activeModule.replaceAll('-', ' ')}
             </p>
           )}
         </div>

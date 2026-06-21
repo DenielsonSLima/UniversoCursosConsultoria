@@ -29,6 +29,16 @@ const MarcaDaguaConfig: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: ['companies_watermarks'] });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documentos_templates' },
+        (payload: any) => {
+          const changedId = payload.new?.id || payload.old?.id || '';
+          if (changedId.startsWith('watermark_landscape_')) {
+            queryClient.invalidateQueries({ queryKey: ['companies_watermarks'] });
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -107,7 +117,7 @@ const MarcaDaguaConfig: React.FC = () => {
               <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-[#001a33] border border-slate-100 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <Building2 size={24} />
               </div>
-              {company.watermarkUrl ? (
+              {company.watermarkUrl || company.landscapeWatermarkUrl ? (
                 <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase px-2 py-1 rounded-full border border-emerald-100">
                   Configurado
                 </span>
@@ -131,9 +141,9 @@ const MarcaDaguaConfig: React.FC = () => {
             </div>
 
             {/* Background Preview Suave */}
-            {company.watermarkUrl && (
+            {(company.landscapeWatermarkUrl || company.watermarkUrl) && (
               <div className="absolute -bottom-10 -right-10 w-40 h-40 opacity-[0.05] group-hover:opacity-10 transition-opacity">
-                <img src={company.watermarkUrl} alt="" className="w-full h-full object-contain transform rotate-12" />
+                <img src={company.landscapeWatermarkUrl || company.watermarkUrl || ''} alt="" className="w-full h-full object-contain transform rotate-12" />
               </div>
             )}
           </div>

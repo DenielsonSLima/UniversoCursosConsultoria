@@ -172,7 +172,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
           .from('parceiros')
           .select('nome')
           .eq('tipo', 'Professor')
-          .eq('status', 'ativo')
+          .eq('status', 'ATIVO')
           .order('nome', { ascending: true });
 
         if (profsError) throw profsError;

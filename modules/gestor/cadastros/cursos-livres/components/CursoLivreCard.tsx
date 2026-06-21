@@ -1,7 +1,7 @@
 // File: modules/gestor/cadastros/cursos-livres/components/CursoLivreCard.tsx
 
 import React from 'react';
-import { Clock, Calendar, ChevronRight, Zap, Copy, Power, PowerOff } from 'lucide-react';
+import { Clock, Calendar, ChevronRight, Zap, Copy, Power, PowerOff, Trash2 } from 'lucide-react';
 import { Curso } from '../../cadastros.types';
 
 interface CursoLivreCardProps {
@@ -9,9 +9,10 @@ interface CursoLivreCardProps {
   onClick: () => void;
   onDuplicate: (e: React.MouseEvent) => void;
   onToggleStatus: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
-const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus }) => {
+const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete }) => {
   const area = curso.area || 'Capacitação';
   const duracaoSemanas = Math.ceil(curso.carga_horaria / 10) || 4;
   const descricao = curso.descricao || `Curso livre de capacitação profissional em ${curso.nome}.`;
@@ -68,34 +69,55 @@ const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDupli
           </div>
         )}
 
-        <div className="flex gap-2 relative z-20">
+        <div className="flex flex-col gap-2 relative z-20">
           <button 
             onClick={onClick}
-            className="flex-1 flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-[#001a33] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-colors"
           >
             <span>Configurar Conteúdo</span>
             <ChevronRight size={14} />
           </button>
           
-          <button 
-            onClick={onDuplicate}
-            title="Copiar / Criar Nova Versão"
-            className="p-3 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-xl border border-slate-100 transition-colors"
-          >
-            <Copy size={14} />
-          </button>
-          
-          <button 
-            onClick={onToggleStatus}
-            title={curso.status === 'ativo' ? 'Inativar Curso' : 'Ativar Curso'}
-            className={`p-3 rounded-xl border border-slate-100 transition-colors ${
-              curso.status === 'ativo' 
-                ? 'bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500' 
-                : 'bg-red-50 text-red-500 hover:bg-emerald-50 hover:text-emerald-600'
-            }`}
-          >
-            {curso.status === 'ativo' ? <Power size={14} /> : <PowerOff size={14} />}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={onDuplicate}
+              title="Copiar / Criar Nova Versão"
+              className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 rounded-xl border border-slate-100 transition-colors"
+            >
+              <Copy size={14} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Duplicar</span>
+            </button>
+            
+            <button 
+              onClick={onToggleStatus}
+              title={curso.status === 'ativo' ? 'Inativar Curso' : 'Ativar Curso'}
+              className={`flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-slate-100 transition-colors ${
+                curso.status === 'ativo' 
+                  ? 'bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500' 
+                  : 'bg-red-50 text-red-500 hover:bg-emerald-50 hover:text-emerald-600'
+              }`}
+            >
+              {curso.status === 'ativo' ? (
+                <>
+                  <Power size={14} />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Inativar</span>
+                </>
+              ) : (
+                <>
+                  <PowerOff size={14} />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Ativar</span>
+                </>
+              )}
+            </button>
+
+            <button 
+              onClick={onDelete}
+              title="Excluir Curso"
+              className="p-2.5 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-xl border border-slate-100 transition-colors flex items-center justify-center"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
 

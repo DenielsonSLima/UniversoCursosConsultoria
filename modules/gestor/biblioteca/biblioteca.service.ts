@@ -71,6 +71,30 @@ export const bibliotecaService = {
     parentId: string | null = null, 
     teacherId: string | null = null
   ): Promise<LibraryFolder[]> {
+    if (parentId === null && teacherId !== null) {
+      const { data: existingFolders, error: checkError } = await supabase
+        .from('biblioteca_pastas')
+        .select('id')
+        .eq('teacher_id', teacherId)
+        .is('parent_id', null);
+      
+      if (!checkError && (!existingFolders || existingFolders.length === 0)) {
+        const { data: teacher } = await supabase
+          .from('parceiros')
+          .select('nome')
+          .eq('id', teacherId)
+          .single();
+        
+        if (teacher) {
+          await supabase.from('biblioteca_pastas').insert({
+            nome: `Arquivos de ${teacher.nome}`,
+            teacher_id: teacherId,
+            parent_id: null
+          });
+        }
+      }
+    }
+
     let query = supabase.from('biblioteca_pastas').select('*');
 
     if (parentId === null) {
@@ -299,7 +323,7 @@ export const bibliotecaService = {
       .from('parceiros')
       .select('id, nome, especialidade, updated_at')
       .eq('tipo', 'Professor')
-      .eq('status', 'ativo')
+      .eq('status', 'ATIVO')
       .order('nome', { ascending: true });
 
     if (error) {
@@ -307,11 +331,27 @@ export const bibliotecaService = {
       throw error;
     }
 
+    // Garantir que cada professor ativo tenha uma pasta de repositório na biblioteca_pastas
+    for (const t of (teachers || [])) {
+      const { data: existingFolders } = await supabase
+        .from('biblioteca_pastas')
+        .select('id')
+        .eq('teacher_id', t.id)
+        .is('parent_id', null);
+      
+      if (!existingFolders || existingFolders.length === 0) {
+        await supabase.from('biblioteca_pastas').insert({
+          nome: `Arquivos de ${t.nome}`,
+          teacher_id: t.id,
+          parent_id: null
+        });
+      }
+    }
+
     // Buscar contagem de documentos por professor
     const { data: docCounts } = await supabase
       .from('biblioteca_documentos')
-      .select('teacher_id')
-      .is('pasta_id', null); // contagem na raiz ou total
+      .select('teacher_id');
 
     const countsMap: { [key: string]: number } = {};
     (docCounts || []).forEach((doc: any) => {

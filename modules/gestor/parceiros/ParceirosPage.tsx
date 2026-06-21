@@ -2,7 +2,7 @@
 // File: modules/gestor/parceiros/ParceirosPage.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, LayoutGrid, Users, GraduationCap, Sparkles, X, Building, User, Download, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Plus, LayoutGrid, Users, GraduationCap, Sparkles, X, Building, User, Download, BookOpen, CheckCircle2, Trash2, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import ParceirosKpis from './components/ParceirosKpis';
@@ -31,6 +31,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   const [showForm, setShowForm] = useState<'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(activeTabInicial);
+  const [deletingParceiro, setDeletingParceiro] = useState<any | null>(null);
   const { toasts, removeToast, toast } = useToast();
 
   React.useEffect(() => {
@@ -151,6 +152,19 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     },
     onError: () => {
       toast.error('Erro na matrícula', 'Não foi possível realizar a matrícula.');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => parceirosService.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
+      toast.success('Parceiro excluído!', 'O registro foi removido com sucesso.');
+      setDeletingParceiro(null);
+    },
+    onError: () => {
+      toast.error('Erro ao excluir', 'Não foi possível remover o registro.');
     }
   });
 
@@ -560,6 +574,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         items={sortedAndFilteredPartners}
         isLoading={loadingPartners}
         onSelectParceiro={(parceiro) => setSelectedParceiro(parceiro)} 
+        onDeleteParceiro={setDeletingParceiro}
       />
 
       <ParceirosExportModal 
@@ -639,6 +654,37 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
               >
                 {enrollAlunoMutation.isPending ? 'Matriculando...' : 'Confirmar Matrícula'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Confirmação de Exclusão Customizado */}
+      {deletingParceiro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 animate-scaleIn">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-5 border border-red-100">
+                <Trash2 size={28} />
+              </div>
+              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight mb-2">Excluir Parceiro?</h3>
+              <p className="text-sm text-slate-500 mb-7 leading-relaxed">
+                O registro de <strong>{deletingParceiro.nome}</strong> será removido permanentemente.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button 
+                  onClick={() => setDeletingParceiro(null)} 
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-650 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(deletingParceiro.id)}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-lg shadow-red-500/20 flex items-center justify-center gap-1.5"
+                >
+                  {deleteMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : 'Sim, Excluir'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

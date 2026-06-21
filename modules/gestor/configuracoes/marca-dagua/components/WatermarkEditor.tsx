@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Save, X, ZoomIn, Sun, Move, Trash2, RotateCw } from 'lucide-react';
+import { Upload, Save, X, ZoomIn, Sun, Trash2, RotateCw, RectangleHorizontal, RectangleVertical } from 'lucide-react';
 import ConfirmModal from '../../../components/ConfirmModal';
 
 interface WatermarkEditorProps {
@@ -11,21 +11,32 @@ interface WatermarkEditorProps {
 }
 
 const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCancel, isSaving }) => {
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [opacity, setOpacity] = useState(company.watermarkOpacity || 0.1);
   const [scale, setScale] = useState(company.watermarkScale || 50); // Porcentagem
   const [image, setImage] = useState<string | null>(company.watermarkUrl || null);
   const [rotate, setRotate] = useState(company.watermarkRotate !== false);
+  const [landscapeOpacity, setLandscapeOpacity] = useState(company.landscapeWatermarkOpacity || 0.1);
+  const [landscapeScale, setLandscapeScale] = useState(company.landscapeWatermarkScale || 50);
+  const [landscapeImage, setLandscapeImage] = useState<string | null>(company.landscapeWatermarkUrl || null);
+  const [landscapeRotate, setLandscapeRotate] = useState(company.landscapeWatermarkRotate === true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Estado Modal Remoção
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
+
+  const activeImage = orientation === 'portrait' ? image : landscapeImage;
+  const activeOpacity = orientation === 'portrait' ? opacity : landscapeOpacity;
+  const activeScale = orientation === 'portrait' ? scale : landscapeScale;
+  const activeRotate = orientation === 'portrait' ? rotate : landscapeRotate;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        if (orientation === 'portrait') setImage(reader.result as string);
+        else setLandscapeImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -37,7 +48,11 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
       watermarkUrl: image,
       watermarkOpacity: opacity,
       watermarkScale: scale,
-      watermarkRotate: rotate
+      watermarkRotate: rotate,
+      landscapeWatermarkUrl: landscapeImage,
+      landscapeWatermarkOpacity: landscapeOpacity,
+      landscapeWatermarkScale: landscapeScale,
+      landscapeWatermarkRotate: landscapeRotate
     });
   };
 
@@ -46,7 +61,8 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
   };
 
   const handleRemove = () => {
-    setImage(null);
+    if (orientation === 'portrait') setImage(null);
+    else setLandscapeImage(null);
     // Podemos salvar imediatamente ou deixar o usuário clicar em Salvar. 
     // Para UX consistente com o editor, apenas limpamos o estado visual.
     // O usuário precisa clicar em "Salvar Configuração" para persistir a remoção.
@@ -75,12 +91,30 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
       <div className="flex flex-col lg:flex-row h-full">
         {/* Painel de Controles (Esquerda) */}
         <div className="lg:w-1/3 p-8 border-r border-slate-100 flex flex-col gap-8 bg-white z-10">
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setOrientation('portrait')}
+              className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${orientation === 'portrait' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+            >
+              <RectangleVertical size={15} /> Retrato
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrientation('landscape')}
+              className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${orientation === 'landscape' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+            >
+              <RectangleHorizontal size={15} /> Paisagem
+            </button>
+          </div>
           
           {/* Upload */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider block">Imagem da Marca</label>
-              {image && (
+              <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider block">
+                Marca em {orientation === 'portrait' ? 'retrato' : 'paisagem'}
+              </label>
+              {activeImage && (
                 <button 
                   onClick={confirmRemove}
                   className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase flex items-center gap-1"
@@ -94,8 +128,8 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
               onClick={() => fileInputRef.current?.click()}
               className="w-full aspect-video border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all group relative overflow-hidden"
             >
-              {image ? (
-                <img src={image} alt="Preview" className="w-full h-full object-contain p-4 opacity-80" />
+              {activeImage ? (
+                <img src={activeImage} alt="Preview" className="w-full h-full object-contain p-4 opacity-80" />
               ) : (
                 <div className="text-center p-4">
                   <div className="w-10 h-10 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:bg-blue-200 group-hover:text-blue-600 transition-colors">
@@ -104,7 +138,7 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
                   <p className="text-xs font-bold text-slate-500 group-hover:text-blue-600">Carregar Imagem</p>
                 </div>
               )}
-              {image && (
+              {activeImage && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-white text-xs font-bold uppercase">Trocar Imagem</span>
                 </div>
@@ -127,7 +161,7 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
                 <Sun size={14} /> Opacidade
               </label>
               <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                {Math.round(opacity * 100)}%
+                {Math.round(activeOpacity * 100)}%
               </span>
             </div>
             <input 
@@ -135,9 +169,9 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
               min="0" 
               max="1" 
               step="0.05" 
-              value={opacity} 
-              onChange={(e) => setOpacity(parseFloat(e.target.value))}
-              disabled={!image}
+              value={activeOpacity}
+              onChange={(e) => orientation === 'portrait' ? setOpacity(parseFloat(e.target.value)) : setLandscapeOpacity(parseFloat(e.target.value))}
+              disabled={!activeImage}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
@@ -149,7 +183,7 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
                 <ZoomIn size={14} /> Tamanho
               </label>
               <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                {scale}%
+                {activeScale}%
               </span>
             </div>
             <input 
@@ -157,9 +191,9 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
               min="10" 
               max="100" 
               step="5" 
-              value={scale} 
-              onChange={(e) => setScale(parseInt(e.target.value))}
-              disabled={!image}
+              value={activeScale}
+              onChange={(e) => orientation === 'portrait' ? setScale(parseInt(e.target.value)) : setLandscapeScale(parseInt(e.target.value))}
+              disabled={!activeImage}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
@@ -172,15 +206,15 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
               </label>
               <button
                 type="button"
-                onClick={() => setRotate(!rotate)}
-                disabled={!image}
+                onClick={() => orientation === 'portrait' ? setRotate(!rotate) : setLandscapeRotate(!landscapeRotate)}
+                disabled={!activeImage}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                  rotate ? 'bg-blue-600' : 'bg-slate-200'
+                  activeRotate ? 'bg-blue-600' : 'bg-slate-200'
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    rotate ? 'translate-x-6' : 'translate-x-1'
+                    activeRotate ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
@@ -203,15 +237,15 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
         <div className="lg:w-2/3 bg-slate-100 p-8 flex items-center justify-center overflow-auto relative">
            
            <div className="absolute top-4 right-4 bg-white/80 backdrop-blur px-3 py-1.5 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 shadow-sm z-20">
-             Pré-visualização A4
+             Pré-visualização A4 · {orientation === 'portrait' ? 'Retrato' : 'Paisagem'}
            </div>
 
            {/* Folha A4 - Aspect Ratio A4 é 1 : 1.414 */}
            <div 
             className="bg-white shadow-2xl relative overflow-hidden transition-all duration-300"
             style={{ 
-              width: '400px', 
-              height: '565px', // Proporção aproximada A4 para visualização
+              width: orientation === 'portrait' ? '400px' : '565px',
+              height: orientation === 'portrait' ? '565px' : '400px',
               transform: 'scale(1)', // Pode ser usado para zoom futuro
             }}
            >
@@ -245,15 +279,15 @@ const WatermarkEditor: React.FC<WatermarkEditorProps> = ({ company, onSave, onCa
               </div>
 
               {/* Marca D'agua Aplicada */}
-              {image && (
+              {activeImage && (
                 <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
                   <img 
-                    src={image} 
+                    src={activeImage}
                     alt="Watermark" 
                     style={{
-                      width: `${scale}%`,
-                      opacity: opacity,
-                      transform: rotate ? 'rotate(-45deg)' : 'none'
+                      width: `${activeScale}%`,
+                      opacity: activeOpacity,
+                      transform: activeRotate ? 'rotate(-45deg)' : 'none'
                     }}
                     className="object-contain transition-all duration-200"
                   />

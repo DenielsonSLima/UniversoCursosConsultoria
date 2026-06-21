@@ -6,37 +6,15 @@ import { crachaService } from './cracha.service';
 
 const INITIAL_MODELOS = [
   {
-    id: '1',
-    nome: 'Crachá de Docente / Professor',
-    cargoPadrao: 'DOCENTE / PROFESSOR',
+    id: 'cracha',
+    nome: 'Crachá de Estágio',
+    cargoPadrao: 'ESTAGIÁRIO',
     status: 'ativo',
     hasVerso: true,
-    corPrimaria: '#0f172a', // Slate 900
-    corSecundaria: '#38bdf8', // Sky 400
-    textoFrente: 'DOCENTE',
-    textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição.\n2. Mantenha-o sempre visível em local adequado com cordão de segurança.\n3. Em caso de perda, roubo ou extravio, comunique imediatamente o setor administrativo.\n4. Se encontrado, favor devolver à Universo Cursos e Consultoria.',
-  },
-  {
-    id: '2',
-    nome: 'Crachá Técnico / Administrativo',
-    cargoPadrao: 'AUXILIAR ADMINISTRATIVO',
-    status: 'inativo',
-    hasVerso: true,
-    corPrimaria: '#1e3a8a', // Blue 900
-    corSecundaria: '#60a5fa', // Blue 400
-    textoFrente: 'TÉCNICO / ADM',
-    textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição.\n2. Mantenha-o sempre visível em local adequado com cordão de segurança.\n3. Em caso de perda, roubo ou extravio, comunique imediatamente o setor administrativo.\n4. Se encontrado, favor devolver à Universo Cursos e Consultoria.',
-  },
-  {
-    id: '3',
-    nome: 'Crachá de Supervisor / Direção',
-    cargoPadrao: 'COORDENADOR GERAL',
-    status: 'inativo',
-    hasVerso: true,
-    corPrimaria: '#111827', // Gray 900
-    corSecundaria: '#fbbf24', // Amber 400
-    textoFrente: 'DIRETORIA',
-    textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição.\n2. Mantenha-o sempre visível em local adequado com cordão de segurança.\n3. Em caso de perda, roubo ou extravio, comunique imediatamente o setor administrativo.\n4. Se encontrado, favor devolver à Universo Cursos e Consultoria.',
+    corPrimaria: '#0f172a',
+    corSecundaria: '#10b981', // Emerald 500
+    textoFrente: 'ESTAGIÁRIO',
+    textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
   }
 ];
 
@@ -44,13 +22,20 @@ const CrachaPage: React.FC = () => {
   const [modelos, setModelos] = useState(INITIAL_MODELOS);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const loadPersisted = async () => {
       try {
         const persisted = await crachaService.getTemplate();
-        if (persisted && persisted.id) {
-          setModelos(prev => prev.map(m => m.id === persisted.id ? persisted : m));
+        if (persisted) {
+          const merged = { ...INITIAL_MODELOS[0], ...persisted, id: 'cracha' };
+          setModelos([merged]);
         }
       } catch (err) {
         console.error('Erro ao carregar template de crachá persistido:', err);
@@ -64,23 +49,14 @@ const CrachaPage: React.FC = () => {
     setIsCreating(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este modelo de crachá?')) {
-      setModelos(modelos.filter(m => m.id !== id));
-    }
-  };
-
   const handleSave = async (savedModelo: any) => {
     try {
       await crachaService.saveTemplate(savedModelo);
-      if (isCreating) {
-        setModelos([...modelos, savedModelo]);
-      } else {
-        setModelos(modelos.map(m => m.id === savedModelo.id ? savedModelo : m));
-      }
+      setModelos([savedModelo]);
+      showToast('Modelo de crachá de estágio salvo com sucesso!', 'success');
     } catch (err) {
       console.error('Erro ao salvar template de crachá:', err);
-      alert('Erro ao salvar o modelo de crachá.');
+      showToast('Erro ao salvar o modelo de crachá.', 'error');
     }
     setEditingModelo(null);
     setIsCreating(false);
@@ -105,15 +81,9 @@ const CrachaPage: React.FC = () => {
     <div className="animate-fadeIn max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Crachás de Identificação</h3>
-          <p className="text-slate-500 text-sm mt-1">Configuração de crachás de identificação corporativos para colaboradores e docentes.</p>
+          <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Crachá de Identificação de Estágio</h3>
+          <p className="text-slate-500 text-sm mt-1">Configuração do modelo oficial de crachá de estágio para alunos de cursos técnicos.</p>
         </div>
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Plus size={16} /> Novo Modelo
-        </button>
       </div>
 
       {/* Info Notice about Crachás */}
@@ -135,21 +105,19 @@ const CrachaPage: React.FC = () => {
             key={modelo.id} 
             modelo={modelo} 
             onEdit={handleEdit} 
-            onDelete={handleDelete} 
+            onDelete={undefined as any} 
           />
         ))}
-        
-        <div 
-          onClick={() => setIsCreating(true)}
-          className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-300 hover:shadow-lg transition-all min-h-[220px] group"
-        >
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-3">
-            <Plus size={24} />
-          </div>
-          <h4 className="text-sm font-bold text-slate-600 uppercase tracking-widest">Criar Novo Modelo</h4>
-          <p className="text-xs text-slate-400 mt-2">Clique para configurar</p>
-        </div>
       </div>
+
+      {/* Toast Notification Container */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-[99999] animate-fadeIn">
+          <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 bg-emerald-500/95 border-emerald-400 text-white`}>
+            <span className="text-xs font-black uppercase tracking-wider">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

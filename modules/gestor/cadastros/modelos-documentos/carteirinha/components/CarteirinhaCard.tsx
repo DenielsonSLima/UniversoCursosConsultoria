@@ -24,12 +24,6 @@ const CarteirinhaCard: React.FC<CarteirinhaCardProps> = ({ modelo, onEdit, onDel
           >
             <Edit size={16} />
           </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
-            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
         </div>
       </div>
 

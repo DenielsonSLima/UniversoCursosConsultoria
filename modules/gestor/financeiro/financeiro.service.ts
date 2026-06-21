@@ -433,7 +433,7 @@ export const financeiroService = {
     const { count: activeStudents, error: err1 } = await supabase
       .from('matriculas')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'ativo');
+      .eq('status', 'ATIVO');
       
     if (err1) {
       console.error('Erro ao contar alunos ativos:', err1);

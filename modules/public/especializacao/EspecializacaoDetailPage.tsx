@@ -266,6 +266,8 @@ const EspecializacaoDetailPage: React.FC = () => {
                     <p className="text-xs font-bold text-white">Pós-Técnico</p>
                   </div>
                 </div>
+
+
               </div>
             </div>
 
@@ -511,6 +513,20 @@ const EspecializacaoDetailPage: React.FC = () => {
                     Preencha o formulário abaixo e um de nossos consultores educacionais entrará em contato para tirar todas as dúvidas.
                   </p>
                 </div>
+
+                {curso.valor && curso.valor > 0 && (
+                  <div className="mb-6 p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-150 rounded-[1.5rem] flex items-center justify-between animate-fadeIn shadow-sm">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">Valor do Curso</span>
+                      <span className="text-[11px] text-slate-500 font-bold block">A partir de</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-emerald-600 block">
+                        R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>

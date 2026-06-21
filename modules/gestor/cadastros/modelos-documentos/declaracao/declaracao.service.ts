@@ -1,7 +1,7 @@
 // File: modules/gestor/cadastros/modelos-documentos/declaracao/declaracao.service.ts
+// REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
-const STORAGE_KEY_PREFIX = 'universo_template_declaracao_';
-const QR_CONFIG_KEY = 'universo_qr_config_declaracao';
+import { supabase } from '../../../../../lib/supabase';
 
 const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{CURSO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
@@ -11,80 +11,134 @@ const DEFAULT_QR_CONFIG = {
 const defaultTemplate = {
   textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
   absoluteFields: [
-    { 
-        id: 'data_field', 
-        type: 'text', 
-        value: '{{CIDADE_POLO}}, {{DATA_ATUAL}}', 
-        x: 400, 
-        y: 800, 
-        style: { textAlign: 'right', fontWeight: 'bold' } 
+    {
+      id: 'data_field',
+      type: 'text',
+      value: '{{CIDADE_POLO}}, {{DATA_ATUAL}}',
+      x: 400,
+      y: 780,
+      style: { textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }
+    },
+    {
+      id: 'sig_line',
+      type: 'text',
+      value: '___________________________________________',
+      x: 200,
+      y: 880,
+      width: 394,
+      style: { textAlign: 'center', fontSize: '14px' }
+    },
+    {
+      id: 'sig_title',
+      type: 'text',
+      value: 'Secretaria Acadêmica',
+      x: 200,
+      y: 910,
+      width: 394,
+      style: { textAlign: 'center', fontWeight: 'bold', fontSize: '14px', textTransform: 'uppercase' }
+    },
+    {
+      id: 'sig_sub',
+      type: 'text',
+      value: '{{POLO_NOME}}',
+      x: 200,
+      y: 935,
+      width: 394,
+      style: { textAlign: 'center', fontSize: '12px', color: '#475569' }
+    },
+    {
+      id: 'footer_url',
+      type: 'text',
+      value: 'Para verificar a autenticidade deste documento acesse: www.universocc.com.br/#/validador',
+      x: 50,
+      y: 995,
+      width: 694,
+      style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+    },
+    {
+      id: 'footer_validity',
+      type: 'text',
+      value: 'Validade deste documento: {{VALIDADE_DIAS}} dias a partir da data de emissão.',
+      x: 50,
+      y: 1015,
+      width: 694,
+      style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
     }
   ],
   validityDays: 30,
-};
-
-const getLocalStorageTemplate = (poloId: string) => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${poloId}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao ler template do localStorage:', e);
-      }
-    }
-  }
-  return JSON.parse(JSON.stringify(defaultTemplate));
-};
-
-const getLocalStorageQrConfig = () => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(QR_CONFIG_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao ler QR config do localStorage:', e);
-      }
-    }
-  }
-  return DEFAULT_QR_CONFIG;
+  v: 2
 };
 
 export const declaracaoService = {
   async getTemplate(poloId: string) {
-    return new Promise<any>((resolve) => {
-      setTimeout(() => {
-        resolve(getLocalStorageTemplate(poloId));
-      }, 300);
-    });
+    try {
+      const { data, error } = await supabase
+        .from('documentos_templates')
+        .select('conteudo')
+        .eq('id', `declaracao_${poloId}`)
+        .maybeSingle();
+
+      if (!error && data && data.conteudo) {
+        return data.conteudo;
+      }
+    } catch (e) {
+      console.error(`[declaracaoService] Erro ao buscar template declaracao_${poloId}:`, e);
+    }
+
+    return JSON.parse(JSON.stringify(defaultTemplate));
   },
 
   async saveTemplate(poloId: string, data: any) {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`${STORAGE_KEY_PREFIX}${poloId}`, JSON.stringify(data));
-        }
-        resolve(true);
-      }, 350);
-    });
+    try {
+      const { error } = await supabase
+        .from('documentos_templates')
+        .upsert({
+          id: `declaracao_${poloId}`,
+          conteudo: data,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error(`[declaracaoService] Erro ao salvar template declaracao_${poloId}:`, e);
+      return false;
+    }
   },
 
   async getQrConfig() {
-    return new Promise<any>((resolve) => {
-      setTimeout(() => resolve(getLocalStorageQrConfig()), 300);
-    });
+    try {
+      const { data, error } = await supabase
+        .from('documentos_templates')
+        .select('conteudo')
+        .eq('id', 'declaracao_qr_config')
+        .maybeSingle();
+
+      if (!error && data && data.conteudo) {
+        return data.conteudo;
+      }
+    } catch (e) {
+      console.error('[declaracaoService] Erro ao buscar QR config:', e);
+    }
+
+    return DEFAULT_QR_CONFIG;
   },
 
   async saveQrConfig(config: any) {
-    return new Promise<boolean>((resolve) => {
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(QR_CONFIG_KEY, JSON.stringify(config));
-        }
-        resolve(true);
-      }, 350);
-    });
+    try {
+      const { error } = await supabase
+        .from('documentos_templates')
+        .upsert({
+          id: 'declaracao_qr_config',
+          conteudo: config,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error('[declaracaoService] Erro ao salvar QR config:', e);
+      return false;
+    }
   }
 };

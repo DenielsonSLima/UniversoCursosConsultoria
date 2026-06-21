@@ -85,9 +85,13 @@ const GestorPage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<typeof MOCK_SEARCH_DATA>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // ─── Badge de chamados pendentes ───────────────────────────────────────────
+  const [pendingChatsCount, setPendingChatsCount] = useState(0);
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [currentPoloId, setCurrentPoloId] = useState<string | null>(() => localStorage.getItem('current_polo_id'));
+  // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
+  const [currentPoloId, setCurrentPoloId] = useState<string | null>(() => sessionStorage.getItem('current_polo_id'));
 
   const { data: activePolos = [] } = useQuery<any[]>({
     queryKey: ['active_polos'],
@@ -121,6 +125,56 @@ const GestorPage: React.FC = () => {
     };
   }, [queryClient]);
 
+  // ─── Carregar contagem inicial de chamados não lidos (mensagens de aluno/professor com lida = false) ───
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const { data } = await supabase
+          .from('comunicacao_mensagens')
+          .select('chat_id')
+          .eq('lida', false)
+          .in('remetente_tipo', ['aluno', 'professor']);
+        const uniqueChatIds = new Set(data?.map(m => m.chat_id) || []);
+        setPendingChatsCount(uniqueChatIds.size);
+      } catch (err) {
+        console.error('Erro ao buscar contagem de chamados pendentes:', err);
+      }
+    };
+    fetchPending();
+  }, []);
+
+  // ─── Realtime: manter badge de chamados não lidos atualizado em tempo real ───
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const { data } = await supabase
+          .from('comunicacao_mensagens')
+          .select('chat_id')
+          .eq('lida', false)
+          .in('remetente_tipo', ['aluno', 'professor']);
+        const uniqueChatIds = new Set(data?.map(m => m.chat_id) || []);
+        setPendingChatsCount(uniqueChatIds.size);
+      } catch (err) {
+        console.error('Erro ao buscar contagem de chamados pendentes (realtime):', err);
+      }
+    };
+
+    const badgeChannel = supabase
+      .channel('sidebar_pending_badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comunicacao_mensagens' },
+        () => {
+          fetchPending();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(badgeChannel);
+    };
+  }, []);
+
   useEffect(() => {
     if (activePolos.length > 0) {
       const isValid = activePolos.some(p => p.id === currentPoloId);
@@ -128,7 +182,7 @@ const GestorPage: React.FC = () => {
         const matriz = activePolos.find(p => p.is_matriz) || activePolos[0];
         setCurrentPoloId(matriz.id || null);
         if (matriz.id) {
-          localStorage.setItem('current_polo_id', matriz.id);
+          sessionStorage.setItem('current_polo_id', matriz.id);
         }
       }
     }
@@ -137,7 +191,7 @@ const GestorPage: React.FC = () => {
   const handlePoloChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setCurrentPoloId(val);
-    localStorage.setItem('current_polo_id', val);
+    sessionStorage.setItem('current_polo_id', val);
   };
 
   const handleLogout = async () => {
@@ -197,7 +251,7 @@ const GestorPage: React.FC = () => {
     { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={20} /> },
     { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={20} /> },
-    { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} /> },
+    { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: pendingChatsCount },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={20} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
   ];
@@ -293,8 +347,13 @@ const GestorPage: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
+                  <div className={`relative ${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
                     {item.icon}
+                    {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5 shadow-md animate-pulse">
+                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm tracking-wide">{item.label}</span>
                 </div>
@@ -302,6 +361,11 @@ const GestorPage: React.FC = () => {
                   <div className="transition-transform duration-300">
                     {(expandedMenus.has(item.id) || item.subItems.some(sub => sub.id === activeModule)) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </div>
+                )}
+                {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
+                  <span className="text-[9px] font-black bg-red-500 text-white rounded-full min-w-[18px] h-4 flex items-center justify-center px-1">
+                    {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                  </span>
                 )}
               </button>
 
@@ -368,10 +432,22 @@ const GestorPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      {item.icon}
+                      <div className="relative">
+                        {item.icon}
+                        {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
+                          <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5">
+                            {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                          </span>
+                        )}
+                      </div>
                       {item.label}
                     </div>
                     {item.subItems && (expandedMenus.has(item.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+                    {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
+                      <span className="text-[8px] font-black bg-red-500 text-white rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                      </span>
+                    )}
                   </button>
 
                   {item.subItems && expandedMenus.has(item.id) && (

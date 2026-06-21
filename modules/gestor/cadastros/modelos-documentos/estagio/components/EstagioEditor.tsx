@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { estagioService } from '../estagio.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
+import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
 
 interface EstagioEditorProps {
@@ -411,6 +412,47 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
                         accept="image/png"
                         onChange={handleImageUpload}
                     />
+                </div>
+
+                {/* Usar Assinatura Centralizada */}
+                <div className="border-t border-slate-100 pt-3 flex flex-col gap-2">
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">Usar Assinatura Central</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { id: 'diretoriaGeral', label: 'Diretoria' },
+                      { id: 'secretaria', label: 'Secretaria' },
+                      { id: 'coordenacao', label: 'Coordenação' },
+                      { id: 'financeiro', label: 'Financeiro' },
+                    ] as const).map((role) => (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={async () => {
+                          const sigs = await assinaturasService.getSignatures();
+                          const url = sigs[role.id];
+                          if (!url) {
+                            showToast(`Assinatura de ${role.label} não cadastrada nas Configurações.`, 'error');
+                            return;
+                          }
+                          const generatedId = Math.random().toString(36).substr(2, 9);
+                          const newField: AbsoluteField = {
+                              id: generatedId,
+                              type: 'image',
+                              value: url,
+                              x: 250, 
+                              y: 850, 
+                              width: 200,
+                              style: { zIndex: 50, mixBlendMode: 'multiply' }
+                          };
+                          setAbsoluteFields(prev => [...prev, newField]);
+                          setSelectedFieldId(generatedId);
+                        }}
+                        className="py-1.5 px-2 bg-slate-50 hover:bg-pink-50 hover:text-pink-600 rounded-xl border border-slate-200 hover:border-pink-200 text-[10px] font-bold text-slate-600 transition-colors truncate"
+                      >
+                        {role.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
             </div>
 

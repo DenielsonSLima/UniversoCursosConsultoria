@@ -93,6 +93,41 @@ const getModalidadeConfig = (modalidade: Curso['modalidade']) => {
   }
 };
 
+// Helper para analisar e converter preços em formato brasileiro (BRL) para float
+const parseBRLPrice = (valStr: string): number | null => {
+  const clean = valStr.trim();
+  if (clean === '') return null;
+
+  // Se tiver tanto ponto quanto vírgula (ex: 1.250,50 ou 1,250.50)
+  if (clean.includes('.') && clean.includes(',')) {
+    if (clean.indexOf('.') < clean.indexOf(',')) {
+      return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+    } else {
+      return parseFloat(clean.replace(/,/g, ''));
+    }
+  }
+
+  // Se tiver apenas vírgula (ex: 299,90)
+  if (clean.includes(',')) {
+    return parseFloat(clean.replace(',', '.'));
+  }
+
+  // Se tiver apenas ponto
+  if (clean.includes('.')) {
+    const parts = clean.split('.');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.length === 2 || lastPart.length === 1) {
+      return parseFloat(clean);
+    } else if (lastPart.length === 3) {
+      return parseFloat(clean.replace(/\./g, ''));
+    }
+    return parseFloat(clean);
+  }
+
+  // Apenas números (ex: 299)
+  return parseFloat(clean);
+};
+
 const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = ({ curso, onBack, onUpdate }) => {
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +154,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [imagemDetalhe2, setImagemDetalhe2] = useState('');
   const [isUploadingD1, setIsUploadingD1] = useState(false);
   const [isUploadingD2, setIsUploadingD2] = useState(false);
+  const [valorCurso, setValorCurso] = useState('');
+  const [isSavingValor, setIsSavingValor] = useState(false);
 
   // Estados para inputs de novos itens
   const [newModuloName, setNewModuloName] = useState('');
@@ -142,7 +179,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     setImagemUrl(curso.imagem_url || '');
     setImagemDetalhe1(curso.imagem_detalhe_1 || '');
     setImagemDetalhe2(curso.imagem_detalhe_2 || '');
-  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2]);
+    setValorCurso(curso.valor !== null && curso.valor !== undefined ? curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2, curso.valor]);
 
   const loadGrade = async () => {
     setLoading(true);
@@ -197,13 +235,40 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         publicar_site: nextVal,
         imagem_url: imagemUrl || null,
         imagem_detalhe_1: imagemDetalhe1 || null,
-        imagem_detalhe_2: imagemDetalhe2 || null
+        imagem_detalhe_2: imagemDetalhe2 || null,
+        valor: parseBRLPrice(valorCurso)
       });
       onUpdate();
     } catch (err) {
       console.error(err);
       alert('Erro ao atualizar visibilidade do curso.');
       setPublicarSite(!nextVal);
+    }
+  };
+
+  const handleSaveValorCurso = async (newVal: string) => {
+    const parsedVal = parseBRLPrice(newVal);
+    if (parsedVal !== null && isNaN(parsedVal)) {
+      alert('Erro: Por favor, insira um valor numérico válido.');
+      return;
+    }
+    setIsSavingValor(true);
+    try {
+      await cadastrosService.updateCurso({
+        ...curso,
+        publicar_site: publicarSite,
+        imagem_url: imagemUrl || null,
+        imagem_detalhe_1: imagemDetalhe1 || null,
+        imagem_detalhe_2: imagemDetalhe2 || null,
+        valor: parsedVal
+      });
+      setValorCurso(parsedVal !== null ? parsedVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+      onUpdate();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar o preço do curso.');
+    } finally {
+      setIsSavingValor(false);
     }
   };
 
@@ -301,7 +366,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         publicar_site: publicarSite,
         imagem_url: newCapa || null,
         imagem_detalhe_1: newD1 || null,
-        imagem_detalhe_2: newD2 || null
+        imagem_detalhe_2: newD2 || null,
+        valor: parseBRLPrice(valorCurso)
       });
       onUpdate();
     } catch (err: any) {
@@ -337,7 +403,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
           publicar_site: publicarSite,
           imagem_url: newCapa || null,
           imagem_detalhe_1: newD1 || null,
-          imagem_detalhe_2: newD2 || null
+          imagem_detalhe_2: newD2 || null,
+          valor: parseBRLPrice(valorCurso)
         });
         onUpdate();
       } catch (err) {
@@ -690,6 +757,46 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               </button>
             </div>
 
+            {/* Valor do Curso (Preço Comercial) */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Valor do Curso (Preço Comercial)
+              </label>
+              <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                <span className="text-slate-500 font-black text-sm">R$</span>
+                <input 
+                  type="text"
+                  placeholder="Ex: 299,90 (Deixe em branco para 'Sob Consulta')"
+                  className="w-full bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 py-2.5"
+                  value={valorCurso}
+                  onChange={(e) => setValorCurso(e.target.value)}
+                  onBlur={() => {
+                    const parsed = parseBRLPrice(valorCurso);
+                    setValorCurso(parsed !== null && !isNaN(parsed) ? parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveValorCurso(valorCurso)}
+                />
+                <button
+                  type="button"
+                  disabled={isSavingValor}
+                  onClick={() => handleSaveValorCurso(valorCurso)}
+                  className="px-4 py-2 bg-[#001a33] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm shrink-0 disabled:opacity-70 flex items-center gap-1.5"
+                >
+                  {isSavingValor ? (
+                    <>
+                      <Loader2 className="animate-spin" size={12} />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    'Salvar'
+                  )}
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-400 font-medium leading-normal">
+                Insira o preço comercial para divulgação pública no site. Digite o valor com duas casas decimais e clique em Salvar (ex: 299,90). Deixe em branco para ocultar o preço no catálogo e exibir apenas o formulário de contato.
+              </p>
+            </div>
+
             {/* Upload de Capa */}
             <div className="space-y-4">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -906,6 +1013,22 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                 <Calendar size={14} className="text-blue-500" />
                 <span className="font-bold">{(curso as any).duracao_meses || (curso.carga_horaria >= 1200 ? 24 : 18)} Meses</span>
               </div>
+
+              {(() => {
+                const normalized = valorCurso.replace(/\./g, '').replace(',', '.').trim();
+                const parsedVal = normalized === '' ? 0 : parseFloat(normalized);
+                return parsedVal > 0 ? (
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
+                    <div className="bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                      <span className="text-[8px] text-emerald-800 font-bold uppercase tracking-wider">A partir de</span>
+                      <span className="text-xs font-black text-emerald-600">
+                        R$ {parsedVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>

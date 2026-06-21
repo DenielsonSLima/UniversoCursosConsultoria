@@ -48,7 +48,7 @@ const CalendarioPage: React.FC = () => {
         .from('parceiros')
         .select('id, nome')
         .eq('tipo', 'Professor')
-        .eq('status', 'ativo')
+        .eq('status', 'ATIVO')
         .order('nome', { ascending: true });
 
       const { data: dbTurmas } = await supabase

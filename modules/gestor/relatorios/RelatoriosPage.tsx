@@ -33,7 +33,8 @@ const RelatoriosPage: React.FC = () => {
   });
 
   // 2. Fetch Active Polo Details
-  const poloId = localStorage.getItem('current_polo_id');
+  // current_polo_id é estado de sessão UI — sessionStorage é adequado
+  const poloId = sessionStorage.getItem('current_polo_id');
   const { data: polo, isLoading: loadingPolo } = useQuery<any>({
     queryKey: ['polo_detalhes', poloId],
     queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),

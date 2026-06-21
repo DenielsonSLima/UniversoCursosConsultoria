@@ -8,9 +8,10 @@ import { parceirosService } from '../../parceiros.service';
 interface PJCardProps {
   data: any;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-const PJCard: React.FC<PJCardProps> = ({ data, onClick }) => {
+const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -36,13 +37,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick }) => {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: () => parceirosService.delete(data.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-    },
-  });
+
 
   return (
     <div
@@ -52,7 +47,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick }) => {
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-slate-100 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       {/* Header */}
-      <div className="flex justify-between items-start mb-4 relative z-10">
+      <div className="flex justify-between items-start mb-4 relative z-20">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-[14px] bg-slate-800 text-white flex items-center justify-center overflow-hidden border border-slate-700 shadow-sm shrink-0">
             {data.foto ? (
@@ -98,7 +93,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick }) => {
               </button>
               <div className="h-px bg-slate-100 mx-3" />
               <button
-                onClick={() => { if (window.confirm(`Excluir "${data.nome}"?`)) { setMenuOpen(false); deleteMutation.mutate(); } }}
+                onClick={() => { setMenuOpen(false); onDelete?.(); }}
                 className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors uppercase tracking-wide"
               >
                 <Trash2 size={13} /> Excluir

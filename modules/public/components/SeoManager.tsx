@@ -5,7 +5,7 @@ const SITE_URL = 'https://universocc.com.br';
 
 const ROUTE_METADATA: Record<string, { title: string; description: string }> = {
   '/': {
-    title: 'Universo Cursos e Consultoria | Educação Profissional em Sergipe',
+    title: 'Universo Cursos e Consultoria | Educação Profissional',
     description: 'Cursos técnicos, EAD, ensino superior e capacitação profissional em Japoatã, Aquidabã e Porto da Folha, Sergipe.',
   },
   '/ead': {

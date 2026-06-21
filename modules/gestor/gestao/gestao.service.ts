@@ -18,8 +18,8 @@ export const gestaoService = {
     return (data || []).map((t: any) => {
       const matriculas = t.matriculas || [];
       const alunosMatriculados = matriculas.length;
-      const alunosAtivos = matriculas.filter((m: any) => m.status === 'ativo').length;
-      const alunosInativos = matriculas.filter((m: any) => m.status !== 'ativo').length;
+      const alunosAtivos = matriculas.filter((m: any) => m.status?.toUpperCase() === 'ATIVO').length;
+      const alunosInativos = matriculas.filter((m: any) => m.status?.toUpperCase() !== 'ATIVO').length;
 
       return {
         id: t.id,
@@ -178,7 +178,7 @@ export const gestaoService = {
     const { count: activeMatriculas, error: matriculasError } = await supabase
       .from('matriculas')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'ativo');
+      .eq('status', 'ATIVO');
 
     if (matriculasError) {
       console.error('Erro ao contar matrículas ativas:', matriculasError);

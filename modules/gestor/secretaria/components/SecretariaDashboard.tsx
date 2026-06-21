@@ -1,100 +1,81 @@
-
-// File: modules/gestor/secretaria/components/SecretariaDashboard.tsx
-
 import React from 'react';
-import { 
-  Search, 
-  FileText, 
-  ScrollText, 
-  CreditCard, 
-  ArrowRightLeft, 
-  Printer
+import {
+  ArrowRightLeft,
+  BadgeCheck,
+  BriefcaseBusiness,
+  ChevronRight,
+  ClipboardCheck,
+  ClipboardList,
+  CreditCard,
+  CircleDollarSign,
+  FileBadge,
+  FileCheck2,
+  Landmark,
+  RefreshCcw,
+  ScrollText,
+  Search,
 } from 'lucide-react';
 
 interface SecretariaDashboardProps {
   onNavigate: (module: string) => void;
 }
 
-const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate }) => {
-  const cards = [
-    {
-      id: 'alunos',
-      title: 'Busca de Aluno 360º',
-      desc: 'Visualize financeiro, acadêmico e dados cadastrais em um só lugar.',
-      icon: <Search size={32} />,
-      color: 'bg-blue-600',
-      textColor: 'text-blue-600',
-      bgLight: 'bg-blue-50'
-    },
-    {
-      id: 'declaracao',
-      title: 'Emitir Declarações',
-      desc: 'Declaração de matrícula, frequência e conclusão de curso.',
-      icon: <FileText size={32} />,
-      color: 'bg-emerald-600',
-      textColor: 'text-emerald-600',
-      bgLight: 'bg-emerald-50'
-    },
-    {
-      id: 'boletim',
-      title: 'Boletins Escolares',
-      desc: 'Emissão individual ou em lote por turma.',
-      icon: <ScrollText size={32} />,
-      color: 'bg-indigo-600',
-      textColor: 'text-indigo-600',
-      bgLight: 'bg-indigo-50'
-    },
-    {
-      id: 'carteirinha',
-      title: 'Carteirinhas',
-      desc: 'Geração de carteirinhas estudantis com QR Code.',
-      icon: <CreditCard size={32} />,
-      color: 'bg-purple-600',
-      textColor: 'text-purple-600',
-      bgLight: 'bg-purple-50'
-    },
-    {
-      id: 'transferencia',
-      title: 'Transferência',
-      desc: 'Processo de transferência externa e emissão de guia.',
-      icon: <ArrowRightLeft size={32} />,
-      color: 'bg-orange-500',
-      textColor: 'text-orange-600',
-      bgLight: 'bg-orange-50'
-    }
-  ];
+const cards = [
+  { id: 'alunos', title: 'Busca de Aluno 360º', desc: 'Dados acadêmicos, cadastrais e financeiros.', icon: Search, color: 'blue' },
+  { id: 'declaracao-matricula', title: 'Declaração de Matrícula', desc: 'Comprovação individual ou por turma.', icon: FileBadge, color: 'emerald' },
+  { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Frequência consolidada pelo serviço acadêmico.', icon: BadgeCheck, color: 'sky' },
+  { id: 'boletim', title: 'Boletim Escolar', desc: 'Notas e resultados dos cursos técnicos.', icon: ClipboardCheck, color: 'indigo' },
+  { id: 'declaracao-irpf', title: 'Declaração de IRPF', desc: 'Comprovante financeiro do ano-calendário.', icon: Landmark, color: 'amber' },
+  { id: 'historico-escolar', title: 'Histórico Escolar', desc: 'Percurso curricular e resultados acadêmicos.', icon: ScrollText, color: 'slate' },
+  { id: 'carteirinha', title: 'Carteirinha Estudantil', desc: 'Identificação estudantil com QR Code.', icon: CreditCard, color: 'purple' },
+  { id: 'cracha-estagio', title: 'Crachá de Estágio', desc: 'Identificação para atividades supervisionadas.', icon: FileCheck2, color: 'rose' },
+  { id: 'termo-estagio', title: 'Termo de Estágio', desc: 'Termo de compromisso individual ou em lote.', icon: BriefcaseBusiness, color: 'teal' },
+  { id: 'rematricula', title: 'Rematrícula', desc: 'Preparação do processo por aluno ou turma.', icon: RefreshCcw, color: 'violet' },
+  { id: 'consulta-financeira', title: 'Financeiro do Aluno', desc: 'Consulta inicial de contratos, parcelas e movimentações.', icon: CircleDollarSign, color: 'cyan' },
+  { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
+  { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
+] as const;
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-      {cards.map((card) => (
+const colorClasses: Record<string, { soft: string; text: string; hover: string; accent: string }> = {
+  blue: { soft: 'bg-blue-50', text: 'text-blue-600', hover: 'hover:border-blue-300', accent: 'bg-blue-600' },
+  emerald: { soft: 'bg-emerald-50', text: 'text-emerald-600', hover: 'hover:border-emerald-300', accent: 'bg-emerald-600' },
+  sky: { soft: 'bg-sky-50', text: 'text-sky-600', hover: 'hover:border-sky-300', accent: 'bg-sky-600' },
+  indigo: { soft: 'bg-indigo-50', text: 'text-indigo-600', hover: 'hover:border-indigo-300', accent: 'bg-indigo-600' },
+  amber: { soft: 'bg-amber-50', text: 'text-amber-600', hover: 'hover:border-amber-300', accent: 'bg-amber-500' },
+  slate: { soft: 'bg-slate-100', text: 'text-slate-700', hover: 'hover:border-slate-400', accent: 'bg-slate-700' },
+  purple: { soft: 'bg-purple-50', text: 'text-purple-600', hover: 'hover:border-purple-300', accent: 'bg-purple-600' },
+  rose: { soft: 'bg-rose-50', text: 'text-rose-600', hover: 'hover:border-rose-300', accent: 'bg-rose-600' },
+  teal: { soft: 'bg-teal-50', text: 'text-teal-600', hover: 'hover:border-teal-300', accent: 'bg-teal-600' },
+  violet: { soft: 'bg-violet-50', text: 'text-violet-600', hover: 'hover:border-violet-300', accent: 'bg-violet-600' },
+  orange: { soft: 'bg-orange-50', text: 'text-orange-600', hover: 'hover:border-orange-300', accent: 'bg-orange-500' },
+  red: { soft: 'bg-red-50', text: 'text-red-600', hover: 'hover:border-red-300', accent: 'bg-red-500' },
+  cyan: { soft: 'bg-cyan-50', text: 'text-cyan-700', hover: 'hover:border-cyan-300', accent: 'bg-cyan-600' },
+};
+
+const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-fadeIn">
+    {cards.map((card) => {
+      const Icon = card.icon;
+      const palette = colorClasses[card.color];
+      return (
         <button
           key={card.id}
           onClick={() => onNavigate(card.id)}
-          className="group flex flex-col items-start p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition-all duration-300 text-left relative overflow-hidden"
+          className={`group relative flex items-start gap-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${palette.hover}`}
         >
-          {/* Decorative Circle */}
-          <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-0 group-hover:opacity-10 transition-opacity ${card.color}`}></div>
-
-          <div className={`p-4 rounded-2xl ${card.bgLight} ${card.textColor} mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-            {card.icon}
+          <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${palette.soft} ${palette.text} group-hover:scale-105 transition-transform`}>
+            <Icon size={22} />
           </div>
-
-          <h3 className="text-xl font-black text-[#001a33] mb-2 group-hover:text-blue-700 transition-colors">
-            {card.title}
-          </h3>
-          
-          <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
-            {card.desc}
-          </p>
-
-          <div className="mt-auto w-full pt-4 border-t border-slate-50 flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-colors">
-            <span>Acessar</span>
-            <Printer size={16} />
+          <div className="flex-1 min-w-0 pt-0.5">
+            <h4 className="font-black text-[#001a33] text-sm uppercase tracking-tight">{card.title}</h4>
+            <p className="text-slate-500 text-xs leading-relaxed font-medium mt-1">{card.desc}</p>
           </div>
+          <ChevronRight size={16} className={`self-center opacity-0 group-hover:opacity-100 ${palette.text} transition-opacity`} />
+          <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${palette.accent} opacity-0 group-hover:opacity-100 transition-opacity`} />
         </button>
-      ))}
-    </div>
-  );
-};
+      );
+    })}
+  </div>
+);
 
 export default SecretariaDashboard;

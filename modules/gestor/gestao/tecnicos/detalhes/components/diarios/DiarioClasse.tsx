@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
+import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface DiarioClasseProps {
@@ -24,7 +25,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
-        .select('id, status, parceiros(*)')
+        .select('id, status, data_matricula, parceiros(*)')
         .eq('turma_id', turma.id);
 
       if (error) throw error;
@@ -34,7 +35,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
         .map((m: any) => ({
           id: m.parceiros.id,
           nome: m.parceiros.nome,
-          matricula: m.id.substring(0, 8).toUpperCase(),
+          matricula: formatMatricula(m.id, m.data_matricula, m.parceiros.polo_id),
           status: m.status
         }));
     }

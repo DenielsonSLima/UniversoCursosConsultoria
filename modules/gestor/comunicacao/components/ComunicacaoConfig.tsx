@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Plus, Save, Smartphone, User, Play, Sparkles, Send, MessageSquare } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
 
 interface Category {
   id: string;
@@ -35,6 +36,7 @@ const PRESET_COLORS = [
 ];
 
 const ComunicacaoConfig: React.FC = () => {
+  const { toasts, removeToast, toast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState<'welcome' | 'categories' | 'simulator'>('welcome');
   
   // Data States
@@ -88,7 +90,7 @@ const ComunicacaoConfig: React.FC = () => {
       const { data: partnerData } = await supabase
         .from('parceiros')
         .select('id, nome, tipo')
-        .eq('status', 'ativo')
+        .eq('status', 'ATIVO')
         .order('nome', { ascending: true });
       
       setPartners(partnerData || []);
@@ -115,10 +117,10 @@ const ComunicacaoConfig: React.FC = () => {
       if (error) throw error;
       
       setConfig({ ...config, mensagem_boas_vindas: welcomeText });
-      alert('Mensagem de boas-vindas salva com sucesso!');
+      toast.success('Configuração salva', 'Mensagem de boas-vindas salva com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar mensagem de boas-vindas:', err);
-      alert('Erro ao salvar configuração.');
+      toast.error('Erro ao salvar', 'Não foi possível salvar a configuração.');
     } finally {
       setSaving(false);
     }
@@ -145,9 +147,10 @@ const ComunicacaoConfig: React.FC = () => {
 
       setCategories([...categories, data]);
       setNewCat({ nome: '', descricao: '', cor: PRESET_COLORS[0] });
+      toast.success('Categoria adicionada', `Setor "${data.nome}" criado com sucesso.`);
     } catch (err) {
       console.error('Erro ao adicionar categoria:', err);
-      alert('Erro ao adicionar categoria.');
+      toast.error('Erro ao criar', 'Não foi possível adicionar a categoria.');
     }
   };
 
@@ -163,9 +166,10 @@ const ComunicacaoConfig: React.FC = () => {
       if (error) throw error;
 
       setCategories(categories.filter(c => c.id !== id));
+      toast.success('Categoria excluída', 'Setor removido com sucesso.');
     } catch (err) {
       console.error('Erro ao deletar categoria:', err);
-      alert('Erro ao excluir categoria.');
+      toast.error('Erro ao excluir', 'Não foi possível excluir a categoria.');
     }
   };
 
@@ -173,7 +177,7 @@ const ComunicacaoConfig: React.FC = () => {
   const startSimulation = () => {
     const selectedPartner = partners.find(p => p.id === selectedPartnerId);
     if (!selectedPartner) {
-      alert('Por favor, cadastre ou ative um parceiro (aluno/professor) para simular.');
+      toast.error('Erro de simulação', 'Por favor, cadastre ou ative um parceiro (aluno/professor) para simular.');
       return;
     }
     
@@ -261,7 +265,7 @@ const ComunicacaoConfig: React.FC = () => {
       setSimStep(3);
     } catch (err) {
       console.error('Erro ao inicializar chat no simulador:', err);
-      alert('Erro ao inicializar o chat do simulador no banco.');
+      toast.error('Erro no simulador', 'Erro ao inicializar o chat do simulador no banco.');
     }
   };
 
@@ -326,6 +330,7 @@ const ComunicacaoConfig: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white p-6 flex flex-col h-full overflow-hidden">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Sub-Tabs de Configurações */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl self-start mb-6 shrink-0">

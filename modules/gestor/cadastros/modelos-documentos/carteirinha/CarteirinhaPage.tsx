@@ -3,6 +3,8 @@ import { CreditCard, Plus } from 'lucide-react';
 import CarteirinhaCard from './components/CarteirinhaCard';
 import CarteirinhaEditor from './components/CarteirinhaEditor';
 import { carteirinhaService } from './carteirinha.service';
+import { assinaturasService } from '../../../configuracoes/assinaturas/assinaturas.service';
+import ToastNotification, { useToast } from '../../../components/ToastNotification';
 
 const INITIAL_MODELOS = [
   {
@@ -15,28 +17,6 @@ const INITIAL_MODELOS = [
     corSecundaria: '#e0f2fe',
     textoFrente: 'DOCUMENTO DO ESTUDANTE',
     textoVerso: 'Este documento é padronizado nacionalmente nos termos da Lei nº 12.933/2013 e garante o direito de meia-entrada em eventos artísticos-culturais e esportivos.\n\nUso pessoal e intransferível.\nVerifique a validade via QR Code.',
-  },
-  {
-    id: '2',
-    nome: 'Carteirinha Superior',
-    tipoCurso: 'Ensino Superior',
-    status: 'inativo',
-    hasVerso: true,
-    corPrimaria: '#7c3aed', // Violet 600
-    corSecundaria: '#ede9fe',
-    textoFrente: 'C. I. E. UNIVERSITÁRIA',
-    textoVerso: 'Válido em todo território nacional para estudantes de graduação e pós-graduação.\nLei da Meia-Entrada - 12.933/13.',
-  },
-  {
-    id: '3',
-    nome: 'Identificação Interna - Cursos Livres',
-    tipoCurso: 'Cursos Livres',
-    status: 'inativo',
-    hasVerso: true,
-    corPrimaria: '#475569', // Slate 600
-    corSecundaria: '#f1f5f9',
-    textoFrente: 'IDENTIFICAÇÃO DE ACESSO',
-    textoVerso: 'ATENÇÃO: Este documento é para uso exclusivamente interno da instituição para controle de acessos corporativos, biblioteca e laboratórios.\n\nNão possui validade como Documento do Estudante (CIE) nos termos da legislação federal de meia-entrada.',
   }
 ];
 
@@ -44,10 +24,14 @@ const CarteirinhaPage: React.FC = () => {
   const [modelos, setModelos] = useState(INITIAL_MODELOS);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const { toasts, removeToast, toast } = useToast();
 
   useEffect(() => {
     const loadPersisted = async () => {
       try {
+        // Sincroniza assinaturas centrais em segundo plano
+        assinaturasService.syncSignatures().catch(err => console.error('Erro ao sincronizar assinaturas:', err));
+
         const persisted = await carteirinhaService.getTemplate();
         if (persisted && persisted.id) {
           setModelos(prev => prev.map(m => m.id === persisted.id ? persisted : m));
@@ -78,9 +62,10 @@ const CarteirinhaPage: React.FC = () => {
       } else {
         setModelos(modelos.map(m => m.id === savedModelo.id ? savedModelo : m));
       }
+      toast.success('Modelo Salvo', 'O modelo de carteirinha foi salvo com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar template:', err);
-      alert('Erro ao salvar o modelo.');
+      toast.error('Erro ao salvar', 'Não foi possível salvar o modelo de carteirinha.');
     }
     setEditingModelo(null);
     setIsCreating(false);
@@ -103,17 +88,12 @@ const CarteirinhaPage: React.FC = () => {
 
   return (
     <div className="animate-fadeIn max-w-7xl mx-auto">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">CIE / Carteirinha</h3>
           <p className="text-slate-500 text-sm mt-1">Configuração da Identidade Estudantil CR80 baseada na Lei 12.933/2013.</p>
         </div>
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Plus size={16} /> Novo Modelo
-        </button>
       </div>
 
       {/* Info Notice about Lei da Meia Entrada */}
@@ -138,17 +118,6 @@ const CarteirinhaPage: React.FC = () => {
             onDelete={handleDelete} 
           />
         ))}
-        
-        <div 
-          onClick={() => setIsCreating(true)}
-          className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-pink-300 hover:shadow-lg transition-all min-h-[220px] group"
-        >
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400 group-hover:text-pink-600 group-hover:scale-110 transition-transform mb-3">
-            <Plus size={24} />
-          </div>
-          <h4 className="text-sm font-bold text-slate-600 uppercase tracking-widest">Criar Novo Modelo</h4>
-          <p className="text-xs text-slate-400 mt-2">Clique para configurar</p>
-        </div>
       </div>
     </div>
   );

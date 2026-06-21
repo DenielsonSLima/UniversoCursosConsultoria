@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, CreditCard } from 'lucide-react';
+import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
+import { getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
 
 interface CarteirinhaPreviewProps {
   formData: any;
@@ -17,6 +19,10 @@ interface CarteirinhaPreviewProps {
     fotoUrl?: string | null;
     tipoDocumento?: string;
     tipo_documento?: string;
+    validationCode?: string;
+    poloRazaoSocial?: string;
+    poloCnpj?: string;
+    poloTelefone?: string;
   };
   isEditable?: boolean;
   onChangePositions?: (positions: any) => void;
@@ -24,6 +30,7 @@ interface CarteirinhaPreviewProps {
 
 // Coordenadas padrão iniciais em porcentagem (%) para encaixe nos boxes do Photoshop
 const posicoesPadrao: Record<string, { x: number; y: number }> = {
+  // Frente
   foto: { x: 3.5, y: 22.0 },
   nome: { x: 25.0, y: 23.0 },
   instituicao: { x: 25.0, y: 39.5 },
@@ -33,7 +40,16 @@ const posicoesPadrao: Record<string, { x: number; y: number }> = {
   cpf: { x: 25.0, y: 72.0 },
   matricula: { x: 3.5, y: 83.5 },
   qrcode: { x: 42.0, y: 80.0 },
-  validade: { x: 75.0, y: 83.5 }
+  codigoValidacao: { x: 42.0, y: 94.0 },
+  validade: { x: 75.0, y: 83.5 },
+  // Verso
+  textoVerso: { x: 5.0, y: 20.0 },
+  dadosInstitucionais: { x: 5.0, y: 47.0 },
+  assinaturaAluno: { x: 6.0, y: 58.0 },
+  assinaturaDiretor: { x: 54.0, y: 58.0 },
+  assinaturaDiretorImagem: { x: 58.0, y: 44.0 },
+  siteValidador: { x: 7.0, y: 88.0 },
+  dataEmissao: { x: 65.0, y: 88.0 }
 };
 
 const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({ 
@@ -45,7 +61,32 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   onChangePositions
 }) => {
   // Tamanho padrão CR80: 85.6mm x 54mm (landscape)
-  
+
+  // Busca assinatura central do Supabase de forma assíncrona (multi-browser safe)
+  const [assinaturaUrl, setAssinaturaUrl] = useState<string>(
+    formData.assinaturaOrigem === 'manual' || !formData.assinaturaOrigem || formData.assinaturaOrigem === 'none'
+      ? (formData.assinaturaDiretorPngUrl || '')
+      : (assinaturasService.getSignaturesSync()[formData.assinaturaOrigem as keyof ReturnType<typeof assinaturasService.getSignaturesSync>] || '')
+  );
+
+  useEffect(() => {
+    if (formData.assinaturaOrigem === 'manual') {
+      setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
+    } else if (formData.assinaturaOrigem && formData.assinaturaOrigem !== 'none') {
+      // Busca do Supabase — fonte primária — garante sincronização entre navegadores
+      assinaturasService.getSignatures().then((sigs) => {
+        const url = sigs[formData.assinaturaOrigem as keyof typeof sigs] || '';
+        setAssinaturaUrl(url);
+      }).catch(() => {
+        // fallback: tenta sync (pode ser vazio no primeiro acesso)
+        const syncSigs = assinaturasService.getSignaturesSync();
+        setAssinaturaUrl(syncSigs[formData.assinaturaOrigem as keyof typeof syncSigs] || '');
+      });
+    } else {
+      setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
+    }
+  }, [formData.assinaturaOrigem, formData.assinaturaDiretorPngUrl]);
+
   const studentData = aluno || {
     nome: 'ANA CLARA DOS SANTOS E SILVA',
     cpf: '123.456.789-00',
@@ -55,7 +96,11 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     curso: formData.tipoCurso === 'Cursos Livres' ? 'Design Gráfico para Web' : 'Técnico em Informática',
     instituicao: 'Instituto EAD e Tecnologia',
     validade: '31/03/2027',
-    tipoDocumento: 'RG'
+    tipoDocumento: 'RG',
+    validationCode: 'CIE-AB12-CD34-EF56',
+    poloRazaoSocial: 'Universo Cursos e Consultoria Ltda.',
+    poloCnpj: '00.000.000/0001-00',
+    poloTelefone: '(79) 99999-9999',
   };
 
   const getDocumentLabel = () => {
@@ -74,33 +119,34 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     return showLabel ? `${label}: ${studentData.rg}` : studentData.rg;
   };
 
-  const codeValidador = studentData.matricula;
-  const urlValidador = `${window.location.origin}/validator?code=${codeValidador}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlValidador)}`;
+  const codeValidador = studentData.validationCode || studentData.matricula;
+  const qrCodeUrl = getDocumentValidationQrUrl(codeValidador);
+  const institutionalText = [
+    studentData.poloRazaoSocial,
+    studentData.poloCnpj ? `CNPJ: ${studentData.poloCnpj}` : null,
+    studentData.poloTelefone ? `Contato: ${studentData.poloTelefone}` : null,
+  ].filter(Boolean).join('\n');
 
   const useCustomBg = page === 'frente' ? !!formData.bgFrenteUrl : !!formData.bgVersoUrl;
+  const customBackgroundUrl = page === 'frente' ? formData.bgFrenteUrl : formData.bgVersoUrl;
   const usePhotoshopLayout = useCustomBg && !!formData.usePhotoshopLayout;
   const ocultarDesign = useCustomBg && (!!formData.ocultarDesignPadrao || usePhotoshopLayout);
 
   const containerStyle: React.CSSProperties = {
     transform: `scale(${zoomLevel / 100})`, 
     marginBottom: zoomLevel < 100 ? `-${54 * (1 - zoomLevel / 100)}mm` : '0',
-    backgroundColor: 'white'
+    backgroundColor: useCustomBg ? 'transparent' : 'white',
+    isolation: 'isolate',
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontKerning: 'none',
+    fontVariantLigatures: 'none',
+    textRendering: 'geometricPrecision',
+    WebkitFontSmoothing: 'antialiased',
   };
-
-  if (page === 'frente' && formData.bgFrenteUrl) {
-    containerStyle.backgroundImage = `url(${formData.bgFrenteUrl})`;
-    containerStyle.backgroundSize = 'cover';
-    containerStyle.backgroundPosition = 'center';
-  } else if (page === 'verso' && formData.bgVersoUrl) {
-    containerStyle.backgroundImage = `url(${formData.bgVersoUrl})`;
-    containerStyle.backgroundSize = 'cover';
-    containerStyle.backgroundPosition = 'center';
-  }
 
   // LÓGICA DO DRAG & DROP NATIVO EM PORCENTAGEM
   const handleDragStart = (e: React.MouseEvent, key: string) => {
-    if (!isEditable || page !== 'frente') return;
+    if (!isEditable) return;
     e.preventDefault();
     e.stopPropagation();
     
@@ -187,9 +233,18 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
 
     return (
       <div 
-        className="bg-white w-[85.6mm] h-[54mm] shadow-2xl relative rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
+        className="carteirinha-render-root bg-white w-[85.6mm] h-[54mm] shadow-2xl relative rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
         style={containerStyle}
       >
+        {customBackgroundUrl && (
+          <img
+            src={customBackgroundUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+            style={{ zIndex: 0 }}
+          />
+        )}
         {page === 'frente' ? (
           // FRENTE - POSICIONAMENTO DINÂMICO ARRASTÁVEL
           <>
@@ -311,6 +366,21 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
               <img src={qrCodeUrl} alt="QR" className="w-full h-full object-contain" />
             </div>
 
+            {/* Código textual para consulta quando a leitura do QR não for possível */}
+            {formData.showValidationCode !== false && (
+              <div
+                style={{
+                  ...getPosStyle('codigoValidacao'),
+                  color: formData.corCodigoValidacao || corTexto,
+                  fontSize: `${formData.tamanhoFonteCodigoValidacao || 4.2}px`,
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'codigoValidacao')}
+                className={`w-[32%] text-center font-black tracking-[0.08em] z-15 whitespace-nowrap ${getDragBorderClass()}`}
+              >
+                {formData.rotuloCodigoValidacao || 'CÓD.:'} {codeValidador}
+              </div>
+            )}
+
             {/* Validade de Meia Entrada */}
             <div 
               style={getPosStyle('validade')}
@@ -328,43 +398,132 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
             </div>
           </>
         ) : (
-          // VERSO - POSICIONAMENTO ABSOLUTO DO VERSO DO PHOTOSHOP (Não-arrastável no verso)
+          // VERSO - POSICIONAMENTO DINÂMICO E ARRASTÁVEL NO VERSO
           <>
             {/* Texto legal superior */}
-            <div 
-              className="absolute top-[16.5mm] left-[4mm] right-[4mm] text-center font-bold text-white text-[5px] leading-normal tracking-wide z-15 whitespace-pre-wrap drop-shadow-sm"
-            >
-              {formData.textoVerso || 'Esta Carteirinha é de Responsabilidade do Portador,\nPara uso Pessoal e Intransferível.'}
-            </div>
+            {formData.showTextoVerso !== false && (
+              <div 
+                style={{ 
+                  ...getPosStyle('textoVerso'), 
+                  color: formData.corTextoVerso || '#1e293b',
+                  fontSize: `${formData.tamanhoFonteVerso || 5.0}px`,
+                  textAlign: formData.alinhamentoTextoVerso || 'center'
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'textoVerso')}
+                className={`w-[90%] font-bold leading-normal tracking-wide z-15 whitespace-pre-wrap drop-shadow-sm ${getDragBorderClass()}`}
+              >
+                {formData.textoVerso || 'Esta Carteirinha é de Responsabilidade do Portador,\nPara uso Pessoal e Intransferível.'}
+              </div>
+            )}
+
+            {/* Dados institucionais carregados automaticamente do polo */}
+            {formData.showInstitutionalData !== false && institutionalText && (
+              <div
+                style={{
+                  ...getPosStyle('dadosInstitucionais'),
+                  color: formData.corDadosInstitucionais || formData.corTextoVerso || '#1e293b',
+                  fontSize: `${formData.tamanhoFonteDadosInstitucionais || 5.2}px`,
+                  textAlign: formData.alinhamentoDadosInstitucionais || 'left',
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'dadosInstitucionais')}
+                className={`w-[52%] font-bold leading-tight whitespace-pre-line z-15 ${getDragBorderClass()}`}
+              >
+                {institutionalText}
+              </div>
+            )}
 
             {/* Assinatura do Aluno */}
-            <div 
-              className="absolute top-[32.2mm] left-[5mm] w-[34mm] text-center font-bold text-slate-600 text-[5.5px] z-15 border-t border-slate-350 pt-[1.5mm]"
-            >
-              Assinatura do Aluno(a)
-            </div>
+            {formData.showAssinaturaAluno !== false && (
+              <div 
+                style={{ ...getPosStyle('assinaturaAluno'), color: formData.corTextoVerso || '#475569' }}
+                onMouseDown={(e) => handleDragStart(e, 'assinaturaAluno')}
+                className={`w-[35%] text-center font-bold text-[5.5px] z-15 flex flex-col items-center justify-end ${getDragBorderClass()}`}
+              >
+                <div 
+                  style={{ 
+                    borderColor: formData.corTextoVerso || '#cbd5e1', 
+                    borderTopWidth: '0.5px',
+                    width: '100%'
+                  }} 
+                  className="pt-[1mm]"
+                >
+                  Assinatura do Aluno(a)
+                </div>
+              </div>
+            )}
 
             {/* Assinatura do Diretor */}
-            <div 
-              className="absolute top-[32.2mm] right-[5mm] w-[34mm] text-center font-bold text-slate-600 text-[5.5px] z-15 border-t border-slate-350 pt-[1.5mm]"
-            >
-              Assinatura do Diretor(a)
-            </div>
+            {formData.showAssinaturaDiretor !== false && (
+              <div 
+                style={{ ...getPosStyle('assinaturaDiretor'), color: formData.corTextoVerso || '#475569' }}
+                onMouseDown={(e) => handleDragStart(e, 'assinaturaDiretor')}
+                className={`w-[35%] text-center font-bold text-[5.5px] z-14 flex flex-col items-center justify-end ${getDragBorderClass()}`}
+              >
+                <div 
+                  style={{ 
+                    borderColor: formData.corTextoVerso || '#cbd5e1', 
+                    borderTopWidth: '0.5px',
+                    width: '100%'
+                  }} 
+                  className="pt-[1mm]"
+                >
+                  {formData.textoDiretor || 'Assinatura do Diretor(a)'}
+                </div>
+              </div>
+            )}
 
-            {/* URL da Instituição */}
-            <div 
-              className="absolute top-[48.2mm] left-[6mm] font-black text-slate-800 text-[6px] tracking-wide z-15"
-            >
-              www.universocc.com.br
-            </div>
+            {/* Imagem da Assinatura do Diretor */}
+            {formData.showAssinaturaDiretor !== false && assinaturaUrl && (
+              <div
+                style={{ 
+                  ...getPosStyle('assinaturaDiretorImagem'), 
+                  width: `${formData.assinaturaDiretorWidth || 25.0}%`,
+                  mixBlendMode: formData.mesclarAssinatura !== false ? 'multiply' : undefined
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'assinaturaDiretorImagem')}
+                className={`z-20 flex items-center justify-center pointer-events-auto ${getDragBorderClass()}`}
+              >
+                <img 
+                  src={assinaturaUrl} 
+                  alt="Assinatura Diretor" 
+                  className="w-full object-contain pointer-events-none" 
+                  style={{ 
+                    mixBlendMode: formData.mesclarAssinatura !== false ? 'multiply' : undefined,
+                    maxHeight: '12mm'
+                  }}
+                />
+              </div>
+            )}
+
+            {/* URL da Instituição / Validador */}
+            {formData.showSiteValidador !== false && (
+              <div 
+                style={{ 
+                  ...getPosStyle('siteValidador'), 
+                  color: formData.corTextoValidador || formData.corTextoVerso || '#1e293b',
+                  fontSize: `${formData.tamanhoFonteValidador || 6.0}px`
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'siteValidador')}
+                className={`font-black tracking-wide z-15 ${getDragBorderClass()}`}
+              >
+                {formData.siteValidadorUrl || 'www.universocc.com.br'}
+              </div>
+            )}
 
             {/* Data de Emissão */}
-            <div 
-              className="absolute top-[48.2mm] right-[6mm] font-bold text-slate-800 text-[5.5px] tracking-wide z-15 flex items-center gap-1"
-            >
-              <span>EMISSÃO:</span>
-              <span className="font-black">18/06/2026</span>
-            </div>
+            {formData.showDataEmissao !== false && (
+              <div 
+                style={{ 
+                  ...getPosStyle('dataEmissao'), 
+                  color: formData.corTextoEmissao || '#ef4444',
+                  fontSize: `${formData.tamanhoFonteEmissao || 5.5}px`
+                }}
+                onMouseDown={(e) => handleDragStart(e, 'dataEmissao')}
+                className={`font-bold tracking-wide z-15 flex items-center gap-1 ${getDragBorderClass()}`}
+              >
+                {formData.dataEmissaoTexto || 'EMISSÃO: 18/06/2026'}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -374,9 +533,18 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   // LAYOUT PADRÃO (SE NÃO FOR O LAYOUT DE POSIÇÕES ABSOLUTAS DO PHOTOSHOP)
   return (
     <div 
-      className="bg-white w-[85.6mm] h-[54mm] shadow-2xl relative flex flex-col rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200"
+      className="carteirinha-render-root bg-white w-[85.6mm] h-[54mm] shadow-2xl relative flex flex-col rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200"
       style={containerStyle}
     >
+       {customBackgroundUrl && (
+         <img
+           src={customBackgroundUrl}
+           alt=""
+           aria-hidden="true"
+           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+           style={{ zIndex: 0 }}
+         />
+       )}
        {page === 'frente' ? (
           // DESIGN FRENTE 
           <>
@@ -458,6 +626,17 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
                   <p className="text-[4px] font-black text-slate-500 uppercase tracking-widest leading-none">
                     VALIDAÇÃO<br/>DIGITAL
                   </p>
+                  {formData.showValidationCode !== false && (
+                    <p
+                      className="mt-1 max-w-full break-all font-black leading-none"
+                      style={{
+                        color: formData.corCodigoValidacao || '#475569',
+                        fontSize: `${formData.tamanhoFonteCodigoValidacao || 4.2}px`,
+                      }}
+                    >
+                      {codeValidador}
+                    </p>
+                  )}
                </div>
 
                {/* Marca d'água super sutil (ocultada se selecionado design customizado) */}
@@ -477,6 +656,19 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
               <div className={`flex-1 pr-12 text-[5.5px] text-slate-700 leading-relaxed text-justify whitespace-pre-wrap font-medium ${ocultarDesign ? '' : 'mt-6'}`}>
                 {formData.textoVerso}
               </div>
+
+              {formData.showInstitutionalData !== false && institutionalText && (
+                <div
+                  className="relative z-10 whitespace-pre-line font-bold leading-tight mt-1"
+                  style={{
+                    color: formData.corDadosInstitucionais || formData.corTextoVerso || '#1e293b',
+                    fontSize: `${formData.tamanhoFonteDadosInstitucionais || 5.2}px`,
+                    textAlign: formData.alinhamentoDadosInstitucionais || 'left',
+                  }}
+                >
+                  {institutionalText}
+                </div>
+              )}
 
               {/* Footer do Verso */}
               <div className="border-t border-slate-300/30 pt-1 mt-1">
