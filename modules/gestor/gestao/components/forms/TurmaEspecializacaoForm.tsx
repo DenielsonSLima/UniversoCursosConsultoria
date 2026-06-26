@@ -9,10 +9,11 @@ interface TurmaEspecializacaoFormProps {
   onClose: () => void;
   onSave: (data: any) => void;
   cursosDisponiveis: any[];
+  selectedPoloId?: string;
 }
 
 const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = ({ 
-  isOpen, onClose, onSave, cursosDisponiveis 
+  isOpen, onClose, onSave, cursosDisponiveis, selectedPoloId
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -29,6 +30,12 @@ const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = ({
   useEffect(() => {
     polosService.getAll().then(setPolos);
   }, []);
+
+  useEffect(() => {
+    if (selectedPoloId) {
+      setFormData(prev => ({ ...prev, poloId: selectedPoloId }));
+    }
+  }, [selectedPoloId]);
 
   useEffect(() => {
     if (formData.cursoId && formData.poloId && formData.dataInicio && formData.turno) {
@@ -117,10 +124,11 @@ const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = ({
                     className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-rose-500"
                     value={formData.poloId}
                     onChange={(e) => setFormData({...formData, poloId: e.target.value})}
+                    disabled={Boolean(selectedPoloId)}
                     required
                 >
                     <option value="">Selecione...</option>
-                    {polos.map(p => (
+                    {polos.filter(p => !selectedPoloId || p.id === selectedPoloId).map(p => (
                         <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
                     ))}
                 </select>

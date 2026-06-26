@@ -18,6 +18,9 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { loginService } from '../login/login.service';
+import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 
 // Sub-módulos do Professor
 import InicioPage from './inicio/InicioPage';
@@ -33,25 +36,57 @@ const ProfessorPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentPoloId, setCurrentPoloId] = useState<string | null>(() => sessionStorage.getItem('active_polo_id'));
+  const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Recupera dados do usuário do localStorage
-  const loggedUserTipo = sessionStorage.getItem('logged_user_tipo');
-  const isRealProfessor = loggedUserTipo === 'Professor';
+  const professorId = profile?.id || '';
+  const professorNome = profile?.nome || '';
+  const professorEmail = profile?.email || '';
 
-  const professorId = isRealProfessor
-    ? (sessionStorage.getItem('logged_user_id') || 'b0000000-0000-0000-0000-000000000001')
-    : 'b0000000-0000-0000-0000-000000000001';
-  const professorNome = isRealProfessor
-    ? (sessionStorage.getItem('logged_user_name') || 'Prof. Carlos Silva')
-    : 'Prof. Carlos Silva';
-  const professorEmail = isRealProfessor
-    ? (sessionStorage.getItem('logged_user_email') || 'carlos.silva@email.com')
-    : 'carlos.silva@email.com';
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateProfile = async () => {
+      try {
+        const portalProfile = await getPortalProfile();
+        if (!mounted) return;
+
+        if (!portalProfile || portalProfile.tipo !== 'Professor') {
+          clearPortalSession();
+          await loginService.logout().catch(() => undefined);
+          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+          navigate(`/login?redirect=${redirect}`, { replace: true });
+          return;
+        }
+
+        const allowedPolos = (portalProfile.poloIds || []).filter(Boolean);
+        const preferredPolo =
+          portalProfile.activePoloId ||
+          (allowedPolos.length === 1 ? allowedPolos[0] : null);
+
+        setCurrentPoloId(preferredPolo || null);
+        setProfile(portalProfile);
+        setIsAuthLoading(false);
+      } catch {
+        clearPortalSession();
+        await loginService.logout().catch(() => undefined);
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+        navigate(`/login?redirect=${redirect}`, { replace: true });
+      }
+    };
+
+    hydrateProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
 
   // Fetch active polos for seletor
   const { data: activePolos = [] } = useQuery<any[]>({
-    queryKey: ['professor-active-polos'],
+    queryKey: ['professor-active-polos', profile?.id],
+    enabled: !!profile,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('polos')
@@ -59,7 +94,13 @@ const ProfessorPage: React.FC = () => {
         .eq('status', 'ativo')
         .order('nome', { ascending: true });
       if (error) throw error;
-      return data || [];
+      const polos = data || [];
+
+      if (!profile?.poloIds?.length) {
+        return polos;
+      }
+
+      return polos.filter((polo) => profile?.poloIds?.includes(polo.id));
     }
   });
 
@@ -80,13 +121,28 @@ const ProfessorPage: React.FC = () => {
     queryClient.invalidateQueries();
   };
 
-  const handleLogout = async () => {
+  const executeLogout = async () => {
     await loginService.logout();
     sessionStorage.removeItem('logged_user_id');
     sessionStorage.removeItem('logged_user_name');
     sessionStorage.removeItem('logged_user_email');
     sessionStorage.removeItem('logged_user_tipo');
+    clearPortalSession();
+    sessionStorage.removeItem('active_polo_id');
     navigate('/login');
+  };
+
+  useInactivityLogout({
+    isEnabled: !!profile && !isAuthLoading,
+    onTimeout: executeLogout,
+  });
+
+  if (isAuthLoading || !profile) {
+    return <AccessCheckingScreen portal="Professor" />;
+  }
+
+  const handleLogout = async () => {
+    await executeLogout();
   };
 
   const menuItems = [

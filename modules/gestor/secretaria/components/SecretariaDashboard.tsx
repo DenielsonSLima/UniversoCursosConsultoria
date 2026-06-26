@@ -3,6 +3,7 @@ import {
   ArrowRightLeft,
   BadgeCheck,
   BriefcaseBusiness,
+
   ChevronRight,
   ClipboardCheck,
   ClipboardList,
@@ -14,6 +15,8 @@ import {
   RefreshCcw,
   ScrollText,
   Search,
+  History,
+  Award,
 } from 'lucide-react';
 
 interface SecretariaDashboardProps {
@@ -25,6 +28,7 @@ const cards = [
   { id: 'declaracao-matricula', title: 'Declaração de Matrícula', desc: 'Comprovação individual ou por turma.', icon: FileBadge, color: 'emerald' },
   { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Frequência consolidada pelo serviço acadêmico.', icon: BadgeCheck, color: 'sky' },
   { id: 'boletim', title: 'Boletim Escolar', desc: 'Notas e resultados dos cursos técnicos.', icon: ClipboardCheck, color: 'indigo' },
+  { id: 'atestado-conclusao', title: 'Atestado de Conclusão', desc: 'Comprovação provisória para cursos técnicos concluídos.', icon: BadgeCheck, color: 'emerald' },
   { id: 'declaracao-irpf', title: 'Declaração de IRPF', desc: 'Comprovante financeiro do ano-calendário.', icon: Landmark, color: 'amber' },
   { id: 'historico-escolar', title: 'Histórico Escolar', desc: 'Percurso curricular e resultados acadêmicos.', icon: ScrollText, color: 'slate' },
   { id: 'carteirinha', title: 'Carteirinha Estudantil', desc: 'Identificação estudantil com QR Code.', icon: CreditCard, color: 'purple' },
@@ -34,7 +38,10 @@ const cards = [
   { id: 'consulta-financeira', title: 'Financeiro do Aluno', desc: 'Consulta inicial de contratos, parcelas e movimentações.', icon: CircleDollarSign, color: 'cyan' },
   { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
   { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
+  { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
+  { id: 'historico-emissoes', title: 'Histórico de Emissões', desc: 'Controle, filtros e 2ª via de todos os documentos emitidos.', icon: History, color: 'blue' },
 ] as const;
+
 
 const colorClasses: Record<string, { soft: string; text: string; hover: string; accent: string }> = {
   blue: { soft: 'bg-blue-50', text: 'text-blue-600', hover: 'hover:border-blue-300', accent: 'bg-blue-600' },

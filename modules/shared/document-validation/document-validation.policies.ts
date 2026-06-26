@@ -37,6 +37,10 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'BOL',
     title: 'Boletim Escolar',
   },
+  atestado_conclusao_tecnico: {
+    prefix: 'ATC-TEC',
+    title: 'Atestado de Conclusão de Curso Técnico',
+  },
   historico_escolar: {
     prefix: 'HIS',
     title: 'Histórico Escolar',
@@ -52,5 +56,21 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
   termo_estagio: {
     prefix: 'TER-EST',
     title: 'Termo de Estágio',
+  },
+  certificado_tecnico: {
+    prefix: 'CERT-TEC',
+    title: 'Certificado Técnico',
+  },
+  certificado_livre: {
+    prefix: 'CERT-LIV',
+    title: 'Certificado de Curso Livre',
+  },
+  certificado_ead: {
+    prefix: 'CERT-EAD',
+    title: 'Certificado EAD',
+  },
+  certificado_especializacao: {
+    prefix: 'CERT-ESP',
+    title: 'Certificado de Especialização',
   },
 };

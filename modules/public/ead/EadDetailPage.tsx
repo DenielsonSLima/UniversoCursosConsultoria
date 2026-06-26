@@ -1,27 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ChevronLeft, 
   Clock, 
   BookOpen, 
   Laptop, 
-  FileText, 
-  Send, 
+  CreditCard,
   Loader2, 
-  MapPin,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  ListChecks,
+  Lock,
+  UserPlus
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso } from '../../gestor/cadastros/cadastros.types';
+import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
+import { buildEadCoursePath, EAD_SITE_URL } from './eadCourseLinks';
+
+const setMetaContent = (selector: string, content: string) => {
+  const element = document.head.querySelector<HTMLMetaElement>(selector);
+  if (element) element.content = content;
+};
+
+const normalizeDescription = (value: string) =>
+  String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const EadDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const cursoId = params.id;
 
   // Força o scroll para o topo ao carregar a página
   useEffect(() => {
@@ -30,53 +44,76 @@ const EadDetailPage: React.FC = () => {
 
   // Query do Curso EAD
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
-    queryKey: ['cursoEadPublicDetail', id],
-    queryFn: () => cadastrosService.getCursoById(id!),
-    enabled: !!id,
+    queryKey: ['cursoEadPublicDetail', cursoId],
+    queryFn: () => cadastrosService.getCursoById(cursoId!),
+    enabled: !!cursoId,
   });
 
-  // Form de Lead/Interesse
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [polo, setPolo] = useState('Japoatã (Sede Matriz)');
-  const [mensagem, setMensagem] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const eadConfigPagePath = curso ? buildEadCoursePath(curso.id, curso.nome) : null;
 
-  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 11) value = value.slice(0, 11);
-    
-    // Aplica a máscara
-    if (value.length > 6) {
-      value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
-    } else if (value.length > 2) {
-      value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-    } else if (value.length > 0) {
-      value = `(${value}`;
+  useEffect(() => {
+    if (!curso || !eadConfigPagePath) return;
+
+    const title = `${curso.nome} | Curso EAD | Universo Cursos e Consultoria`;
+    const descricaoBase = curso.ead_config?.pagina?.subtitulo || curso.descricao || 'Curso EAD completo com conteúdo em vídeo, apostila e certificação da Universo Cursos e Consultoria.';
+    const description = normalizeDescription(`${descricaoBase} ${curso.area ? `Área: ${curso.area}.` : ''} Carga horária de ${curso.carga_horaria || 80} horas.`);
+    const canonical = `${EAD_SITE_URL}${eadConfigPagePath}`;
+
+    document.title = title;
+    setMetaContent('meta[name="description"]', description);
+    setMetaContent('meta[name="keywords"]', `${curso.nome}, curso EAD, Universo Cursos e Consultoria`);
+    setMetaContent('meta[property="og:title"]', title);
+    setMetaContent('meta[property="og:description"]', description);
+    setMetaContent('meta[property="og:url"]', canonical);
+    setMetaContent('meta[name="twitter:title"]', title);
+    setMetaContent('meta[name="twitter:description"]', description);
+    setMetaContent('meta[name="twitter:card"]', 'summary_large_image');
+
+    let canonicalLink = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
     }
-    setWhatsapp(value);
-  };
+    canonicalLink.href = canonical;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nome || !whatsapp) {
-      alert('Por favor, preencha seu nome e WhatsApp.');
-      return;
+    const carga = curso.carga_horaria || 80;
+    const jsonLdPayload = {
+      '@context': 'https://schema.org',
+      '@type': 'Course',
+      name: curso.nome,
+      description,
+      provider: {
+        '@type': 'Organization',
+        name: 'Universo Cursos e Consultoria',
+        sameAs: EAD_SITE_URL,
+      },
+      inLanguage: 'pt-BR',
+      hasCourseInstance: {
+        '@type': 'CourseInstance',
+        courseMode: 'online',
+        courseWorkload: `P${carga}H`,
+      },
+      offers: curso.valor && curso.valor > 0
+        ? {
+            '@type': 'Offer',
+            availability: 'https://schema.org/InStock',
+            priceCurrency: 'BRL',
+            price: String(curso.valor.toFixed(2)),
+            url: canonical,
+          }
+        : undefined,
+    };
+
+    let jsonLd = document.getElementById('ead-course-jsonld') as HTMLScriptElement | null;
+    if (!jsonLd) {
+      jsonLd = document.createElement('script');
+      jsonLd.type = 'application/ld+json';
+      jsonLd.id = 'ead-course-jsonld';
+      document.head.appendChild(jsonLd);
     }
-
-    setIsSubmitting(true);
-
-    const whatsappLimpo = whatsapp.replace(/\D/g, '');
-    const mensagemTexto = `Olá! Meu nome é *${nome}* e tenho interesse no curso EAD *${curso?.nome || 'EAD'}* no Polo *${polo}*. \n\n*E-mail:* ${email || 'Não informado'} \n*Mensagem:* ${mensagem || 'Gostaria de saber mais informações sobre matrículas e descontos.'}`;
-    
-    const whatsappUrl = `https://wa.me/557996028316?text=${encodeURIComponent(mensagemTexto)}`;
-    
-    setTimeout(() => {
-      setIsSubmitting(false);
-      window.open(whatsappUrl, '_blank');
-    }, 800);
-  };
+    jsonLd.textContent = JSON.stringify(jsonLdPayload);
+  }, [curso, eadConfigPagePath]);
 
   // Loading do Curso
   if (loadingCurso) {
@@ -119,7 +156,12 @@ const EadDetailPage: React.FC = () => {
 
   // Obtém cronograma cadastrado a partir de ead_config
   const cronograma = curso.ead_config?.cronograma || [];
+  const conteudos = curso.ead_config?.conteudos || [];
+  const atividades = curso.ead_config?.atividades || [];
+  const pagina = curso.ead_config?.pagina;
+  const regras = curso.ead_config?.regras;
   const eadCarga = curso.carga_horaria || 80;
+  const detailPath = eadConfigPagePath || `/ead/${curso.id}`;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] font-sans">
@@ -222,8 +264,21 @@ const EadDetailPage: React.FC = () => {
                   Sobre o Curso
                 </h2>
                 <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line font-medium">
-                  {curso.descricao || 'Este curso oferece uma formação completa na modalidade Educação a Distância (EAD), permitindo flexibilidade total para que você monte seu cronograma e assista às aulas de onde desejar. A grade curricular é elaborada por especialistas focando no mercado profissional, permitindo que você adquira novas competências de forma eficiente e certificada.'}
+                  {pagina?.subtitulo || curso.descricao || 'Este curso oferece uma formação completa na modalidade Educação a Distância (EAD), permitindo flexibilidade total para que você monte seu cronograma e assista às aulas de onde desejar. A grade curricular é elaborada por especialistas focando no mercado profissional, permitindo que você adquira novas competências de forma eficiente e certificada.'}
                 </p>
+                {curso.descricao && pagina?.subtitulo && (
+                  <p className="text-slate-500 text-xs leading-relaxed whitespace-pre-line font-medium">{curso.descricao}</p>
+                )}
+                {pagina?.objetivos && pagina.objetivos.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    {pagina.objetivos.map((objetivo, idx) => (
+                      <div key={`${objetivo}-${idx}`} className="flex gap-2 rounded-2xl bg-blue-50/60 border border-blue-100 p-3">
+                        <CheckCircle2 size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                        <span className="text-xs font-bold text-slate-700 leading-relaxed">{objetivo}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Grade Curricular / Cronograma */}
@@ -263,6 +318,81 @@ const EadDetailPage: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Jornada de Aprendizagem */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <h2 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2.5">
+                    <span className="w-1.5 h-6 bg-emerald-500 rounded-full"></span>
+                    Jornada do Curso
+                  </h2>
+                  <span className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-bold border border-emerald-100">
+                    {conteudos.length} Etapa(s)
+                  </span>
+                </div>
+
+                {conteudos.length === 0 ? (
+                  <div className="bg-white border border-slate-100 rounded-[2rem] p-10 text-center shadow-sm">
+                    <BookOpen className="text-slate-300 mx-auto mb-3" size={40} />
+                    <p className="text-slate-600 text-sm font-bold">Etapas em preparação.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {conteudos.map((item: any, idx: number) => (
+                      <div key={item.id || idx} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex gap-3">
+                            <span className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black text-xs border border-emerald-100 shrink-0">
+                              {item.etapa || idx + 1}
+                            </span>
+                            <div>
+                              <h3 className="font-black text-sm text-[#001a33] leading-snug">{item.titulo}</h3>
+                              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">{item.descricao}</p>
+                              {item.objetivos && item.objetivos.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {item.objetivos.map((objetivo: string, objIdx: number) => (
+                                    <span key={`${item.id}-obj-${objIdx}`} className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
+                                      {objetivo}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            {item.videoUrl && <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">Vídeo</span>}
+                            {item.textoHtml && <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg">Página</span>}
+                            <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg">{item.duracaoMinutos || 0} min</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
+                  <h3 className="text-sm font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2 mb-4">
+                    <ListChecks size={18} className="text-emerald-600" />
+                    Atividades
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    {atividades.length > 0
+                      ? `${atividades.length} atividade(s) de fixação antes da prova, vinculadas às etapas do curso.`
+                      : 'Atividades de fixação serão disponibilizadas conforme a organização pedagógica do curso.'}
+                  </p>
+                </div>
+                <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
+                  <h3 className="text-sm font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2 mb-4">
+                    <Lock size={18} className="text-amber-600" />
+                    Liberação
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    Tempo mínimo de estudo: <strong>{regras?.tempoMinimoMinutos || 0} min</strong>. As etapas são liberadas progressivamente, com marcação de conclusão e atividades antes da avaliação final.
+                  </p>
+                </div>
               </div>
 
               {/* Diferenciais */}
@@ -314,16 +444,16 @@ const EadDetailPage: React.FC = () => {
 
             </div>
 
-            {/* LADO DIREITO: Form de Lead ("Tenho Interesse") */}
+            {/* LADO DIREITO: Compra online */}
             <div className="lg:col-span-5">
               <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-lg md:sticky md:top-24">
                 <div className="space-y-2 mb-6">
                   <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-                    <FileText size={20} className="text-blue-500" />
-                    Tenho Interesse
+                    <CreditCard size={20} className="text-emerald-600" />
+                    Matrícula Online
                   </h3>
                   <p className="text-slate-500 text-xs font-medium leading-normal">
-                    Preencha o formulário e um consultor entrará em contato para te auxiliar com a matrícula e tirar suas dúvidas.
+                    Cadastre-se ou entre como aluno, realize o pagamento e acompanhe a liberação do curso no portal.
                   </p>
                 </div>
 
@@ -341,94 +471,34 @@ const EadDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Nome Completo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Seu nome completo"
-                      className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-semibold text-slate-800 transition-all"
-                      value={nome}
-                      onChange={e => setNome(e.target.value)}
-                    />
+                {curso.valor && curso.valor > 0 ? (
+                  <OnlineCheckoutButton courseId={curso.id} />
+                ) : (
+                  <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800">
+                    O valor deste curso ainda não foi configurado para compra online.
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      WhatsApp *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="(79) 99999-9999"
-                      className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-semibold text-slate-800 transition-all"
-                      value={whatsapp}
-                      onChange={handleWhatsappChange}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      E-mail (Opcional)
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="seu@email.com"
-                      className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-semibold text-slate-800 transition-all"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Polo Mais Próximo *
-                    </label>
-                    <div className="relative">
-                      <select
-                        className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-slate-800 transition-all appearance-none cursor-pointer"
-                        value={polo}
-                        onChange={e => setPolo(e.target.value)}
-                      >
-                        <option>Japoatã (Sede Matriz)</option>
-                        <option>Aquidabã (Filial)</option>
-                        <option>Porto da Folha (Filial)</option>
-                      </select>
-                      <MapPin className="absolute right-3.5 top-3 text-slate-400 pointer-events-none" size={14} />
+                <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                  {[
+                    { icon: UserPlus, text: 'Cadastro rápido com nome, CPF, WhatsApp, e-mail e senha.' },
+                    { icon: CreditCard, text: 'Pagamento online disponível para EAD, livres e especializações.' },
+                    { icon: Lock, text: 'Cursos técnicos continuam com atendimento e ficha completa.' },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-start gap-3 text-xs font-bold leading-relaxed text-slate-600">
+                      <Icon className="mt-0.5 shrink-0 text-blue-500" size={16} />
+                      <span>{text}</span>
                     </div>
-                  </div>
+                  ))}
+                </div>
 
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                      Mensagem ou Dúvida (Opcional)
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Dúvidas sobre o funcionamento das provas ou emissão de certificado."
-                      className="w-full px-4 py-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none font-semibold text-slate-800 transition-all resize-none"
-                      value={mensagem}
-                      onChange={e => setMensagem(e.target.value)}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-black py-4 rounded-xl transition-all shadow-md shadow-blue-500/10 uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="animate-spin text-white" size={14} />
-                    ) : (
-                      <>
-                        <Send size={12} />
-                        <span>Falar com Consultor</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+                <a
+                  href={`/login?mode=cadastro&redirect=${encodeURIComponent(detailPath)}`}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 py-3.5 text-[10px] font-black uppercase tracking-widest text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                >
+                  <UserPlus size={14} />
+                  Criar cadastro de aluno
+                </a>
               </div>
             </div>
 

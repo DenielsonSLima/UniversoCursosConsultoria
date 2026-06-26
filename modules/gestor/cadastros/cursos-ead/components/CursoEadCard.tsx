@@ -1,18 +1,19 @@
 // File: modules/gestor/cadastros/cursos-ead/components/CursoEadCard.tsx
 
 import React from 'react';
-import { Clock, GraduationCap, Copy, Power, PowerOff, Trash2, Edit3, CheckCircle2 } from 'lucide-react';
+import { Clock, GraduationCap, Copy, Power, PowerOff, Trash2, Edit3, CheckCircle2, CreditCard } from 'lucide-react';
 import { Curso, EadConfig } from '../../cadastros.types';
 
 interface CursoEadCardProps {
   curso: Curso;
-  onClick: () => void;
-  onDuplicate: (e: React.MouseEvent) => void;
-  onToggleStatus: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
+  onClick?: () => void;
+  onDuplicate?: (e: React.MouseEvent) => void;
+  onToggleStatus?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+  readOnly?: boolean;
 }
 
-const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete }) => {
+const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete, readOnly = false }) => {
   const area = curso.area || 'Saúde';
   const descricao = curso.descricao || `Curso livre na modalidade de Educação a Distância em ${curso.nome}.`;
 
@@ -72,12 +73,13 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
             <span className="font-bold">{curso.carga_horaria || 0}h EAD</span>
           </div>
           {curso.valor && curso.valor > 0 ? (
-            <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-md font-black text-[11px]">
+            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-md font-black text-[11px]">
+              <CreditCard size={12} />
               R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           ) : (
-            <span className="bg-slate-100 text-slate-550 px-2 py-0.5 rounded-md font-bold text-[10px]">
-              Sob Consulta
+            <span className="bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-md font-black text-[10px]">
+              Sem Valor
             </span>
           )}
         </div>
@@ -89,6 +91,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
         </div>
 
         {/* Ações */}
+        {!readOnly && (
         <div className="flex flex-col gap-2 relative z-20 pt-2 border-t border-slate-100">
           <button 
             onClick={onClick}
@@ -142,6 +145,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Decorative Gradient Glow */}

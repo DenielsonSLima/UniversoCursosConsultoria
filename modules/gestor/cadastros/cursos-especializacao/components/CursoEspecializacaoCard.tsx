@@ -6,13 +6,14 @@ import { Curso } from '../../cadastros.types';
 
 interface CursoEspecializacaoCardProps {
   curso: Curso;
-  onClick: () => void;
-  onDuplicate: (e: React.MouseEvent) => void;
-  onToggleStatus: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
+  onClick?: () => void;
+  onDuplicate?: (e: React.MouseEvent) => void;
+  onToggleStatus?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+  readOnly?: boolean;
 }
 
-const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete }) => {
+const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete, readOnly = false }) => {
   const area = curso.area || 'Saúde';
   const requisito = 'Graduação ou Curso Técnico concluído';
   const duracaoMeses = curso.carga_horaria >= 360 ? 12 : 6;
@@ -76,6 +77,7 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
           </div>
         )}
 
+        {!readOnly && (
         <div className="flex flex-col gap-2 relative z-20">
           <button 
             onClick={onClick}
@@ -126,6 +128,7 @@ const CursoEspecializacaoCard: React.FC<CursoEspecializacaoCardProps> = ({ curso
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Decorative */}

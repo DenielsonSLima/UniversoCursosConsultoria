@@ -27,20 +27,26 @@ interface DeclaracaoEditorProps {
   defaultValidityDays?: number;
   showValidity?: boolean;
   migrateDeclarationDefaults?: boolean;
+  hideBackButton?: boolean;
+  scopeLabel?: string;
 }
 
 // Variáveis de Texto
 const VARIABLES = [
   { code: '{{ALUNO_NOME}}', label: 'Nome do Aluno' },
   { code: '{{ALUNO_CPF}}', label: 'CPF do Aluno' },
-  { code: '{{ALUNO_RG}}', label: 'RG do Aluno' },
+  { code: '{{ALUNO_RG}}', label: 'RG/Documento do Aluno' },
+  { code: '{{ALUNO_DOCUMENTO_TIPO}}', label: 'Tipo de Documento (RG/CNH/CNI)' },
+  { code: '{{ALUNO_NASCIMENTO}}', label: 'Data de Nascimento' },
   { code: '{{ALUNO_MATRICULA}}', label: 'Matrícula' },
   { code: '{{CURSO_NOME}}', label: 'Nome do Curso' },
   { code: '{{TURMA_NOME}}', label: 'Nome da Turma' },
   { code: '{{POLO_NOME}}', label: 'Nome do Polo' },
+  { code: '{{POLO_CNPJ}}', label: 'CNPJ do Polo' },
   { code: '{{CIDADE_POLO}}', label: 'Cidade do Polo' },
   { code: '{{DATA_ATUAL}}', label: 'Data Atual (Extenso)' },
   { code: '{{HORA_ATUAL}}', label: 'Hora Atual' },
+  { code: '{{DATA_GERACAO}}', label: 'Data/Hora de Geração' },
   { code: '{{VALIDADE_DIAS}}', label: 'Dias de Validade' },
   { code: '{{VALIDADE_DATA}}', label: 'Data de Validade (Limite)' },
 ];
@@ -66,7 +72,9 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   validationPrefix = 'DEC',
   defaultValidityDays = 30,
   showValidity = true,
-  migrateDeclarationDefaults = true
+  migrateDeclarationDefaults = true,
+  hideBackButton = false,
+  scopeLabel
 }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -167,22 +175,40 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
           style: { textAlign: 'center', fontSize: '12px', color: '#475569' }
         },
         {
+          id: 'footer_valid_until',
+          type: 'text',
+          value: 'ESTE DOCUMENTO É VÁLIDO ATÉ <span style="color: #ef4444">{{VALIDADE_DATA}}</span>.',
+          x: 50,
+          y: 975,
+          width: 694,
+          style: { textAlign: 'center', fontSize: '9px', color: '#000000', fontWeight: 'bold', textTransform: 'uppercase' }
+        },
+        {
           id: 'footer_url',
           type: 'text',
-          value: 'Para verificar a autenticidade deste documento acesse: www.universocc.com.br/#/validador',
+          value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
           x: 50,
           y: 995,
           width: 694,
-          style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+          style: { textAlign: 'center', fontSize: '9px', color: '#000000', fontWeight: 'bold', textTransform: 'uppercase' }
         },
         {
           id: 'footer_validity',
           type: 'text',
-          value: 'Validade deste documento: {{VALIDADE_DIAS}} dias a partir da data de emissão.',
+          value: 'Validade deste documento: <span style="color: #ef4444">{{VALIDADE_DIAS}} dias a partir da data de emissão</span>.',
           x: 50,
           y: 1015,
           width: 694,
-          style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+          style: { textAlign: 'center', fontSize: '9px', color: '#000000', fontWeight: 'bold', textTransform: 'uppercase' }
+        },
+        {
+          id: 'footer_generation',
+          type: 'text',
+          value: 'DOCUMENTO GERADO EM: {{DATA_GERACAO}}',
+          x: 50,
+          y: 1035,
+          width: 694,
+          style: { textAlign: 'center', fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase' }
         }
       ];
 
@@ -374,16 +400,16 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
       {/* Toolbar Superior */}
       <div className="flex justify-between items-center mb-6 pb-6 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-4">
-            <button 
+            {!hideBackButton && <button
                 onClick={onBack}
                 className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors"
             >
                 <ArrowLeft size={20} />
-            </button>
+            </button>}
             <div>
                 <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">{editorTitle}</h3>
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                    Unidade: <span className="text-blue-600">{polo.nomeFantasia}</span>
+                    {scopeLabel ? 'Modalidade' : 'Unidade'}: <span className="text-blue-600">{scopeLabel || polo.nomeFantasia}</span>
                 </p>
             </div>
         </div>
@@ -400,7 +426,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
       <div className="flex flex-1 gap-8 overflow-hidden h-full">
         
         {/* Sidebar: Ferramentas */}
-        <div className="w-72 flex flex-col gap-6 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden h-full shrink-0">
+        <div className="w-72 flex flex-col gap-6 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm overflow-y-auto custom-scrollbar h-full shrink-0">
             
             {/* Seção de Validade do Documento */}
             {showValidity && <div className="border-b border-slate-100 pb-4 flex flex-col gap-2 shrink-0">
@@ -849,10 +875,10 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                             )}
 
                             {field.type === 'text' && (
-                                <>
-                                    <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1" />
-                                    {field.value}
-                                </>
+                                <div className="flex items-center w-full">
+                                    <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1 shrink-0" />
+                                    <span dangerouslySetInnerHTML={{ __html: field.value }} className="w-full break-words" />
+                                </div>
                             )}
 
                             <button 

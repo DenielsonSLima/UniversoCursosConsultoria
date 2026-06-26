@@ -36,6 +36,14 @@ export const BOLETIM_TECNICO_VARIABLES = [
   { code: '{{FREQUENCIA_GERAL}}', label: 'Frequência Geral' }
 ];
 
+export const ATESTADO_CONCLUSAO_TECNICO_VARIABLES = [
+  ...BASE_DOCUMENT_VARIABLES,
+  { code: '{{DATA_CONCLUSAO}}', label: 'Data de Conclusão' },
+  { code: '{{CARGA_HORARIA_TOTAL}}', label: 'Carga Horária Total' },
+  { code: '{{MEDIA_GERAL}}', label: 'Média Geral' },
+  { code: '{{FREQUENCIA_GERAL}}', label: 'Frequência Geral' },
+];
+
 export const ESTAGIO_VARIABLES = [
   ...BASE_DOCUMENT_VARIABLES,
   { code: '{{CONCEDENTE_NOME}}', label: 'Empresa Concedente' },

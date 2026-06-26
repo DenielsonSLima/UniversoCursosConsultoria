@@ -13,11 +13,11 @@ const normalizeSearchTerm = (term: string) =>
 
 export const getSecretariaContext = (): SecretariaContext => ({
   userId:
-    sessionStorage.getItem('logged_user_id') ||
+    window.sessionStorage.getItem('logged_user_id') ||
     'f1111111-1111-1111-1111-111111111111',
   poloId:
-    sessionStorage.getItem('current_polo_id') ||
-    sessionStorage.getItem('active_polo_id') ||
+    window.sessionStorage.getItem('current_polo_id') ||
+    window.sessionStorage.getItem('active_polo_id') ||
     '44444444-4444-4444-4444-444444444444',
 });
 
@@ -49,7 +49,9 @@ export const secretariaDocumentosService = {
   async getMatriculas(
     alunoId: string,
     poloId: string,
-    technicalOnly: boolean
+    technicalOnly: boolean,
+    completedOnly = false,
+    activeOnly = false
   ): Promise<SecretariaMatriculaResumo[]> {
     let query = supabase
       .from('matriculas')
@@ -58,6 +60,9 @@ export const secretariaDocumentosService = {
       .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
+    if (activeOnly) query = query.eq('status', 'ATIVO');
+    if (activeOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (completedOnly) query = query.eq('status', 'CONCLUIDO');
 
     const { data, error } = await query.order('data_matricula', { ascending: false });
     if (error) throw error;
@@ -74,7 +79,11 @@ export const secretariaDocumentosService = {
     }));
   },
 
-  async getTurmas(poloId: string, technicalOnly: boolean): Promise<SecretariaTurmaResumo[]> {
+  async getTurmas(
+    poloId: string,
+    technicalOnly: boolean,
+    _activeOnly = false
+  ): Promise<SecretariaTurmaResumo[]> {
     let query = supabase
       .from('turmas')
       .select('id, nome, codigo, turno, status, cursos!inner(nome, modalidade)')
@@ -94,7 +103,7 @@ export const secretariaDocumentosService = {
           .from('matriculas')
           .select('id', { count: 'exact', head: true })
           .eq('turma_id', turma.id)
-          .eq('status', 'ativo');
+          .eq('status', 'ATIVO');
         if (countError) throw countError;
         return count || 0;
       })
@@ -119,18 +128,28 @@ export const secretariaDocumentosService = {
     alunoId?: string;
     matriculaId?: string;
     turmaId?: string;
+    technicalOnly?: boolean;
+    activeOnly?: boolean;
+    completedOnly?: boolean;
   }) {
     let query = supabase
       .from('matriculas')
       .select(`
         id, status, data_matricula, aluno_id, turma_id,
         parceiros!inner(nome, cpf_cnpj, data_nascimento),
-        turmas!inner(nome, codigo, polo_id, cursos!inner(nome), polos!inner(nome))
+        turmas!inner(nome, codigo, polo_id, cursos!inner(nome, modalidade), polos!inner(nome))
       `)
       .or(`polo_id.eq.${input.context.poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
-    if (input.modo === 'individual') query = query.eq('id', input.matriculaId!);
-    else query = query.eq('turma_id', input.turmaId!).eq('status', 'ativo');
+    if (input.modo === 'individual') {
+      query = query.eq('id', input.matriculaId!);
+    } else {
+      query = query.eq('turma_id', input.turmaId!).eq('status', 'ATIVO');
+    }
+    if (input.technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
+    if (input.activeOnly) query = query.eq('status', 'ATIVO');
+    if (input.activeOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (input.completedOnly) query = query.eq('status', 'CONCLUIDO');
 
     const { data: matriculas, error: matriculasError } = await query;
     if (matriculasError) throw matriculasError;

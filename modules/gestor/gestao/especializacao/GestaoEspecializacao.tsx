@@ -6,38 +6,31 @@ import TurmaEspecializacaoForm from '../components/forms/TurmaEspecializacaoForm
 import TurmaEspecializacaoDetalhes from './detalhes/TurmaEspecializacaoDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
-import { cursosEspecializacaoService } from '../../cadastros/cursos-especializacao/cursos-especializacao.service';
+import TurmasFilters from '../components/TurmasFilters';
+import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 
 interface GestaoEspecializacaoProps {
   onToggleDetails?: (isOpen: boolean) => void;
+  poloId?: string;
 }
 
-const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'andamento' | 'finalizadas'>('andamento');
-  const [turmas, setTurmas] = useState<Turma[]>([]);
+const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId }) => {
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const list = useTurmasPaginadas('ESPECIALIZACAO', poloId);
 
-  const loadData = async () => {
-    const turmasData = await gestaoService.getTurmasByModalidade('ESPECIALIZACAO');
-    setTurmas(turmasData);
-    const cursosData = await gestaoService.getCursosByModalidade('ESPECIALIZACAO');
-    setCursosDisponiveis(cursosData);
-  };
+  useEffect(() => {
+    setSelectedTurma(null);
+    if (onToggleDetails) onToggleDetails(false);
+    gestaoService.getCursosByModalidade('ESPECIALIZACAO').then(setCursosDisponiveis);
+  }, [poloId]);
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
-    await loadData();
+    await list.reload();
   };
-
-  const filteredTurmas = turmas.filter(t => 
-    activeSubTab === 'andamento' ? t.status === 'EM_ANDAMENTO' : t.status === 'FINALIZADA'
-  );
 
   const handleSelectTurma = (turma: Turma) => {
     setSelectedTurma(turma);
@@ -81,9 +74,9 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
 
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
         <button 
-          onClick={() => setActiveSubTab('andamento')}
+          onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'andamento' 
+            list.status === 'EM_ANDAMENTO'
             ? 'text-rose-600 border-b-2 border-rose-600' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -91,9 +84,9 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
           <Activity size={14} /> Em Andamento
         </button>
         <button 
-          onClick={() => setActiveSubTab('finalizadas')}
+          onClick={() => list.changeStatus('FINALIZADA')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'finalizadas' 
+            list.status === 'FINALIZADA'
             ? 'text-slate-800 border-b-2 border-slate-800' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -102,15 +95,21 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         </button>
       </div>
 
+      <TurmasFilters {...list} onSearchChange={list.setSearch} onDataInicialChange={list.setDataInicial}
+        onDataFinalChange={list.setDataFinal} onSortByChange={list.changeSortBy}
+        onApply={list.applyFilters} onPageChange={list.setPage} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredTurmas.length === 0 ? (
+        {list.loading ? (
+          <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
+        ) : list.turmas.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-400">
                 Nenhuma turma encontrada.
             </div>
         ) : (
-            filteredTurmas.map(turma => (
+            list.turmas.map(turma => (
                 <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
-                  <TurmaCard turma={turma} colorTheme="rose" />
+                  <TurmaCard turma={turma} colorTheme="rose" showPoloDetails />
                 </div>
             ))
         )}
@@ -121,6 +120,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         onClose={() => setIsModalOpen(false)}
         onSave={handleCreate}
         cursosDisponiveis={cursosDisponiveis}
+        selectedPoloId={poloId}
       />
     </div>
   );

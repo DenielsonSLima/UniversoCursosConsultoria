@@ -9,7 +9,7 @@ const DEFAULT_QR_CONFIG = {
 };
 
 const defaultTemplate = {
-  textContent: `<p>Declaramos para fins de comprovação de rendimentos no Imposto de Renda que o(a) estudante <b>{{ALUNO_NOME}}</b>, inscrito(a) no CPF sob o nº {{ALUNO_CPF}} e registro acadêmico nº {{ALUNO_MATRICULA}}, regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, efetuou nesta instituição de ensino no ano-calendário <b>{{ANO_CALENDARIO}}</b> o pagamento de encargos educacionais e mensalidades escolares no valor total de R$ <b>{{VALOR_TOTAL}}</b> ({{VALOR_EXTENSO}}).</p>`,
+  textContent: `<p>Declaramos, para fins de comprovação no Imposto de Renda, que <b>{{RESPONSAVEL_FINANCEIRO_NOME}}</b>, inscrito(a) no CPF sob o nº <b>{{RESPONSAVEL_FINANCEIRO_CPF}}</b>, efetuou nesta instituição de ensino, no ano-calendário <b>{{ANO_CALENDARIO}}</b>, pagamentos de encargos educacionais no valor total de R$ <b>{{VALOR_TOTAL}}</b> ({{VALOR_EXTENSO}}), referentes ao(à) estudante <b>{{ALUNO_NOME}}</b>, CPF nº <b>{{ALUNO_CPF}}</b>, registro acadêmico nº <b>{{ALUNO_MATRICULA}}</b>, vinculado(a) ao curso de <b>{{CURSO_NOME}}</b>.</p>`,
   absoluteFields: [
     {
       id: 'data_field',

@@ -21,6 +21,16 @@ Plataforma online de gestão acadêmica e escolar para controle de alunos, polos
 - **Tabela de templates (`documentos_templates`):** Criada no Supabase para guardar as configurações JSON dos modelos (`carteirinha`, `cracha`, `diplomas`, `assinaturas`, `academicos_config`, `declaracao_*`, `irpf_*`, `estagio_*`).
 - **Comunicação por Agentes e RAG:** A IA opera com agentes e subagentes autônomos. Toda alteração estrutural deve atualizar os arquivos de RAG (`PROJETO_CONTEXTO.md` e `PROJETO_ALTERACOES.md`) para que o conhecimento persista entre as chamadas do modelo.
 
+## Prioridades atuais do produto
+- **Foco principal:** consolidar primeiro a gestão acadêmica dos **cursos técnicos**, especialmente turmas, matrículas, diários e movimentações acadêmicas.
+- **Próximos processos acadêmicos:** trancamento, desistência, transferências internas e externas, recuperação e fechamento de períodos letivos.
+- **EAD:** cada curso EAD deve possuir uma única turma operacional; essa regra precisa ser garantida no banco/RPC, não apenas na interface.
+- **Financeiro por último:** o módulo financeiro será a etapa final do desenvolvimento, depois da consolidação acadêmica.
+- **Zero dados simulados:** remover números, estados e resultados fictícios dos módulos; quando não houver dado real, exibir estado vazio ou “não configurado”.
+- **Frontend sem regra de negócio:** cálculos, transições de status, fechamentos e movimentações devem ser processados de forma transacional no Supabase por RPC/functions.
+- **Estado remoto:** consultas e mutações devem usar TanStack Query, com invalidação consistente e Realtime quando útil.
+- **Persistência:** dados acadêmicos e configurações permanecem exclusivamente no Supabase; `sessionStorage` serve apenas para contexto temporário da sessão.
+
 ## Erros comuns — não repita
 - **Mensagens Genéricas do Navegador:** Nunca use `alert()`, `confirm()` ou `prompt()` do navegador. Mensagens genéricas violam a estética da UI e o controle do sistema. Use o padrão de toast da UI (`useToast`).
 - **Cálculos no Frontend:** Evite fazer adições, multiplicações financeiras ou validações complexas de data/valores diretamente em componentes. Chame um RPC do Supabase para processar e retornar o resultado de forma transacional segura.

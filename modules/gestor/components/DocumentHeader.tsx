@@ -1,5 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Building2 } from 'lucide-react';
+import { empresasService } from '../configuracoes/empresas/empresas.service';
+
+let principalCompanyLogoCache: string | null | undefined;
+let principalCompanyLogoRequest: Promise<string | null> | null = null;
+
+const getPrincipalCompanyLogo = async () => {
+  if (principalCompanyLogoCache !== undefined) return principalCompanyLogoCache;
+
+  if (!principalCompanyLogoRequest) {
+    principalCompanyLogoRequest = empresasService
+      .getCompanyPrincipal()
+      .then((company) => {
+        principalCompanyLogoCache = company?.logoUrl || null;
+        return principalCompanyLogoCache;
+      })
+      .catch((error) => {
+        console.error('[DocumentHeader] Erro ao carregar logo da empresa principal:', error);
+        principalCompanyLogoCache = null;
+        return null;
+      });
+  }
+
+  return principalCompanyLogoRequest;
+};
 
 interface DocumentHeaderProps {
   logoUrl?: string;
@@ -18,6 +42,7 @@ interface DocumentHeaderProps {
   // direct data objects
   polo?: {
     logoUrl?: string;
+    logo_url?: string;
     nomeFantasia?: string;
     nome?: string;
     cnpj?: string;
@@ -32,6 +57,7 @@ interface DocumentHeaderProps {
   };
   company?: {
     logoUrl?: string;
+    logo_url?: string;
     nomeFantasia?: string;
     razaoSocial?: string;
     cnpj?: string;
@@ -67,8 +93,26 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
   orientation = 'portrait',
   rightContent
 }) => {
+  const providedLogoUrl = logoUrl || polo?.logoUrl || polo?.logo_url || company?.logoUrl || company?.logo_url;
+  const [principalLogoUrl, setPrincipalLogoUrl] = useState<string | null>(
+    principalCompanyLogoCache || null
+  );
+
+  useEffect(() => {
+    if (providedLogoUrl) return;
+
+    let isMounted = true;
+    getPrincipalCompanyLogo().then((mainLogoUrl) => {
+      if (isMounted) setPrincipalLogoUrl(mainLogoUrl);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [providedLogoUrl]);
+
   // Resolve data fields prioritizing overrides, then polo, then company
-  const resolvedLogoUrl = logoUrl || polo?.logoUrl || company?.logoUrl;
+  const resolvedLogoUrl = providedLogoUrl || principalLogoUrl;
   let resolvedNome = nomeFantasia || polo?.nomeFantasia || polo?.nome || company?.nomeFantasia || company?.razaoSocial || 'UNIVERSO CURSOS E CONSULTORIA';
   
   // Clean up "Matriz - " prefix if it exists in the name

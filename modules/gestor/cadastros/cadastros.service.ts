@@ -1,7 +1,136 @@
 // File: modules/gestor/cadastros/cadastros.service.ts
 
 import { supabase } from '../../../lib/supabase';
-import { Curso, Modulo } from './cadastros.types';
+import { Curso, CursoFinanceiroConfig, Modulo } from './cadastros.types';
+
+export const DEFAULT_CURSO_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
+  valorBase: 279,
+  descontoPontualidade: 19,
+  parcelasPadrao: 1,
+  taxaPagaPor: 'aluno',
+  metodosRecebimento: {
+    pix: true,
+    boleto: true,
+    cartao: true
+  },
+  descontoMetodo: {
+    pix: true,
+    boleto: true,
+    cartao: false
+  },
+  cartao: {
+    aceitar: true,
+    maxParcelas: 2,
+    aplicarDescontoPontualidade: false
+  },
+  asaas: {
+    gerarParcelamentoMensalidades: true,
+    tipoCarnePreferencial: 'PARCELAMENTO'
+  }
+};
+
+export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
+  ...DEFAULT_CURSO_FINANCEIRO_CONFIG,
+  parcelasPadrao: 1,
+  descontoPontualidade: 0,
+  descontoMetodo: {
+    pix: false,
+    boleto: false,
+    cartao: false
+  },
+  cartao: {
+    aceitar: true,
+    maxParcelas: 2,
+    aplicarDescontoPontualidade: false
+  },
+  asaas: {
+    gerarParcelamentoMensalidades: false,
+    tipoCarnePreferencial: 'COBRANCAS_AVULSAS'
+  }
+};
+
+export const normalizeCursoFinanceiroConfig = (
+  config?: Partial<CursoFinanceiroConfig> | null,
+  modalidade?: Curso['modalidade']
+): CursoFinanceiroConfig => ({
+  ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG),
+  ...(config || {}),
+  metodosRecebimento: {
+    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).metodosRecebimento,
+    ...(config?.metodosRecebimento || {})
+  },
+  descontoMetodo: {
+    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).descontoMetodo,
+    ...(config?.descontoMetodo || {})
+  },
+  cartao: {
+    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).cartao,
+    ...(config?.cartao || {})
+  },
+  asaas: {
+    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).asaas,
+    ...(config?.asaas || {}),
+    ...(modalidade === 'EAD'
+      ? {
+          gerarParcelamentoMensalidades: false,
+          tipoCarnePreferencial: 'COBRANCAS_AVULSAS' as const
+        }
+      : {})
+  }
+});
+
+const buildCursoCreatePayload = (curso: Omit<Curso, 'id'>) => {
+  const payload: any = {
+    nome: curso.nome,
+    carga_horaria: curso.carga_horaria,
+    modalidade: curso.modalidade,
+    status: curso.status,
+    area: curso.area || 'Outros',
+    descricao: curso.descricao || '',
+    versao: curso.versao || '1.0',
+    parceiro_instituicao: curso.parceiro_instituicao || null,
+    parceiro_logo_url: curso.parceiro_logo_url || null,
+    imagem_url: curso.imagem_url || null,
+    duracao_meses: curso.duracao_meses || null,
+    publicar_site: curso.publicar_site || false,
+    imagem_detalhe_1: curso.imagem_detalhe_1 || null,
+    imagem_detalhe_2: curso.imagem_detalhe_2 || null,
+    valor: curso.valor !== undefined ? curso.valor : null,
+    ead_config: curso.ead_config || {}
+  };
+
+  if (curso.modalidade === 'TECNICO' || curso.financeiro_config) {
+    payload.financeiro_config = normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade);
+  }
+
+  return payload;
+};
+
+const buildCursoUpdatePayload = (curso: Curso) => {
+  const payload: any = {
+    nome: curso.nome,
+    carga_horaria: curso.carga_horaria,
+    status: curso.status,
+    area: curso.area,
+    descricao: curso.descricao,
+    versao: curso.versao,
+    parceiro_instituicao: curso.parceiro_instituicao || null,
+    parceiro_logo_url: curso.parceiro_logo_url || null,
+    imagem_url: curso.imagem_url || null,
+    duracao_meses: curso.duracao_meses || null,
+    publicar_site: curso.publicar_site !== undefined ? curso.publicar_site : false,
+    imagem_detalhe_1: curso.imagem_detalhe_1 !== undefined ? curso.imagem_detalhe_1 : null,
+    imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null,
+    valor: curso.valor !== undefined ? curso.valor : null,
+    ead_config: curso.ead_config !== undefined ? curso.ead_config : null
+  };
+
+  if (curso.financeiro_config !== undefined || curso.modalidade === 'TECNICO') {
+    payload.financeiro_config = normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade);
+  }
+
+  return payload;
+};
 
 export const cadastrosService = {
   // Busca todos os cursos de uma modalidade (ativos e inativos para abas separadas)
@@ -38,30 +167,17 @@ export const cadastrosService = {
   async createCurso(curso: Omit<Curso, 'id'>): Promise<Curso> {
     const { data, error } = await supabase
       .from('cursos')
-      .insert({
-        nome: curso.nome,
-        carga_horaria: curso.carga_horaria,
-        modalidade: curso.modalidade,
-        status: curso.status,
-        area: curso.area || 'Outros',
-        descricao: curso.descricao || '',
-        versao: curso.versao || '1.0',
-        parceiro_instituicao: curso.parceiro_instituicao || null,
-        parceiro_logo_url: curso.parceiro_logo_url || null,
-        imagem_url: curso.imagem_url || null,
-        duracao_meses: curso.duracao_meses || null,
-        publicar_site: curso.publicar_site || false,
-        imagem_detalhe_1: curso.imagem_detalhe_1 || null,
-        imagem_detalhe_2: curso.imagem_detalhe_2 || null,
-        valor: curso.valor !== undefined ? curso.valor : null,
-        ead_config: curso.ead_config || {}
-      })
+      .insert(buildCursoCreatePayload(curso))
       .select()
       .single();
       
       if (error) {
         console.error('Erro ao criar curso:', error);
         throw error;
+      }
+
+      if (data?.modalidade === 'EAD' && data?.publicar_site) {
+        await this.autoCreateEadTurma(data);
       }
       
       return data;
@@ -71,28 +187,16 @@ export const cadastrosService = {
   async updateCurso(curso: Curso): Promise<void> {
     const { error } = await supabase
       .from('cursos')
-      .update({
-        nome: curso.nome,
-        carga_horaria: curso.carga_horaria,
-        status: curso.status,
-        area: curso.area,
-        descricao: curso.descricao,
-        versao: curso.versao,
-        parceiro_instituicao: curso.parceiro_instituicao || null,
-        parceiro_logo_url: curso.parceiro_logo_url || null,
-        imagem_url: curso.imagem_url || null,
-        duracao_meses: curso.duracao_meses || null,
-        publicar_site: curso.publicar_site !== undefined ? curso.publicar_site : false,
-        imagem_detalhe_1: curso.imagem_detalhe_1 !== undefined ? curso.imagem_detalhe_1 : null,
-        imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null,
-        valor: curso.valor !== undefined ? curso.valor : null,
-        ead_config: curso.ead_config !== undefined ? curso.ead_config : null
-      })
+      .update(buildCursoUpdatePayload(curso))
       .eq('id', curso.id);
       
     if (error) {
       console.error('Erro ao atualizar curso:', error);
       throw error;
+    }
+
+    if (curso.modalidade === 'EAD' && curso.publicar_site) {
+      await this.autoCreateEadTurma(curso);
     }
   },
 
@@ -181,7 +285,8 @@ export const cadastrosService = {
         status: 'ativo',
         area: curso.area,
         descricao: curso.descricao,
-        versao: novaVersao
+        versao: novaVersao,
+        financeiro_config: curso.financeiro_config || null
       })
       .select()
       .single();
@@ -228,6 +333,7 @@ export const cadastrosService = {
         imagem_url: curso.imagem_url,
         valor: curso.valor,
         ead_config: curso.ead_config || {},
+        financeiro_config: curso.financeiro_config || null,
         duracao_meses: curso.duracao_meses || 12,
         publicar_site: false // Começa como rascunho (não publicado) ao duplicar
       })

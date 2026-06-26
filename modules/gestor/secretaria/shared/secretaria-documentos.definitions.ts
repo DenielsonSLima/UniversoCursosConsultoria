@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   BriefcaseBusiness,
   ClipboardCheck,
+  BadgeCheck as CompletionBadge,
   FileBadge,
   FileCheck2,
   Landmark,
@@ -41,6 +42,21 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-indigo-700',
     softAccent: 'bg-indigo-50',
     technicalOnly: true,
+    academicPreview: 'boletim_tecnico',
+  },
+  atestadoConclusao: {
+    id: 'atestado_conclusao_tecnico',
+    title: 'Atestado de Conclusão',
+    description: 'Comprovação provisória de conclusão para estudantes de cursos técnicos.',
+    singularLabel: 'Atestado de Conclusão',
+    actionLabel: 'Emitir atestado',
+    icon: CompletionBadge,
+    accent: 'text-emerald-700',
+    softAccent: 'bg-emerald-50',
+    technicalOnly: true,
+    completedOnly: true,
+    allowBatch: false,
+    academicPreview: 'atestado_conclusao_tecnico',
   },
   declaracaoIrpf: {
     id: 'declaracao_irpf',
@@ -51,6 +67,8 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     icon: Landmark,
     accent: 'text-amber-700',
     softAccent: 'bg-amber-50',
+    technicalOnly: true,
+    activeOnly: true,
   },
   historicoEscolar: {
     id: 'historico_escolar',
@@ -72,6 +90,7 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-rose-700',
     softAccent: 'bg-rose-50',
     technicalOnly: true,
+    activeOnly: true,
   },
   rematricula: {
     id: 'rematricula',
@@ -82,6 +101,8 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     icon: RefreshCcw,
     accent: 'text-violet-700',
     softAccent: 'bg-violet-50',
+    technicalOnly: true,
+    activeOnly: true,
   },
   termoEstagio: {
     id: 'termo_estagio',
@@ -93,5 +114,6 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-teal-700',
     softAccent: 'bg-teal-50',
     technicalOnly: true,
+    activeOnly: true,
   },
 };

@@ -28,10 +28,18 @@ export interface Polo {
 
 export const polosService = {
   async getAll(): Promise<Polo[]> {
-    const { data, error } = await supabase
-      .from('polos')
-      .select('*, empresas(*)')
-      .order('nome', { ascending: true });
+    const [{ data, error }, { data: principalCompany }] = await Promise.all([
+      supabase
+        .from('polos')
+        .select('*, empresas(*)')
+        .order('nome', { ascending: true }),
+      supabase
+        .from('empresas')
+        .select('logo_url')
+        .order('id', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
     if (error) {
       console.error('Erro ao buscar polos:', error);
@@ -51,7 +59,7 @@ export const polosService = {
       created_at: p.created_at,
       company_id: p.company_id,
       is_matriz: p.is_matriz,
-      logoUrl: p.logo_url || p.empresas?.logo_url || '',
+      logoUrl: p.logo_url || p.empresas?.logo_url || principalCompany?.logo_url || '',
       endereco: p.endereco || p.empresas?.endereco || '',
       numero: p.numero || p.empresas?.numero || '',
       bairro: p.bairro || p.empresas?.bairro || '',
@@ -152,11 +160,19 @@ export const polosService = {
   },
 
   async getById(id: string): Promise<Polo> {
-    const { data, error } = await supabase
-      .from('polos')
-      .select('*, empresas(*)')
-      .eq('id', id)
-      .maybeSingle();
+    const [{ data, error }, { data: principalCompany }] = await Promise.all([
+      supabase
+        .from('polos')
+        .select('*, empresas(*)')
+        .eq('id', id)
+        .maybeSingle(),
+      supabase
+        .from('empresas')
+        .select('logo_url')
+        .order('id', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
     if (error) {
       console.error('Erro ao buscar polo por ID:', error);
@@ -179,7 +195,7 @@ export const polosService = {
       created_at: p.created_at,
       company_id: p.company_id,
       is_matriz: p.is_matriz,
-      logoUrl: p.logo_url || p.empresas?.logo_url || '',
+      logoUrl: p.logo_url || p.empresas?.logo_url || principalCompany?.logo_url || '',
       endereco: p.endereco || p.empresas?.endereco || '',
       numero: p.numero || p.empresas?.numero || '',
       bairro: p.bairro || p.empresas?.bairro || '',

@@ -1,20 +1,24 @@
 // File: modules/gestor/cadastros/cursos-especializacao/CursosEspecializacaoPage.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Award, Plus, Loader2, X, Copy, Power, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Award, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import CursoEspecializacaoCard from './components/CursoEspecializacaoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
-import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
+import { CursoCadastroStatusFilter } from '../curso-modalidade.service';
+import { useCursoModalidadeQueries } from '../hooks/useCursoModalidadeQueries';
+import { useCursoModalidadeRealtime } from '../hooks/useCursoModalidadeRealtime';
+import { useCursoModalidadeMutations } from '../hooks/useCursoModalidadeMutations';
 
-const CursosEspecializacaoPage: React.FC = () => {
+interface CursosEspecializacaoPageProps {
+  readOnly?: boolean;
+}
+
+const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ readOnly = false }) => {
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
-  const [cursos, setCursos] = useState<Curso[]>([]);
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Filtro de Status ('ativo' | 'inativo')
-  const [statusFilter, setStatusFilter] = useState<'ativo' | 'inativo'>('ativo');
+  const [statusFilter, setStatusFilter] = useState<CursoCadastroStatusFilter>('ativo');
 
   // Estados para Modal de Novo Curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -49,22 +53,49 @@ const CursosEspecializacaoPage: React.FC = () => {
 
   const areasDisponiveis = ['Saúde', 'Gestão', 'Tecnologia', 'Educação', 'Outros'];
 
-  useEffect(() => {
-    loadCursos();
-  }, []);
-
-  const loadCursos = async () => {
-    setLoading(true);
-    try {
-      const data = await cadastrosService.getCursosByModalidade('ESPECIALIZACAO');
-      setCursos(data);
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao carregar especializações técnicas.', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const resetCreateForm = () => {
+    setShowCreateModal(false);
+    setNewCursoNome('');
+    setNewCursoDesc('');
+    setNewCursoArea('Saúde');
+    setNewCursoVersao('1.0');
   };
+
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDuplicateTargetId(null);
+  };
+
+  const { cursosQuery, invalidateCursosModalidade } = useCursoModalidadeQueries('ESPECIALIZACAO');
+  useCursoModalidadeRealtime('ESPECIALIZACAO', invalidateCursosModalidade);
+
+  const {
+    createMutation,
+    duplicateMutation,
+    toggleStatusMutation,
+    deleteMutation
+  } = useCursoModalidadeMutations({
+    modalidade: 'ESPECIALIZACAO',
+    invalidateCursosModalidade,
+    showToast,
+    resetCreateForm,
+    closeDuplicateModal,
+    setIsCreatingCurso,
+    setIsDuplicating,
+    messages: {
+      createSuccess: 'Especialização criada com sucesso!',
+      createError: 'Erro ao criar especialização no Supabase.',
+      duplicateSuccess: 'Especialização duplicada com sucesso!',
+      duplicateError: 'Erro ao duplicar especialização.',
+      deleteSuccess: 'Especialização excluída com sucesso!',
+      deleteError: 'Erro ao excluir a especialização.',
+      toggleSuccess: (novoStatus) => `Especialização ${novoStatus === 'inativo' ? 'inativada' : 'ativada'} com sucesso!`,
+      toggleError: 'Erro ao alterar status do curso.'
+    }
+  });
+
+  const cursos = cursosQuery.data || [];
+  const loading = cursosQuery.isLoading;
 
   const handleSelectCurso = (curso: Curso) => {
     setSelectedCurso(curso);
@@ -74,7 +105,7 @@ const CursosEspecializacaoPage: React.FC = () => {
   const handleBack = () => {
     setSelectedCurso(null);
     setViewState('list');
-    loadCursos();
+    invalidateCursosModalidade();
   };
 
   // Criação de Curso
@@ -83,29 +114,12 @@ const CursosEspecializacaoPage: React.FC = () => {
     if (!newCursoNome.trim()) return;
 
     setIsCreatingCurso(true);
-    try {
-      await cadastrosService.createCurso({
-        nome: newCursoNome,
-        carga_horaria: 0, // Inicia em 0 e é calculada pelas aulas na grade curricular
-        modalidade: 'ESPECIALIZACAO',
-        status: 'ativo',
-        area: newCursoArea,
-        descricao: newCursoDesc,
-        versao: newCursoVersao
-      });
-      setShowCreateModal(false);
-      setNewCursoNome('');
-      setNewCursoDesc('');
-      setNewCursoArea('Saúde');
-      setNewCursoVersao('1.0');
-      loadCursos();
-      showToast('Especialização criada com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao criar especialização no Supabase.', 'error');
-    } finally {
-      setIsCreatingCurso(false);
-    }
+    createMutation.mutate({
+      nome: newCursoNome,
+      descricao: newCursoDesc,
+      area: newCursoArea,
+      versao: newCursoVersao
+    });
   };
 
   // Duplicação de Curso
@@ -123,18 +137,11 @@ const CursosEspecializacaoPage: React.FC = () => {
     if (!duplicateTargetId || !duplicateNome.trim()) return;
 
     setIsDuplicating(true);
-    try {
-      await cadastrosService.duplicateCurso(duplicateTargetId, duplicateNome, duplicateVersao);
-      setShowDuplicateModal(false);
-      setDuplicateTargetId(null);
-      loadCursos();
-      showToast('Especialização duplicada com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao duplicar especialização.', 'error');
-    } finally {
-      setIsDuplicating(false);
-    }
+    duplicateMutation.mutate({
+      cursoId: duplicateTargetId,
+      nome: duplicateNome,
+      versao: duplicateVersao
+    });
   };
 
   // Alterar Status (Ativo/Inativo)
@@ -149,16 +156,7 @@ const CursosEspecializacaoPage: React.FC = () => {
       isOpen: true,
       title: novoStatus === 'inativo' ? 'Pausar Curso' : 'Reativar Curso',
       message: confirmMsg,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.toggleStatus(curso.id, novoStatus);
-          loadCursos();
-          showToast(`Especialização ${novoStatus === 'inativo' ? 'inativada' : 'ativada'} com sucesso!`, 'success');
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao alterar status do curso.', 'error');
-        }
-      }
+      onConfirm: () => toggleStatusMutation.mutate({ cursoId: curso.id, novoStatus })
     });
   };
 
@@ -175,16 +173,7 @@ const CursosEspecializacaoPage: React.FC = () => {
       isOpen: true,
       title: 'Excluir Especialização',
       message: `Tem certeza de que deseja EXCLUIR definitivamente a especialização "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.deleteCurso(curso.id);
-          loadCursos();
-          showToast('Especialização excluída com sucesso!', 'success');
-        } catch (err: any) {
-          console.error(err);
-          showToast(err.message || 'Erro ao excluir a especialização.', 'error');
-        }
-      }
+      onConfirm: () => deleteMutation.mutate(curso.id)
     });
   };
 
@@ -206,7 +195,7 @@ const CursosEspecializacaoPage: React.FC = () => {
       <CursoGradeCurricularDetails 
         curso={selectedCurso} 
         onBack={handleBack} 
-        onUpdate={loadCursos}
+        onUpdate={invalidateCursosModalidade}
       />
     );
   }
@@ -224,13 +213,19 @@ const CursosEspecializacaoPage: React.FC = () => {
           </p>
         </div>
         
-        <button 
+        {!readOnly && <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-rose-600 transition-colors shadow-lg shadow-rose-900/20"
         >
           <Plus size={16} /> Nova Especialização
-        </button>
+        </button>}
       </div>
+
+      {readOnly && (
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+          Modo de visualização do polo: cadastros e alterações são exclusivos da Matriz.
+        </div>
+      )}
 
       {/* Tabs de Filtro de Status */}
       <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-xs border border-slate-200">
@@ -278,6 +273,7 @@ const CursosEspecializacaoPage: React.FC = () => {
                   <CursoEspecializacaoCard 
                     key={curso.id} 
                     curso={curso} 
+                    readOnly={readOnly}
                     onClick={() => handleSelectCurso(curso)} 
                     onDuplicate={(e) => handleOpenDuplicate(curso, e)}
                     onToggleStatus={(e) => handleToggleStatus(curso, e)}
@@ -291,7 +287,7 @@ const CursosEspecializacaoPage: React.FC = () => {
       )}
 
       {/* Modal Criar Novo Curso */}
-      {showCreateModal && (
+      {!readOnly && showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
             <button 
@@ -373,7 +369,7 @@ const CursosEspecializacaoPage: React.FC = () => {
       )}
 
       {/* Modal Duplicar */}
-      {showDuplicateModal && (
+      {!readOnly && showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
             <button 

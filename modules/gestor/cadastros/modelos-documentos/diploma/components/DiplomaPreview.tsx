@@ -1,7 +1,9 @@
 // File: modules/gestor/cadastros/modelos-documentos/diploma/components/DiplomaPreview.tsx
 
-import React from 'react';
-import { QrCode, Award, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Award, X } from 'lucide-react';
+import { getDocumentValidationUrl, getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
+import { assinaturasService, AssinaturasData } from '../../../../configuracoes/assinaturas/assinaturas.service';
 
 interface DiplomaPreviewProps {
   formData: any;
@@ -25,19 +27,90 @@ export const posicoesPadrao: Record<string, { x: number; y: number }> = {
   assinatura2: { x: 55.0, y: 78.0 },
   qrcode: { x: 80.0, y: 72.0 },
   // Verso
+  validacaoSite: { x: 50.0, y: 76.0 },
   historico: { x: 5.0, y: 10.0 },
   registro: { x: 65.0, y: 10.0 },
   carimbo: { x: 65.0, y: 70.0 },
   versoQrcode: { x: 65.0, y: 44.0 }
 };
 
+const normalizeSignatureBlock = (block: any) => {
+  if (block?.type !== 'signature') return block;
+
+  const signatureDefaultSource =
+    block.id === 'assinatura1'
+      ? 'diretoriaGeral'
+      : block.id === 'assinatura2'
+      ? 'none'
+      : 'none';
+  const legacySignatureSource = ['secretaria', 'coordenacao', 'coordenação'].includes(block.signatureSource)
+    ? 'none'
+    : block.signatureSource;
+  const legacyTitle = String(block.title || '').toLowerCase();
+  const title = block.id === 'assinatura1'
+    ? 'Diretor Geral'
+    : block.id === 'assinatura2' && (!block.title || legacyTitle.includes('secretaria') || legacyTitle.includes('coordena'))
+    ? 'Aluno(a)'
+    : block.title || 'Assinatura';
+
+  return {
+    ...block,
+    signatureSource: legacySignatureSource ?? signatureDefaultSource,
+    signatureImageUrl: block.signatureImageUrl || '',
+    signatureBlend: block.signatureBlend ?? true,
+    signatureLabelFontSize: block.signatureLabelFontSize != null ? Number(block.signatureLabelFontSize) : 10,
+    label: block.id === 'assinatura2' ? 'Assinatura do(a) Aluno(a)' : block.label,
+    title,
+  };
+};
+
+const isTechnicalCertificate = (formData: any) =>
+  formData?.tipoCurso === 'Cursos Técnicos' || formData?.id === 'certificado_tecnico';
+
+const validationSiteContent =
+  '<strong>www.universocc.com.br/validador</strong><br /><strong>AVISO DE AUTENTICIDADE:</strong> consulte a autenticidade deste certificado pelo QR Code ou pelo código de autenticidade.';
+
+const normalizeLegacyBlock = (block: any, formData: any) => {
+  const technical = isTechnicalCertificate(formData);
+  let normalized = normalizeSignatureBlock(block);
+
+  if (normalized.id === 'cidadeData' && /aracaju\/se/i.test(String(normalized.content || ''))) {
+    normalized = { ...normalized, content: '{{cidade_uf}}, {{data_conclusao}}' };
+  }
+
+  if (normalized.id === 'historico' && !technical) {
+    const legacyContent = String(normalized.content || '');
+    if (/sistec|c[oó]digo de autenticidade|livro_registro|certificado expedido/i.test(legacyContent)) {
+      normalized = { ...normalized, content: 'Conteúdo Programático:\n\n{{grade_curricular}}' };
+    }
+  }
+
+  if (normalized.id === 'registro') {
+    normalized = { ...normalized, visible: technical && normalized.visible !== false };
+  }
+
+  if (normalized.id === 'carimbo' && !technical) {
+    normalized = { ...normalized, visible: false };
+  }
+
+  if (normalized.id === 'validacaoSite') {
+    normalized = {
+      ...normalized,
+      x: normalized.x ?? posicoesPadrao.validacaoSite.x,
+      y: Number(normalized.y) > 95 ? posicoesPadrao.validacaoSite.y : normalized.y ?? posicoesPadrao.validacaoSite.y,
+      content: validationSiteContent,
+      visible: formData.hasVerso !== false,
+    };
+  }
+
+  return normalized;
+};
+
 export const getBlocks = (formData: any) => {
-  if (formData.blocks && formData.blocks.length > 0) return formData.blocks;
-  
   // Se não existir o array de blocks, vamos construí-lo a partir dos dados do modelo e posições
   const pos = formData.posicoes || posicoesPadrao;
-  
-  return [
+  const technical = isTechnicalCertificate(formData);
+  const defaultBlocks = [
     {
       id: 'selo',
       type: 'logo',
@@ -56,6 +129,11 @@ export const getBlocks = (formData: any) => {
       x: pos.titulo?.x ?? posicoesPadrao.titulo.x,
       y: pos.titulo?.y ?? posicoesPadrao.titulo.y,
       fontSize: formData.tamanhoFonteTitulo || 45,
+      width: 650,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: "'Playfair Display', serif",
+      fontWeight: '900',
+      textAlign: 'center',
       content: 'Certificado',
       visible: formData.exibirTitulo !== false
     },
@@ -67,6 +145,11 @@ export const getBlocks = (formData: any) => {
       x: pos.subtitulo?.x ?? posicoesPadrao.subtitulo.x,
       y: pos.subtitulo?.y ?? posicoesPadrao.subtitulo.y,
       fontSize: formData.tamanhoFonteSubtitulo || 14,
+      width: 650,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: 'sans-serif',
+      fontWeight: '700',
+      textAlign: 'center',
       content: 'De Conclusão de Curso',
       visible: formData.exibirSubtitulo !== false
     },
@@ -78,6 +161,11 @@ export const getBlocks = (formData: any) => {
       x: pos.texto?.x ?? posicoesPadrao.texto.x,
       y: pos.texto?.y ?? posicoesPadrao.texto.y,
       fontSize: formData.tamanhoFonteTexto || 24,
+      width: 650,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: 'serif',
+      fontWeight: '400',
+      textAlign: 'center',
       content: formData.textoFrente || 'Certificamos que {{nome_aluno}} concluiu o curso de {{curso_nome}} com carga horária de {{carga_horaria}} horas.',
       visible: formData.exibirTexto !== false
     },
@@ -89,7 +177,12 @@ export const getBlocks = (formData: any) => {
       x: pos.cidadeData?.x ?? posicoesPadrao.cidadeData.x,
       y: pos.cidadeData?.y ?? posicoesPadrao.cidadeData.y,
       fontSize: formData.tamanhoFonteCidadeData || 12,
-      content: 'Aracaju/SE, {{data_conclusao}}',
+      width: 650,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: 'sans-serif',
+      fontWeight: '700',
+      textAlign: 'center',
+      content: '{{cidade_uf}}, {{data_conclusao}}',
       visible: formData.exibirCidadeData !== false
     },
     {
@@ -101,17 +194,21 @@ export const getBlocks = (formData: any) => {
       y: pos.assinatura1?.y ?? posicoesPadrao.assinatura1.y,
       width: formData.assinaturaWidth || 256,
       title: 'Diretor Geral',
+      signatureSource: 'diretoriaGeral',
+      signatureImageUrl: '',
+      signatureBlend: true,
+      signatureLabelFontSize: 10,
       visible: formData.exibirAssinatura1 !== false
     },
     {
       id: 'assinatura2',
       type: 'signature',
-      label: 'Assinatura Secretaria',
+      label: 'Assinatura do(a) Aluno(a)',
       page: 'frente',
       x: pos.assinatura2?.x ?? posicoesPadrao.assinatura2.x,
       y: pos.assinatura2?.y ?? posicoesPadrao.assinatura2.y,
       width: formData.assinaturaWidth || 256,
-      title: 'Secretaria Acadêmica',
+      title: 'Aluno(a)',
       visible: formData.exibirAssinatura2 !== false
     },
     {
@@ -121,8 +218,23 @@ export const getBlocks = (formData: any) => {
       page: 'frente',
       x: pos.qrcode?.x ?? posicoesPadrao.qrcode.x,
       y: pos.qrcode?.y ?? posicoesPadrao.qrcode.y,
-      width: formData.qrcodeWidth || 120,
+      width: formData.qrcodeWidth || 170,
       visible: formData.hasValidationQrCode !== false
+    },
+    {
+      id: 'validacaoSite',
+      type: 'validationLink',
+      label: 'Site de Validação',
+      page: 'verso',
+      x: pos.validacaoSite?.x ?? posicoesPadrao.validacaoSite.x,
+      y: pos.validacaoSite?.y ?? posicoesPadrao.validacaoSite.y,
+      width: 560,
+      color: formData.corTexto || '#1e293b',
+      fontSize: 10,
+      fontFamily: 'sans-serif',
+      textAlign: 'left',
+      content: validationSiteContent,
+      visible: formData.hasVerso !== false
     },
     {
       id: 'historico',
@@ -131,7 +243,8 @@ export const getBlocks = (formData: any) => {
       page: 'verso',
       x: pos.historico?.x ?? posicoesPadrao.historico.x,
       y: pos.historico?.y ?? posicoesPadrao.historico.y,
-      content: formData.textoVerso || 'Grade Curricular do Curso Técnico:\n\n{{grade_curricular}}',
+      width: 560,
+      content: formData.textoVerso || (formData.tipoCurso === 'Cursos Técnicos' ? 'Grade Curricular do Curso:\n\n{{grade_curricular}}' : 'Conteúdo Programático:\n\n{{grade_curricular}}'),
       visible: formData.hasVerso !== false
     },
     {
@@ -141,7 +254,7 @@ export const getBlocks = (formData: any) => {
       page: 'verso',
       x: pos.registro?.x ?? posicoesPadrao.registro.x,
       y: pos.registro?.y ?? posicoesPadrao.registro.y,
-      visible: formData.exibirVersoRegistro !== false
+      visible: technical && formData.exibirVersoRegistro !== false
     },
     {
       id: 'versoQrcode',
@@ -150,7 +263,7 @@ export const getBlocks = (formData: any) => {
       page: 'verso',
       x: pos.versoQrcode?.x ?? posicoesPadrao.versoQrcode.x,
       y: pos.versoQrcode?.y ?? posicoesPadrao.versoQrcode.y,
-      width: formData.qrcodeWidth || 120,
+      width: formData.qrcodeWidth || 170,
       visible: formData.hasValidationQrCode !== false
     },
     {
@@ -160,9 +273,20 @@ export const getBlocks = (formData: any) => {
       page: 'verso',
       x: pos.carimbo?.x ?? posicoesPadrao.carimbo.x,
       y: pos.carimbo?.y ?? posicoesPadrao.carimbo.y,
-      visible: formData.exibirVersoCarimbo !== false
+      visible: technical && formData.exibirVersoCarimbo !== false
     }
   ];
+
+  if (formData.blocks && formData.blocks.length > 0) {
+    const normalizedBlocks = formData.blocks.map((block: any) => normalizeLegacyBlock(block, formData));
+    const existingIds = new Set(normalizedBlocks.map((block: any) => block.id));
+    const missingBlocks = defaultBlocks
+      .filter((block: any) => !existingIds.has(block.id))
+      .map((block: any) => normalizeLegacyBlock(block, formData));
+    return [...normalizedBlocks, ...missingBlocks];
+  }
+
+  return defaultBlocks.map((block: any) => normalizeLegacyBlock(block, formData));
 };
 
 const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({ 
@@ -178,15 +302,33 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
   const previewData = {
     nome_aluno: 'JOÃO DA SILVA SAURO',
     cpf: '123.456.789-00',
-    curso_nome: formData.tipoCurso === 'Cursos Técnicos' ? 'Técnico em Enfermagem' : 'Enfermagem',
+    cidade: 'Cidade do Polo',
+    uf: 'UF',
+    cidade_uf: 'Cidade do Polo/UF',
+    curso_nome:
+      formData.tipoCurso === 'Cursos Técnicos'
+        ? 'Técnico em Enfermagem'
+        : formData.tipoCurso === 'Cursos Especialização'
+        ? 'Especialização'
+        : formData.tipoCurso === 'Educação a Distância (EAD)'
+        ? 'Curso EAD'
+        : 'Curso de Formação',
     carga_horaria: '1200',
     data_conclusao: '20 de Maio de 2026',
     grade_curricular: `Anatomia Humana - 80h - Nota: 9.0\nFisiologia - 80h - Nota: 8.5\nPrimeiros Socorros - 40h - Nota: 10.0\nFarmacologia Aplicada - 60h - Nota: 9.5\nÉtica e Deontologia - 40h - Nota: 9.0\nEstágio Supervisionado I - 200h - Aprovado`,
-    livro_registro: 'Livro: 12, Folha: 45, Registro: 1024'
+  livro_registro: 'Livro: 12, Folha: 45, Registro: 1024',
+  ensino_medio_estabelecimento: 'COLÉGIO ESTADUAL EXEMPLO',
+  ensino_medio_localidade_uf: 'JAPOATÃ - SE',
+  ensino_medio_ano_conclusao: '2022',
+  certificado_numero: '1024',
+  pagina_livro: '45',
+  livro: '12',
+  validacao_sistec: 'SE123456789',
+  codigo_validacao: 'CERT-EXEMPLO-0001'
   };
 
   // Helper para substituir variáveis simples por negrito no preview
-  const parseText = (text: string) => {
+  const parseText = (text: string, extraVars: Record<string, string> = {}) => {
     if (!text) return '';
     let parsed = text;
     Object.keys(previewData).forEach(key => {
@@ -194,7 +336,33 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
        // @ts-ignore
        parsed = parsed.replace(regex, `<strong>${previewData[key]}</strong>`);
     });
+    Object.keys(extraVars).forEach((key) => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      parsed = parsed.replace(regex, `<strong>${extraVars[key]}</strong>`);
+    });
     return parsed;
+  };
+
+  const validationUrl = getDocumentValidationUrl(previewData.codigo_validacao);
+
+  const [assinaturas, setAssinaturas] = useState<AssinaturasData>(() => assinaturasService.getSignaturesSync());
+
+  useEffect(() => {
+    void assinaturasService.getSignatures().then((data) => {
+      setAssinaturas(data);
+    }).catch(() => {
+      setAssinaturas(assinaturasService.getSignaturesSync());
+    });
+  }, []);
+
+  const getSignatureUrl = (block: any) => {
+    if (!block.signatureSource || block.signatureSource === 'none') {
+      return block.signatureImageUrl || '';
+    }
+    if (block.signatureSource === 'manual') {
+      return block.signatureImageUrl || '';
+    }
+    return assinaturas[block.signatureSource as keyof AssinaturasData] || '';
   };
 
   const containerStyle: React.CSSProperties = {
@@ -310,8 +478,6 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
   };
 
   const renderBlockContent = (block: any) => {
-    const isSelected = selectedBlockId === block.id;
-
     switch (block.type) {
       case 'logo':
         const logoW = `${block.width || 96}px`;
@@ -327,11 +493,11 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       case 'text':
         const textStyle: React.CSSProperties = {
           fontSize: `${block.fontSize || 14}px`,
-          color: corTexto,
-          width: block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' || block.id === 'texto' ? '650px' : 'auto',
-          fontFamily: block.id === 'titulo' ? 'Playfair Display, serif' : block.id === 'texto' ? 'serif' : 'sans-serif',
-          textAlign: block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' || block.id === 'texto' ? 'center' : 'left',
-          fontWeight: block.id === 'titulo' ? '900' : block.id === 'subtitulo' || block.id === 'cidadeData' ? 'bold' : 'normal',
+          color: block.color || corTexto,
+          width: `${block.width || 650}px`,
+          fontFamily: block.fontFamily || (block.id === 'titulo' ? 'Playfair Display, serif' : block.id === 'texto' ? 'serif' : 'sans-serif'),
+          textAlign: block.textAlign || (block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' || block.id === 'texto' ? 'center' : 'left'),
+          fontWeight: block.fontWeight || (block.id === 'titulo' ? '900' : block.id === 'subtitulo' || block.id === 'cidadeData' ? 'bold' : 'normal'),
           textTransform: block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' ? 'uppercase' : 'none',
           lineHeight: block.id === 'texto' ? '1.8' : 'normal',
           letterSpacing: block.id === 'subtitulo' ? '0.3em' : 'normal'
@@ -345,25 +511,59 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
 
       case 'signature':
         const signatureW = `${block.width || 256}px`;
+        const signatureLabelFontSize = Number(block.signatureLabelFontSize || 10);
+        const signatureUrl = getSignatureUrl(block);
+        const signatureBlend = block.signatureBlend !== false ? 'multiply' : 'normal';
         return (
-          <div style={{ width: signatureW }} className="text-center flex flex-col items-center justify-center">
-            <div className="w-full border-b border-slate-800 pb-1 mb-2"></div>
-            <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{block.title || 'Visto'}</p>
+          <div style={{ width: signatureW }} className="text-center flex flex-col items-center justify-end">
+            <div
+              className="w-full border-t border-slate-400 pt-[1px] mb-2"
+              style={{ borderColor: block.color || corTexto }}
+            >
+              <p
+                className="font-black uppercase tracking-widest text-slate-800"
+                style={{ fontSize: `${signatureLabelFontSize}px` }}
+              >
+                {block.title || 'Visto'}
+              </p>
+            </div>
+            {signatureUrl ? (
+              <img
+                src={signatureUrl}
+                alt={block.title || 'Assinatura'}
+                className="w-full object-contain pointer-events-none"
+                style={{ maxHeight: '56px', mixBlendMode: signatureBlend }}
+              />
+            ) : null}
           </div>
         );
 
-      case 'qrcode':
+      case 'qrcode': {
         const qrW = `${block.width || 120}px`;
+        const qrSize = block.width || 120;
+        if (block.id === 'qrcode') {
+          return (
+            <div style={{ width: qrW }} className="bg-white/90 p-2 rounded border border-slate-200 text-center shadow-sm">
+              <p className="text-[7px] font-black uppercase tracking-widest text-slate-500">Código de Autenticidade</p>
+              <p className="mt-1 break-all font-mono text-[9px] font-black text-[#001a33]">{previewData.codigo_validacao}</p>
+            </div>
+          );
+        }
         return (
-          <div style={{ width: qrW }} className="bg-white p-2 rounded border border-slate-200 flex flex-col items-center shadow-sm">
-            <QrCode size={36} className="text-[#001a33]" />
-            <span className="text-[6px] font-black text-slate-400 mt-1 uppercase tracking-widest">Autenticidade</span>
+          <div style={{ width: qrW }} className="bg-white p-1 rounded border border-slate-200 flex flex-col items-center shadow-sm">
+            <img
+              src={getDocumentValidationQrUrl(previewData.codigo_validacao, qrSize * 2)}
+              alt="QR de validação"
+              className="w-full h-auto object-contain pointer-events-none"
+            />
+            <span className="text-[6px] font-black text-slate-400 mt-1 uppercase tracking-widest">Código: {previewData.codigo_validacao}</span>
           </div>
         );
+      }
 
       case 'table':
         return (
-          <div className="flex flex-col border border-slate-200 p-4 bg-white/90 rounded-xl w-[550px]">
+          <div className="flex flex-col border border-slate-200 p-4 bg-white/90 rounded-xl" style={{ width: `${block.width || 550}px` }}>
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight border-b border-slate-800 pb-1.5 mb-3">
               Histórico Escolar
             </h2>
@@ -373,17 +573,30 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
           </div>
         );
 
+      case 'image':
+        return block.imageUrl ? (
+          <img
+            src={block.imageUrl}
+            alt=""
+            draggable={false}
+            style={{
+              width: `${block.width || 180}px`,
+              opacity: block.opacity ?? 1,
+            }}
+            className="block select-none object-contain"
+          />
+        ) : null;
+
       case 'registry':
         return (
-          <div className="flex flex-col border border-slate-250 p-4 bg-white/95 rounded-xl w-[250px] shadow-sm">
+          <div className="flex flex-col border border-slate-250 p-4 bg-white/95 rounded-xl w-[300px] shadow-sm">
             <h2 className="text-xs font-black text-slate-800 uppercase tracking-tight border-b border-slate-800 pb-1.5 mb-3">
-              Registro
+              Registro do Certificado
             </h2>
-            <p className="text-[9px] font-bold text-slate-500 mb-0.5">Registrado sob o número:</p>
-            <p className="text-xs font-black text-slate-800 mb-3">1024-2026</p>
-            
-            <p className="text-[9px] font-bold text-slate-500 mb-0.5">Livro Especial:</p>
-            <p className="text-xs font-black text-slate-800">{previewData.livro_registro}</p>
+            <p className="text-[9px] font-bold text-slate-600 leading-relaxed">
+              Certificado Expedido N° <b>{previewData.certificado_numero}</b>, lavrado à Página <b>{previewData.pagina_livro}</b> do Livro <b>{previewData.livro}</b>.
+            </p>
+            <p className="text-[9px] font-bold text-slate-600 mt-2">Validação do SISTEC: <b>{previewData.validacao_sistec}</b></p>
           </div>
         );
 
@@ -393,7 +606,22 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
             <div className="w-full border-b border-dotted border-slate-400 h-10 mb-1 flex items-center justify-center">
               <span className="text-[8px] text-slate-400 uppercase font-black opacity-30">Visto / Carimbo</span>
             </div>
-            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Autorizado por</p>
+          </div>
+        );
+
+      case 'validationLink':
+        return (
+          <div style={{ width: `${block.width || 560}px` }} className="p-1">
+            <div
+              className="font-black uppercase tracking-widest text-slate-700 leading-tight break-words"
+              style={{
+                fontSize: `${block.fontSize || 10}px`,
+                color: block.color || corTexto,
+                textAlign: block.textAlign || 'left',
+                width: `${block.width || 560}px`,
+              }}
+              dangerouslySetInnerHTML={{ __html: parseText(block.content || '{{url_validacao}}', { url_validacao: validationUrl }) }}
+            />
           </div>
         );
 
@@ -407,24 +635,20 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       className="bg-white w-[297mm] h-[210mm] shadow-2xl relative rounded-[2mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
       style={containerStyle}
     >
-      {/* MARCA D'ÁGUA (Só na Frente se tiver ativa) */}
-      {formData.hasWatermark && formData.watermarkText && page === 'frente' && (
-        <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden w-full h-full pointer-events-none opacity-[0.03]">
-          <div 
-            className="text-slate-900 font-black whitespace-nowrap uppercase transform -rotate-45 select-none" 
-            style={{ fontSize: '140px', letterSpacing: '0.1em' }}
-          >
-            {formData.watermarkText}
-          </div>
+      {/* Marca d'água paisagem da empresa no verso */}
+      {page === 'verso' && formData.landscapeWatermarkUrl && (
+        <div className="absolute inset-0 z-0 flex h-full w-full items-center justify-center overflow-hidden pointer-events-none">
+          <img
+            src={formData.landscapeWatermarkUrl}
+            alt=""
+            className="select-none object-contain"
+            style={{
+              width: `${formData.landscapeWatermarkScale || 55}%`,
+              opacity: formData.landscapeWatermarkOpacity ?? 0.1,
+              transform: formData.landscapeWatermarkRotate ? 'rotate(-22deg)' : 'none',
+            }}
+          />
         </div>
-      )}
-
-      {/* Molduras Padrão */}
-      {(!formData.ocultarDesignPadrao) && page === 'frente' && (
-        <>
-          <div className="absolute inset-4 border-8 border-double border-slate-300 rounded-sm pointer-events-none z-10"></div>
-          <div className="absolute inset-8 border border-slate-200 rounded-sm pointer-events-none z-10"></div>
-        </>
       )}
 
       {/* Renderização de todos os Blocos Visíveis da Página */}

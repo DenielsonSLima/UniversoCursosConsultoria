@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { supabase } from '../../../lib/supabase';
+import { textMatchesSearch } from '../../../lib/search';
 
 const CursosTecnicosPublicPage: React.FC = () => {
   const { pathname } = useLocation();
@@ -62,9 +63,7 @@ const CursosTecnicosPublicPage: React.FC = () => {
 
   // Filtragem combinada
   const filteredCursos = cursos.filter((curso) => {
-    const nameMatch = curso.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const descMatch = (curso.descricao || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const textMatches = nameMatch || descMatch;
+    const textMatches = textMatchesSearch(searchTerm, [curso.nome, curso.descricao, curso.area]);
 
     let areaMatches = true;
     if (selectedArea !== 'Todos') {

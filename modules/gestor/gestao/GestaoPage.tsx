@@ -1,106 +1,87 @@
-
 // File: modules/gestor/gestao/GestaoPage.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Briefcase, Zap, Award, MonitorPlay, Activity, Users, BookOpen } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { gestaoService } from './gestao.service';
+import React, { useEffect, useState } from 'react';
+import { BarChart3, Briefcase, Award, MonitorPlay, Sparkles, Zap } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import GestaoResumo from './resumo/GestaoResumo';
 import GestaoTecnicos from './tecnicos/GestaoTecnicos';
 import GestaoLivres from './livres/GestaoLivres';
 import GestaoEspecializacao from './especializacao/GestaoEspecializacao';
 import GestaoEad from './ead/GestaoEad';
 
-const GestaoPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'tecnicos' | 'livres' | 'especializacao' | 'ead'>('tecnicos');
+interface GestaoPageProps {
+  poloId?: string;
+  poloNome?: string;
+  isMatriz: boolean;
+}
+
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, poloNome, isMatriz }) => {
+  const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: kpis } = useQuery({
-    queryKey: ['gestao-kpis'],
-    queryFn: gestaoService.getGestaoKpis,
-    refetchOnWindowFocus: false,
-  });
+  useEffect(() => {
+    if (!isMatriz && activeTab === 'ead') {
+      setActiveTab('resumo');
+      setIsDetailView(false);
+    }
+  }, [activeTab, isMatriz]);
 
   useEffect(() => {
     const channel = supabase
       .channel('gestao-kpis-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'turmas' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] });
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['gestao-resumo-kpis', poloId || 'matriz-global'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matriculas' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['gestao-resumo-kpis', poloId || 'matriz-global'] });
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [poloId, queryClient]);
 
   const tabs = [
-    { id: 'tecnicos', label: 'Cursos Técnicos', icon: <Briefcase size={18} /> },
-    { id: 'livres', label: 'Cursos Livres', icon: <Zap size={18} /> },
+    { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={18} /> },
+    { id: 'tecnicos', label: 'Técnicos', icon: <Briefcase size={18} /> },
+    { id: 'livres', label: 'Livres', icon: <Zap size={18} /> },
     { id: 'especializacao', label: 'Especialização', icon: <Award size={18} /> },
-    { id: 'ead', label: 'EAD / Online', icon: <MonitorPlay size={18} /> },
-  ];
+    ...(isMatriz ? [{ id: 'ead', label: 'EAD', icon: <MonitorPlay size={18} /> }] : []),
+  ] as const;
 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn">
-      
       {/* Header Geral do Módulo - Oculto apenas se estiver em Detalhes */}
       {!isDetailView && (
         <div className="mb-8">
-          
-          <div className="bg-[#001a33] text-white rounded-[2.5rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-xl">
-             {/* Abstract background shapes */}
-             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-             <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+          <div className="rounded-[1.8rem] border border-[#dce6f2] bg-gradient-to-r from-[#001a33] via-[#012b57] to-[#014c86] p-6 text-white shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Módulo de Gestão</p>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight mt-1">Gestão de Turmas</h2>
+            <p className="text-sm font-bold text-slate-200 mt-2 max-w-3xl">
+              {isMatriz
+                ? 'Acompanhe a estrutura e desempenho das turmas por modalidade em um painel visual único.'
+                : `Visual do polo: ${poloNome || 'selecionado'}.`}
+            </p>
 
-             <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                     <span className="bg-blue-500/20 text-blue-300 font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase border border-blue-500/30 flex items-center gap-2">
-                       <Activity size={12} className="text-emerald-400" /> Operacional
-                     </span>
-                  </div>
-                  <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-2">Gestão de Turmas</h2>
-                  <p className="text-blue-200 font-medium max-w-lg text-sm leading-relaxed">
-                    Acompanhamento operational das turmas, histórico acadêmico, controle de vagas, notas, presenças e relatórios financeiros por núcleo.
-                  </p>
-                </div>
-                
-                <div className="flex gap-4">
-                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col gap-1 min-w-[120px]">
-                     <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><Users size={12} /> Turmas Ativas</span>
-                     <span className="text-3xl font-black text-white">{kpis?.activeTurmas ?? 0}</span>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex flex-col gap-1 min-w-[120px]">
-                     <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><BookOpen size={12} /> Matrículas</span>
-                     <span className="text-3xl font-black text-emerald-400">{kpis?.activeMatriculas ?? 0}</span>
-                  </div>
-                </div>
-             </div>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-100">
+              <Sparkles size={12} />
+              Layout atualizado para leitura rápida
+            </div>
           </div>
 
           {/* Navegação de Abas Principal */}
-          <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm inline-flex flex-wrap gap-1">
+          <div className="mt-4 inline-flex flex-wrap gap-2 rounded-2xl bg-white p-1.5">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-[#001a33] text-white shadow-md' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                className={`group flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-[#001a33] text-white shadow-md'
+                    : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
               >
                 {tab.icon}
@@ -113,18 +94,12 @@ const GestaoPage: React.FC = () => {
 
       {/* Conteúdo Dinâmico */}
       <div className="min-h-[500px]">
-        {activeTab === 'tecnicos' && (
-          <GestaoTecnicos onToggleDetails={setIsDetailView} />
-        )}
-        {activeTab === 'livres' && (
-          <GestaoLivres onToggleDetails={setIsDetailView} />
-        )}
-        {activeTab === 'especializacao' && (
-          <GestaoEspecializacao onToggleDetails={setIsDetailView} />
-        )}
-        {activeTab === 'ead' && <GestaoEad />}
+        {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
+        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} />}
+        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} />}
+        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} />}
+        {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} />}
       </div>
-
     </div>
   );
 };

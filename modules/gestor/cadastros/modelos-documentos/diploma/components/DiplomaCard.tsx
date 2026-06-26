@@ -1,13 +1,12 @@
 import React from 'react';
-import { Award, Edit, Trash2, FileText, CheckCircle2 } from 'lucide-react';
+import { Award, Edit, FileText, CheckCircle2, Lock } from 'lucide-react';
 
 interface DiplomaCardProps {
   modelo: any;
   onEdit: (modelo: any) => void;
-  onDelete: (id: string) => void;
 }
 
-const DiplomaCard: React.FC<DiplomaCardProps> = ({ modelo, onEdit, onDelete }) => {
+const DiplomaCard: React.FC<DiplomaCardProps> = ({ modelo, onEdit }) => {
   return (
     <div 
       className="bg-white rounded-3xl p-5 border border-slate-200 hover:border-purple-400 hover:shadow-lg transition-all group flex flex-col h-full animate-fadeIn cursor-pointer" 
@@ -23,12 +22,6 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({ modelo, onEdit, onDelete }) =
             className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors"
           >
             <Edit size={16} />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onDelete(modelo.id); }}
-            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-          >
-            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -51,6 +44,10 @@ const DiplomaCard: React.FC<DiplomaCardProps> = ({ modelo, onEdit, onDelete }) =
       </div>
 
       <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+          <Lock size={12} className="text-slate-400" />
+          Modelo fixo
+        </span>
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
           {modelo.hasVerso ? (
             <><CheckCircle2 size={12} className="text-emerald-500" /> Frente e Verso</>

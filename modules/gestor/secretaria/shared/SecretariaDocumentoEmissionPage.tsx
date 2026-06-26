@@ -18,6 +18,7 @@ import {
   SecretariaAlunoResumo,
   SecretariaDocumentoDefinition,
 } from './secretaria-documentos.types';
+import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPreview';
 
 interface SecretariaDocumentoEmissionPageProps {
   definition: SecretariaDocumentoDefinition;
@@ -25,10 +26,10 @@ interface SecretariaDocumentoEmissionPageProps {
 
 const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageProps> = ({ definition }) => {
   const queryClient = useQueryClient();
-  const activeUserId = sessionStorage.getItem('logged_user_id');
+  const activeUserId = window.sessionStorage.getItem('logged_user_id');
   const activePoloId =
-    sessionStorage.getItem('current_polo_id') ||
-    sessionStorage.getItem('active_polo_id');
+    window.sessionStorage.getItem('current_polo_id') ||
+    window.sessionStorage.getItem('active_polo_id');
   const context = useMemo(
     () => getSecretariaContext(),
     [activeUserId, activePoloId]
@@ -41,8 +42,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
 
   const normalizedTerm = searchTerm.trim();
-  const documentKey = secretariaDocumentosKeys.document(context, definition.id);
-
   const { data: alunos = [], isFetching: isSearching } = useQuery({
     queryKey: secretariaDocumentosKeys.search(context, definition.id, normalizedTerm),
     queryFn: () => secretariaDocumentosService.searchAlunos(context.poloId, normalizedTerm),
@@ -54,13 +53,16 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     queryKey: secretariaDocumentosKeys.matriculas(
       context,
       definition.id,
-      selectedAluno?.id || 'nenhum'
+      selectedAluno?.id || 'nenhum',
+      !!definition.activeOnly
     ),
     queryFn: () =>
       secretariaDocumentosService.getMatriculas(
         selectedAluno!.id,
         context.poloId,
-        !!definition.technicalOnly
+        !!definition.technicalOnly,
+        !!definition.completedOnly,
+        !!definition.activeOnly
       ),
     enabled: !!selectedAluno,
     staleTime: 60_000,
@@ -70,10 +72,15 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     queryKey: secretariaDocumentosKeys.turmas(
       context,
       definition.id,
-      !!definition.technicalOnly
+      !!definition.technicalOnly,
+      !!definition.activeOnly
     ),
     queryFn: () =>
-      secretariaDocumentosService.getTurmas(context.poloId, !!definition.technicalOnly),
+      secretariaDocumentosService.getTurmas(
+        context.poloId,
+        !!definition.technicalOnly,
+        !!definition.activeOnly
+      ),
     enabled: mode === 'lote',
     staleTime: 60_000,
   });
@@ -117,6 +124,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         alunoId: mode === 'individual' ? selectedAluno?.id : undefined,
         matriculaId: mode === 'individual' ? selectedMatriculaId : undefined,
         turmaId: mode === 'lote' ? selectedTurmaId : undefined,
+        technicalOnly: !!definition.technicalOnly,
+        activeOnly: !!definition.activeOnly,
+        completedOnly: !!definition.completedOnly,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -142,44 +152,37 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSelectedTurmaId('');
   };
 
-  const Icon = definition.icon;
-
   return (
     <div className="animate-fadeIn">
-      <div className="mb-7 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-        <div>
-          <div className={`flex items-center gap-2 ${definition.accent} mb-2`}>
-            <Icon size={18} />
-            <span className="text-[10px] font-black uppercase tracking-[0.22em]">Emissão documental</span>
-          </div>
-          <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">{definition.title}</h3>
-          <p className="text-sm text-slate-500 font-medium mt-1">{definition.description}</p>
-        </div>
-        {definition.technicalOnly && (
-          <span className={`self-start lg:self-auto px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${definition.softAccent} ${definition.accent}`}>
-            Cursos técnicos
-          </span>
-        )}
-      </div>
-
-      <div className="flex justify-center mb-7">
-        <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm inline-flex">
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="border-b border-slate-100 p-4">
+          <div className={`grid gap-2 ${definition.allowBatch !== false ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           <button
             onClick={() => resetFlow('individual')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'individual' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'individual' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
           >
-            <Search size={15} /> Individual
+            <Search size={20} />
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">Individual</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-snug">Localize um aluno e confira a matrícula.</p>
+            </div>
           </button>
-          <button
-            onClick={() => resetFlow('lote')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'lote' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            <Users size={15} /> Em lote por turma
-          </button>
+          {definition.allowBatch !== false && (
+            <button
+              onClick={() => resetFlow('lote')}
+              className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'lote' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
+            >
+              <Users size={20} />
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider">Em lote</p>
+                <p className="mt-0.5 text-[11px] font-medium leading-snug">Prepare a emissão para uma turma.</p>
+              </div>
+            </button>
+          )}
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="border-t border-slate-100">
         <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/70">
           {['Selecionar', 'Conferir', 'Concluído'].map((label, index) => {
             const itemStep = (index + 1) as 1 | 2 | 3;
@@ -316,6 +319,14 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
               {emissionMutation.isError && (
                 <p className="mt-4 text-sm font-bold text-red-600">Não foi possível preparar a emissão. Verifique a conexão e tente novamente.</p>
               )}
+              {mode === 'individual' && selectedMatriculaId && definition.academicPreview && (
+                <div className="mt-6">
+                  <SecretariaAcademicDocumentPreview
+                    matriculaId={selectedMatriculaId}
+                    type={definition.academicPreview}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -368,6 +379,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };

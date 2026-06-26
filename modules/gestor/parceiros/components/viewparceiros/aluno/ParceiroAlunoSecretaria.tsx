@@ -69,6 +69,13 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   });
 
   const activeMatricula = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
+  const activeTechnicalMatricula = matriculas.find(
+    (m) =>
+      m.status?.toUpperCase() === 'ATIVO' &&
+      m.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO' &&
+      m.turmas?.cursos?.modalidade === 'TECNICO'
+  );
+  const isTechnicalIdentityAvailable = Boolean(activeTechnicalMatricula);
   const formattedMat = activeMatricula 
     ? formatMatricula(activeMatricula.id, activeMatricula.data_matricula, activeMatricula.polo_id) 
     : 'PENDENTE';
@@ -82,10 +89,10 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
     isDeclaracaoOpen
   );
   const irpfValidation = useDocumentValidationCode(
-    activeMatricula
+    activeTechnicalMatricula
       ? {
           type: 'declaracao_irpf',
-          enrollmentId: activeMatricula.id,
+          enrollmentId: activeTechnicalMatricula.id,
         }
       : null,
     isIRPFOpen
@@ -348,6 +355,13 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
     const vDays = templateData?.validityDays || 30;
     const alunoNome = aluno?.nome || '';
+    const alunoCpf = aluno?.cpf_cnpj || '';
+    const responsavelFinanceiroNome = aluno?.responsavel_financeiro && aluno?.responsavel_nome
+      ? aluno.responsavel_nome
+      : alunoNome;
+    const responsavelFinanceiroCpf = aluno?.responsavel_financeiro && aluno?.responsavel_cpf
+      ? aluno.responsavel_cpf
+      : alunoCpf;
     const cursoNome = activeMatricula?.turmas?.cursos?.nome || '';
     const turmaNome = activeMatricula?.turmas?.nome || '';
     const poloNome = activeMatricula?.turmas?.polos?.nome || poloData?.nomeFantasia || '';
@@ -356,15 +370,19 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
     const lastYear = new Date().getFullYear() - 1;
     const irpfTotalValue = irpfPayments.length > 0
       ? irpfPayments.reduce((acc, curr) => acc + Number(curr.valor_pago || curr.valor || 0), 0)
-      : 3000.00;
+      : 0;
     const irpfTotalExtenso = valorPorExtenso(irpfTotalValue);
     const formattedIrpfTotal = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(irpfTotalValue);
 
     return text
       .replace(/\{\{ALUNO_NOME\}\}/g, alunoNome.toUpperCase())
       .replace(/\{ALUNO_NOME\}/g, alunoNome.toUpperCase())
-      .replace(/\{\{ALUNO_CPF\}\}/g, aluno?.cpf || '')
-      .replace(/\{ALUNO_CPF\}/g, aluno?.cpf || '')
+      .replace(/\{\{ALUNO_CPF\}\}/g, alunoCpf)
+      .replace(/\{ALUNO_CPF\}/g, alunoCpf)
+      .replace(/\{\{RESPONSAVEL_FINANCEIRO_NOME\}\}/g, responsavelFinanceiroNome.toUpperCase())
+      .replace(/\{RESPONSAVEL_FINANCEIRO_NOME\}/g, responsavelFinanceiroNome.toUpperCase())
+      .replace(/\{\{RESPONSAVEL_FINANCEIRO_CPF\}\}/g, responsavelFinanceiroCpf)
+      .replace(/\{RESPONSAVEL_FINANCEIRO_CPF\}/g, responsavelFinanceiroCpf)
       .replace(/\{\{ALUNO_RG\}\}/g, aluno?.rg || '')
       .replace(/\{ALUNO_RG\}/g, aluno?.rg || '')
       .replace(/\{\{ALUNO_MATRICULA\}\}/g, formattedMat || '')
@@ -478,12 +496,19 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
           >
             <FileText size={14} /> Emitir Declaração
           </button>
-          <button 
-            onClick={() => setIsIRPFOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white rounded-xl font-bold uppercase text-[10px] hover:bg-teal-700 transition-colors shadow-md"
-          >
-            <DollarSign size={14} /> Emitir IRPF
-          </button>
+          {isTechnicalIdentityAvailable && (
+            <button 
+              onClick={() => setIsIRPFOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white rounded-xl font-bold uppercase text-[10px] hover:bg-teal-700 transition-colors shadow-md"
+            >
+              <DollarSign size={14} /> Emitir IRPF
+            </button>
+          )}
+          {!isTechnicalIdentityAvailable && (
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+              IRPF disponível apenas para matrícula ativa em curso técnico.
+            </p>
+          )}
         </div>
       </div>
 

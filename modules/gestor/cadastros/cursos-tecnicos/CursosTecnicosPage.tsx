@@ -1,21 +1,20 @@
 // File: modules/gestor/cadastros/cursos-tecnicos/CursosTecnicosPage.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Loader2, X, Copy, Power, Check, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import CursoTecnicoCard from './components/CursoTecnicoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
-import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
-import { supabase } from '../../../../lib/supabase';
+import { CursoTecnicoStatusFilter } from './cursos-tecnicos.service';
+import { useCursosTecnicosQueries } from './hooks/useCursosTecnicosQueries';
+import { useCursosTecnicosRealtime } from './hooks/useCursosTecnicosRealtime';
+import { useCursosTecnicosMutations } from './hooks/useCursosTecnicosMutations';
 
 const CursosTecnicosPage: React.FC = () => {
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
-  const [cursos, setCursos] = useState<Curso[]>([]);
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Filtro de Status ('ativo' | 'inativo')
-  const [statusFilter, setStatusFilter] = useState<'ativo' | 'inativo'>('ativo');
+  const [statusFilter, setStatusFilter] = useState<CursoTecnicoStatusFilter>('ativo');
 
   // Estados para Modal de Novo Curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -31,90 +30,6 @@ const CursosTecnicosPage: React.FC = () => {
   const [newCursoImagemUrl, setNewCursoImagemUrl] = useState('');
   const [newCursoPublicarSite, setNewCursoPublicarSite] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-
-  // Compressão de imagem do card para WebP
-  const compressImage = (file: File): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(file);
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                resolve(file);
-              }
-            },
-            'image/webp',
-            0.8
-          );
-        };
-        img.onerror = (err) => reject(err);
-      };
-      reader.onerror = (err) => reject(err);
-    });
-  };
-
-  // Upload de imagem do card
-  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const compressedBlob = await compressImage(file);
-      const compressedFile = new File([compressedBlob], `curso_${Date.now()}.webp`, {
-        type: 'image/webp'
-      });
-
-      const filePath = `cursos/curso_${Date.now()}.webp`;
-
-      const { data, error } = await supabase.storage
-        .from('documentos')
-        .upload(filePath, compressedFile, {
-          cacheControl: '31536000',
-          upsert: true
-        });
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage
-        .from('documentos')
-        .getPublicUrl(data.path);
-
-      setNewCursoImagemUrl(urlData.publicUrl);
-    } catch (err: any) {
-      console.error('Erro ao fazer upload da imagem:', err);
-      showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   // Estados para Modal de Duplicação
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -141,20 +56,56 @@ const CursosTecnicosPage: React.FC = () => {
 
   const areasDisponiveis = ['Saúde', 'Gestão', 'Tecnologia', 'Educação', 'Outros'];
 
-  useEffect(() => {
-    loadCursos();
-  }, []);
+  const resetCreateForm = () => {
+    setShowCreateModal(false);
+    setNewCursoNome('');
+    setNewCursoDesc('');
+    setNewCursoArea('Saúde');
+    setNewCursoVersao('1.0');
+    setNewCursoCargaHoraria(1200);
+    setNewCursoDuracaoMeses(24);
+    setNewCursoImagemUrl('');
+    setNewCursoPublicarSite(true);
+  };
 
-  const loadCursos = async () => {
-    setLoading(true);
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDuplicateTargetId(null);
+  };
+
+  const { cursosQuery, invalidateCursosTecnicos } = useCursosTecnicosQueries();
+  useCursosTecnicosRealtime(invalidateCursosTecnicos);
+
+  const {
+    createMutation,
+    deleteMutation,
+    duplicateMutation,
+    toggleStatusMutation,
+    uploadImagemMutation
+  } = useCursosTecnicosMutations({
+    invalidateCursosTecnicos,
+    showToast,
+    resetCreateForm,
+    closeDuplicateModal,
+    setIsCreatingCurso,
+    setIsDuplicating
+  });
+
+  const cursos = cursosQuery.data || [];
+  const loading = cursosQuery.isLoading;
+
+  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
     try {
-      const data = await cadastrosService.getCursosByModalidade('TECNICO');
-      setCursos(data);
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao carregar cursos técnicos.', 'error');
+      const publicUrl = await uploadImagemMutation.mutateAsync(file);
+      setNewCursoImagemUrl(publicUrl);
+    } catch {
+      // O toast de erro fica centralizado na mutation.
     } finally {
-      setLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -166,7 +117,7 @@ const CursosTecnicosPage: React.FC = () => {
   const handleBack = () => {
     setSelectedCurso(null);
     setViewState('list');
-    loadCursos();
+    invalidateCursosTecnicos();
   };
 
   // Criação de Curso
@@ -175,36 +126,16 @@ const CursosTecnicosPage: React.FC = () => {
     if (!newCursoNome.trim()) return;
 
     setIsCreatingCurso(true);
-    try {
-      await cadastrosService.createCurso({
-        nome: newCursoNome,
-        carga_horaria: newCursoCargaHoraria,
-        modalidade: 'TECNICO',
-        status: 'ativo',
-        area: newCursoArea,
-        descricao: newCursoDesc,
-        versao: newCursoVersao,
-        duracao_meses: newCursoDuracaoMeses,
-        imagem_url: newCursoImagemUrl || null,
-        publicar_site: newCursoPublicarSite
-      });
-      setShowCreateModal(false);
-      setNewCursoNome('');
-      setNewCursoDesc('');
-      setNewCursoArea('Saúde');
-      setNewCursoVersao('1.0');
-      setNewCursoCargaHoraria(1200);
-      setNewCursoDuracaoMeses(24);
-      setNewCursoImagemUrl('');
-      setNewCursoPublicarSite(true);
-      loadCursos();
-      showToast('Curso técnico criado com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao criar curso no Supabase.', 'error');
-    } finally {
-      setIsCreatingCurso(false);
-    }
+    createMutation.mutate({
+      nome: newCursoNome,
+      carga_horaria: newCursoCargaHoraria,
+      area: newCursoArea,
+      descricao: newCursoDesc,
+      versao: newCursoVersao,
+      duracao_meses: newCursoDuracaoMeses,
+      imagem_url: newCursoImagemUrl || null,
+      publicar_site: newCursoPublicarSite
+    });
   };
 
   // Exclusão definitiva de curso
@@ -220,16 +151,7 @@ const CursosTecnicosPage: React.FC = () => {
       isOpen: true,
       title: 'Excluir Curso Técnico',
       message: `Tem certeza de que deseja EXCLUIR definitivamente o curso "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.deleteCurso(curso.id);
-          loadCursos();
-          showToast('Curso técnico excluído com sucesso!', 'success');
-        } catch (err: any) {
-          console.error(err);
-          showToast(err.message || 'Erro ao excluir o curso.', 'error');
-        }
-      }
+      onConfirm: () => deleteMutation.mutate(curso.id)
     });
   };
 
@@ -249,18 +171,11 @@ const CursosTecnicosPage: React.FC = () => {
     if (!duplicateTargetId || !duplicateNome.trim()) return;
 
     setIsDuplicating(true);
-    try {
-      await cadastrosService.duplicateCurso(duplicateTargetId, duplicateNome, duplicateVersao);
-      setShowDuplicateModal(false);
-      setDuplicateTargetId(null);
-      loadCursos();
-      showToast('Curso e grade curricular duplicados com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao duplicar curso.', 'error');
-    } finally {
-      setIsDuplicating(false);
-    }
+    duplicateMutation.mutate({
+      cursoId: duplicateTargetId,
+      nome: duplicateNome,
+      versao: duplicateVersao
+    });
   };
 
   // Alterar Status (Ativo/Inativo)
@@ -275,33 +190,13 @@ const CursosTecnicosPage: React.FC = () => {
       isOpen: true,
       title: novoStatus === 'inativo' ? 'Pausar Curso' : 'Reativar Curso',
       message: confirmMsg,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.toggleStatus(curso.id, novoStatus);
-          loadCursos();
-          showToast(`Curso ${novoStatus === 'inativo' ? 'inativado' : 'ativado'} com sucesso!`, 'success');
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao alterar status do curso.', 'error');
-        }
-      }
+      onConfirm: () => toggleStatusMutation.mutate({ cursoId: curso.id, novoStatus })
     });
   };
 
   // Filtra cursos pelo status
   const filteredCursos = cursos.filter(c => c.status === statusFilter);
 
-  // Agrupa os cursos filtrados por Área
-  const groupedCursos = filteredCursos.reduce((acc, curso) => {
-    const area = curso.area || 'Outros';
-    if (!acc[area]) acc[area] = [];
-    acc[acc[area].push(curso)];
-    // Correção para o acumulador do reduce: precisamos retornar o acumulador
-    if (!acc[area]) acc[area] = [];
-    return acc;
-  }, {} as Record<string, Curso[]>);
-
-  // Vamos fazer de forma limpa
   const groupedClean: Record<string, Curso[]> = {};
   filteredCursos.forEach(c => {
     const area = c.area || 'Outros';
@@ -316,7 +211,7 @@ const CursosTecnicosPage: React.FC = () => {
       <CursoGradeCurricularDetails 
         curso={selectedCurso} 
         onBack={handleBack} 
-        onUpdate={loadCursos}
+        onUpdate={invalidateCursosTecnicos}
       />
     );
   }

@@ -25,6 +25,32 @@ export interface Modulo {
   disciplinas: Disciplina[];
 }
 
+export interface CursoFinanceiroConfig {
+  valorBase: number;
+  descontoPontualidade: number;
+  parcelasPadrao: number;
+  taxaPagaPor: 'aluno' | 'instituicao';
+  metodosRecebimento: {
+    pix: boolean;
+    boleto: boolean;
+    cartao: boolean;
+  };
+  descontoMetodo: {
+    pix: boolean;
+    boleto: boolean;
+    cartao: boolean;
+  };
+  cartao: {
+    aceitar: boolean;
+    maxParcelas: number;
+    aplicarDescontoPontualidade: boolean;
+  };
+  asaas: {
+    gerarParcelamentoMensalidades: boolean;
+    tipoCarnePreferencial: 'PARCELAMENTO' | 'COBRANCAS_AVULSAS';
+  };
+}
+
 export interface Curso {
   id: string;
   nome: string;
@@ -44,9 +70,13 @@ export interface Curso {
   imagem_detalhe_1?: string;
   imagem_detalhe_2?: string;
   valor?: number | null;
+  asaas_payment_link_id?: string | null;
+  asaas_payment_link_url?: string | null;
+  asaas_link_status?: string | null;
   created_at?: string;
   modulos?: Modulo[];
   ead_config?: EadConfig;
+  financeiro_config?: CursoFinanceiroConfig;
 }
 
 export interface EadCronogramaItem {
@@ -61,7 +91,12 @@ export interface EadConteudoItem {
   descricao?: string;
   videoUrl?: string; // Links do YouTube/Vimeo
   apostilaUrl?: string; // Anexo da apostila
-  tipo: 'video' | 'material' | 'ambos';
+  textoHtml?: string;
+  etapa?: number;
+  duracaoMinutos?: number;
+  objetivos?: string[];
+  atividadeIds?: string[];
+  tipo: 'video' | 'material' | 'ambos' | 'pagina';
 }
 
 export interface EadQuestao {
@@ -78,16 +113,47 @@ export interface EadProva {
   questoes: EadQuestao[];
 }
 
+export interface EadAtividade {
+  id: string;
+  etapaId?: string;
+  titulo: string;
+  enunciado: string;
+  tipo: 'reflexao' | 'multipla_escolha';
+  opcoes?: string[];
+  respostaCorreta?: number;
+}
+
+export interface EadPaginaCurso {
+  subtitulo?: string;
+  objetivos?: string[];
+  publicoAlvo?: string;
+  requisitos?: string;
+  metodologia?: string;
+  imagemGaleria?: string[];
+}
+
+export interface EadRegrasAprendizagem {
+  tempoMinimoMinutos: number;
+  liberarSequencialmente: boolean;
+  exigirAtividades: boolean;
+  exigirVideosConcluidos: boolean;
+  intervaloReprovacaoHoras?: number;
+}
+
 export interface EadCertificacao {
   emitirAutomatico: boolean;
   minimoAproveitamento: number; // percentual de aprovação necessário, ex: 70
+  modeloDocumento?: 'certificado_ead';
   assinaturaUrl?: string;
   textoCustomizado?: string;
 }
 
 export interface EadConfig {
+  pagina?: EadPaginaCurso;
+  regras?: EadRegrasAprendizagem;
   cronograma: EadCronogramaItem[];
   conteudos: EadConteudoItem[];
+  atividades?: EadAtividade[];
   provas: EadProva[];
   certificacao: EadCertificacao;
 }

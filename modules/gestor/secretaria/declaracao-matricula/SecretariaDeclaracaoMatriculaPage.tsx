@@ -29,17 +29,35 @@ interface Aluno {
   tipoDocumento?: string;
   turmaIds?: string[];
   poloNome: string;
+  poloCnpj: string;
   cidadePolo: string;
 }
 
 const TEMPLATE_DEFAULT = {
-  textContent: `<p>Declaramos para os devidos fins que, <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº {{ALUNO_CPF}}, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
   absoluteFields: [],
   validityDays: 30,
   v: 2
 };
 
-const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
+interface SecretariaDeclaracaoMatriculaPageProps {
+  documentService?: {
+    getTemplate: (poloId: string) => Promise<any>;
+    getQrConfig: () => Promise<any>;
+  };
+  defaultTemplate?: any;
+  documentTitle?: string;
+  documentType?: 'declaracao_matricula' | 'declaracao_frequencia';
+  fileSlug?: string;
+}
+
+const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaPageProps> = ({
+  documentService = declaracaoService,
+  defaultTemplate = TEMPLATE_DEFAULT,
+  documentTitle = 'Declaração de Matrícula',
+  documentType = 'declaracao_matricula',
+  fileSlug = 'declaracoes-matricula',
+}) => {
   const [mode, setMode] = useState<'individual' | 'lote' | 'custom'>('individual');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryCustom, setSearchQueryCustom] = useState('');
@@ -55,7 +73,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('todos');
   
   // Model Configs
-  const [templateConfig, setTemplateConfig] = useState<any>(TEMPLATE_DEFAULT);
+  const [templateConfig, setTemplateConfig] = useState<any>(defaultTemplate);
   const [watermark, setWatermark] = useState<any>(null);
   const [qrConfig, setQrConfig] = useState<any>(null);
   const [academicConfigs, setAcademicConfigs] = useState<any>(null);
@@ -111,6 +129,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
             tipoDocumento: p.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
             turmaIds,
             poloNome: activeMat?.turmas?.polos?.nome || poloData?.nome || 'Universo Cursos e Consultoria',
+            poloCnpj: activeMat?.turmas?.polos?.cnpj || poloData?.cnpj || '',
             cidadePolo: (() => {
               const rawCidade = activeMat?.turmas?.polos?.cidade || poloData?.cidade || 'Aracaju';
               const rawUf = activeMat?.turmas?.polos?.estado || poloData?.estado || 'SE';
@@ -136,7 +155,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
         setPoloId(activePoloId);
 
         // Load document template
-        const template = await declaracaoService.getTemplate(activePoloId);
+        const template = await documentService.getTemplate(activePoloId);
         setTemplateConfig(template);
 
         // Load watermark
@@ -145,7 +164,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
         setWatermark(wm);
 
         // Load QR pattern config
-        const qrData = await declaracaoService.getQrConfig();
+        const qrData = await documentService.getQrConfig();
         setQrConfig(qrData);
 
         // Load global academic configs
@@ -198,7 +217,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
         eligibleTargets.map(async (aluno) => ({
           alunoId: aluno.id,
           issue: await documentValidationService.issue({
-            type: 'declaracao_matricula',
+            type: documentType,
             enrollmentId: aluno.enrollmentId!,
             expiresAt: expiresAtISO,
             registerReissue: true,
@@ -364,7 +383,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
         pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
       }
 
-      pdf.save(`declaracoes-matricula-${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Erro ao baixar declaração:', error);
       alert('Não foi possível gerar o PDF da declaração.');
@@ -403,16 +422,39 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
     expiresAt.setDate(expiresAt.getDate() + validityDays);
     const validadeFormatada = `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`;
 
+    const formatarData = (dataStr?: string) => {
+      if (!dataStr) return 'Não informada';
+      const dateOnly = dataStr.split('T')[0];
+      const parts = dateOnly.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dataStr;
+    };
+
+    const getDocumentLabel = (tipoDocumento?: string) => {
+      const docType = tipoDocumento || 'RG';
+      const upper = docType.toUpperCase();
+      if (upper.includes('CNH')) return 'CNH';
+      if (upper.includes('CNI') || upper.includes('IDENTIFICAÇÃO') || upper.includes('IDENTIFICACAO') || upper.includes('CIN')) {
+        return 'Documento Nacional de Identificação';
+      }
+      if (upper.includes('PASSAPORTE')) return 'Passaporte';
+      if (upper.includes('PROFISSIONAL')) return 'Cart. Profissional';
+      return 'RG';
+    };
+
     parsed = parsed.replace(/{{ALUNO_NOME}}/g, aluno.nome.toUpperCase());
     parsed = parsed.replace(/{{ALUNO_CPF}}/g, aluno.cpf || 'Não informado');
+    parsed = parsed.replace(/{{ALUNO_DOCUMENTO_TIPO}}/g, getDocumentLabel(aluno.tipoDocumento));
     parsed = parsed.replace(/{{ALUNO_RG}}/g, aluno.rg || 'Não informado');
+    parsed = parsed.replace(/{{ALUNO_NASCIMENTO}}/g, formatarData(aluno.nascimento));
     parsed = parsed.replace(/{{ALUNO_MATRICULA}}/g, aluno.matricula || 'Não gerada');
     parsed = parsed.replace(/{{CURSO_NOME}}/g, aluno.curso || '');
     parsed = parsed.replace(/{{TURMA_NOME}}/g, aluno.turmaNome || '');
     parsed = parsed.replace(/{{POLO_NOME}}/g, aluno.poloNome || 'Universo Cursos e Consultoria');
+    parsed = parsed.replace(/{{POLO_CNPJ}}/g, aluno.poloCnpj || '');
     parsed = parsed.replace(/{{CIDADE_POLO}}/g, aluno.cidadePolo || 'Aracaju');
     parsed = parsed.replace(/{{DATA_ATUAL}}/g, dataExtenso);
     parsed = parsed.replace(/{{HORA_ATUAL}}/g, horaAtual);
+    parsed = parsed.replace(/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${horaAtual}`);
     parsed = parsed.replace(/{{VALIDADE_DIAS}}/g, String(validityDays));
     parsed = parsed.replace(/{{VALIDADE_DATA}}/g, validadeFormatada);
 
@@ -451,7 +493,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
           {/* Título */}
           <div className="text-center mb-12 relative z-10 mt-6">
             <h2 className="text-2xl font-bold text-[#001a33] uppercase underline decoration-2 decoration-blue-600 underline-offset-4">
-              DECLARAÇÃO DE MATRÍCULA
+              {documentTitle}
             </h2>
           </div>
 
@@ -502,7 +544,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
                 )}
 
                 {field.type === 'text' && (
-                  <>{parsedVal}</>
+                  <span dangerouslySetInnerHTML={{ __html: parsedVal }} className="w-full break-words" />
                 )}
               </div>
             );
@@ -536,7 +578,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-black uppercase tracking-widest text-white">Visualizador de Documentos</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                Emissão: Declaração de Matrícula ({rawAlunosParaImprimir.length} pág.)
+                Emissão: {documentTitle} ({rawAlunosParaImprimir.length} pág.)
               </p>
             </div>
           </div>
@@ -616,31 +658,43 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
 
   return (
     <div className="animate-fadeIn">
-      {/* Seletor de Modo */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm inline-flex flex-wrap justify-center gap-1">
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="border-b border-slate-100 p-4">
+          <div className="grid gap-2 md:grid-cols-3">
           <button
             onClick={() => setMode('individual')}
-            className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'individual' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'individual' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
           >
-            <Search size={16} /> Individual
+            <Search size={20} />
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">Individual</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-snug">Busque um aluno e emita o documento.</p>
+            </div>
           </button>
           <button
             onClick={() => setMode('lote')}
-            className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'lote' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'lote' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
           >
-            <Users size={16} /> Em Lote (Turma)
+            <Users size={20} />
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">Em lote</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-snug">Gere para uma turma ou todos os alunos.</p>
+            </div>
           </button>
           <button
             onClick={() => setMode('custom')}
-            className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'custom' ? 'bg-[#001a33] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'custom' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
           >
-            <CreditCard size={16} /> Personalizado (Misto)
+            <CreditCard size={20} />
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">Personalizado</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-snug">Monte uma lista mista de alunos.</p>
+            </div>
           </button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl">
+      <div className="p-5 md:p-7">
         {mode === 'individual' && (
           <div className="animate-fadeIn">
             <h3 className="text-xl font-black text-[#001a33] mb-6 uppercase tracking-tight">Declaração Individual</h3>
@@ -748,7 +802,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
                 className="px-8 py-4 bg-[#001a33] text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-900 transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPreparingValidation ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
-                {isPreparingValidation ? 'Registrando código...' : 'Visualizar Declaração de Matrícula'}
+                {isPreparingValidation ? 'Registrando código...' : `Visualizar ${documentTitle}`}
               </button>
             </div>
           </div>
@@ -944,6 +998,7 @@ const SecretariaDeclaracaoMatriculaPage: React.FC = () => {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 };

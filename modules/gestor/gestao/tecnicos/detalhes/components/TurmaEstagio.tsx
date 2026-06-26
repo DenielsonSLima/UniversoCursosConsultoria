@@ -1,6 +1,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaEstagio.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
 import { Turma } from '../../../gestao.types';
 import { cadastrosService } from '../../../../cadastros/cadastros.service';
@@ -10,6 +11,8 @@ import {
   FileText, CheckCircle2, ChevronRight, Loader2, Save, Printer, ArrowLeft
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
+import { academicLifecycleService } from '../academic-lifecycle.service';
+import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 
 // Valores padrão caso o curso não tenha checklist configurado
 const DEFAULT_INSTRUMENTOS = [
@@ -68,6 +71,12 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
   const [instrutorNome, setInstrutorNome] = useState<string>('');
   const [dataAvaliacao, setDataAvaliacao] = useState<string>(new Date().toISOString().split('T')[0]);
   const [frequenciaEstagio, setFrequenciaEstagio] = useState<number>(100);
+
+  const { data: avaliacaoCalculada } = useQuery({
+    queryKey: academicLifecycleKeys.avaliacaoEstagio(criteriosValores),
+    queryFn: () => academicLifecycleService.calcularAvaliacaoEstagio(criteriosValores),
+    enabled: !!selectedAluno && !loadingConfig,
+  });
 
   useEffect(() => {
     fetchEstagioData();
@@ -197,43 +206,11 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
     }
   };
 
-  // --- CALCULA SUBTOTAIS E TOTAIS ---
   const getSubtotal = (grupoNome: string): number => {
-    const grupo = criteriosValores[grupoNome];
-    if (!grupo) return 0;
-    return (Object.values(grupo) as any[]).reduce((acc, curr) => acc + (curr.nota || 0), 0);
-  };
-
-  const getNotaFinalCalculada = () => {
-    return instrumentosConfig.reduce((acc, g) => acc + getSubtotal(g.grupo), 0);
-  };
-
-  // --- AÇÕES DO FORMULÁRIO ---
-  const handleToggleCriterio = (grupoNome: string, itemNome: string, valorMaxGrupo: string) => {
-    const grupoConfig = instrumentosConfig.find(g => g.grupo === grupoNome);
-    if (!grupoConfig) return;
-
-    const valorMaxString = valorMaxGrupo.replace(',', '.');
-    const valorMaxNum = parseFloat(valorMaxString) || 2.0;
-    const numItens = grupoConfig.itens.length;
-    const defaultItemPoints = parseFloat((valorMaxNum / numItens).toFixed(2));
-
-    setCriteriosValores(prev => {
-      const g = prev[grupoNome] || {};
-      const currentVal = g[itemNome]?.nota || 0;
-      const nextVal = currentVal > 0 ? 0 : defaultItemPoints;
-
-      return {
-        ...prev,
-        [grupoNome]: {
-          ...g,
-          [itemNome]: {
-            ...(g[itemNome] || { obs: '' }),
-            nota: nextVal
-          }
-        }
-      };
-    });
+    if (grupoNome === 'Comportamento') return Number(avaliacaoCalculada?.comportamento || 0);
+    if (grupoNome === 'Desempenho nos Registros') return Number(avaliacaoCalculada?.registros || 0);
+    if (grupoNome === 'Desempenho das Técnicas') return Number(avaliacaoCalculada?.tecnicas || 0);
+    return 0;
   };
 
   const handleCriterioObsChange = (grupoNome: string, itemNome: string, obs: string) => {
@@ -303,11 +280,6 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
       const currentDisc = disciplinasEstagio.find(d => d.id === selectedDiscId);
       const currentDiscName = currentDisc?.nome || '';
 
-      // Calcula as notas agregadas por seção
-      const subComp = parseFloat((getSubtotal('Comportamento') as number).toFixed(2));
-      const subRegs = parseFloat((getSubtotal('Desempenho nos Registros') as number).toFixed(2));
-      const subTecs = parseFloat((getSubtotal('Desempenho das Técnicas') as number).toFixed(2));
-
       // Converte procedimentosLog de objeto em Array para salvar
       const checklistArray = Object.entries(procedimentosLog)
         .filter(([_, value]: [string, any]) => value.status !== '')
@@ -317,24 +289,17 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
           data: value.data
         }));
 
-      const { error } = await supabase
-        .from('matriculas_estagios')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: selectedDiscId,
-          aluno_id: selectedAluno.id,
-          nota_comportamento: subComp,
-          nota_registros: subRegs,
-          nota_tecnicas: subTecs,
-          frequencia_estagio: frequenciaEstagio,
-          criterios_detalhes: criteriosValores,
-          checklist_procedimentos: checklistArray,
-          perfil_aluno: perfilAluno,
-          instrutor_nome: instrutorNome,
-          data_avaliacao: dataAvaliacao
-        }, { onConflict: 'turma_id,disciplina_id,aluno_id' });
-
-      if (error) throw error;
+      await academicLifecycleService.salvarAvaliacaoEstagio({
+        turmaId: turma.id,
+        disciplinaId: selectedDiscId,
+        alunoId: selectedAluno.id,
+        frequencia: frequenciaEstagio,
+        criterios: criteriosValores,
+        checklist: checklistArray,
+        perfilAluno,
+        instrutorNome,
+        dataAvaliacao,
+      });
 
       toast.success('Sucesso', `Avaliação de ${selectedAluno.nome} em ${currentDiscName} salva com sucesso!`);
       
@@ -450,7 +415,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
 
           <div className="flex justify-end gap-4 p-3 border border-black rounded mb-6 bg-slate-50">
             <span className="font-black text-sm uppercase">Nota Final de Estágio (E):</span>
-            <span className="font-black text-sm text-emerald-700">{getNotaFinalCalculada().toFixed(2)} / 10.00</span>
+            <span className="font-black text-sm text-emerald-700">{Number(avaliacaoCalculada?.final || 0).toFixed(2)} / 10.00</span>
           </div>
 
           {ucConfig.atividades.length > 0 && (
@@ -566,7 +531,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
                   {alunos.map(aluno => {
                     const av = avaliacoesExistentes[aluno.id];
                     const isEvaluated = !!av;
-                    const notaFinal = av ? (parseFloat(av.nota_comportamento) + parseFloat(av.nota_registros) + parseFloat(av.nota_tecnicas)) : 0;
+                    const notaFinal = Number(av?.nota_final || 0);
                     
                     return (
                       <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors">
@@ -682,8 +647,6 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
 
                 {instrumentosConfig.map((grupo, gIdx) => {
                   const valorMax = parseFloat(grupo.valorMax.replace(',', '.')) || 2.0;
-                  const numItens = grupo.itens.length;
-                  const itemPoints = parseFloat((valorMax / numItens).toFixed(2));
 
                   return (
                     <div key={gIdx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -697,20 +660,13 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
                       <div className="divide-y divide-slate-100">
                         {grupo.itens.map((item: string, iIdx: number) => {
                           const val = criteriosValores[grupo.grupo]?.[item] || { nota: 0, obs: '' };
-                          const isChecked = val.nota > 0;
                           
                           return (
                             <div key={iIdx} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/20 transition-colors">
                               <div className="flex items-start gap-3 flex-1">
-                                <input
-                                  type="checkbox"
-                                  className="mt-1 w-4 h-4 rounded text-teal-600 border-slate-300 focus:ring-teal-500 focus:ring-2 cursor-pointer"
-                                  checked={isChecked}
-                                  onChange={() => handleToggleCriterio(grupo.grupo, item, grupo.valorMax)}
-                                />
                                 <div className="text-left">
                                   <span className="text-xs font-bold text-slate-700">{item}</span>
-                                  <span className="text-[9px] text-slate-400 font-medium block mt-0.5">Peso item: {itemPoints.toFixed(2)} pts</span>
+                                  <span className="text-[9px] text-slate-400 font-medium block mt-0.5">Informe a pontuação conforme a avaliação do supervisor.</span>
                                 </div>
                               </div>
 
@@ -755,7 +711,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
                     {/* Nota Final Card */}
                     <div className="bg-blue-900/40 p-4 rounded-2xl flex items-center justify-between border border-blue-800/50">
                       <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Nota Final Estágio</span>
-                      <span className="text-xl font-black text-teal-400">{getNotaFinalCalculada().toFixed(2)} / 10.0</span>
+                      <span className="text-xl font-black text-teal-400">{Number(avaliacaoCalculada?.final || 0).toFixed(2)} / 10.0</span>
                     </div>
 
                     <div className="flex flex-col">

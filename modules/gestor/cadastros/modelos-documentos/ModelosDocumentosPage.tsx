@@ -11,7 +11,8 @@ import {
   Download,
   ArrowLeft,
   Contact,
-  ClipboardCheck
+  ClipboardCheck,
+  BadgeCheck
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -25,6 +26,8 @@ import EstagioPage from './estagio/EstagioPage';
 import DiplomaPage from './diploma/DiplomaPage';
 import IRPFPage from './irpf/IRPFPage';
 import BoletimPage from './boletim/BoletimPage';
+import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenciaPage';
+import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 
 const ModelosDocumentosPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
@@ -33,10 +36,12 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
+    { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Comprovante de frequência acadêmica regular.', icon: <BadgeCheck size={24} />, color: 'bg-sky-600' },
     { id: 'transferencia', title: 'Modelo de Transferência', desc: 'Documentação para trâmite externo.', icon: <ArrowRightLeft size={24} />, color: 'bg-orange-500' },
     { id: 'diarios', title: 'Modelos Diários', desc: 'Pautas de frequência e conteúdo programático.', icon: <Calendar size={24} />, color: 'bg-indigo-600' },
     { id: 'historico', title: 'Modelo Histórico Escolar', desc: 'Registro acadêmico de notas e faltas.', icon: <ScrollText size={24} />, color: 'bg-slate-700' },
     { id: 'boletim', title: 'Modelo Boletim Escolar', desc: 'Notas e frequência dos cursos técnicos.', icon: <ClipboardCheck size={24} />, color: 'bg-cyan-600' },
+    { id: 'atestado-conclusao', title: 'Atestado de Conclusão', desc: 'Comprovação provisória para cursos técnicos concluídos.', icon: <BadgeCheck size={24} />, color: 'bg-emerald-600' },
     { id: 'estagio', title: 'Termo de Estágio', desc: 'Contrato e plano de atividades do estagiário.', icon: <Briefcase size={24} />, color: 'bg-teal-600' },
     { id: 'diploma', title: 'Modelo Diploma', desc: 'Certificado de conclusão de curso.', icon: <Award size={24} />, color: 'bg-purple-600' },
     { id: 'irpf', title: 'Declaração de IRPF', desc: 'Modelo de declaração financeira para fins de Imposto de Renda.', icon: <FileText size={24} />, color: 'bg-emerald-700' },
@@ -47,10 +52,12 @@ const ModelosDocumentosPage: React.FC = () => {
       case 'carteirinha': return <CarteirinhaPage />;
       case 'cracha': return <CrachaPage />;
       case 'declaracao': return <DeclaracaoPage />;
+      case 'declaracao-frequencia': return <DeclaracaoFrequenciaPage />;
       case 'transferencia': return <TransferenciaPage />;
       case 'diarios': return <DiariosPage />;
       case 'historico': return <HistoricoPage />;
       case 'boletim': return <BoletimPage />;
+      case 'atestado-conclusao': return <AtestadoConclusaoPage />;
       case 'estagio': return <EstagioPage />;
       case 'diploma': return <DiplomaPage />;
       case 'irpf': return <IRPFPage />;

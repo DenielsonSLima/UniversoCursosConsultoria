@@ -3,62 +3,80 @@ import { supabase } from '../../../../lib/supabase';
 export interface AsaasConfigData {
   id?: string;
   environment: 'sandbox' | 'production';
-  apiKey: string;
   walletId: string;
+  configured: boolean;
+  apiConfigured: boolean;
+  webhookConfigured: boolean;
+  lastTestAt?: string;
+  lastTestStatus?: string;
+  lastTestMessage?: string;
+  webhookUrl: string;
+  webhookToken: string;
+  notificationsEnabled: boolean;
+  notificationWhatsappEnabled: boolean;
+  notificationEmailEnabled: boolean;
+  notificationSmsEnabled: boolean;
 }
 
-const CONSTANT_ASAAS_ID = 'a1111111-1111-1111-1111-111111111111';
+const invoke = async <T>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
+  const { data, error } = await supabase.functions.invoke('asaas-api', {
+    body: { action, ...payload },
+  });
+  if (error) {
+    const context = (error as any).context;
+    const body = context ? await context.json().catch(() => null) : null;
+    throw new Error(body?.error || error.message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+};
 
 export const asaasService = {
-  /**
-   * Obtém a configuração do Asaas ativa no banco de dados.
-   */
-  async getConfig(): Promise<AsaasConfigData> {
-    const { data, error } = await supabase
-      .from('asaas_config')
-      .select('*')
-      .maybeSingle();
-
-    if (error) {
-      console.error('Erro ao buscar configuração do Asaas:', error);
-      throw new Error(error.message);
-    }
-
-    if (!data) {
-      return {
-        id: CONSTANT_ASAAS_ID,
-        environment: 'sandbox',
-        apiKey: '',
-        walletId: ''
-      };
-    }
-
+  async getConfig(environment: 'sandbox' | 'production' = 'sandbox'): Promise<AsaasConfigData> {
+    const data = await invoke<any>('get-config', { environment });
     return {
       id: data.id,
       environment: data.environment as 'sandbox' | 'production',
-      apiKey: data.api_key || '',
-      walletId: data.wallet_id || ''
+      walletId: data.wallet_id || '',
+      configured: Boolean(data.configured),
+      apiConfigured: Boolean(data.apiConfigured ?? data.configured),
+      webhookConfigured: Boolean(data.webhookConfigured ?? data.webhookToken),
+      lastTestAt: data.last_test_at || undefined,
+      lastTestStatus: data.last_test_status || undefined,
+      lastTestMessage: data.last_test_message || undefined,
+      webhookUrl: data.webhookUrl,
+      webhookToken: data.webhookToken,
+      notificationsEnabled: Boolean(data.notificationsEnabled),
+      notificationWhatsappEnabled: Boolean(data.notificationWhatsappEnabled),
+      notificationEmailEnabled: Boolean(data.notificationEmailEnabled),
+      notificationSmsEnabled: Boolean(data.notificationSmsEnabled),
     };
   },
 
-  /**
-   * Salva a configuração do Asaas no banco de dados.
-   */
-  async saveConfig(config: AsaasConfigData): Promise<boolean> {
-    const { error } = await supabase
-      .from('asaas_config')
-      .upsert({
-        id: config.id || CONSTANT_ASAAS_ID,
-        environment: config.environment,
-        api_key: config.apiKey,
-        wallet_id: config.walletId
-      });
-
-    if (error) {
-      console.error('Erro ao salvar configuração do Asaas:', error);
-      throw new Error(error.message);
-    }
-
+  async saveConfig(config: {
+    environment: 'sandbox' | 'production';
+    apiKey: string;
+    webhookToken: string;
+    walletId: string;
+    notificationsEnabled: boolean;
+    notificationWhatsappEnabled: boolean;
+    notificationEmailEnabled: boolean;
+    notificationSmsEnabled: boolean;
+  }): Promise<boolean> {
+    await invoke('save-config', config);
     return true;
-  }
+  },
+
+  async saveNotificationPreferences(preferences: {
+    notificationWhatsappEnabled: boolean;
+    notificationEmailEnabled: boolean;
+    notificationSmsEnabled: boolean;
+  }): Promise<boolean> {
+    await invoke('save-notification-preferences', preferences);
+    return true;
+  },
+
+  async testConnection(environment: 'sandbox' | 'production'): Promise<void> {
+    await invoke('test-connection', { environment });
+  },
 };

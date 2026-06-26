@@ -1,61 +1,97 @@
-
-// File: modules/asaas/asaas.service.ts
-
 import { supabase } from '../../lib/supabase';
-import { AsaasCustomer, AsaasPayment, AsaasSubscription } from './asaas.types';
 
-// TODO: Substituir por chamadas reais via Edge Functions quando o backend estiver pronto
-// Por enquanto, usaremos a estratégia "Mock First" para validar o fluxo visual e de dados.
-
-export const asaasService = {
-  
-  /**
-   * Cria ou recupera um cliente no Asaas
-   */
-  async createCustomer(customerData: Omit<AsaasCustomer, 'id'>): Promise<AsaasCustomer> {
-    console.log('[Asaas Mock] Criando cliente:', customerData);
-    
-    // Simula delay de rede
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    return {
-      id: `cus_${Math.random().toString(36).substr(2, 12)}`,
-      ...customerData
-    };
-  },
-
-  /**
-   * Gera uma cobrança única (Boleto/Pix)
-   */
-  async createPayment(paymentData: Omit<AsaasPayment, 'id' | 'status' | 'invoiceUrl' | 'bankSlipUrl'>): Promise<AsaasPayment> {
-    console.log('[Asaas Mock] Gerando cobrança:', paymentData);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const id = `pay_${Math.random().toString(36).substr(2, 12)}`;
-    
-    return {
-      id,
-      ...paymentData,
-      status: 'PENDING',
-      invoiceUrl: `https://sandbox.asaas.com/i/${id}`,
-      bankSlipUrl: paymentData.billingType === 'BOLETO' ? `https://sandbox.asaas.com/b/${id}` : undefined,
-      pixQrCodeText: paymentData.billingType === 'PIX' ? '00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-426614174000520400005303986540510.005802BR5913Universo Cursos6008Aracaju62070503***6304ABCD' : undefined
-    };
-  },
-
-  /**
-   * Cria uma assinatura recorrente
-   */
-  async createSubscription(subscriptionData: Omit<AsaasSubscription, 'id' | 'status'>): Promise<AsaasSubscription> {
-    console.log('[Asaas Mock] Criando assinatura:', subscriptionData);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    return {
-      id: `sub_${Math.random().toString(36).substr(2, 12)}`,
-      ...subscriptionData,
-      status: 'ACTIVE'
-    };
+const invokeFunction = async <T>(functionName: string, payload: Record<string, unknown> = {}): Promise<T> => {
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body: payload,
+  });
+  if (error) {
+    const context = (error as any).context;
+    const body = context ? await context.json().catch(() => null) : null;
+    throw new Error(body?.error || error.message);
   }
+  if (data?.error) throw new Error(data.error);
+  return data as T;
+};
+
+const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
+  return invokeFunction<T>('asaas-api', { action, ...payload });
+};
+
+export const asaasIntegrationService = {
+  async testConnection() {
+    return invokeAdmin<{ success: boolean }>('test-connection');
+  },
+
+  async syncEnrollment(matriculaId: string) {
+    return invokeAdmin<{ success: boolean; receivable: any }>('sync-enrollment', { matriculaId });
+  },
+
+  async syncReceivable(receivableId: string) {
+    return invokeAdmin<{ success: boolean; receivable: any }>('sync-receivable', { receivableId });
+  },
+
+  async cancelReceivable(receivableId: string, environment?: 'sandbox' | 'production') {
+    return invokeFunction<{
+      success: boolean;
+      receivable: any;
+      asaasCanceled?: boolean;
+      asaasDeleteStatus?: number | null;
+    }>('asaas-cancel-receivable', { receivableId, environment });
+  },
+
+  async refreshReceivableStatus(receivableId: string) {
+    return invokeAdmin<{ success: boolean; receivable: any }>('refresh-receivable-status', { receivableId });
+  },
+
+  async generateOfficialCarnet(receivableIds: string[]) {
+    return invokeAdmin<{
+      success: boolean;
+      filename: string;
+      contentType: string;
+      base64: string;
+      count: number;
+    }>('generate-official-carnet', { receivableIds });
+  },
+
+  async settleInPerson(
+    receivableId: string,
+    params: {
+      contaBancariaId: string;
+      valorPago: number;
+      dataPagamento: string;
+      formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
+    },
+  ) {
+    return invokeAdmin<{ success: boolean; asaasCanceled?: boolean; asaasPaymentId?: string }>('manual-settlement', { receivableId, ...params });
+  },
+
+  async reverseInPersonSettlement(
+    receivableId: string,
+    params: {
+      recreateAsaas?: boolean;
+      reason?: string;
+    } = {},
+  ) {
+    return invokeAdmin<{ success: boolean; receivable: any; asaasRecreated?: boolean }>('reverse-manual-settlement', {
+      receivableId,
+      ...params,
+    });
+  },
+
+  async createCourseLink(courseId: string, recreate = false) {
+    return invokeAdmin<{ success: boolean; url: string }>('create-course-link', { courseId, recreate });
+  },
+
+  async getPublicCheckout(courseId: string, alunoId: string) {
+    const { data, error } = await supabase.functions.invoke('asaas-checkout', {
+      body: { courseId, alunoId },
+    });
+    if (error) {
+      const context = (error as any).context;
+      const body = context ? await context.json().catch(() => null) : null;
+      throw new Error(body?.error || error.message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data as { url: string };
+  },
 };

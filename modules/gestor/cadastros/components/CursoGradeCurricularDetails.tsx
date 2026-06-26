@@ -1,13 +1,15 @@
 // File: modules/gestor/cadastros/components/CursoGradeCurricularDetails.tsx
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, Clock, Save, 
-  BookOpen, Layers, Plus, Trash2, CornerDownRight, Loader2, X, Calendar
+import {
+  ArrowLeft, Clock, Save,
+  BookOpen, Layers, Plus, Trash2, CornerDownRight, Loader2, X, Calendar, Link as LinkIcon, Copy,
+  Banknote, CreditCard, Percent, Receipt, WalletCards
 } from 'lucide-react';
-import { Curso, Modulo, Disciplina, Aula } from '../cadastros.types';
-import { cadastrosService } from '../cadastros.service';
+import { Curso, CursoFinanceiroConfig, Modulo, Disciplina, Aula } from '../cadastros.types';
+import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
+import { asaasIntegrationService } from '../../../asaas/asaas.service';
 
 interface CursoGradeCurricularDetailsProps {
   curso: Curso;
@@ -15,133 +17,28 @@ interface CursoGradeCurricularDetailsProps {
   onUpdate: () => void;
 }
 
-// Configurações dinâmicas de estilo e texto por modalidade
-const getModalidadeConfig = (modalidade: Curso['modalidade']) => {
-  switch (modalidade) {
-    case 'TECNICO':
-      return {
-        themeColor: 'emerald',
-        textColor: 'text-emerald-600',
-        bgColor: 'bg-emerald-50/50',
-        borderColor: 'border-emerald-200',
-        hoverBorderColor: 'hover:border-emerald-400',
-        hoverBgColor: 'hover:bg-emerald-50',
-        labelDisciplina: 'Disciplina',
-        labelAula: 'Aula/Conteúdo',
-        labelSave: 'Salvar Grade'
-      };
-    case 'LIVRE':
-      return {
-        themeColor: 'amber',
-        textColor: 'text-amber-600',
-        bgColor: 'bg-amber-50/50',
-        borderColor: 'border-amber-200',
-        hoverBorderColor: 'hover:border-amber-400',
-        hoverBgColor: 'hover:bg-amber-50',
-        labelDisciplina: 'Tópico',
-        labelAula: 'Aula/Atividade',
-        labelSave: 'Salvar Conteúdo'
-      };
-    case 'ESPECIALIZACAO':
-      return {
-        themeColor: 'rose',
-        textColor: 'text-rose-600',
-        bgColor: 'bg-rose-50/50',
-        borderColor: 'border-rose-200',
-        hoverBorderColor: 'hover:border-rose-400',
-        hoverBgColor: 'hover:bg-rose-50',
-        labelDisciplina: 'Disciplina',
-        labelAula: 'Aula/Conteúdo',
-        labelSave: 'Salvar Especialização'
-      };
-    case 'EAD':
-      return {
-        themeColor: 'purple',
-        textColor: 'text-purple-600',
-        bgColor: 'bg-purple-50/50',
-        borderColor: 'border-purple-200',
-        hoverBorderColor: 'hover:border-purple-400',
-        hoverBgColor: 'hover:bg-purple-50',
-        labelDisciplina: 'Disciplina',
-        labelAula: 'Aula/Módulo',
-        labelSave: 'Salvar Grade EAD'
-      };
-    case 'SUPERIOR':
-      return {
-        themeColor: 'blue',
-        textColor: 'text-blue-800',
-        bgColor: 'bg-blue-50/50',
-        borderColor: 'border-blue-200',
-        hoverBorderColor: 'hover:border-blue-400',
-        hoverBgColor: 'hover:bg-blue-50',
-        labelDisciplina: 'Disciplina',
-        labelAula: 'Aula/Conteúdo',
-        labelSave: 'Salvar Grade'
-      };
-    default:
-      return {
-        themeColor: 'slate',
-        textColor: 'text-slate-600',
-        bgColor: 'bg-slate-50/50',
-        borderColor: 'border-slate-200',
-        hoverBorderColor: 'hover:border-slate-400',
-        hoverBgColor: 'hover:bg-slate-50',
-        labelDisciplina: 'Disciplina',
-        labelAula: 'Aula',
-        labelSave: 'Salvar'
-      };
-  }
-};
-
-// Helper para analisar e converter preços em formato brasileiro (BRL) para float
-const parseBRLPrice = (valStr: string): number | null => {
-  const clean = valStr.trim();
-  if (clean === '') return null;
-
-  // Se tiver tanto ponto quanto vírgula (ex: 1.250,50 ou 1,250.50)
-  if (clean.includes('.') && clean.includes(',')) {
-    if (clean.indexOf('.') < clean.indexOf(',')) {
-      return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
-    } else {
-      return parseFloat(clean.replace(/,/g, ''));
-    }
-  }
-
-  // Se tiver apenas vírgula (ex: 299,90)
-  if (clean.includes(',')) {
-    return parseFloat(clean.replace(',', '.'));
-  }
-
-  // Se tiver apenas ponto
-  if (clean.includes('.')) {
-    const parts = clean.split('.');
-    const lastPart = parts[parts.length - 1];
-    if (lastPart.length === 2 || lastPart.length === 1) {
-      return parseFloat(clean);
-    } else if (lastPart.length === 3) {
-      return parseFloat(clean.replace(/\./g, ''));
-    }
-    return parseFloat(clean);
-  }
-
-  // Apenas números (ex: 299)
-  return parseFloat(clean);
-};
+import {
+  formatMoney,
+  getModalidadeConfig,
+  moneyInputValue,
+  parseBRLPrice,
+  parseMoneyInput
+} from './cursoGradeCurricular.helpers';
 
 const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = ({ curso, onBack, onUpdate }) => {
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Abas e KPIs
-  const [activeTab, setActiveTab] = useState<'grade' | 'turmas' | 'publico'>('grade');
+  const [activeTab, setActiveTab] = useState<'grade' | 'turmas' | 'financeiro' | 'publico'>('grade');
   const [kpis, setKpis] = useState<{
     carga_horaria_total: number;
     carga_horaria_cadastrada: number;
     carga_horaria_restante: number;
   } | null>(null);
   const [loadingKpis, setLoadingKpis] = useState(true);
-  
+
   // Turmas vinculadas
   const [turmasVinculadas, setTurmasVinculadas] = useState<any[]>([]);
   const [loadingTurmas, setLoadingTurmas] = useState(false);
@@ -156,6 +53,11 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [isUploadingD2, setIsUploadingD2] = useState(false);
   const [valorCurso, setValorCurso] = useState('');
   const [isSavingValor, setIsSavingValor] = useState(false);
+  const [isGeneratingAsaasLink, setIsGeneratingAsaasLink] = useState(false);
+  const [financeiroConfig, setFinanceiroConfig] = useState<CursoFinanceiroConfig>(() => normalizeCursoFinanceiroConfig(curso.financeiro_config));
+  const [valorBaseInput, setValorBaseInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config).valorBase));
+  const [descontoInput, setDescontoInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config).descontoPontualidade));
+  const [isSavingFinanceiro, setIsSavingFinanceiro] = useState(false);
 
   // Estados para inputs de novos itens
   const [newModuloName, setNewModuloName] = useState('');
@@ -180,7 +82,11 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     setImagemDetalhe1(curso.imagem_detalhe_1 || '');
     setImagemDetalhe2(curso.imagem_detalhe_2 || '');
     setValorCurso(curso.valor !== null && curso.valor !== undefined ? curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
-  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2, curso.valor]);
+    const nextFinanceiroConfig = normalizeCursoFinanceiroConfig(curso.financeiro_config);
+    setFinanceiroConfig(nextFinanceiroConfig);
+    setValorBaseInput(moneyInputValue(nextFinanceiroConfig.valorBase));
+    setDescontoInput(moneyInputValue(nextFinanceiroConfig.descontoPontualidade));
+  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2, curso.valor, curso.financeiro_config]);
 
   const loadGrade = async () => {
     setLoading(true);
@@ -215,7 +121,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         .select('*, polos(nome)')
         .eq('curso_id', curso.id)
         .order('codigo', { ascending: true });
-        
+
       if (error) throw error;
       setTurmasVinculadas(data || []);
     } catch (err) {
@@ -269,6 +175,70 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
       alert('Erro ao salvar o preço do curso.');
     } finally {
       setIsSavingValor(false);
+    }
+  };
+
+  const handleGenerateAsaasLink = async () => {
+    setIsGeneratingAsaasLink(true);
+    try {
+      const result = await asaasIntegrationService.createCourseLink(curso.id);
+      await navigator.clipboard.writeText(result.url);
+      alert('Link de pagamento Asaas gerado e copiado para a área de transferência.');
+      onUpdate();
+    } catch (err: any) {
+      alert(`Não foi possível gerar o link Asaas: ${err.message}`);
+    } finally {
+      setIsGeneratingAsaasLink(false);
+    }
+  };
+
+  const updateFinanceiroConfig = (patch: Partial<CursoFinanceiroConfig>) => {
+    setFinanceiroConfig(prev => normalizeCursoFinanceiroConfig({
+      ...prev,
+      ...patch
+    }));
+  };
+
+  const updateFinanceiroNested = <K extends keyof CursoFinanceiroConfig>(
+    key: K,
+    patch: Partial<CursoFinanceiroConfig[K]>
+  ) => {
+    setFinanceiroConfig(prev => normalizeCursoFinanceiroConfig({
+      ...prev,
+      [key]: {
+        ...(prev[key] as any),
+        ...patch
+      }
+    }));
+  };
+
+  const handleSaveFinanceiroCurso = async () => {
+    const normalized = normalizeCursoFinanceiroConfig({
+      ...financeiroConfig,
+      valorBase: parseMoneyInput(valorBaseInput, financeiroConfig.valorBase),
+      descontoPontualidade: parseMoneyInput(descontoInput, financeiroConfig.descontoPontualidade)
+    });
+    setIsSavingFinanceiro(true);
+    try {
+      await cadastrosService.updateCurso({
+        ...curso,
+        publicar_site: publicarSite,
+        imagem_url: imagemUrl || null,
+        imagem_detalhe_1: imagemDetalhe1 || null,
+        imagem_detalhe_2: imagemDetalhe2 || null,
+        valor: normalized.valorBase,
+        financeiro_config: normalized
+      });
+      setFinanceiroConfig(normalized);
+      setValorCurso(moneyInputValue(normalized.valorBase));
+      setValorBaseInput(moneyInputValue(normalized.valorBase));
+      setDescontoInput(moneyInputValue(normalized.descontoPontualidade));
+      onUpdate();
+    } catch (err) {
+      console.error('Erro ao salvar política financeira do curso:', err);
+      alert('Erro ao salvar a política financeira do curso.');
+    } finally {
+      setIsSavingFinanceiro(false);
     }
   };
 
@@ -345,7 +315,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         .getPublicUrl(data.path);
 
       const nextUrl = urlData.publicUrl;
-      
+
       let newCapa = imagemUrl;
       let newD1 = imagemDetalhe1;
       let newD2 = imagemDetalhe2;
@@ -462,12 +432,12 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   // --- DISCIPLINAS ---
   const handleAddDisciplina = (moduloId: string) => {
     if (!newDiscName.trim()) return;
-    
+
     let horas = 0;
     let t = 0;
     let p = 0;
     let e = 0;
-    
+
     if (curso.modalidade === 'TECNICO') {
       t = parseInt(newDiscTeoria) || 0;
       p = parseInt(newDiscPratica) || 0;
@@ -516,7 +486,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     try {
       // 1. Salva a grade no Supabase
       await cadastrosService.saveGrade(curso.id, modulos);
-      
+
       // 2. Recarrega os KPIs no Postgres via RPC e notifica listagem
       await loadKpis();
       onUpdate();
@@ -550,11 +520,11 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             </p>
           </div>
         </div>
-        
+
         {activeTab === 'grade' && (
-          <button 
-            onClick={handleSave} 
-            disabled={isSaving || loading} 
+          <button
+            onClick={handleSave}
+            disabled={isSaving || loading}
             className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-70"
           >
             <Save size={16} /> {isSaving ? 'Salvando...' : config.labelSave}
@@ -596,25 +566,25 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Carga Restante</span>
             <div className="flex items-baseline gap-1 mt-2">
               <span className={`text-2xl font-black ${
-                kpis.carga_horaria_restante < 0 
-                  ? 'text-red-500' 
-                  : kpis.carga_horaria_restante === 0 
-                  ? 'text-emerald-600' 
+                kpis.carga_horaria_restante < 0
+                  ? 'text-red-500'
+                  : kpis.carga_horaria_restante === 0
+                  ? 'text-emerald-600'
                   : 'text-amber-500'
               }`}>{kpis.carga_horaria_restante}</span>
               <span className={`text-xs font-bold ${
-                kpis.carga_horaria_restante < 0 
-                  ? 'text-red-500' 
-                  : kpis.carga_horaria_restante === 0 
-                  ? 'text-emerald-600' 
+                kpis.carga_horaria_restante < 0
+                  ? 'text-red-500'
+                  : kpis.carga_horaria_restante === 0
+                  ? 'text-emerald-600'
                   : 'text-amber-500'
               }`}>horas</span>
             </div>
             <p className="text-[10px] text-slate-500 font-medium mt-1">
-              {kpis.carga_horaria_restante < 0 
-                ? 'Excesso de horas na grade!' 
-                : kpis.carga_horaria_restante === 0 
-                ? 'Grade concluída e exata' 
+              {kpis.carga_horaria_restante < 0
+                ? 'Excesso de horas na grade!'
+                : kpis.carga_horaria_restante === 0
+                ? 'Grade concluída e exata'
                 : 'Horas pendentes de cadastro'}
             </p>
           </div>
@@ -622,32 +592,42 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
       ) : null}
 
       {/* Tab Switcher */}
-      <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-md border border-slate-200">
-        <button 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-3xl border border-slate-200">
+        <button
           onClick={() => setActiveTab('grade')}
           className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-            activeTab === 'grade' 
-              ? `bg-white text-${config.themeColor}-600 shadow-sm` 
+            activeTab === 'grade'
+              ? `bg-white text-${config.themeColor}-600 shadow-sm`
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           Grade Curricular
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('turmas')}
           className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-            activeTab === 'turmas' 
-              ? `bg-white text-${config.themeColor}-600 shadow-sm` 
+            activeTab === 'turmas'
+              ? `bg-white text-${config.themeColor}-600 shadow-sm`
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           Turmas ({turmasVinculadas.length})
         </button>
-        <button 
+        <button
+          onClick={() => setActiveTab('financeiro')}
+          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+            activeTab === 'financeiro'
+              ? `bg-white text-${config.themeColor}-600 shadow-sm`
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Financeiro
+        </button>
+        <button
           onClick={() => setActiveTab('publico')}
           className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-            activeTab === 'publico' 
-              ? `bg-white text-${config.themeColor}-600 shadow-sm` 
+            activeTab === 'publico'
+              ? `bg-white text-${config.themeColor}-600 shadow-sm`
               : 'text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -685,8 +665,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                     </div>
                     <div className="flex items-center">
                       <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                        t.status === 'EM_ANDAMENTO' 
-                          ? 'bg-blue-50 text-blue-600 border border-blue-100' 
+                        t.status === 'EM_ANDAMENTO'
+                          ? 'bg-blue-50 text-blue-600 border border-blue-100'
                           : 'bg-slate-50 text-slate-600 border border-slate-200'
                       }`}>
                         {t.status === 'EM_ANDAMENTO' ? 'Em Andamento' : 'Finalizada'}
@@ -727,6 +707,177 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             })}
           </div>
         )
+      ) : activeTab === 'financeiro' ? (
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-8 pb-20 animate-fadeIn">
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
+              <div>
+                <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
+                  <WalletCards size={14} /> Política Financeira
+                </span>
+                <h4 className="mt-2 text-xl font-black text-[#001a33]">Regras padrão do curso</h4>
+                <p className="mt-1 max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
+                  Essas regras servem como base para novas turmas técnicas. Matrícula e rematrícula continuam podendo ter valores próprios na turma.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveFinanceiroCurso}
+                disabled={isSavingFinanceiro}
+                className="shrink-0 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-blue-900/15 transition-colors hover:bg-blue-900 disabled:opacity-70 flex items-center gap-2"
+              >
+                {isSavingFinanceiro ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {isSavingFinanceiro ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <label className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Valor base da mensalidade</span>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-emerald-300 focus-within:bg-white">
+                  <span className="text-sm font-black text-slate-400">R$</span>
+                  <input
+                    type="text"
+                    value={valorBaseInput}
+                    onChange={(e) => setValorBaseInput(e.target.value)}
+                    onBlur={() => {
+                      const nextValue = parseMoneyInput(valorBaseInput, financeiroConfig.valorBase);
+                      updateFinanceiroConfig({ valorBase: nextValue });
+                      setValorBaseInput(moneyInputValue(nextValue));
+                    }}
+                    className="w-full bg-transparent text-lg font-black text-[#001a33] outline-none"
+                  />
+                </div>
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Desconto até o vencimento</span>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-emerald-300 focus-within:bg-white">
+                  <span className="text-sm font-black text-slate-400">R$</span>
+                  <input
+                    type="text"
+                    value={descontoInput}
+                    onChange={(e) => setDescontoInput(e.target.value)}
+                    onBlur={() => {
+                      const nextValue = parseMoneyInput(descontoInput, financeiroConfig.descontoPontualidade);
+                      updateFinanceiroConfig({ descontoPontualidade: nextValue });
+                      setDescontoInput(moneyInputValue(nextValue));
+                    }}
+                    className="w-full bg-transparent text-lg font-black text-emerald-600 outline-none"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'pix' as const, label: 'Pix', icon: Banknote, note: 'Recebe desconto se marcado.' },
+                { key: 'boleto' as const, label: 'Boleto', icon: Receipt, note: 'Recebe desconto se marcado.' },
+                { key: 'cartao' as const, label: 'Cartão', icon: CreditCard, note: `Sem desconto. Até ${financeiroConfig.cartao.maxParcelas}x.` }
+              ].map((method) => {
+                const Icon = method.icon;
+                const enabled = financeiroConfig.metodosRecebimento[method.key];
+                const discountEnabled = financeiroConfig.descontoMetodo[method.key];
+                return (
+                  <div key={method.key} className={`rounded-2xl border p-5 transition-colors ${enabled ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-slate-50'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`rounded-xl p-2 ${enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-400'}`}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <span className="block text-sm font-black text-[#001a33]">{method.label}</span>
+                          <span className="text-[10px] font-bold text-slate-500">{method.note}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateFinanceiroNested('metodosRecebimento', { [method.key]: !enabled })}
+                        className={`h-7 w-12 rounded-full p-1 transition-colors ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        title={enabled ? `Desativar ${method.label}` : `Ativar ${method.label}`}
+                      >
+                        <span className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    <label className={`mt-5 flex items-center justify-between rounded-xl border px-3 py-2 ${enabled ? 'bg-white border-slate-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Aplicar desconto</span>
+                      <input
+                        type="checkbox"
+                        checked={discountEnabled}
+                        disabled={!enabled}
+                        onChange={(e) => updateFinanceiroNested('descontoMetodo', { [method.key]: e.target.checked })}
+                        className="h-4 w-4 accent-emerald-600"
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-600">
+                    <CreditCard size={15} /> Regra do cartão
+                  </span>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Por padrão, cartão não recebe desconto de pontualidade e pode parcelar até duas vezes.
+                  </p>
+                </div>
+                <label className="flex items-center gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Máx. parcelas</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={financeiroConfig.cartao.maxParcelas}
+                    onChange={(e) => updateFinanceiroNested('cartao', { maxParcelas: Math.max(1, Math.min(12, Number(e.target.value) || 1)) })}
+                    className="w-20 rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm font-black text-[#001a33] outline-none focus:border-emerald-300"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
+                <Percent size={14} /> Simulação
+              </span>
+              <h4 className="mt-2 text-lg font-black text-[#001a33]">Como fica para o aluno</h4>
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-700">Pix/Boleto até vencimento</span>
+                  <span className="text-lg font-black text-emerald-700">
+                    {formatMoney(Math.max(0, financeiroConfig.valorBase - financeiroConfig.descontoPontualidade))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-600">Cartão</span>
+                  <span className="text-lg font-black text-[#001a33]">
+                    {formatMoney(financeiroConfig.valorBase)}
+                  </span>
+                </div>
+                <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+                  A simulação é visual. A cobrança real deve ser calculada e criada no backend/Asaas usando esta política salva no curso e as regras específicas da turma.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">
+                <Receipt size={14} /> Asaas e carnê
+              </span>
+              <h4 className="mt-2 text-lg font-black text-[#001a33]">Modelo recomendado</h4>
+              <div className="mt-4 space-y-3 text-xs font-semibold leading-relaxed text-slate-600">
+                <p>Use cobrança avulsa para matrícula e rematrícula, porque elas têm valores próprios.</p>
+                <p>Use parcelamento Asaas para mensalidades iguais, pois é o caminho documentado para gerar carnê oficial.</p>
+                <p>Em estorno de baixa manual, o sistema deve reabrir a conta local e recriar/vincular a cobrança no Asaas quando a cobrança anterior tiver sido cancelada.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : activeTab === 'publico' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-20 animate-fadeIn">
           {/* Coluna 1: Visibilidade e Upload */}
@@ -743,13 +894,13 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   Permite que visitantes do site visualizem a grade, duração e se pré-inscrevam no curso.
                 </span>
               </div>
-              <button 
+              <button
                 onClick={handleTogglePublicarSite}
                 className={`w-14 h-8 rounded-full p-1 transition-colors shrink-0 flex items-center ${
                   publicarSite ? 'bg-emerald-500' : 'bg-slate-300'
                 }`}
               >
-                <div 
+                <div
                   className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
                     publicarSite ? 'translate-x-6' : 'translate-x-0'
                   }`}
@@ -764,7 +915,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               </label>
               <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                 <span className="text-slate-500 font-black text-sm">R$</span>
-                <input 
+                <input
                   type="text"
                   placeholder="Ex: 299,90 (Deixe em branco para 'Sob Consulta')"
                   className="w-full bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 py-2.5"
@@ -797,6 +948,42 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               </p>
             </div>
 
+            {['LIVRE', 'ESPECIALIZACAO', 'EAD'].includes(curso.modalidade) && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700">
+                  <LinkIcon size={14} /> Link de pagamento Asaas
+                </span>
+                <p className="mt-1 text-[10px] font-semibold leading-relaxed text-blue-700/75">
+                  Use este link para vender o curso online. O aluno só ganha matrícula/acesso após pagamento confirmado.
+                </p>
+                {curso.asaas_payment_link_url ? (
+                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-white p-3">
+                    <code className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-600">
+                      {curso.asaas_payment_link_url}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(curso.asaas_payment_link_url || '')}
+                      className="rounded-lg bg-blue-50 p-2 text-blue-600 hover:bg-blue-100"
+                      title="Copiar link"
+                    >
+                      <Copy size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isGeneratingAsaasLink}
+                    onClick={handleGenerateAsaasLink}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {isGeneratingAsaasLink ? <Loader2 className="animate-spin" size={14} /> : <LinkIcon size={14} />}
+                    Gerar link de pagamento
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Upload de Capa */}
             <div className="space-y-4">
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
@@ -805,9 +992,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               <div className="border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center bg-slate-50 flex flex-col items-center justify-center gap-4 relative overflow-hidden group hover:bg-slate-100/50 transition-colors">
                 {imagemUrl ? (
                   <>
-                    <img 
-                      src={imagemUrl} 
-                      alt="Capa do Curso" 
+                    <img
+                      src={imagemUrl}
+                      alt="Capa do Curso"
                       className="max-h-48 rounded-2xl object-cover border border-slate-200 shadow-sm animate-fadeIn"
                     />
                     <div className="flex gap-2">
@@ -821,7 +1008,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                           className="hidden"
                         />
                       </label>
-                      <button 
+                      <button
                         onClick={handleRemoverImagem}
                         className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider rounded-xl transition-all border border-red-200"
                       >
@@ -858,7 +1045,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
                 Fotos Adicionais (Galeria na Página Pública)
               </label>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Foto Detalhe 1 */}
                 <div className="space-y-2">
@@ -866,9 +1053,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center bg-slate-50 flex flex-col items-center justify-center gap-2 h-44 relative overflow-hidden group hover:bg-slate-100/50 transition-colors">
                     {imagemDetalhe1 ? (
                       <>
-                        <img 
-                          src={imagemDetalhe1} 
-                          alt="Detalhe 1" 
+                        <img
+                          src={imagemDetalhe1}
+                          alt="Detalhe 1"
                           className="h-20 rounded-xl object-cover border border-slate-200 shadow-sm animate-fadeIn"
                         />
                         <div className="flex gap-1.5 mt-2">
@@ -882,7 +1069,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                               className="hidden"
                             />
                           </label>
-                          <button 
+                          <button
                             onClick={handleRemoverImagemD1}
                             className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all border border-red-200"
                           >
@@ -916,9 +1103,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center bg-slate-50 flex flex-col items-center justify-center gap-2 h-44 relative overflow-hidden group hover:bg-slate-100/50 transition-colors">
                     {imagemDetalhe2 ? (
                       <>
-                        <img 
-                          src={imagemDetalhe2} 
-                          alt="Detalhe 2" 
+                        <img
+                          src={imagemDetalhe2}
+                          alt="Detalhe 2"
                           className="h-20 rounded-xl object-cover border border-slate-200 shadow-sm animate-fadeIn"
                         />
                         <div className="flex gap-1.5 mt-2">
@@ -932,7 +1119,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                               className="hidden"
                             />
                           </label>
-                          <button 
+                          <button
                             onClick={handleRemoverImagemD2}
                             className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all border border-red-200"
                           >
@@ -968,7 +1155,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
               Visualização Prévia (Site Público)
             </label>
-            
+
             <div className="max-w-sm mx-auto w-full bg-white border border-slate-200 rounded-[2rem] p-6 shadow-md flex flex-col justify-between min-h-[380px]">
               <div>
                 {/* Imagem de Capa do Curso */}
@@ -1042,7 +1229,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             {/* Renderização dos Módulos */}
             {modulos.map((modulo) => (
               <div key={modulo.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-fadeIn">
-                
+
                 {/* Header do Módulo */}
                 <div className={`${config.bgColor} px-6 py-4 border-b border-slate-100 flex justify-between items-center`}>
                   <div className="flex items-center gap-3">
@@ -1097,7 +1284,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                               <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm">
                                 <div className="flex flex-col items-center">
                                   <span className="text-[9px] font-black text-slate-400 select-none">T</span>
-                                  <input 
+                                  <input
                                     type="number"
                                     title="Teoria"
                                     className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
@@ -1113,10 +1300,10 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                                                 const newT = val;
                                                 const newP = d.cargaHorariaPratica || 0;
                                                 const newE = d.cargaHorariaEstagio || 0;
-                                                return { 
-                                                  ...d, 
+                                                return {
+                                                  ...d,
                                                   cargaHorariaTeoria: newT,
-                                                  cargaHoraria: newT + newP + newE 
+                                                  cargaHoraria: newT + newP + newE
                                                 };
                                               }
                                               return d;
@@ -1131,7 +1318,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                                 <span className="text-slate-300 font-bold select-none">|</span>
                                 <div className="flex flex-col items-center">
                                   <span className="text-[9px] font-black text-slate-400 select-none">P</span>
-                                  <input 
+                                  <input
                                     type="number"
                                     title="Prática"
                                     className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
@@ -1147,10 +1334,10 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                                                 const newT = d.cargaHorariaTeoria || 0;
                                                 const newP = val;
                                                 const newE = d.cargaHorariaEstagio || 0;
-                                                return { 
-                                                  ...d, 
+                                                return {
+                                                  ...d,
                                                   cargaHorariaPratica: newP,
-                                                  cargaHoraria: newT + newP + newE 
+                                                  cargaHoraria: newT + newP + newE
                                                 };
                                               }
                                               return d;
@@ -1165,7 +1352,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                                 <span className="text-slate-300 font-bold select-none">|</span>
                                 <div className="flex flex-col items-center">
                                   <span className="text-[9px] font-black text-slate-400 select-none">E</span>
-                                  <input 
+                                  <input
                                     type="number"
                                     title="Estágio"
                                     className="w-10 text-center text-xs font-black text-[#001a33] outline-none"
@@ -1181,10 +1368,10 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                                                 const newT = d.cargaHorariaTeoria || 0;
                                                 const newP = d.cargaHorariaPratica || 0;
                                                 const newE = val;
-                                                return { 
-                                                  ...d, 
+                                                return {
+                                                  ...d,
                                                   cargaHorariaEstagio: newE,
-                                                  cargaHoraria: newT + newP + newE 
+                                                  cargaHoraria: newT + newP + newE
                                                 };
                                               }
                                               return d;
@@ -1204,7 +1391,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                               </div>
                             ) : (
                               <>
-                                <input 
+                                <input
                                   type="number"
                                   title="Carga Horária"
                                   className="w-16 text-center text-xs font-bold text-[#001a33] bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -1244,9 +1431,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                     {addingDiscToModId === modulo.id ? (
                       <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                         <div className="flex flex-col sm:flex-row gap-3">
-                          <input 
+                          <input
                             autoFocus
-                            type="text" 
+                            type="text"
                             placeholder={`Nome da Nova ${config.labelDisciplina} *`}
                             className="flex-grow px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold animate-fadeIn"
                             value={newDiscName}
@@ -1254,22 +1441,22 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                           />
                           {curso.modalidade === 'TECNICO' ? (
                             <div className="flex gap-2">
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
                                 placeholder="Teoria (T) *"
                                 className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
                                 value={newDiscTeoria}
                                 onChange={(e) => setNewDiscTeoria(e.target.value)}
                               />
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
                                 placeholder="Prática (P) *"
                                 className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
                                 value={newDiscPratica}
                                 onChange={(e) => setNewDiscPratica(e.target.value)}
                               />
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
                                 placeholder="Estágio (E) *"
                                 className="w-24 px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-xs font-bold text-center"
                                 value={newDiscEstagio}
@@ -1277,8 +1464,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                               />
                             </div>
                           ) : (
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               placeholder="Horas *"
                               className="w-24 px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm font-bold text-center"
                               value={newDiscHoras}
@@ -1286,8 +1473,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                             />
                           )}
                         </div>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder={`Descrição da ${config.labelDisciplina} (Opcional)`}
                           className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 text-sm"
                           value={newDiscDesc}
@@ -1304,7 +1491,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                         </div>
                       </div>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => setAddingDiscToModId(modulo.id)}
                         className={`w-full py-2 border border-dashed border-slate-300 rounded-xl text-slate-400 text-xs font-bold uppercase ${config.hoverBorderColor} ${config.textColor} ${config.hoverBgColor} transition-all flex items-center justify-center gap-2`}
                       >
@@ -1318,8 +1505,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
 
             {/* Criar Novo Módulo */}
             <div className="bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 p-6 flex items-center justify-center gap-3">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Nome do Novo Módulo (Ex: Módulo III)"
                 className="w-64 px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 text-sm bg-white"
                 value={newModuloName}

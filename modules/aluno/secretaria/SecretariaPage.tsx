@@ -115,25 +115,34 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   });
 
   const activeMatricula = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
+  const activeTechnicalMatricula = matriculas.find(
+    (m) =>
+      m.status?.toUpperCase() === 'ATIVO' &&
+      m.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO' &&
+      m.turmas?.cursos?.modalidade === 'TECNICO'
+  );
+  const hasTechnicalActiveMatricula = Boolean(activeTechnicalMatricula);
+  const identityMatricula = hasTechnicalActiveMatricula ? activeTechnicalMatricula : null;
+  const isTechnicalIdentityAvailable = hasTechnicalActiveMatricula;
   const activePoloId = activeMatricula?.turmas?.polo_id || activeMatricula?.polo_id;
   const { data: cardInstitutionalData } = usePoloInstitutionalData(activePoloId);
   const formattedMat = activeMatricula 
     ? formatMatricula(activeMatricula.id, activeMatricula.data_matricula, activeMatricula.polo_id) 
     : 'PENDENTE';
   const cardValidation = useDocumentValidationCode(
-    activeMatricula
+    identityMatricula
       ? {
           type: 'carteirinha',
-          enrollmentId: activeMatricula.id,
+          enrollmentId: identityMatricula.id,
         }
       : null,
     docTab === 'carteirinha'
   );
   const badgeValidation = useDocumentValidationCode(
-    activeMatricula
+    identityMatricula
       ? {
           type: 'cracha_estagio',
-          enrollmentId: activeMatricula.id,
+          enrollmentId: identityMatricula.id,
         }
       : null,
     docTab === 'cracha'
@@ -148,10 +157,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     isDeclaracaoOpen
   );
   const irpfValidation = useDocumentValidationCode(
-    activeMatricula
+    identityMatricula
       ? {
           type: 'declaracao_irpf',
-          enrollmentId: activeMatricula.id,
+          enrollmentId: identityMatricula.id,
         }
       : null,
     isIRPFOpen
@@ -321,6 +330,18 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}q=${getValidationCodeIRPF()}`;
   };
+
+  useEffect(() => {
+    if (!isTechnicalIdentityAvailable && (docTab === 'carteirinha' || docTab === 'cracha')) {
+      setDocTab('servicos' as any);
+    }
+  }, [isTechnicalIdentityAvailable, docTab]);
+
+  useEffect(() => {
+    if (!isTechnicalIdentityAvailable && tipoNovaSolicitacao !== 'Histórico Escolar') {
+      setTipoNovaSolicitacao('Histórico Escolar');
+    }
+  }, [isTechnicalIdentityAvailable, tipoNovaSolicitacao]);
 
   // Portuguese number to words helper
   const valorPorExtenso = (valor: number): string => {
@@ -563,6 +584,14 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   };
 
   const handleOpenIRPF = () => {
+    if (!isTechnicalIdentityAvailable) {
+      showToast(
+        'A Declaração de Rendimentos (IRPF) só está disponível para matrícula ativa em curso técnico.',
+        'warning'
+      );
+      return;
+    }
+
     const dateLimit = irpfTemplateData?.liberacaoDate || '03-01';
     const [monthStr, dayStr] = dateLimit.split('-');
     const limitMonth = parseInt(monthStr, 10) || 3;
@@ -628,26 +657,30 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
         >
           <FileText size={13} /> Serviços
         </button>
-        <button
-          onClick={() => setDocTab('carteirinha')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
-            docTab === 'carteirinha'
-              ? 'bg-[#001a33] text-white shadow-md'
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-          }`}
-        >
-          <CreditCard size={13} /> Carteirinha Digital
-        </button>
-        <button
-          onClick={() => setDocTab('cracha')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
-            docTab === 'cracha'
-              ? 'bg-[#001a33] text-white shadow-md'
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-          }`}
-        >
-          <BadgeCheck size={13} /> Crachá de Identificação
-        </button>
+        {isTechnicalIdentityAvailable && (
+          <>
+            <button
+              onClick={() => setDocTab('carteirinha')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
+                docTab === 'carteirinha'
+                  ? 'bg-[#001a33] text-white shadow-md'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+            >
+              <CreditCard size={13} /> Carteirinha Digital
+            </button>
+            <button
+              onClick={() => setDocTab('cracha')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
+                docTab === 'cracha'
+                  ? 'bg-[#001a33] text-white shadow-md'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+            >
+              <BadgeCheck size={13} /> Crachá de Identificação
+            </button>
+          </>
+        )}
       </div>
 
       {/* ══════════════ SERVIÇOS TAB ══════════════ */}
@@ -689,19 +722,26 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     </div>
                   </button>
 
-                  <button
-                    onClick={handleOpenIRPF}
-                    className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
-                  >
-                    <div className="p-3 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
-                      <DollarSign size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Comprovante IRPF</h4>
-                      <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Declaração financeira de mensalidades quitadas no ano-calendário anterior.</p>
-                    </div>
-                  </button>
+                  {isTechnicalIdentityAvailable && (
+                    <button
+                      onClick={handleOpenIRPF}
+                      className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
+                    >
+                      <div className="p-3 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
+                        <DollarSign size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Comprovante IRPF</h4>
+                        <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Declaração financeira de mensalidades quitadas no ano-calendário anterior.</p>
+                      </div>
+                    </button>
+                  )}
                 </div>
+                {!isTechnicalIdentityAvailable && (
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-2 mt-4">
+                    Carteirinha, crachá e Declaração de IRPF estão disponíveis apenas para matrícula ativa em curso técnico.
+                  </p>
+                )}
               </div>
 
               {/* Requests Table */}
@@ -774,8 +814,12 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-blue-500 font-bold text-slate-700 cursor-pointer"
                   >
                     <option value="Histórico Escolar">Histórico Escolar (Prazo: {prazos['Histórico Escolar']?.prazo || '48h'})</option>
-                    <option value="Declaração IRPF">Declaração IRPF (Prazo: {prazos['Declaração IRPF']?.prazo || '48h'})</option>
-                    <option value="Transferência">Transferência Escolar (Prazo: {prazos['Transferência']?.prazo || '3 dias úteis'})</option>
+                    {isTechnicalIdentityAvailable && (
+                      <>
+                        <option value="Declaração IRPF">Declaração IRPF (Prazo: {prazos['Declaração IRPF']?.prazo || '48h'})</option>
+                        <option value="Transferência">Transferência Escolar (Prazo: {prazos['Transferência']?.prazo || '3 dias úteis'})</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-150 space-y-1.5">

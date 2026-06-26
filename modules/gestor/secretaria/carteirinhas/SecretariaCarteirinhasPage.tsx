@@ -11,40 +11,8 @@ import { formatMatricula } from '../../../../lib/academicUtils';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { poloInstitutionalService } from '../../../shared/polo-institutional/polo-institutional.service';
-
-interface Aluno {
-  id: string;
-  enrollmentId?: string;
-  nome: string;
-  cpf: string;
-  rg: string;
-  nascimento: string;
-  matricula: string;
-  curso: string;
-  instituicao: string;
-  validade: string;
-  fotoUrl?: string | null;
-  tipoDocumento?: string;
-  tipo_documento?: string;
-  turmaIds?: string[];
-  validationCode?: string;
-  poloRazaoSocial?: string;
-  poloCnpj?: string;
-  poloTelefone?: string;
-}
-
-const TEMPLATE_DEFAULT = {
-  corPrimaria: '#0284c7', // Sky 600
-  corSecundaria: '#e0f2fe',
-  textoFrente: 'DOCUMENTO DO ESTUDANTE',
-  textoVerso: 'Este documento é padronizado nacionalmente nos termos da Lei nº 12.933/2013 e garante o direito de meia-entrada em eventos artísticos-culturais e esportivos.\n\nUso pessoal e intransferível.\nVerifique a validade via QR Code.',
-  tipoCurso: 'Cursos Técnicos',
-  hasVerso: true,
-  startNumber: 1000,
-  bgFrenteUrl: '',
-  bgVersoUrl: '',
-  ocultarDesignPadrao: false
-};
+import { Aluno } from './secretaria-carteirinhas.types';
+import { TEMPLATE_DEFAULT, getTechnicalActiveMatricula } from './secretaria-carteirinhas.helpers';
 
 const SecretariaCarteirinhasPage: React.FC = () => {
   const [mode, setMode] = useState<'individual' | 'lote' | 'custom'>('individual');
@@ -97,25 +65,36 @@ const SecretariaCarteirinhasPage: React.FC = () => {
       const mapped = await Promise.all(
         allAlunos.map(async (p) => {
           const matriculas = await parceirosService.getMatriculas(p.id);
-          const activeMat = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
-          const turmaIds = matriculas.map(m => m.turma_id);
-          const poloId = activeMat?.turmas?.polo_id || activeMat?.polo_id;
+          const technicalActiveMatriculas = getTechnicalActiveMatricula(matriculas);
+          const technicalActiveMatricula = technicalActiveMatriculas[0];
+          if (!technicalActiveMatricula) return null;
+
+          const turmaIds = technicalActiveMatriculas
+            .map((matricula) => matricula.turma_id)
+            .filter(Boolean);
+          const poloId = technicalActiveMatricula?.turmas?.polo_id || technicalActiveMatricula?.polo_id;
           const institutionalData = await getInstitutionalData(poloId);
           
           return {
             id: p.id,
-            enrollmentId: activeMat?.id,
+            enrollmentId: technicalActiveMatricula.id,
             nome: p.nome.toUpperCase(),
             cpf: p.cpf || '',
             rg: p.rg || '',
             nascimento: p.dataNascimento || '',
-            matricula: activeMat ? formatMatricula(activeMat.id, activeMat.data_matricula, activeMat.polo_id) : 'PENDENTE',
-            curso: activeMat?.turmas?.cursos?.nome || 'Curso Geral',
+            matricula: formatMatricula(
+              technicalActiveMatricula.id,
+              technicalActiveMatricula.data_matricula,
+              technicalActiveMatricula.polo_id
+            ),
+            curso: technicalActiveMatricula.turmas?.cursos?.nome || 'Curso Geral',
             instituicao: 'Universo Cursos e Consultoria',
             validade: (() => {
               // Validade calculada com base nos meses do config — configs já carregados via Supabase no useEffect
               const months = 12; // fallback — será recalculado quando academicosService carregar
-              const d = activeMat?.data_matricula ? new Date(activeMat.data_matricula) : new Date();
+              const d = technicalActiveMatricula?.data_matricula
+                ? new Date(technicalActiveMatricula.data_matricula)
+                : new Date();
               d.setMonth(d.getMonth() + months);
               return d.toLocaleDateString('pt-BR');
             })(),
@@ -129,7 +108,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
         })
       );
 
-      setAlunos(mapped);
+      setAlunos(mapped.filter(Boolean) as Aluno[]);
     } catch (err) {
       console.error('Erro ao carregar dados acadêmicos do banco:', err);
     } finally {
@@ -916,31 +895,43 @@ const SecretariaCarteirinhasPage: React.FC = () => {
 
   return (
     <div className="animate-fadeIn">
-      {/* Seletor de Modo na secretaria */}
-      <div className="flex justify-center mb-8">
-        <div className="bg-white p-1 rounded-2xl border border-slate-200 shadow-sm inline-flex flex-wrap justify-center gap-1">
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="border-b border-slate-100 p-4">
+          <div className="grid gap-2 md:grid-cols-3">
             <button
                 onClick={() => setMode('individual')}
-                className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'individual' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'individual' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
             >
-                <Search size={16} /> Individual
+                <Search size={20} />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider">Individual</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Busque um aluno e gere uma carteirinha.</p>
+                </div>
             </button>
             <button
                 onClick={() => setMode('lote')}
-                className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'lote' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'lote' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
             >
-                <Users size={16} /> Em Lote (Turma)
+                <Users size={20} />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider">Em lote</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Gere para uma turma ou todos os alunos.</p>
+                </div>
             </button>
             <button
                 onClick={() => setMode('custom')}
-                className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${mode === 'custom' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${mode === 'custom' ? 'border-cyan-200 bg-cyan-50 text-cyan-800' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
             >
-                <CreditCard size={16} /> Personalizado (Misto)
+                <CreditCard size={20} />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider">Personalizado</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Monte uma lista mista de alunos.</p>
+                </div>
             </button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto bg-white p-6 sm:p-10 rounded-[2.5rem] border border-slate-100 shadow-xl">
+      <div className="p-5 md:p-7">
         
         {mode === 'individual' && (
             <div className="animate-fadeIn">
@@ -1372,6 +1363,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
         )}
 
       </div>
+    </div>
     </div>
   );
 };

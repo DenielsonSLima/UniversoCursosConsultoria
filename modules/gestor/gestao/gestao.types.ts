@@ -1,6 +1,7 @@
 
 export type StatusTurma = 'EM_ANDAMENTO' | 'FINALIZADA';
 export type Turno = 'MATUTINO' | 'VESPERTINO' | 'NOTURNO' | 'INTEGRAL' | 'EAD';
+export type TurmasSortBy = 'NOME_ASC' | 'NOME_DESC' | 'ALUNOS_DESC';
 
 export interface Turma {
   id: string;
@@ -11,6 +12,9 @@ export interface Turma {
   modalidade: 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
   poloId?: string; // Opcional pois EAD não tem
   poloNome?: string; // Opcional pois EAD não tem
+  poloCnpj?: string;
+  poloCidade?: string;
+  poloEstado?: string;
   dataInicio: string;
   dataPrevisaoTermino: string;
   turno: Turno;
@@ -26,4 +30,24 @@ export interface Turma {
   descontoPontualidade: number;
   jurosAtraso: number;
   multaAtraso: number;
+  totalDisciplinas?: number;
+  disciplinaAtual?: string;
+  disciplinaAtualOrdem?: number;
+}
+
+export interface TurmasPageFilters {
+  modalidade: Turma['modalidade'];
+  poloId?: string;
+  status: StatusTurma;
+  sortBy?: TurmasSortBy;
+  search?: string;
+  dataInicial?: string;
+  dataFinal?: string;
+  page: number;
+  pageSize: number;
+}
+
+export interface TurmasPageResult {
+  data: Turma[];
+  total: number;
 }

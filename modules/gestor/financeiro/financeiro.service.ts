@@ -1,6 +1,7 @@
 // File: modules/gestor/financeiro/financeiro.service.ts
 
 import { supabase } from '../../../lib/supabase';
+import { asaasIntegrationService } from '../../asaas/asaas.service';
 
 export interface ContaBancaria {
   id?: string;
@@ -23,21 +24,37 @@ export interface ContasReceber {
   id?: string;
   poloId: string;
   poloNome?: string;
+  poloCnpj?: string;
+  poloCidade?: string;
+  poloUf?: string;
   descricao: string;
   valor: number;
   dataVencimento: string;
   dataPagamento?: string;
   valorPago?: number;
-  status: 'PENDENTE' | 'PAGO' | 'VENCIDO' | 'ESTORNADO' | 'CANCELADO' | 'DEVOLVIDO';
+  status: 'PENDENTE' | 'PAGO' | 'VENCIDO' | 'SUSPENSO' | 'ESTORNADO' | 'CANCELADO' | 'DEVOLVIDO';
   categoria: 'MENSALIDADE' | 'OUTROS_CREDITOS' | 'ADIANTAMENTO_TOMADO';
   clienteId?: string;
   clienteNome?: string;
+  clienteCpfCnpj?: string;
   matriculaId?: string;
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
+  origemPagamento?: string;
   contaBancariaId?: string;
   nossoNumeroAsaas?: string;
+  asaasPaymentId?: string;
+  asaasInvoiceUrl?: string;
+  asaasBankSlipUrl?: string;
+  asaasInstallmentId?: string;
+  asaasStatus?: string;
+  asaasLastError?: string;
   createdAt?: string;
+  tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA';
+  parcelaNumero?: number;
+  origemCronogramaId?: string;
+  turmaNome?: string;
+  cursoNome?: string;
 }
 
 export interface ContasPagar {
@@ -163,7 +180,7 @@ export const financeiroService = {
   async getContasReceber(filters?: { poloId?: string; status?: string; categoria?: string }): Promise<ContasReceber[]> {
     let query = supabase
       .from('contas_receber')
-      .select('*, parceiros(nome), polos(nome)');
+      .select('*, parceiros(nome, cpf_cnpj), polos(nome, cnpj, cidade, estado)');
 
     if (filters?.poloId && filters.poloId !== 'todos') {
       query = query.eq('polo_id', filters.poloId);
@@ -185,6 +202,9 @@ export const financeiroService = {
       id: cr.id,
       poloId: cr.polo_id,
       poloNome: cr.polos?.nome || '',
+      poloCnpj: cr.polos?.cnpj || '',
+      poloCidade: cr.polos?.cidade || '',
+      poloUf: cr.polos?.estado || '',
       descricao: cr.descricao,
       valor: Number(cr.valor),
       dataVencimento: cr.data_vencimento,
@@ -194,13 +214,88 @@ export const financeiroService = {
       categoria: cr.categoria,
       clienteId: cr.cliente_id,
       clienteNome: cr.parceiros?.nome || 'Cliente Geral',
+      clienteCpfCnpj: cr.parceiros?.cpf_cnpj || '',
       matriculaId: cr.matricula_id,
       turmaId: cr.turma_id,
       formaPagamento: cr.forma_pagamento,
+      origemPagamento: cr.origem_pagamento,
       contaBancariaId: cr.conta_bancaria_id,
       nossoNumeroAsaas: cr.nosso_numero_asaas,
-      createdAt: cr.created_at
+      asaasPaymentId: cr.asaas_payment_id,
+      asaasInvoiceUrl: cr.asaas_invoice_url,
+      asaasBankSlipUrl: cr.asaas_bank_slip_url,
+      asaasInstallmentId: cr.asaas_installment_id,
+      asaasStatus: cr.asaas_status,
+      asaasLastError: cr.asaas_last_error,
+      createdAt: cr.created_at,
+      tipoLancamento: cr.tipo_lancamento,
+      parcelaNumero: cr.parcela_numero,
+      origemCronogramaId: cr.origem_cronograma_id,
     }));
+  },
+
+  async getReceivablesByModality(modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO'): Promise<ContasReceber[]> {
+    const { data, error } = await supabase
+      .from('contas_receber')
+      .select(`
+        *,
+        parceiros(nome, cpf_cnpj),
+        polos(nome, cnpj, cidade, estado),
+        turmas!inner(
+          nome,
+          codigo,
+          cursos!inner(nome, modalidade)
+        )
+      `)
+      .eq('categoria', 'MENSALIDADE')
+      .eq('turmas.cursos.modalidade', modality)
+      .order('data_vencimento', { ascending: true });
+
+    if (error) {
+      console.error(`Erro ao buscar recebíveis da modalidade ${modality}:`, error);
+      throw error;
+    }
+
+    return (data || []).map((cr: any) => ({
+      id: cr.id,
+      poloId: cr.polo_id,
+      poloNome: cr.polos?.nome || '',
+      poloCnpj: cr.polos?.cnpj || '',
+      poloCidade: cr.polos?.cidade || '',
+      poloUf: cr.polos?.estado || '',
+      descricao: cr.descricao,
+      valor: Number(cr.valor),
+      dataVencimento: cr.data_vencimento,
+      dataPagamento: cr.data_pagamento,
+      valorPago: cr.valor_pago === null ? undefined : Number(cr.valor_pago),
+      status: cr.status,
+      categoria: cr.categoria,
+      clienteId: cr.cliente_id,
+      clienteNome: cr.parceiros?.nome || 'Aluno',
+      clienteCpfCnpj: cr.parceiros?.cpf_cnpj || '',
+      matriculaId: cr.matricula_id,
+      turmaId: cr.turma_id,
+      turmaNome: cr.turmas?.nome || '',
+      cursoNome: cr.turmas?.cursos?.nome || '',
+      formaPagamento: cr.forma_pagamento,
+      origemPagamento: cr.origem_pagamento,
+      contaBancariaId: cr.conta_bancaria_id,
+      nossoNumeroAsaas: cr.nosso_numero_asaas,
+      asaasPaymentId: cr.asaas_payment_id,
+      asaasInvoiceUrl: cr.asaas_invoice_url,
+      asaasBankSlipUrl: cr.asaas_bank_slip_url,
+      asaasInstallmentId: cr.asaas_installment_id,
+      asaasStatus: cr.asaas_status,
+      asaasLastError: cr.asaas_last_error,
+      tipoLancamento: cr.tipo_lancamento,
+      parcelaNumero: cr.parcela_numero,
+      origemCronogramaId: cr.origem_cronograma_id,
+      createdAt: cr.created_at,
+    }));
+  },
+
+  async getTechnicalReceivables(): Promise<ContasReceber[]> {
+    return this.getReceivablesByModality('TECNICO');
   },
 
   async createReceivable(cr: Omit<ContasReceber, 'id'>): Promise<void> {
@@ -224,6 +319,129 @@ export const financeiroService = {
     }
   },
 
+  async getOutrosCreditos(): Promise<ContasReceber[]> {
+    return this.getContasReceber({ categoria: 'OUTROS_CREDITOS' });
+  },
+
+  async createOtherCredit(input: {
+    poloId: string;
+    descricao: string;
+    valor: number;
+    dataVencimento: string;
+    clienteId?: string;
+    formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
+    contaBancariaId?: string;
+    markAsPaid?: boolean;
+    generateAsaas?: boolean;
+  }): Promise<ContasReceber> {
+    if (input.generateAsaas && !input.clienteId) {
+      throw new Error('Selecione um parceiro cadastrado para gerar cobrança no Asaas.');
+    }
+
+    const payload = {
+      polo_id: input.poloId,
+      descricao: input.descricao,
+      valor: input.valor,
+      data_vencimento: input.dataVencimento,
+      status: input.markAsPaid ? 'PAGO' : 'PENDENTE',
+      categoria: 'OUTROS_CREDITOS',
+      cliente_id: input.clienteId || null,
+      forma_pagamento: input.formaPagamento || null,
+      conta_bancaria_id: input.contaBancariaId || null,
+      valor_pago: input.markAsPaid ? input.valor : null,
+      data_pagamento: input.markAsPaid ? input.dataVencimento : null,
+      origem_pagamento: input.markAsPaid ? 'PRESENCIAL' : (input.generateAsaas ? 'ASAAS' : 'LOCAL'),
+    };
+
+    const { data, error } = await supabase
+      .from('contas_receber')
+      .insert(payload)
+      .select(`
+        *,
+        parceiros(nome, cpf_cnpj),
+        polos(nome, cnpj, cidade, estado)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Erro ao criar outro crédito:', error);
+      throw error;
+    }
+
+    if (input.generateAsaas && data?.id) {
+      await asaasIntegrationService.syncReceivable(data.id);
+      const { data: synced, error: syncFetchError } = await supabase
+        .from('contas_receber')
+        .select(`
+          *,
+          parceiros(nome, cpf_cnpj),
+          polos(nome, cnpj, cidade, estado)
+        `)
+        .eq('id', data.id)
+        .single();
+      if (syncFetchError) throw syncFetchError;
+      return {
+        id: synced.id,
+        poloId: synced.polo_id,
+        poloNome: synced.polos?.nome || '',
+        poloCnpj: synced.polos?.cnpj || '',
+        poloCidade: synced.polos?.cidade || '',
+        poloUf: synced.polos?.estado || '',
+        descricao: synced.descricao,
+        valor: Number(synced.valor),
+        dataVencimento: synced.data_vencimento,
+        dataPagamento: synced.data_pagamento,
+        valorPago: synced.valor_pago === null ? undefined : Number(synced.valor_pago),
+        status: synced.status,
+        categoria: synced.categoria,
+        clienteId: synced.cliente_id,
+        clienteNome: synced.parceiros?.nome || 'Cliente Geral',
+        clienteCpfCnpj: synced.parceiros?.cpf_cnpj || '',
+        formaPagamento: synced.forma_pagamento,
+        origemPagamento: synced.origem_pagamento,
+        contaBancariaId: synced.conta_bancaria_id,
+        nossoNumeroAsaas: synced.nosso_numero_asaas,
+        asaasPaymentId: synced.asaas_payment_id,
+        asaasInvoiceUrl: synced.asaas_invoice_url,
+        asaasBankSlipUrl: synced.asaas_bank_slip_url,
+        asaasInstallmentId: synced.asaas_installment_id,
+        asaasStatus: synced.asaas_status,
+        asaasLastError: synced.asaas_last_error,
+        createdAt: synced.created_at,
+      };
+    }
+
+    return {
+      id: data.id,
+      poloId: data.polo_id,
+      poloNome: data.polos?.nome || '',
+      poloCnpj: data.polos?.cnpj || '',
+      poloCidade: data.polos?.cidade || '',
+      poloUf: data.polos?.estado || '',
+      descricao: data.descricao,
+      valor: Number(data.valor),
+      dataVencimento: data.data_vencimento,
+      dataPagamento: data.data_pagamento,
+      valorPago: data.valor_pago === null ? undefined : Number(data.valor_pago),
+      status: data.status,
+      categoria: data.categoria,
+      clienteId: data.cliente_id,
+      clienteNome: data.parceiros?.nome || 'Cliente Geral',
+      clienteCpfCnpj: data.parceiros?.cpf_cnpj || '',
+      formaPagamento: data.forma_pagamento,
+      origemPagamento: data.origem_pagamento,
+      contaBancariaId: data.conta_bancaria_id,
+      nossoNumeroAsaas: data.nosso_numero_asaas,
+      asaasPaymentId: data.asaas_payment_id,
+      asaasInvoiceUrl: data.asaas_invoice_url,
+      asaasBankSlipUrl: data.asaas_bank_slip_url,
+      asaasInstallmentId: data.asaas_installment_id,
+      asaasStatus: data.asaas_status,
+      asaasLastError: data.asaas_last_error,
+      createdAt: data.created_at,
+    };
+  },
+
   async markReceivablePaid(
     id: string,
     params: {
@@ -232,21 +450,18 @@ export const financeiroService = {
       dataPagamento: string;
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     }
-  ): Promise<void> {
-    const { error } = await supabase
-      .from('contas_receber')
-      .update({
-        status: 'PAGO',
-        conta_bancaria_id: params.contaBancariaId,
-        valor_pago: params.valorPago,
-        data_pagamento: params.dataPagamento,
-        forma_pagamento: params.formaPagamento
-      })
-      .eq('id', id);
-    if (error) {
-      console.error('Erro ao liquidar conta a receber:', error);
-      throw error;
-    }
+  ): Promise<{ success: boolean; asaasCanceled?: boolean; asaasPaymentId?: string }> {
+    return asaasIntegrationService.settleInPerson(id, params);
+  },
+
+  async reverseManualSettlement(
+    id: string,
+    params: {
+      recreateAsaas?: boolean;
+      reason?: string;
+    } = {}
+  ): Promise<{ success: boolean; receivable: any; asaasRecreated?: boolean }> {
+    return asaasIntegrationService.reverseInPersonSettlement(id, params);
   },
 
   async deleteReceivable(id: string): Promise<void> {
@@ -407,7 +622,7 @@ export const financeiroService = {
   async getPolos(): Promise<any[]> {
     const { data, error } = await supabase
       .from('polos')
-      .select('id, nome')
+      .select('id, nome, cnpj, cidade, estado, is_matriz')
       .order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar polos no financeiro:', error);
@@ -419,7 +634,7 @@ export const financeiroService = {
   async getParceiros(): Promise<any[]> {
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, tipo')
+      .select('id, nome, tipo, cpf_cnpj, email, telefone')
       .eq('status', 'ATIVO')
       .order('nome', { ascending: true });
     if (error) {

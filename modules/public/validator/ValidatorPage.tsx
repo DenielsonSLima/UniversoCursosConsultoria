@@ -16,6 +16,7 @@ import HistoricoValidationResult from './historico/HistoricoValidationResult';
 import EstagioValidationResult from './estagio/EstagioValidationResult';
 import RematriculaValidationResult from './rematricula/RematriculaValidationResult';
 import TransferenciaValidationResult from './transferencia/TransferenciaValidationResult';
+import CertificadoValidationResult from './certificado/CertificadoValidationResult';
 import { AcademicDocumentValidationResult } from './validator.types';
 
 const ValidatorPage: React.FC = () => {
@@ -138,6 +139,11 @@ const ValidatorPage: React.FC = () => {
             {status === 'valid' && result?.type === 'rematricula' && (
               <RematriculaValidationResult result={result} />
             )}
+            {status === 'valid' &&
+              result &&
+              ['certificado_tecnico', 'certificado_livre', 'certificado_ead', 'certificado_especializacao'].includes(result.type) && (
+                <CertificadoValidationResult result={result as AcademicDocumentValidationResult} />
+              )}
 
             {/* Resultado Inválido */}
             {status === 'invalid' && (

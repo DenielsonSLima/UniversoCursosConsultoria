@@ -1,14 +1,23 @@
 
 import React from 'react';
-import { Users, Calendar, Clock, MoreVertical, GraduationCap, MapPin, ChevronRight, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Users, Calendar, Clock, MoreVertical, GraduationCap, MapPin, CheckCircle2, TrendingUp, BookOpen, PlayCircle } from 'lucide-react';
 import { Turma } from '../gestao.types';
 
 interface TurmaCardProps {
   turma: Turma;
   colorTheme: string; // 'emerald' | 'amber' | 'rose' | 'purple'
+  showPoloDetails?: boolean;
+  showDisciplineProgress?: boolean;
+  onClick?: () => void;
 }
 
-const TurmaCard: React.FC<TurmaCardProps> = ({ turma, colorTheme }) => {
+const TurmaCard: React.FC<TurmaCardProps> = ({
+  turma,
+  colorTheme,
+  showPoloDetails = true,
+  showDisciplineProgress = false,
+  onClick,
+}) => {
   
   // Mapeamento de cores baseado no tema passado
   const getColors = () => {
@@ -25,7 +34,19 @@ const TurmaCard: React.FC<TurmaCardProps> = ({ turma, colorTheme }) => {
   const percentualOcupacao = (turma.alunosMatriculados / turma.vagasTotais) * 100;
 
   return (
-    <div className={`bg-white rounded-[2rem] p-6 border ${colors.border} shadow-sm hover:shadow-2xl transition-all duration-300 relative overflow-hidden group flex flex-col h-full`}>
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className={`bg-white rounded-[2rem] p-6 border ${colors.border} shadow-sm hover:shadow-2xl transition-all duration-300 relative overflow-hidden group flex flex-col h-full ${onClick ? 'cursor-pointer focus:outline-none focus:ring-4 focus:ring-purple-100' : ''}`}
+    >
       
       {/* Background Gradient Effect */}
       <div className={`absolute top-0 right-0 w-32 h-32 opacity-20 -mr-10 -mt-10 blur-3xl rounded-full transition-transform duration-700 group-hover:scale-150 ${colors.fill}`}></div>
@@ -50,19 +71,31 @@ const TurmaCard: React.FC<TurmaCardProps> = ({ turma, colorTheme }) => {
             {turma.cursoNome}
           </p>
         </div>
-        <button className="text-slate-300 hover:text-slate-600 p-1 bg-white rounded-full shadow-sm border border-slate-100 shrink-0">
+        <button
+          type="button"
+          onClick={(event) => event.stopPropagation()}
+          className="text-slate-300 hover:text-slate-600 p-1 bg-white rounded-full shadow-sm border border-slate-100 shrink-0"
+        >
           <MoreVertical size={16} />
         </button>
       </div>
 
       <div className="flex flex-col gap-3 mb-6 relative z-10 flex-1">
-        {turma.poloNome && (
-           <div className="flex items-center justify-between text-xs font-medium text-slate-600 bg-slate-50 p-2 rounded-xl">
-             <div className="flex items-center gap-2">
+        {showPoloDetails && turma.poloNome && (
+           <div className="flex items-start justify-between gap-3 text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl">
+             <div className="flex items-center gap-2 pt-0.5 shrink-0">
                 <MapPin size={14} className="text-slate-400" />
-                <span>Polo / Unidade</span>
+                <span>Polo</span>
              </div>
-             <span className="font-bold text-[#001a33]">{turma.poloNome}</span>
+             <div className="min-w-0 text-right">
+               <span className="block font-black text-[#001a33] truncate" title={turma.poloNome}>{turma.poloNome}</span>
+               <span className="block mt-0.5 text-[9px] font-bold text-slate-400">
+                 CNPJ: {turma.poloCnpj || 'Não informado'}
+               </span>
+               <span className="block text-[9px] font-bold uppercase text-slate-400">
+                 {[turma.poloCidade, turma.poloEstado].filter(Boolean).join(' - ') || 'Localização não informada'}
+               </span>
+             </div>
            </div>
         )}
         
@@ -81,6 +114,41 @@ const TurmaCard: React.FC<TurmaCardProps> = ({ turma, colorTheme }) => {
            </div>
            <span className="font-bold text-[#001a33] uppercase">{turma.turno}</span>
         </div>
+
+        {showDisciplineProgress && (
+          <div className={`rounded-xl border p-3 ${colors.border} ${colors.bg}`}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                <BookOpen size={13} className={colors.text} />
+                Disciplinas
+              </span>
+              <span className={`text-sm font-black ${colors.text}`}>
+                {turma.totalDisciplinas || 0}
+              </span>
+            </div>
+
+            <div className="flex items-start gap-2 border-t border-white/70 pt-2">
+              <PlayCircle size={14} className={`${colors.text} mt-0.5 shrink-0`} />
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  {turma.totalDisciplinas === 0
+                    ? 'Grade não configurada'
+                    : turma.disciplinaAtual
+                      ? `Atual ${turma.disciplinaAtualOrdem}/${turma.totalDisciplinas}`
+                      : 'Grade concluída'}
+                </p>
+                {turma.disciplinaAtual && (
+                  <p
+                    className="mt-0.5 truncate text-xs font-black text-[#001a33]"
+                    title={turma.disciplinaAtual}
+                  >
+                    {turma.disciplinaAtual}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Barra de Progresso / Alunos */}

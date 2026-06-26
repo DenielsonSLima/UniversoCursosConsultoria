@@ -30,9 +30,11 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    let finalValue = value;
-    if (type === 'text' || e.target.tagName === 'SELECT') {
-      if (name !== 'email') {
+    let finalValue: any = value;
+    if (type === 'checkbox') {
+      finalValue = (e.target as HTMLInputElement).checked;
+    } else if (type === 'text' || e.target.tagName === 'SELECT') {
+      if (name !== 'email' && name !== 'responsavelEmail') {
         finalValue = value.toUpperCase();
       }
     }
@@ -41,7 +43,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
     const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
     const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
 
-    if (name === 'cpf') finalValue = maskCPF(finalValue);
+    if (name === 'cpf' || name === 'responsavelCpf') finalValue = maskCPF(finalValue);
     if (name === 'cep') finalValue = maskCEP(finalValue);
     if (name === 'telefone' || name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
     if (name === 'dataNascimento' || name === 'rgDataEmissao') finalValue = maskDate(finalValue);
@@ -220,6 +222,53 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
             <>
               <DisplayField label="Nome da Mãe" value={formData.nomeMae} />
               <DisplayField label="Nome do Pai" value={formData.nomePai} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Responsável financeiro */}
+      <div className="space-y-6 pt-6">
+        <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Responsável legal e financeiro</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isEditing ? (
+            <>
+              <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 cursor-pointer">
+                <input type="checkbox" name="responsavelFinanceiro" checked={!!formData.responsavelFinanceiro} onChange={handleChange} className="mt-0.5 h-4 w-4 accent-blue-600" />
+                <span>
+                  <strong className="block text-xs uppercase tracking-wider text-blue-800">Responsável pelos pagamentos</strong>
+                  <span className="mt-1 block text-xs text-blue-700">Será considerado como pagador na declaração de IRPF.</span>
+                </span>
+              </label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nome</label>
+                <input name="responsavelNome" value={formData.responsavelNome || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">CPF</label>
+                <input name="responsavelCpf" value={formData.responsavelCpf || ''} onChange={handleChange} maxLength={14} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Parentesco</label>
+                <input name="responsavelParentesco" value={formData.responsavelParentesco || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Telefone</label>
+                <input name="responsavelTelefone" value={formData.responsavelTelefone || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail</label>
+                <input type="email" name="responsavelEmail" value={formData.responsavelEmail || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
+              </div>
+            </>
+          ) : (
+            <>
+              <DisplayField label="Responsável" value={formData.responsavelNome} />
+              <DisplayField label="CPF" value={formData.responsavelCpf} />
+              <DisplayField label="Parentesco" value={formData.responsavelParentesco} />
+              <DisplayField label="Telefone" value={formData.responsavelTelefone} />
+              <DisplayField label="E-mail" value={formData.responsavelEmail} />
+              <DisplayField label="Responsável financeiro" value={formData.responsavelFinanceiro ? 'SIM' : 'NÃO'} />
             </>
           )}
         </div>

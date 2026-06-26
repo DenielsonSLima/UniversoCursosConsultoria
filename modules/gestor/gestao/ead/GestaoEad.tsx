@@ -4,33 +4,44 @@ import { Plus, MonitorPlay, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaEadForm from '../components/forms/TurmaEadForm';
 import { gestaoService } from '../gestao.service';
+import TurmasFilters from '../components/TurmasFilters';
+import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 import { Turma } from '../gestao.types';
+import TurmaEadDetalhes from './detalhes/TurmaEadDetalhes';
 
-const GestaoEad: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'andamento' | 'finalizadas'>('andamento');
-  const [turmas, setTurmas] = useState<Turma[]>([]);
+interface GestaoEadProps {
+  onToggleDetails?: (isOpen: boolean) => void;
+}
+
+const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]); // Mock temporário
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
+
+  const list = useTurmasPaginadas('EAD');
 
   useEffect(() => {
-    loadData();
+    gestaoService.getCursosByModalidade('EAD').then(setCursosDisponiveis);
   }, []);
-
-  const loadData = async () => {
-    const turmasData = await gestaoService.getTurmasByModalidade('EAD');
-    setTurmas(turmasData);
-    const cursosData = await gestaoService.getCursosByModalidade('EAD');
-    setCursosDisponiveis(cursosData);
-  };
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
-    await loadData();
+    await list.reload();
   };
 
-  const filteredTurmas = turmas.filter(t => 
-    activeSubTab === 'andamento' ? t.status === 'EM_ANDAMENTO' : t.status === 'FINALIZADA'
-  );
+  const openTurma = (turma: Turma) => {
+    setSelectedTurma(turma);
+    onToggleDetails?.(true);
+  };
+
+  const closeTurma = () => {
+    setSelectedTurma(null);
+    onToggleDetails?.(false);
+  };
+
+  if (selectedTurma) {
+    return <TurmaEadDetalhes turma={selectedTurma} onBack={closeTurma} />;
+  }
 
   return (
     <div className="animate-fadeIn">
@@ -55,9 +66,9 @@ const GestaoEad: React.FC = () => {
 
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
         <button 
-          onClick={() => setActiveSubTab('andamento')}
+          onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'andamento' 
+            list.status === 'EM_ANDAMENTO'
             ? 'text-purple-600 border-b-2 border-purple-600' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -65,9 +76,9 @@ const GestaoEad: React.FC = () => {
           <Activity size={14} /> Em Andamento
         </button>
         <button 
-          onClick={() => setActiveSubTab('finalizadas')}
+          onClick={() => list.changeStatus('FINALIZADA')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'finalizadas' 
+            list.status === 'FINALIZADA'
             ? 'text-slate-800 border-b-2 border-slate-800' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -76,14 +87,26 @@ const GestaoEad: React.FC = () => {
         </button>
       </div>
 
+      <TurmasFilters {...list} onSearchChange={list.setSearch} onDataInicialChange={list.setDataInicial}
+        onDataFinalChange={list.setDataFinal} onSortByChange={list.changeSortBy}
+        onApply={list.applyFilters} onPageChange={list.setPage} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredTurmas.length === 0 ? (
+        {list.loading ? (
+          <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
+        ) : list.turmas.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-400">
                 Nenhuma turma encontrada.
             </div>
         ) : (
-            filteredTurmas.map(turma => (
-                <TurmaCard key={turma.id} turma={turma} colorTheme="purple" />
+            list.turmas.map(turma => (
+                <TurmaCard
+                  key={turma.id}
+                  turma={turma}
+                  colorTheme="purple"
+                  showPoloDetails={false}
+                  onClick={() => openTurma(turma)}
+                />
             ))
         )}
       </div>

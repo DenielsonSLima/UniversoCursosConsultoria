@@ -1,7 +1,6 @@
 // File: modules/gestor/biblioteca/BibliotecaPage.tsx
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   BookOpen, LayoutGrid, Users, Award, Eye, Download, 
   Clock, Calendar, Sparkles, Folder, Lock, Search, Trash2
@@ -12,13 +11,13 @@ import TeacherRepositoryList from './components/TeacherRepository';
 import UploadModal from './components/UploadModal';
 import QuickPreviewModal from './components/QuickPreviewModal';
 import DocumentPermissionsModal from './components/DocumentPermissionsModal';
-import { bibliotecaService } from './biblioteca.service';
 import { LibraryDocument } from './biblioteca.types';
+import { useBibliotecaPageQueries } from './hooks/useBibliotecaPageQueries';
+import { useBibliotecaPageMutations } from './hooks/useBibliotecaPageMutations';
 
 type LibraryTab = 'destaques' | 'gerenciador' | 'professores' | 'regras';
 
 const BibliotecaPage: React.FC = () => {
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<LibraryTab>('destaques');
   
   // Modal Upload States
@@ -33,69 +32,40 @@ const BibliotecaPage: React.FC = () => {
   const [permissionsDoc, setPermissionsDoc] = useState<LibraryDocument | null>(null);
   const [searchRegrasQuery, setSearchRegrasQuery] = useState('');
 
-  // Academics queries for resolving IDs to Names
-  const { data: cursosList = [] } = useQuery({ 
-    queryKey: ['library-cursos-list'], 
-    queryFn: () => bibliotecaService.getCursos(),
-    enabled: activeTab === 'regras'
-  });
+  const {
+    cursosList,
+    turmasList,
+    disciplinasList,
+    allDocs,
+    isAllDocsLoading,
+    topAccessed,
+    isTopLoading,
+    topRecent,
+    isRecentLoading,
+  } = useBibliotecaPageQueries(activeTab);
 
-  const { data: turmasList = [] } = useQuery({ 
-    queryKey: ['library-turmas-list'], 
-    queryFn: () => bibliotecaService.getTurmas(),
-    enabled: activeTab === 'regras'
-  });
-
-  const { data: disciplinasList = [] } = useQuery({ 
-    queryKey: ['library-disciplinas-list'], 
-    queryFn: () => bibliotecaService.getDisciplinas(),
-    enabled: activeTab === 'regras'
-  });
-
-  // Query to get all documents for the rules list
-  const { data: allDocs = [], isLoading: isAllDocsLoading } = useQuery({
-    queryKey: ['library-all-documents-rules'],
-    queryFn: () => bibliotecaService.getDocuments(),
-    enabled: activeTab === 'regras'
-  });
+  const {
+    uploadMutation,
+    deleteMutation,
+    invalidateDocuments,
+    invalidateHighlights,
+  } = useBibliotecaPageMutations();
 
   const getCursoName = (id: string) => cursosList.find((c: any) => c.id === id)?.nome || id;
   const getTurmaName = (id: string) => turmasList.find((t: any) => t.id === id)?.nome || id;
   const getDisciplinaName = (id: string) => disciplinasList.find((d: any) => d.id === id)?.nome || id;
 
   const handleDeleteDocument = async (id: string) => {
-    await bibliotecaService.deleteDocument(id);
-    queryClient.invalidateQueries({ queryKey: ['library-all-documents-rules'] });
-    queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-    queryClient.invalidateQueries({ queryKey: ['library-top-accessed'] });
-    queryClient.invalidateQueries({ queryKey: ['library-top-recent'] });
+    await deleteMutation.mutateAsync(id);
   };
 
   const filteredAllDocs = allDocs.filter(doc => 
     doc.title.toLowerCase().includes(searchRegrasQuery.toLowerCase())
   );
 
-  // Queries for Highlights
-  const { data: topAccessed = [], isLoading: isTopLoading } = useQuery({
-    queryKey: ['library-top-accessed'],
-    queryFn: () => bibliotecaService.getTop10Accessed(),
-    enabled: activeTab === 'destaques'
-  });
-
-  const { data: topRecent = [], isLoading: isRecentLoading } = useQuery({
-    queryKey: ['library-top-recent'],
-    queryFn: () => bibliotecaService.getTop10Recent(),
-    enabled: activeTab === 'destaques'
-  });
-
   // Handle uploading document
   const handleUploadSubmit = async (uploadData: any) => {
-    await bibliotecaService.uploadDocument(uploadData);
-    // Invalidate queries to refresh lists
-    queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-    queryClient.invalidateQueries({ queryKey: ['library-top-accessed'] });
-    queryClient.invalidateQueries({ queryKey: ['library-top-recent'] });
-    queryClient.invalidateQueries({ queryKey: ['library-teacher-repositories'] });
+    await uploadMutation.mutateAsync(uploadData);
   };
 
   const handleOpenUpload = (pastaId: string | null, teacherId: string | null = null) => {
@@ -108,7 +78,7 @@ const BibliotecaPage: React.FC = () => {
     setPreviewDoc(doc);
     // Invalidate highlight queries after visual count update
     setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ['library-top-accessed'] });
+      invalidateHighlights();
     }, 1000);
   };
 
@@ -499,8 +469,7 @@ const BibliotecaPage: React.FC = () => {
         onClose={() => setPermissionsDoc(null)}
         document={permissionsDoc}
         onSave={() => {
-          queryClient.invalidateQueries({ queryKey: ['library-all-documents-rules'] });
-          queryClient.invalidateQueries({ queryKey: ['library-documents'] });
+          invalidateDocuments();
         }}
       />
 

@@ -18,6 +18,8 @@ const VARIABLES = [
   { code: '{{ALUNO_NOME}}', label: 'Nome do Aluno' },
   { code: '{{ALUNO_CPF}}', label: 'CPF do Aluno' },
   { code: '{{ALUNO_MATRICULA}}', label: 'Matrícula' },
+  { code: '{{RESPONSAVEL_FINANCEIRO_NOME}}', label: 'Responsável Financeiro' },
+  { code: '{{RESPONSAVEL_FINANCEIRO_CPF}}', label: 'CPF do Responsável Financeiro' },
   { code: '{{CURSO_NOME}}', label: 'Nome do Curso' },
   { code: '{{ANO_CALENDARIO}}', label: 'Ano-calendário' },
   { code: '{{VALOR_TOTAL}}', label: 'Valor Total (R$)' },

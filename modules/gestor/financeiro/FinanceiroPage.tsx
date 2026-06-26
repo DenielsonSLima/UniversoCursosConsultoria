@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  DollarSign, TrendingUp, TrendingDown, Layers, ArrowRightLeft, ShieldAlert
+  TrendingUp, TrendingDown, Layers, ArrowRightLeft
 } from 'lucide-react';
 
 // Submodule Tab Imports
@@ -48,26 +48,6 @@ const FinanceiroPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
-      {/* HEADER PRINCIPAL */}
-      <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-2xl">
-         <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-         <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-blue-600/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
-
-         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                 <span className="bg-emerald-500/20 text-emerald-300 font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase border border-emerald-500/30 flex items-center gap-2">
-                   <DollarSign size={12} className="text-emerald-400" /> Finanças da Instituição
-                 </span>
-              </div>
-              <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-2">Módulo Financeiro</h2>
-              <p className="text-slate-300 font-medium max-w-xl text-sm leading-relaxed">
-                Acompanhe o resumo de mensalidades e controle de caixas de forma integrada com busca rápida de contas de alunos.
-              </p>
-            </div>
-         </div>
-      </div>
-
       {/* ABA DE NAVEGAÇÃO PRINCIPAL */}
       <div className="flex flex-wrap gap-2 mb-8 border-b border-slate-200 pb-3">
         {tabs.map((tab) => {

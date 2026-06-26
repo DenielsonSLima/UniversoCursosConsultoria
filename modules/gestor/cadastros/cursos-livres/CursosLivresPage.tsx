@@ -1,20 +1,24 @@
 // File: modules/gestor/cadastros/cursos-livres/CursosLivresPage.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Zap, Plus, Loader2, X, Copy, Power, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import CursoLivreCard from './components/CursoLivreCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
-import { cadastrosService } from '../cadastros.service';
 import { Curso } from '../cadastros.types';
+import { CursoCadastroStatusFilter } from '../curso-modalidade.service';
+import { useCursoModalidadeQueries } from '../hooks/useCursoModalidadeQueries';
+import { useCursoModalidadeRealtime } from '../hooks/useCursoModalidadeRealtime';
+import { useCursoModalidadeMutations } from '../hooks/useCursoModalidadeMutations';
 
-const CursosLivresPage: React.FC = () => {
+interface CursosLivresPageProps {
+  readOnly?: boolean;
+}
+
+const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false }) => {
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
-  const [cursos, setCursos] = useState<Curso[]>([]);
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Filtro de Status ('ativo' | 'inativo')
-  const [statusFilter, setStatusFilter] = useState<'ativo' | 'inativo'>('ativo');
+  const [statusFilter, setStatusFilter] = useState<CursoCadastroStatusFilter>('ativo');
 
   // Estados para Modal de Novo Curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -49,22 +53,49 @@ const CursosLivresPage: React.FC = () => {
 
   const areasDisponiveis = ['Capacitação', 'Tecnologia', 'Gestão', 'Idiomas', 'Outros'];
 
-  useEffect(() => {
-    loadCursos();
-  }, []);
-
-  const loadCursos = async () => {
-    setLoading(true);
-    try {
-      const data = await cadastrosService.getCursosByModalidade('LIVRE');
-      setCursos(data);
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao carregar cursos livres.', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const resetCreateForm = () => {
+    setShowCreateModal(false);
+    setNewCursoNome('');
+    setNewCursoDesc('');
+    setNewCursoArea('Capacitação');
+    setNewCursoVersao('1.0');
   };
+
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDuplicateTargetId(null);
+  };
+
+  const { cursosQuery, invalidateCursosModalidade } = useCursoModalidadeQueries('LIVRE');
+  useCursoModalidadeRealtime('LIVRE', invalidateCursosModalidade);
+
+  const {
+    createMutation,
+    duplicateMutation,
+    toggleStatusMutation,
+    deleteMutation
+  } = useCursoModalidadeMutations({
+    modalidade: 'LIVRE',
+    invalidateCursosModalidade,
+    showToast,
+    resetCreateForm,
+    closeDuplicateModal,
+    setIsCreatingCurso,
+    setIsDuplicating,
+    messages: {
+      createSuccess: 'Curso livre criado com sucesso!',
+      createError: 'Erro ao criar curso livre no Supabase.',
+      duplicateSuccess: 'Curso duplicado com sucesso!',
+      duplicateError: 'Erro ao duplicar curso.',
+      deleteSuccess: 'Curso excluído com sucesso!',
+      deleteError: 'Erro ao excluir o curso.',
+      toggleSuccess: (novoStatus) => `Curso ${novoStatus === 'inativo' ? 'inativado' : 'ativado'} com sucesso!`,
+      toggleError: 'Erro ao alterar status do curso.'
+    }
+  });
+
+  const cursos = cursosQuery.data || [];
+  const loading = cursosQuery.isLoading;
 
   const handleSelectCurso = (curso: Curso) => {
     setSelectedCurso(curso);
@@ -74,7 +105,7 @@ const CursosLivresPage: React.FC = () => {
   const handleBack = () => {
     setSelectedCurso(null);
     setViewState('list');
-    loadCursos();
+    invalidateCursosModalidade();
   };
 
   // Criação de Curso
@@ -83,29 +114,12 @@ const CursosLivresPage: React.FC = () => {
     if (!newCursoNome.trim()) return;
 
     setIsCreatingCurso(true);
-    try {
-      await cadastrosService.createCurso({
-        nome: newCursoNome,
-        carga_horaria: 0, // Inicia em 0 e calcula a partir das aulas inseridas na grade
-        modalidade: 'LIVRE',
-        status: 'ativo',
-        area: newCursoArea,
-        descricao: newCursoDesc,
-        versao: newCursoVersao
-      });
-      setShowCreateModal(false);
-      setNewCursoNome('');
-      setNewCursoDesc('');
-      setNewCursoArea('Capacitação');
-      setNewCursoVersao('1.0');
-      loadCursos();
-      showToast('Curso livre criado com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao criar curso livre no Supabase.', 'error');
-    } finally {
-      setIsCreatingCurso(false);
-    }
+    createMutation.mutate({
+      nome: newCursoNome,
+      descricao: newCursoDesc,
+      area: newCursoArea,
+      versao: newCursoVersao
+    });
   };
 
   // Duplicação de Curso
@@ -123,18 +137,11 @@ const CursosLivresPage: React.FC = () => {
     if (!duplicateTargetId || !duplicateNome.trim()) return;
 
     setIsDuplicating(true);
-    try {
-      await cadastrosService.duplicateCurso(duplicateTargetId, duplicateNome, duplicateVersao);
-      setShowDuplicateModal(false);
-      setDuplicateTargetId(null);
-      loadCursos();
-      showToast('Curso duplicado com sucesso!', 'success');
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao duplicar curso.', 'error');
-    } finally {
-      setIsDuplicating(false);
-    }
+    duplicateMutation.mutate({
+      cursoId: duplicateTargetId,
+      nome: duplicateNome,
+      versao: duplicateVersao
+    });
   };
 
   // Alterar Status (Ativo/Inativo)
@@ -149,16 +156,7 @@ const CursosLivresPage: React.FC = () => {
       isOpen: true,
       title: novoStatus === 'inativo' ? 'Pausar Curso' : 'Reativar Curso',
       message: confirmMsg,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.toggleStatus(curso.id, novoStatus);
-          loadCursos();
-          showToast(`Curso ${novoStatus === 'inativo' ? 'inativado' : 'ativado'} com sucesso!`, 'success');
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao alterar status do curso.', 'error');
-        }
-      }
+      onConfirm: () => toggleStatusMutation.mutate({ cursoId: curso.id, novoStatus })
     });
   };
 
@@ -175,16 +173,7 @@ const CursosLivresPage: React.FC = () => {
       isOpen: true,
       title: 'Excluir Curso Livre',
       message: `Tem certeza de que deseja EXCLUIR definitivamente o curso "${curso.nome}"? Esta ação removerá a grade curricular vinculada e não poderá ser desfeita.`,
-      onConfirm: async () => {
-        try {
-          await cadastrosService.deleteCurso(curso.id);
-          loadCursos();
-          showToast('Curso excluído com sucesso!', 'success');
-        } catch (err: any) {
-          console.error(err);
-          showToast(err.message || 'Erro ao excluir o curso.', 'error');
-        }
-      }
+      onConfirm: () => deleteMutation.mutate(curso.id)
     });
   };
 
@@ -206,7 +195,7 @@ const CursosLivresPage: React.FC = () => {
       <CursoGradeCurricularDetails 
         curso={selectedCurso} 
         onBack={handleBack} 
-        onUpdate={loadCursos}
+        onUpdate={invalidateCursosModalidade}
       />
     );
   }
@@ -224,13 +213,19 @@ const CursosLivresPage: React.FC = () => {
           </p>
         </div>
         
-        <button 
+        {!readOnly && <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-amber-600 transition-colors shadow-lg shadow-amber-900/20"
         >
           <Plus size={16} /> Novo Curso
-        </button>
+        </button>}
       </div>
+
+      {readOnly && (
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+          Modo de visualização do polo: cadastros e alterações são exclusivos da Matriz.
+        </div>
+      )}
 
       {/* Tabs de Filtro de Status */}
       <div className="flex gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-xs border border-slate-200">
@@ -278,6 +273,7 @@ const CursosLivresPage: React.FC = () => {
                   <CursoLivreCard 
                     key={curso.id} 
                     curso={curso} 
+                    readOnly={readOnly}
                     onClick={() => handleSelectCurso(curso)} 
                     onDuplicate={(e) => handleOpenDuplicate(curso, e)}
                     onToggleStatus={(e) => handleToggleStatus(curso, e)}
@@ -291,7 +287,7 @@ const CursosLivresPage: React.FC = () => {
       )}
 
       {/* Modal Criar Novo Curso */}
-      {showCreateModal && (
+      {!readOnly && showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
             <button 
@@ -373,7 +369,7 @@ const CursosLivresPage: React.FC = () => {
       )}
 
       {/* Modal Duplicar */}
-      {showDuplicateModal && (
+      {!readOnly && showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
             <button 

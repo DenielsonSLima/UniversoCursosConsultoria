@@ -17,6 +17,7 @@ const BoletimPage: React.FC = () => (
     validationPrefix="BOL"
     defaultValidityDays={30}
     restrictionLabel="Somente cursos técnicos"
+    modalityScope="TECNICO"
   />
 );
 

@@ -6,7 +6,11 @@ import { Curso } from '../cadastros.types';
 import { supabase } from '../../../../lib/supabase';
 import { parceirosService } from '../../parceiros/parceiros.service';
 
-const EnsinoSuperiorPage: React.FC = () => {
+interface EnsinoSuperiorPageProps {
+  readOnly?: boolean;
+}
+
+const EnsinoSuperiorPage: React.FC<EnsinoSuperiorPageProps> = ({ readOnly = false }) => {
   const queryClient = useQueryClient();
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,16 +215,13 @@ const EnsinoSuperiorPage: React.FC = () => {
     if (!nome.trim()) return;
 
     // Resolve o nome e logo do parceiro selecionado
-    let finalParceiroNome = '';
-    let finalLogoUrl = '';
-    if (parceiroTipo === 'Outro') {
-      finalParceiroNome = parceiroNomeCustom.trim();
-      finalLogoUrl = '';
-    } else {
-      const dbPartner = parceirosPj?.find(p => p.id === parceiroTipo);
-      finalParceiroNome = dbPartner?.nome || '';
-      finalLogoUrl = dbPartner?.foto || '';
-    }
+    const dbPartner = parceiroTipo === 'Outro'
+      ? null
+      : parceirosPj?.find(p => p.id === parceiroTipo);
+    const finalParceiroNome = parceiroTipo === 'Outro'
+      ? parceiroNomeCustom.trim()
+      : dbPartner?.nome || '';
+    const finalLogoUrl = dbPartner?.foto || '';
 
     if (!finalParceiroNome) {
       alert('Por favor, selecione ou informe a instituição parceira.');
@@ -332,13 +333,19 @@ const EnsinoSuperiorPage: React.FC = () => {
           </p>
         </div>
         
-        <button 
+        {!readOnly && <button
           onClick={handleOpenCreate}
           className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
         >
           <Plus size={16} /> Novo Curso Superior
-        </button>
+        </button>}
       </div>
+
+      {readOnly && (
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+          Modo de visualização do polo: cadastros e alterações são exclusivos da Matriz.
+        </div>
+      )}
 
       {/* Info Box sobre o funcionamento das Parcerias */}
       <div className="bg-blue-50/70 border border-blue-100 p-5 rounded-3xl mb-8 flex items-start gap-4 shadow-sm">
@@ -450,7 +457,7 @@ const EnsinoSuperiorPage: React.FC = () => {
                         Versão {curso.versao || '1.0'}
                       </span>
                       
-                      <div className="flex items-center gap-1">
+                      {!readOnly && <div className="flex items-center gap-1">
                         {/* Toggle Status */}
                         <button
                           onClick={(e) => handleToggleStatus(curso, e)}
@@ -481,7 +488,7 @@ const EnsinoSuperiorPage: React.FC = () => {
                         >
                           <Trash2 size={16} />
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   </div>
                 ))}
@@ -492,7 +499,7 @@ const EnsinoSuperiorPage: React.FC = () => {
       )}
 
       {/* Modal de Formulário (Criar/Editar) */}
-      {showFormModal && (
+      {!readOnly && showFormModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
             <button 

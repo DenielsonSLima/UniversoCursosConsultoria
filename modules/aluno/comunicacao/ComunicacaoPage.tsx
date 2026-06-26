@@ -1,41 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
 import {
   MessageSquare, Send, Paperclip, Clock, CheckCircle, Tag, Plus, X, Sparkles,
-  FileText, FileSpreadsheet, Presentation, Image, File, Download, Trash2, AlertTriangle
+  Download, Trash2, AlertTriangle
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
-
-interface ComunicacaoPageProps {
-  alunoId: string;
-  alunoNome: string;
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const ACCEPTED_TYPES = 'image/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx';
-
-const getFileIcon = (url: string | null, type?: string) => {
-  if (!url && !type) return <File size={14} />;
-  const lower = (url || type || '').toLowerCase();
-  if (/\.(jpe?g|png|gif|webp|svg)/.test(lower) || (type || '').startsWith('image/'))
-    return <Image size={14} className="text-blue-500" />;
-  if (/\.pdf/.test(lower) || lower.includes('pdf'))
-    return <FileText size={14} className="text-red-500" />;
-  if (/\.(ppt|pptx)/.test(lower) || lower.includes('presentation'))
-    return <Presentation size={14} className="text-orange-500" />;
-  if (/\.(xls|xlsx)/.test(lower) || lower.includes('spreadsheet'))
-    return <FileSpreadsheet size={14} className="text-emerald-600" />;
-  if (/\.(doc|docx)/.test(lower) || lower.includes('word'))
-    return <FileText size={14} className="text-blue-600" />;
-  return <File size={14} className="text-slate-500" />;
-};
-
-const isImageUrl = (url: string) =>
-  /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url);
+import {
+  ACCEPTED_ATTACHMENT_TYPES,
+  formatChatTime,
+  getFileIcon,
+  isImageUrl,
+} from './comunicacao.helpers';
+import {
+  alunoComunicacaoKeys,
+  alunoComunicacaoService,
+} from './comunicacao.service';
+import { useAlunoComunicacaoRealtime } from './useAlunoComunicacaoRealtime';
+import {
+  ComunicacaoCategoria,
+  ComunicacaoChat,
+  ComunicacaoMensagem,
+  ComunicacaoPageProps,
+} from './comunicacao.types';
 
 // ─── Component ───────────────────────────────────────────────────────────────
+
+const playMessageSound = (tone: 'send' | 'receive') => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = new AudioContextClass();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = tone === 'send' ? 660 : 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.18);
+    window.setTimeout(() => context.close().catch(() => undefined), 260);
+  } catch {
+    // Se o navegador bloquear áudio, o envio/recebimento segue funcionando.
+  }
+};
 
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome }) => {
   const queryClient = useQueryClient();
@@ -53,163 +63,52 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Delete confirm modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingChat, setDeletingChat] = useState(false);
 
   // ── 1. Fetch Categories ──
-  const { data: categories = [] } = useQuery<any[]>({
-    queryKey: ['comunicacao-categorias'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('comunicacao_categorias').select('*').eq('ativo', true);
-      if (error) throw error;
-      return data || [];
-    }
+  const { data: categories = [] } = useQuery<ComunicacaoCategoria[]>({
+    queryKey: alunoComunicacaoKeys.categories,
+    queryFn: alunoComunicacaoService.getCategories
   });
 
   // ── 2. Fetch Aluno's Chats (mais recente primeiro, excluindo soft-deleted) ──
-  const { data: chats = [], isLoading: loadingChats } = useQuery<any[]>({
-    queryKey: ['aluno-chats', alunoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comunicacao_chats')
-        .select('*')
-        .eq('remetente_id', alunoId)
-        .eq('deleted_by_aluno', false)      // ← só mostra os não excluídos
-        .order('ultima_data', { ascending: false }); // ← mais recente primeiro
-      if (error) throw error;
-      return data || [];
-    },
+  const { data: chats = [], isLoading: loadingChats } = useQuery<ComunicacaoChat[]>({
+    queryKey: alunoComunicacaoKeys.chats(alunoId),
+    queryFn: () => alunoComunicacaoService.getAlunoChats(alunoId),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
   // ── 3. Fetch Messages for Active Chat ──
-  const { data: messages = [], isLoading: loadingMessages } = useQuery<any[]>({
-    queryKey: ['chat-messages', activeChatId],
+  const { data: messages = [], isLoading: loadingMessages } = useQuery<ComunicacaoMensagem[]>({
+    queryKey: alunoComunicacaoKeys.messages(activeChatId),
     enabled: !!activeChatId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('comunicacao_mensagens')
-        .select('*')
-        .eq('chat_id', activeChatId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data || [];
-    }
+    queryFn: () => alunoComunicacaoService.getMessages(activeChatId!)
   });
 
-  // ── 3.1 Fetch and Subscribe to global unread messages ──
+  useAlunoComunicacaoRealtime({ alunoId, activeChatId, setUnreadChatIds });
+
   useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const { data: studentChats } = await supabase
-          .from('comunicacao_chats')
-          .select('id')
-          .eq('remetente_id', alunoId)
-          .eq('deleted_by_aluno', false);
-        
-        const chatIds = studentChats?.map(c => c.id) || [];
-        if (chatIds.length === 0) {
-          setUnreadChatIds(new Set());
-          return;
-        }
+    seenMessageIdsRef.current = new Set();
+  }, [activeChatId]);
 
-        const { data } = await supabase
-          .from('comunicacao_mensagens')
-          .select('chat_id')
-          .in('chat_id', chatIds)
-          .eq('lida', false)
-          .in('remetente_tipo', ['gestor', 'sistema']);
-        
-        setUnreadChatIds(new Set(data?.map(m => m.chat_id) || []));
-      } catch (err) {
-        console.error('Erro ao buscar chamados não lidos:', err);
-      }
-    };
-    
-    fetchUnread();
+  useEffect(() => {
+    const seen = seenMessageIdsRef.current;
+    const hasLoadedBefore = seen.size > 0;
+    const hasNewIncoming = messages.some(message => (
+      !seen.has(message.id) && message.remetente_tipo !== 'aluno'
+    ));
 
-    const msgsGlobalChannel = supabase
-      .channel('aluno_comunicacao_msgs_global_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comunicacao_mensagens' },
-        () => {
-          fetchUnread();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(msgsGlobalChannel);
-    };
-  }, [alunoId]);
-
-  // Helper: marcar mensagens como lidas
-  const markMessagesAsRead = async (chatId: string) => {
-    try {
-      await supabase
-        .from('comunicacao_mensagens')
-        .update({ lida: true })
-        .eq('chat_id', chatId)
-        .in('remetente_tipo', ['gestor', 'sistema'])
-        .eq('lida', false);
-    } catch (err) {
-      console.error('Erro ao marcar mensagens como lidas:', err);
+    if (hasLoadedBefore && hasNewIncoming) {
+      playMessageSound('receive');
     }
-  };
 
-  // ── 4. Realtime: Messages of active chat ──
-  useEffect(() => {
-    if (!activeChatId) return;
-    const msgsChannel = supabase
-      .channel(`aluno_msgs_realtime_${activeChatId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'comunicacao_mensagens',
-        filter: `chat_id=eq.${activeChatId}`,
-      }, (payload) => {
-        queryClient.setQueryData(['chat-messages', activeChatId], (oldData: any[] | undefined) => {
-          if (!oldData) return [payload.new];
-          if (oldData.some(m => m.id === payload.new.id)) return oldData;
-          return [...oldData, payload.new];
-        });
-        if (payload.new.remetente_tipo === 'gestor' || payload.new.remetente_tipo === 'sistema') {
-          markMessagesAsRead(activeChatId);
-        }
-      })
-      .subscribe();
-
-    markMessagesAsRead(activeChatId);
-
-    return () => { supabase.removeChannel(msgsChannel); };
-  }, [activeChatId, queryClient]);
-
-  // ── 5. Realtime: Chat list updates ──
-  useEffect(() => {
-    const chatsChannel = supabase
-      .channel(`aluno_chats_realtime_${alunoId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'comunicacao_chats',
-        filter: `remetente_id=eq.${alunoId}`
-      }, () => { queryClient.invalidateQueries({ queryKey: ['aluno-chats', alunoId] }); })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'comunicacao_chats',
-        filter: `remetente_id=eq.${alunoId}`
-      }, async (payload) => {
-        const changedId = (payload.new as { id: string }).id;
-        const { data: freshChat } = await supabase.from('comunicacao_chats').select('*').eq('id', changedId).single();
-        if (!freshChat) return;
-        queryClient.setQueryData(['aluno-chats', alunoId], (oldData: any[] | undefined) => {
-          if (!oldData) return [freshChat];
-          const updated = oldData.map(c => c.id === freshChat.id ? freshChat : c);
-          return [...updated].sort((a, b) => new Date(b.ultima_data).getTime() - new Date(a.ultima_data).getTime());
-        });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(chatsChannel); };
-  }, [alunoId, queryClient]);
+    seenMessageIdsRef.current = new Set(messages.map(message => message.id));
+  }, [messages]);
 
   // ── 6. Autoscroll ──
   useEffect(() => {
@@ -220,16 +119,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   useEffect(() => {
     if (chats.length > 0 && !activeChatId) setActiveChatId(chats[0].id);
   }, [chats, activeChatId]);
-
-  // ── Upload helper ──
-  const uploadAttachment = async (file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop();
-    const path = `comunicacao/${alunoId}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('anexos').upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('anexos').getPublicUrl(path);
-    return urlData?.publicUrl || null;
-  };
 
   // ── Send Message ──
   const handleSendMessage = async () => {
@@ -243,34 +132,20 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     setUploadingFile(!!fileToSend);
 
     try {
-      let anexoUrl: string | null = null;
-      if (fileToSend) {
-        anexoUrl = await uploadAttachment(fileToSend);
-      }
+      const newMsg = await alunoComunicacaoService.sendMessage({
+        chatId: activeChatId,
+        alunoId,
+        alunoNome,
+        text,
+        file: fileToSend,
+      });
 
-      const msgPayload: any = {
-        chat_id: activeChatId,
-        remetente_id: alunoId,
-        remetente_nome: alunoNome,
-        remetente_tipo: 'aluno',
-        conteudo: text || (fileToSend ? `📎 ${fileToSend.name}` : ''),
-        anexo_url: anexoUrl,
-      };
-
-      const { data: newMsg, error: msgErr } = await supabase
-        .from('comunicacao_mensagens').insert(msgPayload).select().single();
-      if (msgErr) throw msgErr;
-
-      await supabase.from('comunicacao_chats').update({
-        ultimo_texto: text || `📎 ${fileToSend?.name}`,
-        ultima_data: new Date().toISOString()
-      }).eq('id', activeChatId);
-
-      queryClient.setQueryData(['chat-messages', activeChatId], (oldData: any[] | undefined) => {
+      queryClient.setQueryData(alunoComunicacaoKeys.messages(activeChatId), (oldData: ComunicacaoMensagem[] | undefined) => {
         if (!oldData) return [newMsg];
         if (oldData.some(m => m.id === newMsg.id)) return oldData;
         return [...oldData, newMsg];
       });
+      playMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       toast.error('Erro ao enviar', 'Não foi possível enviar a mensagem.');
@@ -286,16 +161,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     if (!activeChatId) return;
     setDeletingChat(true);
     try {
-      const { error } = await supabase
-        .from('comunicacao_chats')
-        .update({ deleted_by_aluno: true })
-        .eq('id', activeChatId)
-        .eq('remetente_id', alunoId); // segurança: só pode excluir o próprio
-
-      if (error) throw error;
+      await alunoComunicacaoService.deleteChatForAluno(activeChatId, alunoId);
 
       // Remove do cache local imediatamente
-      queryClient.setQueryData(['aluno-chats', alunoId], (oldData: any[] | undefined) =>
+      queryClient.setQueryData(alunoComunicacaoKeys.chats(alunoId), (oldData: ComunicacaoChat[] | undefined) =>
         (oldData || []).filter(c => c.id !== activeChatId)
       );
       setActiveChatId(null);
@@ -317,29 +186,18 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       const selectedCat = categories.find(c => c.id === newChatCategory);
       const catName = selectedCat ? selectedCat.nome : 'Suporte';
 
-      const { data: newChat, error: chatErr } = await supabase.from('comunicacao_chats').insert({
-        remetente_id: alunoId,
-        remetente_nome: alunoNome,
-        remetente_tipo: 'Aluno',
-        categoria_id: newChatCategory,
-        status: 'pendente',
-        ultimo_texto: newChatSubject,
-        ultima_data: new Date().toISOString()
-      }).select().single();
-      if (chatErr) throw chatErr;
-
-      await supabase.from('comunicacao_mensagens').insert({
-        chat_id: newChat.id,
-        remetente_id: alunoId,
-        remetente_nome: alunoNome,
-        remetente_tipo: 'aluno',
-        conteudo: `Iniciou o chamado sobre [${catName}]: ${newChatSubject}`
+      const newChat = await alunoComunicacaoService.createChat({
+        alunoId,
+        alunoNome,
+        categoryId: newChatCategory,
+        categoryName: catName,
+        subject: newChatSubject,
       });
 
       setShowNewChatModal(false);
       setNewChatCategory('');
       setNewChatSubject('');
-      queryClient.invalidateQueries({ queryKey: ['aluno-chats', alunoId] });
+      queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
       setActiveChatId(newChat.id);
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
@@ -354,15 +212,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const getCategoryInfo = (catId: string | null) => {
     if (!catId) return { nome: 'Geral', cor: '#475569' };
     return categories.find(c => c.id === catId) || { nome: 'Geral', cor: '#475569' };
-  };
-
-  const formatTime = (isoString: string) => {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    const today = new Date();
-    if (d.toDateString() === today.toDateString())
-      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -440,14 +289,14 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
                             <span className="w-2 h-2 bg-red-500 rounded-full shrink-0 animate-pulse" />
                           )}
                         </h4>
-                        <span className="text-[9px] text-slate-400 font-bold shrink-0 ml-1">{formatTime(chat.ultima_data)}</span>
+                        <span className="text-[9px] text-slate-400 font-bold shrink-0 ml-1">{formatChatTime(chat.ultima_data)}</span>
                       </div>
 
                       <p className="text-[10px] text-slate-500 truncate font-medium">{chat.ultimo_texto || '...'}</p>
 
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: catInfo.cor }} />
-                        <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">{catInfo.nome}</span>
+                        <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Setor: {catInfo.nome}</span>
                         <span className="text-[8px] text-slate-300">|</span>
                         <span className={`text-[8px] font-black uppercase tracking-wider ${
                           isPending ? 'text-amber-600' : 'text-emerald-600'
@@ -479,7 +328,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
                   <h3 className="font-bold text-xs text-[#001a33]">Suporte Universo</h3>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider flex items-center gap-1">
-                      <Tag size={9} /> {getCategoryInfo(currentChat.categoria_id).nome}
+                      <Tag size={9} /> Setor: {getCategoryInfo(currentChat.categoria_id).nome}
                     </span>
                     <span className="w-1 h-1 bg-slate-300 rounded-full" />
                     <span className={`text-[9px] uppercase font-black tracking-wider flex items-center gap-1 ${
@@ -571,7 +420,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
                           </div>
                         )}
                         <div className={`flex items-center justify-end px-3 pb-1.5 ${msg.conteudo && !msg.conteudo.startsWith('📎') ? '' : 'pt-1.5'}`}>
-                          <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
+                          <span className="text-[8px] font-bold text-slate-400">{formatChatTime(msg.created_at)}</span>
                         </div>
                       </div>
                     </div>
@@ -618,7 +467,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept={ACCEPTED_TYPES}
+                      accept={ACCEPTED_ATTACHMENT_TYPES}
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0] || null;

@@ -160,5 +160,82 @@ export const secretariaService = {
       console.error('[secretariaService] Erro ao salvar prazos:', e);
       return false;
     }
+  },
+
+  async getSystemUsers(): Promise<Record<string, string>> {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios_sistema')
+        .select('id, nome');
+      
+      if (error) throw error;
+      
+      const userMap: Record<string, string> = {};
+      (data || []).forEach((u: any) => {
+        userMap[u.id] = u.nome;
+      });
+      return userMap;
+    } catch (e) {
+      console.error('[secretariaService] Erro ao buscar usuários do sistema:', e);
+      return {};
+    }
+  },
+
+  async getEmissoesPaginadas(params: {
+    documento?: string;
+    search?: string;
+    turmaId?: string;
+    poloId?: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ data: any[]; total: number }> {
+    try {
+      const from = (params.page - 1) * params.pageSize;
+      const to = from + params.pageSize - 1;
+
+      let query = supabase
+        .from('documentos_validacao')
+        .select(`
+          *,
+          aluno:parceiros(id, nome, cpf_cnpj),
+          matricula:matriculas(
+            id,
+            status,
+            turma:turmas(id, nome, codigo)
+          )
+        `, { count: 'exact' });
+
+      if (params.documento && params.documento !== 'todos') {
+        query = query.eq('documento', params.documento);
+      }
+
+      if (params.poloId) {
+        query = query.eq('polo_id', params.poloId);
+      }
+
+      if (params.turmaId && params.turmaId !== 'todos') {
+        query = query.eq('matriculas.turma_id', params.turmaId);
+      }
+
+      if (params.search) {
+        const cleanSearch = params.search.trim();
+        query = query.or(`codigo.ilike.%${cleanSearch}%,dados_emissao->>studentName.ilike.%${cleanSearch}%,dados_emissao->>studentCpf.ilike.%${cleanSearch}%`);
+      }
+
+      const { data, count, error } = await query
+        .order('ultima_emissao_em', { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      return {
+        data: data || [],
+        total: count || 0
+      };
+    } catch (e) {
+      console.error('[secretariaService] Erro ao buscar emissões paginadas:', e);
+      return { data: [], total: 0 };
+    }
   }
 };
+

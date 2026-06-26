@@ -103,3 +103,31 @@
 - `modules/gestor/comunicacao/components/ComunicacaoConfig.tsx`
 
 ---
+
+## 2026-06-21 — Implementação do Histórico de Emissões (Secretaria Digital)
+
+**O que foi feito:**
+- Criação do submódulo **Histórico de Emissões** na Secretaria, listando todas as emissões oficiais de documentos com códigos de validação.
+- Organização em abas por tipo de documento (`carteirinha`, `cracha_estagio`, `declaracao_matricula`, `declaracao_frequencia`, `declaracao_irpf`, `boletim`, `historico_escolar`, `rematricula`, `termo_estagio`, `transferencia`) com suporte a paginação de 10 registros por página.
+- Adicionados filtros de busca em tempo real por nome do aluno, CPF ou código validador (buscando nativamente no JSONB de `dados_emissao`), além de filtro por Turma.
+- Mapeamento dinâmico do ID do operador (`emitido_por`) com a tabela `usuarios_sistema` para exibir o nome do usuário que emitiu o documento. Caso seja nulo (emissões pelo portal do estudante), exibe "Aluno (Auto-emissão)".
+- Implementação de um visualizador modal para geração de **Segunda Via** dos documentos:
+  - Reutiliza `CarteirinhaPreview` e `CrachaPreview` para carteirinhas e crachás.
+  - Renderiza layouts A4 universais mesclando placeholders como `{{ALUNO_NOME}}`, `{{ALUNO_CPF}}`, `{{CURSO_NOME}}` e montando chaves QR Code e assinaturas com base nas coordenadas absolutas do template.
+  - Ao imprimir ou baixar a segunda via, o contador de emissões no banco de dados é incrementado de forma transacional e a lista é atualizada.
+- Substituição de popups nativos do navegador (`alert()`) por notificações `ToastNotification` seguindo a regra de ouro do RAG.
+- Criação de migração SQL (`20260621180000_grant_select_documentos_validacao.sql`) para conceder permissões de SELECT para o role `anon` na tabela `documentos_validacao` e ajustar a política de RLS, visto que a sessão administrativa atua localmente sob o token público (`anon`) nos cadastros de demonstração.
+
+**Por quê:**
+- Permitir controle detalhado e auditoria de todos os documentos gerados pela instituição, além de fornecer um canal centralizado para que a secretaria emita segundas vias oficiais (preservando o código de validação original e apenas registrando a quantidade de reemissões).
+
+**Arquivos afetados:**
+- `modules/gestor/secretaria/secretaria.service.ts`
+- `modules/gestor/secretaria/SecretariaPage.tsx`
+- `modules/gestor/secretaria/components/SecretariaDashboard.tsx`
+- `modules/gestor/secretaria/historico-emissoes/SecretariaHistoricoEmissoesPage.tsx`
+- `supabase/migrations/20260621180000_grant_select_documentos_validacao.sql`
+- `PROJETO_ALTERACOES.md`
+
+
+---

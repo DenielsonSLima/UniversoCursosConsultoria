@@ -18,6 +18,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
 import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso, Modulo } from '../../gestor/cadastros/cadastros.types';
 
@@ -507,6 +508,8 @@ const CursoLivreDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {curso.valor && curso.valor > 0 && <OnlineCheckoutButton courseId={curso.id} />}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>

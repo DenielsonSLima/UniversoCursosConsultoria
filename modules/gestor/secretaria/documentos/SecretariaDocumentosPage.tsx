@@ -17,6 +17,7 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAlunoObj, setSelectedAlunoObj] = useState<any | null>(null);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('');
+  const isTransferencia = docType === 'transferencia';
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ['secretaria-documentos-search', searchTerm],
@@ -39,13 +40,22 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
   });
 
   const { data: matriculas = [] } = useQuery({
-    queryKey: ['documentos-aluno-matriculas', selectedAlunoObj?.id],
+    queryKey: ['documentos-aluno-matriculas', selectedAlunoObj?.id, docType],
     queryFn: async () => {
       if (!selectedAlunoObj?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('matriculas')
         .select('*, turmas(*, cursos(*))')
         .eq('aluno_id', selectedAlunoObj.id);
+
+      if (isTransferencia) {
+        query = query
+          .eq('status', 'ATIVO')
+          .eq('turmas.status', 'EM_ANDAMENTO')
+          .eq('turmas.cursos.modalidade', 'TECNICO');
+      }
+
+      const { data, error } = await query.order('data_matricula', { ascending: false });
       if (error) {
         console.error('Erro ao buscar matrículas para documentos:', error);
         throw error;
@@ -161,7 +171,11 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
                             </option>
                         ))}
                         {matriculas.length === 0 && (
-                            <option value="">Nenhum curso/turma ativa encontrada</option>
+                            <option value="">
+                              {isTransferencia
+                                ? 'Nenhum curso técnico ativo encontrado'
+                                : 'Nenhum curso/turma encontrado'}
+                            </option>
                         )}
                     </select>
                 </div>

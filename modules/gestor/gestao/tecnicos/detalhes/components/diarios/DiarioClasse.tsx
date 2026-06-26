@@ -1,11 +1,15 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle, Download } from 'lucide-react';
 import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import DiarioPrintDocument from './DiarioPrintDocument';
+import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 
 interface DiarioClasseProps {
   disciplina: any;
@@ -18,6 +22,14 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'frequencia' | 'resultado' | 'conteudo' | 'observacoes'>('frequencia');
   const queryClient = useQueryClient();
+  const printDocumentRef = useRef<HTMLDivElement>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const { data: diarioTemplate } = useQuery({
+    queryKey: ['diario-template', turma.cursoId],
+    queryFn: () => diariosService.getTemplate(turma.cursoId),
+    enabled: !!turma.cursoId,
+  });
 
   // 1. Alunos matriculados
   const { data: students = [], isLoading: loadingStudents } = useQuery({
@@ -86,15 +98,14 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     }
   });
 
-  // 4. Notas lançadas (View calculada no banco de dados!)
+  // 4. Notas e situação acadêmica calculadas no banco de dados
   const { data: dbGrades = [], isLoading: loadingGrades } = useQuery({
     queryKey: ['diario-notas-resultados', turma.id, disciplina.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_diario_notas_resultados')
-        .select('*')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id);
+      const { data, error } = await supabase.rpc('get_diario_resultados', {
+        p_turma_id: turma.id,
+        p_disciplina_id: disciplina.id,
+      });
       if (error) throw error;
       return data || [];
     }
@@ -131,11 +142,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
 
   // Mapeamentos computados (Memo)
   const attendanceMap = useMemo(() => {
-    const map: Record<string, Record<string, 'P' | 'F'>> = {};
+    const map: Record<string, Record<string, 'P' | 'F' | null>> = {};
     students.forEach(s => {
       map[s.id] = {};
       aulas.forEach(a => {
-        map[s.id][a.id] = 'P';
+        map[s.id][a.id] = null;
       });
     });
     dbAttendance.forEach((f: any) => {
@@ -150,51 +161,37 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     const map: Record<string, any> = {};
     students.forEach(s => {
       map[s.id] = {
-        p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null,
+        p: null, ti: null, tg: null, s: null, cq: null, o: null, rec: null,
         total_aulas: aulas.length,
         total_faltas: 0,
-        frequencia_percent: 100,
-        media_parcial: 0,
-        media_final: 0,
-        resultado_final: 'REPROVADO'
+        frequencia_percent: null,
+        media_parcial: null,
+        media_final: null,
+        resultado_final: 'SEM_LANCAMENTO'
       };
     });
     dbGrades.forEach((g: any) => {
       if (map[g.aluno_id]) {
         map[g.aluno_id] = {
-          p: parseFloat(g.nota_p || 0),
-          ti: parseFloat(g.nota_ti || 0),
-          tg: parseFloat(g.nota_tg || 0),
-          s: parseFloat(g.nota_s || 0),
-          cq: parseFloat(g.nota_cq || 0),
-          o: parseFloat(g.nota_o || 0),
+          p: g.nota_p === null ? null : parseFloat(g.nota_p),
+          ti: g.nota_ti === null ? null : parseFloat(g.nota_ti),
+          tg: g.nota_tg === null ? null : parseFloat(g.nota_tg),
+          s: g.nota_s === null ? null : parseFloat(g.nota_s),
+          cq: g.nota_cq === null ? null : parseFloat(g.nota_cq),
+          o: g.nota_o === null ? null : parseFloat(g.nota_o),
           rec: g.nota_rec !== null ? parseFloat(g.nota_rec) : null,
           total_aulas: parseInt(g.total_aulas || 0),
           total_faltas: parseInt(g.total_faltas || 0),
-          frequencia_percent: parseInt(g.frequencia_percent || 100),
-          media_parcial: parseFloat(g.media_parcial || 0),
-          media_final: parseFloat(g.media_final || 0),
-          resultado_final: g.resultado_final || 'REPROVADO'
+          frequencia_percent: g.frequencia_percent === null ? null : parseFloat(g.frequencia_percent),
+          media_parcial: g.media_parcial === null ? null : parseFloat(g.media_parcial),
+          media_final: g.media_final === null ? null : parseFloat(g.media_final),
+          resultado_final: g.resultado_final || 'SEM_LANCAMENTO'
         };
       }
     });
 
-    // Ajusta faltas e frequências em tempo real antes de salvar notas para reatividade perfeita
-    students.forEach(s => {
-      const g = map[s.id];
-      const studentAttendance = attendanceMap[s.id] || {};
-      const totalAulas = aulas.length;
-      const faltas = Object.values(studentAttendance).filter(v => v === 'F').length;
-      const freq = totalAulas > 0 ? Math.round(((totalAulas - faltas) / totalAulas) * 100) : 100;
-      
-      g.total_aulas = totalAulas;
-      g.total_faltas = faltas;
-      g.frequencia_percent = freq;
-      g.resultado_final = (g.media_final >= 6.0 && freq >= 75) ? 'APROVADO' : 'REPROVADO';
-    });
-
     return map;
-  }, [students, aulas, dbGrades, attendanceMap]);
+  }, [students, aulas, dbGrades]);
 
   const praticasMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -369,8 +366,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
 
   // Funções controladoras locais
   const handleToggleAttendance = (studentId: string, classId: string) => {
-    const current = attendanceMap[studentId]?.[classId] || 'P';
-    const nextStatus = current === 'P' ? 'F' : 'P';
+    const current = attendanceMap[studentId]?.[classId] || null;
+    const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
     toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });
   };
 
@@ -397,20 +394,73 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
 
   const handleSaveGrade = (studentId: string) => {
     const fields = localGrades[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
-    saveStudentGradesMutation.mutate({ alunoId: studentId, fields });
+    saveStudentGradesMutation.mutate({
+      alunoId: studentId,
+      fields: {
+        ...fields,
+        p: fields.p ?? 0,
+        ti: fields.ti ?? 0,
+        tg: fields.tg ?? 0,
+        s: fields.s ?? 0,
+        cq: fields.cq ?? 0,
+        o: fields.o ?? 0,
+      },
+    });
   };
 
   const handleSave = () => {
     toast.success("Sucesso", "Todas as alterações foram sincronizadas em tempo real com o banco de dados.");
   };
 
+  const handleDownloadPdf = async () => {
+    const container = printDocumentRef.current;
+    if (!container) return;
+
+    setDownloadingPdf(true);
+    try {
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map((image) => image.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            image.onload = () => resolve();
+            image.onerror = () => resolve();
+          })));
+
+      const pages = Array.from(container.querySelectorAll<HTMLElement>('.diario-print-page'));
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+      for (let index = 0; index < pages.length; index += 1) {
+        const canvas = await html2canvas(pages[index], {
+          scale: 1.65,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+        if (index > 0) pdf.addPage('a4', 'landscape');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210);
+      }
+
+      const fileName = `diario-${turma.codigo || turma.nome || 'turma'}-${disciplina.nome}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .toLowerCase();
+      pdf.save(`${fileName}.pdf`);
+    } catch (error: any) {
+      console.error('Erro ao gerar PDF do diário:', error);
+      toast.error('Erro no PDF', error.message || 'Não foi possível gerar o diário.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   const calculateStudentStats = (studentId: string) => {
     const g = gradesMap[studentId] || {
       total_faltas: 0,
-      frequencia_percent: 100,
-      media_parcial: 0,
-      media_final: 0,
-      resultado_final: 'REPROVADO'
+      frequencia_percent: null,
+      media_parcial: null,
+      media_final: null,
+      resultado_final: 'SEM_LANCAMENTO'
     };
     return {
       faltas: g.total_faltas,
@@ -449,6 +499,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
           </div>
         </div>
         <div className="flex gap-2">
+           <button onClick={handleDownloadPdf} disabled={downloadingPdf} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 shadow-sm disabled:opacity-60">
+             {downloadingPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Baixar PDF
+           </button>
            <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 shadow-sm">
              <Printer size={16} /> Imprimir Diário
            </button>
@@ -565,18 +618,22 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                   <td className="p-3 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
                                   <td className="p-3 border-r border-slate-100 font-bold text-sm text-[#001a33] truncate max-w-[250px]">{aluno.nome}</td>
                                   {aulas.map((aula) => {
-                                     const foiFalta = attendanceMap[aluno.id]?.[aula.id] === 'F';
+                                  const attendanceStatus = attendanceMap[aluno.id]?.[aula.id] || null;
+                                  const foiFalta = attendanceStatus === 'F';
+                                  const foiPresente = attendanceStatus === 'P';
                                      return (
                                         <td key={aula.id} className="p-2 border-r border-slate-100 text-center">
                                            <button 
                                              onClick={() => handleToggleAttendance(aluno.id, aula.id)}
                                              className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
-                                                foiFalta 
-                                                   ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
-                                                   : 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
+                                                foiFalta
+                                                   ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                                                   : foiPresente
+                                                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
+                                                     : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
                                              }`}
                                            >
-                                               {foiFalta ? 'F' : 'P'}
+                                               {foiFalta ? 'F' : foiPresente ? 'P' : '—'}
                                            </button>
                                         </td>
                                      );
@@ -633,16 +690,18 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                       <tbody className="divide-y divide-slate-100">
                          {students.map((aluno, idx) => {
                             const stats = calculateStudentStats(aluno.id);
+                            const isCredited = stats.resultado === 'APROVEITADO';
                             const studentGrades = localGrades[aluno.id] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
                             return (
-                               <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors">
+                               <tr key={aluno.id} className={`transition-colors ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}>
                                   <td className="p-2 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
                                   <td className="p-2 border-r border-slate-100 font-bold text-xs text-[#001a33] text-left truncate max-w-[200px]">{aluno.nome}</td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.p ?? 0} 
+                                      value={studentGrades.p ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'p', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -652,7 +711,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.ti ?? 0} 
+                                      value={studentGrades.ti ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'ti', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -662,7 +722,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.tg ?? 0} 
+                                      value={studentGrades.tg ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'tg', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -672,7 +733,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.s ?? 0} 
+                                      value={studentGrades.s ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 's', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -682,7 +744,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.cq ?? 0} 
+                                      value={studentGrades.cq ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'cq', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -692,33 +755,47 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
-                                      value={studentGrades.o ?? 0} 
+                                      value={studentGrades.o ?? ''}
+                                      disabled={isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'o', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
                                   
-                                  <td className="p-2 border-r border-slate-100 font-bold text-xs bg-slate-50">{stats.mediaParcial.toFixed(1)}</td>
+                                  <td className="p-2 border-r border-slate-100 font-bold text-xs bg-slate-50">
+                                    {stats.mediaParcial === null ? '—' : stats.mediaParcial.toFixed(1)}
+                                  </td>
                                   <td className="p-1 border-r border-slate-100">
                                     <input 
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-blue-600 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.rec === null || studentGrades.rec === undefined ? '' : studentGrades.rec} 
                                       placeholder="—"
+                                      disabled={isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'rec', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                                     />
                                   </td>
-                                  <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">{stats.mediaFinal.toFixed(1)}</td>
+                                  <td className="p-2 border-r border-slate-100 font-black text-sm bg-slate-50 text-[#001a33]">
+                                    {stats.mediaFinal === null ? '—' : stats.mediaFinal.toFixed(1)}
+                                  </td>
                                   
                                   <td className="p-2 border-r border-slate-100 font-bold text-xs text-red-600">{stats.faltas}</td>
-                                  <td className="p-2 border-r border-slate-100 font-bold text-xs">{stats.frequencia}%</td>
+                                  <td className="p-2 border-r border-slate-100 font-bold text-xs">
+                                    {stats.frequencia === null ? '—' : `${stats.frequencia}%`}
+                                  </td>
                                   
                                   <td className="p-2">
-                                     <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${stats.resultado === 'APROVADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                                        {stats.resultado}
+                                     <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                       ['APROVADO', 'APROVEITADO'].includes(stats.resultado)
+                                         ? 'bg-emerald-100 text-emerald-800'
+                                         : stats.resultado === 'SEM_LANCAMENTO'
+                                           ? 'bg-slate-100 text-slate-500'
+                                           : 'bg-red-100 text-red-800'
+                                     }`}>
+                                        {stats.resultado.replaceAll('_', ' ')}
                                      </span>
                                   </td>
                                </tr>
@@ -834,6 +911,23 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
             </div>
          </div>
       </div>
+      {diarioTemplate && (
+        <div className="diario-print-host fixed left-[-20000px] top-0 z-[-1]">
+          <DiarioPrintDocument
+            ref={printDocumentRef}
+            template={diarioTemplate}
+            turma={turma}
+            disciplina={disciplina}
+            moduloNome={moduloNome}
+            students={students}
+            aulas={aulas}
+            attendanceMap={attendanceMap}
+            gradesMap={gradesMap}
+            praticasMap={praticasMap}
+            observacoes={localObservacoes}
+          />
+        </div>
+      )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );

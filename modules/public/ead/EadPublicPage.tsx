@@ -1,10 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Laptop, Clock, Loader2, Search, Filter, X, ArrowRight, BookOpen, Sparkles } from 'lucide-react';
+import { Laptop, Clock, Loader2, Search, Filter, X, ArrowRight, BookOpen } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { supabase } from '../../../lib/supabase';
+import { textMatchesSearch } from '../../../lib/search';
+import { buildEadCoursePath } from './eadCourseLinks';
+
+const PUBLIC_EAD_CATEGORIES = [
+  'Administração e Gestão',
+  'Educação',
+  'Saúde',
+  'Tecnologia e Comunicação',
+  'Comércio e Vendas',
+  'Segurança e Operações',
+  'Beleza e Bem-estar',
+  'Serviços e Finanças',
+];
+
+const PUBLIC_AREA_ALIASES: Record<string, string> = {
+  'Educação': 'Educação',
+  'Educação Social': 'Educação',
+  'Educação Física': 'Educação',
+  'Administração Escolar': 'Educação',
+  'Gestão Escolar': 'Educação',
+  'Matemática': 'Educação',
+  'Educação Inclusiva': 'Educação',
+  'Tecnologia Kids': 'Educação',
+  'Saúde': 'Saúde',
+  'Saúde e Atendimento': 'Saúde',
+  'Saúde e Cuidado': 'Saúde',
+  'Saúde e Diagnóstico': 'Saúde',
+  'Saúde Animal': 'Saúde',
+  'Administração e Gestão': 'Administração e Gestão',
+  'Administração e Operações': 'Administração e Gestão',
+  'Tecnologia e Produtividade': 'Tecnologia e Comunicação',
+  'Comunicação Digital': 'Tecnologia e Comunicação',
+  'Comunicação e Linguagens': 'Tecnologia e Comunicação',
+  'Tecnologia e Vendas': 'Tecnologia e Comunicação',
+  'Atendimento e Vendas': 'Comércio e Vendas',
+  'Comércio e Varejo': 'Comércio e Vendas',
+  'Negócios e Vendas': 'Comércio e Vendas',
+  'Segurança Operacional': 'Segurança e Operações',
+  'Segurança Patrimonial': 'Segurança e Operações',
+  'Transporte Escolar': 'Segurança e Operações',
+  'Logística e Operações': 'Segurança e Operações',
+  'Comércio e Segurança': 'Segurança e Operações',
+  'Elétrica e Segurança': 'Segurança e Operações',
+  'Segurança do Trabalho': 'Segurança e Operações',
+  'Máquinas Pesadas': 'Segurança e Operações',
+  'Beleza e Estética': 'Beleza e Bem-estar',
+  'Serviço Social': 'Serviços e Finanças',
+  'Alimentação': 'Serviços e Finanças',
+  'Finanças e Bancos': 'Serviços e Finanças',
+};
+
+const normalizePublicArea = (area?: string | null) => {
+  const cleanArea = String(area || '').trim();
+  return PUBLIC_AREA_ALIASES[cleanArea] || (cleanArea && PUBLIC_EAD_CATEGORIES.includes(cleanArea) ? cleanArea : 'Administração e Gestão');
+};
 
 const EadPublicPage: React.FC = () => {
   const { pathname } = useLocation();
@@ -15,7 +70,9 @@ const EadPublicPage: React.FC = () => {
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedArea, setSelectedArea] = useState<string>('Todos'); // 'Todos', 'Saúde', 'Gestão', 'Tecnologia', etc.
+  const [selectedArea, setSelectedArea] = useState<string>('Todos');
+  const [groupMode, setGroupMode] = useState<'area' | 'none'>('area');
+  const [sortMode, setSortMode] = useState<'nome-asc' | 'nome-desc' | 'valor-asc' | 'valor-desc' | 'carga-desc'>('nome-asc');
 
   // Força o scroll para o topo ao carregar a página
   useEffect(() => {
@@ -62,27 +119,53 @@ const EadPublicPage: React.FC = () => {
 
   // Filtragem combinada
   const filteredCursos = cursos.filter((curso) => {
-    const nameMatch = curso.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const descMatch = (curso.descricao || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const textMatches = nameMatch || descMatch;
+    const textMatches = textMatchesSearch(searchTerm, [curso.nome, curso.descricao, curso.area]);
 
     let areaMatches = true;
     if (selectedArea !== 'Todos') {
-      areaMatches = curso.area === selectedArea;
+      areaMatches = normalizePublicArea(curso.area) === selectedArea;
     }
 
     return textMatches && areaMatches;
   });
 
-  // Áreas presentes dinamicamente para os botões de filtro
-  const areasExistentes = ['Todos', ...Array.from(new Set(cursos.map((c) => c.area).filter(Boolean)))];
+  const sortedCursos = [...filteredCursos].sort((a, b) => {
+    const nomeA = String(a.nome || '');
+    const nomeB = String(b.nome || '');
+    const valorA = Number(a.valor || 0);
+    const valorB = Number(b.valor || 0);
+    const cargaA = Number(a.carga_horaria || 0);
+    const cargaB = Number(b.carga_horaria || 0);
+
+    if (sortMode === 'nome-desc') return nomeB.localeCompare(nomeA, 'pt-BR');
+    if (sortMode === 'valor-asc') return valorA - valorB || nomeA.localeCompare(nomeB, 'pt-BR');
+    if (sortMode === 'valor-desc') return valorB - valorA || nomeA.localeCompare(nomeB, 'pt-BR');
+    if (sortMode === 'carga-desc') return cargaB - cargaA || nomeA.localeCompare(nomeB, 'pt-BR');
+    return nomeA.localeCompare(nomeB, 'pt-BR');
+  });
+
+  const groupedCursos = groupMode === 'area'
+    ? Array.from(sortedCursos.reduce((groups, curso) => {
+        const area = normalizePublicArea(curso.area);
+        const current = groups.get(area) || [];
+        current.push(curso);
+        groups.set(area, current);
+        return groups;
+      }, new Map<string, any[]>()).entries()).sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+    : [['Todos os cursos', sortedCursos] as [string, any[]]];
+
+  // Áreas presentes dinamicamente para os filtros
+  const areaSet = new Set(cursos.map((c) => normalizePublicArea(c.area)));
+  const areasExistentes = ['Todos', ...PUBLIC_EAD_CATEGORIES.filter((area) => areaSet.has(area))];
 
   const cleanFilters = () => {
     setSearchTerm('');
     setSelectedArea('Todos');
+    setGroupMode('area');
+    setSortMode('nome-asc');
   };
 
-  const hasActiveFilters = searchTerm !== '' || selectedArea !== 'Todos';
+  const hasActiveFilters = searchTerm !== '' || selectedArea !== 'Todos' || groupMode !== 'area' || sortMode !== 'nome-asc';
 
   return (
     <div className="flex flex-col min-h-screen bg-white font-sans">
@@ -138,33 +221,56 @@ const EadPublicPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Filtro de Área */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <Filter size={14} /> Filtrar por Área
+              {/* Filtros e ordenação */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                <label className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Filter size={14} /> Categoria
+                  </span>
+                  <select
+                    value={selectedArea}
+                    onChange={(e) => setSelectedArea(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    {areasExistentes.map((area) => (
+                      <option key={area} value={area}>{area}</option>
+                    ))}
+                  </select>
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {areasExistentes.map((area) => (
-                    <button
-                      key={area}
-                      onClick={() => setSelectedArea(area)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                        selectedArea === area
-                          ? 'bg-[#001a33] text-white shadow-md'
-                          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {area}
-                    </button>
-                  ))}
-                </div>
+
+                <label className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Agrupamento</span>
+                  <select
+                    value={groupMode}
+                    onChange={(e) => setGroupMode(e.target.value as 'area' | 'none')}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="area">Agrupar por categoria</option>
+                    <option value="none">Sem agrupamento</option>
+                  </select>
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordenação</span>
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="nome-asc">Ordem alfabética A-Z</option>
+                    <option value="nome-desc">Ordem alfabética Z-A</option>
+                    <option value="valor-asc">Menor valor</option>
+                    <option value="valor-desc">Maior valor</option>
+                    <option value="carga-desc">Maior carga horária</option>
+                  </select>
+                </label>
               </div>
 
               {/* Status de Filtros Ativos */}
               {hasActiveFilters && (
                 <div className="flex justify-between items-center bg-blue-50/50 border border-blue-100/60 rounded-xl px-4 py-2.5 text-xs">
                   <div className="text-blue-900 font-medium">
-                    Mostrando <strong className="font-bold">{filteredCursos.length}</strong> de <strong className="font-bold">{cursos.length}</strong> cursos EAD encontrados.
+                    Mostrando <strong className="font-bold">{sortedCursos.length}</strong> de <strong className="font-bold">{cursos.length}</strong> cursos EAD encontrados.
                   </div>
                   <button 
                     onClick={cleanFilters}
@@ -193,7 +299,7 @@ const EadPublicPage: React.FC = () => {
                   Não foi possível obter os dados do servidor. Por favor, verifique a conexão ou tente novamente mais tarde.
                 </p>
               </div>
-            ) : filteredCursos.length === 0 ? (
+            ) : sortedCursos.length === 0 ? (
               <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-20 text-center animate-fadeIn">
                 <BookOpen className="text-slate-300 mx-auto mb-4 animate-pulse" size={56} />
                 <p className="text-slate-600 font-bold mb-2">Nenhum curso EAD corresponde aos filtros selecionados.</p>
@@ -206,14 +312,28 @@ const EadPublicPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-                {filteredCursos.map((curso) => {
-                  const eadCarga = curso.carga_horaria || 80;
-                  return (
-                    <div
-                      key={curso.id}
-                      className="bg-white border border-slate-200 hover:border-blue-500/40 rounded-[2rem] p-6 flex flex-col justify-between min-h-[380px] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 group"
-                    >
+              <div className="space-y-12 animate-fadeIn">
+                {groupedCursos.map(([groupName, groupCursos]) => (
+                  <section key={groupName} className="space-y-5">
+                    {groupMode === 'area' && (
+                      <div className="flex items-center gap-3">
+                        <span className="h-8 w-1 rounded-full bg-blue-500"></span>
+                        <h2 className="text-lg font-black text-[#001a33] uppercase tracking-[0.18em]">{groupName}</h2>
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 border border-blue-100">
+                          {groupCursos.length}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {groupCursos.map((curso) => {
+                        const eadCarga = curso.carga_horaria || 80;
+                        const cursoArea = normalizePublicArea(curso.area);
+                        return (
+                          <div
+                            key={curso.id}
+                            className="bg-white border border-slate-200 hover:border-blue-500/40 rounded-[2rem] p-6 flex flex-col justify-between min-h-[380px] shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 group"
+                          >
                       <div>
                         {/* Imagem de Capa do Curso */}
                         <div className="h-44 w-full bg-slate-50 rounded-2xl overflow-hidden mb-4 border border-slate-100 shrink-0 flex items-center justify-center relative">
@@ -232,7 +352,7 @@ const EadPublicPage: React.FC = () => {
                             </div>
                           )}
                           <span className="absolute top-3 right-3 bg-white/95 backdrop-blur shadow-sm text-[8px] font-black text-blue-600 border border-blue-100 px-2 py-1 rounded-md uppercase tracking-wider">
-                            {curso.area || 'EAD'}
+                            {cursoArea}
                           </span>
                         </div>
 
@@ -253,31 +373,43 @@ const EadPublicPage: React.FC = () => {
                           {curso.descricao || 'Estude de forma totalmente digital com materiais atualizados, suporte e certificação garantida pela Universo.'}
                         </p>
 
-                        {/* Preço (se cadastrado) */}
-                        {curso.valor && curso.valor > 0 && (
-                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between items-center animate-fadeIn">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
-                              <span className="text-[9px] text-emerald-800 font-bold uppercase tracking-wider">A partir de</span>
-                              <span className="text-sm font-black text-emerald-600">
-                                R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between animate-fadeIn">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
+                          <div className={`rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm border ${
+                            curso.valor && curso.valor > 0
+                              ? 'bg-emerald-50 border-emerald-100'
+                              : 'bg-red-50 border-red-100'
+                          }`}>
+                            <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                              curso.valor && curso.valor > 0 ? 'text-emerald-800' : 'text-red-700'
+                            }`}>
+                              {curso.valor && curso.valor > 0 ? 'A partir de' : 'Valor pendente'}
+                            </span>
+                            <span className={`text-sm font-black ${
+                              curso.valor && curso.valor > 0 ? 'text-emerald-600' : 'text-red-600'
+                            }`}>
+                              {curso.valor && curso.valor > 0
+                                ? `R$ ${curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                : 'Obrigatório'}
+                            </span>
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       {/* CTA Button */}
                       <button
-                        onClick={() => navigate(`/ead/detalhes/${curso.id}`)}
+                        onClick={() => navigate(buildEadCoursePath(curso.id, curso.nome))}
                         className="w-full mt-6 bg-[#001a33] hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest hover:scale-[1.01] shadow-lg shadow-blue-500/10"
                       >
                         <span>Ver Detalhes do Curso</span>
                         <ArrowRight size={14} />
                       </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
               </div>
             )}
           </div>

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
 import { User, Phone, Mail, MapPin, Save, Award, Landmark, Wallet } from 'lucide-react';
+import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 
 interface PerfilPageProps {
   professorId: string;
@@ -77,7 +78,8 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
   }
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn">
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm space-y-6">
       
       {/* Header and edit actions */}
       <div className="flex justify-between items-center pb-4 border-b border-slate-100">
@@ -262,6 +264,17 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
           </div>
         )}
       </form>
+      </div>
+
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm">
+        <div className="mb-5 flex items-center gap-2 border-b border-slate-100 pb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50 text-purple-650">
+            <User size={16} />
+          </div>
+          <h3 className="text-base font-bold uppercase tracking-tight text-[#001a33]">Acesso da conta</h3>
+        </div>
+        <GoogleIdentityCard tone="purple" />
+      </div>
     </div>
   );
 };

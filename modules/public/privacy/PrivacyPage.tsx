@@ -15,7 +15,7 @@ const PrivacyPage: React.FC = () => {
       <div className="bg-[#001a33] py-16 text-white">
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4">
-            Política de <span className="text-blue-400">Privacidade</span>
+            Política de Privacidade <span className="text-blue-400">(LGPD)</span>
           </h1>
           <p className="text-blue-100 max-w-2xl mx-auto">
             Entenda como coletamos, usamos e protegemos seus dados.
@@ -28,7 +28,7 @@ const PrivacyPage: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">1. Introdução</h2>
             <p>
-              A Universo Cursos e Consultoria valoriza a privacidade de seus usuários, alunos e parceiros. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais ao utilizar nosso site e serviços.
+              A Universo Cursos e Consultoria valoriza a privacidade de seus usuários, alunos e parceiros. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais ao utilizar nosso site e serviços, em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD).
             </p>
           </section>
 
@@ -69,9 +69,16 @@ const PrivacyPage: React.FC = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">6. Contato</h2>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">6. Direitos do Titular</h2>
             <p>
-              Para dúvidas sobre esta política ou para exercer seus direitos de titular de dados, entre em contato através do e-mail: contato@universoconsultoria.com
+              O titular pode solicitar confirmação do tratamento, acesso, correção, portabilidade, anonimização, bloqueio ou eliminação de dados, além de informações sobre compartilhamento e revogação do consentimento, quando aplicável.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">7. Contato</h2>
+            <p>
+              Para dúvidas sobre esta política ou para exercer seus direitos de titular de dados, entre em contato pelo e-mail: universo.cursoseconsultoria@gmail.com
             </p>
           </section>
         </div>

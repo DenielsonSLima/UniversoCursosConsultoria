@@ -124,6 +124,25 @@ export const bibliotecaService = {
     }));
   },
 
+  async getFoldersForMove(
+    teacherId: string | null = null
+  ): Promise<Array<{ id: string; nome: string; parent_id: string | null }>> {
+    let query = supabase.from('biblioteca_pastas').select('id, nome, parent_id');
+    if (teacherId) {
+      query = query.eq('teacher_id', teacherId);
+    } else {
+      query = query.is('teacher_id', null);
+    }
+
+    const { data, error } = await query.order('nome', { ascending: true });
+    if (error) {
+      console.error('Erro ao buscar pastas para movimentação:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
   // 3. Criar Pasta
   async createFolder(nome: string, parentId: string | null = null, teacherId: string | null = null): Promise<void> {
     const { error } = await supabase.from('biblioteca_pastas').insert({

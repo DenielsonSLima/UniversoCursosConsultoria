@@ -1,6 +1,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx
 
 import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Layers, BookOpen, UserPlus, ChevronDown, ChevronRight, 
   UserCheck, CheckCircle2, X, Plus, Trash2, CornerDownRight, Loader2
@@ -10,6 +11,8 @@ import { cadastrosService } from '../../../../cadastros/cadastros.service';
 import { Curso } from '../../../../cadastros/cadastros.types';
 import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
+import { academicLifecycleService } from '../academic-lifecycle.service';
+import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 
 
 interface TurmaGradeProps {
@@ -20,6 +23,7 @@ interface TurmaGradeProps {
 
 const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false, colorTheme = 'emerald' }) => {
   const { toasts, removeToast, toast } = useToast();
+  const queryClient = useQueryClient();
   const [cursoBase, setCursoBase] = useState<Curso | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedDisciplines, setExpandedDisciplines] = useState<Set<string>>(new Set());
@@ -29,6 +33,10 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const [aulas, setAulas] = useState<Record<string, { id: string; titulo: string; cargaHoraria: number; dataAula?: string }[]>>({});
   const [professores, setProfessores] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: metricasGrade = [] } = useQuery({
+    queryKey: academicLifecycleKeys.diarios(turma.id),
+    queryFn: () => academicLifecycleService.getDiarios(turma.id),
+  });
 
   const getThemeColors = () => {
     switch (colorTheme) {
@@ -89,6 +97,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
 
   // Modal states
   const [showDocenteModal, setShowDocenteModal] = useState<{ isOpen: boolean; disciplinaId: string }>({ isOpen: false, disciplinaId: '' });
+  const [aulaParaExcluir, setAulaParaExcluir] = useState<{ disciplinaId: string; aulaId: string } | null>(null);
 
   useEffect(() => {
     const fetchDados = async () => {
@@ -223,6 +232,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
         ...prev,
         [disciplinaId]: { ...prev[disciplinaId], professor: professorName }
       }));
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
     } catch (err) {
       console.error('Erro ao atribuir docente:', err);
       toast.error('Erro', 'Erro ao salvar docente no banco.');
@@ -270,6 +280,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       });
 
       toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.');
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
     } catch (err) {
       console.error('Erro ao atribuir docente para a turma:', err);
       toast.error('Erro', 'Erro ao salvar docente da turma.');
@@ -295,6 +306,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
         ...prev,
         [disciplinaId]: { ...prev[disciplinaId], concluida: nextConcluida }
       }));
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
     } catch (err) {
       console.error('Erro ao alternar status da disciplina:', err);
       toast.error('Erro', 'Erro ao salvar status da disciplina no banco.');
@@ -351,6 +363,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       setNewAulaTitulo(prev => ({ ...prev, [disciplinaId]: '' }));
       setNewAulaHoras(prev => ({ ...prev, [disciplinaId]: '' }));
       setNewAulaData(prev => ({ ...prev, [disciplinaId]: '' }));
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
     } catch (err) {
       console.error('Erro ao adicionar aula:', err);
       toast.error('Erro', 'Erro ao salvar aula no banco.');
@@ -358,7 +371,6 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   };
 
   const handleRemoveAula = async (disciplinaId: string, aulaId: string) => {
-    if (!confirm('Deseja realmente remover esta aula da turma?')) return;
     try {
       const { error } = await supabase
         .from('aulas_turma')
@@ -371,6 +383,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
         ...prev,
         [disciplinaId]: (prev[disciplinaId] || []).filter(a => a.id !== aulaId)
       }));
+      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
+      setAulaParaExcluir(null);
     } catch (err) {
       console.error('Erro ao remover aula:', err);
       toast.error('Erro', 'Erro ao excluir aula do banco.');
@@ -425,10 +439,9 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       )}
 
       {(cursoBase.modulos || []).map((modulo, index) => {
-        // progress for module calculated from completed disciplines
-        const totalDiscs = modulo.disciplinas.length;
-        const completedDiscs = modulo.disciplinas.filter(d => disciplinasConfig[d.id]?.concluida).length;
-        const moduloProgress = totalDiscs > 0 ? Math.round((completedDiscs / totalDiscs) * 100) : 0;
+        const moduloMetricas = metricasGrade.find((item: any) => item.modulo_id === modulo.id);
+        const totalDiscs = Number(moduloMetricas?.modulo_total_disciplinas || modulo.disciplinas.length);
+        const moduloProgress = Number(moduloMetricas?.modulo_progresso_percent || 0);
         
         return (
           <div key={modulo.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -474,7 +487,12 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                       const discConfig = disciplinasConfig[disc.id] || { professor: null, concluida: false };
                       const isComplete = discConfig.concluida;
                       const discAulas = aulas[disc.id] || [];
-                      const sumHoras = discAulas.reduce((acc, a) => acc + a.cargaHoraria, 0);
+                      const discMetricas = metricasGrade.find((item: any) => item.disciplina_id === disc.id);
+                      const sumHoras = Number(discMetricas?.horas_realizadas || 0);
+                      const aulasCount = Number(discMetricas?.aulas_count || 0);
+                      const progressoDisciplina = Number(discMetricas?.progresso_percent || 0);
+                      const horasStatus = String(discMetricas?.horas_status || 'PENDENTE');
+                      const horasDiferenca = Number(discMetricas?.horas_diferenca || 0);
                       const isExpanded = expandedDisciplines.has(disc.id);
                       
                       let progressColor = 'bg-blue-500';
@@ -509,7 +527,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                   {isExpanded ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
                                 </div>
                                 <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                  {disc.cargaHoraria} horas oficiais • {discAulas.length} aulas ({sumHoras}h) planejadas
+                                  {disc.cargaHoraria} horas oficiais • {aulasCount} aulas ({sumHoras}h) planejadas
                                 </p>
                               </div>
                             </div>
@@ -524,7 +542,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                   {sumHoras}h de {disc.cargaHoraria}h
                                 </span>
                                 <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
-                                  <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${Math.min((sumHoras / disc.cargaHoraria) * 100, 100)}%` }}></div>
+                                  <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${progressoDisciplina}%` }}></div>
                                 </div>
                               </div>
 
@@ -571,17 +589,17 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                               <div className="flex items-center justify-between gap-4 mb-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-inner">
                                 <span className="text-xs font-bold text-slate-500">Planejamento das Aulas:</span>
                                 <div className="flex items-center gap-2">
-                                  {sumHoras === disc.cargaHoraria ? (
+                                  {horasStatus === 'EXATA' ? (
                                     <span className={`${theme.bg} ${theme.text} text-[10px] font-bold px-2.5 py-1 rounded-lg border ${theme.border} uppercase tracking-wider flex items-center gap-1`}>
                                       <CheckCircle2 size={12} /> Grade Concluída e Exata
                                     </span>
-                                  ) : sumHoras > disc.cargaHoraria ? (
+                                  ) : horasStatus === 'EXCESSO' ? (
                                     <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider flex items-center gap-1">
-                                      Excesso de {sumHoras - disc.cargaHoraria}h!
+                                      Excesso de {horasDiferenca}h!
                                     </span>
                                   ) : (
                                     <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-amber-100 uppercase tracking-wider flex items-center gap-1">
-                                      Faltam {disc.cargaHoraria - sumHoras}h para completar a grade
+                                      Faltam {horasDiferenca}h para completar a grade
                                     </span>
                                   )}
                                 </div>
@@ -604,7 +622,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                       <div className="flex items-center gap-3 shrink-0">
                                         <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{aula.cargaHoraria}h</span>
                                         <button 
-                                          onClick={() => handleRemoveAula(disc.id, aula.id)}
+                                          onClick={() => setAulaParaExcluir({ disciplinaId: disc.id, aulaId: aula.id })}
                                           className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
                                           title="Excluir aula"
                                         >
@@ -706,6 +724,30 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                </div>
             </div>
          </div>
+      )}
+      {aulaParaExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-black text-[#001a33]">Excluir aula?</h3>
+            <p className="text-sm text-slate-500 mt-2">A aula e seus lançamentos associados serão removidos.</p>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setAulaParaExcluir(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-black uppercase text-slate-600"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveAula(aulaParaExcluir.disciplinaId, aulaParaExcluir.aulaId)}
+                className="px-4 py-2.5 rounded-xl bg-red-600 text-white text-xs font-black uppercase"
+              >
+                Excluir aula
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

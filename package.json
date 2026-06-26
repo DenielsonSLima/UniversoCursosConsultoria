@@ -7,7 +7,12 @@
     "dev": "vite --force",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'"
+    "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
+    "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
+    "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
+    "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",
+    "ead:update-acs-vimeo": "node scripts/update-acs-vimeo-embed.mjs",
+    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
@@ -26,6 +31,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "sharp": "^0.35.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

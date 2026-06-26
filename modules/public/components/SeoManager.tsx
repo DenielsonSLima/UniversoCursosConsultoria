@@ -40,6 +40,18 @@ const ROUTE_METADATA: Record<string, { title: string; description: string }> = {
     title: 'Perguntas Frequentes | Universo Cursos e Consultoria',
     description: 'Encontre respostas sobre cursos, matrículas, documentos, certificados e atendimento.',
   },
+  '/termos': {
+    title: 'Termos de Uso | Universo Cursos e Consultoria',
+    description: 'Consulte os termos e condições de uso dos serviços da Universo Cursos e Consultoria.',
+  },
+  '/privacidade': {
+    title: 'Política de Privacidade (LGPD) | Universo Cursos e Consultoria',
+    description: 'Saiba como a Universo Cursos e Consultoria trata e protege dados pessoais conforme a LGPD.',
+  },
+  '/cookies': {
+    title: 'Política de Cookies | Universo Cursos e Consultoria',
+    description: 'Entenda como os cookies são utilizados no site da Universo Cursos e Consultoria.',
+  },
 };
 
 const setMetaContent = (selector: string, content: string) => {
@@ -57,6 +69,8 @@ const SeoManager: React.FC = () => {
         ? '/cursos-livres'
         : pathname.startsWith('/especializacao/detalhes/')
           ? '/especializacao'
+          : pathname === '/ead' || pathname.startsWith('/ead/')
+            ? '/ead'
           : pathname;
 
     const metadata = ROUTE_METADATA[basePath] || ROUTE_METADATA['/'];

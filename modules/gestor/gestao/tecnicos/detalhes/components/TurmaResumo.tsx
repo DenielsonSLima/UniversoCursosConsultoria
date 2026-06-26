@@ -1,202 +1,142 @@
-// File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaResumo.tsx
-
-import React, { useEffect, useState } from 'react';
-import { Users, TrendingUp, AlertCircle, Calendar, Clock, Loader2, BookOpen } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, BookOpen, Calendar, Clock, Loader2, TrendingUp, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
+import { academicLifecycleKeys } from '../academic-lifecycle.keys';
+import { academicLifecycleService } from '../academic-lifecycle.service';
 
 interface TurmaResumoProps {
   turma: Turma;
 }
 
 const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
-  const [loading, setLoading] = useState(true);
-  const [totalAlunos, setTotalAlunos] = useState(0);
-  const [progressoCurso, setProgressoCurso] = useState(0);
-  const [aulasSemana, setAulasSemana] = useState<any[]>([]);
+  const { data: resumo, isLoading: loadingResumo } = useQuery({
+    queryKey: academicLifecycleKeys.resumo(turma.id),
+    queryFn: () => academicLifecycleService.getResumo(turma.id),
+  });
 
-  useEffect(() => {
-    const fetchResumoData = async () => {
-      setLoading(true);
-      try {
-        // 1. Contagem de alunos matriculados reais
-        const { count, error: countError } = await supabase
-          .from('matriculas')
-          .select('*', { count: 'exact', head: true })
-          .eq('turma_id', turma.id);
+  const { data: recentClasses = [], isLoading: loadingClasses } = useQuery({
+    queryKey: [...academicLifecycleKeys.turma(turma.id), 'aulas-recentes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('aulas_turma')
+        .select('id, titulo, carga_horaria, data_aula, created_at, disciplinas(nome)')
+        .eq('turma_id', turma.id)
+        .order('data_aula', { ascending: false, nullsFirst: false })
+        .limit(3);
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-        if (countError) throw countError;
-        setTotalAlunos(count || 0);
-
-        // 2. Calcular progresso do curso baseando-se nas disciplinas concluídas
-        // Buscar total de disciplinas do curso
-        const { data: modulosData } = await supabase
-          .from('modulos')
-          .select('id')
-          .eq('curso_id', turma.cursoId);
-
-        const moduloIds = (modulosData || []).map(m => m.id);
-        
-        let totalDisciplinas = 0;
-        let concluidasCount = 0;
-
-        if (moduloIds.length > 0) {
-          const { count: discCount } = await supabase
-            .from('disciplinas')
-            .select('*', { count: 'exact', head: true })
-            .in('modulo_id', moduloIds);
-          
-          totalDisciplinas = discCount || 0;
-
-          // Buscar quantas disciplinas estão concluídas para esta turma
-          const { count: completedCount } = await supabase
-            .from('turmas_disciplinas')
-            .select('*', { count: 'exact', head: true })
-            .eq('turma_id', turma.id)
-            .eq('concluida', true);
-            
-          concluidasCount = completedCount || 0;
-        }
-
-        const progresso = totalDisciplinas > 0 ? Math.round((concluidasCount / totalDisciplinas) * 100) : 0;
-        setProgressoCurso(progresso);
-
-        // 3. Buscar as aulas reais lançadas para esta turma
-        const { data: aulasData } = await supabase
-          .from('aulas_turma')
-          .select('*, disciplinas(nome)')
-          .eq('turma_id', turma.id);
-
-        // Ordenar por data_aula DESC (mais recente primeiro), fallback para created_at DESC
-        const sortedAulas = (aulasData || [])
-          .sort((a: any, b: any) => {
-            if (a.data_aula && b.data_aula) return b.data_aula.localeCompare(a.data_aula);
-            if (a.data_aula) return -1;
-            if (b.data_aula) return 1;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          })
-          .slice(0, 3);
-
-        const mappedAulas = sortedAulas.map((a: any) => {
-          const dateToUse = a.data_aula ? new Date(a.data_aula + 'T00:00:00') : (a.created_at ? new Date(a.created_at) : null);
-          return {
-            id: a.id,
-            titulo: a.titulo,
-            disciplinaNome: a.disciplinas?.nome || 'Disciplina Geral',
-            cargaHoraria: parseFloat(a.carga_horaria),
-            dataLabel: dateToUse 
-              ? dateToUse.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).toUpperCase()
-              : 'AULA'
-          };
-        });
-        setAulasSemana(mappedAulas);
-
-      } catch (err) {
-        console.error('Erro ao carregar resumo da turma:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchResumoData();
-  }, [turma.id, turma.cursoId]);
-
-  if (loading) {
+  if (loadingResumo || loadingClasses) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
-        <span className="text-slate-500 font-bold ml-3">Carregando resumo operacional...</span>
+        <span className="text-slate-500 font-bold ml-3">Carregando resumo acadêmico...</span>
       </div>
     );
   }
 
+  const cards = [
+    {
+      label: 'Alunos Ativos',
+      value: resumo?.alunosAtivos ?? 0,
+      icon: Users,
+      iconClass: 'bg-blue-50 text-blue-600',
+      empty: false,
+    },
+    {
+      label: 'Frequência Média',
+      value: resumo?.frequenciaMedia === null || resumo?.frequenciaMedia === undefined
+        ? 'Sem dados'
+        : `${resumo.frequenciaMedia}%`,
+      icon: TrendingUp,
+      iconClass: 'bg-emerald-50 text-emerald-600',
+      empty: resumo?.frequenciaMedia === null || resumo?.frequenciaMedia === undefined,
+    },
+    {
+      label: 'Alunos em Risco',
+      value: resumo?.alunosEmRisco ?? 0,
+      icon: AlertCircle,
+      iconClass: 'bg-rose-50 text-rose-600',
+      empty: false,
+    },
+    {
+      label: 'Progresso do Curso',
+      value: resumo?.progressoCurso === null || resumo?.progressoCurso === undefined
+        ? 'Sem grade'
+        : `${resumo.progressoCurso}%`,
+      icon: Clock,
+      iconClass: 'bg-amber-50 text-amber-600',
+      empty: resumo?.progressoCurso === null || resumo?.progressoCurso === undefined,
+    },
+  ];
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* KPIs Principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Users size={20} /></div>
-            <span className="text-emerald-600 text-[10px] font-bold bg-emerald-50 px-2 py-1 rounded-full">Atualizado</span>
-          </div>
-          <p className="text-2xl font-black text-[#001a33]">{totalAlunos}</p>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Alunos Ativos</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><TrendingUp size={20} /></div>
-            <span className="text-emerald-600 text-[10px] font-bold bg-emerald-50 px-2 py-1 rounded-full">100%</span>
-          </div>
-          <p className="text-2xl font-black text-[#001a33]">Presença</p>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Média Geral</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <div className="p-2 bg-rose-50 text-rose-600 rounded-lg"><AlertCircle size={20} /></div>
-            <span className="text-slate-400 text-[10px] font-bold">Crítico</span>
-          </div>
-          <p className="text-2xl font-black text-[#001a33]">0</p>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Alunos em Risco</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><Clock size={20} /></div>
-            <span className="text-slate-400 text-[10px] font-bold">Progresso</span>
-          </div>
-          <p className="text-2xl font-black text-[#001a33]">{progressoCurso}%</p>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Progresso do Curso</p>
-        </div>
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <div className={`inline-flex p-2 rounded-lg mb-3 ${card.iconClass}`}>
+                <Icon size={20} />
+              </div>
+              <p className={`font-black text-[#001a33] ${card.empty ? 'text-lg' : 'text-2xl'}`}>{card.value}</p>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{card.label}</p>
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Próximas Aulas / Histórico Recente */}
         <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <h3 className="text-lg font-bold text-[#001a33] mb-4">Cronograma de Aulas Recentes</h3>
-          {aulasSemana.length === 0 ? (
+          <h3 className="text-lg font-bold text-[#001a33] mb-4">Aulas recentes</h3>
+          {recentClasses.length === 0 ? (
             <div className="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col items-center">
               <Calendar size={36} className="mb-2 opacity-50 text-slate-300" />
-              <p className="font-bold text-sm">Nenhuma aula registrada nesta turma ainda.</p>
-              <p className="text-xs text-slate-500 mt-0.5">Cadastre e planeje aulas na aba "Grade & Profs".</p>
+              <p className="font-bold text-sm">Nenhuma aula registrada.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {aulasSemana.map((aula) => (
-                <div key={aula.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="flex flex-col items-center justify-center bg-white w-12 h-12 rounded-lg shadow-sm text-[#001a33] font-bold text-[10px] border border-slate-100 shrink-0">
-                    <span className="text-blue-500">{aula.dataLabel.split(' ')[0]}</span>
-                    <span className="text-sm">{aula.dataLabel.split(' ')[1]}</span>
+              {recentClasses.map((lesson: any) => (
+                <div key={lesson.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center justify-center bg-white w-12 h-12 rounded-lg shadow-sm text-blue-600 border border-slate-100 shrink-0">
+                    <BookOpen size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-[#001a33] text-sm truncate">{aula.titulo}</h4>
-                    <p className="text-xs text-slate-500 flex items-center gap-2 mt-1 truncate">
-                      <BookOpen size={12} /> {aula.disciplinaNome} • Carga: {aula.cargaHoraria}H
+                    <h4 className="font-bold text-[#001a33] text-sm truncate">{lesson.titulo}</h4>
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      {lesson.disciplinas?.nome || 'Disciplina'} · {lesson.carga_horaria}h
                     </p>
                   </div>
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold uppercase shrink-0">Registrada</span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {lesson.data_aula
+                      ? new Date(`${lesson.data_aula}T12:00:00`).toLocaleDateString('pt-BR')
+                      : 'Data não informada'}
+                  </span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Avisos / Pendências */}
-        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col">
-          <h3 className="text-lg font-bold text-[#001a33] mb-4">Avisos da Turma</h3>
-          <div className="space-y-4 flex-1">
+        <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+          <h3 className="text-lg font-bold text-[#001a33] mb-4">Situação acadêmica</h3>
+          <div className="space-y-3">
             <div className="bg-white p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Operacional</p>
+              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Matrículas</p>
               <p className="text-sm text-slate-700 font-medium">
-                {totalAlunos === 0 
-                  ? 'Matricule alunos para liberar a emissão automática de crachás e carteirinhas.' 
-                  : `Matrículas ativas: ${totalAlunos} alunos no total.`}
+                {resumo?.totalMatriculas ?? 0} registros históricos; {resumo?.alunosAtivos ?? 0} ativos.
               </p>
             </div>
             <div className="bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
-              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Coordenação</p>
-              <p className="text-sm text-slate-700 font-medium">Assegure a atribuição de docentes para todas as disciplinas da grade.</p>
+              <p className="text-xs font-bold text-slate-400 uppercase mb-1">Fonte dos indicadores</p>
+              <p className="text-sm text-slate-700 font-medium">
+                Notas, frequência e progresso são consolidados pelo Supabase.
+              </p>
             </div>
           </div>
         </div>

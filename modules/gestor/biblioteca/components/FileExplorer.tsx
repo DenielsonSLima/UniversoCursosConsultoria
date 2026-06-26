@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Folder, FolderPlus, ArrowUp, ChevronRight, FileText, 
   Trash2, Edit, MoreVertical, FolderOpen, ArrowRight, Eye, Download, Info,
@@ -10,8 +9,10 @@ import {
 } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
 import { TargetAudience, Scope, LibraryFolder, LibraryDocument } from '../biblioteca.types';
-import { supabase } from '../../../../lib/supabase';
 import DocumentPermissionsModal from './DocumentPermissionsModal';
+import { useFileExplorerQueries } from '../hooks/useFileExplorerQueries';
+import { useFileExplorerMutations } from '../hooks/useFileExplorerMutations';
+import { useFileExplorerRealtime } from '../hooks/useFileExplorerRealtime';
 
 interface FileExplorerProps {
   teacherId?: string | null;
@@ -28,7 +29,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   readOnly = false,
   allowedAudiences
 }) => {
-  const queryClient = useQueryClient();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
 
@@ -43,111 +43,44 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const [actionType, setActionType] = useState<'move' | 'copy'>('move');
   const [permissionsDoc, setPermissionsDoc] = useState<LibraryDocument | null>(null);
 
-  // Queries
-  const { data: folders = [], isLoading: isFoldersLoading } = useQuery({
-    queryKey: ['library-folders', teacherId, currentFolderId],
-    queryFn: () => bibliotecaService.getFolders(currentFolderId, teacherId)
-  });
-
-  const { data: documents = [], isLoading: isDocsLoading } = useQuery({
-    queryKey: ['library-documents', teacherId, currentFolderId],
-    queryFn: () => bibliotecaService.getDocuments({ pastaId: currentFolderId, teacherId })
-  });
+  const {
+    folders,
+    documents,
+    allFolders,
+    isFoldersLoading,
+    isDocsLoading,
+  } = useFileExplorerQueries(teacherId, currentFolderId, !!movingItem);
 
   const filteredDocs = allowedAudiences 
     ? documents.filter(d => allowedAudiences.includes(d.targetAudience))
     : documents;
 
-  // Query to get all folders for moving destination dropdown
-  const { data: allFolders = [] } = useQuery({
-    queryKey: ['library-all-folders-move', teacherId],
-    queryFn: async () => {
-      let query = supabase.from('biblioteca_pastas').select('id, nome, parent_id');
-      if (teacherId) {
-        query = query.eq('teacher_id', teacherId);
-      } else {
-        query = query.is('teacher_id', null);
-      }
-      const { data } = await query;
-      return (data || []) as Array<{ id: string; nome: string; parent_id: string | null }>;
-    },
-    enabled: !!movingItem
-  });
-
-  // Mutations
-  const createFolderMutation = useMutation({
-    mutationFn: (nome: string) => bibliotecaService.createFolder(nome, currentFolderId, teacherId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-folders'] });
+  const {
+    createFolderMutation,
+    renameFolderMutation,
+    deleteFolderMutation,
+    deleteDocumentMutation,
+    moveFolderMutation,
+    moveDocumentMutation,
+    copyDocumentMutation,
+    invalidateDocuments,
+  } = useFileExplorerMutations({
+    currentFolderId,
+    teacherId,
+    onFolderCreated: () => {
       setIsNewFolderOpen(false);
       setNewFolderName('');
-    }
-  });
-
-  const renameFolderMutation = useMutation({
-    mutationFn: ({ id, nome }: { id: string; nome: string }) => bibliotecaService.renameFolder(id, nome),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-folders'] });
+    },
+    onFolderRenamed: () => {
       setRenamingFolder(null);
       setRenamedName('');
-    }
-  });
-
-  const deleteFolderMutation = useMutation({
-    mutationFn: (id: string) => bibliotecaService.deleteFolder(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-folders'] });
-    }
-  });
-
-  const deleteDocumentMutation = useMutation({
-    mutationFn: (id: string) => bibliotecaService.deleteDocument(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-    }
-  });
-
-  const moveFolderMutation = useMutation({
-    mutationFn: ({ id, targetId }: { id: string; targetId: string | null }) => bibliotecaService.moveFolder(id, targetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-folders'] });
+    },
+    onMoveFinished: () => {
       setMovingItem(null);
     }
   });
 
-  const moveDocumentMutation = useMutation({
-    mutationFn: ({ id, targetId }: { id: string; targetId: string | null }) => bibliotecaService.moveDocument(id, targetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-      setMovingItem(null);
-    }
-  });
-
-  const copyDocumentMutation = useMutation({
-    mutationFn: ({ id, targetId }: { id: string; targetId: string | null }) => bibliotecaService.copyDocument(id, targetId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-      setMovingItem(null);
-    }
-  });
-
-  // Realtime subscription (live sync)
-  React.useEffect(() => {
-    const channel = supabase
-      .channel('realtime-file-explorer')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'biblioteca_pastas' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['library-folders'] });
-        queryClient.invalidateQueries({ queryKey: ['library-all-folders-move'] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'biblioteca_documentos' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['library-documents'] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  useFileExplorerRealtime();
 
   // Navigate into a folder
   const handleOpenFolder = (folder: LibraryFolder) => {
@@ -571,7 +504,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         onClose={() => setPermissionsDoc(null)}
         document={permissionsDoc}
         onSave={() => {
-          queryClient.invalidateQueries({ queryKey: ['library-documents'] });
+          invalidateDocuments();
+          setPermissionsDoc(null);
         }}
       />
 

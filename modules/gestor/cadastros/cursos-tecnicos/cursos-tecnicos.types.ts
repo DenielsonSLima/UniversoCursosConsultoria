@@ -1,4 +1,6 @@
 
+import { CursoFinanceiroConfig } from '../cadastros.types';
+
 export interface Aula {
   id: string;
   titulo: string;
@@ -34,5 +36,6 @@ export interface CursoTecnico {
   publicarSite?: boolean;
   imagemDetalhe1?: string;
   imagemDetalhe2?: string;
+  financeiroConfig?: CursoFinanceiroConfig;
   modulos: Modulo[];
 }

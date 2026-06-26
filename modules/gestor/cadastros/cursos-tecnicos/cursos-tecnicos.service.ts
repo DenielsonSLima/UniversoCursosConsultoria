@@ -1,84 +1,114 @@
-// File: modules/gestor/cadastros/cursos-tecnicos/cursos-tecnicos.service.ts
-
+import { supabase } from '../../../../lib/supabase';
 import { cadastrosService } from '../cadastros.service';
-import { CursoTecnico } from './cursos-tecnicos.types';
+import { Curso } from '../cadastros.types';
+
+export type CursoTecnicoStatusFilter = 'ativo' | 'inativo';
+
+export interface CreateCursoTecnicoInput {
+  nome: string;
+  descricao: string;
+  area: string;
+  versao: string;
+  carga_horaria: number;
+  duracao_meses: number;
+  imagem_url: string | null;
+  publicar_site: boolean;
+}
+
+export const cursosTecnicosQueryKeys = {
+  all: ['cadastros', 'cursos-tecnicos'] as const,
+  list: () => [...cursosTecnicosQueryKeys.all, 'list'] as const
+};
+
+const compressImage = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxWidth = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), 'image/webp', 0.8);
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
 
 export const cursosTecnicosService = {
-  async getAll(): Promise<CursoTecnico[]> {
-    try {
-      const cursos = await cadastrosService.getCursosByModalidade('TECNICO');
-      const result: CursoTecnico[] = [];
-
-      for (const c of cursos) {
-        const modulos = await cadastrosService.getGrade(c.id);
-        result.push({
-          id: c.id,
-          nome: c.nome,
-          descricao: c.descricao || `Curso técnico profissionalizante regulamentado em ${c.nome}.`,
-          cargaHorariaTotal: c.carga_horaria,
-          duracaoMeses: c.duracao_meses || (c.carga_horaria >= 1200 ? 24 : 18),
-          area: c.area || 'Saúde',
-          status: c.status,
-          versao: c.versao || '1.0',
-          totalTurmas: c.total_turmas,
-          cargaHorariaCadastrada: c.carga_horaria_cadastrada,
-          publicarSite: c.publicar_site,
-          imagemDetalhe1: c.imagem_detalhe_1,
-          imagemDetalhe2: c.imagem_detalhe_2,
-          modulos: modulos
-        });
-      }
-
-      return result;
-    } catch (err) {
-      console.error('Erro no service de cursos técnicos:', err);
-      return [];
-    }
+  async getCursos(): Promise<Curso[]> {
+    return cadastrosService.getCursosByModalidade('TECNICO');
   },
 
-  async getById(id: string): Promise<CursoTecnico | undefined> {
-    const list = await this.getAll();
-    return list.find(c => c.id === id);
-  },
-
-  async update(curso: CursoTecnico): Promise<void> {
-    await cadastrosService.updateCurso({
-      id: curso.id,
-      nome: curso.nome,
-      modalidade: 'TECNICO',
-      carga_horaria: curso.cargaHorariaTotal,
-      status: (curso.status as any) || 'ativo',
-      area: curso.area,
-      descricao: curso.descricao,
-      versao: curso.versao,
-      duracao_meses: curso.duracaoMeses,
-      publicar_site: curso.publicarSite,
-      imagem_detalhe_1: curso.imagemDetalhe1,
-      imagem_detalhe_2: curso.imagemDetalhe2
-    });
-    await cadastrosService.saveGrade(curso.id, curso.modulos);
-  },
-
-  async create(curso: CursoTecnico): Promise<CursoTecnico> {
-    const created = await cadastrosService.createCurso({
-      nome: curso.nome,
-      carga_horaria: curso.cargaHorariaTotal,
+  async createCurso(input: CreateCursoTecnicoInput): Promise<Curso> {
+    return cadastrosService.createCurso({
+      nome: input.nome,
+      carga_horaria: input.carga_horaria,
       modalidade: 'TECNICO',
       status: 'ativo',
-      area: curso.area,
-      descricao: curso.descricao,
-      versao: curso.versao || '1.0',
-      duracao_meses: curso.duracaoMeses,
-      publicar_site: curso.publicarSite,
-      imagem_detalhe_1: curso.imagemDetalhe1,
-      imagem_detalhe_2: curso.imagemDetalhe2
+      area: input.area,
+      descricao: input.descricao,
+      versao: input.versao,
+      duracao_meses: input.duracao_meses,
+      imagem_url: input.imagem_url,
+      publicar_site: input.publicar_site
     });
+  },
 
-    await cadastrosService.saveGrade(created.id, curso.modulos);
+  async deleteCurso(cursoId: string): Promise<void> {
+    await cadastrosService.deleteCurso(cursoId);
+  },
 
-    return {
-      ...curso,
-      id: created.id
-    };
+  async duplicateCurso(cursoId: string, nome: string, versao: string): Promise<void> {
+    await cadastrosService.duplicateCurso(cursoId, nome, versao);
+  },
+
+  async toggleStatus(cursoId: string, novoStatus: CursoTecnicoStatusFilter): Promise<void> {
+    await cadastrosService.toggleStatus(cursoId, novoStatus);
+  },
+
+  async uploadImagem(file: File): Promise<string> {
+    const timestamp = Date.now();
+    const compressedBlob = await compressImage(file);
+    const compressedFile = new File([compressedBlob], `curso_${timestamp}.webp`, {
+      type: 'image/webp'
+    });
+    const filePath = `cursos/curso_${timestamp}.webp`;
+
+    const { data, error } = await supabase.storage
+      .from('documentos')
+      .upload(filePath, compressedFile, {
+        cacheControl: '31536000',
+        upsert: true
+      });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from('documentos')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
   }
 };

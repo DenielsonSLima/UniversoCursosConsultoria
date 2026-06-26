@@ -78,6 +78,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
     responsavelCpf: '',
     responsavelParentesco: '',
     responsavelTelefone: '',
+    responsavelEmail: '',
+    responsavelFinanceiro: false,
 
     // Step 4 — Escolaridade
     escolaridadeAnterior: '',
@@ -111,7 +113,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
       finalValue = (e.target as HTMLInputElement).checked;
     } else {
       if (type === 'text' || type === 'textarea' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-        if (name !== 'email') {
+        if (name !== 'email' && name !== 'responsavelEmail') {
           finalValue = value.toUpperCase();
         }
       }
@@ -539,6 +541,36 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
                 </div>
               </div>
             )}
+
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="responsavelFinanceiro"
+                  checked={formData.responsavelFinanceiro}
+                  onChange={handleChange}
+                  className="mt-0.5 h-4 w-4 accent-blue-600"
+                />
+                <span>
+                  <strong className="block text-xs uppercase tracking-wider text-blue-800">Este contato é o responsável financeiro</strong>
+                  <span className="mt-1 block text-xs text-blue-700">Pode ser informado mesmo quando o aluno é maior de idade e será usado em cobranças e na declaração de IRPF.</span>
+                </span>
+              </label>
+              <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
+                {!isMinor() && (
+                  <div>
+                    <label className={labelCls}>Telefone do Responsável</label>
+                    <input type="tel" name="responsavelTelefone" value={formData.responsavelTelefone} onChange={handleChange}
+                      maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
+                  </div>
+                )}
+                <div>
+                  <label className={labelCls}>E-mail do Responsável</label>
+                  <input type="email" name="responsavelEmail" value={formData.responsavelEmail} onChange={handleChange}
+                    className={inputCls} placeholder="responsavel@email.com" />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

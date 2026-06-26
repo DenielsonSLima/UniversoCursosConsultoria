@@ -6,13 +6,14 @@ import { Curso } from '../../cadastros.types';
 
 interface CursoLivreCardProps {
   curso: Curso;
-  onClick: () => void;
-  onDuplicate: (e: React.MouseEvent) => void;
-  onToggleStatus: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
+  onClick?: () => void;
+  onDuplicate?: (e: React.MouseEvent) => void;
+  onToggleStatus?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
+  readOnly?: boolean;
 }
 
-const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete }) => {
+const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDuplicate, onToggleStatus, onDelete, readOnly = false }) => {
   const area = curso.area || 'Capacitação';
   const duracaoSemanas = Math.ceil(curso.carga_horaria / 10) || 4;
   const descricao = curso.descricao || `Curso livre de capacitação profissional em ${curso.nome}.`;
@@ -69,6 +70,7 @@ const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDupli
           </div>
         )}
 
+        {!readOnly && (
         <div className="flex flex-col gap-2 relative z-20">
           <button 
             onClick={onClick}
@@ -119,6 +121,7 @@ const CursoLivreCard: React.FC<CursoLivreCardProps> = ({ curso, onClick, onDupli
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* Decorative */}

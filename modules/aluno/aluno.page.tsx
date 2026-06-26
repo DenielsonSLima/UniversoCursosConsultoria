@@ -16,7 +16,10 @@ import {
   FileText
 } from 'lucide-react';
 import { loginService } from '../login/login.service';
+import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
 import { supabase } from '../../lib/supabase';
+import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 // Sub-módulos do Aluno
 import InicioPage from './inicio/InicioPage';
 import TurmasPage from './turmas/TurmasPage';
@@ -32,23 +35,50 @@ const AlunoPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Recupera dados do usuário do localStorage
-  const loggedUserTipo = sessionStorage.getItem('logged_user_tipo');
-  const isRealAluno = loggedUserTipo === 'Aluno';
+  const alunoId = profile?.id || '';
+  const alunoNome = profile?.nome || '';
+  const alunoEmail = profile?.email || '';
 
-  const alunoId = isRealAluno 
-    ? (sessionStorage.getItem('logged_user_id') || 'a0000000-0000-0000-0000-000000000001')
-    : 'a0000000-0000-0000-0000-000000000001';
-  const alunoNome = isRealAluno
-    ? (sessionStorage.getItem('logged_user_name') || 'Ana Clara Souza')
-    : 'Ana Clara Souza';
-  const alunoEmail = isRealAluno
-    ? (sessionStorage.getItem('logged_user_email') || 'anaclara@email.com')
-    : 'anaclara@email.com';
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateProfile = async () => {
+      try {
+        const portalProfile = await getPortalProfile();
+        if (!mounted) return;
+
+        if (!portalProfile || portalProfile.tipo !== 'Aluno') {
+          clearPortalSession();
+          await loginService.logout().catch(() => undefined);
+          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+          navigate(`/login?redirect=${redirect}`, { replace: true });
+          return;
+        }
+
+        setProfile(portalProfile);
+        setIsAuthLoading(false);
+      } catch {
+        clearPortalSession();
+        await loginService.logout().catch(() => undefined);
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+        navigate(`/login?redirect=${redirect}`, { replace: true });
+      }
+    };
+
+    hydrateProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
 
   // ─── Carregar contagem inicial de chamados não lidos (mensagens de gestor/sistema com lida = false) ───
   useEffect(() => {
+    if (!profile?.id) return;
+
     const fetchUnread = async () => {
       try {
         const { data: studentChats } = await supabase
@@ -77,10 +107,12 @@ const AlunoPage: React.FC = () => {
       }
     };
     fetchUnread();
-  }, [alunoId]);
+  }, [alunoId, profile?.id]);
 
   // ─── Realtime: manter badge de chamados não lidos do aluno atualizado em tempo real ───
   useEffect(() => {
+    if (!profile?.id) return;
+
     const fetchUnread = async () => {
       try {
         const { data: studentChats } = await supabase
@@ -123,29 +155,30 @@ const AlunoPage: React.FC = () => {
     return () => {
       supabase.removeChannel(badgeChannel);
     };
-  }, [alunoId]);
+  }, [alunoId, profile?.id]);
 
-  // Redireciona se não houver ID e não estivermos em desenvolvimento (evitar acessos órfãos)
-  useEffect(() => {
-    const mode = import.meta.env.VITE_APP_MODE;
-    const activePolo = sessionStorage.getItem('active_polo_id');
-    if (!activePolo && mode !== 'development') {
-      navigate('/login');
-    }
-  }, [navigate]);
+  const executeLogout = async () => {
+    await loginService.logout().catch(() => undefined);
+    clearPortalSession();
+    navigate('/login');
+  };
+
+  useInactivityLogout({
+    isEnabled: !!profile && !isAuthLoading,
+    onTimeout: executeLogout,
+  });
+
+  if (isAuthLoading || !profile) {
+    return <AccessCheckingScreen portal="Aluno" />;
+  }
 
   const handleLogout = async () => {
-    await loginService.logout();
-    sessionStorage.removeItem('logged_user_id');
-    sessionStorage.removeItem('logged_user_name');
-    sessionStorage.removeItem('logged_user_email');
-    sessionStorage.removeItem('logged_user_tipo');
-    navigate('/login');
+    await executeLogout();
   };
 
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
-    { id: 'turmas', label: 'Minhas Turmas', icon: <GraduationCap size={20} /> },
+    { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={20} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
@@ -161,7 +194,7 @@ const AlunoPage: React.FC = () => {
       case 'turmas':
         return <TurmasPage alunoId={alunoId} />;
       case 'cursos':
-        return <CursosPage />;
+        return <CursosPage alunoId={alunoId} />;
       case 'financeiro':
         return <FinanceiroPage alunoId={alunoId} />;
       case 'biblioteca':

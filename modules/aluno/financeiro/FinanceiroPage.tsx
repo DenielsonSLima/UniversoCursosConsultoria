@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { CreditCard, TrendingUp, Calendar, AlertTriangle, CheckCircle, Clock, Copy, ArrowRight, X, FileText, BadgeAlert } from 'lucide-react';
+import { CreditCard, TrendingUp, CheckCircle, Clock, Copy, X, FileText, BadgeAlert, ExternalLink } from 'lucide-react';
 
 interface FinanceiroPageProps {
   alunoId: string;
@@ -11,6 +11,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [showPixModal, setShowPixModal] = useState<any | null>(null);
   const [showBoletoModal, setShowBoletoModal] = useState<any | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
+  const [notice, setNotice] = useState('');
 
   // Fetch actual contas_receber from Supabase
   const { data: dbRecords = [], isLoading } = useQuery<any[]>({
@@ -27,24 +28,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     }
   });
 
-  // Generate realistic mock data if the database table is empty for this student
-  const getInstallments = () => {
-    if (dbRecords.length > 0) {
-      return dbRecords;
-    }
-    // Fallback/Mock Installments for demonstration
-    return [
-      { id: '1', descricao: 'Mensalidade 01/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-02-10', data_pagamento: '2026-02-09', valor_pago: 250.00, status: 'PAGO', forma_pagamento: 'Pix' },
-      { id: '2', descricao: 'Mensalidade 02/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-03-10', data_pagamento: '2026-03-10', valor_pago: 250.00, status: 'PAGO', forma_pagamento: 'Pix' },
-      { id: '3', descricao: 'Mensalidade 03/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-04-10', data_pagamento: '2026-04-08', valor_pago: 250.00, status: 'PAGO', forma_pagamento: 'Boleto' },
-      { id: '4', descricao: 'Mensalidade 04/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-05-10', data_pagamento: '2026-05-10', valor_pago: 250.00, status: 'PAGO', forma_pagamento: 'Pix' },
-      { id: '5', descricao: 'Mensalidade 05/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-06-10', data_pagamento: null, valor_pago: null, status: 'PENDENTE', forma_pagamento: null },
-      { id: '6', descricao: 'Mensalidade 06/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-07-10', data_pagamento: null, valor_pago: null, status: 'PENDENTE', forma_pagamento: null },
-      { id: '7', descricao: 'Mensalidade 07/10 - Curso Técnico', valor: 250.00, data_vencimento: '2026-08-10', data_pagamento: null, valor_pago: null, status: 'PENDENTE', forma_pagamento: null },
-    ];
-  };
-
-  const installments = getInstallments();
+  const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
+  const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
 
   // Calculations
   const totalPaid = installments
@@ -61,6 +46,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setTimeout(() => setPixCopied(false), 2000);
   };
 
+  const copyPaymentLink = async (url?: string | null) => {
+    if (!url) {
+      setNotice('Esta cobrança ainda não possui link de pagamento. Fale com a secretaria para reenviar a cobrança.');
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    setNotice('Link de pagamento copiado.');
+    setTimeout(() => setNotice(''), 2500);
+  };
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
@@ -70,6 +65,246 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
+  };
+
+  const escapeHtml = (value: unknown) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  const openReceipt = (inst: any) => {
+    if (String(inst.status || '').toUpperCase() !== 'PAGO') {
+      setNotice('O recibo fica disponível somente para cobranças pagas.');
+      return;
+    }
+
+    const receiptWindow = window.open('', '_blank', 'width=900,height=720');
+    if (!receiptWindow) {
+      setNotice('O navegador bloqueou a abertura do recibo. Permita pop-ups para visualizar.');
+      return;
+    }
+
+    const receiptNumber = String(inst.id || '').slice(0, 8).toUpperCase() || 'RECIBO';
+    const paidDate = formatDate(inst.data_pagamento || inst.updated_at || inst.data_vencimento);
+    const paymentMethod = inst.forma_pagamento || inst.origem_pagamento || 'Pagamento confirmado';
+    const paidValue = Number(inst.valor_pago || inst.valor || 0);
+
+    receiptWindow.document.write(`
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Recibo ${escapeHtml(receiptNumber)} - Universo Cursos</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 32px;
+              background: #eef4fb;
+              color: #001a33;
+              font-family: Arial, sans-serif;
+            }
+            .receipt {
+              max-width: 760px;
+              margin: 0 auto;
+              background: #fff;
+              border: 1px solid #dbe7f3;
+              border-radius: 24px;
+              padding: 32px;
+              box-shadow: 0 20px 50px rgba(0, 26, 51, 0.12);
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              gap: 24px;
+              border-bottom: 2px solid #eef4fb;
+              padding-bottom: 20px;
+              margin-bottom: 24px;
+            }
+            .brand {
+              font-size: 24px;
+              font-weight: 900;
+              color: #1238d8;
+              letter-spacing: .04em;
+              text-transform: uppercase;
+            }
+            .subtitle {
+              color: #64748b;
+              font-size: 12px;
+              font-weight: 700;
+              margin-top: 6px;
+              text-transform: uppercase;
+              letter-spacing: .12em;
+            }
+            .badge {
+              align-self: flex-start;
+              background: #ecfdf5;
+              color: #047857;
+              border: 1px solid #bbf7d0;
+              border-radius: 999px;
+              padding: 10px 14px;
+              font-size: 12px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: .12em;
+            }
+            h1 {
+              margin: 0 0 20px;
+              font-size: 30px;
+              line-height: 1.05;
+              text-transform: uppercase;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 14px;
+              margin: 22px 0;
+            }
+            .field {
+              border: 1px solid #e2e8f0;
+              border-radius: 16px;
+              padding: 14px;
+              background: #f8fafc;
+            }
+            .field strong {
+              display: block;
+              color: #94a3b8;
+              font-size: 10px;
+              text-transform: uppercase;
+              letter-spacing: .14em;
+              margin-bottom: 6px;
+            }
+            .field span {
+              font-size: 14px;
+              font-weight: 800;
+            }
+            .description {
+              border: 1px solid #dbeafe;
+              background: #eff6ff;
+              border-radius: 18px;
+              padding: 18px;
+              margin: 20px 0;
+              font-weight: 800;
+              line-height: 1.45;
+            }
+            .total {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-radius: 20px;
+              background: #001a33;
+              color: #fff;
+              padding: 18px 22px;
+              margin-top: 20px;
+            }
+            .total small {
+              display: block;
+              color: #a8c7ee;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: .14em;
+            }
+            .total b {
+              font-size: 28px;
+            }
+            .footer {
+              margin-top: 24px;
+              color: #64748b;
+              font-size: 12px;
+              line-height: 1.6;
+            }
+            .actions {
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+              margin-top: 26px;
+            }
+            button {
+              border: 0;
+              border-radius: 12px;
+              padding: 12px 16px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: .08em;
+              cursor: pointer;
+            }
+            .print {
+              background: #2563eb;
+              color: #fff;
+            }
+            .close {
+              background: #e2e8f0;
+              color: #334155;
+            }
+            @media print {
+              body { background: #fff; padding: 0; }
+              .receipt { box-shadow: none; border: 0; }
+              .actions { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="receipt">
+            <section class="header">
+              <div>
+                <div class="brand">Universo Cursos e Consultoria</div>
+                <div class="subtitle">Comprovante de pagamento</div>
+              </div>
+              <div class="badge">Pago</div>
+            </section>
+
+            <h1>Recibo de pagamento</h1>
+
+            <div class="grid">
+              <div class="field">
+                <strong>Número do recibo</strong>
+                <span>${escapeHtml(receiptNumber)}</span>
+              </div>
+              <div class="field">
+                <strong>Data do pagamento</strong>
+                <span>${escapeHtml(paidDate)}</span>
+              </div>
+              <div class="field">
+                <strong>Forma de pagamento</strong>
+                <span>${escapeHtml(paymentMethod)}</span>
+              </div>
+              <div class="field">
+                <strong>Vencimento original</strong>
+                <span>${escapeHtml(formatDate(inst.data_vencimento))}</span>
+              </div>
+            </div>
+
+            <div class="description">
+              ${escapeHtml(inst.descricao)}
+            </div>
+
+            <div class="total">
+              <div>
+                <small>Valor recebido</small>
+                <b>${escapeHtml(formatCurrency(paidValue))}</b>
+              </div>
+              <div>
+                <small>Status</small>
+                <b>Pago</b>
+              </div>
+            </div>
+
+            <p class="footer">
+              Este recibo confirma o pagamento registrado no Portal do Aluno da Universo Cursos e Consultoria.
+              Em caso de dúvidas, entre em contato com a secretaria para validação administrativa.
+            </p>
+
+            <div class="actions">
+              <button class="close" onclick="window.close()">Fechar</button>
+              <button class="print" onclick="window.print()">Imprimir / Salvar PDF</button>
+            </div>
+          </main>
+        </body>
+      </html>
+    `);
+    receiptWindow.document.close();
   };
 
   const getInstallmentStatusBadge = (status: string) => {
@@ -90,6 +325,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         return (
           <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-red-100">
             <BadgeAlert size={10} /> Vencido
+          </span>
+        );
+      case 'SUSPENSO':
+        return (
+          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-blue-100">
+            <Clock size={10} /> Suspenso
           </span>
         );
       default:
@@ -150,6 +391,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           <h3 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Histórico de Cobranças</h3>
         </div>
 
+        {notice && (
+          <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700">
+            {notice}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-medium text-slate-500">
             <thead>
@@ -163,7 +410,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {installments.map((inst) => (
+              {installments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-xs font-bold text-slate-400">
+                    Nenhuma cobrança registrada para este aluno.
+                  </td>
+                </tr>
+              ) : installments.map((inst) => (
                 <tr key={inst.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4.5 px-4 font-bold text-slate-800">{inst.descricao}</td>
                   <td className="py-4.5 px-4">{formatDate(inst.data_vencimento)}</td>
@@ -179,24 +432,45 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                     )}
                   </td>
                   <td className="py-4.5 px-4 text-right">
-                    {inst.status !== 'PAGO' ? (
+                    {['PENDENTE', 'VENCIDO'].includes(inst.status) ? (
                       <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={() => setShowPixModal(inst)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                        >
-                          Pagar Pix
-                        </button>
-                        <button 
-                          onClick={() => setShowBoletoModal(inst)}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                        >
-                          Boleto
-                        </button>
+                        {inst.asaas_invoice_url ? (
+                          <>
+                            <a
+                              href={inst.asaas_invoice_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+                            >
+                              <ExternalLink size={12} /> Pagar agora
+                            </a>
+                            <button 
+                              onClick={() => copyPaymentLink(inst.asaas_invoice_url)}
+                              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+                            >
+                              Copiar link
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => setShowPixModal(inst)}
+                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+                            >
+                              Pagar Pix
+                            </button>
+                            <button 
+                              onClick={() => setShowBoletoModal(inst)}
+                              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+                            >
+                              Boleto
+                            </button>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <button 
-                        onClick={() => alert('Recibo gerado com sucesso! (Simulação)')}
+                        onClick={() => openReceipt(inst)}
                         className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
                       >
                         Recibo
@@ -259,7 +533,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
               <button 
                 onClick={() => {
-                  alert('Comprovante enviado! Aguardando compensação bancária (compensação simulada em 5 segundos)');
+                  setNotice('Pagamento enviado para conferência. A baixa oficial acontece após confirmação do Asaas.');
                   setShowPixModal(null);
                 }}
                 className="w-full py-3 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
@@ -353,7 +627,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               </button>
               <button 
                 onClick={() => {
-                  alert('Download do PDF do boleto iniciado! (Simulação)');
+                  setNotice('Quando o Asaas retornar o PDF do boleto, ele ficará disponível neste botão.');
                   setShowBoletoModal(null);
                 }}
                 className="px-5 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors shadow-md"

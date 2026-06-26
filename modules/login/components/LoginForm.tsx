@@ -1,18 +1,24 @@
-
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { LoginCredentials } from '../login.types';
+import GoogleLogo from '../../shared/auth/GoogleLogo';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginCredentials) => void;
+  onGoogleLogin?: () => void;
   isLoading?: boolean;
   onBack: () => void;
+  forgotPasswordHref?: string;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) => {
-  // Credenciais preenchidas para desenvolvimento
-  const [email, setEmail] = useState('gestor@universo.com');
-  const [password, setPassword] = useState('123456');
+const LoginForm: React.FC<LoginFormProps> = ({
+  onSubmit,
+  onGoogleLogin,
+  isLoading = false,
+  forgotPasswordHref = '/recuperar-senha',
+}) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -22,7 +28,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) =>
   };
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-5" onSubmit={handleSubmit}>
       
       {/* Campo E-mail */}
       <div className="space-y-2">
@@ -38,7 +44,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) =>
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-medium text-sm shadow-sm"
+            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:bg-white focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-semibold text-sm shadow-sm"
             required
           />
         </div>
@@ -50,7 +56,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) =>
           <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider">
             Senha
           </label>
-          <a href="#" className="text-xs font-bold text-[#4169E1] hover:text-[#001a33] transition-colors">
+          <a href={forgotPasswordHref} className="text-xs font-bold text-[#4169E1] hover:text-[#001a33] transition-colors">
             Esqueceu a senha?
           </a>
         </div>
@@ -63,7 +69,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) =>
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full pl-12 pr-12 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-medium text-sm shadow-sm"
+            className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:bg-white focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-semibold text-sm shadow-sm"
             required
           />
           <button 
@@ -102,13 +108,33 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading = false }) =>
       {/* Botão de Ação */}
       <button 
         disabled={isLoading}
-        className="w-full bg-gradient-to-r from-[#4169E1] to-[#001a33] hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full bg-[#001a33] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
       >
         <span>{isLoading ? 'Autenticando...' : 'Acessar Plataforma'}</span>
         {!isLoading && (
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         )}
       </button>
+
+      {onGoogleLogin ? (
+        <>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ou</span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <button
+            type="button"
+            onClick={onGoogleLogin}
+            disabled={isLoading}
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3.5 text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <GoogleLogo className="h-5 w-5" />
+            Entrar com Google
+          </button>
+        </>
+      ) : null}
 
       {/* Texto de suporte */}
       <p className="text-center text-slate-400 text-xs font-medium pt-4">

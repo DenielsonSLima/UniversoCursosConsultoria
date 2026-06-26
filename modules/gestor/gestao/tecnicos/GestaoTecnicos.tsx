@@ -8,33 +8,30 @@ import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
-import { cursosTecnicosService } from '../../cadastros/cursos-tecnicos/cursos-tecnicos.service';
+import TurmasFilters from '../components/TurmasFilters';
+import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: (isOpen: boolean) => void;
+  poloId?: string;
 }
 
-const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'andamento' | 'finalizadas'>('andamento');
-  const [turmas, setTurmas] = useState<Turma[]>([]);
+const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId }) => {
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const list = useTurmasPaginadas('TECNICO', poloId);
 
-  const loadData = async () => {
-    const turmasData = await gestaoService.getTurmasByModalidade('TECNICO');
-    setTurmas(turmasData);
-    const cursosData = await gestaoService.getCursosByModalidade('TECNICO');
-    setCursosDisponiveis(cursosData);
-  };
+  useEffect(() => {
+    setSelectedTurma(null);
+    if (onToggleDetails) onToggleDetails(false);
+    gestaoService.getCursosByModalidade('TECNICO').then(setCursosDisponiveis);
+  }, [poloId]);
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
-    await loadData();
+    await list.reload();
   };
 
   const handleSelectTurma = (turma: Turma) => {
@@ -46,10 +43,6 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
   };
-
-  const filteredTurmas = turmas.filter(t => 
-    activeSubTab === 'andamento' ? t.status === 'EM_ANDAMENTO' : t.status === 'FINALIZADA'
-  );
 
   // Se houver uma turma selecionada, exibe a tela de detalhes
   if (selectedTurma) {
@@ -86,9 +79,9 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
       {/* Abas Internas */}
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
         <button 
-          onClick={() => setActiveSubTab('andamento')}
+          onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'andamento' 
+            list.status === 'EM_ANDAMENTO'
             ? 'text-emerald-600 border-b-2 border-emerald-600' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -96,9 +89,9 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
           <Activity size={14} /> Em Andamento
         </button>
         <button 
-          onClick={() => setActiveSubTab('finalizadas')}
+          onClick={() => list.changeStatus('FINALIZADA')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeSubTab === 'finalizadas' 
+            list.status === 'FINALIZADA'
             ? 'text-slate-800 border-b-2 border-slate-800' 
             : 'text-slate-400 hover:text-slate-600'
           }`}
@@ -107,16 +100,27 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
         </button>
       </div>
 
+      <TurmasFilters {...list} onSearchChange={list.setSearch} onDataInicialChange={list.setDataInicial}
+        onDataFinalChange={list.setDataFinal} onSortByChange={list.changeSortBy}
+        onApply={list.applyFilters} onPageChange={list.setPage} />
+
       {/* Lista */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredTurmas.length === 0 ? (
+        {list.loading ? (
+          <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
+        ) : list.turmas.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-400">
                 Nenhuma turma encontrada nesta categoria.
             </div>
         ) : (
-            filteredTurmas.map(turma => (
+            list.turmas.map(turma => (
                 <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
-                  <TurmaCard turma={turma} colorTheme="emerald" />
+                  <TurmaCard
+                    turma={turma}
+                    colorTheme="emerald"
+                    showPoloDetails
+                    showDisciplineProgress
+                  />
                 </div>
             ))
         )}
@@ -127,6 +131,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails }) => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleCreate}
         cursosDisponiveis={cursosDisponiveis}
+        selectedPoloId={poloId}
       />
     </div>
   );

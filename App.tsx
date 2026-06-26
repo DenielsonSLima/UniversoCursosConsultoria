@@ -10,6 +10,7 @@ import FaqPage from './modules/public/faq/FaqPage';
 import ContactPage from './modules/public/contact/ContactPage';
 import PrivacyPage from './modules/public/privacy/PrivacyPage';
 import TermsPage from './modules/public/terms/TermsPage';
+import CookiesPage from './modules/public/cookies/CookiesPage';
 import EnsinoSuperiorPublicPage from './modules/public/ensino-superior/EnsinoSuperiorPublicPage';
 import CursosTecnicosPublicPage from './modules/public/cursos-tecnicos/CursosTecnicosPublicPage';
 import CursoTecnicoDetailPage from './modules/public/cursos-tecnicos/CursoTecnicoDetailPage';
@@ -22,6 +23,8 @@ import EadPublicPage from './modules/public/ead/EadPublicPage';
 import EadDetailPage from './modules/public/ead/EadDetailPage';
 import AlunoLoginPublicPage from './modules/public/login/AlunoLoginPublicPage';
 import ValidatorPage from './modules/public/validator/ValidatorPage';
+import PasswordRecoveryPage from './modules/login/PasswordRecoveryPage';
+import AlunoFirstAccessPage from './modules/public/login/AlunoFirstAccessPage';
 
 // Páginas do Sistema Interno (somente em desenvolvimento)
 import LoginPage from './modules/login/LoginPage';
@@ -49,6 +52,7 @@ const App: React.FC = () => {
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/privacidade" element={<PrivacyPage />} />
         <Route path="/termos" element={<TermsPage />} />
+        <Route path="/cookies" element={<CookiesPage />} />
         <Route path="/ensino-superior" element={<EnsinoSuperiorPublicPage />} />
         <Route path="/cursos-tecnicos" element={<CursosTecnicosPublicPage />} />
         <Route path="/cursos-tecnicos/detalhes/:id" element={<CursoTecnicoDetailPage />} />
@@ -57,17 +61,10 @@ const App: React.FC = () => {
         <Route path="/especializacao" element={<EspecializacaoPublicPage />} />
         <Route path="/especializacao/detalhes/:id" element={<EspecializacaoDetailPage />} />
 
-        {/* ── Login ── */}
-        {/* Em produção: redireciona para o Proesc (sistema externo do aluno) */}
-        {/* Em desenvolvimento: abre o sistema interno de login */}
-        <Route
-          path="/login"
-          element={
-            isDevelopmentMode
-              ? <LoginPage />
-              : <AlunoLoginPublicPage />
-          }
-        />
+        {/* ── Login público do aluno ── */}
+        <Route path="/login" element={<AlunoLoginPublicPage />} />
+        <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
+        <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
 
         {/* ── Cursos EAD ── */}
         {/* Em produção: redireciona para a plataforma EAD externa */}
@@ -80,28 +77,32 @@ const App: React.FC = () => {
           path="/ead/detalhes/:id"
           element={<EadDetailPage />}
         />
+        <Route
+          path="/ead/:slug/:id"
+          element={<EadDetailPage />}
+        />
+        <Route path="/validador" element={<ValidatorPage />} />
+        <Route path="/validator" element={<Navigate to={`/validador${window.location.search}`} replace />} />
 
         {/* ── Rotas do Sistema Interno ── */}
-        {/* Completamente ocultas em produção — qualquer acesso vai para a home */}
+        {/* Em produção, mantemos o portal do aluno ativo para não redirecionar o login Google para home */}
         {isDevelopmentMode ? (
           <>
+            <Route path="/sistema/login" element={<LoginPage />} />
             <Route path="/gestor/*" element={<GestorPage />} />
             <Route path="/professor/*" element={<ProfessorPage />} />
-            <Route path="/aluno/*" element={<AlunoPage />} />
             <Route path="/cad-aed" element={<CadAedPage />} />
-            <Route path="/validador" element={<ValidatorPage />} />
-            <Route path="/validator" element={<Navigate to={`/validador${window.location.search}`} replace />} />
           </>
         ) : (
           <>
-            {/* Em produção: redireciona qualquer rota interna para a home */}
+            <Route path="/sistema/login" element={<Navigate to="/" replace />} />
+            {/* Em produção, restringe rotas de gestão/secretaria, mas mantém o portal do aluno para retorno do login */}
             <Route path="/gestor/*" element={<Navigate to="/" replace />} />
             <Route path="/professor/*" element={<Navigate to="/" replace />} />
-            <Route path="/aluno/*" element={<Navigate to="/" replace />} />
             <Route path="/cad-aed" element={<Navigate to="/" replace />} />
-            <Route path="/validador" element={<Navigate to="/" replace />} />
           </>
         )}
+        <Route path="/aluno/*" element={<AlunoPage />} />
 
         {/* Redireciona qualquer rota não encontrada para a home */}
         <Route path="*" element={<Navigate to="/" replace />} />

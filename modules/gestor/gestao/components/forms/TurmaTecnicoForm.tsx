@@ -9,10 +9,11 @@ interface TurmaTecnicoFormProps {
   onClose: () => void;
   onSave: (data: any) => void;
   cursosDisponiveis: any[];
+  selectedPoloId?: string;
 }
 
 const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({ 
-  isOpen, onClose, onSave, cursosDisponiveis 
+  isOpen, onClose, onSave, cursosDisponiveis, selectedPoloId
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -31,6 +32,12 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
   useEffect(() => {
     polosService.getAll().then(setPolos);
   }, []);
+
+  useEffect(() => {
+    if (selectedPoloId) {
+      setFormData(prev => ({ ...prev, poloId: selectedPoloId }));
+    }
+  }, [selectedPoloId]);
 
   // Lógica de Automação
   useEffect(() => {
@@ -128,10 +135,11 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
                     className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-emerald-500"
                     value={formData.poloId}
                     onChange={(e) => setFormData({...formData, poloId: e.target.value})}
+                    disabled={Boolean(selectedPoloId)}
                     required
                 >
                     <option value="">Selecione...</option>
-                    {polos.map(p => (
+                    {polos.filter(p => !selectedPoloId || p.id === selectedPoloId).map(p => (
                         <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
                     ))}
                 </select>

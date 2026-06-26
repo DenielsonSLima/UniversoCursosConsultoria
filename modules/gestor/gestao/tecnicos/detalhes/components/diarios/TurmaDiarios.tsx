@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Layers, BookOpen, Loader2 } from 'lucide-react';
 import DiarioClasse from './DiarioClasse';
 import { Turma } from '../../../../gestao.types';
-import { supabase } from '../../../../../../../lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { academicLifecycleService } from '../../academic-lifecycle.service';
+import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
 
 interface Disciplina {
   id: string;
@@ -11,6 +12,9 @@ interface Disciplina {
   professor: string;
   horasRealizadas: number;
   cargaHoraria: number;
+  progressoPercent: number;
+  periodoStatus: string;
+  concluida: boolean;
 }
 
 interface Modulo {
@@ -28,81 +32,37 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
   const [activeDisciplina, setActiveDisciplina] = useState<Disciplina | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: modulos = [], isLoading: loading } = useQuery<Modulo[]>({
-    queryKey: ['diarios-list', turma.id, turma.cursoId],
+  const { data: modulosData = [], isLoading: loading } = useQuery<Modulo[]>({
+    queryKey: [...academicLifecycleKeys.diarios(turma.id), 'normalized-v2'],
     queryFn: async () => {
-      // 1. Módulos do Curso
-      const { data: modulosData, error: modulosError } = await supabase
-        .from('modulos')
-        .select('*')
-        .eq('curso_id', turma.cursoId);
-
-      if (modulosError) throw modulosError;
-
-      if (!modulosData || modulosData.length === 0) {
-        return [];
-      }
-
-      const moduloIds = modulosData.map(m => m.id);
-
-      // 2. Disciplinas desses Módulos
-      const { data: discData, error: discError } = await supabase
-        .from('disciplinas')
-        .select('*')
-        .in('modulo_id', moduloIds);
-
-      if (discError) throw discError;
-
-      // 3. Atribuições de professores
-      const { data: configsData, error: configsError } = await supabase
-        .from('turmas_disciplinas')
-        .select('*')
-        .eq('turma_id', turma.id);
-
-      if (configsError) throw configsError;
-
-      const teacherMap: Record<string, string> = {};
-      configsData?.forEach(c => {
-        if (c.professor_nome) {
-          teacherMap[c.disciplina_id] = c.professor_nome;
+      const rows = await academicLifecycleService.getDiarios(turma.id);
+      const grouped = new Map<string, Modulo>();
+      rows.forEach((row: any) => {
+        if (!grouped.has(row.modulo_id)) {
+          grouped.set(row.modulo_id, {
+            id: row.modulo_id,
+            nome: row.modulo_nome,
+            disciplinas: [],
+          });
         }
+        grouped.get(row.modulo_id)!.disciplinas.push({
+          id: row.disciplina_id,
+          nome: row.disciplina_nome,
+          professor: row.professor_nome,
+          horasRealizadas: Number(row.horas_realizadas),
+          cargaHoraria: Number(row.carga_horaria),
+          progressoPercent: Number(row.progresso_percent),
+          periodoStatus: row.periodo_status,
+          concluida: row.concluida,
+        });
       });
-
-      // 4. Aulas lançadas (para compor horas realizadas)
-      const { data: aulasData, error: aulasError } = await supabase
-        .from('aulas_turma')
-        .select('*')
-        .eq('turma_id', turma.id);
-
-      if (aulasError) throw aulasError;
-
-      const hoursMap: Record<string, number> = {};
-      aulasData?.forEach(a => {
-        hoursMap[a.disciplina_id] = (hoursMap[a.disciplina_id] || 0) + parseFloat(a.carga_horaria);
-      });
-
-      // 5. Agrupamento
-      const structuredModulos: Modulo[] = modulosData.map(m => {
-        const moduloDisciplines = (discData || [])
-          .filter(d => d.modulo_id === m.id)
-          .map(d => ({
-            id: d.id,
-            nome: d.nome,
-            professor: teacherMap[d.id] || 'Não atribuído',
-            horasRealizadas: hoursMap[d.id] || 0,
-            cargaHoraria: d.carga_horaria
-          }));
-
-        return {
-          id: m.id,
-          nome: m.nome,
-          disciplinas: moduloDisciplines
-        };
-      });
-
-      return structuredModulos;
+      return Array.from(grouped.values());
     }
   });
+  const modulos = (Array.isArray(modulosData) ? modulosData : []).map((modulo) => ({
+    ...modulo,
+    disciplinas: Array.isArray(modulo?.disciplinas) ? modulo.disciplinas : [],
+  }));
 
   const handleOpenDiario = (disciplina: Disciplina, moduloNome: string) => {
     setActiveModuloNome(moduloNome);
@@ -111,7 +71,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
 
   const handleBack = () => {
     setActiveDisciplina(null);
-    queryClient.invalidateQueries({ queryKey: ['diarios-list', turma.id, turma.cursoId] });
+    queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
   };
 
   if (loading) {
@@ -155,7 +115,6 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {modulo.disciplinas.map(disc => {
-                    const progressPercent = disc.cargaHoraria > 0 ? Math.min((disc.horasRealizadas / disc.cargaHoraria) * 100, 100) : 0;
                     return (
                       <div key={disc.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col group">
                         <div className="flex justify-between items-start mb-4">
@@ -176,16 +135,17 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
                           <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-1000 ${disc.horasRealizadas > disc.cargaHoraria ? 'bg-rose-500' : 'bg-indigo-500'}`}
-                              style={{ width: `${progressPercent}%` }}
+                              style={{ width: `${disc.progressoPercent}%` }}
                             ></div>
                           </div>
 
                           <div className="flex pt-4">
                             <button
                               onClick={() => handleOpenDiario(disc, modulo.nome)}
-                              className="w-full py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
+                              disabled={disc.periodoStatus === 'FECHADO'}
+                              className="w-full py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
                             >
-                              <BookOpen size={14} /> Acessar Diário
+                              <BookOpen size={14} /> {disc.periodoStatus === 'FECHADO' ? 'Período Fechado' : 'Acessar Diário'}
                             </button>
                           </div>
                         </div>

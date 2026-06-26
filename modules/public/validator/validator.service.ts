@@ -16,7 +16,7 @@ const maskCpf = (cpf?: string | null) => {
   if (cpf?.includes('*')) return cpf;
   const digits = (cpf || '').replace(/\D/g, '');
   if (digits.length !== 11) return '***.***.***-**';
-  return `***.***.***-${digits.slice(-2)}`;
+  return `${digits.slice(0, 2)}*.***.***-${digits.slice(-2)}`;
 };
 
 const maskBirthDate = (date?: string | null) => {
@@ -68,6 +68,13 @@ const activeEnrollmentDocuments = new Set<ValidatableDocumentType>([
   'rematricula',
 ]);
 
+const certificateDocuments = new Set<ValidatableDocumentType>([
+  'certificado_tecnico',
+  'certificado_livre',
+  'certificado_ead',
+  'certificado_especializacao',
+]);
+
 const validateEmissionRegistry = async (
   code: string
 ): Promise<DocumentValidationResult | null> => {
@@ -117,7 +124,7 @@ const mapValidationRecord = async (
     activeEnrollmentDocuments.has(type) &&
     currentEnrollmentStatus !== 'ATIVO'
     ? 'revoked'
-    : calculateStatus(record.status, record.expiresAt);
+    : calculateStatus(record.status, certificateDocuments.has(type) ? null : record.expiresAt);
   const base = {
     type,
     status,
@@ -138,9 +145,10 @@ const mapValidationRecord = async (
     enrollmentStatus: currentEnrollmentStatus || 'NÃO INFORMADO',
     issuedAt: formatDate(record.issuedAt),
     lastIssuedAt: formatDate(record.lastIssuedAt || record.issuedAt),
-    expiresAt: formatDate(record.expiresAt),
+    expiresAt: certificateDocuments.has(type) ? null : formatDate(record.expiresAt),
     referencePeriod: record.referencePeriod || null,
     issueCount: Number(record.issueCount || 1),
+    enrollmentDate: formatDate(record.enrollmentDate || record.enrollment_date),
   };
 
   if (type === 'carteirinha') {

@@ -3,6 +3,7 @@ import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, MoreVertica
 import { supabase } from '../../../lib/supabase';
 import ComunicacaoConfig from './components/ComunicacaoConfig';
 import ToastNotification, { useToast } from '../components/ToastNotification';
+import { PortalAuthProfile } from '../../login/portal-session';
 
 interface Chat {
   id: string;
@@ -37,7 +38,33 @@ interface Category {
   ativo: boolean;
 }
 
-const ComunicacaoPage: React.FC = () => {
+interface ComunicacaoPageProps {
+  gestorProfile?: PortalAuthProfile | null;
+}
+
+const playMessageSound = (tone: 'send' | 'receive') => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = new AudioContextClass();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = tone === 'send' ? 660 : 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.18);
+    window.setTimeout(() => context.close().catch(() => undefined), 260);
+  } catch {
+    // Som é um refinamento: se o navegador bloquear áudio, o chat continua normal.
+  }
+};
+
+const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
   const { toasts, removeToast, toast } = useToast();
   const [mainTab, setMainTab] = useState<'tickets' | 'config'>('tickets');
   const [activeTicketStatus, setActiveTicketStatus] = useState<'pendente' | 'solucionada'>('pendente');
@@ -60,6 +87,8 @@ const ComunicacaoPage: React.FC = () => {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gestorNome = gestorProfile?.nome || 'Gestor (Escola)';
+  const gestorId = gestorProfile?.id || null;
 
   // Delete confirm
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -193,6 +222,7 @@ const ComunicacaoPage: React.FC = () => {
             return [...prev, newMsg];
           });
           if (newMsg.remetente_tipo === 'aluno' || newMsg.remetente_tipo === 'professor') {
+            playMessageSound('receive');
             markMessagesAsRead(activeChatId);
           }
         }
@@ -315,7 +345,8 @@ const ComunicacaoPage: React.FC = () => {
 
       const msgPayload: any = {
         chat_id: activeChatId,
-        remetente_nome: 'Gestor (Escola)',
+        remetente_id: gestorId,
+        remetente_nome: gestorNome,
         remetente_tipo: 'gestor',
         conteudo: text || (fileToSend ? `📎 ${fileToSend.name}` : ''),
         anexo_url: anexoUrl,
@@ -334,11 +365,61 @@ const ComunicacaoPage: React.FC = () => {
         if (prev.some(m => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
+      playMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       toast.error('Erro ao enviar', 'Não foi possível enviar sua resposta.');
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  const handleTransferCategory = async (nextCategoryId: string) => {
+    if (!activeChatId || !currentChat || !nextCategoryId || nextCategoryId === currentChat.categoria_id) return;
+    const previousCategory = getCategoryInfo(currentChat.categoria_id).nome;
+    const nextCategory = getCategoryInfo(nextCategoryId).nome;
+
+    try {
+      const { error: chatErr } = await supabase
+        .from('comunicacao_chats')
+        .update({
+          categoria_id: nextCategoryId,
+          ultimo_texto: `Atendimento transferido para ${nextCategory}`,
+          ultima_data: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', activeChatId);
+
+      if (chatErr) throw chatErr;
+
+      const { data: systemMessage, error: msgErr } = await supabase
+        .from('comunicacao_mensagens')
+        .insert({
+          chat_id: activeChatId,
+          remetente_nome: 'Sistema',
+          remetente_tipo: 'sistema',
+          conteudo: `${gestorNome} transferiu o atendimento de ${previousCategory} para ${nextCategory}.`
+        })
+        .select()
+        .single();
+
+      if (msgErr) throw msgErr;
+
+      setChats(prev => prev.map(chat => chat.id === activeChatId
+        ? {
+            ...chat,
+            categoria_id: nextCategoryId,
+            ultimo_texto: `Atendimento transferido para ${nextCategory}`,
+            ultima_data: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        : chat
+      ));
+      setMessages(prev => systemMessage && !prev.some(message => message.id === systemMessage.id) ? [...prev, systemMessage] : prev);
+      toast.success('Atendimento transferido', `Conversa movida para ${nextCategory}.`);
+    } catch (err) {
+      console.error('Erro ao transferir atendimento:', err);
+      toast.error('Erro ao transferir', 'Não foi possível mudar o setor do atendimento.');
     }
   };
 
@@ -621,7 +702,7 @@ const ComunicacaoPage: React.FC = () => {
 
                           <div className="flex items-center gap-1.5 mt-2">
                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: catInfo.cor }}></div>
-                             <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">{catInfo.nome}</span>
+                             <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Setor: {catInfo.nome}</span>
                              <span className="text-[8px] text-slate-300 font-medium">|</span>
                              <span className={`text-[8px] font-black uppercase tracking-wider ${
                                chat.remetente_tipo === 'Professor' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
@@ -660,7 +741,7 @@ const ComunicacaoPage: React.FC = () => {
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider flex items-center gap-1">
-                          <Tag size={9} /> {getCategoryInfo(currentChat.categoria_id).nome}
+                          <Tag size={9} /> Setor: {getCategoryInfo(currentChat.categoria_id).nome}
                         </span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                         <span className={`text-[9px] uppercase font-black tracking-wider flex items-center gap-1 ${
@@ -674,6 +755,22 @@ const ComunicacaoPage: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    {currentChat.status === 'pendente' && (
+                      <label className="relative flex items-center">
+                        <span className="sr-only">Transferir conversa para outro setor</span>
+                        <select
+                          value={currentChat.categoria_id || ''}
+                          onChange={(event) => handleTransferCategory(event.target.value)}
+                          className="h-9 appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none transition-colors hover:bg-white focus:border-blue-500"
+                        >
+                          <option value="" disabled>Transferir setor</option>
+                          {categories.filter(category => category.ativo).map(category => (
+                            <option key={category.id} value={category.id}>{category.nome}</option>
+                          ))}
+                        </select>
+                        <Tag size={12} className="pointer-events-none absolute right-3 text-slate-400" />
+                      </label>
+                    )}
                     {currentChat.status === 'pendente' && (
                       <button 
                         onClick={handleMarkAsSolved}

@@ -10,7 +10,7 @@ import TecnicoReceberTab from './tecnico/TecnicoReceberTab';
 type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico';
 
 const ReceberTab: React.FC = () => {
-  const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('livres');
+  const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('tecnico');
 
   const subtabs = [
     { id: 'livres' as const, label: 'Cursos Livres', icon: <Award size={14} /> },
@@ -36,13 +36,7 @@ const ReceberTab: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div>
-        <h3 className="text-xl font-black text-emerald-600 uppercase tracking-tight mb-2">Contas a Receber</h3>
-        <p className="text-slate-500 text-xs font-bold uppercase">Gestão financeira segmentada por modalidades de ensino.</p>
-      </div>
-
-      {/* Subtabs header */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
         {subtabs.map((tab) => (
           <button
             key={tab.id}

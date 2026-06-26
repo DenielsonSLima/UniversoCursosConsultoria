@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Users, AlertTriangle, DollarSign, Calendar, CreditCard } from 'lucide-react';
+import { Search, Users, AlertTriangle, DollarSign, Link2, CheckCircle2 } from 'lucide-react';
 import { financeiroService } from '../financeiro.service';
 
 const ResumoTab: React.FC = () => {
@@ -49,6 +49,30 @@ const ResumoTab: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-[2rem] border border-slate-100 bg-[#001a33] p-6 text-white shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-200">
+            <DollarSign size={12} /> Finanças da instituição
+          </div>
+          <h3 className="text-xl font-black uppercase tracking-tight">Módulo financeiro</h3>
+          <p className="mt-2 max-w-xl text-xs font-medium leading-relaxed text-slate-300">
+            Acompanhe o resumo de mensalidades e controle de caixas de forma integrada com busca rápida de contas de alunos.
+          </p>
+        </div>
+
+        <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+            <Link2 size={12} /> Integração Asaas
+          </div>
+          <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Como funciona o Contas a Receber</h3>
+          <div className="mt-3 space-y-2 text-xs font-bold text-slate-600">
+            <p className="flex gap-2"><CheckCircle2 size={14} className="mt-0.5 flex-shrink-0 text-emerald-600" /> A matrícula gera a cobrança inicial no sistema e no Asaas quando confirmada.</p>
+            <p className="flex gap-2"><CheckCircle2 size={14} className="mt-0.5 flex-shrink-0 text-emerald-600" /> O pagamento no Asaas baixa automaticamente o recebível pelo webhook.</p>
+            <p className="flex gap-2"><CheckCircle2 size={14} className="mt-0.5 flex-shrink-0 text-emerald-600" /> Se a baixa for manual, o sistema registra como presencial e cancela a cobrança aberta no Asaas quando aplicável.</p>
+          </div>
+        </div>
+      </div>
+
       {/* KPIs Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Alunos Ativos Card */}

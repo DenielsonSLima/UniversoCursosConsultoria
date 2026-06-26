@@ -27,6 +27,7 @@ interface EditableDocumentPageProps {
   defaultValidityDays?: number;
   showValidity?: boolean;
   restrictionLabel?: string;
+  modalityScope?: 'TECNICO';
 }
 
 const EditableDocumentPage: React.FC<EditableDocumentPageProps> = ({
@@ -41,7 +42,8 @@ const EditableDocumentPage: React.FC<EditableDocumentPageProps> = ({
   validationPrefix,
   defaultValidityDays = 90,
   showValidity = false,
-  restrictionLabel
+  restrictionLabel,
+  modalityScope
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
   const [selectedPolo, setSelectedPolo] = useState<any | null>(null);
@@ -51,9 +53,13 @@ const EditableDocumentPage: React.FC<EditableDocumentPageProps> = ({
   useEffect(() => {
     polosService.getAll().then((data) => {
       setPolos(data);
+      if (modalityScope) {
+        const matriz = data.find((polo) => polo.is_matriz) || data[0];
+        if (matriz) setSelectedPolo({ ...matriz, id: modalityScope });
+      }
       setLoading(false);
     });
-  }, []);
+  }, [modalityScope]);
 
   if (isConfiguringQr) {
     return (
@@ -66,18 +72,33 @@ const EditableDocumentPage: React.FC<EditableDocumentPageProps> = ({
 
   if (selectedPolo) {
     return (
-      <DeclaracaoEditor
-        polo={selectedPolo}
-        onBack={() => setSelectedPolo(null)}
-        service={service}
-        editorTitle={editorTitle}
-        documentTitle={documentTitle}
-        variables={variables}
-        validationPrefix={validationPrefix}
-        defaultValidityDays={defaultValidityDays}
-        showValidity={showValidity}
-        migrateDeclarationDefaults={false}
-      />
+      <div>
+        {modalityScope && (
+          <div className={`mb-5 flex items-center justify-between rounded-2xl border ${accent.border} ${accent.soft} px-5 py-4`}>
+            <div>
+              <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${accent.text}`}>Modelo por modalidade</p>
+              <p className="mt-1 font-black text-[#001a33]">Cursos Técnicos</p>
+            </div>
+            <span className={`rounded-full border ${accent.border} bg-white px-3 py-1 text-[10px] font-black uppercase ${accent.text}`}>
+              Único para todos os polos
+            </span>
+          </div>
+        )}
+        <DeclaracaoEditor
+          polo={selectedPolo}
+          onBack={() => modalityScope ? undefined : setSelectedPolo(null)}
+          service={service}
+          editorTitle={editorTitle}
+          documentTitle={documentTitle}
+          variables={variables}
+          validationPrefix={validationPrefix}
+          defaultValidityDays={defaultValidityDays}
+          showValidity={showValidity}
+          migrateDeclarationDefaults={false}
+          hideBackButton={!!modalityScope}
+          scopeLabel={modalityScope ? 'Cursos Técnicos' : undefined}
+        />
+      </div>
     );
   }
 

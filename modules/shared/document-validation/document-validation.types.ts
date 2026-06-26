@@ -5,10 +5,15 @@ export type ValidatableDocumentType =
   | 'declaracao_frequencia'
   | 'declaracao_irpf'
   | 'boletim'
+  | 'atestado_conclusao_tecnico'
   | 'historico_escolar'
   | 'transferencia'
   | 'rematricula'
-  | 'termo_estagio';
+  | 'termo_estagio'
+  | 'certificado_tecnico'
+  | 'certificado_livre'
+  | 'certificado_ead'
+  | 'certificado_especializacao';
 
 export interface DocumentValidationPolicy {
   prefix: string;

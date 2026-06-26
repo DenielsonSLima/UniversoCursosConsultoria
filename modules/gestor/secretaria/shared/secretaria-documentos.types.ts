@@ -4,6 +4,7 @@ export type SecretariaDocumentoId =
   | 'declaracao_matricula'
   | 'declaracao_frequencia'
   | 'boletim'
+  | 'atestado_conclusao_tecnico'
   | 'declaracao_irpf'
   | 'historico_escolar'
   | 'cracha_estagio'
@@ -20,6 +21,10 @@ export interface SecretariaDocumentoDefinition {
   accent: string;
   softAccent: string;
   technicalOnly?: boolean;
+  activeOnly?: boolean;
+  completedOnly?: boolean;
+  allowBatch?: boolean;
+  academicPreview?: 'boletim_tecnico' | 'atestado_conclusao_tecnico';
 }
 
 export interface SecretariaContext {

@@ -77,6 +77,8 @@ function toCamel(s: any) {
     responsavelCpf: s.responsavel_cpf,
     responsavelParentesco: s.responsavel_parentesco,
     responsavelTelefone: s.responsavel_telefone,
+    responsavelEmail: s.responsavel_email,
+    responsavelFinanceiro: s.responsavel_financeiro,
     responsavelCargo: s.responsavel_cargo,
     especialidade: s.especialidade,
     titulacao: s.titulacao,
@@ -93,6 +95,10 @@ function toCamel(s: any) {
     tipoServico: s.tipo_servico,
     tipoPj: s.tipo_pj,
     tipoConvenio: s.tipo_convenio,
+    aceitouTermosUso: s.aceitou_termos_uso,
+    aceitouTermosUsoEm: s.aceitou_termos_uso_em,
+    termosUsoVersao: s.termos_uso_versao,
+    trocaSenhaObrigatoria: s.troca_senha_obrigatoria,
     poloIds: s.polo_ids || [],
     createdAt: s.created_at,
     updatedAt: s.updated_at
@@ -147,6 +153,8 @@ function toSnake(c: any) {
     responsavel_cpf: c.responsavelCpf || null,
     responsavel_parentesco: c.responsavelParentesco || null,
     responsavel_telefone: c.responsavelTelefone || null,
+    responsavel_email: c.responsavelEmail || null,
+    responsavel_financeiro: c.responsavelFinanceiro || false,
     responsavel_cargo: c.responsavelCargo || null,
     especialidade: c.especialidade || null,
     titulacao: c.titulacao || null,
@@ -163,6 +171,10 @@ function toSnake(c: any) {
     tipo_servico: c.tipoServico || null,
     tipo_pj: c.tipoPj || null,
     tipo_convenio: c.tipoConvenio || null,
+    aceitou_termos_uso: c.aceitouTermosUso ?? c.aceitou_termos_uso ?? false,
+    aceitou_termos_uso_em: c.aceitouTermosUsoEm || c.aceitou_termos_uso_em || null,
+    termos_uso_versao: c.termosUsoVersao || c.termos_uso_versao || null,
+    troca_senha_obrigatoria: c.trocaSenhaObrigatoria ?? c.troca_senha_obrigatoria ?? false,
     polo_ids: c.poloIds || [],
   };
 }
@@ -445,4 +457,3 @@ export const parceirosService = {
     };
   }
 };
-

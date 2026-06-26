@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { supabase } from '../../../lib/supabase';
+import { textMatchesSearch } from '../../../lib/search';
 
 const EnsinoSuperiorPublicPage: React.FC = () => {
   const { pathname } = useLocation();
@@ -63,9 +64,7 @@ const EnsinoSuperiorPublicPage: React.FC = () => {
   // Lógica de filtragem combinada
   const filteredCursos = cursos.filter((curso) => {
     // 1. Filtro de Busca por Texto
-    const nameMatch = curso.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const descMatch = (curso.descricao || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const textMatches = nameMatch || descMatch;
+    const textMatches = textMatchesSearch(searchTerm, [curso.nome, curso.descricao, curso.area]);
 
     // 2. Filtro de Grau Acadêmico
     let grauMatches = true;

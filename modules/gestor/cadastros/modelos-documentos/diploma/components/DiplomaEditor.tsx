@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Save, LayoutTemplate, Copy, Check, ZoomOut, ZoomIn, 
-  Upload, Loader2, Sparkles, Plus, Trash2, Eye, Layout, Sliders 
+  Upload, Loader2, Plus, Trash2, Eye, Layout, Sliders, Type, Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../../../../../../lib/supabase';
+import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import DiplomaPreview, { getBlocks, posicoesPadrao } from './DiplomaPreview';
 
 interface DiplomaEditorProps {
@@ -14,11 +15,40 @@ interface DiplomaEditorProps {
   onCancel: () => void;
 }
 
+const normalizeSignatureBlock = (block: any) => {
+  if (block?.type !== 'signature') return block;
+
+  const signatureDefaultSource = block.id === 'assinatura1'
+    ? 'diretoriaGeral'
+    : block.id === 'assinatura2'
+      ? 'none'
+      : 'none';
+  const legacySource = ['secretaria', 'coordenacao', 'coordenação'].includes(block.signatureSource)
+    ? 'none'
+    : block.signatureSource;
+  const legacyTitle = String(block.title || '').toLowerCase();
+  const title = block.id === 'assinatura1'
+    ? 'Diretor Geral'
+    : block.id === 'assinatura2' && (!block.title || legacyTitle.includes('secretaria') || legacyTitle.includes('coordena'))
+      ? 'Aluno(a)'
+      : block.title || 'Assinatura';
+
+  return {
+    ...block,
+    signatureSource: legacySource ?? signatureDefaultSource,
+    signatureImageUrl: block.signatureImageUrl || '',
+    signatureBlend: block.signatureBlend ?? true,
+    signatureLabelFontSize: block.signatureLabelFontSize != null ? Number(block.signatureLabelFontSize) : 10,
+    label: block.id === 'assinatura2' ? 'Assinatura do(a) Aluno(a)' : block.label,
+    title,
+  };
+};
+
 const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel }) => {
   // Inicializa o estado sincronizando/mapeando os blocos
   const [formData, setFormData] = useState<any>(() => {
     const data = modelo || {
-      id: `new-${Date.now()}`,
+      id: 'certificado_livre',
       nome: '',
       tipoCurso: 'Cursos Livres',
       status: 'ativo',
@@ -27,7 +57,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
       watermarkText: '',
       layout: 'classic',
       usePhotoshopLayout: true, // Força layout interativo por padrão
-      ocultarDesignPadrao: false,
+      ocultarDesignPadrao: true,
       bgFrenteUrl: '',
       bgVersoUrl: '',
       corTexto: '#1e293b',
@@ -38,9 +68,13 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
     // Injeta os blocos iniciais se não estiverem presentes
     if (!data.blocks) {
       data.blocks = getBlocks(data);
+    } else {
+      data.blocks = getBlocks(data).map((block: any) => normalizeSignatureBlock(block));
     }
     // Garante que o layout customizado está ativado
     data.usePhotoshopLayout = true;
+    data.ocultarDesignPadrao = true;
+    data.exibirBorda = false;
     
     return data;
   });
@@ -51,6 +85,33 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(50);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    const loadLandscapeWatermark = async () => {
+      try {
+        const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
+        const preferred = watermarks.find(item => item.landscapeWatermarkUrl) || watermarks.find(item => item.watermarkUrl);
+        if (!preferred) return;
+        setFormData((prev: any) => ({
+          ...prev,
+          landscapeWatermarkUrl: prev.landscapeWatermarkUrl || preferred.landscapeWatermarkUrl || preferred.watermarkUrl,
+          landscapeWatermarkOpacity: prev.landscapeWatermarkOpacity ?? preferred.landscapeWatermarkOpacity ?? preferred.watermarkOpacity ?? 0.1,
+          landscapeWatermarkScale: prev.landscapeWatermarkScale ?? preferred.landscapeWatermarkScale ?? preferred.watermarkScale ?? 55,
+          landscapeWatermarkRotate: prev.landscapeWatermarkRotate ?? (preferred.landscapeWatermarkRotate === true),
+        }));
+      } catch (error) {
+        console.warn('[DiplomaEditor] Não foi possível carregar marca dágua paisagem:', error);
+      }
+    };
+
+    void loadLandscapeWatermark();
+  }, []);
+
+  const signatureSourceOptions = [
+    { value: 'none', label: 'Nenhuma Assinatura' },
+    { value: 'diretoriaGeral', label: 'Diretoria Geral (Configurações)' },
+    { value: 'manual', label: 'Aluno(a) (Upload Manual / URL Personalizada)' },
+  ];
 
   // Sincroniza a exibição do preview de acordo com a aba de edição selecionada
   useEffect(() => {
@@ -80,7 +141,9 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
     setIsUploading(true);
     try {
-      const filePath = `templates/bg_diploma_${Date.now()}_${fieldName}.png`;
+      const fileExt = file.name.split('.').pop() || 'png';
+      const safeModelId = String(formData.id || 'certificado').replace(/[^a-z0-9_-]/gi, '_');
+      const filePath = `templates/certificados/${safeModelId}_${fieldName}_${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
@@ -95,13 +158,88 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
         .from('documentos')
         .getPublicUrl(data.path);
 
-      setFormData({ ...formData, [fieldName]: urlData.publicUrl });
+      setFormData((prev: any) => ({ ...prev, [fieldName]: urlData.publicUrl }));
       alert('Upload da imagem concluído com sucesso!');
     } catch (err: any) {
       console.error('Erro ao fazer upload:', err);
       alert('Erro ao fazer upload da imagem: ' + err.message);
     } finally {
       setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const uploadTemplateImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop() || 'png';
+    const filePath = `templates/certificados/assets_${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('documentos')
+      .upload(filePath, file, {
+        cacheControl: '31536000',
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from('documentos')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  };
+
+  const handleUploadBlockImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const imageUrl = await uploadTemplateImage(file);
+      const newBlock = {
+        id: `imagem-${Date.now()}`,
+        type: 'image',
+        label: 'Imagem',
+        page: activePage,
+        x: 10,
+        y: 10,
+        width: 180,
+        visible: true,
+        imageUrl,
+        opacity: 1,
+      };
+      setFormData({ ...formData, blocks: [...formData.blocks, newBlock] });
+      setSelectedBlockId(newBlock.id);
+    } catch (err: any) {
+      console.error('Erro ao fazer upload:', err);
+      alert('Erro ao fazer upload da imagem: ' + err.message);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleUploadSignature = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBlockId) return;
+
+    setIsUploading(true);
+    try {
+      const signatureImageUrl = await uploadTemplateImage(file);
+      const updatedBlocks = formData.blocks.map((b: any) => {
+        if (b.id !== selectedBlockId || b.type !== 'signature') return b;
+        return {
+          ...b,
+          signatureSource: 'manual',
+          signatureImageUrl,
+        };
+      });
+      setFormData({ ...formData, blocks: updatedBlocks });
+    } catch (err: any) {
+      console.error('Erro ao fazer upload da assinatura:', err);
+      alert('Erro ao fazer upload da assinatura: ' + err.message);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -160,6 +298,27 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
     }
   };
 
+  const handleAddTextBlock = () => {
+    const newBlock = {
+      id: `texto-livre-${Date.now()}`,
+      type: 'text',
+      label: 'Texto Livre',
+      page: activePage,
+      x: 12,
+      y: 12,
+      width: 420,
+      fontSize: 22,
+      fontFamily: 'serif',
+      fontWeight: '700',
+      textAlign: 'center',
+      color: formData.corTexto || '#1e293b',
+      content: 'Novo texto',
+      visible: true,
+    };
+    setFormData({ ...formData, blocks: [...formData.blocks, newBlock] });
+    setSelectedBlockId(newBlock.id);
+  };
+
   // Sincroniza campos antigos/legados antes de salvar e chama onSave
   const handleFinalSave = () => {
     if (!formData.nome.trim()) {
@@ -167,7 +326,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
       return;
     }
 
-    const blocks = formData.blocks;
+    const blocks = getBlocks(formData).map((block: any) => normalizeSignatureBlock(block));
     const findBlock = (id: string) => blocks.find((b: any) => b.id === id);
 
     // Mapeia de volta os campos antigos para garantir total compatibilidade em PDFs
@@ -192,6 +351,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
     const finalData = {
       ...formData,
+      blocks,
       posicoes,
       textoFrente: texto?.content || formData.textoFrente || '',
       textoVerso: historico?.content || formData.textoVerso || '',
@@ -212,7 +372,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
       tamanhoFonteTexto: texto?.fontSize || formData.tamanhoFonteTexto || 24,
       tamanhoFonteCidadeData: cidadeData?.fontSize || formData.tamanhoFonteCidadeData || 12,
       seloWidth: selo?.width || formData.seloWidth || 96,
-      qrcodeWidth: qrcode?.width || formData.qrcodeWidth || 120,
+      qrcodeWidth: qrcode?.width || formData.qrcodeWidth || 170,
       assinaturaWidth: assinatura1?.width || formData.assinaturaWidth || 256,
     };
 
@@ -260,7 +420,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
           <div>
             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
               <LayoutTemplate size={24} className="text-purple-600" />
-              {modelo ? 'Editar Modelo de Diploma' : 'Novo Modelo de Diploma'}
+              Editar Modelo de Certificado
             </h3>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
               Personalize o layout de forma 100% interativa e flexível (Canva-style)
@@ -309,14 +469,14 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
             {activeTab === 'visualizar' && (
               <div className="space-y-5 animate-fadeIn">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Modelo *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Modelo</label>
                   <input 
                     type="text" 
                     name="nome"
                     value={formData.nome}
-                    onChange={handleChange}
+                    readOnly
                     placeholder="Ex: Diploma Padrão Téc. Enfermagem"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none"
                   />
                 </div>
                 
@@ -325,26 +485,13 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                   <select 
                     name="tipoCurso"
                     value={formData.tipoCurso}
-                    onChange={handleChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:bg-white transition-all cursor-pointer"
+                    disabled
+                    className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none"
                   >
                     <option value="Educação a Distância (EAD)">Educação a Distância (EAD)</option>
                     <option value="Cursos Especialização">Cursos Especialização</option>
                     <option value="Cursos Técnicos">Cursos Técnicos</option>
                     <option value="Cursos Livres">Cursos Livres</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Status</label>
-                  <select 
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:bg-white transition-all cursor-pointer"
-                  >
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
                   </select>
                 </div>
 
@@ -398,48 +545,20 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 cursor-pointer p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      name="ocultarDesignPadrao" 
-                      checked={formData.ocultarDesignPadrao || false} 
-                      onChange={handleChange}
-                      className="w-5 h-5 text-purple-600 rounded" 
-                    />
-                    <div>
-                      <span className="block text-sm font-bold text-[#001a33] uppercase">Ocultar Moldura/Borda Ornamental</span>
-                      <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Oculta as linhas clássicas de moldura.</span>
-                    </div>
-                  </label>
-
                   {/* Watermark Section */}
                   <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
-                    <label className="flex items-center gap-3 cursor-pointer mb-3">
-                      <input 
-                        type="checkbox" 
-                        name="hasWatermark" 
-                        checked={formData.hasWatermark} 
-                        onChange={handleChange}
-                        className="w-5 h-5 text-purple-600 rounded" 
-                      />
+                    <span className="block text-sm font-bold text-[#001a33] uppercase">Verso com marca d'água da empresa</span>
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Usa automaticamente a imagem paisagem cadastrada em Configurações.</span>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
                       <div>
-                        <span className="block text-sm font-bold text-[#001a33] uppercase">Marca d'água</span>
-                        <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Texto ao fundo do diploma (Frente)</span>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Opacidade</label>
+                        <input type="range" min="0.02" max="0.35" step="0.01" value={formData.landscapeWatermarkOpacity || 0.1} onChange={(e) => setFormData({ ...formData, landscapeWatermarkOpacity: Number(e.target.value) })} className="w-full accent-purple-600" />
                       </div>
-                    </label>
-                    
-                    {formData.hasWatermark && (
-                      <div className="pl-8">
-                        <input 
-                          type="text" 
-                          name="watermarkText"
-                          value={formData.watermarkText}
-                          onChange={handleChange}
-                          placeholder="EX: CERTIFICADO UNIVERSO"
-                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
-                        />
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Escala</label>
+                        <input type="range" min="25" max="110" step="1" value={formData.landscapeWatermarkScale || 55} onChange={(e) => setFormData({ ...formData, landscapeWatermarkScale: Number(e.target.value) })} className="w-full accent-purple-600" />
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -477,6 +596,24 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                   <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 leading-normal">
                     Recomendado: Proporção A4 horizontal (2970 x 2100 px). Pode ser exportado do Canva/Photoshop.
                   </p>
+                </div>
+
+                <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl">
+                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                    Inserir novos elementos
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handleAddTextBlock}
+                      className="flex items-center gap-1 bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg border border-slate-200 transition-colors shadow-sm"
+                    >
+                      <Type size={12} /> Texto
+                    </button>
+                    <label className="flex items-center gap-1 bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg border border-slate-200 transition-colors shadow-sm cursor-pointer">
+                      <input type="file" accept="image/*" onChange={handleUploadBlockImage} className="hidden" disabled={isUploading} />
+                      {isUploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />} Imagem
+                    </label>
+                  </div>
                 </div>
 
                 {/* ADICIONAR ELEMENTOS INATIVOS */}
@@ -557,7 +694,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
                       {/* Editor de Fonte (Slidres) */}
                       {(selectedBlock.type === 'text') && (
-                        <div>
+                        <div className="space-y-3">
                           <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                             <span>Tamanho da Fonte</span>
                             <span className="font-mono">{selectedBlock.fontSize || 14}px</span>
@@ -571,45 +708,58 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                             onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'fontSize', parseInt(e.target.value))} 
                             className="w-full accent-purple-600" 
                           />
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Cor do texto</label>
+                              <input
+                                type="color"
+                                value={selectedBlock.color || formData.corTexto || '#1e293b'}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'color', e.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white p-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Alinhamento</label>
+                              <select
+                                value={selectedBlock.textAlign || 'center'}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'textAlign', e.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-2 text-xs font-bold"
+                            >
+                                <option value="left">Esquerda</option>
+                                <option value="center">Centro</option>
+                                <option value="right">Direita</option>
+                                <option value="justify">Justificado</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Fonte</label>
+                              <select
+                                value={selectedBlock.fontFamily || 'serif'}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'fontFamily', e.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-2 text-xs font-bold"
+                              >
+                                <option value="serif">Serifada</option>
+                                <option value="sans-serif">Sem serifa</option>
+                                <option value="monospace">Monoespaçada</option>
+                                <option value="'Playfair Display', serif">Clássica</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Peso</label>
+                              <select
+                                value={selectedBlock.fontWeight || 'normal'}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'fontWeight', e.target.value)}
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-2 text-xs font-bold"
+                              >
+                                <option value="400">Normal</option>
+                                <option value="700">Negrito</option>
+                                <option value="900">Extra forte</option>
+                              </select>
+                            </div>
+                          </div>
                         </div>
                       )}
 
-                      {/* Editor de Larguras (Selo, QR, Assinatura) */}
-                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature') && (
-                        <div>
-                          <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                            <span>Largura do Elemento</span>
-                            <span className="font-mono">{selectedBlock.width || 120}px</span>
-                          </label>
-                          <input 
-                            type="range" 
-                            min="40" 
-                            max="450" 
-                            step="5" 
-                            value={selectedBlock.width || 120} 
-                            onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'width', parseInt(e.target.value))} 
-                            className="w-full accent-purple-600" 
-                          />
-                        </div>
-                      )}
-
-                      {/* Editor de Cargo de Assinatura */}
-                      {selectedBlock.type === 'signature' && (
-                        <div className="space-y-1.5">
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Cargo / Identificação da Assinatura
-                          </label>
-                          <input
-                            type="text"
-                            value={selectedBlock.title || ''}
-                            onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'title', e.target.value)}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
-                            placeholder="Ex: Diretor Geral"
-                          />
-                        </div>
-                      )}
-
-                      {/* Variáveis e Token Helper para Textos */}
                       {selectedBlock.type === 'text' && (
                         <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50 space-y-2">
                           <span className="block text-[8px] font-black text-purple-700 uppercase tracking-widest">Variáveis Suportadas</span>
@@ -619,6 +769,136 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                             <VariableToken token="{{curso_nome}}" label="Curso" />
                             <VariableToken token="{{carga_horaria}}" label="Carga" />
                             <VariableToken token="{{data_conclusao}}" label="Data" />
+                            <VariableToken token="{{url_validacao}}" label="Link de Validação" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Editor de Larguras (Selo, QR, Assinatura) */}
+                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature' || selectedBlock.type === 'image' || selectedBlock.type === 'text' || selectedBlock.type === 'table') && (
+                        <div>
+                          <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                            <span>Largura</span>
+                            <span className="font-mono">{selectedBlock.width || 120}px</span>
+                          </label>
+                          <input 
+                            type="range" 
+                            min="40" 
+                            max={selectedBlock.type === 'qrcode' ? '650' : '900'}
+                            step="5" 
+                            value={selectedBlock.width || 120} 
+                            onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'width', parseInt(e.target.value))} 
+                            className="w-full accent-purple-600" 
+                          />
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'image' && (
+                        <div className="space-y-3">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">URL da imagem</label>
+                          <input
+                            type="text"
+                            value={selectedBlock.imageUrl || ''}
+                            onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'imageUrl', e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
+                          />
+                          <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                            <span>Opacidade</span>
+                            <span className="font-mono">{Math.round((selectedBlock.opacity ?? 1) * 100)}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="1"
+                            step="0.05"
+                            value={selectedBlock.opacity ?? 1}
+                            onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'opacity', Number(e.target.value))}
+                            className="w-full accent-purple-600"
+                          />
+                        </div>
+                      )}
+
+                      {/* Editor de Cargo de Assinatura */}
+                      {selectedBlock.type === 'signature' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                              Cargo / Identificação da Assinatura
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedBlock.title || ''}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'title', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
+                              placeholder="Ex: Diretor Geral"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Origem da Assinatura</label>
+                            <select
+                              value={selectedBlock.signatureSource || 'none'}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureSource', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-purple-500 transition-all cursor-pointer"
+                            >
+                              {signatureSourceOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {selectedBlock.signatureSource === 'manual' && (
+                            <div className="space-y-2">
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload da Assinatura PNG</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={selectedBlock.signatureImageUrl || ''}
+                                  onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureImageUrl', e.target.value)}
+                                  className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                                  placeholder="URL da assinatura digitalizada (.png)"
+                                />
+                                <label className="flex items-center justify-center p-2.5 bg-white hover:bg-purple-50 hover:text-purple-600 rounded-xl border border-slate-200 cursor-pointer transition-colors relative shrink-0">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleUploadSignature}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    disabled={isUploading}
+                                  />
+                                  {isUploading ? <Loader2 size={16} className="animate-spin text-purple-600" /> : <Upload size={16} />}
+                                </label>
+                              </div>
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PNG com fundo transparente (preferencial)</p>
+                            </div>
+                          )}
+
+                          {selectedBlock.signatureSource && selectedBlock.signatureSource !== 'none' && (
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedBlock.signatureBlend !== false}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureBlend', e.target.checked)}
+                                className="w-4 h-4 text-purple-600 rounded"
+                              />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Mesclar assinatura no documento (modo multiply)</span>
+                            </label>
+                          )}
+
+                          <div>
+                            <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                              <span>Tamanho da Fonte do Identificador</span>
+                              <span className="font-mono">{selectedBlock.signatureLabelFontSize || 10}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="8"
+                              max="20"
+                              step="1"
+                              value={selectedBlock.signatureLabelFontSize || 10}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureLabelFontSize', parseInt(e.target.value, 10))}
+                              className="w-full accent-purple-600"
+                            />
                           </div>
                         </div>
                       )}
@@ -630,6 +910,13 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                           <div className="grid grid-cols-1 gap-1 text-[8px]">
                             <VariableToken token="{{grade_curricular}}" label="Estrutura de Disciplinas" />
                             <VariableToken token="{{livro_registro}}" label="Dados de Registro Geral" />
+                            <VariableToken token="{{ensino_medio_estabelecimento}}" label="Estabelecimento do Ensino Médio" />
+                            <VariableToken token="{{ensino_medio_localidade_uf}}" label="Localidade / UF" />
+                            <VariableToken token="{{ensino_medio_ano_conclusao}}" label="Ano de Conclusão" />
+                            <VariableToken token="{{certificado_numero}}" label="Número do Certificado" />
+                            <VariableToken token="{{pagina_livro}}" label="Página do Livro" />
+                            <VariableToken token="{{livro}}" label="Livro" />
+                            <VariableToken token="{{validacao_sistec}}" label="Validação SISTEC" />
                           </div>
                         </div>
                       )}
@@ -651,7 +938,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
             <div className="flex items-center gap-1.5">
               <span className="tracking-widest">Visualização / Tela de Trabalho</span>
               {(activeTab === 'frente' || activeTab === 'verso') && (
-                <span className="bg-purple-650 text-white font-black text-[8px] px-2 py-0.5 rounded tracking-wide animate-pulse">ARRASAR PARA MOVER</span>
+                <span className="bg-purple-650 text-white font-black text-[8px] px-2 py-0.5 rounded tracking-wide animate-pulse">ARRASTAR PARA MOVER</span>
               )}
             </div>
             
