@@ -49,6 +49,14 @@ const formatDate = (value?: string | null) => {
   return date.toLocaleDateString('pt-BR');
 };
 
+const getFormattedDuration = (min?: number) => {
+  if (!min) return '';
+  if (min % 60 === 0) return `${min / 60}h`;
+  const hrs = Math.floor(min / 60);
+  const rem = min % 60;
+  return hrs > 0 ? `${hrs}h ${rem}min` : `${rem}min`;
+};
+
 const normalizePercent = (value: unknown) => {
   const parsed = Number(value || 0);
   if (!Number.isFinite(parsed)) return 0;
@@ -644,7 +652,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
                         <div className="space-y-0.5">
                           <p className="font-bold text-[#001a33]">{index + 1}. {conteudo.titulo || `Aula ${index + 1}`}</p>
                           <p className="text-[10px] text-slate-400">
-                            {conteudo.etapa || 'Modulo'} | {conteudo.duracaoMinutos ? `${conteudo.duracaoMinutos} min` : conteudo.duracao || 'Carga não informada'}
+                            {conteudo.etapa || 'Modulo'} | {conteudo.duracaoMinutos ? getFormattedDuration(conteudo.duracaoMinutos) : conteudo.duracao || 'Carga não informada'}
                           </p>
                         </div>
                         <span className={`text-[10px] font-black uppercase tracking-widest ${done ? 'text-emerald-600' : 'text-slate-400'}`}>

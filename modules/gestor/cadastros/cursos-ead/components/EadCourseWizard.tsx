@@ -27,6 +27,19 @@ import {
   removeOldStorageImage
 } from './eadCourseWizard.helpers';
 
+const formatDuration = (minutes: number) => {
+  if (!minutes) return '0min';
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}h`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${remainingMinutes}min`;
+  }
+  return `${remainingMinutes}min`;
+};
+
 const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -1299,7 +1312,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                           <div className="flex gap-4 pt-1 text-[9px] font-bold text-slate-400 uppercase tracking-wide">
                             {item.videoUrl && <span className="flex items-center gap-1 text-red-500"><Play size={10} /> Videoaula Configurada</span>}
                             {item.apostilaUrl && <span className="flex items-center gap-1 text-blue-500"><FileUp size={10} /> PDF Configurado</span>}
-                            <span className="flex items-center gap-1 text-amber-600"><Clock size={10} /> {item.duracaoMinutos || 0} min</span>
+                            <span className="flex items-center gap-1 text-amber-600"><Clock size={10} /> {formatDuration(item.duracaoMinutos || 0)}</span>
                           </div>
                         </div>
 

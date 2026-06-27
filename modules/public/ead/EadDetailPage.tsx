@@ -40,6 +40,19 @@ const getEtapaLabel = (etapa: any) => {
   return str;
 };
 
+const formatDuration = (minutes: number) => {
+  if (!minutes) return '0h';
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}h`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${remainingMinutes}min`;
+  }
+  return `${remainingMinutes}min`;
+};
+
 const EadDetailPage: React.FC = () => {
   const params = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
@@ -377,7 +390,7 @@ const EadDetailPage: React.FC = () => {
                           <div className="flex gap-2 shrink-0">
                             {item.videoUrl && <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">Vídeo</span>}
                             {item.textoHtml && <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg">Página</span>}
-                            <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg">{item.duracaoMinutos || 0} min</span>
+                            <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg">{formatDuration(item.duracaoMinutos || 0)}</span>
                           </div>
                         </div>
                       </div>

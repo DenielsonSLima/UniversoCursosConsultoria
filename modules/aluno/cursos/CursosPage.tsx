@@ -211,7 +211,18 @@ const getCourseProgressPercent = (progressState?: any, enrollmentStatus?: string
 
 const getLessonDurationLabel = (lesson: any) => {
   if (lesson?.duracao) return lesson.duracao;
-  if (lesson?.duracaoMinutos) return `${lesson.duracaoMinutos} min`;
+  if (lesson?.duracaoMinutos) {
+    const minutes = lesson.duracaoMinutos;
+    if (minutes % 60 === 0) {
+      return `${minutes / 60}h`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${remainingMinutes}min`;
+    }
+    return `${remainingMinutes}min`;
+  }
   return 'Leitura';
 };
 
