@@ -31,6 +31,15 @@ const normalizeDescription = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const getEtapaLabel = (etapa: any) => {
+  if (!etapa) return null;
+  const str = String(etapa).trim();
+  if (/^\d+$/.test(str)) {
+    return `Módulo ${str}`;
+  }
+  return str;
+};
+
 const EadDetailPage: React.FC = () => {
   const params = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
@@ -344,9 +353,14 @@ const EadDetailPage: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                           <div className="flex gap-3">
                             <span className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black text-xs border border-emerald-100 shrink-0">
-                              {item.etapa || idx + 1}
+                              {idx + 1}
                             </span>
                             <div>
+                              {item.etapa && (
+                                <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider inline-block mb-1.5">
+                                  {getEtapaLabel(item.etapa)}
+                                </span>
+                              )}
                               <h3 className="font-black text-sm text-[#001a33] leading-snug">{item.titulo}</h3>
                               <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">{item.descricao}</p>
                               {item.objetivos && item.objetivos.length > 0 && (

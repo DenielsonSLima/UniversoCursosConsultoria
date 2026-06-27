@@ -1500,7 +1500,10 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                   <>
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Etapa {selectedLesson.etapa || selectedLessonIdx + 1}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+                          Etapa {selectedLessonIdx + 1}
+                          {selectedLesson.etapa && ` • ${selectedLesson.etapa}`}
+                        </span>
                         <h3 className="text-xl font-black text-[#001a33] tracking-tight mt-1">{selectedLesson.titulo}</h3>
                         <p className="text-sm text-slate-500 font-medium leading-relaxed mt-2">{selectedLesson.descricao}</p>
                       </div>
@@ -1555,7 +1558,8 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                               <p className="text-xs font-black text-[#001a33]">{atividade.titulo}</p>
                               {linkedLessonIndex >= 0 && (
                                 <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                                  Etapa {conteudos[linkedLessonIndex]?.etapa || linkedLessonIndex + 1}
+                                  Etapa {linkedLessonIndex + 1}
+                                  {conteudos[linkedLessonIndex]?.etapa && ` • ${conteudos[linkedLessonIndex].etapa}`}
                                 </p>
                               )}
                               <p className="text-xs text-slate-600 font-medium mt-1">{choiceData?.enunciado || atividade.enunciado}</p>
