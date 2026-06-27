@@ -4,6 +4,8 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { diplomaService } from '../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
 import { CertificadoAcademico } from '../../gestor/secretaria/certificados/certificados.types';
@@ -111,8 +113,73 @@ const emptyProgressState: EadProgressState = {
 const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 const EAD_PENDING_STATUSES = new Set(['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO']);
 const RECEIVABLE_PENDING_STATUSES = new Set(['PENDENTE', 'VENCIDO']);
+const ONLINE_CLASS_MODALITIES = new Set(['LIVRE', 'ESPECIALIZACAO', 'TECNICO']);
+const BLOCKING_ENROLLMENT_STATUSES = new Set([
+  'ATIVO',
+  'CONCLUIDO',
+  'PENDENTE',
+  'AGUARDANDO_PAGAMENTO',
+  'AGUARDANDO_CONFIRMACAO',
+]);
 
 const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
+
+const todayDate = () => new Date().toISOString().slice(0, 10);
+
+const formatDate = (value: string | null | undefined) => {
+  if (!value) return '';
+  return new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
+};
+
+const getBlockingMatriculasTotal = (turma: any) => {
+  const matriculas = turma?.matriculas;
+  if (!Array.isArray(matriculas)) return 0;
+  return matriculas.filter((matricula: any) =>
+    BLOCKING_ENROLLMENT_STATUSES.has(normalizeStatus(matricula?.status))
+  ).length;
+};
+
+const getTurmaUnavailabilityReason = (turma: any, today: string) => {
+  const alunosMatriculados = getBlockingMatriculasTotal(turma);
+  const vagasTotais = Number(turma?.vagas_totais || 0);
+  const qtdVagasMinima = Number(turma?.qtd_vagas_minima || 0);
+  const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
+
+  if (turma?.data_inicio_inscricao && today < turma.data_inicio_inscricao) {
+    return `Inscrições abrem em ${formatDate(turma.data_inicio_inscricao)}.`;
+  }
+
+  if (turma?.data_fim_inscricao && today > turma.data_fim_inscricao) {
+    return `Inscrições encerradas em ${formatDate(turma.data_fim_inscricao)}. Aguarde uma nova turma.`;
+  }
+
+  if (bloquearMatriculasAposCompletarVagas) {
+    if (qtdVagasMinima > 0 && alunosMatriculados >= qtdVagasMinima) {
+      return `Turma com limite de ${qtdVagasMinima} alunos atingido. Aguarde uma nova turma.`;
+    }
+
+    if (vagasTotais > 0 && alunosMatriculados >= vagasTotais) {
+      return 'Turma lotada. Aguarde uma nova turma.';
+    }
+  }
+
+  return null;
+};
+
+const getCourseEnrollmentAvailability = (turmas: any[]) => {
+  const today = todayDate();
+  const analyzed = (turmas || []).map((turma) => ({
+    turma,
+    reason: getTurmaUnavailabilityReason(turma, today),
+  }));
+  const available = analyzed.find((item) => !item.reason);
+  if (available) return { isAvailable: true, reason: null, turma: available.turma };
+  return {
+    isAvailable: false,
+    reason: analyzed[0]?.reason || 'Sem turma aberta para inscrição no momento.',
+    turma: analyzed[0]?.turma || null,
+  };
+};
 
 const getEnrollmentRank = (status?: string | null) => {
   const normalized = normalizeStatus(status);
@@ -385,7 +452,7 @@ const getCourseImageSrc = (imageUrl?: string | null) => {
 const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExitCourse }) => {
   const queryClient = useQueryClient();
   const hasAlunoContext = Boolean(alunoId);
-  const [activeTab, setActiveTab] = useState<'ead' | 'live' | 'especializacao'>('ead');
+  const [activeTab, setActiveTab] = useState<'ead' | 'live' | 'especializacao' | 'tecnico'>('ead');
   const [categoryFilter, setCategoryFilter] = useState('todas');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [coursePage, setCoursePage] = useState(1);
@@ -414,7 +481,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const { data: courses = [], isLoading, isError } = useQuery<any[]>({
     queryKey: ['aluno-cursos-disponiveis', alunoId],
     queryFn: async () => {
-      const [coursesResult, matriculasResult] = await Promise.all([
+      const [coursesResult, matriculasResult, turmasOnlineResult] = await Promise.all([
         supabase
           .from('cursos')
           .select('*')
@@ -425,13 +492,37 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
               .from('matriculas')
               .select('id, status, data_matricula, turma_id, turmas(id, curso_id, cursos(id, modalidade))')
               .eq('aluno_id', alunoId)
-          : Promise.resolve({ data: [], error: null })
+          : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from('turmas')
+          .select(`
+            id,
+            curso_id,
+            nome,
+            vagas_totais,
+            qtd_vagas_minima,
+            bloquear_matriculas_apos_completar_vagas,
+            data_inicio_inscricao,
+            data_fim_inscricao,
+            status,
+            cursos!inner(id, modalidade),
+            matriculas(status)
+          `)
+          .eq('status', 'EM_ANDAMENTO')
+          .in('cursos.modalidade', ['LIVRE', 'ESPECIALIZACAO', 'TECNICO'])
+          .order('data_inicio', { ascending: true })
       ]);
 
       if (coursesResult.error) throw coursesResult.error;
       if (matriculasResult.error) throw matriculasResult.error;
+      if (turmasOnlineResult.error) throw turmasOnlineResult.error;
 
       const allMatriculas = matriculasResult.data || [];
+      const turmasByCourse = new Map<string, any[]>();
+      for (const turma of turmasOnlineResult.data || []) {
+        if (!turma?.curso_id) continue;
+        turmasByCourse.set(turma.curso_id, [...(turmasByCourse.get(turma.curso_id) || []), turma]);
+      }
       const pendingMatriculaIds = allMatriculas
         .filter((m: any) => EAD_PENDING_STATUSES.has(normalizeStatus(m.status)))
         .map((m: any) => m.id)
@@ -480,10 +571,18 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         }
       }
 
-      return (coursesResult.data || []).map((course: any) => ({
-        ...course,
-        alunoMatricula: enrollmentByCourse.get(course.id) || null
-      }));
+      return (coursesResult.data || []).map((course: any) => {
+        const modality = String(course.modalidade || '').toUpperCase();
+        const onlineAvailability = ONLINE_CLASS_MODALITIES.has(modality)
+          ? getCourseEnrollmentAvailability(turmasByCourse.get(course.id) || [])
+          : null;
+
+        return {
+          ...course,
+          alunoMatricula: enrollmentByCourse.get(course.id) || null,
+          onlineAvailability,
+        };
+      });
     }
   });
 
@@ -645,6 +744,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     let typeFilter = 'EAD';
     if (activeTab === 'live') typeFilter = 'LIVRE';
     if (activeTab === 'especializacao') typeFilter = 'ESPECIALIZACAO';
+    if (activeTab === 'tecnico') typeFilter = 'TECNICO';
     return typeFilter;
   }, [activeTab]);
 
@@ -802,7 +902,8 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         .eq('aluno_id', alunoId)
         .eq('curso_id', selectedCourse!.id)
         .eq('modalidade', 'EAD')
-        .neq('status', 'CANCELADO')
+        .eq('status', 'FINALIZADO')
+        .not('codigo_validacao', 'is', null)
         .order('data_conclusao', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -865,12 +966,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const buildCertificatePdf = async () => {
     if (!certificatePdfSourceRef.current || !alunoCertificado) return null;
 
-    const [{ default: html2canvas }, jspdfModule] = await Promise.all([
-      import('html2canvas'),
-      import('jspdf')
-    ]);
-    const JsPDF = jspdfModule.jsPDF || (jspdfModule as any).default;
-    const pdf = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pages = Array.from(certificatePdfSourceRef.current.querySelectorAll(CERTIFICATE_PDF_PAGE_SELECTOR)) as any[];
     const captureTargets = pages.length ? pages : [certificatePdfSourceRef.current];
 
@@ -1720,7 +1816,8 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         {[
           ['ead', 'Cursos EAD', <MonitorPlay size={15} />],
           ['live', 'Cursos Livres', <Zap size={15} />],
-          ['especializacao', 'Especializações', <Award size={15} />]
+          ['especializacao', 'Especializações', <Award size={15} />],
+          ['tecnico', 'Cursos Técnicos', <BookOpen size={15} />]
         ].map(([id, label, icon]) => (
           <button
             key={id as string}
@@ -1771,8 +1868,11 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                   const globalIndex = (coursePage - 1) * COURSE_PAGE_SIZE + index;
                   const eadConfig = course.ead_config || {};
                   const isEad = course.modalidade?.toUpperCase() === 'EAD';
+                  const isOnlineClassModality = ONLINE_CLASS_MODALITIES.has(String(course.modalidade || '').toUpperCase());
                   const canAccess = isEad && hasEadAccess(course);
                   const pendingPayment = isEad && hasPendingEadPayment(course);
+                  const onlineAvailability = course.onlineAvailability;
+                  const onlineClassAvailable = Boolean(onlineAvailability?.isAvailable);
                   const courseProgress = progressByCourseId.get(course.id);
                   const courseProgressPercent = getCourseProgressPercent(courseProgress, course.alunoMatricula?.status);
                   const showCourseProgress = Boolean(course.alunoMatricula);
@@ -1862,6 +1962,21 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                               {isCheckoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                               {isCheckoutLoading ? 'Preparando pagamento' : pendingPayment ? 'Continuar pagamento' : 'Comprar curso'}
                             </button>
+                          )
+                        ) : isOnlineClassModality ? (
+                          onlineClassAvailable ? (
+                            <button
+                              onClick={() => startCheckout(course)}
+                              disabled={isCheckoutLoading}
+                              className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 rounded-xl py-3 transition-all"
+                            >
+                              {isCheckoutLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                              {isCheckoutLoading ? 'Preparando pagamento' : 'Matricular e pagar'}
+                            </button>
+                          ) : (
+                            <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-3 text-[10px] font-bold leading-relaxed text-rose-700">
+                              {onlineAvailability?.reason || 'Inscrições encerradas. Aguarde uma nova turma.'}
+                            </div>
                           )
                         ) : (
                           <a

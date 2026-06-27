@@ -24,6 +24,6 @@ export interface CertificadoAcademico {
   emitido_em: string | null;
   aluno: { nome: string; cpf_cnpj: string };
   turma: { nome: string; codigo: string };
-  curso: { nome: string; carga_horaria: number };
+  curso: { nome: string; carga_horaria: number; ead_config?: any };
   polo: { nome: string; cidade: string; estado: string } | null;
 }

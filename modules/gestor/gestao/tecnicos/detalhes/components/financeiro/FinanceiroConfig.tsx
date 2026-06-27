@@ -7,22 +7,20 @@ import {
   GripVertical, RefreshCw, Plus, Trash2 
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-import { supabase } from '../../../../../../../lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../../gestao.types';
-import { gestaoService } from '../../../../gestao.service';
-
-
-
-
-interface CronogramaItem {
-  id: string;
-  tipo: 'MATRICULA' | 'PARCELA' | 'REMATRICULA';
-  label: string;
-  valor: number;
-  numero?: number; // Número da parcela se for parcela
-  dataVencimento?: string;
-}
+import {
+  buildFinanceiroCronograma,
+  CronogramaItem,
+  DEFAULT_FINANCEIRO_CONFIG,
+  FinanceiroConfigData,
+  mapSavedCronograma,
+  shouldUseSavedCronograma,
+} from './financeiro-config.service';
+import {
+  useFinanceiroConfig,
+  useFinanceiroRulesCalculation,
+  useSaveFinanceiroConfigMutation,
+} from './hooks/useFinanceiroConfig';
 
 interface FinanceiroConfigProps {
   turma: Turma;
@@ -31,47 +29,12 @@ interface FinanceiroConfigProps {
 const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const queryClient = useQueryClient();
   
   // Configuração Base
-  const [config, setConfig] = useState({
-    valorMatricula: 150.00,
-    valorRematricula: 100.00,
-    qtdParcelas: 22, // Exemplo do prompt
-    valorParcela: 350.00,
-    descontoPontualidade: 20.00,
-    jurosAtraso: 2.0,
-    multaAtraso: 5.00,
-    diaVencimentoPadrao: 10,
-    cronogramaFinanceiro: [] as any[]
-  });
+  const [config, setConfig] = useState<FinanceiroConfigData>(DEFAULT_FINANCEIRO_CONFIG);
 
   const [formData, setFormData] = useState({ ...config });
   const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
-
-  // Helper para calcular a data de vencimento sequencial por mês
-  const calcularDataVencimento = (dataInicio: string, diaVencimento: number, offsetMeses: number): string => {
-    if (!dataInicio) return '';
-    const date = new Date(dataInicio + 'T00:00:00');
-    
-    // Adiciona o offset de meses
-    date.setMonth(date.getMonth() + offsetMeses);
-    
-    const ano = date.getFullYear();
-    const mes = date.getMonth();
-    
-    // Evita extrapolar dias do mês (ex: 31 de fevereiro)
-    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
-    const diaFinal = Math.min(diaVencimento, ultimoDia);
-    
-    const dateFinal = new Date(ano, mes, diaFinal);
-    
-    const y = dateFinal.getFullYear();
-    const m = String(dateFinal.getMonth() + 1).padStart(2, '0');
-    const d = String(dateFinal.getDate()).padStart(2, '0');
-    
-    return `${y}-${m}-${d}`;
-  };
 
   const handleUpdateItemDate = (itemId: string, newDate: string) => {
     setCronograma(prev => 
@@ -82,43 +45,19 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   };
 
   // Carregar as configurações financeiras específicas desta turma do banco
-  const { data: configDb, isLoading } = useQuery({
-    queryKey: ['turma_financeiro_config', turma.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('turmas')
-        .select('valor_matricula, valor_rematricula, qtd_parcelas, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, dia_vencimento_padrao, cronograma_financeiro')
-        .eq('id', turma.id)
-        .single();
-
-      if (error) throw error;
-
-      return {
-        valorMatricula: Number(data.valor_matricula),
-        valorRematricula: Number(data.valor_rematricula),
-        qtdParcelas: Number(data.qtd_parcelas),
-        valorParcela: Number(data.valor_parcela),
-        descontoPontualidade: Number(data.desconto_pontualidade),
-        jurosAtraso: Number(data.juros_atraso),
-        multaAtraso: Number(data.multa_atraso),
-        diaVencimentoPadrao: Number(data.dia_vencimento_padrao || 10),
-        cronogramaFinanceiro: data.cronograma_financeiro || []
-      };
-    }
-  });
+  const { data: configDb, isLoading } = useFinanceiroConfig(turma.id);
 
   // Salvar as configurações no banco via mutation
-  const saveMutation = useMutation({
-    mutationFn: (newConfig: typeof config) => gestaoService.saveTurmaFinanceiroConfig(turma.id, newConfig),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['turma_financeiro_config', turma.id] });
+  const saveMutation = useSaveFinanceiroConfigMutation(
+    turma.id,
+    () => {
       toast.success("Sucesso", "Configurações e ordem do cronograma salvas!");
       setIsEditing(false);
     },
-    onError: (err: any) => {
+    (err: any) => {
       toast.error("Erro", `Erro ao salvar configurações: ${err.message}`);
-    }
-  });
+    },
+  );
 
   // Sincronizar estado local e cronograma quando os dados carregarem do banco
   useEffect(() => {
@@ -126,102 +65,19 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
       setConfig(configDb);
       setFormData(configDb);
 
-      // Carregar cronograma salvo se existir, senão gerar o padrão
-      if (configDb.cronogramaFinanceiro && Array.isArray(configDb.cronogramaFinanceiro) && configDb.cronogramaFinanceiro.length > 0) {
-        const loadedCronograma: CronogramaItem[] = configDb.cronogramaFinanceiro.map((item: any) => ({
-          id: item.id,
-          tipo: item.tipo,
-          label: item.label,
-          valor: Number(item.valor),
-          numero: item.numero,
-          dataVencimento: item.dataVencimento
-        }));
-        setCronograma(loadedCronograma);
+      if (shouldUseSavedCronograma(configDb.cronogramaFinanceiro, configDb.qtdParcelas)) {
+        setCronograma(mapSavedCronograma(configDb.cronogramaFinanceiro));
       } else {
-        const novoCronograma: CronogramaItem[] = [];
-        novoCronograma.push({
-          id: 'matr',
-          tipo: 'MATRICULA',
-          label: 'Matrícula Inicial',
-          valor: configDb.valorMatricula,
-          dataVencimento: turma.dataInicio || ''
-        });
-        for (let i = 1; i <= configDb.qtdParcelas; i++) {
-          const isRematricula = i === 12;
-          if (isRematricula) {
-            novoCronograma.push({
-              id: `rem-${i}`,
-              tipo: 'REMATRICULA',
-              label: 'Rematrícula Semestral',
-              valor: configDb.valorRematricula,
-              dataVencimento: calcularDataVencimento(turma.dataInicio, configDb.diaVencimentoPadrao, i)
-            });
-          } else {
-            novoCronograma.push({
-              id: `parc-${i}`,
-              tipo: 'PARCELA',
-              label: `Parcela ${i}`,
-              valor: configDb.valorParcela,
-              numero: i,
-              dataVencimento: calcularDataVencimento(turma.dataInicio, configDb.diaVencimentoPadrao, i)
-            });
-          }
-        }
-        setCronograma(novoCronograma);
+        setCronograma(buildFinanceiroCronograma(configDb, turma.dataInicio));
       }
     }
   }, [configDb, turma.dataInicio]);
 
-  // Realtime Subscription para atualizar em tempo real quando alterado por outro usuário
-  useEffect(() => {
-    const channel = supabase
-      .channel(`turma_financeiro_${turma.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'turmas', filter: `id=eq.${turma.id}` },
-        (payload) => {
-          console.log('Alteração detectada na turma via Realtime, invalidando cache:', payload);
-          queryClient.invalidateQueries({ queryKey: ['turma_financeiro_config', turma.id] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [turma.id, queryClient]);
-
   // Para a visualização (cálculo via RPC no Supabase)
-  const { data: calculoConfig } = useQuery({
-    queryKey: ['calculo_regras_turma', config.valorParcela, config.descontoPontualidade, config.jurosAtraso, config.multaAtraso],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('calcular_regras_financeiras_turma', {
-        valor_parcela: config.valorParcela,
-        desconto_pontualidade: config.descontoPontualidade,
-        juros_atraso_percentual: config.jurosAtraso,
-        multa_atraso: config.multaAtraso
-      });
-      if (error) throw error;
-      return data[0];
-    },
-    staleTime: Infinity,
-  });
+  const { data: calculoConfig } = useFinanceiroRulesCalculation(config);
 
   // Para a edição (cálculo via RPC no Supabase)
-  const { data: calculoForm } = useQuery({
-    queryKey: ['calculo_regras_turma_form', formData.valorParcela, formData.descontoPontualidade, formData.jurosAtraso, formData.multaAtraso],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('calcular_regras_financeiras_turma', {
-        valor_parcela: formData.valorParcela,
-        desconto_pontualidade: formData.descontoPontualidade,
-        juros_atraso_percentual: formData.jurosAtraso,
-        multa_atraso: formData.multaAtraso
-      });
-      if (error) throw error;
-      return data[0];
-    },
-    staleTime: Infinity,
-  });
+  const { data: calculoForm } = useFinanceiroRulesCalculation(formData, true);
 
   // Referências para arrastar
   const dragItem = useRef<any>(null);
@@ -251,42 +107,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
 
   // Gera o cronograma com base nas configurações
   const gerarCronograma = () => {
-    const novoCronograma: CronogramaItem[] = [];
-
-    // Mês 1: Matrícula
-    novoCronograma.push({
-      id: 'matr',
-      tipo: 'MATRICULA',
-      label: 'Matrícula Inicial',
-      valor: formData.valorMatricula,
-      dataVencimento: turma.dataInicio || ''
-    });
-
-    // Meses seguintes: Parcelas
-    for (let i = 1; i <= formData.qtdParcelas; i++) {
-      const isRematricula = i === 12; 
-      
-      if (isRematricula) {
-        novoCronograma.push({
-          id: `rem-${i}`,
-          tipo: 'REMATRICULA',
-          label: 'Rematrícula Semestral',
-          valor: formData.valorRematricula,
-          dataVencimento: calcularDataVencimento(turma.dataInicio, formData.diaVencimentoPadrao, i)
-        });
-      } else {
-        novoCronograma.push({
-          id: `parc-${i}`,
-          tipo: 'PARCELA',
-          label: `Parcela ${i}`,
-          valor: formData.valorParcela,
-          numero: i,
-          dataVencimento: calcularDataVencimento(turma.dataInicio, formData.diaVencimentoPadrao, i)
-        });
-      }
-    }
-
-    setCronograma(novoCronograma);
+    setCronograma(buildFinanceiroCronograma(formData, turma.dataInicio));
   };
 
   const handleSort = () => {
@@ -401,7 +222,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase">Qtd. Parcelas</label>
+                <label className="text-xs font-bold text-slate-500 uppercase">Parcelas por ciclo</label>
                 <input 
                   type="number" name="qtdParcelas" 
                   value={formData.qtdParcelas} onChange={handleChange} 
@@ -461,6 +282,47 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
                     />
                   </div>
                </div>
+               <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl bg-white/70 p-3 md:grid-cols-3">
+                  {[
+                    {
+                      label: 'Matrícula',
+                      descontoKey: 'aplicarDescontoMatricula',
+                      multaKey: 'aplicarMultaJurosMatricula',
+                    },
+                    {
+                      label: 'Mensalidades',
+                      descontoKey: 'aplicarDescontoMensalidade',
+                      multaKey: 'aplicarMultaJurosMensalidade',
+                    },
+                    {
+                      label: 'Rematrícula',
+                      descontoKey: 'aplicarDescontoRematricula',
+                      multaKey: 'aplicarMultaJurosRematricula',
+                    },
+                  ].map((policy) => (
+                    <div key={policy.label} className="rounded-lg border border-blue-100 bg-white p-3">
+                      <p className="mb-2 text-[10px] font-black uppercase text-[#001a33]">{policy.label}</p>
+                      <label className="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={Boolean((formData as any)[policy.descontoKey])}
+                          onChange={(event) => setFormData(prev => ({ ...prev, [policy.descontoKey]: event.target.checked }))}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                        />
+                        Desconto
+                      </label>
+                      <label className="mt-2 flex items-center gap-2 text-[10px] font-bold uppercase text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={Boolean((formData as any)[policy.multaKey])}
+                          onChange={(event) => setFormData(prev => ({ ...prev, [policy.multaKey]: event.target.checked }))}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                        />
+                        Multa/Juros
+                      </label>
+                    </div>
+                  ))}
+               </div>
             </div>
 
             {/* Simulação Dinâmica na Edição */}
@@ -501,8 +363,8 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
           {/* Lado Direito: Drag & Drop */}
           <div className="flex flex-col h-full">
              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4 flex justify-between items-center">
-               <span>2. Ordem de Cobrança</span>
-               <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600">Arraste para ordenar</span>
+               <span>2. Cronograma do ciclo</span>
+               <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600">Estimativa padrão</span>
              </h4>
 
              <div className="flex-1 bg-slate-100 rounded-2xl p-4 overflow-y-auto max-h-[500px] border-2 border-dashed border-slate-300 custom-scrollbar relative">
@@ -518,7 +380,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
              
              {cronograma.length > 0 && (
                 <div className="mt-2 text-[10px] text-slate-500 text-center">
-                   * A ordem definida acima será aplicada na geração dos boletos/mensalidades dos alunos.
+                   * A matrícula é criada primeiro; mensalidades e rematrícula são liberadas por baixa de pagamento.
                 </div>
              )}
           </div>
@@ -592,7 +454,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
                 <Calendar size={10} /> Plano
               </p>
               <p className="text-lg font-black text-[#001a33]">
-                {config.qtdParcelas}x + Remat.
+                {config.qtdParcelas}x por ciclo
               </p>
             </div>
 
@@ -631,6 +493,21 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
               <p className="text-lg font-black text-red-500">{config.jurosAtraso}%</p>
             </div>
           </div>
+
+          <div className="mt-6 grid gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-3">
+            {[
+              ['Matrícula', config.aplicarDescontoMatricula, config.aplicarMultaJurosMatricula],
+              ['Mensalidades', config.aplicarDescontoMensalidade, config.aplicarMultaJurosMensalidade],
+              ['Rematrícula', config.aplicarDescontoRematricula, config.aplicarMultaJurosRematricula],
+            ].map(([label, desconto, multa]) => (
+              <div key={String(label)} className="rounded-xl bg-white p-3">
+                <p className="text-[10px] font-black uppercase text-[#001a33]">{label}</p>
+                <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">
+                  Desc: {desconto ? 'sim' : 'não'} · Multa/Juros: {multa ? 'sim' : 'não'}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Simulação de Valores */}
@@ -667,7 +544,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
       <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col max-h-[500px]">
         <div className="mb-4">
           <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Cronograma de Cobrança</h3>
-          <p className="text-slate-500 text-xs mt-0.5">Datas de vencimento estimadas por parcela.</p>
+          <p className="text-slate-500 text-xs mt-0.5">Matrícula, mensalidades e rematrícula estimadas.</p>
         </div>
         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2.5">
           {cronograma.length === 0 ? (

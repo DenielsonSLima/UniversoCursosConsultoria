@@ -12,6 +12,7 @@ import TurmaConfiguracoes from './components/TurmaConfiguracoes';
 import TurmaEstagio from './components/TurmaEstagio';
 import TurmaAcademico from './components/TurmaAcademico';
 import TurmaFinanceiro from './components/TurmaFinanceiro';
+import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
 
 interface TurmaTecnicoDetalhesProps {
   turma: Turma;
@@ -20,6 +21,8 @@ interface TurmaTecnicoDetalhesProps {
 
 const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBack }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+
+  useTurmaTecnicoRealtime(turma.id);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

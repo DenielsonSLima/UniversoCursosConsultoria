@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, Sparkles, ArrowLeft, ChevronRight, AlertTriangle, Award } from 'lucide-react';
+import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, Sparkles, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark } from 'lucide-react';
 import { empresasService } from '../configuracoes/empresas/empresas.service';
 import { polosService } from '../configuracoes/polos/polos.service';
 
@@ -12,18 +12,27 @@ import RelatorioFinanceiro from './components/RelatorioFinanceiro';
 import RelatorioDRE from './components/RelatorioDRE';
 import RelatorioInadimplencia from './components/RelatorioInadimplencia';
 import RelatorioEstagios from './components/RelatorioEstagios';
+import RelatorioFinanceiroTurmaMensal from './components/RelatorioFinanceiroTurmaMensal';
+import RelatorioAlunosCursando from './components/RelatorioAlunosCursando';
+import RelatorioAlunosFinalizados from './components/RelatorioAlunosFinalizados';
+import RelatorioMatriculaInicial from './components/RelatorioMatriculaInicial';
+import RelatorioSituacaoAluno from './components/RelatorioSituacaoAluno';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno';
 
 interface ReportMenuItem {
   id: ReportType;
   label: string;
   description: string;
   icon: React.ReactNode;
-  category: 'operacional' | 'financeiro';
+  category: 'operacional' | 'financeiro' | 'academico' | 'oficial';
 }
 
-const RelatoriosPage: React.FC = () => {
+interface RelatoriosPageProps {
+  poloId?: string | null;
+}
+
+const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
   const [activeReport, setActiveReport] = useState<ReportType | null>(null);
 
   // 1. Fetch Company Principal Details
@@ -33,8 +42,6 @@ const RelatoriosPage: React.FC = () => {
   });
 
   // 2. Fetch Active Polo Details
-  // current_polo_id é estado de sessão UI — sessionStorage é adequado
-  const poloId = sessionStorage.getItem('current_polo_id');
   const { data: polo, isLoading: loadingPolo } = useQuery<any>({
     queryKey: ['polo_detalhes', poloId],
     queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
@@ -90,6 +97,41 @@ const RelatoriosPage: React.FC = () => {
       description: 'Listagem reativa de parcelas em aberto e atrasadas por aluno, contato e dias de atraso.',
       icon: <AlertTriangle size={22} />,
       category: 'financeiro'
+    },
+    {
+      id: 'financeiro-turma-mensal',
+      label: 'Financeiro por Turma e Mês',
+      description: 'Competência mensal por turma: matrícula, mensalidades, parcelas pagas, abertas e vencidas.',
+      icon: <ClipboardList size={22} />,
+      category: 'financeiro'
+    },
+    {
+      id: 'alunos-cursando',
+      label: 'Alunos Cursando',
+      description: 'Alunos ativos/em curso separados por modalidade, turma, curso e polo.',
+      icon: <GraduationCap size={22} />,
+      category: 'academico'
+    },
+    {
+      id: 'alunos-finalizados',
+      label: 'Alunos Finalizados',
+      description: 'Concluintes por modalidade com carga horária, turma e situação de certificado.',
+      icon: <CheckCircle2 size={22} />,
+      category: 'academico'
+    },
+    {
+      id: 'matricula-inicial',
+      label: 'Matrícula Inicial',
+      description: 'Base acadêmica inspirada na coleta de Matrícula Inicial do Censo Escolar/Inep.',
+      icon: <Landmark size={22} />,
+      category: 'oficial'
+    },
+    {
+      id: 'situacao-aluno',
+      label: 'Situação do Aluno',
+      description: 'Movimento e rendimento: cursando, concluído, transferido, desistente, trancado ou cancelado.',
+      icon: <AlertTriangle size={22} />,
+      category: 'oficial'
     }
   ];
 
@@ -109,6 +151,16 @@ const RelatoriosPage: React.FC = () => {
         return <RelatorioInadimplencia company={company} polo={polo} />;
       case 'estagios':
         return <RelatorioEstagios company={company} polo={polo} />;
+      case 'financeiro-turma-mensal':
+        return <RelatorioFinanceiroTurmaMensal company={company} polo={polo} />;
+      case 'alunos-cursando':
+        return <RelatorioAlunosCursando company={company} polo={polo} />;
+      case 'alunos-finalizados':
+        return <RelatorioAlunosFinalizados company={company} polo={polo} />;
+      case 'matricula-inicial':
+        return <RelatorioMatriculaInicial company={company} polo={polo} />;
+      case 'situacao-aluno':
+        return <RelatorioSituacaoAluno company={company} polo={polo} />;
       default:
         return null;
     }
@@ -118,6 +170,8 @@ const RelatoriosPage: React.FC = () => {
 
   const operacionais = menuItems.filter(item => item.category === 'operacional');
   const financeiros = menuItems.filter(item => item.category === 'financeiro');
+  const academicos = menuItems.filter(item => item.category === 'academico');
+  const oficiais = menuItems.filter(item => item.category === 'oficial');
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
@@ -191,6 +245,74 @@ const RelatoriosPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest mt-4">
+                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category: Academico */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <GraduationCap size={16} className="text-cyan-700" />
+                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
+                  Relatórios Acadêmicos
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {academicos.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveReport(item.id)}
+                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-cyan-200 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
+                  >
+                    <div>
+                      <div className="w-12 h-12 bg-cyan-50 text-cyan-700 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-cyan-700 group-hover:text-white shadow-sm">
+                        {item.icon}
+                      </div>
+                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-cyan-800 transition-colors uppercase tracking-tight">
+                        {item.label}
+                      </h4>
+                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-black text-cyan-700 uppercase tracking-widest mt-4">
+                      Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Category: Oficial */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                <Landmark size={16} className="text-orange-700" />
+                <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest">
+                  Relatórios Oficiais / Censo Escolar
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {oficiais.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveReport(item.id)}
+                    className="group bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-lg hover:border-orange-200 transition-all text-left flex flex-col justify-between h-52 relative overflow-hidden"
+                  >
+                    <div>
+                      <div className="w-12 h-12 bg-orange-50 text-orange-700 rounded-2xl flex items-center justify-center mb-4 transition-colors group-hover:bg-orange-700 group-hover:text-white shadow-sm">
+                        {item.icon}
+                      </div>
+                      <h4 className="text-sm font-black text-[#001a33] group-hover:text-orange-800 transition-colors uppercase tracking-tight">
+                        {item.label}
+                      </h4>
+                      <p className="text-xs text-slate-450 font-medium leading-relaxed mt-2 line-clamp-3">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-black text-orange-700 uppercase tracking-widest mt-4">
                       Gerar Relatório <ChevronRight size={12} className="transition-transform group-hover:translate-x-1" />
                     </div>
                   </button>

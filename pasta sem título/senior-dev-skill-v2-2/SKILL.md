@@ -13,7 +13,8 @@ description: >
   migração, SQL, RPC, trigger, multitenancy, realtime, teste, performance,
   arquitetura, refatoração, review, checklist, agente, agentes, handoff,
   pipeline, CI, CD, GitHub Actions, pull request, PR, code review,
-  módulo, feature, sprint, onboarding, padrão, regra, lançamento financeiro.
+  módulo, feature, sprint, onboarding, padrão, regra, lançamento financeiro,
+  MCP Supabase, deploy Edge Function, migration remota.
 ---
 
 # 📘 SKILL: Padrões de Engenharia Sênior — Regra de Ouro da Empresa
@@ -47,7 +48,7 @@ description: >
 
 ---
 
-## ⚡ As 18 Regras de Ouro (Imutáveis — Nunca Quebre)
+## ⚡ As 19 Regras de Ouro (Imutáveis — Nunca Quebre)
 
 ```
 REGRA 1  → Componentes NUNCA fazem chamadas de API diretas
@@ -68,6 +69,7 @@ REGRA 15 → Invalidação inteligente: revalide apenas chaves de cache afetadas
 REGRA 16 → Persistência segura em multi-usuários: EM HIPÓTESE ALGUMA utilize localStorage para salvar configurações, templates, assinaturas, dados estruturais ou de negócio. Utilize exclusivamente o Supabase para sincronizar e persistir esses dados globalmente.
 REGRA 17 → Notificações do Sistema: NUNCA utilize mensagens ou diálogos nativos e genéricos do próprio navegador (como alert(), confirm() ou prompt()). Siga rigorosamente o padrão visual do sistema utilizando o hook useToast ou componentes customizados.
 REGRA 18 → Agentes e Handoff: Delegue tarefas complexas de desenvolvimento a subagentes autônomos dedicados, mantendo sempre o RAG (PROJETO_CONTEXTO.md e PROJETO_ALTERACOES.md) atualizado para continuidade do fluxo de trabalho.
+REGRA 19 → Supabase remoto SEMPRE via MCP: migrations remotas, RLS, Storage remoto, consultas administrativas e deploy/listagem/leitura de Edge Functions devem usar MCP Supabase. NUNCA use Supabase CLI para operações remotas neste projeto; erro 401 da CLI não é bloqueio se o MCP estiver disponível.
 ```
 
 ---

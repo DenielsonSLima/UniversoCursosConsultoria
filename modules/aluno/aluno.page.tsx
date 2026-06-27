@@ -20,6 +20,7 @@ import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../logi
 import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
+import ConfirmModal from '../shared/components/ConfirmModal';
 // Sub-módulos do Aluno
 import InicioPage from './inicio/InicioPage';
 import TurmasPage from './turmas/TurmasPage';
@@ -37,6 +38,7 @@ const AlunoPage: React.FC = () => {
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const alunoId = profile?.id || '';
   const alunoNome = profile?.nome || '';
@@ -47,7 +49,7 @@ const AlunoPage: React.FC = () => {
 
     const hydrateProfile = async () => {
       try {
-        const portalProfile = await getPortalProfile();
+        const portalProfile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
         if (!mounted) return;
 
         if (!portalProfile || portalProfile.tipo !== 'Aluno') {
@@ -173,7 +175,7 @@ const AlunoPage: React.FC = () => {
   }
 
   const handleLogout = async () => {
-    await executeLogout();
+    setIsLogoutConfirmOpen(true);
   };
 
   const menuItems = [
@@ -348,11 +350,6 @@ const AlunoPage: React.FC = () => {
               Portal do Aluno
              </h2>
              
-             {/* Elegant "In Development" Badge */}
-             <div className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-150 animate-pulse">
-               <Sparkles size={9} />
-               <span>Desenvolvimento</span>
-             </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -369,20 +366,20 @@ const AlunoPage: React.FC = () => {
         {/* Dynamic page contents wrapper */}
         <div className="p-8 flex-1 overflow-auto bg-slate-50">
           
-          {/* Warning banner indicating active development state */}
-          <div className="mb-6 p-4.5 bg-amber-50/40 border border-amber-100 rounded-3xl flex items-start gap-3 text-xs text-amber-800">
-            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">Portal em Homologação</p>
-              <p className="text-[11px] text-slate-600 mt-0.5">
-                Você está visualizando a área do aluno em ambiente de testes. Todas as conexões ao Supabase e notificações em tempo real estão ativas.
-              </p>
-            </div>
-          </div>
-
           {renderContent()}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title="Confirmação"
+        message="Deseja realmente sair?"
+        confirmText="Sair"
+        cancelText="Cancelar"
+        variant="danger"
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={executeLogout}
+      />
     </div>
   );
 };

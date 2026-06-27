@@ -3,6 +3,12 @@
 
 import { supabase } from '../../../../../lib/supabase';
 
+const EAD_FRONT_TEXT =
+  'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
+
+const EAD_BACK_TEXT =
+  '{{grade_curricular}}';
+
 const FIXED_CERTIFICATE_MODELS = [
   {
     id: 'certificado_especializacao',
@@ -125,8 +131,8 @@ const FIXED_CERTIFICATE_MODELS = [
     hasWatermark: true,
     watermarkText: 'EAD INSTITUCIONAL',
     hasValidationQrCode: true,
-    textoFrente: 'Confere-se o presente certificado a <strong>{{nome_aluno}}</strong> (CPF: {{cpf}}) por concluir o curso na modalidade de Educação a Distância (EAD) em <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} horas, em {{data_conclusao}}.',
-    textoVerso: 'Conteúdo Programático:\n\n{{grade_curricular}}',
+    textoFrente: EAD_FRONT_TEXT,
+    textoVerso: EAD_BACK_TEXT,
     layout: 'classic',
     usePhotoshopLayout: true,
     ocultarDesignPadrao: true,
@@ -169,7 +175,7 @@ const normalizeFixedTemplates = (templates: any[] = []) => {
       legacyTypeById[item.id] === defaultModel.tipoCurso
     );
 
-    return {
+    const normalized = {
       ...defaultModel,
       ...(persisted || {}),
       id: defaultModel.id,
@@ -180,6 +186,17 @@ const normalizeFixedTemplates = (templates: any[] = []) => {
       ocultarDesignPadrao: true,
       exibirBorda: false,
     };
+
+    if (normalized.id === 'certificado_ead') {
+      if (!/LDB n[º°]\s*9\.394\/1996|V[aá]lido em todo o pa[ií]s/i.test(String(normalized.textoFrente || ''))) {
+        normalized.textoFrente = EAD_FRONT_TEXT;
+      }
+      if (!/DECRETO PRESIDENCIAL N[°º]\s*5\.154/i.test(String(normalized.textoVerso || ''))) {
+        normalized.textoVerso = EAD_BACK_TEXT;
+      }
+    }
+
+    return normalized;
   });
 };
 

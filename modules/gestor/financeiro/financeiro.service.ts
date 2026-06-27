@@ -644,21 +644,33 @@ export const financeiroService = {
     return data || [];
   },
 
-  async getResumoKpis(): Promise<{ alunosAtivos: number; parcelasAtraso: number }> {
-    const { count: activeStudents, error: err1 } = await supabase
+  async getResumoKpis(poloId?: string): Promise<{ alunosAtivos: number; parcelasAtraso: number }> {
+    let activeStudentsQuery = supabase
       .from('matriculas')
-      .select('*', { count: 'exact', head: true })
+      .select('*, turmas!inner(polo_id)', { count: 'exact', head: true })
       .eq('status', 'ATIVO');
+
+    if (poloId && poloId !== 'todos') {
+      activeStudentsQuery = activeStudentsQuery.eq('turmas.polo_id', poloId);
+    }
+
+    const { count: activeStudents, error: err1 } = await activeStudentsQuery;
       
     if (err1) {
       console.error('Erro ao contar alunos ativos:', err1);
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const { count: overdueCount, error: err2 } = await supabase
+    let overdueQuery = supabase
       .from('contas_receber')
       .select('*', { count: 'exact', head: true })
       .or(`status.eq.VENCIDO,and(status.eq.PENDENTE,data_vencimento.lt.${todayStr})`);
+
+    if (poloId && poloId !== 'todos') {
+      overdueQuery = overdueQuery.eq('polo_id', poloId);
+    }
+
+    const { count: overdueCount, error: err2 } = await overdueQuery;
 
     if (err2) {
       console.error('Erro ao contar parcelas em atraso:', err2);
@@ -670,11 +682,15 @@ export const financeiroService = {
     };
   },
 
-  async searchAlunoReceivables(searchQuery: string): Promise<any[]> {
+  async searchAlunoReceivables(searchQuery: string, poloId?: string): Promise<any[]> {
     let query = supabase
       .from('contas_receber')
       .select('*, parceiros!inner(nome, cpf_cnpj), polos(nome)')
       .eq('categoria', 'MENSALIDADE');
+
+    if (poloId && poloId !== 'todos') {
+      query = query.eq('polo_id', poloId);
+    }
 
     if (searchQuery) {
       query = query.or(`descricao.ilike.%${searchQuery}%,parceiros.nome.ilike.%${searchQuery}%,parceiros.cpf_cnpj.ilike.%${searchQuery}%`);

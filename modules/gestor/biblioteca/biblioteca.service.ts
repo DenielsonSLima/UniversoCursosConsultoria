@@ -1,7 +1,203 @@
 // File: modules/gestor/biblioteca/biblioteca.service.ts
 
 import { supabase } from '../../../lib/supabase';
-import { LibraryDocument, LibraryFolder, TeacherRepository } from './biblioteca.types';
+import {
+  LibraryDocument,
+  LibraryDocumentUploadPayload,
+  LibraryFolder,
+  TeacherRepository,
+  TeacherStorageQuota
+} from './biblioteca.types';
+
+const LIBRARY_STORAGE_BUCKETS = ['biblioteca', 'anexos', 'documentos'];
+const MAX_LIBRARY_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const DEFAULT_TEACHER_STORAGE_QUOTA_GB = 1;
+const BYTES_PER_GB = 1024 * 1024 * 1024;
+const ALLOWED_LIBRARY_FILE_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp'
+];
+
+const normalizeFileName = (value: string) => {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 80);
+};
+
+const parseDbDecimal = (value: any): number => {
+  if (value === null || value === undefined) return 0;
+  const numeric = Number(String(value).replace(',', '.'));
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const parseDisplaySizeToBytes = (sizeText: string): number => {
+  if (!sizeText) return 0;
+  const raw = `${sizeText}`.trim().toLowerCase();
+  const numberPart = raw.match(/([0-9]+(?:[.,][0-9]+)?)/)?.[1];
+  if (!numberPart) return 0;
+
+  const value = parseFloat(numberPart.replace(',', '.'));
+  if (!Number.isFinite(value)) return 0;
+
+  if (raw.includes('gb')) return Math.max(0, Math.round(value * BYTES_PER_GB));
+  if (raw.includes('kb')) return Math.max(0, Math.round(value * 1024));
+  if (raw.includes('mb')) return Math.max(0, Math.round(value * 1024 * 1024));
+  if (raw.includes('bytes') || raw.includes('byte') || raw.includes('b')) {
+    return Math.max(0, Math.round(value));
+  }
+
+  return Math.max(0, Math.round(value * 1024 * 1024));
+};
+
+const bytesToGb = (bytes: number) => {
+  return bytes / BYTES_PER_GB;
+};
+
+const formatGb = (value: number) => {
+  return Number.parseFloat(String(value)).toFixed(2);
+};
+
+const formatBytesForManager = (bytes: number) => {
+  if (bytes >= BYTES_PER_GB) return `${formatGb(bytesToGb(bytes))} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${Math.round(bytes / 1024)} KB`;
+};
+
+const isAllowedLibraryFile = (file: File) => {
+  if (file.size > MAX_LIBRARY_FILE_SIZE_BYTES) return false;
+  if (ALLOWED_LIBRARY_FILE_MIME_TYPES.includes(file.type)) return true;
+
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
+  return !!extension && allowedExtensions.includes(extension);
+};
+
+const buildLibraryStoragePath = (file: File, title: string) => {
+  const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '';
+  const randomSuffix = Math.random().toString(36).slice(2, 10);
+  const safeTitle = normalizeFileName(title || file.name.replace(/\.[^/.]+$/, ''));
+  return `biblioteca/${Date.now()}_${randomSuffix}_${safeTitle}${ext.toLowerCase()}`;
+};
+
+const uploadLibraryFile = async (file: File, title: string) => {
+  const path = buildLibraryStoragePath(file, title);
+
+  const isRetryableStorageError = (error: any) => {
+    const status = Number(error?.status || error?.statusCode || 0);
+    const message = `${error?.message || ''}`.toLowerCase();
+    return (
+      status === 401 ||
+      status === 403 ||
+      status === 404 ||
+      message.includes('bucket') ||
+      message.includes('policy') ||
+      message.includes('not found') ||
+      message.includes('not authorized')
+    );
+  };
+
+  let lastError = null as any;
+
+  for (const bucketName of LIBRARY_STORAGE_BUCKETS) {
+    const { error } = await supabase.storage
+      .from(bucketName)
+      .upload(path, file, {
+        upsert: true,
+        cacheControl: '3600',
+        contentType: file.type || 'application/octet-stream'
+      });
+
+    if (!error) {
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(path);
+      return urlData?.publicUrl || null;
+    }
+
+    lastError = error;
+    if (!isRetryableStorageError(error)) {
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+};
+
+const getDefaultTeacherQuotaBytes = () => {
+  return DEFAULT_TEACHER_STORAGE_QUOTA_GB * BYTES_PER_GB;
+};
+
+const getTeacherUsedBytes = async (teacherId: string): Promise<number> => {
+  const { data: docUsageRows, error } = await supabase
+    .from('biblioteca_documentos')
+    .select('tamanho_bytes, tamanho')
+    .eq('teacher_id', teacherId);
+
+  if (error) {
+    console.error('Erro ao buscar uso de storage por professor:', error);
+    throw error;
+  }
+
+  return (docUsageRows || []).reduce((acc, row: any) => {
+    const rawBytes = row?.tamanho_bytes;
+    const directBytes = rawBytes === null || rawBytes === undefined ? Number.NaN : Number(rawBytes);
+    const parsed = Number.isFinite(directBytes) ? directBytes : parseDisplaySizeToBytes(row?.tamanho || '');
+    return acc + (Number.isFinite(parsed) ? parsed : 0);
+  }, 0);
+};
+
+const getTeacherQuotaBytes = async (teacherId: string): Promise<number> => {
+  const { data, error } = await supabase
+    .from('biblioteca_professor_quotas')
+    .select('max_storage_gb')
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Erro ao buscar quota de storage do professor:', error);
+    throw error;
+  }
+
+  if (!data?.max_storage_gb) {
+    return getDefaultTeacherQuotaBytes();
+  }
+
+  return Math.max(0, parseDbDecimal(data.max_storage_gb) * BYTES_PER_GB);
+};
+
+const assertTeacherStorageCapacity = async (teacherId: string, newFileBytes: number): Promise<void> => {
+  if (!Number.isFinite(newFileBytes) || newFileBytes <= 0) {
+    return;
+  }
+
+  const quotaBytes = await getTeacherQuotaBytes(teacherId);
+  const usedBytes = await getTeacherUsedBytes(teacherId);
+
+  if (usedBytes + newFileBytes > quotaBytes) {
+    const quotaGb = bytesToGb(quotaBytes);
+    throw new Error(
+      `Limite de armazenamento excedido para este professor. ` +
+      `Usado: ${formatBytesForManager(usedBytes)} de ${formatGb(quotaGb)} GB. `
+      + `Novo total ficaria em ${formatBytesForManager(usedBytes + newFileBytes)}.`
+    );
+  }
+};
 
 export const bibliotecaService = {
   // 1. Buscar Documentos
@@ -180,19 +376,46 @@ export const bibliotecaService = {
   },
 
   // 6. Publicar Documento
-  async uploadDocument(doc: Omit<LibraryDocument, 'id' | 'createdAt' | 'acessos' | 'authorName'>): Promise<void> {
+  async uploadDocument(doc: LibraryDocumentUploadPayload): Promise<void> {
+    let arquivoUrl = doc.url || '';
+    const fileSizeBytes = Number.isFinite(Number(doc.sizeBytes))
+      ? Number(doc.sizeBytes)
+      : (doc.file ? doc.file.size : 0);
+
+    if (doc.file) {
+      if (!doc.file.name?.trim()) {
+        throw new Error('Arquivo inválido.');
+      }
+      if (!isAllowedLibraryFile(doc.file)) {
+        throw new Error('Formato ou tamanho de arquivo não permitido. Aceitos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, WEBP (até 10MB).');
+      }
+      if (doc.teacherId) {
+        await assertTeacherStorageCapacity(doc.teacherId, fileSizeBytes);
+      }
+      const uploaded = await uploadLibraryFile(doc.file, doc.title || 'documento');
+      if (!uploaded) {
+        throw new Error('Não foi possível gerar URL pública do documento.');
+      }
+      arquivoUrl = uploaded;
+    }
+
+    if (!arquivoUrl) {
+      throw new Error('É necessário enviar um arquivo válido para publicar o documento.');
+    }
+
     const { error } = await supabase.from('biblioteca_documentos').insert({
       pasta_id: doc.pastaId || null,
       titulo: doc.title,
       descricao: doc.description || null,
       tipo_arquivo: doc.fileType,
       tamanho: doc.size,
-      arquivo_url: doc.url,
+      tamanho_bytes: fileSizeBytes,
+      arquivo_url: arquivoUrl,
       publico_alvo: doc.targetAudience,
       abrangencia: doc.scope,
       polo_id: doc.poloId || null,
       teacher_id: doc.teacherId || null,
-      author_name: 'Gestor',
+      author_name: doc.authorName || 'Gestor',
       curso_ids: doc.cursoIds || [],
       turma_ids: doc.turmaIds || [],
       disciplina_ids: doc.disciplinaIds || [],
@@ -239,6 +462,98 @@ export const bibliotecaService = {
 
     if (error) {
       console.error('Erro ao mover pasta:', error);
+      throw error;
+    }
+  },
+
+  async getTeacherStorageConfigs(): Promise<TeacherStorageQuota[]> {
+    const { data: teachers, error } = await supabase
+      .from('parceiros')
+      .select('id, nome, especialidade, updated_at')
+      .eq('tipo', 'Professor')
+      .eq('status', 'ATIVO')
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar professores para configuração de quota:', error);
+      throw error;
+    }
+
+    const teacherIds = (teachers || []).map((t: any) => t.id);
+    if (!teacherIds.length) {
+      return [];
+    }
+
+    const { data: quotas, error: quotaError } = await supabase
+      .from('biblioteca_professor_quotas')
+      .select('teacher_id, max_storage_gb')
+      .in('teacher_id', teacherIds);
+
+    if (quotaError) {
+      console.error('Erro ao buscar quotas de professores:', quotaError);
+      throw quotaError;
+    }
+
+    const quotaMap: { [key: string]: number } = {};
+    (quotas || []).forEach((quota: any) => {
+      if (quota.teacher_id) {
+        quotaMap[quota.teacher_id] = parseDbDecimal(quota.max_storage_gb);
+      }
+    });
+
+    const { data: usageRows, error: usageError } = await supabase
+      .from('biblioteca_documentos')
+      .select('teacher_id, tamanho_bytes, tamanho')
+      .in('teacher_id', teacherIds);
+
+    if (usageError) {
+      console.error('Erro ao buscar consumo de storage dos professores:', usageError);
+      throw usageError;
+    }
+
+    const usageMap: { [key: string]: number } = {};
+    const documentsCountMap: { [key: string]: number } = {};
+    (usageRows || []).forEach((row: any) => {
+      if (!row.teacher_id) return;
+      const rawBytes = row.tamanho_bytes === null || row.tamanho_bytes === undefined
+        ? Number.NaN
+        : Number(row.tamanho_bytes);
+      const parsedBytes = Number.isFinite(rawBytes) ? rawBytes : parseDisplaySizeToBytes(row.tamanho || '');
+      usageMap[row.teacher_id] = (usageMap[row.teacher_id] || 0) + (Number.isFinite(parsedBytes) ? parsedBytes : 0);
+      documentsCountMap[row.teacher_id] = (documentsCountMap[row.teacher_id] || 0) + 1;
+    });
+
+    return (teachers || []).map((teacher: any) => {
+      const usedBytes = usageMap[teacher.id] || 0;
+      const quotaGb = quotaMap[teacher.id] || DEFAULT_TEACHER_STORAGE_QUOTA_GB;
+      return {
+        teacherId: teacher.id,
+        teacherName: teacher.nome,
+        specialty: teacher.especialidade || 'Docente',
+        documentsCount: documentsCountMap[teacher.id] || 0,
+        lastUpdate: teacher.updated_at ? teacher.updated_at.split('T')[0] : new Date().toISOString().split('T')[0],
+        storageQuotaGb: quotaGb,
+        storageUsedBytes: usedBytes
+      };
+    });
+  },
+
+  async updateTeacherStorageQuota(teacherId: string, storageQuotaGb: number): Promise<void> {
+    const normalizedQuota = Number(storageQuotaGb);
+    if (!Number.isFinite(normalizedQuota) || normalizedQuota <= 0) {
+      throw new Error('Quota deve ser maior que 0 GB.');
+    }
+
+    const { error } = await supabase
+      .from('biblioteca_professor_quotas')
+      .upsert({
+        teacher_id: teacherId,
+        max_storage_gb: normalizedQuota,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'teacher_id' });
+
+    if (error) {
+      console.error('Erro ao salvar quota do professor:', error);
       throw error;
     }
   },
@@ -485,6 +800,14 @@ export const bibliotecaService = {
       teacherId = folder?.teacher_id || null;
     }
 
+    const rawCopyBytes = doc.tamanho_bytes === null || doc.tamanho_bytes === undefined
+      ? Number.NaN
+      : Number(doc.tamanho_bytes);
+    const copySizeBytes = Number.isFinite(rawCopyBytes) ? rawCopyBytes : parseDisplaySizeToBytes(doc.tamanho || '');
+    if (teacherId && copySizeBytes > 0) {
+      await assertTeacherStorageCapacity(teacherId, copySizeBytes);
+    }
+
     // Inserir cópia
     const { error: insertError } = await supabase
       .from('biblioteca_documentos')
@@ -494,6 +817,7 @@ export const bibliotecaService = {
         descricao: doc.descricao,
         tipo_arquivo: doc.tipo_arquivo,
         tamanho: doc.tamanho,
+        tamanho_bytes: copySizeBytes,
         arquivo_url: doc.arquivo_url,
         publico_alvo: doc.publico_alvo,
         abrangencia: doc.abrangencia,

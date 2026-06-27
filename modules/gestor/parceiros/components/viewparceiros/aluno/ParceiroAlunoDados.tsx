@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { User, Camera, MapPin, Phone, Mail, Edit2, Save, X, Upload, Loader2 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroAlunoDadosProps {
   aluno: any;
@@ -193,7 +194,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
               <>
                 <div className="md:col-span-2"><DisplayField label="Nome Completo" value={formData.nome} /></div>
                 <DisplayField label="Nome Social" value={formData.nomeSocial || formData.nome} />
-                <DisplayField label="CPF" value={formData.cpf} />
+                <DisplayField label="CPF" value={formatCpf(formData.cpf)} />
                 <DisplayField label="Data de Nascimento" value={formData.dataNascimento} />
                 <DisplayField label="Sexo" value={formData.sexo} />
                 <DisplayField label="Status Acadêmico" value={formData.status || 'ATIVO'} />
@@ -264,7 +265,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
           ) : (
             <>
               <DisplayField label="Responsável" value={formData.responsavelNome} />
-              <DisplayField label="CPF" value={formData.responsavelCpf} />
+              <DisplayField label="CPF" value={formatCpf(formData.responsavelCpf)} />
               <DisplayField label="Parentesco" value={formData.responsavelParentesco} />
               <DisplayField label="Telefone" value={formData.responsavelTelefone} />
               <DisplayField label="E-mail" value={formData.responsavelEmail} />

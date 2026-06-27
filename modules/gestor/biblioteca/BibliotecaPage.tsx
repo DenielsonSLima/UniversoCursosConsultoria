@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { 
-  BookOpen, LayoutGrid, Users, Award, Eye, Download, 
-  Clock, Calendar, Sparkles, Folder, Lock, Search, Trash2
+  BookOpen, LayoutGrid, Users, Award, Eye, 
+  Clock, Calendar, Sparkles, Folder, Lock, Search, Trash2, Settings2
 } from 'lucide-react';
 
 import FileExplorer from './components/FileExplorer';
@@ -11,11 +11,12 @@ import TeacherRepositoryList from './components/TeacherRepository';
 import UploadModal from './components/UploadModal';
 import QuickPreviewModal from './components/QuickPreviewModal';
 import DocumentPermissionsModal from './components/DocumentPermissionsModal';
+import TeacherStorageConfig from './components/TeacherStorageConfig';
 import { LibraryDocument } from './biblioteca.types';
 import { useBibliotecaPageQueries } from './hooks/useBibliotecaPageQueries';
 import { useBibliotecaPageMutations } from './hooks/useBibliotecaPageMutations';
 
-type LibraryTab = 'destaques' | 'gerenciador' | 'professores' | 'regras';
+type LibraryTab = 'destaques' | 'gerenciador' | 'professores' | 'regras' | 'configuracao';
 
 const BibliotecaPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<LibraryTab>('destaques');
@@ -151,6 +152,16 @@ const BibliotecaPage: React.FC = () => {
               }`}
           >
               <Lock size={14} /> Regras de Liberação
+          </button>
+          <button
+              onClick={() => setActiveTab('configuracao')}
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+                  activeTab === 'configuracao' 
+                  ? 'bg-slate-700 text-white shadow-md' 
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+          >
+              <Settings2 size={14} /> Configuração
           </button>
       </div>
 
@@ -444,6 +455,13 @@ const BibliotecaPage: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* TAB 5: CONFIGURAÇÃO DE QUOTA */}
+        {activeTab === 'configuracao' && (
+          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-150 shadow-sm space-y-6 animate-fadeIn">
+            <TeacherStorageConfig />
+          </div>
+          )}
 
       </div>
 

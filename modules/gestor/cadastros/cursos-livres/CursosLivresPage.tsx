@@ -5,10 +5,10 @@ import { Zap, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'lucide
 import CursoLivreCard from './components/CursoLivreCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
 import { Curso } from '../cadastros.types';
-import { CursoCadastroStatusFilter } from '../curso-modalidade.service';
-import { useCursoModalidadeQueries } from '../hooks/useCursoModalidadeQueries';
-import { useCursoModalidadeRealtime } from '../hooks/useCursoModalidadeRealtime';
-import { useCursoModalidadeMutations } from '../hooks/useCursoModalidadeMutations';
+import { CursoLivreStatusFilter } from './cursos-livres.service';
+import { useCursosLivresQueries } from './hooks/useCursosLivresQueries';
+import { useCursosLivresRealtime } from './hooks/useCursosLivresRealtime';
+import { useCursosLivresMutations } from './hooks/useCursosLivresMutations';
 
 interface CursosLivresPageProps {
   readOnly?: boolean;
@@ -18,7 +18,7 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<CursoCadastroStatusFilter>('ativo');
+  const [statusFilter, setStatusFilter] = useState<CursoLivreStatusFilter>('ativo');
 
   // Estados para Modal de Novo Curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,6 +26,7 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
   const [newCursoDesc, setNewCursoDesc] = useState('');
   const [newCursoArea, setNewCursoArea] = useState('Capacitação');
   const [newCursoVersao, setNewCursoVersao] = useState('1.0');
+  const [newCursoCargaHoraria, setNewCursoCargaHoraria] = useState(40);
   const [isCreatingCurso, setIsCreatingCurso] = useState(false);
 
   // Estados para Modal de Duplicação
@@ -59,6 +60,7 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
     setNewCursoDesc('');
     setNewCursoArea('Capacitação');
     setNewCursoVersao('1.0');
+    setNewCursoCargaHoraria(40);
   };
 
   const closeDuplicateModal = () => {
@@ -66,32 +68,21 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
     setDuplicateTargetId(null);
   };
 
-  const { cursosQuery, invalidateCursosModalidade } = useCursoModalidadeQueries('LIVRE');
-  useCursoModalidadeRealtime('LIVRE', invalidateCursosModalidade);
+  const { cursosQuery, invalidateCursosLivres } = useCursosLivresQueries();
+  useCursosLivresRealtime(invalidateCursosLivres);
 
   const {
     createMutation,
     duplicateMutation,
     toggleStatusMutation,
     deleteMutation
-  } = useCursoModalidadeMutations({
-    modalidade: 'LIVRE',
-    invalidateCursosModalidade,
+  } = useCursosLivresMutations({
+    invalidateCursosLivres,
     showToast,
     resetCreateForm,
     closeDuplicateModal,
     setIsCreatingCurso,
     setIsDuplicating,
-    messages: {
-      createSuccess: 'Curso livre criado com sucesso!',
-      createError: 'Erro ao criar curso livre no Supabase.',
-      duplicateSuccess: 'Curso duplicado com sucesso!',
-      duplicateError: 'Erro ao duplicar curso.',
-      deleteSuccess: 'Curso excluído com sucesso!',
-      deleteError: 'Erro ao excluir o curso.',
-      toggleSuccess: (novoStatus) => `Curso ${novoStatus === 'inativo' ? 'inativado' : 'ativado'} com sucesso!`,
-      toggleError: 'Erro ao alterar status do curso.'
-    }
   });
 
   const cursos = cursosQuery.data || [];
@@ -105,7 +96,7 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
   const handleBack = () => {
     setSelectedCurso(null);
     setViewState('list');
-    invalidateCursosModalidade();
+    invalidateCursosLivres();
   };
 
   // Criação de Curso
@@ -118,7 +109,8 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
       nome: newCursoNome,
       descricao: newCursoDesc,
       area: newCursoArea,
-      versao: newCursoVersao
+      versao: newCursoVersao,
+      cargaHoraria: Number.isFinite(newCursoCargaHoraria) ? newCursoCargaHoraria : 40,
     });
   };
 
@@ -195,7 +187,7 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
       <CursoGradeCurricularDetails 
         curso={selectedCurso} 
         onBack={handleBack} 
-        onUpdate={invalidateCursosModalidade}
+        onUpdate={invalidateCursosLivres}
       />
     );
   }
@@ -323,6 +315,18 @@ const CursosLivresPage: React.FC<CursosLivresPageProps> = ({ readOnly = false })
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Carga Horária (h)</label>
+                  <input 
+                    required
+                    type="number"
+                    min="1"
+                    value={newCursoCargaHoraria}
+                    onChange={(e) => setNewCursoCargaHoraria(parseInt(e.target.value, 10) || 0)}
+                    placeholder="Ex: 40"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>

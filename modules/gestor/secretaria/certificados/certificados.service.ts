@@ -1,5 +1,10 @@
 import { supabase } from '../../../../lib/supabase';
 import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
+import {
+  buildEadProgressMap,
+  getEadProgressKey,
+  hasValidEadCertificateCompletion,
+} from './eadCertificateEligibility';
 
 export const certificadosService = {
   async list(filters: {
@@ -15,7 +20,7 @@ export const certificadosService = {
         *,
         aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj),
         turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
-        curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria),
+        curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, ead_config),
         polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)
       `)
       .eq('modalidade', filters.modalidade)
@@ -26,7 +31,26 @@ export const certificadosService = {
     if (filters.poloId) query = query.eq('polo_id', filters.poloId);
     const { data, error } = await query;
     if (error) throw error;
-    const rows = (data || []) as unknown as CertificadoAcademico[];
+    let rows = (data || []) as unknown as CertificadoAcademico[];
+
+    if (filters.modalidade === 'EAD' && rows.length) {
+      const alunoIds = [...new Set(rows.map(row => row.aluno_id).filter(Boolean))];
+      const cursoIds = [...new Set(rows.map(row => row.curso_id).filter(Boolean))];
+      const { data: progressRows, error: progressError } = await supabase
+        .from('ead_aluno_progresso')
+        .select('aluno_id, curso_id, progress')
+        .in('aluno_id', alunoIds)
+        .in('curso_id', cursoIds);
+
+      if (progressError) throw progressError;
+
+      const progressByStudentCourse = buildEadProgressMap(progressRows || []);
+      rows = rows.filter(row => hasValidEadCertificateCompletion(
+        row,
+        progressByStudentCourse.get(getEadProgressKey(row.aluno_id, row.curso_id))
+      ));
+    }
+
     const search = filters.search?.trim().toLocaleLowerCase('pt-BR');
     return search
       ? rows.filter(row =>

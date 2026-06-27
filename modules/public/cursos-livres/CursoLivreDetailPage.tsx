@@ -19,15 +19,17 @@ import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
+import { useCourseEnrollmentAvailability } from '../hooks/useCourseEnrollmentAvailability';
 import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso, Modulo } from '../../gestor/cadastros/cadastros.types';
+import { fetchOpenTurmasForCourse, fetchPublicCourseById, getPublicTurmaPoloOptions } from '../courseAvailability';
 
 const CursoLivreDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+  const isDevelopmentMode = true;
 
   // Força o scroll para o topo ao carregar a página
   useEffect(() => {
@@ -37,7 +39,7 @@ const CursoLivreDetailPage: React.FC = () => {
   // Query do Curso
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
     queryKey: ['cursoLivrePublicDetail', id],
-    queryFn: () => cadastrosService.getCursoById(id!),
+    queryFn: () => fetchPublicCourseById(id!) as Promise<Curso>,
     enabled: !!id && isDevelopmentMode,
   });
 
@@ -47,6 +49,27 @@ const CursoLivreDetailPage: React.FC = () => {
     queryFn: () => cadastrosService.getGrade(id!),
     enabled: !!id && isDevelopmentMode,
   });
+
+  const {
+    data: enrollmentAvailability,
+    isLoading: availabilityLoading,
+    isError: availabilityError,
+  } = useCourseEnrollmentAvailability(curso?.id);
+
+  const checkoutDisabled = Boolean(curso?.valor && curso.valor > 0) && (
+    availabilityLoading || !enrollmentAvailability || !enrollmentAvailability.isAvailable
+  );
+  const checkoutDisabledReason = availabilityError
+    ? 'Não foi possível validar a disponibilidade de matrícula agora.'
+    : enrollmentAvailability?.reason ?? null;
+
+  const { data: turmasAbertas = [] } = useQuery<any[]>({
+    queryKey: ['cursoLivrePublicTurmasAbertas', id],
+    queryFn: () => fetchOpenTurmasForCourse(id!),
+    enabled: !!id && isDevelopmentMode,
+  });
+
+  const poloOptions = getPublicTurmaPoloOptions(turmasAbertas);
 
   // Estado dos Módulos Expandidos (Accordion)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -77,6 +100,12 @@ const CursoLivreDetailPage: React.FC = () => {
   const [polo, setPolo] = useState('Japoatã (Sede Matriz)');
   const [mensagem, setMensagem] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (poloOptions.length > 0 && !poloOptions.includes(polo)) {
+      setPolo(poloOptions[0]);
+    }
+  }, [polo, poloOptions]);
 
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -509,7 +538,14 @@ const CursoLivreDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                {curso.valor && curso.valor > 0 && <OnlineCheckoutButton courseId={curso.id} />}
+                {curso.valor && curso.valor > 0 && (
+                  <OnlineCheckoutButton
+                    courseId={curso.id}
+                    disabled={checkoutDisabled}
+                    disabledReason={checkoutDisabledReason}
+                    availabilityLoading={availabilityLoading}
+                  />
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
@@ -563,9 +599,9 @@ const CursoLivreDetailPage: React.FC = () => {
                         value={polo}
                         onChange={e => setPolo(e.target.value)}
                       >
-                        <option>Japoatã (Sede Matriz)</option>
-                        <option>Aquidabã (Filial)</option>
-                        <option>Porto da Folha (Filial)</option>
+                        {(poloOptions.length > 0 ? poloOptions : ['Japoatã (Sede Matriz)']).map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
                       </select>
                       <MapPin className="absolute right-3.5 top-3 text-slate-400 pointer-events-none" size={14} />
                     </div>

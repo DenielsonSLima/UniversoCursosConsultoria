@@ -20,6 +20,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso, Modulo } from '../../gestor/cadastros/cadastros.types';
+import { fetchOpenTurmasForCourse, fetchPublicCourseById, getPublicTurmaPoloOptions } from '../courseAvailability';
 
 const CursoTecnicoDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +35,7 @@ const CursoTecnicoDetailPage: React.FC = () => {
   // Query do Curso
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
     queryKey: ['cursoTecnicoPublicDetail', id],
-    queryFn: () => cadastrosService.getCursoById(id!),
+    queryFn: () => fetchPublicCourseById(id!) as Promise<Curso>,
     enabled: !!id,
   });
 
@@ -44,6 +45,14 @@ const CursoTecnicoDetailPage: React.FC = () => {
     queryFn: () => cadastrosService.getGrade(id!),
     enabled: !!id,
   });
+
+  const { data: turmasAbertas = [] } = useQuery<any[]>({
+    queryKey: ['cursoTecnicoPublicTurmasAbertas', id],
+    queryFn: () => fetchOpenTurmasForCourse(id!),
+    enabled: !!id,
+  });
+
+  const poloOptions = getPublicTurmaPoloOptions(turmasAbertas);
 
   // Estado dos Módulos Expandidos (Accordion)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -74,6 +83,12 @@ const CursoTecnicoDetailPage: React.FC = () => {
   const [polo, setPolo] = useState('Japoatã (Sede Matriz)');
   const [mensagem, setMensagem] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (poloOptions.length > 0 && !poloOptions.includes(polo)) {
+      setPolo(poloOptions[0]);
+    }
+  }, [polo, poloOptions]);
 
   const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -510,9 +525,9 @@ const CursoTecnicoDetailPage: React.FC = () => {
                         value={polo}
                         onChange={e => setPolo(e.target.value)}
                       >
-                        <option>Japoatã (Sede Matriz)</option>
-                        <option>Aquidabã (Filial)</option>
-                        <option>Porto da Folha (Filial)</option>
+                        {(poloOptions.length > 0 ? poloOptions : ['Japoatã (Sede Matriz)']).map((option) => (
+                          <option key={option}>{option}</option>
+                        ))}
                       </select>
                       <MapPin className="absolute right-3.5 top-3 text-slate-400 pointer-events-none" size={14} />
                     </div>

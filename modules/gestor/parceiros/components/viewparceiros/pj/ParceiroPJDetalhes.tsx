@@ -11,6 +11,7 @@ import { parceirosService } from '../../../parceiros.service';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { useToast } from '../../shared/ToastNotification';
 import ToastNotification from '../../shared/ToastNotification';
+import { formatCnpj, formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroPJDetalhesProps {
   pjInicial: any;
@@ -160,7 +161,7 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                   </h2>
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                      PJ • CNPJ: <span className="font-mono text-slate-600">{pjData.cnpj || 'Não informado'}</span>
+                      PJ • CNPJ: <span className="font-mono text-slate-600">{formatCnpj(pjData.cnpj) || 'Não informado'}</span>
                     </span>
                     {pjData.tipoPj && (
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full border border-blue-100">
@@ -254,7 +255,7 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
               {!isEditing ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2"><Field label="Razão Social" value={pjData.nome} /></div>
-                  <Field label="CNPJ" value={pjData.cnpj} mono />
+                  <Field label="CNPJ" value={formatCnpj(pjData.cnpj)} mono />
                   <Field label="Tipo / Classificação" value={pjData.tipoPj} />
                   <Field label="Tipo de Convênio" value={pjData.tipoConvenio} />
                   <Field label="Status" value={pjData.status} />
@@ -398,7 +399,7 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                   <div><Field label="E-mail" value={pjData.email} /></div>
                   <div><Field label="Telefone Principal" value={pjData.telefone} /></div>
                   <div><Field label="Responsável / Contato" value={pjData.responsavelNome} /></div>
-                  <div><Field label="CPF do Contato" value={pjData.responsavelCpf} mono /></div>
+                  <div><Field label="CPF do Contato" value={formatCpf(pjData.responsavelCpf)} mono /></div>
                   <div><Field label="Cargo / Função" value={pjData.responsavelCargo} /></div>
                   <div><Field label="E-mail do Contato" value={pjData.responsavelEmail} /></div>
                 </div>

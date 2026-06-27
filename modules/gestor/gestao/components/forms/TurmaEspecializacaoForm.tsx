@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
-import { X, Save, Award, MapPin, Calendar, Clock, Lock } from 'lucide-react';
+import React from 'react';
+import { Award } from 'lucide-react';
 import { Turno } from '../../gestao.types';
-import { polosService } from '../../../configuracoes/polos/polos.service';
+import TurmaPresencialForm, { TurmaPresencialFormData } from './TurmaPresencialForm';
 
 interface TurmaEspecializacaoFormProps {
   isOpen: boolean;
@@ -12,211 +11,67 @@ interface TurmaEspecializacaoFormProps {
   selectedPoloId?: string;
 }
 
-const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = ({ 
-  isOpen, onClose, onSave, cursosDisponiveis, selectedPoloId
-}) => {
-  const [polos, setPolos] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    cursoId: '',
-    poloId: '',
-    dataInicio: '',
-    dataPrevisaoTermino: '',
-    turno: 'VESPERTINO' as Turno,
-    vagasTotais: 35,
-    nomeAutomatico: '',
-    codigoAutomatico: ''
-  });
-
-  useEffect(() => {
-    polosService.getAll().then(setPolos);
-  }, []);
-
-  useEffect(() => {
-    if (selectedPoloId) {
-      setFormData(prev => ({ ...prev, poloId: selectedPoloId }));
-    }
-  }, [selectedPoloId]);
-
-  useEffect(() => {
-    if (formData.cursoId && formData.poloId && formData.dataInicio && formData.turno) {
-        const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
-        const polo = polos.find(p => p.id === formData.poloId);
-        const date = new Date(formData.dataInicio);
-        const year = date.getFullYear();
-        
-        if (curso && polo && !isNaN(year)) {
-            const siglaCurso = curso.nome.includes('Instrumentação') ? 'INST' : curso.nome.substring(0, 4).toUpperCase();
-            const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
-            const turnoSigla = formData.turno.substring(0, 3).toUpperCase();
-
-            // Código: ESP-INST-VES-POR-2024
-            const codigo = `ESP-${siglaCurso}-${turnoSigla}-${poloSigla}-${year}`;
-            
-            // Nome: Especialização em Instrumentação - Vespertino - Porto da Folha
-            const nome = `${curso.nome.replace('Especialização em ', '')} - ${formData.turno.charAt(0) + formData.turno.slice(1).toLowerCase()} - ${polo.cidade} (${year})`;
-
-            setFormData(prev => ({ ...prev, nomeAutomatico: nome, codigoAutomatico: codigo }));
-        }
-    }
-  }, [formData.cursoId, formData.poloId, formData.dataInicio, formData.turno, cursosDisponiveis, polos]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
-    const polo = polos.find(p => p.id === formData.poloId);
-
-    if (!curso || !polo) { alert('Selecione curso e polo'); return; }
-
-    onSave({
-        ...formData,
-        nome: formData.nomeAutomatico,
-        codigo: formData.codigoAutomatico,
-        cursoNome: curso.nome,
-        poloNome: polo.cidade,
-        modalidade: 'ESPECIALIZACAO',
-        status: 'EM_ANDAMENTO'
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-      
-      <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl animate-fadeIn border border-slate-100 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-          <div>
-             <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Especialização</h3>
-             <p className="text-xs text-slate-500 font-medium">Pós-técnico e aprofundamento.</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-                    <Award size={14} className="text-rose-600" /> Especialização
-                </label>
-                <select 
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-rose-500"
-                    value={formData.cursoId}
-                    onChange={(e) => setFormData({...formData, cursoId: e.target.value})}
-                    required
-                >
-                    <option value="">Selecione...</option>
-                    {cursosDisponiveis.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                </select>
-             </div>
-
-             <div className="space-y-2">
-                <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-                    <MapPin size={14} className="text-rose-600" /> Polo
-                </label>
-                <select 
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-rose-500"
-                    value={formData.poloId}
-                    onChange={(e) => setFormData({...formData, poloId: e.target.value})}
-                    disabled={Boolean(selectedPoloId)}
-                    required
-                >
-                    <option value="">Selecione...</option>
-                    {polos.filter(p => !selectedPoloId || p.id === selectedPoloId).map(p => (
-                        <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
-                    ))}
-                </select>
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                    <Clock size={14} /> Turno
-                </label>
-                <select 
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 outline-none focus:border-rose-500"
-                    value={formData.turno}
-                    onChange={(e) => setFormData({...formData, turno: e.target.value as Turno})}
-                >
-                    <option value="MATUTINO">Matutino</option>
-                    <option value="VESPERTINO">Vespertino</option>
-                    <option value="NOTURNO">Noturno</option>
-                    <option value="INTEGRAL">Integral</option>
-                </select>
-            </div>
-            <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                    <Calendar size={14} /> Início
-                </label>
-                <input 
-                    type="date" 
-                    className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-rose-500 bg-slate-50"
-                    value={formData.dataInicio}
-                    onChange={(e) => setFormData({...formData, dataInicio: e.target.value})}
-                    required
-                />
-            </div>
-            <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                    <Calendar size={14} /> Fim Previsto
-                </label>
-                <input 
-                    type="date" 
-                    className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-rose-500 bg-slate-50"
-                    value={formData.dataPrevisaoTermino}
-                    onChange={(e) => setFormData({...formData, dataPrevisaoTermino: e.target.value})}
-                    required
-                />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-             <label className="text-xs font-bold text-slate-500 uppercase">Vagas Totais</label>
-             <input 
-                type="number" 
-                className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-rose-500 bg-slate-50"
-                value={formData.vagasTotais}
-                onChange={(e) => setFormData({...formData, vagasTotais: parseInt(e.target.value)})}
-                required
-             />
-          </div>
-
-          <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 space-y-3">
-             <div className="flex items-center gap-2 text-rose-700/60 mb-1">
-                <Lock size={12} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Gerado Automaticamente</span>
-             </div>
-             <div>
-                <div className="font-bold text-[#001a33] text-sm break-words">
-                    {formData.nomeAutomatico || 'Selecione os dados...'}
-                </div>
-                <div className="font-mono font-bold text-[#001a33] text-xs tracking-wider mt-1 opacity-70">
-                    {formData.codigoAutomatico}
-                </div>
-             </div>
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <button 
-                type="submit"
-                disabled={!formData.nomeAutomatico}
-                className="px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-rose-600 transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                <Save size={16} /> Abrir Especialização
-            </button>
-          </div>
-
-        </form>
-      </div>
-    </div>
-  );
+const especializacaoDefaults: TurmaPresencialFormData = {
+  cursoId: '',
+  poloId: '',
+  dataInicio: '',
+  dataPrevisaoTermino: '',
+  turno: 'VESPERTINO' as Turno,
+  vagasTotais: 35,
+  valorMatricula: 200,
+  valorRematricula: 120,
+  qtdParcelas: 1,
+  valorParcela: 0,
+  descontoPontualidade: 0,
+  jurosAtraso: 2,
+  multaAtraso: 5,
+  diaVencimentoPadrao: 10,
+  dataInicioInscricao: '',
+  dataFimInscricao: '',
+  exigeMatricula: true,
+  qtdVagasMinima: 0,
+  bloquearMatriculasAposCompletarVagas: true,
+  nomeAutomatico: '',
+  codigoAutomatico: '',
 };
+
+const especializacaoConfig = {
+  modalidade: 'ESPECIALIZACAO' as const,
+  title: 'Nova Especialização',
+  subtitle: 'Pós-técnico e aprofundamento.',
+  cursoLabel: 'Especialização',
+  submitLabel: 'Abrir Especialização',
+  automaticLabel: 'Gerado Automaticamente',
+  Icon: Award,
+  theme: {
+    accentText: 'text-rose-600',
+    accentMutedText: 'text-rose-700/60',
+    accentBorderFocus: 'focus:border-rose-500',
+    accentHoverBg: 'hover:bg-rose-600',
+    accentSoftBg: 'bg-rose-50',
+    accentSoftBorder: 'border-rose-100',
+    checkboxText: 'text-rose-600',
+  },
+  defaults: especializacaoDefaults,
+  generateIdentity: ({ curso, polo, formData }: { curso: any; polo: any; formData: TurmaPresencialFormData }) => {
+    const date = new Date(formData.dataInicio);
+    const year = date.getFullYear();
+
+    if (Number.isNaN(year)) return null;
+
+    const siglaCurso = curso.nome.includes('Instrumentação') ? 'INST' : curso.nome.substring(0, 4).toUpperCase();
+    const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
+    const turnoSigla = formData.turno.substring(0, 3).toUpperCase();
+
+    return {
+      codigo: `ESP-${siglaCurso}-${turnoSigla}-${poloSigla}-${year}`,
+      nome: `${curso.nome.replace('Especialização em ', '')} - ${formData.turno.charAt(0) + formData.turno.slice(1).toLowerCase()} - ${polo.cidade} (${year})`,
+    };
+  },
+};
+
+const TurmaEspecializacaoForm: React.FC<TurmaEspecializacaoFormProps> = (props) => (
+  <TurmaPresencialForm {...props} config={especializacaoConfig} />
+);
 
 export default TurmaEspecializacaoForm;

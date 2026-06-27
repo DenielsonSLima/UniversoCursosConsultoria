@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   MessageSquare, Send, Paperclip, Clock, CheckCircle, Tag, Plus, X, Sparkles,
-  Download, Trash2, AlertTriangle
+  Download, Trash2, AlertTriangle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 import {
@@ -22,6 +22,60 @@ import {
   ComunicacaoMensagem,
   ComunicacaoPageProps,
 } from './comunicacao.types';
+
+const CHAT_PAGE_SIZE = 8;
+
+const Pagination: React.FC<{
+  page: number;
+  total: number;
+  onPage: (page: number) => void;
+}> = ({ page, total, onPage }) => {
+  const pages = Math.max(1, Math.ceil(total / CHAT_PAGE_SIZE));
+
+  if (pages <= 1) return null;
+
+  return (
+    <div className="border-t border-slate-100 px-2 py-2 bg-white flex items-center justify-between">
+      <span className="text-[9px] text-slate-500 font-black uppercase tracking-wider">
+        Página {page} de {pages}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(1)}
+          disabled={page === 1}
+          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+          aria-label="Primeira página"
+        >
+          <ChevronsLeft size={14} />
+        </button>
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+          aria-label="Página anterior"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === pages}
+          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+          aria-label="Próxima página"
+        >
+          <ChevronRight size={14} />
+        </button>
+        <button
+          onClick={() => onPage(pages)}
+          disabled={page === pages}
+          className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+          aria-label="Última página"
+        >
+          <ChevronsRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -57,6 +111,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const [newChatCategory, setNewChatCategory] = useState('');
   const [newChatSubject, setNewChatSubject] = useState('');
   const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
+  const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
+  const [pendingPage, setPendingPage] = useState(1);
+  const [resolvedPage, setResolvedPage] = useState(1);
 
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -90,6 +147,18 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     queryFn: () => alunoComunicacaoService.getMessages(activeChatId!)
   });
 
+  const isPendingChat = (chat: ComunicacaoChat) => chat.status === 'pendente';
+  const pendentes = useMemo(() => chats.filter(isPendingChat), [chats]);
+  const resolvidos = useMemo(() => chats.filter((chat) => !isPendingChat(chat)), [chats]);
+  const activeCallChats = activeCallTab === 'pendentes' ? pendentes : resolvidos;
+  const activePage = activeCallTab === 'pendentes' ? pendingPage : resolvedPage;
+  const activeStartIndex = (activePage - 1) * CHAT_PAGE_SIZE;
+  const displayedChats = activeCallChats.slice(activeStartIndex, activeStartIndex + CHAT_PAGE_SIZE);
+  const handlePageChange = (page: number) => {
+    if (activeCallTab === 'pendentes') setPendingPage(page);
+    else setResolvedPage(page);
+  };
+
   useAlunoComunicacaoRealtime({ alunoId, activeChatId, setUnreadChatIds });
 
   useEffect(() => {
@@ -117,8 +186,31 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ── 7. Default active chat ──
   useEffect(() => {
-    if (chats.length > 0 && !activeChatId) setActiveChatId(chats[0].id);
-  }, [chats, activeChatId]);
+    const isCurrentInTab = activeCallChats.some(c => c.id === activeChatId);
+    const totalPagesForTab = Math.max(1, Math.ceil(activeCallChats.length / CHAT_PAGE_SIZE));
+
+    if (activeCallTab === 'pendentes' && pendingPage > totalPagesForTab) {
+      setPendingPage(totalPagesForTab);
+    }
+    if (activeCallTab === 'resolvidos' && resolvedPage > totalPagesForTab) {
+      setResolvedPage(totalPagesForTab);
+    }
+
+    if (activeCallChats.length === 0) {
+      setActiveChatId(null);
+      return;
+    }
+
+    if (!activeChatId || !isCurrentInTab) {
+      setActiveChatId(activeCallChats[0].id);
+    }
+  }, [
+    activeCallChats,
+    activeCallTab,
+    activeChatId,
+    pendingPage,
+    resolvedPage
+  ]);
 
   // ── Send Message ──
   const handleSendMessage = async () => {
@@ -198,6 +290,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       setNewChatCategory('');
       setNewChatSubject('');
       queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
+      setActiveCallTab('pendentes');
+      setPendingPage(1);
       setActiveChatId(newChat.id);
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
@@ -246,20 +340,52 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           <div className="px-4 py-3 border-b border-slate-200 bg-white">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Seus Chamados</span>
           </div>
+          <div className="px-2 pt-2 border-b border-slate-200 bg-white">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => {
+                  setActiveCallTab('pendentes');
+                  setPendingPage(1);
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                  activeCallTab === 'pendentes'
+                    ? 'bg-white text-amber-600 shadow-sm'
+                    : 'text-slate-500 hover:text-amber-600'
+                }`}
+              >
+                <Clock size={12} />
+                Pendentes ({pendentes.length})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveCallTab('resolvidos');
+                  setResolvedPage(1);
+                }}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                  activeCallTab === 'resolvidos'
+                    ? 'bg-white text-emerald-600 shadow-sm'
+                    : 'text-slate-500 hover:text-emerald-600'
+                }`}
+              >
+                <CheckCircle size={12} />
+                Resolvidos ({resolvidos.length})
+              </button>
+            </div>
+          </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
             {loadingChats ? (
               <div className="flex justify-center items-center py-10">
                 <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : chats.length === 0 ? (
+            ) : displayedChats.length === 0 ? (
               <div className="text-center py-12 text-slate-400 px-4">
                 <MessageSquare size={24} className="mx-auto mb-2 text-slate-300" />
                 <p className="text-[10px] font-black uppercase tracking-widest">Nenhum chamado aberto</p>
                 <p className="text-[9px] mt-1">Clique em "Novo Chamado" para iniciar um atendimento.</p>
               </div>
             ) : (
-              chats.map(chat => {
+              displayedChats.map(chat => {
                 const catInfo = getCategoryInfo(chat.categoria_id);
                 const isSelected = activeChatId === chat.id;
                 const isPending = chat.status === 'pendente';
@@ -310,6 +436,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
               })
             )}
           </div>
+          <Pagination page={activePage} total={activeCallChats.length} onPage={handlePageChange} />
         </div>
 
         {/* ── Right: Chat Panel ── */}

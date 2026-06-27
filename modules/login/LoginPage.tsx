@@ -4,7 +4,7 @@ import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Q
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
-import { getPortalProfile, PortalAuthProfile, savePortalSession } from './portal-session';
+import { getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
 import { supabase } from '../../lib/supabase';
 import DailabsSignature from '../shared/components/DailabsSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
@@ -20,7 +20,8 @@ const LoginPage: React.FC = () => {
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const [loginStep, setLoginStep] = useState<'credentials' | 'polo_select'>('credentials');
+  const [loginStep, setLoginStep] = useState<'credentials' | 'role_select' | 'polo_select'>('credentials');
+  const [institutionalProfiles, setInstitutionalProfiles] = useState<PortalAuthProfile[]>([]);
   const [professorPolos, setProfessorPolos] = useState<{ id: string; nome: string }[]>([]);
   const [professorName, setProfessorName] = useState('');
   const [selectedPoloId, setSelectedPoloId] = useState('');
@@ -70,9 +71,41 @@ const LoginPage: React.FC = () => {
     navigate(getPostLoginRoute(profile));
   };
 
+  const resolveInstitutionalAccess = async () => {
+    const profiles = await getInstitutionalProfiles();
+    if (profiles.length === 0) return null;
+    if (profiles.length === 1) return profiles[0];
+    setInstitutionalProfiles(profiles);
+    setLoginStep('role_select');
+    return undefined;
+  };
+
+  const getOAuthErrorMessage = (errorCode: string | null) => {
+    if (!errorCode) return null;
+    if (errorCode === 'no_profile') {
+      return 'Esta conta Google não possui vínculo com nenhum perfil no portal institucional. Entre com e-mail/senha vinculado ou solicite o vínculo no suporte.';
+    }
+    if (errorCode === 'no_session') {
+      return 'Não foi possível recuperar a sessão do Google. Tente novamente.';
+    }
+    if (errorCode === 'google_error') {
+      return 'Não foi possível concluir o login com Google. Tente novamente ou use credenciais de usuário.';
+    }
+    return null;
+  };
+
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('oauth_error');
+    const message = getOAuthErrorMessage(oauthError);
+    if (message) {
+      setErrorMessage(message);
+    }
   }, []);
 
   useEffect(() => {
@@ -85,14 +118,22 @@ const LoginPage: React.FC = () => {
           window.location.hash.includes('access_token') ||
           window.location.search.includes('code=');
 
-        if (!data.session || !hasOAuthReturn) return;
+        if (!data.session) {
+          if (hasOAuthReturn) {
+            setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
+          }
+          return;
+        }
 
-        const profile = await getPortalProfile();
+        if (!hasOAuthReturn) return;
+
+        const profile = await resolveInstitutionalAccess();
         if (!mounted) return;
 
+        if (profile === undefined) return;
         if (!profile) {
           await loginService.logout();
-          setErrorMessage('Conta Google autenticada, mas sem perfil válido no portal.');
+          setErrorMessage('Conta Google autenticada, mas sem vínculo com perfil no portal institucional. Entre com outro e-mail/senha ou solicite o vínculo no suporte.');
           return;
         }
 
@@ -123,7 +164,8 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const profile = await getPortalProfile();
+      const profile = await resolveInstitutionalAccess();
+      if (profile === undefined) return;
       if (!profile) {
         await loginService.logout();
         const message = 'Usuário autenticado, mas sem perfil válido para acesso. Verifique o cadastro do e-mail em parceiros/usuários do sistema.';
@@ -165,6 +207,10 @@ const LoginPage: React.FC = () => {
     };
     savePortalSession(finalProfile);
     navigate(getPostLoginRoute(finalProfile));
+  };
+
+  const handleRoleSelect = async (profile: PortalAuthProfile) => {
+    await handleAuthenticatedProfile(profile);
   };
 
   const formattedDate = currentTime.toLocaleDateString('pt-BR', {
@@ -217,7 +263,7 @@ const LoginPage: React.FC = () => {
               <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/25 bg-blue-600/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-100 backdrop-blur-md">
                 <ShieldCheck size={14} /> Portal institucional
               </span>
-              <h1 className="mt-6 text-5xl font-black uppercase leading-[0.98] tracking-tight xl:text-6xl">
+              <h1 className="mt-6 text-[2.55rem] font-black uppercase leading-[0.98] tracking-tight xl:text-[3.2rem]">
                 Gestão, professores e secretaria em um só acesso.
               </h1>
               <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-slate-200/90">
@@ -285,6 +331,49 @@ const LoginPage: React.FC = () => {
               onBack={() => navigate('/')}
               forgotPasswordHref="/recuperar-senha"
             />
+          </div>
+        ) : loginStep === 'role_select' ? (
+          <div className="w-full max-w-md animate-fadeIn rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 sm:p-8">
+            <div className="mb-8 text-center lg:text-left">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 mx-auto lg:mx-0">
+                <ShieldCheck size={24} />
+              </div>
+              <h2 className="text-2xl font-black text-[#001a33] mb-2 uppercase tracking-tight">Escolha o acesso</h2>
+              <p className="text-slate-500 text-sm">
+                Encontramos mais de um perfil institucional para este login. Escolha como deseja entrar agora.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-8">
+              {institutionalProfiles.map((profile) => {
+                const Icon = profile.tipo === 'Gestor' ? Building2 : GraduationCap;
+                return (
+                  <button
+                    key={`${profile.tipo}-${profile.id}`}
+                    onClick={() => handleRoleSelect(profile)}
+                    className="w-full flex items-center justify-between p-5 rounded-2xl border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-slate-100 text-blue-600 group-hover:bg-blue-100">
+                        <Icon size={18} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-[#001a33]">{profile.tipo}</p>
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">{profile.nome}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="text-blue-600" size={18} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setLoginStep('credentials')}
+              className="w-full bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-3.5 rounded-xl transition-all uppercase tracking-widest text-[10px] font-black text-center"
+            >
+              Voltar para Login
+            </button>
           </div>
         ) : (
           <div className="w-full max-w-md animate-fadeIn rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-200/70 sm:p-8">

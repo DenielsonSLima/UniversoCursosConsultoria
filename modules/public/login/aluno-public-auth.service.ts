@@ -1,7 +1,9 @@
 import { supabase } from '../../../lib/supabase';
+import { buildAuthRedirectUrl } from '../../../lib/app-url';
 import { loginService } from '../../login/login.service';
 import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
+import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
 
 export interface PublicAlunoSignupData {
   nome: string;
@@ -53,11 +55,17 @@ const getFriendlyOAuthError = (message: string) => {
 };
 
 export const alunoPublicAuthService = {
-  async login(email: string, password: string) {
-    const { error } = await loginService.login({ email, password });
+  async login(
+    email: string,
+    password: string,
+  ) {
+    const { error } = await loginService.login({
+      email,
+      password,
+    });
     if (error) throw new Error(error);
 
-    const profile = await getPortalProfile();
+    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
       throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
@@ -67,7 +75,7 @@ export const alunoPublicAuthService = {
   },
 
   async loginWithGoogle(redirectPath = '/aluno') {
-    const redirectTo = `${window.location.origin}/login?redirect=${encodeURIComponent(redirectPath)}`;
+    const redirectTo = buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent(redirectPath)}`);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -82,21 +90,31 @@ export const alunoPublicAuthService = {
   },
 
   async finishExternalLogin() {
-    const profile = await getPortalProfile();
-    if (!profile || (profile.tipo !== 'Aluno' && profile.tipo !== 'Professor')) {
+    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
-      throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
+      throw new Error('Esta conta Google não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
     }
 
     return profile;
   },
 
-  async signup(data: PublicAlunoSignupData) {
-    const email = data.email.trim().toLowerCase();
+  async signup(
+    data: PublicAlunoSignupData,
+  ) {
+    const email = normalizeEmail(data.email);
     const nome = data.nome.trim();
     const telefone = onlyDigits(data.telefone);
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
+
+    if (!isValidEmail(email)) {
+      throw new Error('Informe um e-mail válido. Ele será usado como login do aluno.');
+    }
+
+    if (!isValidCpf(cpf)) {
+      throw new Error('Informe um CPF válido para concluir o cadastro.');
+    }
 
     if (!data.acceptedTerms) {
       throw new Error('Você precisa aceitar os Termos de Uso para concluir o cadastro.');
@@ -114,7 +132,7 @@ export const alunoPublicAuthService = {
       email,
       password: data.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login?redirect=${encodeURIComponent('/aluno')}`,
+        emailRedirectTo: buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent('/aluno')}`),
         data: {
           nome,
           tipo: 'Aluno',
@@ -173,7 +191,7 @@ export const alunoPublicAuthService = {
       return { profile: null, emailConfirmationRequired: true };
     }
 
-    const profile = await getPortalProfile();
+    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     if (!profile || profile.tipo !== 'Aluno') {
       throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
     }
@@ -214,7 +232,7 @@ export const alunoPublicAuthService = {
     }
 
     if (Object.keys(updates).length === 0) {
-      return getPortalProfile();
+      return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     }
 
     const { error } = await supabase.from('parceiros').update(updates).eq('id', partnerId);
@@ -222,7 +240,7 @@ export const alunoPublicAuthService = {
       throw new Error(getFriendlySignupError(error.message));
     }
 
-    return getPortalProfile();
+    return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
   },
 
   needsInitialAccess(profile: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean }) {

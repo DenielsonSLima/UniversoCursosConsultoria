@@ -1,0 +1,349 @@
+{
+  "general": {
+    "sourceNotesUsed": true,
+    "lastRun": "2026-06-26T19:29:30.389Z",
+    "acolhimento e seguranca no retorno as aulas": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.416Z",
+      "sourceUrl": ""
+    },
+    "agente de portaria": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.418Z",
+      "sourceUrl": ""
+    },
+    "almoxarifado": {
+      "source": "definition",
+      "area": "Administração e Operações",
+      "generatedAt": "2026-06-26T19:29:30.420Z",
+      "sourceUrl": ""
+    },
+    "analises clinicas": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.422Z",
+      "sourceUrl": ""
+    },
+    "aperfeicoamento em educacao interdimensional": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.424Z",
+      "sourceUrl": ""
+    },
+    "atendente de farmacia": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.425Z",
+      "sourceUrl": ""
+    },
+    "atualizacao em radiologia": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.427Z",
+      "sourceUrl": ""
+    },
+    "auxiliar administrativo": {
+      "source": "definition",
+      "area": "Administração",
+      "generatedAt": "2026-06-26T19:29:30.429Z",
+      "sourceUrl": ""
+    },
+    "auxiliar corretor de imoveis": {
+      "source": "definition",
+      "area": "Comércio e Vendas",
+      "generatedAt": "2026-06-26T19:29:30.430Z",
+      "sourceUrl": ""
+    },
+    "auxiliar de cozinha": {
+      "source": "definition",
+      "area": "Alimentação",
+      "generatedAt": "2026-06-26T19:29:30.432Z",
+      "sourceUrl": ""
+    },
+    "auxiliar de creche": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.434Z",
+      "sourceUrl": ""
+    },
+    "auxiliar de veterinario": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.435Z",
+      "sourceUrl": ""
+    },
+    "auxiliar pedagogico": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.437Z",
+      "sourceUrl": ""
+    },
+    "barbeiro profissional": {
+      "source": "definition",
+      "area": "Beleza",
+      "generatedAt": "2026-06-26T19:29:30.438Z",
+      "sourceUrl": ""
+    },
+    "condutor de transporte escolar": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.440Z",
+      "sourceUrl": ""
+    },
+    "conhecimentos bancarios": {
+      "source": "definition",
+      "area": "Finanças e Bancos",
+      "generatedAt": "2026-06-26T19:29:30.442Z",
+      "sourceUrl": ""
+    },
+    "criacao de loja virtual": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.443Z",
+      "sourceUrl": ""
+    },
+    "cuidador de idoso": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.445Z",
+      "sourceUrl": ""
+    },
+    "designer de cilios e sobrancelha": {
+      "source": "definition",
+      "area": "Beleza",
+      "generatedAt": "2026-06-26T19:29:30.446Z",
+      "sourceUrl": ""
+    },
+    "digitacao interativa": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.447Z",
+      "sourceUrl": ""
+    },
+    "educacao e gestao escolar": {
+      "source": "definition",
+      "area": "Gestão Escolar",
+      "generatedAt": "2026-06-26T19:29:30.449Z",
+      "sourceUrl": ""
+    },
+    "educacao fisica escolar": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.450Z",
+      "sourceUrl": ""
+    },
+    "educacao nas mudancas da sociedade": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.452Z",
+      "sourceUrl": ""
+    },
+    "educacao social na adolescencia": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.453Z",
+      "sourceUrl": ""
+    },
+    "eletricista": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.455Z",
+      "sourceUrl": ""
+    },
+    "estoque e faturamento": {
+      "source": "definition",
+      "area": "Administração",
+      "generatedAt": "2026-06-26T19:29:30.456Z",
+      "sourceUrl": ""
+    },
+    "excel basico e avancado": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.458Z",
+      "sourceUrl": ""
+    },
+    "excel kids": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.459Z",
+      "sourceUrl": ""
+    },
+    "fiscal de loja": {
+      "source": "definition",
+      "area": "Comércio e Vendas",
+      "generatedAt": "2026-06-26T19:29:30.460Z",
+      "sourceUrl": ""
+    },
+    "frentista": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.462Z",
+      "sourceUrl": ""
+    },
+    "gestao em rh": {
+      "source": "definition",
+      "area": "Administração",
+      "generatedAt": "2026-06-26T19:29:30.463Z",
+      "sourceUrl": ""
+    },
+    "instagram para vendas": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.465Z",
+      "sourceUrl": ""
+    },
+    "introducao a nutricao": {
+      "source": "definition",
+      "area": "Saúde",
+      "generatedAt": "2026-06-26T19:29:30.466Z",
+      "sourceUrl": ""
+    },
+    "logistica 4 0": {
+      "source": "definition",
+      "area": "Administração e Operações",
+      "generatedAt": "2026-06-26T19:29:30.468Z",
+      "sourceUrl": ""
+    },
+    "manicure e pedicure": {
+      "source": "definition",
+      "area": "Beleza",
+      "generatedAt": "2026-06-26T19:29:30.469Z",
+      "sourceUrl": ""
+    },
+    "marketing digital": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.471Z",
+      "sourceUrl": ""
+    },
+    "matematica basica": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.472Z",
+      "sourceUrl": ""
+    },
+    "matematica eja": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.474Z",
+      "sourceUrl": ""
+    },
+    "matematica infantil": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.475Z",
+      "sourceUrl": ""
+    },
+    "matematica para enem": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.476Z",
+      "sourceUrl": ""
+    },
+    "mediador escolar monitor escolar": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.478Z",
+      "sourceUrl": ""
+    },
+    "metodologias ativas para o professor": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.479Z",
+      "sourceUrl": ""
+    },
+    "monitor escolar de classe auxiliar do regente": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.481Z",
+      "sourceUrl": ""
+    },
+    "nr 10": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.482Z",
+      "sourceUrl": ""
+    },
+    "oficineiro": {
+      "source": "definition",
+      "area": "Educação",
+      "generatedAt": "2026-06-26T19:29:30.483Z",
+      "sourceUrl": ""
+    },
+    "operador de caixa": {
+      "source": "definition",
+      "area": "Comércio e Vendas",
+      "generatedAt": "2026-06-26T19:29:30.485Z",
+      "sourceUrl": ""
+    },
+    "operador de empilhadeira": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.486Z",
+      "sourceUrl": ""
+    },
+    "oratoria": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.488Z",
+      "sourceUrl": ""
+    },
+    "pa carregadeira": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.489Z",
+      "sourceUrl": ""
+    },
+    "porteiro e vigia": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.490Z",
+      "sourceUrl": ""
+    },
+    "redes sociais": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.492Z",
+      "sourceUrl": ""
+    },
+    "retroescavadeira": {
+      "source": "definition",
+      "area": "Segurança e Operações",
+      "generatedAt": "2026-06-26T19:29:30.493Z",
+      "sourceUrl": ""
+    },
+    "secretariado escolar": {
+      "source": "definition",
+      "area": "Administração",
+      "generatedAt": "2026-06-26T19:29:30.494Z",
+      "sourceUrl": ""
+    },
+    "servicos sociais basico": {
+      "source": "definition",
+      "area": "Serviço Social",
+      "generatedAt": "2026-06-26T19:29:30.496Z",
+      "sourceUrl": ""
+    },
+    "tecnicas de redacao": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.497Z",
+      "sourceUrl": ""
+    },
+    "telemarketing": {
+      "source": "definition",
+      "area": "Comércio e Vendas",
+      "generatedAt": "2026-06-26T19:29:30.498Z",
+      "sourceUrl": ""
+    },
+    "word kids": {
+      "source": "definition",
+      "area": "Tecnologia e Comunicação",
+      "generatedAt": "2026-06-26T19:29:30.500Z",
+      "sourceUrl": ""
+    }
+  },
+  "external": {}
+}

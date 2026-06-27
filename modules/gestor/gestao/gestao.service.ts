@@ -30,6 +30,13 @@ const mapTurma = (t: any): Turma => {
     cursoId: t.curso_id,
     cursoNome: t.cursos?.nome || '',
     modalidade: t.cursos?.modalidade || 'TECNICO',
+    dataInicioInscricao: t.data_inicio_inscricao || null,
+    dataFimInscricao: t.data_fim_inscricao || null,
+    exigeMatricula: t.exige_matricula ?? true,
+    bloquearMatriculasAposCompletarVagas: t.bloquear_matriculas_apos_completar_vagas ?? true,
+    qtdVagasMinima: t.qtd_vagas_minima === null || t.qtd_vagas_minima === undefined
+      ? undefined
+      : Number(t.qtd_vagas_minima),
     poloId: t.polo_id,
     poloNome: t.polos?.nome || '',
     poloCnpj: t.polos?.cnpj || '',
@@ -191,15 +198,35 @@ export const gestaoService = {
   },
 
   async createTurma(turma: Omit<Turma, 'id' | 'alunosMatriculados'>): Promise<Turma> {
+    if (turma.modalidade !== 'EAD' && !turma.poloId) {
+      throw new Error('Informe o polo da turma antes de abrir inscrições.');
+    }
+
     const dbData = {
       codigo: turma.codigo,
       nome: turma.nome,
       curso_id: turma.cursoId,
-      polo_id: turma.poloId || '44444444-4444-4444-4444-444444444444', // default to Matriz if EAD or undefined
+      polo_id: turma.poloId || '44444444-4444-4444-4444-444444444444', // fallback apenas para EAD
       data_inicio: turma.dataInicio || null,
       data_previsao_termino: turma.dataPrevisaoTermino || null,
+      data_inicio_inscricao: turma.dataInicioInscricao || null,
+      data_fim_inscricao: turma.dataFimInscricao || null,
+      exige_matricula: turma.exigeMatricula === false ? false : true,
+      qtd_vagas_minima: turma.qtdVagasMinima === null || turma.qtdVagasMinima === undefined
+        ? null
+        : Number(turma.qtdVagasMinima),
+      bloquear_matriculas_apos_completar_vagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
       turno: turma.turno,
       status: turma.status || 'EM_ANDAMENTO',
+      valor_matricula: Number(turma.valorMatricula ?? 150),
+      valor_rematricula: Number(turma.valorRematricula ?? 100),
+      qtd_parcelas: Number(turma.qtdParcelas ?? 1),
+      valor_parcela: Number(turma.valorParcela ?? 0),
+      desconto_pontualidade: Number(turma.descontoPontualidade ?? 0),
+      juros_atraso: Number(turma.jurosAtraso ?? 0),
+      multa_atraso: Number(turma.multaAtraso ?? 0),
+      dia_vencimento_padrao: Number(turma.diaVencimentoPadrao || 10),
+      cronograma_financeiro: Array.isArray(turma.cronogramaFinanceiro) ? turma.cronogramaFinanceiro : [],
       vagas_totais: Number(turma.vagasTotais) || 40
     };
 
@@ -225,6 +252,13 @@ export const gestaoService = {
       poloNome: data.polos?.nome || '',
       dataInicio: data.data_inicio,
       dataPrevisaoTermino: data.data_previsao_termino,
+      dataInicioInscricao: data.data_inicio_inscricao || null,
+      dataFimInscricao: data.data_fim_inscricao || null,
+      exigeMatricula: data.exige_matricula ?? true,
+      bloquearMatriculasAposCompletarVagas: data.bloquear_matriculas_apos_completar_vagas ?? true,
+      qtdVagasMinima: data.qtd_vagas_minima === null || data.qtd_vagas_minima === undefined
+        ? undefined
+        : Number(data.qtd_vagas_minima),
       turno: data.turno,
       status: data.status,
       alunosMatriculados: 0,
@@ -303,6 +337,12 @@ export const gestaoService = {
       descontoPontualidade: number;
       jurosAtraso: number;
       multaAtraso: number;
+      aplicarDescontoMatricula?: boolean;
+      aplicarMultaJurosMatricula?: boolean;
+      aplicarDescontoMensalidade?: boolean;
+      aplicarMultaJurosMensalidade?: boolean;
+      aplicarDescontoRematricula?: boolean;
+      aplicarMultaJurosRematricula?: boolean;
       diaVencimentoPadrao: number;
       cronogramaFinanceiro: any[];
     }
@@ -317,6 +357,12 @@ export const gestaoService = {
         desconto_pontualidade: config.descontoPontualidade,
         juros_atraso: config.jurosAtraso,
         multa_atraso: config.multaAtraso,
+        aplicar_desconto_matricula: config.aplicarDescontoMatricula === true,
+        aplicar_multa_juros_matricula: config.aplicarMultaJurosMatricula !== false,
+        aplicar_desconto_mensalidade: config.aplicarDescontoMensalidade !== false,
+        aplicar_multa_juros_mensalidade: config.aplicarMultaJurosMensalidade !== false,
+        aplicar_desconto_rematricula: config.aplicarDescontoRematricula !== false,
+        aplicar_multa_juros_rematricula: config.aplicarMultaJurosRematricula !== false,
         dia_vencimento_padrao: config.diaVencimentoPadrao,
         cronograma_financeiro: config.cronogramaFinanceiro
       })

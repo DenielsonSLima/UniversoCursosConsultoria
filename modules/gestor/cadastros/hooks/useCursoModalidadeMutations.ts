@@ -41,7 +41,7 @@ export function useCursoModalidadeMutations({
   messages
 }: UseCursoModalidadeMutationsParams) {
   const createMutation = useMutation({
-    mutationFn: (input: { nome: string; descricao: string; area: string; versao: string }) =>
+    mutationFn: (input: { nome: string; descricao: string; area: string; versao: string; cargaHoraria: number }) =>
       cursoModalidadeService.createCurso({ modalidade, ...input }),
     onSuccess: () => {
       resetCreateForm();

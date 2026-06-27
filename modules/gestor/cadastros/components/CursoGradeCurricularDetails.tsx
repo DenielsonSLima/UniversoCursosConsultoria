@@ -10,6 +10,8 @@ import { Curso, CursoFinanceiroConfig, Modulo, Disciplina, Aula } from '../cadas
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
 import { asaasIntegrationService } from '../../../asaas/asaas.service';
+import { cursosLivresAsaasService } from '../cursos-livres/asaasLivres.service';
+import { cursosEspecializacaoAsaasService } from '../cursos-especializacao/asaasEspecializacao.service';
 
 interface CursoGradeCurricularDetailsProps {
   curso: Curso;
@@ -181,8 +183,14 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const handleGenerateAsaasLink = async () => {
     setIsGeneratingAsaasLink(true);
     try {
-      const result = await asaasIntegrationService.createCourseLink(curso.id);
-      await navigator.clipboard.writeText(result.url);
+      const result = curso.modalidade === 'LIVRE'
+        ? await cursosLivresAsaasService.createCourseProduct(curso)
+        : curso.modalidade === 'ESPECIALIZACAO'
+          ? await cursosEspecializacaoAsaasService.createCourseProduct(curso)
+          : await asaasIntegrationService.createCourseLink(curso.id);
+      const url = 'url' in result ? result.url : result.linkPagamento;
+      if (!url) throw new Error('Link Asaas não retornado.');
+      await navigator.clipboard.writeText(url);
       alert('Link de pagamento Asaas gerado e copiado para a área de transferência.');
       onUpdate();
     } catch (err: any) {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Edit2, Camera, Upload, Loader2, User, X } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
+import { formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroProfessorDadosProps {
   data: any;
@@ -168,7 +169,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="md:col-span-2"><DisplayField label="Nome Completo" value={formData.nome} /></div>
                 <DisplayField label="Nome Social" value={formData.nomeSocial || formData.nome} />
-                <DisplayField label="CPF" value={formData.cpf} />
+                <DisplayField label="CPF" value={formatCpf(formData.cpf)} />
                 <DisplayField label="Telefone" value={formData.telefone} />
                 <DisplayField label="E-mail" value={formData.email} />
               </div>

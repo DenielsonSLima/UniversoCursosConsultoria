@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-06-26 — Regra Obrigatória de Supabase Remoto via MCP
+
+**O que foi feito:**
+- Reforçada no RAG a regra de que operações remotas do Supabase devem usar MCP, não Supabase CLI.
+- Documentado que erro `401 Unauthorized` da CLI não é bloqueio quando o MCP Supabase está disponível e autorizado.
+- Atualizada a skill de acesso Supabase para incluir deploy/listagem/leitura de Edge Functions via MCP.
+- Atualizada a skill de memória persistente para registrar a regra como comportamento obrigatório.
+- Atualizada a skill sênior com a nova Regra 19: Supabase remoto sempre via MCP.
+- Ajustado o documento de ambiente para deixar Supabase CLI como ferramenta local opcional, nunca caminho de deploy remoto.
+- Criado registro específico em `ai/rag/supabase-mcp-operacoes-remotas.md`.
+
+**Por quê:**
+- Evitar repetição do erro operacional em que o agente tenta usar Supabase CLI, encontra `401 Unauthorized` e trata isso como bloqueio, apesar de o MCP ter autorização para migrations e Edge Functions.
+
+**Arquivos afetados:**
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+- `ai/rag/supabase-mcp-operacoes-remotas.md`
+- `pasta sem título/Acesso/SKILL.md`
+- `pasta sem título/memory/SKILL.md`
+- `pasta sem título/senior-dev-skill-v2-2/SKILL.md`
+- `pasta sem título/senior-dev-skill-v2-2/AMBIENTE.md`
+
+---
+
+## 2026-06-26 — Supabase MCP, RLS de Templates e Deploy Asaas
+
+**O que foi feito:**
+- Registrada no RAG a decisão operacional de usar MCP Supabase para operações remotas e evitar Supabase CLI neste projeto.
+- Aplicada via MCP a migration `secure_documentos_templates_rls`, ativando RLS em `public.documentos_templates`.
+- Criadas políticas para manter leitura pública apenas dos registros `validation_%` usados pelo validador público, e leitura/escrita de templates para usuários autenticados.
+- Deploy via MCP das Edge Functions `asaas-webhook` e `asaas-api`.
+
+**Impacto:**
+- O alerta crítico de RLS desativado em `documentos_templates` foi corrigido sem bloquear o validador público.
+- As regras novas de Asaas para desconto, multa e juros por tipo de cobrança passam a estar publicadas na function remota.
+
+**Arquivos afetados:**
+- `PROJETO_CONTEXTO.md`
+- `supabase/migrations/20260626213000_secure_documentos_templates_rls.sql`
+- `supabase/functions/asaas-api/index.ts`
+- `supabase/functions/asaas-api/shared.ts`
+- `supabase/functions/asaas-api/asaas-http.ts`
+- `supabase/functions/asaas-webhook/index.ts`
+
+---
+
 ## 2026-06-20 — Migração de Templates e Configurações para o Supabase
 
 **O que foi feito:**
@@ -52,6 +99,103 @@
 - `pasta sem título/senior-dev-skill-v2-2/SKILL.md`
 - `pasta sem título/memory/SKILL.md`
 - `PROJETO_CONTEXTO.md`
+
+---
+
+## 2026-06-26 — Modularização Complementar de Turmas Técnicas
+
+**O que foi feito:**
+- Separação da grade curricular da turma técnica em service, types e hooks:
+  - queries de grade, professores, aulas e métricas ficam em `turma-grade.service.ts`.
+  - mutações de docente, conclusão de disciplina e aulas ficam em `useTurmaGrade.ts`.
+- Separação do módulo de estágio em service, types e hooks:
+  - carregamento de disciplinas/alunos, avaliações salvas, checklist e ficha inicial saiu do componente.
+  - cálculo e salvamento da avaliação usam hooks com invalidação pelo TanStack Query.
+- Separação do diário de classe:
+  - queries e mutations migradas para `diario-classe.service.ts` e `useDiarioClasse.ts`.
+  - realtime do diário isolado em `useDiarioRealtime.ts`.
+  - query keys centralizadas em `diario-classe.keys.ts`.
+- Separação da configuração financeira da turma:
+  - leitura/salvamento/RPC e geração de cronograma migrados para `financeiro-config.service.ts`.
+  - hooks de configuração, cálculo financeiro e salvamento em `useFinanceiroConfig.ts`.
+- Separação da aba de alunos da turma técnica:
+  - tabela, modal de matrícula, modal de confirmação financeira e modal de movimentação acadêmica migrados para componentes próprios.
+  - `TurmaAlunos.tsx` ficou responsável apenas por orquestrar estado, hooks e ações de alto nível.
+- Separação da Edge Function `asaas-webhook`:
+  - entrypoint reduzido para roteamento, autenticação e dispatch de eventos.
+  - handlers de recebíveis e links de pagamento movidos para `handlers.service.ts`.
+  - helpers compartilhados e cliente HTTP do Asaas movidos para `shared.ts` e `asaas-http.ts`.
+
+**Validação:**
+- `npm run build` executado após cada bloco principal, mantendo o build verde.
+- Bundle local do `asaas-webhook` validado via esbuild.
+- Deploy remoto do `asaas-webhook` feito via MCP Supabase, confirmado como versão 8 ativa e `verify_jwt=false`.
+
+**Arquivos afetados:**
+- `modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/turma-grade.service.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/turma-grade.types.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/hooks/useTurmaGrade.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/TurmaEstagio.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/turma-estagio.service.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/turma-estagio.types.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/hooks/useTurmaEstagio.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-classe.keys.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-classe.service.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/diarios/hooks/useDiarioClasse.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/diarios/hooks/useDiarioRealtime.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroConfig.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/financeiro-config.service.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/hooks/useFinanceiroConfig.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/TurmaAlunos.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/alunos/TurmaAlunosTable.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/alunos/MatricularAlunoModal.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/alunos/ConfirmarMatriculaModal.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/alunos/MovimentacaoAlunoModal.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/academic-lifecycle.keys.ts`
+- `supabase/functions/asaas-webhook/index.ts`
+- `supabase/functions/asaas-webhook/handlers.service.ts`
+- `supabase/functions/asaas-webhook/asaas-http.ts`
+- `supabase/functions/asaas-webhook/shared.ts`
+
+---
+
+## 2026-06-26 — Modularização de Turmas, Financeiro Técnico, EAD e Asaas API
+
+**O que foi feito:**
+- Separação do detalhe de turma EAD em camadas de `types`, `keys`, `service`, hooks de queries/mutations e hook de realtime.
+- Extração da listagem financeira de alunos da turma técnica para `financeiro-alunos.service.ts` e `useFinanceiroAlunos`, removendo fetch direto do componente.
+- Ajuste do realtime da turma técnica para invalidar também a chave `financeiro-alunos` usada pelo TanStack Query.
+- Separação da Edge Function `asaas-api` em módulos locais:
+  - `billing.service.ts` para cliente Asaas, payload de cobrança, desconto, multa, juros e sincronização de recebíveis.
+  - `online.service.ts` para reconciliação de pagamentos online e geração de links de cursos EAD/livres/especializações.
+  - `carnet.service.ts` para montagem de carnês oficiais em PDF.
+  - `asaas-http.ts` para chamadas HTTP e download de arquivos oficiais do Asaas.
+  - `shared.ts` para CORS, ambiente, secrets, CPF e helpers compartilhados.
+- Validação local com `npm run build`, bundle da Edge Function via esbuild e `git diff --check`.
+
+**Observação operacional:**
+- A refatoração local do `asaas-api` foi validada sem Supabase CLI. Qualquer deploy remoto posterior dessa Edge Function deve ser feito exclusivamente via MCP Supabase, enviando os arquivos necessários pela ferramenta `deploy_edge_function` ou equivalente. Erro `401 Unauthorized` da CLI não deve ser tratado como bloqueio para esse fluxo.
+
+**Arquivos afetados:**
+- `modules/gestor/gestao/ead/detalhes/TurmaEadDetalhes.tsx`
+- `modules/gestor/gestao/ead/detalhes/ead-turma.types.ts`
+- `modules/gestor/gestao/ead/detalhes/ead-turma.keys.ts`
+- `modules/gestor/gestao/ead/detalhes/ead-turma.service.ts`
+- `modules/gestor/gestao/ead/detalhes/hooks/useTurmaEadQueries.ts`
+- `modules/gestor/gestao/ead/detalhes/hooks/useTurmaEadMutations.ts`
+- `modules/gestor/gestao/ead/detalhes/hooks/useTurmaEadRealtime.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/financeiro-alunos.service.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/components/financeiro/hooks/useFinanceiroAlunos.ts`
+- `modules/gestor/gestao/tecnicos/detalhes/hooks/useTurmaTecnicoRealtime.ts`
+- `supabase/functions/asaas-api/index.ts`
+- `supabase/functions/asaas-api/billing.service.ts`
+- `supabase/functions/asaas-api/online.service.ts`
+- `supabase/functions/asaas-api/carnet.service.ts`
+- `supabase/functions/asaas-api/asaas-http.ts`
+- `supabase/functions/asaas-api/shared.ts`
 
 ---
 

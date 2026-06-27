@@ -110,6 +110,29 @@ export const academicLifecycleService = {
     return requireData(data, error);
   },
 
+  async matricularAlunoComFinanceiro(input: {
+    turmaId: string;
+    alunoId: string;
+    responsavelId?: string | null;
+    valorMatricula: number;
+    dataVencimentoMatricula: string;
+    valorParcela: number;
+    valorRematricula: number;
+    diaVencimento: number;
+  }) {
+    const { data, error } = await supabase.rpc('matricular_aluno_turma_financeiro', {
+      p_aluno_id: input.alunoId,
+      p_turma_id: input.turmaId,
+      p_responsavel_id: input.responsavelId || null,
+      p_valor_matricula: input.valorMatricula,
+      p_data_vencimento_matricula: input.dataVencimentoMatricula,
+      p_valor_parcela: input.valorParcela,
+      p_valor_rematricula: input.valorRematricula,
+      p_dia_vencimento: input.diaVencimento,
+    });
+    return requireData(data, error);
+  },
+
   async movimentar(input: {
     matriculaId: string;
     tipo: AcademicMovementType;

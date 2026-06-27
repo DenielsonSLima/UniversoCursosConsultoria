@@ -7,8 +7,15 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO"];
+const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
+const BLOCKING_ENROLLMENT_STATUSES = new Set([
+  "ATIVO",
+  "CONCLUIDO",
+  "PENDENTE",
+  "AGUARDANDO_PAGAMENTO",
+  "AGUARDANDO_CONFIRMACAO",
+]);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -17,12 +24,47 @@ const json = (body: unknown, status = 200) =>
   });
 
 const buildCoursePaymentDescription = (courseName: string) =>
-  `${courseName} - Inscricao Curso EAD - Universo Cursos e Consultoria`;
+  `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
 
 const dueDateInDays = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const onlyDigits = (value?: string | null) => String(value || "").replace(/\D/g, "");
+
+const normalizeCourseFinanceiroConfig = (config: any = {}) => {
+  const metodos = config?.metodosRecebimento || {};
+  const cartao = config?.cartao || {};
+  const parcelasPadrao = Math.max(1, Number(config?.parcelasPadrao || 1));
+  const maxParcelas = cartao?.aceitar
+    ? Math.max(parcelasPadrao, Number(cartao?.maxParcelas || parcelasPadrao))
+    : 1;
+
+  return {
+    metodosRecebimento: {
+      pix: metodos.pix !== false,
+      boleto: metodos.boleto !== false,
+      cartao: metodos.cartao !== false,
+    },
+    cartao: {
+      aceitar: cartao.aceitar !== false,
+      maxParcelas,
+    },
+  };
+};
+
+const resolveBillingType = (metodos: { pix: boolean; boleto: boolean; cartao: boolean }) => {
+  const metodosAtivos = [
+    metodos.pix ? "PIX" : null,
+    metodos.boleto ? "BOLETO" : null,
+    metodos.cartao ? "CREDIT_CARD" : null,
+  ].filter(Boolean);
+
+  if (metodosAtivos.length === 0) {
+    throw new Error("Nenhuma forma de recebimento configurada para este curso.");
+  }
+
+  return metodosAtivos.length === 1 ? metodosAtivos[0] : "UNDEFINED";
+};
 
 const isValidCpf = (value: string) => {
   const cpf = onlyDigits(value);
@@ -59,6 +101,81 @@ const normalizeErrorMessage = (error: unknown) => {
   return "Erro interno.";
 };
 
+const toDateString = (value: unknown) => {
+  if (!value) return null;
+  const valueAsString = String(value);
+  return valueAsString.length >= 10 ? valueAsString.slice(0, 10) : null;
+};
+
+const currentIsoDate = () => new Date().toISOString().slice(0, 10);
+
+const formatDatePtBr = (value: unknown) => {
+  const date = toDateString(value);
+  if (!date) return "";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR");
+};
+
+const getMatriculasTotal = (turma: any) => {
+  const matriculas = turma?.matriculas;
+  if (!Array.isArray(matriculas)) return 0;
+  return matriculas.filter((matricula: any) =>
+    BLOCKING_ENROLLMENT_STATUSES.has(String(matricula?.status || "").toUpperCase())
+  ).length;
+};
+
+const getTurmaUnavailabilityReason = (turma: any) => {
+  const today = currentIsoDate();
+  const alunosMatriculados = getMatriculasTotal(turma);
+  const vagasTotais = Number(turma?.vagas_totais || 0);
+  const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
+  const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
+
+  const inicioInscricao = toDateString(turma?.data_inicio_inscricao);
+  const fimInscricao = toDateString(turma?.data_fim_inscricao);
+
+  if (inicioInscricao && today < inicioInscricao) {
+    return `As inscrições ainda não abriram. Abertura prevista para ${formatDatePtBr(inicioInscricao)}.`;
+  }
+
+  if (fimInscricao && today > fimInscricao) {
+    return `As inscrições foram encerradas em ${formatDatePtBr(fimInscricao)}. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.`;
+  }
+
+  if (bloquearMatriculasAposCompletarVagas) {
+    if (vagasMinima > 0 && alunosMatriculados >= vagasMinima) {
+      return `A turma atingiu o limite configurado de ${vagasMinima} alunos e não está aceitando novos alunos.`;
+    }
+
+    if (vagasTotais > 0 && alunosMatriculados >= vagasTotais) {
+      return "A turma está com vagas completas. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.";
+    }
+  }
+
+  return null;
+};
+
+const getAvailableTurmaForEnrollment = (turmas: any[]) => {
+  const evaluated = (turmas || []).map((turma) => {
+    return {
+      turma,
+      reason: getTurmaUnavailabilityReason(turma),
+    };
+  });
+
+  const available = evaluated.find((row) => !row.reason);
+  if (available) {
+    return {
+      turma: available.turma,
+      reason: null,
+    };
+  }
+
+  return {
+    turma: null,
+    reason: evaluated[0]?.reason || "Não há turma aberta para este curso para receber inscrições.",
+  };
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
@@ -87,10 +204,10 @@ Deno.serve(async (req: Request) => {
       .from("parceiros")
       .select("*")
       .eq("id", alunoId)
-      .eq("tipo", "Aluno")
+      .in("tipo", ["Aluno", "Professor"])
       .maybeSingle();
     if (alunoError) throw alunoError;
-    if (!aluno) throw new Error("Aluno não encontrado. Faça seu cadastro antes de comprar.");
+    if (!aluno) throw new Error("Comprador não encontrado. Faça seu cadastro antes de comprar.");
 
     const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
     if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para comprar pelo Asaas.");
@@ -98,14 +215,26 @@ Deno.serve(async (req: Request) => {
       throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
     }
 
-    const { data: turma, error: turmaError } = await admin.from("turmas")
-      .select("id, polo_id")
+    const { data: turmas, error: turmasError } = await admin
+      .from("turmas")
+      .select(`
+        id,
+        nome,
+        polo_id,
+        vagas_totais,
+        qtd_vagas_minima,
+        bloquear_matriculas_apos_completar_vagas,
+        data_inicio_inscricao,
+        data_fim_inscricao,
+        matriculas(status)
+      `)
       .eq("curso_id", course.id)
       .eq("status", "EM_ANDAMENTO")
-      .limit(1)
-      .maybeSingle();
-    if (turmaError) throw turmaError;
-    if (!turma) throw new Error("Não há turma aberta para este curso.");
+      .order("data_inicio", { ascending: true });
+    if (turmasError) throw turmasError;
+    const availableSelection = getAvailableTurmaForEnrollment(turmas || []);
+    if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
+    const turma = availableSelection.turma;
 
     let matricula: any = null;
     const { data: existingMatriculas, error: existingMatriculaError } = await admin
@@ -293,37 +422,36 @@ Deno.serve(async (req: Request) => {
     if (!receivable) throw new Error("Não foi possível registrar a cobrança interna.");
 
     const customerId = await ensureCustomer();
-    const financeiroConfig = course.financeiro_config || {};
-    const metodos = financeiroConfig.metodosRecebimento || {};
-    const metodosAtivos = [
-      metodos.pix ? "PIX" : null,
-      metodos.boleto ? "BOLETO" : null,
-      metodos.cartao ? "CREDIT_CARD" : null,
-    ].filter(Boolean);
-    const billingType = metodosAtivos.length === 1 ? metodosAtivos[0] : "UNDEFINED";
+    const financeiroConfig = normalizeCourseFinanceiroConfig(course.financeiro_config || {});
+    const billingType = resolveBillingType(financeiroConfig.metodosRecebimento);
+    const maxInstallmentCount = financeiroConfig.metodosRecebimento.cartao
+      && financeiroConfig.cartao.aceitar
+      ? financeiroConfig.cartao.maxParcelas
+      : 1;
 
-    const payment = await callAsaas("/payments", {
+    const paymentLink = await callAsaas("/paymentLinks", {
       method: "POST",
       body: JSON.stringify({
-        customer: customerId,
-        billingType,
-        value: Number(course.valor),
-        dueDate: dataVencimento,
+        name: course.nome,
         description,
+        value: Number(course.valor),
+        billingType,
+        chargeType: "DETACHED",
+        maxInstallmentCount,
+        dueDateLimitDays: 7,
         externalReference: receivable.id,
-        postalService: false,
       }),
     });
 
     const { data: updatedReceivable, error: updateReceivableError } = await admin
       .from("contas_receber")
       .update({
-        asaas_payment_id: payment.id,
-        nosso_numero_asaas: payment.id,
-        asaas_invoice_url: payment.invoiceUrl || null,
-        asaas_bank_slip_url: payment.bankSlipUrl || null,
-        asaas_installment_id: payment.installment || payment.installmentId || null,
-        asaas_status: payment.status,
+        asaas_payment_id: null,
+        nosso_numero_asaas: paymentLink.id,
+        asaas_invoice_url: paymentLink.url || null,
+        asaas_bank_slip_url: null,
+        asaas_installment_id: null,
+        asaas_status: "PAYMENT_LINK_CREATED",
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),
@@ -338,9 +466,9 @@ Deno.serve(async (req: Request) => {
       turma_id: turma.id,
       aluno_id: aluno.id,
       matricula_id: matricula.id,
-      asaas_payment_id: payment.id,
+      asaas_payment_id: null,
       asaas_customer_id: customerId,
-      asaas_payment_link_id: null,
+      asaas_payment_link_id: paymentLink.id,
       nome: aluno.nome,
       cpf_cnpj: cpfCnpj || null,
       email: aluno.email || null,
@@ -371,7 +499,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
     }
 
-    return json({ url: updatedReceivable.asaas_invoice_url || updatedReceivable.asaas_bank_slip_url });
+    return json({ url: updatedReceivable.asaas_invoice_url || paymentLink.url });
   } catch (error) {
     const errorMessage = normalizeErrorMessage(error);
     console.error("Erro ao gerar checkout público:", error);

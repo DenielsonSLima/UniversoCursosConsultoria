@@ -8,6 +8,7 @@ import {
   Shield, Heart, Home, Accessibility, Camera, Upload, Loader2
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
@@ -101,7 +102,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
   });
 
   // Máscaras
-  const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+  const maskCPF = formatCpf;
   const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
   const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
   const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
@@ -117,6 +118,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
           finalValue = value.toUpperCase();
         }
       }
+      if (name === 'email' || name === 'responsavelEmail') finalValue = normalizeEmail(finalValue);
       if (name === 'cpf' || name === 'responsavelCpf') finalValue = maskCPF(finalValue);
       if (name === 'cep') finalValue = maskCEP(finalValue);
       if (name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
@@ -155,12 +157,19 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
   };
 
   const stepValid = () => {
-    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && formData.cpf.length === 14;
-    if (currentStep === 5) return formData.email.trim() !== '' && formData.contato1.length >= 14;
+    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
+    if (currentStep === 5) return isValidEmail(formData.email) && formData.contato1.length >= 14;
     return true;
   };
 
-  const handleNext = () => { if (stepValid() && currentStep < 5) setCurrentStep(s => s + 1); };
+  const handleNext = () => {
+    if (!stepValid()) {
+      if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
+      if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
+      return;
+    }
+    if (currentStep < 5) setCurrentStep(s => s + 1);
+  };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -169,7 +178,31 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
   };
 
   const handleFinalize = (matricularAgora: boolean) => {
-    if (onSave) onSave({ ...formData, matricularAgora });
+    if (!isValidCpf(formData.cpf)) {
+      alert('CPF do aluno inválido. Corrija antes de salvar.');
+      return;
+    }
+    if (!formData.dataNascimento || formData.dataNascimento.length !== 10) {
+      alert('Data de nascimento do aluno é obrigatória.');
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      alert('E-mail do aluno inválido. Ele será usado como login.');
+      return;
+    }
+    if (formData.contato1.length < 14) {
+      alert('Telefone/WhatsApp do aluno é obrigatório.');
+      return;
+    }
+    if (formData.responsavelCpf && !isValidCpf(formData.responsavelCpf)) {
+      alert('CPF do responsável inválido.');
+      return;
+    }
+    if (formData.responsavelEmail && !isValidEmail(formData.responsavelEmail)) {
+      alert('E-mail do responsável inválido.');
+      return;
+    }
+    if (onSave) onSave({ ...formData, email: normalizeEmail(formData.email), responsavelEmail: normalizeEmail(formData.responsavelEmail), matricularAgora });
     setShowMatriculaModal(false);
   };
 

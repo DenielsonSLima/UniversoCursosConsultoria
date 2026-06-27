@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   BarChart3,
@@ -14,81 +13,24 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
-import { supabase } from '../../../../../lib/supabase';
 import { Turma } from '../../gestao.types';
 import ToastNotification, { useToast } from '../../../parceiros/components/shared/ToastNotification';
+import { AlunoDisponivel } from './ead-turma.types';
+import {
+  useTurmaEadAlunos,
+  useTurmaEadAlunosDisponiveis,
+  useTurmaEadPagamentos,
+  useTurmaEadResumo,
+} from './hooks/useTurmaEadQueries';
+import {
+  useLiberarMatriculaEadMutation,
+  useMatricularAlunoEadMutation,
+} from './hooks/useTurmaEadMutations';
+import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
 
 interface TurmaEadDetalhesProps {
   turma: Turma;
   onBack: () => void;
-}
-
-interface EadTurmaResumo {
-  cursoId: string;
-  cursoNome: string;
-  area: string;
-  valor: number;
-  asaasUrl?: string | null;
-  alunosTotal: number;
-  alunosPendentes: number;
-  alunosLiberados: number;
-  alunosConcluidos: number;
-  certificadosPendentes: number;
-  certificadosEmitidos: number;
-  receitaPrevista: number;
-  receitaConfirmada: number;
-  vagasTotais: number;
-  configuracao?: {
-    conteudos?: unknown[];
-    atividades?: unknown[];
-    regras?: {
-      tempoMinimoMinutos?: number;
-    };
-  };
-}
-
-interface EadAlunoTurma {
-  matriculaId: string;
-  alunoId: string;
-  nome: string;
-  email?: string | null;
-  telefone?: string | null;
-  cpfCnpj?: string | null;
-  status: string;
-  inscricaoStatus?: string | null;
-  dataMatricula?: string | null;
-  aulasConcluidas: number;
-  totalAulas: number;
-  atividadesConcluidas: number;
-  totalAtividades: number;
-  progressoPercentual: number;
-  notaProva?: number | null;
-  certificadoStatus?: string | null;
-  certificadoNumero?: string | null;
-  valorPago?: number;
-}
-
-interface AlunoDisponivel {
-  id: string;
-  nome: string;
-  email?: string | null;
-  cpfCnpj?: string | null;
-  telefone?: string | null;
-}
-
-interface EadPagamentoTurma {
-  id: string;
-  matricula_id?: string | null;
-  nome?: string | null;
-  email?: string | null;
-  valor?: number | null;
-  status: string;
-  pago_em?: string | null;
-  confirmado_em?: string | null;
-  forma_pagamento?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  asaas_payment_id?: string | null;
 }
 
 const formatCurrency = (value?: number | null) =>
@@ -194,96 +136,37 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [turma.id]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`gestao-ead-turma-${turma.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matriculas', filter: `turma_id=eq.${turma.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_online', filter: `turma_id=eq.${turma.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ead_aluno_progresso' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'certificados_academicos', filter: `turma_id=eq.${turma.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] });
-      })
-      .subscribe();
+  useTurmaEadRealtime(turma.id);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, turma.id]);
-
-  const resumoQuery = useQuery({
-    queryKey: ['gestao-ead-turma', turma.id, 'resumo'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('ead_get_turma_dashboard', { p_turma_id: turma.id });
-      if (error) throw error;
-      return data as EadTurmaResumo;
-    },
-  });
-
-  const alunosQuery = useQuery({
-    queryKey: ['gestao-ead-turma', turma.id, 'alunos'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('ead_get_turma_alunos', { p_turma_id: turma.id });
-      if (error) throw error;
-      return data as EadAlunoTurma[];
-    },
-  });
-
-  const alunosDisponiveisQuery = useQuery({
-    queryKey: ['gestao-ead-turma', turma.id, 'alunos-disponiveis', searchAluno],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('ead_buscar_alunos_disponiveis', {
-        p_turma_id: turma.id,
-        p_search: searchAluno,
-      });
-      if (error) throw error;
-      return data as AlunoDisponivel[];
-    },
-    enabled: showAddAluno,
-  });
-
-  const liberarMutation = useMutation({
-    mutationFn: async (matriculaId: string) => {
-      const { error } = await supabase.rpc('ead_liberar_matricula', { p_matricula_id: matriculaId });
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] }),
-  });
-
-  const matricularMutation = useMutation({
-    mutationFn: async (alunoId: string) => {
-      const { error } = await supabase.rpc('ead_matricular_aluno_manual', {
-        p_turma_id: turma.id,
-        p_aluno_id: alunoId,
-      });
-      if (error) throw error;
-    },
-    onSuccess: (_, alunoId) => {
-      const alunoSelecionado = (alunosDisponiveisQuery.data || []).find((item) => item.id === alunoId);
-      const alunoNome = alunoSelecionado?.nome || 'Aluno';
+  const resumoQuery = useTurmaEadResumo(turma.id);
+  const alunosQuery = useTurmaEadAlunos(turma.id);
+  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, searchAluno, showAddAluno);
+  const liberarMutation = useLiberarMatriculaEadMutation(
+    turma.id,
+    (error: any) => toast.error('Não foi possível liberar', error?.message || 'Tente novamente em alguns instantes.'),
+  );
+  const matricularMutation = useMatricularAlunoEadMutation(
+    turma.id,
+    (alunosDisponiveisQuery.data || []) as AlunoDisponivel[],
+    {
+      onSuccess: (alunoNome) => {
       toast.success(
         'Aluno adicionado',
         `${alunoNome} foi adicionado(a) à turma sem gerar pagamento e com acesso liberado.`
       );
       setShowAddAluno(false);
       setSearchAluno('');
-      queryClient.invalidateQueries({ queryKey: ['gestao-ead-turma', turma.id] });
+      },
+      onError: (error: any) => {
+        toast.error('Não foi possível adicionar', error?.message || 'Tente novamente em alguns instantes.');
+      },
     },
-    onError: (error: any) => {
-      toast.error('Não foi possível adicionar', error?.message || 'Tente novamente em alguns instantes.');
-    },
-  });
+  );
 
   const resumo = resumoQuery.data;
   const alunos = alunosQuery.data || [];
@@ -292,19 +175,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   const alunosLiberados = alunosComAcesso.length;
   const alunosConcluidos = alunosComAcesso.filter((aluno) => normalizeStatus(aluno.status) === 'CONCLUIDO').length;
   const alunosPendentesCount = alunosPendentes.length;
-  const pagamentosQuery = useQuery({
-    queryKey: ['gestao-ead-turma', turma.id, 'pagamentos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inscricoes_online')
-        .select('id,matricula_id,nome,email,valor,status,pago_em,confirmado_em,forma_pagamento,created_at,updated_at,asaas_payment_id')
-        .eq('turma_id', turma.id)
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      return data as EadPagamentoTurma[];
-    },
-  });
+  const pagamentosQuery = useTurmaEadPagamentos(turma.id);
 
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={17} /> },

@@ -1,56 +1,56 @@
 // File: modules/gestor/cadastros/cursos-livres/cursos-livres.service.ts
 
+import { Curso } from '../cadastros.types';
 import { cadastrosService } from '../cadastros.service';
-import { CursoLivre } from './cursos-livres.types';
+
+export type CursoLivreStatusFilter = 'ativo' | 'inativo';
+
+export interface CreateCursoLivreInput {
+  nome: string;
+  descricao: string;
+  area: string;
+  versao: string;
+  cargaHoraria: number;
+  imagemUrl?: string | null;
+  publicarSite?: boolean;
+  duracaoMeses?: number;
+}
+
+export const cursosLivresQueryKeys = {
+  all: ['cadastros', 'cursos-livres'] as const,
+  list: () => [...cursosLivresQueryKeys.all, 'list'] as const,
+};
 
 export const cursosLivresService = {
-  async getAll(): Promise<CursoLivre[]> {
-    try {
-      const cursos = await cadastrosService.getCursosByModalidade('LIVRE');
-      const result: CursoLivre[] = [];
-
-      for (const c of cursos) {
-        const modulos = await cadastrosService.getGrade(c.id);
-        result.push({
-          id: c.id,
-          nome: c.nome,
-          descricao: `Curso livre de capacitação profissional em ${c.nome}.`,
-          cargaHorariaTotal: c.carga_horaria,
-          duracaoSemanas: Math.ceil(c.carga_horaria / 10) || 4,
-          area: 'Capacitação',
-          modulos: modulos
-        });
-      }
-
-      return result;
-    } catch (err) {
-      console.error('Erro no service de cursos livres:', err);
-      return [];
-    }
+  async getCursos(): Promise<Curso[]> {
+    return cadastrosService.getCursosByModalidade('LIVRE');
   },
 
-  async getById(id: string): Promise<CursoLivre | undefined> {
-    const list = await this.getAll();
-    return list.find(c => c.id === id);
-  },
-
-  async update(curso: CursoLivre): Promise<void> {
-    await cadastrosService.saveGrade(curso.id, curso.modulos);
-  },
-
-  async create(curso: CursoLivre): Promise<CursoLivre> {
-    const created = await cadastrosService.createCurso({
-      nome: curso.nome,
-      carga_horaria: curso.cargaHorariaTotal,
+  async createCurso(input: CreateCursoLivreInput): Promise<Curso> {
+    return cadastrosService.createCurso({
+      nome: input.nome,
+      carga_horaria: input.cargaHoraria,
       modalidade: 'LIVRE',
-      status: 'ativo'
+      status: 'ativo',
+      area: input.area,
+      descricao: input.descricao,
+      versao: input.versao,
+      duracao_meses: input.duracaoMeses || null,
+      imagem_url: input.imagemUrl || null,
+      publicar_site: input.publicarSite ?? false,
+      valor: null
     });
+  },
 
-    await cadastrosService.saveGrade(created.id, curso.modulos);
+  async deleteCurso(cursoId: string): Promise<void> {
+    await cadastrosService.deleteCurso(cursoId);
+  },
 
-    return {
-      ...curso,
-      id: created.id
-    };
-  }
+  async duplicateCurso(cursoId: string, nome: string, versao: string): Promise<void> {
+    await cadastrosService.duplicateCurso(cursoId, nome, versao);
+  },
+
+  async toggleStatus(cursoId: string, novoStatus: CursoLivreStatusFilter): Promise<void> {
+    await cadastrosService.toggleStatus(cursoId, novoStatus);
+  },
 };

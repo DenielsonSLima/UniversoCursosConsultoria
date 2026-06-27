@@ -44,6 +44,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
   const [liberacaoData, setLiberacaoData] = useState('');
   const [liberacaoDisciplinaId, setLiberacaoDisciplinaId] = useState('');
   const [liberacaoDiasValidade, setLiberacaoDiasValidade] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // UI Expand/Collapse
   const [showAdvancedAccess, setShowAdvancedAccess] = useState(false);
@@ -88,9 +89,33 @@ const UploadModal: React.FC<UploadModalProps> = ({
   if (!isOpen) return null;
   if (typeof window === 'undefined') return null;
 
+  const formatSizeMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(2);
+
+  const detectFileType = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toUpperCase() || 'OTHER';
+    let fileType: 'PDF' | 'DOC' | 'XLS' | 'IMG' | 'OTHER' = 'OTHER';
+    if (['PDF'].includes(ext)) fileType = 'PDF';
+    if (['DOC', 'DOCX'].includes(ext)) fileType = 'DOC';
+    if (['XLS', 'XLSX'].includes(ext)) fileType = 'XLS';
+    if (['JPG', 'PNG', 'JPEG', 'GIF', 'WEBP'].includes(ext)) fileType = 'IMG';
+    return { ext, fileType };
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      const { ext } = detectFileType(selectedFile.name);
+      const allowedExtensions = ['PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'JPG', 'PNG', 'JPEG', 'GIF', 'WEBP'];
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        alert('Arquivo excede 10MB. Selecione um arquivo menor.');
+        e.target.value = '';
+        return;
+      }
+      if (!allowedExtensions.includes(ext)) {
+        alert('Formato não suportado. Use PDF, DOC/DOCX, XLS/XLSX ou JPG/PNG/GIF/WEBP.');
+        e.target.value = '';
+        return;
+      }
       setFormData(prev => ({
         ...prev,
         file: selectedFile,
@@ -100,45 +125,82 @@ const UploadModal: React.FC<UploadModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.file) {
         alert("Selecione um arquivo.");
         return;
     }
-    
-    const poloSelected = polos.find(p => p.id === formData.poloId);
-    
-    // Simulate size and format
-    const sizeMB = (formData.file.size / (1024 * 1024)).toFixed(2);
-    const ext = formData.file.name.split('.').pop()?.toUpperCase() || 'OTHER';
-    let fileType = 'OTHER';
-    if(['PDF'].includes(ext)) fileType = 'PDF';
-    if(['DOC', 'DOCX'].includes(ext)) fileType = 'DOC';
-    if(['XLS', 'XLSX'].includes(ext)) fileType = 'XLS';
-    if(['JPG', 'PNG', 'JPEG', 'GIF', 'WEBP'].includes(ext)) fileType = 'IMG';
 
-    onUpload({
+    const { fileType } = detectFileType(formData.file.name);
+    const poloSelected = polos.find(p => p.id === formData.poloId);
+
+    if (!formData.title.trim()) {
+      alert('Informe o título do documento.');
+      return;
+    }
+
+    if (liberacaoTipo === 'POR_DATA' && !liberacaoData) {
+      alert('Para liberação por data, informe data e hora de liberação.');
+      return;
+    }
+
+    if (
+      liberacaoTipo === 'DISCIPLINA_INICIO' &&
+      (selectedDisciplinas.length === 0 || !liberacaoDisciplinaId)
+    ) {
+      alert('Para liberação por início de disciplina, selecione a disciplina gatilho e ao menos uma disciplina relacionada.');
+      return;
+    }
+
+    if (
+      liberacaoTipo === 'DISCIPLINA_INICIO' &&
+      liberacaoDiasValidade &&
+      !/^\d+$/.test(liberacaoDiasValidade)
+    ) {
+      alert('Período de acesso por dias deve conter apenas números inteiros.');
+      return;
+    }
+
+    const parsedDiasValidade = liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDiasValidade
+      ? parseInt(liberacaoDiasValidade, 10)
+      : null;
+
+    const disciplinaIds = new Set(selectedDisciplinas);
+    if (liberacaoDisciplinaId) {
+      disciplinaIds.add(liberacaoDisciplinaId);
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onUpload({
         title: formData.title,
         description: formData.description,
         fileType,
-        size: sizeMB + ' MB',
-        url: '#', // In production, this would be the actual file URL from Supabase Storage
+        size: `${formatSizeMB(formData.file.size)} MB`,
+        sizeBytes: formData.file.size,
+        url: '',
+        file: formData.file,
         targetAudience: formData.targetAudience,
         scope: formData.scope,
-        poloId: formData.scope === 'GLOBAL' ? null : formData.poloId,
+        poloId: formData.scope === 'GLOBAL' ? null : formData.poloId || null,
         poloName: formData.scope === 'GLOBAL' ? undefined : poloSelected?.nome,
         pastaId: pastaId || null,
         teacherId: teacherId || null,
         cursoIds: selectedCursos,
         turmaIds: selectedTurmas,
-        disciplinaIds: selectedDisciplinas,
+        disciplinaIds: Array.from(disciplinaIds),
         liberacaoTipo,
         liberacaoData: liberacaoTipo === 'POR_DATA' && liberacaoData ? new Date(liberacaoData).toISOString() : null,
         liberacaoDisciplinaId: liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDisciplinaId ? liberacaoDisciplinaId : null,
-        liberacaoDiasValidade: liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDiasValidade ? parseInt(liberacaoDiasValidade, 10) : null
-    });
-    onClose();
+        liberacaoDiasValidade: parsedDiasValidade
+      });
+      onClose();
+    } catch (err) {
+      alert('Não foi possível publicar o documento. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return createPortal(
@@ -165,6 +227,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
                 id="file-upload" 
                 className="hidden" 
                 onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
             />
             <label 
                 htmlFor="file-upload"
@@ -441,9 +504,10 @@ const UploadModal: React.FC<UploadModalProps> = ({
           <div className="flex justify-end pt-4">
             <button 
                 type="submit"
-                className="px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg flex items-center gap-2"
+                disabled={isSubmitting}
+                className={`px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider transition-colors shadow-lg flex items-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-900'}`}
             >
-                <Upload size={16} /> Publicar Documento
+                <Upload size={16} /> {isSubmitting ? 'Enviando...' : 'Publicar Documento'}
             </button>
           </div>
 

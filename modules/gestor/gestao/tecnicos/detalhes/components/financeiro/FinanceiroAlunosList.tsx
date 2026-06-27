@@ -1,91 +1,26 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Download, Loader2, Copy, ExternalLink } from 'lucide-react';
 import { Turma } from '../../../../gestao.types';
-import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
+import { AlunoFinanceiro } from './financeiro-alunos.service';
+import { useFinanceiroAlunos } from './hooks/useFinanceiroAlunos';
 
 
 interface FinanceiroAlunosListProps {
   turma: Turma;
 }
 
-interface AlunoFinanceiro {
-  id: string;
-  nome: string;
-  matricula: string;
-  status: 'em_dia' | 'atrasado' | 'inadimplente';
-  parcelasPagas: number;
-  totalParcelas: number;
-  cobrancaUrl?: string;
-  cobrancaDescricao?: string;
-}
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [alunos, setAlunos] = useState<AlunoFinanceiro[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchFinanceiroAlunos = async () => {
-      setLoading(true);
-      try {
-        const [
-          { data, error },
-          { data: receivables, error: receivablesError },
-        ] = await Promise.all([
-          supabase
-            .from('matriculas')
-            .select('id, status, data_matricula, parceiros(*)')
-            .eq('turma_id', turma.id),
-          supabase
-            .from('contas_receber')
-            .select('matricula_id, status, data_vencimento, asaas_invoice_url, descricao')
-            .eq('turma_id', turma.id),
-        ]);
-
-        if (error) throw error;
-        if (receivablesError) throw receivablesError;
-
-        const mapped: AlunoFinanceiro[] = (data || [])
-          .filter((m: any) => m.parceiros)
-          .map((m: any) => {
-            const studentReceivables = (receivables || []).filter((item: any) => item.matricula_id === m.id);
-            const hasOverdue = studentReceivables.some((item: any) =>
-              item.status === 'VENCIDO'
-              || (item.status === 'PENDENTE' && item.data_vencimento < new Date().toISOString().slice(0, 10))
-            );
-            const paid = studentReceivables.filter((item: any) => item.status === 'PAGO').length;
-            const nextCharge = studentReceivables
-              .filter((item: any) => ['PENDENTE', 'VENCIDO'].includes(item.status) && item.asaas_invoice_url)
-              .sort((a: any, b: any) => String(a.data_vencimento).localeCompare(String(b.data_vencimento)))[0];
-
-            return {
-              id: m.id,
-              nome: m.parceiros.nome,
-              matricula: formatMatricula(m.id, m.data_matricula, m.parceiros.polo_id),
-              status: hasOverdue ? 'inadimplente' : 'em_dia',
-              parcelasPagas: paid,
-              totalParcelas: studentReceivables.length,
-              cobrancaUrl: nextCharge?.asaas_invoice_url,
-              cobrancaDescricao: nextCharge?.descricao,
-            };
-          });
-
-        setAlunos(mapped);
-      } catch (err) {
-        console.error('Erro ao buscar dados financeiros dos alunos:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFinanceiroAlunos();
-  }, [turma.id]);
+  const { data: alunos = [], isLoading: loading } = useFinanceiroAlunos(turma.id);
 
   const filteredAlunos = alunos.filter(a => 
     a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -170,6 +105,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
             <tr>
               <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Aluno</th>
               <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Matrícula</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Valores</th>
               <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Progresso Pagto.</th>
               <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">Ações</th>
@@ -178,7 +114,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
           <tbody className="divide-y divide-slate-50">
             {filteredAlunos.length === 0 ? (
                 <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm">
                         <XCircle size={32} className="mx-auto mb-2 opacity-50 text-slate-300" />
                         <p className="font-bold">Nenhum aluno matriculado na turma.</p>
                         <p className="text-xs text-slate-500 mt-0.5">Vincule alunos na aba "Alunos" para gerar lançamentos financeiros.</p>
@@ -201,6 +137,14 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
                     </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500 font-mono">{aluno.matricula}</td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase text-emerald-700">Mat. {formatCurrency(aluno.valorMatricula)}</p>
+                        <p className="text-[10px] font-bold uppercase text-slate-500">
+                          Mens. {aluno.valorMensalidade > 0 ? formatCurrency(aluno.valorMensalidade) : 'aguardando baixa'}
+                        </p>
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                             <div className="flex-1 h-2 w-24 bg-slate-100 rounded-full overflow-hidden">

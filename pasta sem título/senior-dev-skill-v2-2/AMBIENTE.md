@@ -11,11 +11,13 @@
 |---|---|---|
 | Node.js | 20.x LTS | `node --version` |
 | npm | 10.x | `npm --version` |
-| Supabase CLI | 1.x | `supabase --version` |
+| Supabase CLI | 1.x, opcional apenas para ambiente local | `supabase --version` |
 | Git | qualquer | `git --version` |
 | Docker Desktop | qualquer | `docker --version` |
 
 > Docker é necessário para rodar o Supabase localmente.
+
+> Operações remotas no projeto Supabase da Universo Cursos e Consultoria devem ser feitas via MCP Supabase. Não use Supabase CLI para deploy remoto, migrations remotas, `db push`, `link` remoto ou Edge Functions remotas; a CLI já apresentou `401 Unauthorized` neste projeto enquanto o MCP estava autorizado.
 
 ---
 
@@ -111,7 +113,7 @@ supabase gen types typescript             # Gera tipos a partir do banco
 
 # Edge Functions
 supabase functions serve                  # Serve Edge Functions localmente
-supabase functions deploy nome-funcao     # Deploy de uma função específica
+# Deploy remoto de Edge Functions: usar MCP Supabase (`deploy_edge_function`)
 
 # Qualidade
 npm run lint             # ESLint
@@ -166,6 +168,7 @@ Lançamentos de exemplo para testar extrato
 | Tipos desatualizados | Schema mudou sem regenerar | `supabase gen types typescript` |
 | RLS bloqueando query | Usuário não autenticado localmente | Faça login no app antes |
 | Edge Function com erro 401 | JWT inválido ou expirado | Refaça login |
+| Supabase CLI com `401 Unauthorized` em operação remota | CLI sem autenticação válida, mesmo com MCP autorizado | Não use CLI para remoto; execute via MCP Supabase |
 | Migração falhando | SQL com erro de sintaxe | Verifique o arquivo em `supabase/migrations/` |
 
 ---
@@ -179,3 +182,4 @@ Se você é um agente gerando código para este projeto:
 3. Variáveis disponíveis em Edge Functions: todas do Supabase + as definidas em `supabase/functions/.env`
 4. **Nunca gere código que usa `SERVICE_ROLE_KEY` no frontend**
 5. Ao gerar migrações, use o formato: `YYYYMMDDHHMMSS_descricao_da_mudanca.sql`
+6. Para aplicar migrations remotas, configurar RLS remoto ou fazer deploy de Edge Functions remotas, use MCP Supabase. Não tente Supabase CLI neste projeto.

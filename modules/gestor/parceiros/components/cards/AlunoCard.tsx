@@ -5,6 +5,7 @@ import { GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
+import { formatCpf } from '../../../../../lib/documentFormatters';
 
 interface AlunoCardProps {
   data: any;
@@ -26,6 +27,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   }, []);
 
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
+  const formattedCpf = formatCpf(data.cpf);
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'Aluno', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -69,7 +71,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
               {data.nome}
             </h3>
             <div className="text-[11px] text-slate-400 font-medium font-mono flex items-center gap-1.5 flex-wrap">
-              {data.cpf && <span>{data.cpf}</span>}
+              {data.cpf && <span>{formattedCpf}</span>}
               {data.cpf && <span className="text-slate-300">•</span>}
               <span className="text-purple-650 font-bold uppercase tracking-wide">
                 {formatMatricula(data.id, data.createdAt, data.poloId)}

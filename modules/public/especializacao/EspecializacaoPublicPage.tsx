@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Award, Calendar, Clock, Loader2, Search, Filter, X, Sparkles, ArrowRight, FileText, CheckCircle2 } from 'lucide-react';
+import { Award, Calendar, Clock, Loader2, Search, Filter, X, Sparkles, ArrowRight, FileText, CheckCircle2, MapPin } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
+import { fetchPublicCoursesWithOpenTurmas, formatPublicTurmaInicio, formatPublicTurmaPolo, getCursoTurmasAbertas } from '../courseAvailability';
 
 const EspecializacaoPublicPage: React.FC = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
+  const isDevelopmentMode = true;
 
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,16 +48,7 @@ const EspecializacaoPublicPage: React.FC = () => {
   const { data: cursos = [], isLoading: loading } = useQuery<any[]>({
     queryKey: ['cursosEspecializacaoPublic'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cursos')
-        .select('*')
-        .eq('modalidade', 'ESPECIALIZACAO')
-        .eq('status', 'ativo')
-        .eq('publicar_site', true)
-        .order('nome', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+      return fetchPublicCoursesWithOpenTurmas('ESPECIALIZACAO');
     },
     enabled: isDevelopmentMode,
   });
@@ -254,6 +246,7 @@ const EspecializacaoPublicPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
                   {filteredCursos.map((curso) => {
                     const duracao = curso.duracao_meses || 6;
+                    const turmasAbertas = getCursoTurmasAbertas(curso);
                     return (
                       <div
                         key={curso.id}
@@ -286,6 +279,22 @@ const EspecializacaoPublicPage: React.FC = () => {
                             <span className="text-slate-300">|</span>
                             <span className="flex items-center gap-1"><Calendar size={14} className="text-blue-500" /> {duracao} Meses</span>
                           </div>
+
+                          {turmasAbertas.length > 0 ? (
+                            <div className="mb-4 space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Turmas abertas por polo</p>
+                              {turmasAbertas.slice(0, 3).map((turma: any) => (
+                                <div key={turma.id} className="flex items-start gap-2 text-[11px] font-bold text-emerald-900">
+                                  <MapPin size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                                  <span>{formatPublicTurmaPolo(turma)} • início {formatPublicTurmaInicio(turma)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-[11px] font-bold text-amber-800">
+                              Aguardando abertura de turma presencial.
+                            </div>
+                          )}
 
                           {/* Descrição */}
                           <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed font-medium">

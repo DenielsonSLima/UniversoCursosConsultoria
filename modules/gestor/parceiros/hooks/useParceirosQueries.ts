@@ -4,19 +4,25 @@ import { parceirosService } from '../parceiros.service';
 
 export const parceirosQueryKeys = {
   all: ['parceiros'] as const,
-  list: ['parceiros', 'todos'] as const,
+  list: (poloId?: string | null, includeGlobal?: boolean) => ['parceiros', 'todos', poloId || 'todos', includeGlobal ? 'global' : 'local'] as const,
   kpis: ['parceiros_kpis'] as const,
   detail: (id: string) => ['parceiro', id] as const,
   turmasDisponiveis: ['turmas_disponiveis'] as const,
   matriculas: ['matriculas'] as const,
 };
 
-export const useParceirosQueries = (showEnrollmentModalForAlunoId: string | null) => {
+export const useParceirosQueries = (
+  showEnrollmentModalForAlunoId: string | null,
+  scope: { poloId?: string | null; includeGlobal?: boolean } = {},
+) => {
   const queryClient = useQueryClient();
 
   const parceirosQuery = useQuery<any[]>({
-    queryKey: parceirosQueryKeys.list,
-    queryFn: () => parceirosService.getAll('todos'),
+    queryKey: parceirosQueryKeys.list(scope.poloId, scope.includeGlobal),
+    queryFn: () => parceirosService.getAll('todos', {
+      poloId: scope.poloId || undefined,
+      includeGlobal: scope.includeGlobal,
+    }),
   });
 
   const turmasDisponiveisQuery = useQuery({

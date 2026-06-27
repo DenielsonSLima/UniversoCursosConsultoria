@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { CreditCard, TrendingUp, CheckCircle, Clock, Copy, X, FileText, BadgeAlert, ExternalLink } from 'lucide-react';
+import { CalendarDays, CheckCircle, Clock, Copy, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download } from 'lucide-react';
+import FinanceiroCardItem from './FinanceiroCardItem';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface FinanceiroPageProps {
   alunoId: string;
@@ -10,8 +13,19 @@ interface FinanceiroPageProps {
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [showPixModal, setShowPixModal] = useState<any | null>(null);
   const [showBoletoModal, setShowBoletoModal] = useState<any | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [notice, setNotice] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [modalityFilter, setModalityFilter] = useState<'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO'>('TODOS');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [statusTab, setStatusTab] = useState<'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS'>('ABERTO');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Fetch actual contas_receber from Supabase
   const { data: dbRecords = [], isLoading } = useQuery<any[]>({
@@ -19,7 +33,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_receber')
-        .select('*')
+        .select(`
+          *,
+          turmas!left(
+            nome,
+            cursos!left(
+              modalidade,
+              nome
+            )
+          )
+        `)
         .eq('cliente_id', alunoId)
         .order('data_vencimento', { ascending: true });
       
@@ -30,6 +53,139 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
+
+  const getInstallmentModality = (inst: any) => {
+    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
+    const rawModality = String(curso?.modalidade || '').toUpperCase();
+
+    if (['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(rawModality)) {
+      return rawModality;
+    }
+
+    return 'OUTROS';
+  };
+
+  const getInstallmentCourseName = (inst: any) => {
+    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
+    return curso?.nome || 'Sem curso vinculado';
+  };
+
+  const getInstallmentClassName = (modality: string) => {
+    const palette = {
+      EAD: 'bg-blue-50 text-blue-700 border-blue-100',
+      TECNICO: 'bg-violet-50 text-violet-700 border-violet-100',
+      LIVRE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      ESPECIALIZACAO: 'bg-amber-50 text-amber-700 border-amber-100',
+      OUTROS: 'bg-slate-50 text-slate-700 border-slate-100'
+    };
+
+    return `${palette[modality as keyof typeof palette] || palette.OUTROS}`;
+  };
+
+  const parseDate = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const installmentRows = installments.map((inst) => {
+    const modality = getInstallmentModality(inst);
+    const dueDate = parseDate(inst.data_vencimento);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isOverdue = String(inst.status || '').toUpperCase() === 'VENCIDO' || (String(inst.status || '').toUpperCase() === 'PENDENTE' && Boolean(dueDate) && dueDate < today);
+    return {
+      ...inst,
+      modalidade: modality,
+      cursoNome: getInstallmentCourseName(inst),
+      turmaNome: (Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas)?.nome || 'N/A',
+      isOverdue
+    };
+  });
+
+  const filteredBySearchDateModality = installmentRows.filter((inst) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = !normalizedSearch || [
+      inst.descricao,
+      inst.cursoNome,
+      inst.turmaNome,
+      inst.status,
+      inst.forma_pagamento
+    ].some((item) => String(item || '').toLowerCase().includes(normalizedSearch));
+
+    const dueDate = parseDate(inst.data_vencimento);
+    const start = startDate ? parseDate(startDate) : null;
+    const end = endDate ? parseDate(endDate) : null;
+    const matchesDate = (() => {
+      if (!dueDate) return true;
+      if (start && dueDate < start) return false;
+      if (end && dueDate > end) return false;
+      return true;
+    })();
+
+    const matchesModality = modalityFilter === 'TODOS' ? true : inst.modalidade === modalityFilter;
+
+    return matchesSearch && matchesDate && matchesModality;
+  });
+
+  const tabCounts = {
+    ABERTO: filteredBySearchDateModality.filter((inst) => String(inst.status || '').toUpperCase() === 'PENDENTE' && !inst.isOverdue).length,
+    ATRASADO: filteredBySearchDateModality.filter((inst) => inst.isOverdue).length,
+    PAGO: filteredBySearchDateModality.filter((inst) => String(inst.status || '').toUpperCase() === 'PAGO').length,
+    TODOS: filteredBySearchDateModality.length
+  };
+
+  const filteredInstallments = filteredBySearchDateModality.filter((inst) => {
+    const status = String(inst.status || '').toUpperCase();
+    const matchesStatus = (() => {
+      if (statusTab === 'ABERTO') return status === 'PENDENTE' && !inst.isOverdue;
+      if (statusTab === 'ATRASADO') return inst.isOverdue;
+      if (statusTab === 'PAGO') return status === 'PAGO';
+      return true;
+    })();
+
+    return matchesStatus;
+  });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
+
+  useEffect(() => {
+    const hasOpenModal = Boolean(showPixModal || showBoletoModal || selectedReceipt);
+    if (!hasOpenModal) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (selectedReceipt) closeReceipt();
+        if (showPixModal) setShowPixModal(null);
+        if (showBoletoModal) setShowBoletoModal(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPixModal, showBoletoModal, selectedReceipt]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInstallments.length / pageSize));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const pageOffset = (currentPageSafe - 1) * pageSize;
+  const visibleInstallments = filteredInstallments.slice(pageOffset, pageOffset + pageSize);
+  const groupedVisibleInstallments = visibleInstallments.reduce<Record<string, any[]>>((acc, inst) => {
+    const modality = inst.modalidade || 'OUTROS';
+    if (!acc[modality]) acc[modality] = [];
+    acc[modality].push(inst);
+    return acc;
+  }, {});
+  const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
+
+  const safeSetPage = (page: number) => {
+    if (page < 1) return;
+    if (page > totalPages) return;
+    setCurrentPage(page);
+  };
 
   // Calculations
   const totalPaid = installments
@@ -67,245 +223,107 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return dateStr;
   };
 
-  const escapeHtml = (value: unknown) => String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
   const openReceipt = (inst: any) => {
     if (String(inst.status || '').toUpperCase() !== 'PAGO') {
       setNotice('O recibo fica disponível somente para cobranças pagas.');
       return;
     }
 
-    const receiptWindow = window.open('', '_blank', 'width=900,height=720');
-    if (!receiptWindow) {
-      setNotice('O navegador bloqueou a abertura do recibo. Permita pop-ups para visualizar.');
-      return;
-    }
-
-    const receiptNumber = String(inst.id || '').slice(0, 8).toUpperCase() || 'RECIBO';
-    const paidDate = formatDate(inst.data_pagamento || inst.updated_at || inst.data_vencimento);
-    const paymentMethod = inst.forma_pagamento || inst.origem_pagamento || 'Pagamento confirmado';
-    const paidValue = Number(inst.valor_pago || inst.valor || 0);
-
-    receiptWindow.document.write(`
-      <!doctype html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Recibo ${escapeHtml(receiptNumber)} - Universo Cursos</title>
-          <style>
-            body {
-              margin: 0;
-              padding: 32px;
-              background: #eef4fb;
-              color: #001a33;
-              font-family: Arial, sans-serif;
-            }
-            .receipt {
-              max-width: 760px;
-              margin: 0 auto;
-              background: #fff;
-              border: 1px solid #dbe7f3;
-              border-radius: 24px;
-              padding: 32px;
-              box-shadow: 0 20px 50px rgba(0, 26, 51, 0.12);
-            }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              gap: 24px;
-              border-bottom: 2px solid #eef4fb;
-              padding-bottom: 20px;
-              margin-bottom: 24px;
-            }
-            .brand {
-              font-size: 24px;
-              font-weight: 900;
-              color: #1238d8;
-              letter-spacing: .04em;
-              text-transform: uppercase;
-            }
-            .subtitle {
-              color: #64748b;
-              font-size: 12px;
-              font-weight: 700;
-              margin-top: 6px;
-              text-transform: uppercase;
-              letter-spacing: .12em;
-            }
-            .badge {
-              align-self: flex-start;
-              background: #ecfdf5;
-              color: #047857;
-              border: 1px solid #bbf7d0;
-              border-radius: 999px;
-              padding: 10px 14px;
-              font-size: 12px;
-              font-weight: 900;
-              text-transform: uppercase;
-              letter-spacing: .12em;
-            }
-            h1 {
-              margin: 0 0 20px;
-              font-size: 30px;
-              line-height: 1.05;
-              text-transform: uppercase;
-            }
-            .grid {
-              display: grid;
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 14px;
-              margin: 22px 0;
-            }
-            .field {
-              border: 1px solid #e2e8f0;
-              border-radius: 16px;
-              padding: 14px;
-              background: #f8fafc;
-            }
-            .field strong {
-              display: block;
-              color: #94a3b8;
-              font-size: 10px;
-              text-transform: uppercase;
-              letter-spacing: .14em;
-              margin-bottom: 6px;
-            }
-            .field span {
-              font-size: 14px;
-              font-weight: 800;
-            }
-            .description {
-              border: 1px solid #dbeafe;
-              background: #eff6ff;
-              border-radius: 18px;
-              padding: 18px;
-              margin: 20px 0;
-              font-weight: 800;
-              line-height: 1.45;
-            }
-            .total {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-radius: 20px;
-              background: #001a33;
-              color: #fff;
-              padding: 18px 22px;
-              margin-top: 20px;
-            }
-            .total small {
-              display: block;
-              color: #a8c7ee;
-              font-weight: 900;
-              text-transform: uppercase;
-              letter-spacing: .14em;
-            }
-            .total b {
-              font-size: 28px;
-            }
-            .footer {
-              margin-top: 24px;
-              color: #64748b;
-              font-size: 12px;
-              line-height: 1.6;
-            }
-            .actions {
-              display: flex;
-              justify-content: flex-end;
-              gap: 10px;
-              margin-top: 26px;
-            }
-            button {
-              border: 0;
-              border-radius: 12px;
-              padding: 12px 16px;
-              font-weight: 900;
-              text-transform: uppercase;
-              letter-spacing: .08em;
-              cursor: pointer;
-            }
-            .print {
-              background: #2563eb;
-              color: #fff;
-            }
-            .close {
-              background: #e2e8f0;
-              color: #334155;
-            }
-            @media print {
-              body { background: #fff; padding: 0; }
-              .receipt { box-shadow: none; border: 0; }
-              .actions { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <main class="receipt">
-            <section class="header">
-              <div>
-                <div class="brand">Universo Cursos e Consultoria</div>
-                <div class="subtitle">Comprovante de pagamento</div>
-              </div>
-              <div class="badge">Pago</div>
-            </section>
-
-            <h1>Recibo de pagamento</h1>
-
-            <div class="grid">
-              <div class="field">
-                <strong>Número do recibo</strong>
-                <span>${escapeHtml(receiptNumber)}</span>
-              </div>
-              <div class="field">
-                <strong>Data do pagamento</strong>
-                <span>${escapeHtml(paidDate)}</span>
-              </div>
-              <div class="field">
-                <strong>Forma de pagamento</strong>
-                <span>${escapeHtml(paymentMethod)}</span>
-              </div>
-              <div class="field">
-                <strong>Vencimento original</strong>
-                <span>${escapeHtml(formatDate(inst.data_vencimento))}</span>
-              </div>
-            </div>
-
-            <div class="description">
-              ${escapeHtml(inst.descricao)}
-            </div>
-
-            <div class="total">
-              <div>
-                <small>Valor recebido</small>
-                <b>${escapeHtml(formatCurrency(paidValue))}</b>
-              </div>
-              <div>
-                <small>Status</small>
-                <b>Pago</b>
-              </div>
-            </div>
-
-            <p class="footer">
-              Este recibo confirma o pagamento registrado no Portal do Aluno da Universo Cursos e Consultoria.
-              Em caso de dúvidas, entre em contato com a secretaria para validação administrativa.
-            </p>
-
-            <div class="actions">
-              <button class="close" onclick="window.close()">Fechar</button>
-              <button class="print" onclick="window.print()">Imprimir / Salvar PDF</button>
-            </div>
-          </main>
-        </body>
-      </html>
-    `);
-    receiptWindow.document.close();
+    setSelectedReceipt(inst);
   };
+
+  const closeReceipt = () => {
+    setSelectedReceipt(null);
+  };
+
+  const downloadReceiptPdf = async () => {
+    if (!selectedReceipt || !receiptRef.current) return;
+    const originalNotice = notice;
+    setIsGeneratingReceiptPdf(true);
+
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 190;
+      const pageHeight = 277;
+      const ratio = imgWidth / canvas.width;
+      const imgHeight = canvas.height * ratio;
+      let remainingHeight = canvas.height;
+      const pagePixelHeight = pageHeight / ratio;
+      let position = 0;
+      let pageIndex = 0;
+
+      while (remainingHeight > 0) {
+        const sliceHeight = Math.min(pagePixelHeight, remainingHeight);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeight;
+        const ctx = sliceCanvas.getContext('2d');
+
+        if (!ctx) {
+          throw new Error('Não foi possível preparar o canvas do recibo.');
+        }
+
+        ctx.drawImage(
+          canvas,
+          0,
+          position,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight
+        );
+
+        const sliceData = sliceCanvas.toDataURL('image/png');
+        const sliceHeightMm = sliceHeight * ratio;
+
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(sliceData, 'PNG', 10, 10, imgWidth, sliceHeightMm);
+        remainingHeight -= sliceHeight;
+        position += sliceHeight;
+        pageIndex += 1;
+      }
+
+      const fileName = `recibo-${String(selectedReceipt.id || '').slice(0, 8).toUpperCase() || 'PAGO'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      pdf.save(fileName);
+      setNotice('Recibo baixado com sucesso.');
+      setTimeout(() => setNotice(originalNotice), 2000);
+    } catch {
+      setNotice('Não foi possível gerar o PDF do recibo. Tente novamente.');
+      setTimeout(() => setNotice(''), 2000);
+    } finally {
+      setIsGeneratingReceiptPdf(false);
+    }
+  };
+
+  const getReceiptPayload = (inst: any) => {
+    const receiptNumber = String(inst?.id || '').slice(0, 8).toUpperCase() || 'RECIBO';
+    return {
+      receiptNumber,
+      paidAt: formatDate(inst?.data_pagamento || inst?.updated_at || inst?.data_vencimento),
+      paymentMethod: inst?.forma_pagamento || inst?.origem_pagamento || 'Pagamento confirmado',
+      dueDate: formatDate(inst?.data_vencimento),
+      description: inst?.descricao || 'Recibo de pagamento',
+      paidValue: formatCurrency(Number(inst?.valor_pago || inst?.valor || 0)),
+      status: String(inst?.status || 'PAGO').toUpperCase(),
+      courseName: inst?.cursoNome || getInstallmentCourseName(inst),
+      turmaNome: inst?.turmaNome || 'N/A',
+      enrollment: inst?.turma_id || 'Sem vínculo',
+      generatedAt: formatDate(new Date().toISOString().slice(0, 10))
+    };
+  };
+
+  const receiptPayload = selectedReceipt ? getReceiptPayload(selectedReceipt) : null;
 
   const getInstallmentStatusBadge = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -336,6 +354,69 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       default:
         return null;
     }
+  };
+
+  const getModalityLabel = (modality: string) => {
+    const map: Record<string, string> = {
+      EAD: 'EAD',
+      TECNICO: 'Técnico',
+      LIVRE: 'Livre',
+      ESPECIALIZACAO: 'Especialização',
+      OUTROS: 'Outros'
+    };
+
+    return map[modality] || 'Outros';
+  };
+
+  const renderActions = (inst: any) => {
+    if (['PENDENTE', 'VENCIDO'].includes(inst.status)) {
+      if (inst.asaas_invoice_url) {
+        return (
+          <div className="flex justify-start gap-2">
+            <a
+              href={inst.asaas_invoice_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+            >
+              <ExternalLink size={12} /> Pagar agora
+            </a>
+            <button
+              onClick={() => copyPaymentLink(inst.asaas_invoice_url)}
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+            >
+              Copiar link
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex justify-start gap-2">
+          <button
+            onClick={() => setShowPixModal(inst)}
+            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+          >
+            Pagar Pix
+          </button>
+          <button
+            onClick={() => setShowBoletoModal(inst)}
+            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+          >
+            Boleto
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => openReceipt(inst)}
+        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+      >
+        Recibo
+      </button>
+    );
   };
 
   if (isLoading) {
@@ -384,7 +465,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         </div>
       </div>
 
-      {/* Invoice Table / List */}
+      {/* Filter + List + Views */}
       <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <FileText size={16} className="text-blue-500" />
@@ -397,97 +478,249 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-medium text-slate-500">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-black uppercase tracking-wider">
-                <th className="py-4 px-4">Descrição</th>
-                <th className="py-4 px-4">Vencimento</th>
-                <th className="py-4 px-4">Valor</th>
-                <th className="py-4 px-4">Status</th>
-                <th className="py-4 px-4">Pagamento</th>
-                <th className="py-4 px-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {installments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-xs font-bold text-slate-400">
-                    Nenhuma cobrança registrada para este aluno.
-                  </td>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="md:col-span-2">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
+              <span className="inline-flex items-center gap-1"><Search size={12} /> Buscar</span>
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por descrição, curso ou status"
+              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
+              <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data inicial</span>
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
+              <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data final</span>
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
+              <span className="inline-flex items-center gap-1"><Filter size={12} /> Tipo</span>
+            </label>
+            <select
+              value={modalityFilter}
+              onChange={(e) => setModalityFilter(e.target.value as 'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO')}
+              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+            >
+              <option value="TODOS">Todos os tipos</option>
+              <option value="EAD">EAD</option>
+              <option value="TECNICO">Técnico</option>
+              <option value="LIVRE">Livre</option>
+              <option value="ESPECIALIZACAO">Especialização</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="sr-only">Visualização</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                title="Visualização em tabela"
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors inline-flex items-center justify-center ${
+                  viewMode === 'table'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                }`}
+              >
+                <List size={16} />
+              </button>
+              <button
+                title="Visualização em cards"
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors inline-flex items-center justify-center ${
+                  viewMode === 'cards'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                }`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4 mt-4">
+          {[
+            { key: 'ABERTO', label: 'Em aberto', count: tabCounts.ABERTO },
+            { key: 'ATRASADO', label: 'Atrasado', count: tabCounts.ATRASADO },
+            { key: 'PAGO', label: 'Pagos', count: tabCounts.PAGO },
+            { key: 'TODOS', label: 'Todos', count: tabCounts.TODOS }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusTab(tab.key as 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS')}
+              className={`px-3 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors ${
+                statusTab === tab.key
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1">
+                {tab.label}
+                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-black">{tab.count}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500 font-bold">
+          <span>
+            Exibindo <strong className="font-black">{filteredInstallments.length}</strong> cobranças
+            {filteredInstallments.length !== installments.length && (
+              <span> de <strong className="font-black">{installments.length}</strong> no total</span>
+            )}
+          </span>
+          {modalityFilter !== 'TODOS' && <span className="uppercase text-blue-600">Tipo: {getModalityLabel(modalityFilter)}</span>}
+        </div>
+
+        {viewMode === 'table' ? (
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-left text-xs font-medium text-slate-500">
+              <thead>
+                <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-black uppercase tracking-wider">
+                  <th className="py-4 px-4">Descrição</th>
+                  <th className="py-4 px-4">Tipo</th>
+                  <th className="py-4 px-4">Vencimento</th>
+                  <th className="py-4 px-4">Valor</th>
+                  <th className="py-4 px-4">Status</th>
+                  <th className="py-4 px-4">Pagamento</th>
+                  <th className="py-4 px-4 text-right">Ações</th>
                 </tr>
-              ) : installments.map((inst) => (
-                <tr key={inst.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4.5 px-4 font-bold text-slate-800">{inst.descricao}</td>
-                  <td className="py-4.5 px-4">{formatDate(inst.data_vencimento)}</td>
-                  <td className="py-4.5 px-4 font-bold text-[#001a33]">{formatCurrency(inst.valor)}</td>
-                  <td className="py-4.5 px-4">{getInstallmentStatusBadge(inst.status)}</td>
-                  <td className="py-4.5 px-4">
-                    {inst.status === 'PAGO' ? (
-                      <span className="text-[10px] font-bold text-slate-650 bg-slate-100 px-2 py-0.5 rounded">
-                        {formatDate(inst.data_pagamento)} via {inst.forma_pagamento || 'Pix'}
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visibleInstallments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-xs font-bold text-slate-400">
+                      Nenhuma cobrança encontrada com os filtros atuais.
+                    </td>
+                  </tr>
+                ) : visibleInstallments.map((inst) => (
+                  <tr key={inst.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="py-4.5 px-4 font-bold text-slate-800">{inst.descricao}</td>
+                    <td className="py-4.5 px-4">
+                      <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${getInstallmentClassName(inst.modalidade)}`}>
+                        {getModalityLabel(inst.modalidade)}
                       </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 font-bold">—</span>
-                    )}
-                  </td>
-                  <td className="py-4.5 px-4 text-right">
-                    {['PENDENTE', 'VENCIDO'].includes(inst.status) ? (
-                      <div className="flex justify-end gap-2">
-                        {inst.asaas_invoice_url ? (
-                          <>
-                            <a
-                              href={inst.asaas_invoice_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                            >
-                              <ExternalLink size={12} /> Pagar agora
-                            </a>
-                            <button 
-                              onClick={() => copyPaymentLink(inst.asaas_invoice_url)}
-                              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                            >
-                              Copiar link
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button 
-                              onClick={() => setShowPixModal(inst)}
-                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                            >
-                              Pagar Pix
-                            </button>
-                            <button 
-                              onClick={() => setShowBoletoModal(inst)}
-                              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                            >
-                              Boleto
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => openReceipt(inst)}
-                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-                      >
-                        Recibo
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="py-4.5 px-4">{formatDate(inst.data_vencimento)}</td>
+                    <td className="py-4.5 px-4 font-bold text-[#001a33]">{formatCurrency(inst.valor)}</td>
+                    <td className="py-4.5 px-4">{getInstallmentStatusBadge(inst.status)}</td>
+                    <td className="py-4.5 px-4">
+                      {inst.status === 'PAGO' ? (
+                        <span className="text-[10px] font-bold text-slate-650 bg-slate-100 px-2 py-0.5 rounded">
+                          {formatDate(inst.data_pagamento)} via {inst.forma_pagamento || 'Pix'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-bold">—</span>
+                      )}
+                    </td>
+                    <td className="py-4.5 px-4 text-right">{renderActions(inst)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-6">
+            {visibleInstallments.length === 0 ? (
+              <div className="px-4 py-12 text-center text-xs font-bold text-slate-400">
+                Nenhuma cobrança encontrada com os filtros atuais.
+              </div>
+            ) : modalityOrder.map((modality) => {
+              const installmentsByModality = groupedVisibleInstallments[modality] || [];
+              if (installmentsByModality.length === 0) return null;
+
+              return (
+                <div key={modality} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-[#001a33]">
+                      {getModalityLabel(modality)}
+                    </h4>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                      {installmentsByModality.length} item{installmentsByModality.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {installmentsByModality.map((inst) => (
+                      <FinanceiroCardItem
+                        key={inst.id}
+                        installment={inst}
+                        formatCurrency={formatCurrency}
+                        formatDate={formatDate}
+                        getModalityLabel={getModalityLabel}
+                        getModalityClassName={getInstallmentClassName}
+                        getInstallmentStatusBadge={getInstallmentStatusBadge}
+                        onCopyLink={copyPaymentLink}
+                        onOpenReceipt={openReceipt}
+                        onOpenPix={setShowPixModal}
+                        onOpenBoleto={setShowBoletoModal}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-[11px] text-slate-500 font-bold">
+            Página {currentPageSafe} de {totalPages}
+          </p>
+          <div className="inline-flex items-center gap-2">
+            <button
+              onClick={() => safeSetPage(currentPageSafe - 1)}
+              disabled={currentPageSafe === 1}
+              className="px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-slate-100 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => safeSetPage(currentPageSafe + 1)}
+              disabled={currentPageSafe === totalPages}
+              className="px-3 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-slate-100 text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Próxima
+            </button>
+          </div>
         </div>
       </div>
 
       {/* PIX Modal Overlay */}
       {showPixModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fadeIn flex flex-col items-center text-center">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
+          onClick={() => setShowPixModal(null)}
+        >
+          <div
+            className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fadeIn flex flex-col items-center text-center"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
             <button 
               onClick={() => setShowPixModal(null)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
@@ -547,8 +780,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
       {/* BOLETO Modal Overlay */}
       {showBoletoModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
+          onClick={() => setShowBoletoModal(null)}
+        >
+          <div
+            className="bg-white rounded-[2.5rem] p-8 max-w-xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
             <button 
               onClick={() => setShowBoletoModal(null)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
@@ -633,6 +874,119 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 className="px-5 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors shadow-md"
               >
                 Baixar PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recibo Modal Overlay */}
+      {selectedReceipt && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
+          onClick={closeReceipt}
+        >
+          <div
+            className="bg-white rounded-[1.75rem] p-5 sm:p-6 max-w-2xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              onClick={closeReceipt}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex flex-col gap-2 mb-6">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Universo Cursos e Consultoria</p>
+              <h4 className="text-xl font-black text-[#001a33]">Recibo de pagamento</h4>
+              <p className="text-[10px] text-slate-500 font-medium">
+                Comprovante financeiro para consulta e conferência
+              </p>
+            </div>
+
+            <div
+              ref={receiptRef}
+              className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 print-area"
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:justify-between">
+                <div>
+                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-[0.2em]">Número do Recibo</p>
+                  <p className="text-base font-black text-[#001a33] mt-1">{receiptPayload?.receiptNumber}</p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest">
+                    {receiptPayload?.status}
+                  </span>
+                  <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Gerado em {receiptPayload?.generatedAt}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                <div className="rounded-xl border border-slate-150 bg-white p-3">
+                  <p className="text-[9px] text-slate-400 font-black uppercase">Pagamento</p>
+                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.paidAt}</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium">{receiptPayload?.paymentMethod}</p>
+                </div>
+                <div className="rounded-xl border border-slate-150 bg-white p-3">
+                  <p className="text-[9px] text-slate-400 font-black uppercase">Vencimento original</p>
+                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.dueDate || '—'}</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Data de referência</p>
+                </div>
+                <div className="rounded-xl border border-slate-150 bg-white p-3">
+                  <p className="text-[9px] text-slate-400 font-black uppercase">Curso</p>
+                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.courseName}</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Turma: {receiptPayload?.turmaNome}</p>
+                </div>
+                <div className="rounded-xl border border-slate-150 bg-white p-3">
+                  <p className="text-[9px] text-slate-400 font-black uppercase">Associação</p>
+                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.enrollment}</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Matrícula / vínculo</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-indigo-700">Descrição</p>
+                <p className="text-xs text-indigo-900 font-semibold mt-1.5 leading-relaxed">{receiptPayload?.description}</p>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-[#001a33] text-white p-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-indigo-200">Valor recebido</p>
+                  <p className="text-3xl font-black mt-1 text-white">{receiptPayload?.paidValue}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-indigo-200">Status</p>
+                  <p className="text-sm font-black mt-1 text-emerald-300">{receiptPayload?.status}</p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-[9px] text-slate-500 leading-relaxed">
+                Este documento foi emitido automaticamente em razão de pagamento confirmado no Portal do Aluno.
+                Em caso de inconsistência, conserve este comprovante e procure a secretaria.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                onClick={closeReceipt}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={downloadReceiptPdf}
+                disabled={isGeneratingReceiptPdf}
+                className={`px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors shadow-md inline-flex items-center gap-2 justify-center ${
+                  isGeneratingReceiptPdf
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                }`}
+              >
+                <Download size={16} />
+                {isGeneratingReceiptPdf ? 'Gerando PDF...' : 'Baixar PDF'}
               </button>
             </div>
           </div>

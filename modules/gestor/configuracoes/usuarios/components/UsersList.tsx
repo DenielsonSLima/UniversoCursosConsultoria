@@ -66,6 +66,8 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     createUserMutation.mutate({
       nome: `${newUser.nome} ${newUser.sobrenome}`.trim(),
       email: newUser.email,
+      cpf: newUser.cpf,
+      telefone: newUser.telefone,
       perfil: isGestor ? 'Gestor' : 'Operacional',
       status: 'Ativo',
       context: contextId

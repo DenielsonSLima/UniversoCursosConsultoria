@@ -5,10 +5,10 @@ import { Award, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'luci
 import CursoEspecializacaoCard from './components/CursoEspecializacaoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
 import { Curso } from '../cadastros.types';
-import { CursoCadastroStatusFilter } from '../curso-modalidade.service';
-import { useCursoModalidadeQueries } from '../hooks/useCursoModalidadeQueries';
-import { useCursoModalidadeRealtime } from '../hooks/useCursoModalidadeRealtime';
-import { useCursoModalidadeMutations } from '../hooks/useCursoModalidadeMutations';
+import { CursoEspecializacaoStatusFilter } from './cursos-especializacao.service';
+import { useCursosEspecializacaoQueries } from './hooks/useCursosEspecializacaoQueries';
+import { useCursosEspecializacaoRealtime } from './hooks/useCursosEspecializacaoRealtime';
+import { useCursosEspecializacaoMutations } from './hooks/useCursosEspecializacaoMutations';
 
 interface CursosEspecializacaoPageProps {
   readOnly?: boolean;
@@ -18,7 +18,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
   const [viewState, setViewState] = useState<'list' | 'details'>('list');
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<CursoCadastroStatusFilter>('ativo');
+  const [statusFilter, setStatusFilter] = useState<CursoEspecializacaoStatusFilter>('ativo');
 
   // Estados para Modal de Novo Curso
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,6 +26,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
   const [newCursoDesc, setNewCursoDesc] = useState('');
   const [newCursoArea, setNewCursoArea] = useState('Saúde');
   const [newCursoVersao, setNewCursoVersao] = useState('1.0');
+  const [newCursoCargaHoraria, setNewCursoCargaHoraria] = useState(120);
   const [isCreatingCurso, setIsCreatingCurso] = useState(false);
 
   // Estados para Modal de Duplicação
@@ -59,6 +60,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
     setNewCursoDesc('');
     setNewCursoArea('Saúde');
     setNewCursoVersao('1.0');
+    setNewCursoCargaHoraria(120);
   };
 
   const closeDuplicateModal = () => {
@@ -66,32 +68,21 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
     setDuplicateTargetId(null);
   };
 
-  const { cursosQuery, invalidateCursosModalidade } = useCursoModalidadeQueries('ESPECIALIZACAO');
-  useCursoModalidadeRealtime('ESPECIALIZACAO', invalidateCursosModalidade);
+  const { cursosQuery, invalidateCursosEspecializacao } = useCursosEspecializacaoQueries();
+  useCursosEspecializacaoRealtime(invalidateCursosEspecializacao);
 
   const {
     createMutation,
     duplicateMutation,
     toggleStatusMutation,
     deleteMutation
-  } = useCursoModalidadeMutations({
-    modalidade: 'ESPECIALIZACAO',
-    invalidateCursosModalidade,
+  } = useCursosEspecializacaoMutations({
+    invalidateCursosEspecializacao,
     showToast,
     resetCreateForm,
     closeDuplicateModal,
     setIsCreatingCurso,
     setIsDuplicating,
-    messages: {
-      createSuccess: 'Especialização criada com sucesso!',
-      createError: 'Erro ao criar especialização no Supabase.',
-      duplicateSuccess: 'Especialização duplicada com sucesso!',
-      duplicateError: 'Erro ao duplicar especialização.',
-      deleteSuccess: 'Especialização excluída com sucesso!',
-      deleteError: 'Erro ao excluir a especialização.',
-      toggleSuccess: (novoStatus) => `Especialização ${novoStatus === 'inativo' ? 'inativada' : 'ativada'} com sucesso!`,
-      toggleError: 'Erro ao alterar status do curso.'
-    }
   });
 
   const cursos = cursosQuery.data || [];
@@ -105,7 +96,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
   const handleBack = () => {
     setSelectedCurso(null);
     setViewState('list');
-    invalidateCursosModalidade();
+    invalidateCursosEspecializacao();
   };
 
   // Criação de Curso
@@ -118,7 +109,8 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
       nome: newCursoNome,
       descricao: newCursoDesc,
       area: newCursoArea,
-      versao: newCursoVersao
+      versao: newCursoVersao,
+      cargaHoraria: Number.isFinite(newCursoCargaHoraria) ? newCursoCargaHoraria : 120,
     });
   };
 
@@ -195,7 +187,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
       <CursoGradeCurricularDetails 
         curso={selectedCurso} 
         onBack={handleBack} 
-        onUpdate={invalidateCursosModalidade}
+        onUpdate={invalidateCursosEspecializacao}
       />
     );
   }
@@ -323,6 +315,18 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
                       <option key={a} value={a}>{a}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Carga Horária (h)</label>
+                  <input 
+                    required
+                    type="number"
+                    min="1"
+                    value={newCursoCargaHoraria}
+                    onChange={(e) => setNewCursoCargaHoraria(parseInt(e.target.value, 10) || 0)}
+                    placeholder="Ex: 120"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>

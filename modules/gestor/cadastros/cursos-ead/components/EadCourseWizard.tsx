@@ -9,8 +9,8 @@ import {
 import { supabase } from '../../../../../lib/supabase';
 import { Curso, EadAtividade, EadConfig, EadCronogramaItem, EadConteudoItem, EadProva, EadQuestao } from '../../cadastros.types';
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../../cadastros.service';
-import { asaasEadService } from '../asaasEad.service';
 import { diplomaService } from '../../modelos-documentos/diploma/diploma.service';
+import DiplomaPreview from '../../modelos-documentos/diploma/components/DiplomaPreview';
 
 interface EadCourseWizardProps {
   curso?: Curso | null;
@@ -27,8 +27,7 @@ import {
   compressImageToWebp,
   getStoragePathFromPublicUrl,
   parseBRLPrice,
-  removeOldStorageImage,
-  replaceCertificateTemplateVars
+  removeOldStorageImage
 } from './eadCourseWizard.helpers';
 
 const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave }) => {
@@ -197,19 +196,28 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     void loadModeloCertificado();
   }, []);
 
+  const gradeCurricularPreview = cronograma.length
+    ? cronograma
+        .map((item) => `${item.titulo || 'Módulo do curso'} - ${item.cargaHoraria || 0}h - Aprovado`)
+        .join('\n')
+    : 'Módulo introdutório - 20h - Aprovado\nMódulo profissionalizante - 40h - Aprovado\nAvaliação final - 10h - Aprovado';
+
   const previewTemplateValues = {
     nome_aluno: 'Aluno Teste',
     cpf: '000.000.000-00',
     curso_nome: nome || '[Nome do Curso EAD]',
     carga_horaria: cargaHoraria || '0',
+    data_inicio: '04/12/2025',
+    data_fim: '30/12/2025',
+    periodo: '04/12/2025 até 30/12/2025',
     data_conclusao: new Date().toLocaleDateString('pt-BR'),
     cidade: 'Cidade Exemplo',
     uf: 'UF',
     cidade_uf: 'Cidade Exemplo/UF',
-    grade_curricular: cronograma.length
-      ? cronograma.map((item, idx) => `${idx + 1}. ${item.titulo} (${item.cargaHoraria}h)`).join('\n')
-      : 'Grade curricular conforme histórico acadêmico.',
+    grade_curricular: gradeCurricularPreview,
     certificado_numero: '00001',
+    codigo_certificado: 'CERT-EAD-2B4F-D710-0F26',
+    codigo_validacao: 'CERT-EAD-2B4F-D710-0F26',
     pagina_livro: '—',
     livro: '—',
     livro_registro: '—',
@@ -219,15 +227,11 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     ensino_medio_ano_conclusao: '—',
     url_validacao: 'https://universo.com/validacao',
   };
-
-  const textoFrentePreview = replaceCertificateTemplateVars(
-    modeloCertificadoEad?.textoFrente || '',
-    previewTemplateValues
-  );
-  const textoVersoPreview = replaceCertificateTemplateVars(
-    modeloCertificadoEad?.textoVerso || '',
-    previewTemplateValues
-  );
+  const certificatePreviewZoom = 34;
+  const certificatePreviewFrameStyle = {
+    width: `${297 * (certificatePreviewZoom / 100)}mm`,
+    height: `${210 * (certificatePreviewZoom / 100)}mm`,
+  };
 
   // --- MÉTODOS DE CONTROLE ---
 
@@ -585,7 +589,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     const isPublishing = forcePublishState !== undefined ? forcePublishState : publicarSite;
     const financeiroConfig = normalizeCursoFinanceiroConfig({
       valorBase: valorParsed,
-      parcelasPadrao: 1,
+      parcelasPadrao: parcelasPadraoParsed,
       taxaPagaPor: financeiroTaxaPagaPor,
       metodosRecebimento: {
         pix: financeiroPix,
@@ -635,15 +639,9 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
         savedCurso = await cadastrosService.createCurso(cursoPayload);
       }
 
-      // Se publicado, dispara integrações em background (Turma Única e Asaas)
+      // Se publicado, prepara a turma virtual. O checkout Asaas é gerado individualmente por aluno.
       if (isPublishing) {
-        // 1. Cria a turma virtual única do EAD
         await cadastrosService.autoCreateEadTurma(savedCurso);
-
-        // 2. Cria o produto de cobrança no Asaas
-        if (valorParsed && valorParsed > 0) {
-          await asaasEadService.createCourseProduct(savedCurso);
-        }
       }
 
       showToast('Curso EAD salvo e configurado com sucesso!', 'success');
@@ -1020,13 +1018,13 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de cobrança Asaas</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsável pela taxa Asaas</label>
                   <select
                     className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-slate-800 transition-all"
                     value={financeiroTaxaPagaPor}
                     onChange={e => setFinanceiroTaxaPagaPor(e.target.value as 'aluno' | 'instituicao')}
                   >
-                    <option value="aluno">Repassar para o aluno</option>
+                    <option value="aluno">Aluno (registro interno)</option>
                     <option value="instituicao">Instituição absorve a taxa</option>
                   </select>
                 </div>
@@ -1097,15 +1095,10 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                 <div className="flex items-start gap-3">
                   <Link2 size={18} className="mt-0.5 text-emerald-700" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Link automático do curso</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">Checkout individual do aluno</p>
                     <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
-                      Ao publicar, o sistema cria a turma única EAD e gera o link de recebimento no Asaas. Após confirmação do pagamento, a matrícula do aluno é liberada automaticamente.
+                      Ao publicar, o sistema cria a turma única EAD. Na compra, o checkout Asaas é gerado para cada aluno usando estas regras financeiras e vinculado à matrícula.
                     </p>
-                    {curso?.asaas_payment_link_url && (
-                      <p className="mt-3 truncate rounded-xl bg-white px-3 py-2 text-xs font-black text-[#001a33]" title={curso.asaas_payment_link_url}>
-                        {curso.asaas_payment_link_url}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1809,62 +1802,57 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
               {/* Prévia do Certificado */}
               <div className="border border-slate-250 bg-slate-50/50 rounded-3xl p-6 mt-4 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-2 h-full bg-purple-600" />
-                <h5 className="font-bold text-xs text-slate-500 uppercase tracking-wider mb-4">Pré-visualização do Layout do Certificado</h5>
-                
-                <div className="bg-white p-6 md:p-8 max-w-2xl mx-auto rounded-lg border border-slate-200 space-y-4 shadow-sm font-serif">
+                <div className="mb-5 flex flex-col gap-1 pl-2">
+                  <h5 className="font-black text-xs text-slate-600 uppercase tracking-wider">Pré-visualização real do certificado</h5>
+                  <p className="text-[10px] font-semibold text-slate-400">
+                    Frente e verso renderizados com o modelo usado na emissão do certificado EAD.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   {isLoadingModeloCertificado ? (
-                    <p className="text-[11px] leading-relaxed text-slate-500">Carregando preview...</p>
+                    <div className="flex min-h-[260px] items-center justify-center text-xs font-bold text-slate-400">
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                      Carregando preview do certificado...
+                    </div>
                   ) : !modeloCertificadoEad ? (
-                    <p className="text-[11px] leading-relaxed text-slate-500">Modelo indisponível no momento.</p>
+                    <div className="flex min-h-[220px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-xs font-bold text-slate-400">
+                      Modelo indisponível no momento.
+                    </div>
                   ) : (
-                    <>
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-sans font-black text-purple-600">Prévia de Conteúdo</span>
-                      {textoFrentePreview && (
-                        <div className="rounded-xl border border-slate-150 bg-slate-50 p-4">
-                          <p className="text-[9px] font-black uppercase text-slate-500 mb-2">Frente</p>
-                          <p
-                            className="text-[12px] leading-relaxed text-slate-600 font-medium whitespace-pre-wrap"
-                            dangerouslySetInnerHTML={{ __html: textoFrentePreview }}
-                          />
-                        </div>
-                      )}
-                      {(textoVersoPreview || modeloCertificadoEad?.hasVerso) && (
-                        <div className="rounded-xl border border-slate-150 bg-slate-50 p-4">
-                          <p className="text-[9px] font-black uppercase text-slate-500 mb-2">Verso</p>
-                          <p
-                            className="text-[12px] leading-relaxed text-slate-600 font-medium whitespace-pre-wrap"
-                            dangerouslySetInnerHTML={{ __html: textoVersoPreview || 'Sem texto no verso configurado.' }}
-                          />
-                        </div>
-                      )}
-                      {(modeloCertificadoEad?.bgFrenteUrl || modeloCertificadoEad?.bgVersoUrl) && (
-                        <div className="rounded-xl border border-slate-150 bg-slate-50 p-4 space-y-2">
-                          <p className="text-[9px] font-black uppercase text-slate-500">Imagens do modelo</p>
-                          <div className="flex gap-3">
-                            {modeloCertificadoEad.bgFrenteUrl && (
-                              <img
-                                src={modeloCertificadoEad.bgFrenteUrl}
-                                alt="Fundo da frente do modelo"
-                                className="h-16 w-24 object-cover rounded border border-slate-200"
+                    <div className="overflow-x-auto rounded-xl bg-slate-200/70 p-4">
+                      <div className="flex min-w-max gap-6">
+                        <div className="space-y-2">
+                          <span className="block text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Frente</span>
+                          <div className="relative" style={certificatePreviewFrameStyle}>
+                            <div className="absolute left-0 top-0">
+                              <DiplomaPreview
+                                formData={modeloCertificadoEad}
+                                page="frente"
+                                zoomLevel={certificatePreviewZoom}
+                                previewValues={previewTemplateValues}
                               />
-                            )}
-                            {modeloCertificadoEad.bgVersoUrl && (
-                              <img
-                                src={modeloCertificadoEad.bgVersoUrl}
-                                alt="Fundo do verso do modelo"
-                                className="h-16 w-24 object-cover rounded border border-slate-200"
-                              />
-                            )}
+                            </div>
                           </div>
                         </div>
-                      )}
-                    </>
+                        {modeloCertificadoEad.hasVerso && (
+                          <div className="space-y-2">
+                            <span className="block text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Verso</span>
+                            <div className="relative" style={certificatePreviewFrameStyle}>
+                              <div className="absolute left-0 top-0">
+                                <DiplomaPreview
+                                  formData={modeloCertificadoEad}
+                                  page="verso"
+                                  zoomLevel={certificatePreviewZoom}
+                                  previewValues={previewTemplateValues}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
-                  <div className="pt-6 flex justify-center items-center flex-col">
-                    <span className="rounded-full bg-purple-50 px-4 py-2 text-[9px] font-sans font-black uppercase text-purple-700 tracking-wider">
-                      {modeloCertificadoEad?.nome || 'Modelo de Certificado EAD'}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>

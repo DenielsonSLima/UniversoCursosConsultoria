@@ -5,19 +5,23 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, Users, AlertTriangle, DollarSign, Link2, CheckCircle2 } from 'lucide-react';
 import { financeiroService } from '../financeiro.service';
 
-const ResumoTab: React.FC = () => {
+interface ResumoTabProps {
+  poloId?: string | null;
+}
+
+const ResumoTab: React.FC<ResumoTabProps> = ({ poloId }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch KPIs
   const { data: kpis, isLoading: isKpisLoading } = useQuery({
-    queryKey: ['financeiro-resumo-kpis'],
-    queryFn: () => financeiroService.getResumoKpis()
+    queryKey: ['financeiro-resumo-kpis', poloId || 'todos'],
+    queryFn: () => financeiroService.getResumoKpis(poloId || undefined)
   });
 
   // Fetch / Search student receivables
   const { data: receivables = [], isLoading: isSearchLoading } = useQuery({
-    queryKey: ['financeiro-aluno-receivables', searchTerm],
-    queryFn: () => financeiroService.searchAlunoReceivables(searchTerm),
+    queryKey: ['financeiro-aluno-receivables', searchTerm, poloId || 'todos'],
+    queryFn: () => financeiroService.searchAlunoReceivables(searchTerm, poloId || undefined),
     enabled: true
   });
 

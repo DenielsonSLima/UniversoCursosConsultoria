@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Download, ZoomIn, ZoomOut, AlertCircle } from 'lucide-react';
+import { X, FileText, Download, AlertCircle, Camera } from 'lucide-react';
 import { LibraryDocument } from '../biblioteca.types';
 
 interface QuickPreviewModalProps {
@@ -15,18 +15,56 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
   if (!isOpen || !document) return null;
   if (typeof window === 'undefined') return null;
 
-  const isMockUrl = document.url === '#' || document.url.startsWith('data:') || !document.url.startsWith('http');
+  const normalizedUrl = `${document.url || ''}`.trim();
+  const isValidPublicUrl =
+    normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://');
+  const isMockUrl = !normalizedUrl || normalizedUrl === '#' || normalizedUrl.startsWith('data:') || !isValidPublicUrl;
+  const fileTitle = `${document.title || 'documento'}`.toLowerCase();
+  const fileUrlBase = normalizedUrl.split('?')[0].toLowerCase();
+  const extensionHint = (() => {
+    const titleExt = fileTitle.split('.').pop() || '';
+    const urlExt = fileUrlBase.split('.').pop() || '';
+    return titleExt || urlExt || '';
+  })();
+
+  const isImageFile = () => {
+    if (document.fileType === 'IMG') return true;
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(extensionHint);
+  };
+
+  const isPdfFile = () => {
+    if (document.fileType === 'PDF') return true;
+    return extensionHint === 'pdf';
+  };
+
+  const fileTypeTag = (() => {
+    if (isPdfFile()) return 'PDF';
+    if (isImageFile()) return 'IMG';
+    return document.fileType;
+  })();
 
   const renderPreviewContent = () => {
-    switch (document.fileType) {
+    switch (fileTypeTag) {
       case 'IMG':
         return (
-          <div className="flex items-center justify-center p-4 bg-slate-900 rounded-2xl h-[60vh] overflow-auto select-none">
-            <img 
-              src={isMockUrl ? 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=600&auto=format&fit=crop' : document.url} 
-              alt={document.title} 
-              className="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300"
-            />
+          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
+            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+              <Camera size={28} />
+            </div>
+            {isMockUrl ? (
+              <>
+                <p className="text-sm font-black text-slate-800 uppercase tracking-wide">Visualização de Imagem Indisponível</p>
+                <p className="text-xs text-slate-400 font-bold uppercase">
+                  A pré-visualização é liberada no próprio sistema quando o arquivo está publicado corretamente.
+                </p>
+              </>
+            ) : (
+              <img 
+                src={normalizedUrl} 
+                alt={document.title} 
+                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300"
+              />
+            )}
           </div>
         );
       case 'PDF':
@@ -38,72 +76,69 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
               </div>
               <div className="text-center space-y-1">
                 <p className="text-sm font-black text-slate-800 uppercase tracking-wide">Leitor PDF Simulado</p>
-                <p className="text-xs text-slate-400 font-bold uppercase">Ambiente de Desenvolvimento Local</p>
+                <p className="text-xs text-slate-400 font-bold uppercase">Ambiente interno de pré-visualização</p>
               </div>
               <div className="w-full max-w-md p-6 bg-white rounded-xl border border-slate-150 space-y-3 font-serif text-slate-700 text-xs leading-relaxed shadow-sm">
-                <p className="font-bold border-b border-slate-100 pb-1.5 text-center uppercase tracking-wide font-sans text-[10px] text-slate-400">Conteúdo do Arquivo: {document.title}</p>
-                <p><b>Seção I - Diretrizes Gerais:</b> Este documento estabelece as normas pedagógicas e de acompanhamento curricular para as disciplinas práticas e teóricas da instituição.</p>
-                <p><b>Seção II - Avaliações:</b> O aproveitamento escolar será apurado mediante acompanhamento contínuo e avaliações periódicas cumulativas estabelecidas pelo conselho docente.</p>
+                <p className="font-bold border-b border-slate-100 pb-1.5 text-center uppercase tracking-wide font-sans text-[10px] text-slate-400">
+                  Pré-visualização não disponível para este documento
+                </p>
+                <p className="leading-relaxed">
+                  O arquivo foi recebido e validado no sistema, mas não foi possível renderizar um preview embutido no momento.
+                </p>
+                <p className="leading-relaxed">
+                  Use o botão "Baixar Arquivo" para abrir o conteúdo completo no seu dispositivo.
+                </p>
               </div>
             </div>
           );
         }
         return (
           <iframe
-            src={document.url}
+            src={normalizedUrl}
             title={document.title}
             className="w-full h-[60vh] rounded-2xl border border-slate-250 shadow-inner"
           />
         );
       case 'DOC':
       case 'XLS':
-        if (isMockUrl) {
-          return (
-            <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                document.fileType === 'DOC' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'
-              }`}>
-                <FileText size={32} />
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-black text-slate-800 uppercase tracking-wide">
-                  Leitor de {document.fileType === 'DOC' ? 'Documento Word' : 'Planilha Excel'}
-                </p>
-                <p className="text-xs text-slate-400 font-bold uppercase">Visualização Simulada</p>
-              </div>
-              <div className="w-full max-w-lg p-6 bg-white rounded-xl border border-slate-150 space-y-3 shadow-sm">
-                <p className="font-bold border-b border-slate-100 pb-2 text-[10px] text-slate-400 uppercase tracking-wider">
-                  Visualização rápida de {document.title}
-                </p>
-                {document.fileType === 'DOC' ? (
-                  <div className="space-y-2 text-xs font-serif text-slate-650 leading-relaxed">
-                    <p className="font-bold text-slate-800 text-center text-sm">TERMO ADITIVO DE MATRICULA E CONTRATO</p>
-                    <p>Por este instrumento aditivo, fica pactuado o ajuste de matérias e cronograma letivo.</p>
-                    <p>Cláusula 1ª - Fica acordada a liberação de disciplinas práticas adicionais para conclusão do módulo.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-xs font-mono">
-                    <div className="grid grid-cols-4 gap-2 bg-slate-50 p-1.5 font-bold border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[9px] text-center">
-                      <span>Ref</span><span>Categoria</span><span>Descrição</span><span>Status</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 p-1.5 border-b border-slate-100 text-center">
-                      <span>001</span><span>Pedagógico</span><span>Aulas Práticas</span><span className="text-emerald-650 font-bold">OK</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2 p-1.5 border-b border-slate-100 text-center">
-                      <span>002</span><span>Geral</span><span>Normativas 2024</span><span className="text-emerald-650 font-bold">OK</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
         return (
-          <iframe
-            src={`https://docs.google.com/gview?url=${encodeURIComponent(document.url)}&embedded=true`}
-            title={document.title}
-            className="w-full h-[60vh] rounded-2xl border border-slate-250 shadow-inner"
-          />
+          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              document.fileType === 'DOC' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'
+            }`}>
+              <FileText size={32} />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-sm font-black text-slate-800 uppercase tracking-wide">
+                {document.fileType === 'DOC' ? 'Pré-Visualização de Documento' : 'Pré-Visualização de Planilha'}
+              </p>
+              <p className="text-xs text-slate-400 font-bold uppercase">
+                Conteúdo não encontrado no preview.
+              </p>
+            </div>
+          <p className="text-xs text-slate-500 text-center max-w-lg">
+              Este é um recurso interno. Para visualizar integralmente, faça o download do arquivo.
+            </p>
+            <div className="w-full max-w-lg p-6 bg-white rounded-xl border border-slate-150 space-y-3 shadow-sm">
+              <p className="font-bold border-b border-slate-100 pb-2 text-[10px] text-slate-400 uppercase tracking-wider">
+                {document.title}
+              </p>
+              <p className="text-xs text-slate-650 leading-relaxed">
+                Prévia simplificada disponível no painel do sistema. O arquivo foi enviado para download e pode ser aberto no programa apropriado do seu dispositivo.
+              </p>
+            </div>
+            {!isMockUrl && (
+              <a
+                href={normalizedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border border-slate-200 text-slate-600 hover:bg-slate-50"
+              >
+                <Download size={12} />
+                Abrir arquivo
+              </a>
+            )}
+          </div>
         );
       default:
         return (
@@ -158,16 +193,17 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
           <p className="text-[9px] text-slate-450 uppercase font-black tracking-widest">
             Autor: <span className="text-blue-600">{document.authorName}</span> • Criado em: {new Date(document.createdAt).toLocaleDateString('pt-BR')}
           </p>
-          <a
-            href={document.url === '#' ? undefined : document.url}
-            download={document.title}
+            <a
+            href={isMockUrl ? undefined : normalizedUrl}
+            download={isMockUrl ? undefined : document.title}
             onClick={(e) => {
-              if (document.url === '#') {
+              if (isMockUrl) {
                 e.preventDefault();
-                alert('O download deste arquivo simulado não está disponível.');
+                alert('O download não está disponível para este documento.');
               }
             }}
             className="flex items-center gap-2 bg-[#001a33] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider transition-colors shadow-lg shadow-blue-900/10"
+            onKeyDown={(e) => isMockUrl ? e.preventDefault() : undefined}
           >
             <Download size={14} /> Baixar Arquivo
           </a>

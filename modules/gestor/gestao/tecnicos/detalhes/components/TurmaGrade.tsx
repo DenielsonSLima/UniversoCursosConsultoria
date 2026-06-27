@@ -1,19 +1,20 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx
 
 import React, { useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Layers, BookOpen, UserPlus, ChevronDown, ChevronRight, 
   UserCheck, CheckCircle2, X, Plus, Trash2, CornerDownRight, Loader2
 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
-import { cadastrosService } from '../../../../cadastros/cadastros.service';
-import { Curso } from '../../../../cadastros/cadastros.types';
-import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
-import { academicLifecycleService } from '../academic-lifecycle.service';
-import { academicLifecycleKeys } from '../academic-lifecycle.keys';
-
+import {
+  useAddTurmaAulaMutation,
+  useAssignProfessorMutation,
+  useAssignProfessorToAllMutation,
+  useRemoveTurmaAulaMutation,
+  useToggleDisciplinaConcluidaMutation,
+  useTurmaGradeData,
+} from '../hooks/useTurmaGrade';
 
 interface TurmaGradeProps {
   turma: Turma;
@@ -23,20 +24,14 @@ interface TurmaGradeProps {
 
 const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false, colorTheme = 'emerald' }) => {
   const { toasts, removeToast, toast } = useToast();
-  const queryClient = useQueryClient();
-  const [cursoBase, setCursoBase] = useState<Curso | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedDisciplines, setExpandedDisciplines] = useState<Set<string>>(new Set());
-  
-  // State for database data
-  const [disciplinasConfig, setDisciplinasConfig] = useState<Record<string, { professor: string | null; concluida: boolean }>>({});
-  const [aulas, setAulas] = useState<Record<string, { id: string; titulo: string; cargaHoraria: number; dataAula?: string }[]>>({});
-  const [professores, setProfessores] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { data: metricasGrade = [] } = useQuery({
-    queryKey: academicLifecycleKeys.diarios(turma.id),
-    queryFn: () => academicLifecycleService.getDiarios(turma.id),
-  });
+  const { data: gradeData, isLoading: loading } = useTurmaGradeData(turma.id, turma.cursoId);
+  const cursoBase = gradeData?.cursoBase || null;
+  const disciplinasConfig = gradeData?.disciplinasConfig || {};
+  const aulas = gradeData?.aulas || {};
+  const professores = gradeData?.professores || [];
+  const metricasGrade = gradeData?.metricasGrade || [];
 
   const getThemeColors = () => {
     switch (colorTheme) {
@@ -98,107 +93,56 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   // Modal states
   const [showDocenteModal, setShowDocenteModal] = useState<{ isOpen: boolean; disciplinaId: string }>({ isOpen: false, disciplinaId: '' });
   const [aulaParaExcluir, setAulaParaExcluir] = useState<{ disciplinaId: string; aulaId: string } | null>(null);
+  const assignProfessorMutation = useAssignProfessorMutation(
+    turma.id,
+    () => setShowDocenteModal({ isOpen: false, disciplinaId: '' }),
+    (err) => {
+      console.error('Erro ao atribuir docente:', err);
+      toast.error('Erro', 'Erro ao salvar docente no banco.');
+      setShowDocenteModal({ isOpen: false, disciplinaId: '' });
+    },
+  );
+  const assignProfessorToAllMutation = useAssignProfessorToAllMutation(
+    turma.id,
+    () => toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.'),
+    (err) => {
+      console.error('Erro ao atribuir docente para a turma:', err);
+      toast.error('Erro', 'Erro ao salvar docente da turma.');
+    },
+  );
+  const toggleConcluidaMutation = useToggleDisciplinaConcluidaMutation(
+    turma.id,
+    (err) => {
+      console.error('Erro ao alternar status da disciplina:', err);
+      toast.error('Erro', 'Erro ao salvar status da disciplina no banco.');
+    },
+  );
+  const addAulaMutation = useAddTurmaAulaMutation(
+    turma.id,
+    (input) => {
+      setNewAulaTitulo(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaHoras(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaData(prev => ({ ...prev, [input.disciplinaId]: '' }));
+    },
+    (err) => {
+      console.error('Erro ao adicionar aula:', err);
+      toast.error('Erro', 'Erro ao salvar aula no banco.');
+    },
+  );
+  const removeAulaMutation = useRemoveTurmaAulaMutation(
+    turma.id,
+    () => setAulaParaExcluir(null),
+    (err) => {
+      console.error('Erro ao remover aula:', err);
+      toast.error('Erro', 'Erro ao excluir aula do banco.');
+    },
+  );
 
   useEffect(() => {
-    const fetchDados = async () => {
-      setLoading(true);
-      try {
-        // 1. Fetch Course Base
-        const cursoEncontrado = await cadastrosService.getCursoById(turma.cursoId);
-        const modulos = await cadastrosService.getGrade(turma.cursoId);
-        const cursoCompleto: Curso = {
-          ...cursoEncontrado,
-          modulos
-        };
-        setCursoBase(cursoCompleto);
-        
-        if (cursoCompleto) {
-          if (cursoCompleto.modulos && cursoCompleto.modulos.length > 0) {
-            setExpandedModules(new Set([cursoCompleto.modulos[0].id]));
-          }
-
-          // Initialize defaults in local state for all disciplines
-          const defaultConfigs: Record<string, { professor: string | null; concluida: boolean }> = {};
-          (cursoCompleto.modulos || []).forEach(mod => {
-            mod.disciplinas.forEach(disc => {
-              defaultConfigs[disc.id] = { professor: null, concluida: false };
-            });
-          });
-          setDisciplinasConfig(defaultConfigs);
-
-          // 2. Fetch class discipline config from DB
-          const { data: configsData, error: configError } = await supabase
-            .from('turmas_disciplinas')
-            .select('*')
-            .eq('turma_id', turma.id);
-
-          if (configError) throw configError;
-
-          const dbConfigs: Record<string, { professor: string | null; concluida: boolean }> = {};
-          configsData?.forEach(c => {
-            dbConfigs[c.disciplina_id] = { 
-              professor: c.professor_nome, 
-              concluida: c.concluida 
-            };
-          });
-          setDisciplinasConfig(prev => ({ ...prev, ...dbConfigs }));
-
-          // 3. Fetch class lessons from DB
-          const { data: aulasData, error: aulasError } = await supabase
-            .from('aulas_turma')
-            .select('*')
-            .eq('turma_id', turma.id);
-
-          if (aulasError) throw aulasError;
-
-          // Ordenação: data da aula (mais antiga primeiro), fallback para data de criação
-          const sortedAulasData = (aulasData || []).sort((a: any, b: any) => {
-            if (a.data_aula && b.data_aula) {
-              return a.data_aula.localeCompare(b.data_aula);
-            }
-            if (a.data_aula) return -1;
-            if (b.data_aula) return 1;
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          });
-
-          const dbAulas: Record<string, { id: string; titulo: string; cargaHoraria: number; dataAula?: string }[]> = {};
-          sortedAulasData.forEach(a => {
-            if (!dbAulas[a.disciplina_id]) {
-              dbAulas[a.disciplina_id] = [];
-            }
-            dbAulas[a.disciplina_id].push({
-              id: a.id,
-              titulo: a.titulo,
-              cargaHoraria: parseFloat(a.carga_horaria),
-              dataAula: a.data_aula
-            });
-          });
-          setAulas(dbAulas);
-        }
-
-        // 4. Fetch teachers
-        const { data: profsData, error: profsError } = await supabase
-          .from('parceiros')
-          .select('nome')
-          .eq('tipo', 'Professor')
-          .eq('status', 'ATIVO')
-          .order('nome', { ascending: true });
-
-        if (profsError) throw profsError;
-        if (profsData && profsData.length > 0) {
-          setProfessores(profsData.map(p => p.nome));
-        } else {
-          setProfessores([]);
-        }
-      } catch (err) {
-        console.error('Erro ao buscar dados operacionais da turma:', err);
-        setProfessores([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDados();
-  }, [turma.id, turma.cursoId]);
+    const firstModuleId = cursoBase?.modulos?.[0]?.id;
+    if (!firstModuleId || expandedModules.size > 0) return;
+    setExpandedModules(new Set([firstModuleId]));
+  }, [cursoBase, expandedModules.size]);
 
   const toggleModule = (id: string) => {
     const newSet = new Set(expandedModules);
@@ -215,102 +159,32 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   };
   
   const handleAssignProfessor = async (disciplinaId: string, professorName: string) => {
-    try {
-      const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
-      const { error } = await supabase
-        .from('turmas_disciplinas')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplinaId,
-          professor_nome: professorName,
-          concluida: currentConfig.concluida
-        }, { onConflict: 'turma_id,disciplina_id' });
-
-      if (error) throw error;
-
-      setDisciplinasConfig(prev => ({
-        ...prev,
-        [disciplinaId]: { ...prev[disciplinaId], professor: professorName }
-      }));
-      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-    } catch (err) {
-      console.error('Erro ao atribuir docente:', err);
-      toast.error('Erro', 'Erro ao salvar docente no banco.');
-    }
-    setShowDocenteModal({ isOpen: false, disciplinaId: '' });
+    const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
+    await assignProfessorMutation.mutateAsync({
+      disciplinaId,
+      professorName,
+      currentConfig,
+    });
   };
 
   const handleAssignProfessorToAll = async (professorName: string) => {
     if (!cursoBase) return;
-    try {
-      const disciplineIds: string[] = [];
-      (cursoBase.modulos || []).forEach(m => {
-        m.disciplinas.forEach(d => {
-          disciplineIds.push(d.id);
-        });
-      });
+    const disciplineIds = (cursoBase.modulos || []).flatMap(m => m.disciplinas.map(d => d.id));
+    if (disciplineIds.length === 0) return;
 
-      if (disciplineIds.length === 0) return;
-
-      const rows = disciplineIds.map(dId => {
-        const currentConfig = disciplinasConfig[dId] || { professor: null, concluida: false };
-        return {
-          turma_id: turma.id,
-          disciplina_id: dId,
-          professor_nome: professorName || null,
-          concluida: currentConfig.concluida
-        };
-      });
-
-      const { error } = await supabase
-        .from('turmas_disciplinas')
-        .upsert(rows, { onConflict: 'turma_id,disciplina_id' });
-
-      if (error) throw error;
-
-      setDisciplinasConfig(prev => {
-        const next = { ...prev };
-        disciplineIds.forEach(dId => {
-          next[dId] = {
-            ...next[dId],
-            professor: professorName || null
-          };
-        });
-        return next;
-      });
-
-      toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.');
-      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-    } catch (err) {
-      console.error('Erro ao atribuir docente para a turma:', err);
-      toast.error('Erro', 'Erro ao salvar docente da turma.');
-    }
+    await assignProfessorToAllMutation.mutateAsync({
+      disciplineIds,
+      professorName: professorName || null,
+      configs: disciplinasConfig,
+    });
   };
   
   const toggleConcluida = async (disciplinaId: string) => {
-    try {
-      const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
-      const nextConcluida = !currentConfig.concluida;
-      const { error } = await supabase
-        .from('turmas_disciplinas')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplinaId,
-          professor_nome: currentConfig.professor,
-          concluida: nextConcluida
-        }, { onConflict: 'turma_id,disciplina_id' });
-
-      if (error) throw error;
-
-      setDisciplinasConfig(prev => ({
-        ...prev,
-        [disciplinaId]: { ...prev[disciplinaId], concluida: nextConcluida }
-      }));
-      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-    } catch (err) {
-      console.error('Erro ao alternar status da disciplina:', err);
-      toast.error('Erro', 'Erro ao salvar status da disciplina no banco.');
-    }
+    const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
+    await toggleConcluidaMutation.mutateAsync({
+      disciplinaId,
+      currentConfig,
+    });
   };
 
   const handleAddAula = async (disciplinaId: string) => {
@@ -322,73 +196,16 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     const horas = parseFloat(horasStr);
     if (isNaN(horas) || horas <= 0) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('aulas_turma')
-        .insert({
-          turma_id: turma.id,
-          disciplina_id: disciplinaId,
-          titulo,
-          carga_horaria: horas,
-          data_aula: dataStr
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const novaAula = {
-        id: data.id,
-        titulo: data.titulo,
-        cargaHoraria: parseFloat(data.carga_horaria),
-        dataAula: data.data_aula
-      };
-
-      setAulas(prev => {
-        const updatedList = [...(prev[disciplinaId] || []), novaAula];
-        // Reordenar após inserção
-        updatedList.sort((a, b) => {
-          if (a.dataAula && b.dataAula) return a.dataAula.localeCompare(b.dataAula);
-          if (a.dataAula) return -1;
-          if (b.dataAula) return 1;
-          return 0;
-        });
-        return {
-          ...prev,
-          [disciplinaId]: updatedList
-        };
-      });
-
-      // Reset locally
-      setNewAulaTitulo(prev => ({ ...prev, [disciplinaId]: '' }));
-      setNewAulaHoras(prev => ({ ...prev, [disciplinaId]: '' }));
-      setNewAulaData(prev => ({ ...prev, [disciplinaId]: '' }));
-      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-    } catch (err) {
-      console.error('Erro ao adicionar aula:', err);
-      toast.error('Erro', 'Erro ao salvar aula no banco.');
-    }
+    await addAulaMutation.mutateAsync({
+      disciplinaId,
+      titulo,
+      horas,
+      dataAula: dataStr,
+    });
   };
 
   const handleRemoveAula = async (disciplinaId: string, aulaId: string) => {
-    try {
-      const { error } = await supabase
-        .from('aulas_turma')
-        .delete()
-        .eq('id', aulaId);
-
-      if (error) throw error;
-
-      setAulas(prev => ({
-        ...prev,
-        [disciplinaId]: (prev[disciplinaId] || []).filter(a => a.id !== aulaId)
-      }));
-      await queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-      setAulaParaExcluir(null);
-    } catch (err) {
-      console.error('Erro ao remover aula:', err);
-      toast.error('Erro', 'Erro ao excluir aula do banco.');
-    }
+    await removeAulaMutation.mutateAsync(aulaId);
   };
 
   if (loading) {

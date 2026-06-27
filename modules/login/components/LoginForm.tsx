@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { IdCard, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { LoginCredentials } from '../login.types';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 
@@ -17,33 +17,34 @@ const LoginForm: React.FC<LoginFormProps> = ({
   isLoading = false,
   forgotPasswordHref = '/recuperar-senha',
 }) => {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ email, password });
+    onSubmit({ email: identifier, password });
   };
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       
-      {/* Campo E-mail */}
+      {/* Campo CPF ou E-mail */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider ml-1">
-          E-mail Acadêmico
+          CPF ou E-mail
         </label>
         <div className="relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#4169E1] transition-colors">
-            <Mail size={20} />
+            <IdCard size={20} />
           </div>
           <input 
-            type="email" 
-            placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text" 
+            inputMode="email"
+            placeholder="CPF ou seu@email.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:bg-white focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-semibold text-sm shadow-sm"
             required
           />

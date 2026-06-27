@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   GraduationCap, 
-  BookOpen, 
   CreditCard, 
   Library, 
   MessageSquare, 
@@ -21,11 +20,11 @@ import { loginService } from '../login/login.service';
 import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
+import ConfirmModal from '../shared/components/ConfirmModal';
 
 // Sub-módulos do Professor
 import InicioPage from './inicio/InicioPage';
 import TurmasPage from './turmas/TurmasPage';
-import CursosPage from './cursos/CursosPage';
 import FinanceiroPage from './financeiro/FinanceiroPage';
 import BibliotecaPage from './biblioteca/BibliotecaPage';
 import ComunicacaoPage from './comunicacao/ComunicacaoPage';
@@ -39,6 +38,7 @@ const ProfessorPage: React.FC = () => {
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const professorId = profile?.id || '';
   const professorNome = profile?.nome || '';
@@ -49,14 +49,14 @@ const ProfessorPage: React.FC = () => {
 
     const hydrateProfile = async () => {
       try {
-        const portalProfile = await getPortalProfile();
+        const portalProfile = await getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] });
         if (!mounted) return;
 
         if (!portalProfile || portalProfile.tipo !== 'Professor') {
           clearPortalSession();
           await loginService.logout().catch(() => undefined);
           const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-          navigate(`/login?redirect=${redirect}`, { replace: true });
+          navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
           return;
         }
 
@@ -72,7 +72,7 @@ const ProfessorPage: React.FC = () => {
         clearPortalSession();
         await loginService.logout().catch(() => undefined);
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-        navigate(`/login?redirect=${redirect}`, { replace: true });
+        navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
       }
     };
 
@@ -104,14 +104,13 @@ const ProfessorPage: React.FC = () => {
     }
   });
 
-  // Redireciona se não houver polo ativo e não estivermos em desenvolvimento
+  // Redireciona apenas depois da autenticação se o professor não tiver polo ativo.
   useEffect(() => {
-    const mode = import.meta.env.VITE_APP_MODE;
-    const activePolo = sessionStorage.getItem('active_polo_id');
-    if (!activePolo && mode !== 'development') {
-      navigate('/login');
+    if (isAuthLoading || !profile) return;
+    if (!currentPoloId) {
+      navigate('/sistema/login');
     }
-  }, [navigate]);
+  }, [currentPoloId, isAuthLoading, navigate, profile]);
 
   const handlePoloChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
@@ -129,7 +128,7 @@ const ProfessorPage: React.FC = () => {
     sessionStorage.removeItem('logged_user_tipo');
     clearPortalSession();
     sessionStorage.removeItem('active_polo_id');
-    navigate('/login');
+    navigate('/sistema/login');
   };
 
   useInactivityLogout({
@@ -142,13 +141,12 @@ const ProfessorPage: React.FC = () => {
   }
 
   const handleLogout = async () => {
-    await executeLogout();
+    setIsLogoutConfirmOpen(true);
   };
 
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'turmas', label: 'Disciplinas', icon: <GraduationCap size={20} /> },
-    { id: 'cursos', label: 'Ementas Cursos', icon: <BookOpen size={20} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} /> },
@@ -161,8 +159,6 @@ const ProfessorPage: React.FC = () => {
         return <InicioPage professorId={professorId} professorNome={professorNome} onNavigate={setActiveModule} />;
       case 'turmas':
         return <TurmasPage professorId={professorId} />;
-      case 'cursos':
-        return <CursosPage />;
       case 'financeiro':
         return <FinanceiroPage professorId={professorId} />;
       case 'biblioteca':
@@ -347,6 +343,17 @@ const ProfessorPage: React.FC = () => {
           {renderContent()}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title="Confirmação"
+        message="Deseja realmente sair?"
+        confirmText="Sair"
+        cancelText="Cancelar"
+        variant="danger"
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={executeLogout}
+      />
     </div>
   );
 };

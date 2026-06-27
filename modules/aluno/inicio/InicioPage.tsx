@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award } from 'lucide-react';
+import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 
 interface InicioPageProps {
   alunoId: string;
@@ -25,17 +26,82 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
     }
   });
 
-  // Query to count available library files
-  const { data: bibliotecaCount = 0 } = useQuery({
-    queryKey: ['aluno-biblioteca-count'],
+  // 2. Informações de matrícula para contexto de acesso
+  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
+    queryKey: ['aluno-inicio-matriculas', alunoId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('biblioteca_documentos')
-        .select('*', { count: 'exact', head: true });
-      
+      const { data, error } = await supabase
+        .from('matriculas')
+        .select('*, turmas(*, cursos(*))')
+        .eq('aluno_id', alunoId)
+        .in('status', ['ATIVO', 'CONCLUIDO']);
       if (error) throw error;
-      return count || 0;
+      return data || [];
     }
+  });
+
+  const activeTurmaIds = matriculas.map((m) => m.turma_id).filter(Boolean);
+  const activeCursoIds = Array.from(new Set(matriculas.map((m) => m.turmas?.cursos?.id).filter(Boolean)));
+  const activePoloIds = Array.from(new Set(matriculas.map((m) => m.polo_id).filter(Boolean)));
+
+  const { data: activeTeachers = [] } = useQuery<any[]>({
+    queryKey: ['aluno-inicio-professores', activeTurmaIds.join(',')],
+    queryFn: async () => {
+      if (activeTurmaIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('turmas_disciplinas')
+        .select('professor_id')
+        .in('turma_id', activeTurmaIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: matriculas.length > 0
+  });
+
+  const { data: turmaDisciplinas = [] } = useQuery<any[]>({
+    queryKey: ['aluno-inicio-turma-disciplinas', activeTurmaIds.join(',')],
+    queryFn: async () => {
+      if (activeTurmaIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('turmas_disciplinas')
+        .select('turma_id, disciplina_id, created_at')
+        .in('turma_id', activeTurmaIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: activeTurmaIds.length > 0
+  });
+
+  const activeTeacherIds = Array.from(new Set(activeTeachers.map((item) => item.professor_id).filter(Boolean)));
+
+  const accessContext = {
+    activeTurmaIds,
+    activeCursoIds,
+    activePoloIds,
+    activeTeacherIds,
+    turmaDisciplinas
+  };
+
+  // 3. Count de documentos realmente disponíveis ao aluno no contexto atual
+  const { data: bibliotecaCount = 0 } = useQuery<number>({
+    queryKey: [
+      'aluno-biblioteca-count',
+      alunoId,
+      activeTurmaIds.join(','),
+      activeCursoIds.join(','),
+      activePoloIds.join(','),
+      activeTeacherIds.join(',')
+    ],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('biblioteca_documentos')
+        .select('*');
+
+      if (error) throw error;
+
+      return (data || []).filter((doc) => canAccessLibraryDocumentAsAluno(doc, accessContext)).length;
+    },
+    enabled: !loadingMatriculas
   });
 
   // Query to count open chats
@@ -70,7 +136,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
             Olá, <span className="text-blue-200">{alunoNome}</span>!
           </h1>
           <p className="mt-2 text-blue-100/90 text-sm md:text-base font-medium max-w-md">
-            Bem-vindo ao seu ambiente virtual de aprendizagem. Acompanhe seus estudos, financeiro, biblioteca e chamados de suporte.
+            Olá! Acompanhe estudos, financeiro, biblioteca e suporte em um só lugar.
           </p>
         </div>
       </div>

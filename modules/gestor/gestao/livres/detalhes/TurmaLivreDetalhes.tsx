@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign } from 'lucide-react';
 import { Turma } from '../../gestao.types';
-import TurmaResumo from '../../tecnicos/detalhes/components/TurmaResumo';
-import TurmaAlunos from '../../tecnicos/detalhes/components/TurmaAlunos';
-import TurmaGrade from '../../tecnicos/detalhes/components/TurmaGrade';
-import TurmaDiarios from '../../tecnicos/detalhes/components/diarios/TurmaDiarios';
-import TurmaFinanceiro from '../../tecnicos/detalhes/components/TurmaFinanceiro';
-import TurmaConfiguracoes from '../../tecnicos/detalhes/components/TurmaConfiguracoes';
+import TurmaResumo from './components/TurmaResumo';
+import TurmaAlunos from './components/TurmaAlunos';
+import TurmaGrade from './components/TurmaGrade';
+import TurmaDiarios from './components/diarios/TurmaDiarios';
+import TurmaFinanceiro from './components/TurmaFinanceiro';
+import TurmaConfiguracoes from './components/TurmaConfiguracoes';
+import { useTurmaLivreRealtime } from './hooks/useTurmaLivreRealtime';
 
 interface TurmaLivreDetalhesProps {
   turma: Turma;
@@ -17,6 +18,8 @@ interface TurmaLivreDetalhesProps {
 
 const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+
+  useTurmaLivreRealtime(turma.id);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

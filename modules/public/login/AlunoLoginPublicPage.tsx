@@ -11,6 +11,7 @@ import {
   Home,
   Loader2,
   Lock,
+  IdCard,
   Mail,
   Phone,
   Quote,
@@ -20,6 +21,7 @@ import {
 import { alunoPublicAuthService } from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
+import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import DailabsSignature from '../../shared/components/DailabsSignature';
 import AccessCheckingScreen from '../../shared/components/AccessCheckingScreen';
@@ -58,7 +60,7 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -116,7 +118,19 @@ const AlunoLoginPublicPage: React.FC = () => {
     const checkGoogleReturn = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        if (!data.session) return;
+        const hasOAuthReturn =
+          window.location.hash.includes('access_token') ||
+          window.location.search.includes('code=');
+
+        if (!data.session) {
+          if (hasOAuthReturn && mounted) {
+            setMessage({
+              tone: 'error',
+              text: 'Não foi possível recuperar a sessão do Google. Tente novamente.',
+            });
+          }
+          return;
+        }
 
         const profile = await alunoPublicAuthService.finishExternalLogin();
         if (!mounted) return;
@@ -159,10 +173,6 @@ const AlunoLoginPublicPage: React.FC = () => {
 
     savePortalSession(profile as any);
 
-    if (profile?.tipo === 'Professor') {
-      navigate('/professor');
-      return;
-    }
     if (hasExplicitRedirect) {
       navigate(redirectPath);
       return;
@@ -175,7 +185,7 @@ const AlunoLoginPublicPage: React.FC = () => {
     setLoading(true);
     setMessage(null);
     try {
-      const profile = await alunoPublicAuthService.login(loginEmail, loginPassword);
+      const profile = await alunoPublicAuthService.login(loginIdentifier, loginPassword);
       await finishAuth(profile);
     } catch (error) {
       setMessage({
@@ -190,6 +200,16 @@ const AlunoLoginPublicPage: React.FC = () => {
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
     setMessage(null);
+
+    if (!isValidEmail(email)) {
+      setMessage({ tone: 'error', text: 'Informe um e-mail válido. Ele será usado como login do aluno.' });
+      return;
+    }
+
+    if (!isValidCpf(cpf)) {
+      setMessage({ tone: 'error', text: 'Informe um CPF válido para concluir o cadastro.' });
+      return;
+    }
 
     if (!dataNascimento) {
       setMessage({ tone: 'error', text: 'Informe a data de nascimento para concluir o cadastro.' });
@@ -216,21 +236,24 @@ const AlunoLoginPublicPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const result = await alunoPublicAuthService.signup({
-        nome,
-        email,
-        telefone,
-        cpf,
-        dataNascimento,
-        password,
-        acceptedTerms,
-      });
+      const result = await alunoPublicAuthService.signup(
+        {
+          nome,
+          email,
+          telefone,
+          cpf,
+          dataNascimento,
+          password,
+          acceptedTerms,
+        },
+      );
+
       if (result.emailConfirmationRequired) {
         const next = new URLSearchParams(searchParams);
         next.set('mode', 'login');
         setMode('login');
         setSearchParams(next, { replace: true });
-        setLoginEmail(email);
+        setLoginIdentifier(email);
         setMessage({
           tone: 'success',
           text: 'Cadastro criado. Confirme seu e-mail e depois entre para concluir a compra.',
@@ -285,7 +308,7 @@ const AlunoLoginPublicPage: React.FC = () => {
     <div className="relative min-h-screen bg-slate-50">
       <DailabsSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
-        <section className="relative hidden overflow-hidden bg-[#001a33] text-white lg:block">
+        <section className="relative hidden min-h-screen overflow-hidden bg-[#001a33] text-white lg:flex lg:flex-col">
           <img src="/banner1.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
           <div
             className="absolute inset-0"
@@ -300,37 +323,37 @@ const AlunoLoginPublicPage: React.FC = () => {
               background: 'linear-gradient(90deg, rgba(0,26,51,0.96) 0%, rgba(0,58,133,0.78) 48%, rgba(0,26,51,0.22) 100%)',
             }}
           />
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="absolute left-16 top-10 z-20 rounded-2xl bg-white px-5 py-3 shadow-2xl shadow-black/20 transition hover:scale-[1.02]"
-          >
-            <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-12 w-auto object-contain" />
-          </button>
-          <div className="absolute right-16 top-12 z-20 flex items-center gap-2">
+          <div className="relative z-20 flex items-start justify-between gap-3 px-10 pt-8 xl:px-16 xl:pt-10">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/15"
+              className="shrink-0 rounded-2xl bg-white px-3 py-3 shadow-2xl shadow-black/20 transition hover:scale-[1.02] xl:px-5"
             >
-              <Home size={14} /> Site
+              <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-9 w-auto object-contain xl:h-12" />
             </button>
-            {import.meta.env.VITE_APP_MODE === 'development' && (
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/15 xl:px-4"
+              >
+                <Home size={14} /> Site
+              </button>
               <button
                 type="button"
                 onClick={() => navigate('/sistema/login')}
-                className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/15"
+                className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/15 xl:px-4"
               >
                 Institucional
               </button>
-            )}
+            </div>
           </div>
-          <div className="relative z-10 flex h-full flex-col justify-center px-16">
+          <div className="relative z-10 flex flex-1 flex-col justify-center px-10 pb-8 pt-8 xl:px-16 xl:pb-10">
             <div className="w-full max-w-[720px]">
               <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/30 bg-blue-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-blue-100">
                 <GraduationCap size={14} /> Portal do aluno
               </span>
-              <h1 className="mt-5 w-full max-w-[620px] text-4xl font-black uppercase leading-[0.98] tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="mt-5 w-full max-w-[620px] text-[1.9rem] font-black uppercase leading-[0.98] tracking-tight sm:text-[2.55rem] lg:text-[2.85rem] xl:text-[3.15rem] 2xl:text-[3.2rem]">
                 Comece seu curso sem esperar atendimento.
               </h1>
               <p className="mt-5 w-full max-w-[620px] text-sm font-semibold leading-relaxed text-blue-50/85 sm:text-base">
@@ -411,15 +434,13 @@ const AlunoLoginPublicPage: React.FC = () => {
             >
               <Home size={14} /> Site
             </button>
-            {import.meta.env.VITE_APP_MODE === 'development' && (
-              <button
-                type="button"
-                onClick={() => navigate('/sistema/login')}
-                className="rounded-full bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-md transition hover:bg-blue-700"
-              >
-                Institucional
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => navigate('/sistema/login')}
+              className="rounded-full bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-md transition hover:bg-blue-700"
+            >
+              Institucional
+            </button>
           </div>
           <div className="w-full max-w-[560px] rounded-[2rem] border border-slate-200 bg-white px-5 pb-7 pt-6 shadow-2xl shadow-slate-200/80 sm:px-8 lg:mx-auto lg:p-9">
             <div className="mb-6 flex items-center justify-between gap-4">
@@ -470,15 +491,16 @@ const AlunoLoginPublicPage: React.FC = () => {
             {mode === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <label className="block">
-                  <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">E-mail</span>
+                  <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">CPF ou E-mail</span>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
-                      type="email"
+                      type="text"
+                      inputMode="email"
                       required
-                      value={loginEmail}
-                      onChange={(event) => setLoginEmail(event.target.value)}
-                      placeholder="seu@email.com"
+                      value={loginIdentifier}
+                      onChange={(event) => setLoginIdentifier(event.target.value)}
+                      placeholder="CPF ou seu@email.com"
                       className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                     />
                   </div>

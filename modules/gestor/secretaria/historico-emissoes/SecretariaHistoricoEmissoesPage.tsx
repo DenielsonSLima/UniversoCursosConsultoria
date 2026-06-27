@@ -32,6 +32,8 @@ import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import DocumentHeader from '../../components/DocumentHeader';
+import CertificadoPreview from '../certificados/components/CertificadoPreview';
+import { CertificadoAcademico, CertificadoModalidade } from '../certificados/certificados.types';
 import CarteirinhaPreview from '../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
 import { carteirinhaService } from '../../cadastros/modelos-documentos/carteirinha/carteirinha.service';
@@ -106,6 +108,15 @@ const DOCUMENT_TABS = [
   { key: 'certificado_especializacao', label: 'Certificado Especialização', icon: Award, color: 'rose' },
 ] as const;
 
+const CERTIFICATE_DOCUMENT_MODALITY: Record<string, CertificadoModalidade> = {
+  certificado_tecnico: 'TECNICO',
+  certificado_livre: 'LIVRE',
+  certificado_ead: 'EAD',
+  certificado_especializacao: 'ESPECIALIZACAO',
+};
+
+const isCertificateDocument = (documento: string) => documento in CERTIFICATE_DOCUMENT_MODALITY;
+
 const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const context = getSecretariaContext();
   const { toasts, removeToast, toast } = useToast();
@@ -130,6 +141,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [templateConfig, setTemplateConfig] = useState<any>(null);
+  const [certificatePreview, setCertificatePreview] = useState<CertificadoAcademico | null>(null);
   const [watermark, setWatermark] = useState<any>(null);
   const [poloInfo, setPoloInfo] = useState<any>(null);
   const printContentRef = useRef<HTMLDivElement>(null);
@@ -182,7 +194,8 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
             status,
             turma:turmas(id, nome, codigo)
           )
-        `, { count: 'exact' });
+        `, { count: 'exact' })
+        .eq('status', 'ATIVO');
 
       // Tab filter
       if (activeTab !== 'todos') {
@@ -232,12 +245,59 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     loadEmissionsData();
   };
 
+  const fetchCertificateForEmission = async (emission: EmissionLog): Promise<CertificadoAcademico | null> => {
+    if (!isCertificateDocument(emission.documento)) return null;
+
+    const select = `
+      *,
+      aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj),
+      turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
+      curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, ead_config),
+      polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)
+    `;
+
+    const byCode = await supabase
+      .from('certificados_academicos')
+      .select(select)
+      .eq('codigo_validacao', emission.codigo)
+      .maybeSingle();
+
+    if (byCode.error) throw byCode.error;
+    if (byCode.data) return byCode.data as unknown as CertificadoAcademico;
+
+    const certificateId = emission.dados_emissao?.certificateId;
+    if (certificateId) {
+      const byId = await supabase
+        .from('certificados_academicos')
+        .select(select)
+        .eq('id', certificateId)
+        .maybeSingle();
+
+      if (byId.error) throw byId.error;
+      if (byId.data) return byId.data as unknown as CertificadoAcademico;
+    }
+
+    const byEnrollment = await supabase
+      .from('certificados_academicos')
+      .select(select)
+      .eq('matricula_id', emission.matricula_id)
+      .eq('modalidade', CERTIFICATE_DOCUMENT_MODALITY[emission.documento])
+      .eq('status', 'FINALIZADO')
+      .order('emitido_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (byEnrollment.error) throw byEnrollment.error;
+    return (byEnrollment.data || null) as unknown as CertificadoAcademico | null;
+  };
+
   // Re-issue Second Copy (2ª Via) handler
   const handleOpenPreview = async (emission: EmissionLog) => {
     setSelectedEmission(emission);
     setIsPreviewOpen(true);
     setIsLoadingPreview(true);
     setTemplateConfig(null);
+    setCertificatePreview(null);
     
     try {
       const poloId = emission.polo_id || context.poloId;
@@ -259,7 +319,9 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         template = await crachaService.getTemplate();
       } else if (emission.documento === 'declaracao_matricula') {
         template = await declaracaoService.getTemplate(poloId);
-      } else if (emission.documento.startsWith('certificado_')) {
+      } else if (isCertificateDocument(emission.documento)) {
+        const certificate = await fetchCertificateForEmission(emission);
+        setCertificatePreview(certificate);
         const { data } = await supabase
           .from('documentos_templates')
           .select('conteudo')
@@ -367,28 +429,46 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 
     setIsDownloading(true);
     try {
-      const pageNode = container.querySelector('.print-page') as HTMLElement;
-      if (!pageNode) throw new Error('Elemento de página não localizado.');
+      const certificatePages = Array.from(container.querySelectorAll('[data-certificate-pdf-page="true"]')) as HTMLElement[];
+      const pageNodes = certificatePages.length
+        ? certificatePages
+        : [container.querySelector('.print-page') as HTMLElement].filter(Boolean);
+
+      if (!pageNodes.length) throw new Error('Elemento de página não localizado.');
+      const isLandscape = certificatePages.length > 0;
 
       // Wait briefly for images and styling
       await new Promise(r => setTimeout(r, 400));
 
-      const canvas = await html2canvas(pageNode, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        allowTaint: false,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: isLandscape ? 'landscape' : 'portrait',
         unit: 'mm',
         format: 'a4',
-        compress: true
+        compress: true,
       });
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      for (const [index, pageNode] of pageNodes.entries()) {
+        const canvas = await html2canvas(pageNode, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: false,
+        });
+
+        if (index > 0) pdf.addPage('a4', isLandscape ? 'landscape' : 'portrait');
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(
+          imgData,
+          'JPEG',
+          0,
+          0,
+          isLandscape ? 297 : 210,
+          isLandscape ? 210 : 297,
+          undefined,
+          'FAST'
+        );
+      }
+
       pdf.save(`2-via-${selectedEmission.documento}-${selectedEmission.codigo}.pdf`);
       
       // Update DB counter for duplicate release
@@ -772,7 +852,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                   Imprimir (Registrar 2ª Via)
                 </button>
                 <button
-                  onClick={() => { setIsPreviewOpen(false); setSelectedEmission(null); setTemplateConfig(null); }}
+                  onClick={() => { setIsPreviewOpen(false); setSelectedEmission(null); setTemplateConfig(null); setCertificatePreview(null); }}
                   className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 rounded-xl transition-colors shadow-sm"
                 >
                   <X size={16} />
@@ -868,8 +948,27 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* 3. CERTIFICADOS OFICIAIS */}
+                {!isLoadingPreview && isCertificateDocument(selectedEmission.documento) && certificatePreview && (
+                  <div id="certificate-reprint-pages" className="space-y-6">
+                    <CertificadoPreview certificado={certificatePreview} modelo={templateConfig} pdfMode />
+                  </div>
+                )}
+
+                {!isLoadingPreview && isCertificateDocument(selectedEmission.documento) && !certificatePreview && (
+                  <div className="w-[210mm] min-h-[120mm] max-w-full rounded-2xl border border-amber-100 bg-white p-8 text-center shadow-xl">
+                    <Award className="mx-auto mb-4 text-amber-500" size={38} />
+                    <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">
+                      Certificado oficial não localizado
+                    </h5>
+                    <p className="mx-auto mt-3 max-w-md text-xs font-bold leading-relaxed text-slate-500">
+                      O histórico possui um código de certificado, mas não há um registro acadêmico finalizado correspondente para renderizar a segunda via oficial.
+                    </p>
+                  </div>
+                )}
+
                 {/* 3. A4 STANDARD TEMPLATE DOCUMENTS */}
-                {!isLoadingPreview && selectedEmission.documento !== 'carteirinha' && selectedEmission.documento !== 'cracha_estagio' && (
+                {!isLoadingPreview && selectedEmission.documento !== 'carteirinha' && selectedEmission.documento !== 'cracha_estagio' && !isCertificateDocument(selectedEmission.documento) && (
                   <div
                     className="print-page w-[210mm] min-h-[297mm] bg-white text-black p-[20mm] mx-auto shadow-xl relative box-border border border-slate-200 overflow-hidden text-left"
                     style={{ fontFamily: '"Times New Roman", Times, serif' }}
@@ -983,7 +1082,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 210mm !important;
+                width: ${isCertificateDocument(selectedEmission.documento) ? '297mm' : '210mm'} !important;
                 height: auto !important;
                 background: white !important;
                 margin: 0 !important;
@@ -1007,6 +1106,16 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
               .print-page.reprint-card-page {
                 padding: 5mm !important;
               }
+              [data-certificate-pdf-page="true"] {
+                width: 297mm !important;
+                height: 210mm !important;
+                page-break-after: always !important;
+                page-break-inside: avoid !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                overflow: hidden !important;
+              }
               .reprint-card-page .print-fold-grid {
                 display: grid !important;
                 grid-template-rows: repeat(5, 54mm) !important;
@@ -1022,7 +1131,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
               }
             }
             @page {
-              size: A4 portrait;
+              size: ${isCertificateDocument(selectedEmission.documento) ? 'A4 landscape' : 'A4 portrait'};
               margin: 0;
             }
           `}} />

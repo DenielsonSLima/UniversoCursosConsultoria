@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../../../../lib/supabase';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
-import DiplomaPreview, { getBlocks, posicoesPadrao } from './DiplomaPreview';
+import DiplomaPreview, { getBlocks, getTemplateBackgroundUrl, posicoesPadrao } from './DiplomaPreview';
 
 interface DiplomaEditorProps {
   modelo: any;
@@ -38,9 +38,30 @@ const normalizeSignatureBlock = (block: any) => {
     signatureSource: legacySource ?? signatureDefaultSource,
     signatureImageUrl: block.signatureImageUrl || '',
     signatureBlend: block.signatureBlend ?? true,
+    signatureImageOffsetY: Number(block.signatureImageOffsetY || 0),
     signatureLabelFontSize: block.signatureLabelFontSize != null ? Number(block.signatureLabelFontSize) : 10,
     label: block.id === 'assinatura2' ? 'Assinatura do(a) Aluno(a)' : block.label,
     title,
+  };
+};
+
+const buildBackgroundPatch = (page: 'frente' | 'verso', url: string, updatedAt = Date.now()) => {
+  if (page === 'frente') {
+    return {
+      bgFrenteUrl: url,
+      frenteUrl: url,
+      backgroundFrenteUrl: url,
+      bg_frente_url: url,
+      bgFrenteUpdatedAt: updatedAt,
+    };
+  }
+
+  return {
+    bgVersoUrl: url,
+    versoUrl: url,
+    backgroundVersoUrl: url,
+    bg_verso_url: url,
+    bgVersoUpdatedAt: updatedAt,
   };
 };
 
@@ -110,7 +131,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
   const signatureSourceOptions = [
     { value: 'none', label: 'Nenhuma Assinatura' },
     { value: 'diretoriaGeral', label: 'Diretoria Geral (Configurações)' },
-    { value: 'manual', label: 'Aluno(a) (Upload Manual / URL Personalizada)' },
+    { value: 'manual', label: 'Upload Manual / URL Personalizada' },
   ];
 
   // Sincroniza a exibição do preview de acordo com a aba de edição selecionada
@@ -158,8 +179,13 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
         .from('documentos')
         .getPublicUrl(data.path);
 
-      setFormData((prev: any) => ({ ...prev, [fieldName]: urlData.publicUrl }));
-      alert('Upload da imagem concluído com sucesso!');
+      const page = fieldName === 'bgFrenteUrl' ? 'frente' : 'verso';
+      const patch = buildBackgroundPatch(page, urlData.publicUrl);
+      setFormData((prev: any) => ({
+        ...prev,
+        ...patch,
+      }));
+      window.setTimeout(() => alert('Upload da imagem concluído com sucesso!'), 0);
     } catch (err: any) {
       console.error('Erro ao fazer upload:', err);
       alert('Erro ao fazer upload da imagem: ' + err.message);
@@ -226,7 +252,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
     try {
       const signatureImageUrl = await uploadTemplateImage(file);
       const updatedBlocks = formData.blocks.map((b: any) => {
-        if (b.id !== selectedBlockId || b.type !== 'signature') return b;
+        if (b.id !== selectedBlockId || !['signature', 'signatureImage'].includes(b.type)) return b;
         return {
           ...b,
           signatureSource: 'manual',
@@ -351,6 +377,8 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
     const finalData = {
       ...formData,
+      ...buildBackgroundPatch('frente', getTemplateBackgroundUrl(formData, 'frente'), formData.bgFrenteUpdatedAt || Date.now()),
+      ...buildBackgroundPatch('verso', getTemplateBackgroundUrl(formData, 'verso'), formData.bgVersoUpdatedAt || Date.now()),
       blocks,
       posicoes,
       textoFrente: texto?.content || formData.textoFrente || '',
@@ -578,8 +606,11 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                       type="text" 
                       name={activeTab === 'frente' ? 'bgFrenteUrl' : 'bgVersoUrl'}
                       placeholder="URL da imagem de fundo (.png / .jpg)"
-                      value={(activeTab === 'frente' ? formData.bgFrenteUrl : formData.bgVersoUrl) || ''}
-                      onChange={handleChange}
+                      value={getTemplateBackgroundUrl(formData, activeTab === 'frente' ? 'frente' : 'verso')}
+                      onChange={(e) => {
+                        const page = activeTab === 'frente' ? 'frente' : 'verso';
+                        setFormData({ ...formData, ...buildBackgroundPatch(page, e.target.value) });
+                      }}
                       className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-purple-500"
                     />
                     <label className="flex items-center justify-center p-3 bg-white hover:bg-purple-50 hover:text-purple-600 rounded-xl border border-slate-200 cursor-pointer transition-colors relative shadow-sm shrink-0">
@@ -663,7 +694,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                       </div>
 
                       {/* Editor de Texto do Bloco */}
-                      {selectedBlock.type === 'text' && (
+                      {['text', 'validationLink'].includes(selectedBlock.type) && (
                         <div className="space-y-2">
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             Conteúdo Textual
@@ -693,7 +724,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                       )}
 
                       {/* Editor de Fonte (Slidres) */}
-                      {(selectedBlock.type === 'text') && (
+                      {['text', 'table', 'validationLink'].includes(selectedBlock.type) && (
                         <div className="space-y-3">
                           <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                             <span>Tamanho da Fonte</span>
@@ -702,7 +733,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                           <input 
                             type="range" 
                             min={selectedBlock.id === 'titulo' ? "20" : "8"} 
-                            max={selectedBlock.id === 'titulo' ? "90" : "40"} 
+                            max={selectedBlock.id === 'titulo' ? "90" : selectedBlock.type === 'table' ? "22" : "40"} 
                             step="1" 
                             value={selectedBlock.fontSize || 14} 
                             onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'fontSize', parseInt(e.target.value))} 
@@ -760,7 +791,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                         </div>
                       )}
 
-                      {selectedBlock.type === 'text' && (
+                      {['text', 'table', 'validationLink'].includes(selectedBlock.type) && (
                         <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50 space-y-2">
                           <span className="block text-[8px] font-black text-purple-700 uppercase tracking-widest">Variáveis Suportadas</span>
                           <div className="grid grid-cols-1 gap-1 text-[8px]">
@@ -768,14 +799,18 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                             <VariableToken token="{{cpf}}" label="CPF" />
                             <VariableToken token="{{curso_nome}}" label="Curso" />
                             <VariableToken token="{{carga_horaria}}" label="Carga" />
+                            <VariableToken token="{{data_inicio}}" label="Início" />
+                            <VariableToken token="{{data_fim}}" label="Fim" />
+                            <VariableToken token="{{periodo}}" label="Período" />
                             <VariableToken token="{{data_conclusao}}" label="Data" />
+                            <VariableToken token="{{codigo_certificado}}" label="Código" />
                             <VariableToken token="{{url_validacao}}" label="Link de Validação" />
                           </div>
                         </div>
                       )}
 
                       {/* Editor de Larguras (Selo, QR, Assinatura) */}
-                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature' || selectedBlock.type === 'image' || selectedBlock.type === 'text' || selectedBlock.type === 'table') && (
+                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature' || selectedBlock.type === 'signatureImage' || selectedBlock.type === 'image' || selectedBlock.type === 'text' || selectedBlock.type === 'table' || selectedBlock.type === 'validationLink') && (
                         <div>
                           <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                             <span>Largura</span>
@@ -815,6 +850,65 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                             onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'opacity', Number(e.target.value))}
                             className="w-full accent-purple-600"
                           />
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'signatureImage' && (
+                        <div className="space-y-3">
+                          <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-3 text-[10px] font-bold uppercase tracking-widest text-purple-800">
+                            Arraste esta imagem no certificado para mover somente a assinatura, sem mover a linha ou o cargo.
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Origem da Assinatura</label>
+                            <select
+                              value={selectedBlock.signatureSource || 'none'}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureSource', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-purple-500 transition-all cursor-pointer"
+                            >
+                              {signatureSourceOptions.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {selectedBlock.signatureSource === 'manual' && (
+                            <div className="space-y-2">
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload da Assinatura PNG</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={selectedBlock.signatureImageUrl || ''}
+                                  onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureImageUrl', e.target.value)}
+                                  className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                                  placeholder="URL da assinatura digitalizada (.png)"
+                                />
+                                <label className="flex items-center justify-center p-2.5 bg-white hover:bg-purple-50 hover:text-purple-600 rounded-xl border border-slate-200 cursor-pointer transition-colors relative shrink-0">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleUploadSignature}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    disabled={isUploading}
+                                  />
+                                  {isUploading ? <Loader2 size={16} className="animate-spin text-purple-600" /> : <Upload size={16} />}
+                                </label>
+                              </div>
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">PNG com fundo transparente (preferencial)</p>
+                            </div>
+                          )}
+
+                          {selectedBlock.signatureSource && selectedBlock.signatureSource !== 'none' && (
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedBlock.signatureBlend !== false}
+                                onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureBlend', e.target.checked)}
+                                className="w-4 h-4 text-purple-600 rounded"
+                              />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Modo mesclagem (multiplicar)</span>
+                            </label>
+                          )}
                         </div>
                       )}
 
@@ -887,6 +981,22 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
                           <div>
                             <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                              <span>Ajuste vertical da imagem</span>
+                              <span className="font-mono">{selectedBlock.signatureImageOffsetY || 0}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min="-40"
+                              max="40"
+                              step="1"
+                              value={selectedBlock.signatureImageOffsetY || 0}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureImageOffsetY', parseInt(e.target.value, 10))}
+                              className="w-full accent-purple-600"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                               <span>Tamanho da Fonte do Identificador</span>
                               <span className="font-mono">{selectedBlock.signatureLabelFontSize || 10}px</span>
                             </label>
@@ -898,6 +1008,16 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                               value={selectedBlock.signatureLabelFontSize || 10}
                               onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'signatureLabelFontSize', parseInt(e.target.value, 10))}
                               className="w-full accent-purple-600"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Cor da linha e do cargo</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.color || formData.corTexto || '#1e293b'}
+                              onChange={(e) => handleUpdateBlockProp(selectedBlock.id, 'color', e.target.value)}
+                              className="h-10 w-full rounded-xl border border-slate-200 bg-white p-1"
                             />
                           </div>
                         </div>
@@ -988,6 +1108,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
           >
              {(previewMode === 'frente' || previewMode === 'ambos') && (
                <DiplomaPreview 
+                 key={`frente-${getTemplateBackgroundUrl(formData, 'frente')}-${formData.bgFrenteUpdatedAt || ''}`}
                  formData={formData} 
                  page="frente" 
                  zoomLevel={zoomLevel} 
@@ -999,6 +1120,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
              )}
              {(previewMode === 'verso' || previewMode === 'ambos') && formData.hasVerso && (
                <DiplomaPreview 
+                 key={`verso-${getTemplateBackgroundUrl(formData, 'verso')}-${formData.bgVersoUpdatedAt || ''}`}
                  formData={formData} 
                  page="verso" 
                  zoomLevel={zoomLevel} 

@@ -300,10 +300,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                           <Eye size={14} />
                         </button>
                         <a
-                          href={doc.url === '#' ? undefined : doc.url}
+                          href={!doc.url || doc.url === '#' ? undefined : doc.url}
                           download={doc.title}
                           onClick={(e) => {
-                            if (doc.url === '#') {
+                            if (!doc.url || doc.url === '#') {
                               e.preventDefault();
                               alert('Download não disponível.');
                             } else {

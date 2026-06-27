@@ -198,7 +198,8 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
         .eq('aluno_id', alunoId)
         .eq('curso_id', selectedCurso.id)
         .eq('modalidade', 'EAD')
-        .neq('status', 'CANCELADO')
+        .eq('status', 'FINALIZADO')
+        .not('codigo_validacao', 'is', null)
         .order('data_conclusao', { ascending: false });
 
       if (certErr) throw certErr;

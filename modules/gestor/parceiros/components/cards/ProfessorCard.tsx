@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Briefcase, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, GraduationCap } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
+import { formatCpf } from '../../../../../lib/documentFormatters';
 
 interface ProfessorCardProps {
   data: any;
@@ -25,6 +26,7 @@ const ProfessorCard: React.FC<ProfessorCardProps> = ({ data, onClick, onDelete }
   }, []);
 
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
+  const formattedCpf = formatCpf(data.cpf);
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'Professor', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -58,7 +60,7 @@ const ProfessorCard: React.FC<ProfessorCardProps> = ({ data, onClick, onDelete }
               {data.nome}
             </h3>
             {data.cpf && (
-              <div className="text-[11px] text-slate-400 font-medium font-mono">{data.cpf}</div>
+              <div className="text-[11px] text-slate-400 font-medium font-mono">{formattedCpf}</div>
             )}
           </div>
         </div>

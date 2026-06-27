@@ -11,6 +11,7 @@ export interface CreateCursoModalidadeInput {
   descricao: string;
   area: string;
   versao: string;
+  cargaHoraria: number;
 }
 
 export const cursoModalidadeQueryKeys = {
@@ -26,7 +27,7 @@ export const cursoModalidadeService = {
   async createCurso(input: CreateCursoModalidadeInput): Promise<Curso> {
     return cadastrosService.createCurso({
       nome: input.nome,
-      carga_horaria: 0,
+      carga_horaria: input.cargaHoraria,
       modalidade: input.modalidade,
       status: 'ativo',
       area: input.area,

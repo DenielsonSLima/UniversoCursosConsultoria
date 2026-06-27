@@ -2,6 +2,7 @@ import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Link2, Loader2, Unlink2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { buildAuthRedirectUrl } from '../../../lib/app-url';
 import GoogleLogo from './GoogleLogo';
 
 const getFriendlyOAuthError = (message: string) => {
@@ -60,7 +61,7 @@ const GoogleIdentityCard: React.FC<GoogleIdentityCardProps> = ({ tone = 'blue' }
   });
 
   const handleLinkGoogle = async () => {
-    const redirectTo = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const redirectTo = buildAuthRedirectUrl(`${window.location.pathname}${window.location.search}`);
     const { error } = await supabase.auth.linkIdentity({
       provider: 'google',
       options: { redirectTo },

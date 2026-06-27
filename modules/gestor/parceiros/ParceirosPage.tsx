@@ -31,6 +31,8 @@ type FormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null;
 
 interface ParceirosPageProps {
   activeTabInicial?: ParceirosTabType;
+  poloId?: string | null;
+  includeGlobal?: boolean;
 }
 
 const tabs = [
@@ -41,7 +43,7 @@ const tabs = [
   { id: 'pf', label: 'Pessoa Física', icon: User },
 ] as const;
 
-const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos' }) => {
+const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos', poloId, includeGlobal = false }) => {
   const { toasts, removeToast, toast } = useToast();
   const [showForm, setShowForm] = useState<FormType>(null);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -61,7 +63,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     loadingPartners,
     turmasDisponiveis,
     invalidateParceiros,
-  } = useParceirosQueries(showEnrollmentModalForAlunoId);
+  } = useParceirosQueries(showEnrollmentModalForAlunoId, { poloId, includeGlobal });
   useParceirosRealtime(invalidateParceiros);
   const {
     searchTerm,

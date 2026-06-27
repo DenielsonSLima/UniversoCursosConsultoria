@@ -9,6 +9,7 @@ interface DiplomaPreviewProps {
   formData: any;
   page: 'frente' | 'verso';
   zoomLevel: number;
+  previewValues?: Record<string, string>;
   isEditable?: boolean; // True when on the active editing tabs (frente/verso)
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string | null) => void;
@@ -24,15 +25,34 @@ export const posicoesPadrao: Record<string, { x: number; y: number }> = {
   texto: { x: 10.0, y: 48.0 },
   cidadeData: { x: 10.0, y: 70.0 },
   assinatura1: { x: 15.0, y: 78.0 },
+  assinatura1Imagem: { x: 17.0, y: 71.0 },
   assinatura2: { x: 55.0, y: 78.0 },
+  assinatura2Imagem: { x: 57.0, y: 71.0 },
   qrcode: { x: 80.0, y: 72.0 },
   // Verso
+  conteudoProgramaticoTitulo: { x: 6.0, y: 10.0 },
   validacaoSite: { x: 50.0, y: 76.0 },
-  historico: { x: 5.0, y: 10.0 },
+  historico: { x: 6.0, y: 16.0 },
+  cursosLivresLegal: { x: 6.0, y: 58.0 },
+  validadeNacional: { x: 6.0, y: 64.0 },
   registro: { x: 65.0, y: 10.0 },
   carimbo: { x: 65.0, y: 70.0 },
   versoQrcode: { x: 65.0, y: 44.0 }
 };
+
+export const EAD_FRONT_TEXT =
+  'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
+
+export const EAD_VALIDITY_TEXT =
+  'VÁLIDO EM TODO O TERRITÓRIO NACIONAL COMO COMPROVANTE DE CAPACITAÇÃO E QUALIFICAÇÃO PROFISSIONAL.';
+
+export const EAD_BACK_TITLE_TEXT = 'CONTEÚDO PROGRAMÁTICO';
+
+export const EAD_BACK_LEGAL_TEXT =
+  'CURSOS LIVRES SÃO LEGAIS COM BASE NO DECRETO PRESIDENCIAL N° 5.154.';
+
+export const EAD_BACK_TEXT =
+  '{{grade_curricular}}';
 
 const normalizeSignatureBlock = (block: any) => {
   if (block?.type !== 'signature') return block;
@@ -58,6 +78,7 @@ const normalizeSignatureBlock = (block: any) => {
     signatureSource: legacySignatureSource ?? signatureDefaultSource,
     signatureImageUrl: block.signatureImageUrl || '',
     signatureBlend: block.signatureBlend ?? true,
+    signatureImageOffsetY: Number(block.signatureImageOffsetY || 0),
     signatureLabelFontSize: block.signatureLabelFontSize != null ? Number(block.signatureLabelFontSize) : 10,
     label: block.id === 'assinatura2' ? 'Assinatura do(a) Aluno(a)' : block.label,
     title,
@@ -67,11 +88,69 @@ const normalizeSignatureBlock = (block: any) => {
 const isTechnicalCertificate = (formData: any) =>
   formData?.tipoCurso === 'Cursos Técnicos' || formData?.id === 'certificado_tecnico';
 
+const isEadCertificate = (formData: any) =>
+  formData?.tipoCurso === 'Educação a Distância (EAD)' || formData?.id === 'certificado_ead';
+
 const validationSiteContent =
-  '<strong>www.universocc.com.br/validador</strong><br /><strong>AVISO DE AUTENTICIDADE:</strong> consulte a autenticidade deste certificado pelo QR Code ou pelo código de autenticidade.';
+  '<strong style="color:#dc2626">www.universocc.com.br/validador</strong><br /><strong>AVISO DE AUTENTICIDADE:</strong> consulte a autenticidade deste certificado pelo QR Code ou pelo código de autenticidade.';
+
+export const getTemplateBackgroundUrl = (template: any, page: 'frente' | 'verso') => {
+  if (!template) return '';
+
+  if (page === 'frente') {
+    return template.bgFrenteUrl || template.frenteUrl || template.backgroundFrenteUrl || template.bg_frente_url || '';
+  }
+
+  return template.bgVersoUrl || template.versoUrl || template.backgroundVersoUrl || template.bg_verso_url || '';
+};
+
+const stripEadValidityText = (content: string) =>
+  String(content || '')
+    .replace(/(?:<br\s*\/?>\s*){0,4}V[aá]lido em todo (?:o pa[ií]s|o territ[oó]rio nacional)[\s\S]*?qualifica[cç][aã]o profissional\.?/gi, '')
+    .trim();
+
+const stripEadBackDecorations = (content: string) => {
+  const cleaned = String(content || '')
+    .replace(/^\s*Conte[uú]do Program[aá]tico:\s*/i, '')
+    .replace(/CURSOS LIVRES S[ÃA]O LEGAIS COM BASE NO DECRETO PRESIDENCIAL N[°º]\s*5\.154\.?/gi, '')
+    .trim();
+
+  return cleaned || EAD_BACK_TEXT;
+};
+
+const highlightApprovalStatus = (html: string) =>
+  String(html || '').replace(
+    /\s*-\s*Aprovado\b/gi,
+    '<br /><br /><span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#001a33;color:#ffffff;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;">APROVADO</span>'
+  );
+
+const parseProgrammaticRows = (content: string) => {
+  const plain = String(content || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ');
+
+  return plain
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/^conte[uú]do program[aá]tico:?$/i.test(line))
+    .map((line) => {
+      const parts = line.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
+      if (parts.length < 2) return null;
+
+      const status = parts.slice(2).join(' - ');
+      return {
+        nome: parts[0],
+        carga: parts[1] || '',
+        status: status || '',
+      };
+    })
+    .filter(Boolean) as Array<{ nome: string; carga: string; status: string }>;
+};
 
 const normalizeLegacyBlock = (block: any, formData: any) => {
   const technical = isTechnicalCertificate(formData);
+  const ead = isEadCertificate(formData);
   let normalized = normalizeSignatureBlock(block);
 
   if (normalized.id === 'cidadeData' && /aracaju\/se/i.test(String(normalized.content || ''))) {
@@ -83,6 +162,50 @@ const normalizeLegacyBlock = (block: any, formData: any) => {
     if (/sistec|c[oó]digo de autenticidade|livro_registro|certificado expedido/i.test(legacyContent)) {
       normalized = { ...normalized, content: 'Conteúdo Programático:\n\n{{grade_curricular}}' };
     }
+  }
+
+  if (normalized.id === 'texto' && ead) {
+    const content = stripEadValidityText(String(normalized.content || ''));
+    normalized = {
+      ...normalized,
+      content: /LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT,
+    };
+  }
+
+  if (normalized.id === 'historico' && ead) {
+    normalized = {
+      ...normalized,
+      content: stripEadBackDecorations(String(normalized.content || '')),
+      tableTitleVisible: false,
+      label: 'Conteúdo / Grade',
+    };
+  }
+
+  if (normalized.id === 'validadeNacional' && ead) {
+    const wasOnFront = normalized.page !== 'verso';
+    const savedContent = String(normalized.content || '').trim();
+    const validityContent = /V[aá]lido em todo o territ[oó]rio nacional como comprovante de capacita[cç][aã]o e qualifica[cç][aã]o profissional\.?/i.test(savedContent)
+      ? EAD_VALIDITY_TEXT
+      : savedContent || EAD_VALIDITY_TEXT;
+    normalized = {
+      ...normalized,
+      label: 'Validade Nacional',
+      page: 'verso',
+      x: wasOnFront ? posicoesPadrao.validadeNacional.x : normalized.x ?? posicoesPadrao.validadeNacional.x,
+      y: wasOnFront ? posicoesPadrao.validadeNacional.y : normalized.y ?? posicoesPadrao.validadeNacional.y,
+      content: validityContent,
+      visible: formData.hasVerso !== false,
+    };
+  }
+
+  if (normalized.type === 'signatureImage') {
+    normalized = {
+      ...normalized,
+      signatureBlend: normalized.signatureBlend ?? true,
+      signatureSource: normalized.signatureSource || 'none',
+      signatureImageUrl: normalized.signatureImageUrl || '',
+      width: normalized.width || 220,
+    };
   }
 
   if (normalized.id === 'registro') {
@@ -110,6 +233,9 @@ export const getBlocks = (formData: any) => {
   // Se não existir o array de blocks, vamos construí-lo a partir dos dados do modelo e posições
   const pos = formData.posicoes || posicoesPadrao;
   const technical = isTechnicalCertificate(formData);
+  const ead = isEadCertificate(formData);
+  const sourceBlocks = Array.isArray(formData.blocks) ? formData.blocks : [];
+  const existingSignature = (id: string) => sourceBlocks.find((block: any) => block.id === id && block.type === 'signature') || {};
   const defaultBlocks = [
     {
       id: 'selo',
@@ -166,7 +292,7 @@ export const getBlocks = (formData: any) => {
       fontFamily: 'serif',
       fontWeight: '400',
       textAlign: 'center',
-      content: formData.textoFrente || 'Certificamos que {{nome_aluno}} concluiu o curso de {{curso_nome}} com carga horária de {{carga_horaria}} horas.',
+      content: formData.textoFrente || (ead ? EAD_FRONT_TEXT : 'Certificamos que {{nome_aluno}} concluiu o curso de {{curso_nome}} com carga horária de {{carga_horaria}} horas.'),
       visible: formData.exibirTexto !== false
     },
     {
@@ -186,6 +312,22 @@ export const getBlocks = (formData: any) => {
       visible: formData.exibirCidadeData !== false
     },
     {
+      id: 'validadeNacional',
+      type: 'text',
+      label: 'Validade Nacional',
+      page: 'verso',
+      x: pos.validadeNacional?.x ?? posicoesPadrao.validadeNacional.x,
+      y: pos.validadeNacional?.y ?? posicoesPadrao.validadeNacional.y,
+      fontSize: 13,
+      width: 520,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: 'serif',
+      fontWeight: '400',
+      textAlign: 'center',
+      content: EAD_VALIDITY_TEXT,
+      visible: ead && formData.hasVerso !== false
+    },
+    {
       id: 'assinatura1',
       type: 'signature',
       label: 'Assinatura Diretor',
@@ -197,7 +339,22 @@ export const getBlocks = (formData: any) => {
       signatureSource: 'diretoriaGeral',
       signatureImageUrl: '',
       signatureBlend: true,
+      signatureImageOffsetY: 0,
       signatureLabelFontSize: 10,
+      visible: formData.exibirAssinatura1 !== false
+    },
+    {
+      id: 'assinatura1Imagem',
+      type: 'signatureImage',
+      label: 'Imagem Assinatura Diretor',
+      page: 'frente',
+      signatureBlockId: 'assinatura1',
+      x: pos.assinatura1Imagem?.x ?? posicoesPadrao.assinatura1Imagem.x,
+      y: pos.assinatura1Imagem?.y ?? posicoesPadrao.assinatura1Imagem.y,
+      width: existingSignature('assinatura1').signatureImageWidth || 220,
+      signatureSource: existingSignature('assinatura1').signatureSource || 'diretoriaGeral',
+      signatureImageUrl: existingSignature('assinatura1').signatureImageUrl || '',
+      signatureBlend: existingSignature('assinatura1').signatureBlend ?? true,
       visible: formData.exibirAssinatura1 !== false
     },
     {
@@ -210,6 +367,20 @@ export const getBlocks = (formData: any) => {
       width: formData.assinaturaWidth || 256,
       title: 'Aluno(a)',
       visible: formData.exibirAssinatura2 !== false
+    },
+    {
+      id: 'assinatura2Imagem',
+      type: 'signatureImage',
+      label: 'Imagem Assinatura Aluno(a)',
+      page: 'frente',
+      signatureBlockId: 'assinatura2',
+      x: pos.assinatura2Imagem?.x ?? posicoesPadrao.assinatura2Imagem.x,
+      y: pos.assinatura2Imagem?.y ?? posicoesPadrao.assinatura2Imagem.y,
+      width: existingSignature('assinatura2').signatureImageWidth || 220,
+      signatureSource: existingSignature('assinatura2').signatureSource || 'none',
+      signatureImageUrl: existingSignature('assinatura2').signatureImageUrl || '',
+      signatureBlend: existingSignature('assinatura2').signatureBlend ?? true,
+      visible: false
     },
     {
       id: 'qrcode',
@@ -237,6 +408,22 @@ export const getBlocks = (formData: any) => {
       visible: formData.hasVerso !== false
     },
     {
+      id: 'conteudoProgramaticoTitulo',
+      type: 'text',
+      label: 'Título Conteúdo Programático',
+      page: 'verso',
+      x: pos.conteudoProgramaticoTitulo?.x ?? posicoesPadrao.conteudoProgramaticoTitulo.x,
+      y: pos.conteudoProgramaticoTitulo?.y ?? posicoesPadrao.conteudoProgramaticoTitulo.y,
+      width: 560,
+      color: formData.corTexto || '#1e293b',
+      fontSize: 15,
+      fontFamily: 'sans-serif',
+      fontWeight: '900',
+      textAlign: 'left',
+      content: EAD_BACK_TITLE_TEXT,
+      visible: ead && formData.hasVerso !== false
+    },
+    {
       id: 'historico',
       type: 'table',
       label: 'Histórico Escolar / Grade',
@@ -244,8 +431,29 @@ export const getBlocks = (formData: any) => {
       x: pos.historico?.x ?? posicoesPadrao.historico.x,
       y: pos.historico?.y ?? posicoesPadrao.historico.y,
       width: 560,
-      content: formData.textoVerso || (formData.tipoCurso === 'Cursos Técnicos' ? 'Grade Curricular do Curso:\n\n{{grade_curricular}}' : 'Conteúdo Programático:\n\n{{grade_curricular}}'),
+      fontSize: 11,
+      color: formData.corTexto || '#1e293b',
+      fontFamily: 'monospace',
+      textAlign: 'left',
+      tableTitleVisible: !ead,
+      content: formData.textoVerso || (formData.tipoCurso === 'Cursos Técnicos' ? 'Grade Curricular do Curso:\n\n{{grade_curricular}}' : ead ? EAD_BACK_TEXT : 'Conteúdo Programático:\n\n{{grade_curricular}}'),
       visible: formData.hasVerso !== false
+    },
+    {
+      id: 'cursosLivresLegal',
+      type: 'text',
+      label: 'Base Legal Cursos Livres',
+      page: 'verso',
+      x: pos.cursosLivresLegal?.x ?? posicoesPadrao.cursosLivresLegal.x,
+      y: pos.cursosLivresLegal?.y ?? posicoesPadrao.cursosLivresLegal.y,
+      width: 560,
+      color: formData.corTexto || '#1e293b',
+      fontSize: 11,
+      fontFamily: 'sans-serif',
+      fontWeight: '900',
+      textAlign: 'left',
+      content: EAD_BACK_LEGAL_TEXT,
+      visible: ead && formData.hasVerso !== false
     },
     {
       id: 'registro',
@@ -293,13 +501,14 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
   formData, 
   page, 
   zoomLevel,
+  previewValues = {},
   isEditable = false,
   selectedBlockId = null,
   onSelectBlock,
   onChangeBlocks
 }) => {
   // Dados fictícios para preencher o visualizador
-  const previewData = {
+  const defaultPreviewData = {
     nome_aluno: 'JOÃO DA SILVA SAURO',
     cpf: '123.456.789-00',
     cidade: 'Cidade do Polo',
@@ -314,18 +523,23 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
         ? 'Curso EAD'
         : 'Curso de Formação',
     carga_horaria: '1200',
+    data_inicio: '04/12/2025',
+    data_fim: '30/12/2025',
+    periodo: '04/12/2025 até 30/12/2025',
     data_conclusao: '20 de Maio de 2026',
     grade_curricular: `Anatomia Humana - 80h - Nota: 9.0\nFisiologia - 80h - Nota: 8.5\nPrimeiros Socorros - 40h - Nota: 10.0\nFarmacologia Aplicada - 60h - Nota: 9.5\nÉtica e Deontologia - 40h - Nota: 9.0\nEstágio Supervisionado I - 200h - Aprovado`,
-  livro_registro: 'Livro: 12, Folha: 45, Registro: 1024',
-  ensino_medio_estabelecimento: 'COLÉGIO ESTADUAL EXEMPLO',
-  ensino_medio_localidade_uf: 'JAPOATÃ - SE',
-  ensino_medio_ano_conclusao: '2022',
-  certificado_numero: '1024',
-  pagina_livro: '45',
-  livro: '12',
-  validacao_sistec: 'SE123456789',
-  codigo_validacao: 'CERT-EXEMPLO-0001'
+    livro_registro: 'Livro: 12, Folha: 45, Registro: 1024',
+    ensino_medio_estabelecimento: 'COLÉGIO ESTADUAL EXEMPLO',
+    ensino_medio_localidade_uf: 'JAPOATÃ - SE',
+    ensino_medio_ano_conclusao: '2022',
+    certificado_numero: '1024',
+    codigo_certificado: 'CERT-EAD-2B4F-D710-0F26',
+    pagina_livro: '45',
+    livro: '12',
+    validacao_sistec: 'SE123456789',
+    codigo_validacao: 'CERT-EAD-2B4F-D710-0F26'
   };
+  const previewData = { ...defaultPreviewData, ...previewValues };
 
   // Helper para substituir variáveis simples por negrito no preview
   const parseText = (text: string, extraVars: Record<string, string> = {}) => {
@@ -339,6 +553,21 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
     Object.keys(extraVars).forEach((key) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       parsed = parsed.replace(regex, `<strong>${extraVars[key]}</strong>`);
+    });
+    return highlightApprovalStatus(parsed);
+  };
+
+  const resolvePlainText = (text: string, extraVars: Record<string, string> = {}) => {
+    if (!text) return '';
+    let parsed = text;
+    Object.keys(previewData).forEach(key => {
+       const regex = new RegExp(`{{${key}}}`, 'g');
+       // @ts-ignore
+       parsed = parsed.replace(regex, previewData[key]);
+    });
+    Object.keys(extraVars).forEach((key) => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      parsed = parsed.replace(regex, extraVars[key]);
     });
     return parsed;
   };
@@ -372,12 +601,12 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
     position: 'relative'
   };
 
-  if (page === 'frente' && formData.bgFrenteUrl) {
-    containerStyle.backgroundImage = `url(${formData.bgFrenteUrl})`;
-    containerStyle.backgroundSize = 'cover';
-    containerStyle.backgroundPosition = 'center';
-  } else if (page === 'verso' && formData.bgVersoUrl) {
-    containerStyle.backgroundImage = `url(${formData.bgVersoUrl})`;
+  const backgroundUrl = getTemplateBackgroundUrl(formData, page);
+  const shouldRenderLandscapeWatermark =
+    page === 'verso' && !backgroundUrl && Boolean(formData.landscapeWatermarkUrl);
+
+  if (backgroundUrl) {
+    containerStyle.backgroundImage = `url(${backgroundUrl})`;
     containerStyle.backgroundSize = 'cover';
     containerStyle.backgroundPosition = 'center';
   }
@@ -514,10 +743,28 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
         const signatureLabelFontSize = Number(block.signatureLabelFontSize || 10);
         const signatureUrl = getSignatureUrl(block);
         const signatureBlend = block.signatureBlend !== false ? 'multiply' : 'normal';
+        const signatureImageOffsetY = Number(block.signatureImageOffsetY || 0);
+        const hasSeparateSignatureImage = visibleBlocks.some((item: any) => item.type === 'signatureImage' && item.signatureBlockId === block.id);
         return (
           <div style={{ width: signatureW }} className="text-center flex flex-col items-center justify-end">
+            {!hasSeparateSignatureImage && (
+              <div className="flex h-[58px] w-full items-end justify-center overflow-visible">
+                {signatureUrl ? (
+                  <img
+                    src={signatureUrl}
+                    alt={block.title || 'Assinatura'}
+                    className="w-full object-contain pointer-events-none"
+                    style={{
+                      maxHeight: '58px',
+                      mixBlendMode: signatureBlend,
+                      transform: `translateY(${signatureImageOffsetY}px)`,
+                    }}
+                  />
+                ) : null}
+              </div>
+            )}
             <div
-              className="w-full border-t border-slate-400 pt-[1px] mb-2"
+              className="w-full border-t border-slate-400 pt-[1px]"
               style={{ borderColor: block.color || corTexto }}
             >
               <p
@@ -527,16 +774,37 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
                 {block.title || 'Visto'}
               </p>
             </div>
-            {signatureUrl ? (
-              <img
-                src={signatureUrl}
-                alt={block.title || 'Assinatura'}
-                className="w-full object-contain pointer-events-none"
-                style={{ maxHeight: '56px', mixBlendMode: signatureBlend }}
-              />
-            ) : null}
           </div>
         );
+
+      case 'signatureImage': {
+        const signatureImageUrl = getSignatureUrl(block);
+        const signatureImageBlend = block.signatureBlend !== false ? 'multiply' : undefined;
+        if (!signatureImageUrl) {
+          return isEditable ? (
+            <div
+              className="flex items-center justify-center rounded border border-dashed border-purple-300 bg-purple-50/50 text-center text-[8px] font-black uppercase tracking-widest text-purple-500"
+              style={{ width: `${block.width || 220}px`, height: '58px' }}
+            >
+              Imagem da assinatura
+            </div>
+          ) : null;
+        }
+
+        return (
+          <img
+            src={signatureImageUrl}
+            alt={block.label || 'Assinatura'}
+            draggable={false}
+            className="block select-none object-contain pointer-events-none"
+            style={{
+              width: `${block.width || 220}px`,
+              maxHeight: '90px',
+              mixBlendMode: signatureImageBlend,
+            }}
+          />
+        );
+      }
 
       case 'qrcode': {
         const qrW = `${block.width || 120}px`;
@@ -562,14 +830,59 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       }
 
       case 'table':
+        const tableText = resolvePlainText(block.content || '');
+        const programmaticRows = parseProgrammaticRows(tableText);
+        const compactTable = programmaticRows.length > 6;
+        const denseTable = programmaticRows.length > 10;
+        const tableFontSize = Math.min(
+          Number(block.fontSize || 11),
+          denseTable ? 8 : compactTable ? 9 : 11
+        );
+        const tableCellClass = denseTable ? 'px-1.5 py-0.5' : compactTable ? 'px-1.5 py-1' : 'px-2 py-1.5';
+        const tableTextStyle: React.CSSProperties = {
+          color: block.color || corTexto,
+          fontFamily: block.fontFamily || 'monospace',
+          fontSize: `${tableFontSize}px`,
+          textAlign: block.textAlign || 'left',
+        };
+
         return (
-          <div className="flex flex-col border border-slate-200 p-4 bg-white/90 rounded-xl" style={{ width: `${block.width || 550}px` }}>
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight border-b border-slate-800 pb-1.5 mb-3">
-              Histórico Escolar
-            </h2>
-            <div className="text-[11px] text-slate-700 leading-relaxed font-mono whitespace-pre-wrap">
-              <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '') }} />
-            </div>
+          <div className="flex flex-col border border-slate-200 bg-white/90 rounded-xl" style={{ width: `${block.width || 550}px`, padding: denseTable ? '8px' : compactTable ? '10px' : '16px' }}>
+            {block.tableTitleVisible !== false && (
+              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight border-b border-slate-800 pb-1.5 mb-3">
+                Histórico Escolar
+              </h2>
+            )}
+            {programmaticRows.length > 0 ? (
+              <table className="w-full border-collapse overflow-hidden rounded-lg text-left" style={tableTextStyle}>
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700">
+                    <th className={`border border-slate-200 font-black uppercase tracking-widest ${tableCellClass}`}>Componente</th>
+                    <th className={`w-20 border border-slate-200 font-black uppercase tracking-widest ${tableCellClass}`}>Carga</th>
+                    <th className={`w-24 border border-slate-200 font-black uppercase tracking-widest ${tableCellClass}`}>Nota / Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {programmaticRows.map((row, index) => (
+                    <tr key={`${row.nome}-${index}`} className={index % 2 === 0 ? 'bg-white/85' : 'bg-slate-50/85'}>
+                      <td className={`border border-slate-200 font-bold ${tableCellClass}`}>{row.nome}</td>
+                      <td className={`border border-slate-200 font-bold ${tableCellClass}`}>{row.carga}</td>
+                      <td className={`border border-slate-200 font-black ${tableCellClass}`}>
+                        {/aprovado/i.test(row.status) ? (
+                          <span className="inline-block rounded-full bg-[#001a33] px-2 py-0.5 text-[0.78em] font-black uppercase tracking-widest text-white">Aprovado</span>
+                        ) : (
+                          row.status.replace(/^Nota:\s*/i, 'Nota: ')
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="leading-relaxed whitespace-pre-wrap" style={tableTextStyle}>
+                <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '') }} />
+              </div>
+            )}
           </div>
         );
 
@@ -635,8 +948,8 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       className="bg-white w-[297mm] h-[210mm] shadow-2xl relative rounded-[2mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
       style={containerStyle}
     >
-      {/* Marca d'água paisagem da empresa no verso */}
-      {page === 'verso' && formData.landscapeWatermarkUrl && (
+      {/* Marca d'água paisagem da empresa no verso, apenas quando não houver fundo próprio */}
+      {shouldRenderLandscapeWatermark && (
         <div className="absolute inset-0 z-0 flex h-full w-full items-center justify-center overflow-hidden pointer-events-none">
           <img
             src={formData.landscapeWatermarkUrl}
@@ -654,11 +967,16 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       {/* Renderização de todos os Blocos Visíveis da Página */}
       {visibleBlocks.map((block: any) => {
         const isSelected = selectedBlockId === block.id;
+        const blockStyle = getPosStyle(block);
+
+        if (block.type === 'signatureImage' && block.signatureBlend !== false) {
+          blockStyle.mixBlendMode = 'multiply';
+        }
         
         return (
           <div
             key={block.id}
-            style={getPosStyle(block)}
+            style={blockStyle}
             onMouseDown={(e) => handleDragStart(e, block.id)}
             onClick={(e) => {
               e.stopPropagation();

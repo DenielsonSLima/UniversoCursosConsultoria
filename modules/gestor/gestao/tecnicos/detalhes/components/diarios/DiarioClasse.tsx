@@ -2,14 +2,24 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle, Download } from 'lucide-react';
-import { supabase } from '../../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
-import { formatMatricula } from '../../../../../../../lib/academicUtils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import DiarioPrintDocument from './DiarioPrintDocument';
-import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
+import {
+  useDiarioAttendance,
+  useDiarioAulas,
+  useDiarioGrades,
+  useDiarioObservacoes,
+  useDiarioPraticas,
+  useDiarioStudents,
+  useDiarioTemplate,
+  useSaveDiarioGradesMutation,
+  useSaveDiarioObservacoesMutation,
+  useSaveDiarioPraticaMutation,
+  useToggleDiarioAttendanceMutation,
+} from './hooks/useDiarioClasse';
+import { useDiarioRealtime } from './hooks/useDiarioRealtime';
 
 interface DiarioClasseProps {
   disciplina: any;
@@ -21,124 +31,17 @@ interface DiarioClasseProps {
 const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, turma, onBack }) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'frequencia' | 'resultado' | 'conteudo' | 'observacoes'>('frequencia');
-  const queryClient = useQueryClient();
   const printDocumentRef = useRef<HTMLDivElement>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-  const { data: diarioTemplate } = useQuery({
-    queryKey: ['diario-template', turma.cursoId],
-    queryFn: () => diariosService.getTemplate(turma.cursoId),
-    enabled: !!turma.cursoId,
-  });
-
-  // 1. Alunos matriculados
-  const { data: students = [], isLoading: loadingStudents } = useQuery({
-    queryKey: ['diario-alunos', turma.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas')
-        .select('id, status, data_matricula, parceiros(*)')
-        .eq('turma_id', turma.id);
-
-      if (error) throw error;
-
-      return (data || [])
-        .filter((m: any) => m.parceiros)
-        .map((m: any) => ({
-          id: m.parceiros.id,
-          nome: m.parceiros.nome,
-          matricula: formatMatricula(m.id, m.data_matricula, m.parceiros.polo_id),
-          status: m.status
-        }));
-    }
-  });
-
-  // 2. Aulas lançadas na turma para esta disciplina
-  const { data: aulas = [], isLoading: loadingAulas } = useQuery({
-    queryKey: ['diario-aulas', turma.id, disciplina.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('aulas_turma')
-        .select('*')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id);
-
-      if (error) throw error;
-
-      // Ordenar por data_aula ASC, fallback para created_at ASC
-      const sortedAulasData = (data || []).sort((a: any, b: any) => {
-        if (a.data_aula && b.data_aula) return a.data_aula.localeCompare(b.data_aula);
-        if (a.data_aula) return -1;
-        if (b.data_aula) return 1;
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      });
-
-      return sortedAulasData.map((a: any, idx: number) => ({
-        id: a.id,
-        titulo: a.titulo,
-        cargaHoraria: parseFloat(a.carga_horaria),
-        dataLabel: a.data_aula 
-          ? new Date(a.data_aula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-          : (a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : `Aula ${idx + 1}`)
-      }));
-    }
-  });
-
-  // 3. Frequência lançada no banco
-  const { data: dbAttendance = [], isLoading: loadingAttendance } = useQuery({
-    queryKey: ['diario-frequencia', turma.id, disciplina.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('diario_frequencia')
-        .select('*')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id);
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // 4. Notas e situação acadêmica calculadas no banco de dados
-  const { data: dbGrades = [], isLoading: loadingGrades } = useQuery({
-    queryKey: ['diario-notas-resultados', turma.id, disciplina.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_diario_resultados', {
-        p_turma_id: turma.id,
-        p_disciplina_id: disciplina.id,
-      });
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // 5. Práticas Pedagógicas
-  const { data: dbPraticas = [], isLoading: loadingPraticas } = useQuery({
-    queryKey: ['diario-praticas', turma.id, disciplina.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('diario_praticas')
-        .select('*')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id);
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // 6. Observações do docente
-  const { data: dbObservacoes = '', isLoading: loadingObservacoes } = useQuery({
-    queryKey: ['diario-observacoes', turma.id, disciplina.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('diario_observacoes')
-        .select('observacoes')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplina.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.observacoes || '';
-    }
-  });
+  const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
+  const { data: students = [], isLoading: loadingStudents } = useDiarioStudents(turma.id);
+  const { data: aulas = [], isLoading: loadingAulas } = useDiarioAulas(turma.id, disciplina.id);
+  const { data: dbAttendance = [], isLoading: loadingAttendance } = useDiarioAttendance(turma.id, disciplina.id);
+  const { data: dbGrades = [], isLoading: loadingGrades } = useDiarioGrades(turma.id, disciplina.id);
+  const { data: dbPraticas = [], isLoading: loadingPraticas } = useDiarioPraticas(turma.id, disciplina.id);
+  const { data: dbObservacoes = '', isLoading: loadingObservacoes } = useDiarioObservacoes(turma.id, disciplina.id);
+  useDiarioRealtime(turma.id, disciplina.id);
 
   // Mapeamentos computados (Memo)
   const attendanceMap = useMemo(() => {
@@ -228,141 +131,10 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     }
   }, [dbObservacoes]);
 
-  // Supabase Realtime para sincronização multiusuário em tempo real (Egress otimizado)
-  useEffect(() => {
-    const channel = supabase
-      .channel(`diario-${turma.id}-${disciplina.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'diario_frequencia',
-          filter: `turma_id=eq.${turma.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['diario-frequencia', turma.id, disciplina.id] });
-          queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'diario_notas',
-          filter: `turma_id=eq.${turma.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'diario_praticas',
-          filter: `turma_id=eq.${turma.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['diario-praticas', turma.id, disciplina.id] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'diario_observacoes',
-          filter: `turma_id=eq.${turma.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['diario-observacoes', turma.id, disciplina.id] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [turma.id, disciplina.id, queryClient]);
-
-  // Mutações (Mutations)
-  const toggleAttendanceMutation = useMutation({
-    mutationFn: async ({ aulaId, alunoId, nextStatus }: { aulaId: string, alunoId: string, nextStatus: 'P' | 'F' }) => {
-      const { error } = await supabase
-        .from('diario_frequencia')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplina.id,
-          aula_id: aulaId,
-          aluno_id: alunoId,
-          status: nextStatus
-        }, { onConflict: 'aula_id,aluno_id' });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diario-frequencia', turma.id, disciplina.id] });
-      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
-    }
-  });
-
-  const saveStudentGradesMutation = useMutation({
-    mutationFn: async ({ alunoId, fields }: { alunoId: string, fields: any }) => {
-      const { error } = await supabase
-        .from('diario_notas')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplina.id,
-          aluno_id: alunoId,
-          nota_p: fields.p,
-          nota_ti: fields.ti,
-          nota_tg: fields.tg,
-          nota_s: fields.s,
-          nota_cq: fields.cq,
-          nota_o: fields.o,
-          nota_rec: fields.rec
-        }, { onConflict: 'turma_id,disciplina_id,aluno_id' });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diario-notas-resultados', turma.id, disciplina.id] });
-    }
-  });
-
-  const savePraticaMutation = useMutation({
-    mutationFn: async ({ aulaId, text }: { aulaId: string, text: string }) => {
-      const { error } = await supabase
-        .from('diario_praticas')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplina.id,
-          aula_id: aulaId,
-          pratica_pedagogica: text
-        }, { onConflict: 'aula_id' });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diario-praticas', turma.id, disciplina.id] });
-    }
-  });
-
-  const saveObservacoesMutation = useMutation({
-    mutationFn: async (text: string) => {
-      const { error } = await supabase
-        .from('diario_observacoes')
-        .upsert({
-          turma_id: turma.id,
-          disciplina_id: disciplina.id,
-          observacoes: text
-        }, { onConflict: 'turma_id,disciplina_id' });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['diario-observacoes', turma.id, disciplina.id] });
-    }
-  });
+  const toggleAttendanceMutation = useToggleDiarioAttendanceMutation(turma.id, disciplina.id);
+  const saveStudentGradesMutation = useSaveDiarioGradesMutation(turma.id, disciplina.id);
+  const savePraticaMutation = useSaveDiarioPraticaMutation(turma.id, disciplina.id);
+  const saveObservacoesMutation = useSaveDiarioObservacoesMutation(turma.id, disciplina.id);
 
   // Funções controladoras locais
   const handleToggleAttendance = (studentId: string, classId: string) => {

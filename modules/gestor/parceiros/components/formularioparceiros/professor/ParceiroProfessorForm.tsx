@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
+import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
 
 interface ParceiroProfessorFormProps {
   onCancel?: () => void;
@@ -113,7 +114,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
     observacao: '',
   });
 
-  const maskCPF = (v: string) => v.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})/,'$1-$2').replace(/(-\d{2})\d+?$/,'$1');
+  const maskCPF = formatCpf;
   const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
   const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
   const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
@@ -126,6 +127,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
         finalValue = value.toUpperCase();
       }
     }
+    if (name === 'email') finalValue = normalizeEmail(finalValue);
     if (name === 'cpf') finalValue = maskCPF(finalValue);
     if (name === 'cep') finalValue = maskCEP(finalValue);
     if (name === 'contato1' || name === 'contato2') finalValue = maskPhone(finalValue);
@@ -152,20 +154,44 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
   };
 
   const stepValid = () => {
-    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && formData.cpf.length === 14;
-    if (currentStep === 4) return formData.email.trim() !== '' && formData.contato1.length >= 14;
+    if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
+    if (currentStep === 4) return isValidEmail(formData.email) && formData.contato1.length >= 14;
     return true;
   };
 
-  const handleNext = () => { if (stepValid() && currentStep < 4) setCurrentStep(s => s + 1); };
+  const handleNext = () => {
+    if (!stepValid()) {
+      if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
+      if (currentStep === 4) alert('Informe e-mail válido e telefone para concluir.');
+      return;
+    }
+    if (currentStep < 4) setCurrentStep(s => s + 1);
+  };
   const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalTitulacao = showCustomTitulacao ? customTitulacao.trim().toUpperCase() : selectedTitulacao;
     const finalVinculo = showCustomVinculo ? customVinculo.trim().toUpperCase() : selectedVinculo;
+    if (!isValidCpf(formData.cpf)) {
+      alert('CPF do professor inválido. Corrija antes de salvar.');
+      return;
+    }
+    if (!formData.dataNascimento || formData.dataNascimento.length !== 10) {
+      alert('Data de nascimento do professor é obrigatória.');
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      alert('E-mail do professor inválido. Ele será usado como login.');
+      return;
+    }
+    if (formData.contato1.length < 14) {
+      alert('Telefone/WhatsApp do professor é obrigatório.');
+      return;
+    }
     if (onSave) onSave({
       ...formData,
+      email: normalizeEmail(formData.email),
       titulacao: finalTitulacao,
       tipoVinculo: finalVinculo,
     });
@@ -362,9 +388,9 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
               </div>
 
               <div>
-                <label className={labelCls}>Data de Nascimento</label>
+                <label className={labelCls}>Data de Nascimento <span className="text-red-500">*</span></label>
                 <input type="text" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange}
-                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
+                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" required />
               </div>
 
               <div>

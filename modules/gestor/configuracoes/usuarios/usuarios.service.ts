@@ -4,6 +4,8 @@ export interface UsuarioSistema {
   id?: string;
   nome: string;
   email: string;
+  cpf?: string;
+  telefone?: string;
   perfil: string;
   status: 'Ativo' | 'Inativo';
   context: string;
@@ -50,11 +52,20 @@ export const usuariosService = {
    * Cria um novo usuário na tabela usuarios_sistema.
    */
   async createUser(user: Omit<UsuarioSistema, 'id'>): Promise<UsuarioSistema> {
-    const { data, error } = await supabase
+    const insertUser = async (payload: Omit<UsuarioSistema, 'id'> | Omit<UsuarioSistema, 'id' | 'cpf'>) => supabase
       .from('usuarios_sistema')
-      .insert(user)
+      .insert(payload)
       .select()
       .single();
+
+    let { data, error } = await insertUser(user);
+
+    if (error && (error.message?.includes('cpf') || error.message?.includes('telefone'))) {
+      const { cpf, telefone, ...withoutIdentityExtras } = user;
+      const retry = await insertUser(withoutIdentityExtras);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error('Erro ao criar usuário:', error);

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Building, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Tag } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
+import { formatCnpj } from '../../../../../lib/documentFormatters';
 
 interface PJCardProps {
   data: any;
@@ -28,6 +29,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
   }, []);
 
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
+  const formattedCnpj = formatCnpj(data.cnpj);
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'PJ', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -61,7 +63,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
               {data.nome}
             </h3>
             {data.cnpj && (
-              <div className="text-[11px] text-slate-400 font-medium font-mono">{data.cnpj}</div>
+              <div className="text-[11px] text-slate-400 font-medium font-mono">{formattedCnpj}</div>
             )}
           </div>
         </div>

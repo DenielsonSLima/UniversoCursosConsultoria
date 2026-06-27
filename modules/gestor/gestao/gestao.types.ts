@@ -17,6 +17,11 @@ export interface Turma {
   poloEstado?: string;
   dataInicio: string;
   dataPrevisaoTermino: string;
+  dataInicioInscricao?: string;
+  dataFimInscricao?: string;
+  exigeMatricula?: boolean;
+  bloquearMatriculasAposCompletarVagas?: boolean;
+  qtdVagasMinima?: number;
   turno: Turno;
   status: StatusTurma;
   alunosMatriculados: number;
@@ -30,6 +35,14 @@ export interface Turma {
   descontoPontualidade: number;
   jurosAtraso: number;
   multaAtraso: number;
+  diaVencimentoPadrao?: number;
+  cronogramaFinanceiro?: any[];
+  aplicarDescontoMatricula?: boolean;
+  aplicarMultaJurosMatricula?: boolean;
+  aplicarDescontoMensalidade?: boolean;
+  aplicarMultaJurosMensalidade?: boolean;
+  aplicarDescontoRematricula?: boolean;
+  aplicarMultaJurosRematricula?: boolean;
   totalDisciplinas?: number;
   disciplinaAtual?: string;
   disciplinaAtualOrdem?: number;

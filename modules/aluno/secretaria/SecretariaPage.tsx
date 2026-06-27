@@ -33,6 +33,9 @@ import {
   getDocumentValidationUrl,
 } from '../../shared/document-validation/document-validation.url';
 import { usePoloInstitutionalData } from '../../shared/polo-institutional/use-polo-institutional-data';
+import { secretariaService } from '../../gestor/secretaria/secretaria.service';
+import { carteirinhaService } from '../../gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service';
+import { crachaService } from '../../gestor/cadastros/modelos-documentos/cracha/cracha.service';
 
 interface SecretariaPageProps {
   alunoId: string;
@@ -484,12 +487,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   useEffect(() => {
     const loadData = async () => {
       // Prazos configurados pelo admin
-      const { secretariaService } = await import('../../gestor/secretaria/secretaria.service');
       const prz = await secretariaService.getPrazos();
       setPrazos(prz);
 
       // Templates de cartões
-      const { carteirinhaService } = await import('../../gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service');
       const savedCarteirinha = await carteirinhaService.getTemplate();
       if (savedCarteirinha) {
         setCarteirinhaFormData(savedCarteirinha);
@@ -497,7 +498,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
         setCarteirinhaFormData({ corPrimaria: '#001a33', corSecundaria: '#3b82f6', textoFrente: 'CIE - Documento do Estudante', textoVerso: 'Esta Carteirinha é de Responsabilidade do Portador,\nPara uso Pessoal e Intransferível.', tipoCurso: 'Técnico', exibirRotulos: true });
       }
 
-      const { crachaService } = await import('../../gestor/cadastros/modelos-documentos/cracha/cracha.service');
       const savedCracha = await crachaService.getTemplate();
       if (savedCracha) {
         setCrachaFormData(savedCracha);
@@ -518,7 +518,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
 
     const prazo = prazos[tipoNovaSolicitacao]?.prazo || (tipoNovaSolicitacao === 'Transferência' ? '3 dias úteis' : '48 horas');
 
-    const { secretariaService } = await import('../../gestor/secretaria/secretaria.service');
     const newRequest = await secretariaService.createSolicitacao({
       alunoId,
       alunoNome: aluno.nome.toUpperCase(),

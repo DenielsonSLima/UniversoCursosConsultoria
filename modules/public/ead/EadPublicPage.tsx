@@ -8,6 +8,8 @@ import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
 import { buildEadCoursePath } from './eadCourseLinks';
 
+const PUBLIC_EAD_COURSE_COLUMNS = 'id, nome, modalidade, carga_horaria, status, area, descricao, parceiro_instituicao, parceiro_logo_url, imagem_url, duracao_meses, publicar_site, imagem_detalhe_1, imagem_detalhe_2, valor, asaas_payment_link_url';
+
 const PUBLIC_EAD_CATEGORIES = [
   'Administração e Gestão',
   'Educação',
@@ -105,7 +107,7 @@ const EadPublicPage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cursos')
-        .select('*')
+        .select(PUBLIC_EAD_COURSE_COLUMNS)
         .eq('modalidade', 'EAD')
         .eq('status', 'ativo')
         .eq('publicar_site', true)

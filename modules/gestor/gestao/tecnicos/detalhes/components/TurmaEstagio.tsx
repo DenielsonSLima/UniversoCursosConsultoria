@@ -1,61 +1,43 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaEstagio.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../../../../../lib/supabase';
 import { Turma } from '../../../gestao.types';
-import { cadastrosService } from '../../../../cadastros/cadastros.service';
-import { checklistEstagioService } from '../../../../cadastros/checklist-estagio/checklist-estagio.service';
 import { 
   Activity, BookOpen, User, ClipboardCheck, Calendar, 
   FileText, CheckCircle2, ChevronRight, Loader2, Save, Printer, ArrowLeft
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
-import { academicLifecycleService } from '../academic-lifecycle.service';
-import { academicLifecycleKeys } from '../academic-lifecycle.keys';
-
-// Valores padrão caso o curso não tenha checklist configurado
-const DEFAULT_INSTRUMENTOS = [
-  {
-    grupo: 'Comportamento',
-    valorMax: '2,0',
-    itens: [
-      'Assiduidade e Pontualidade', 'Aparência Pessoal', 'Iniciativa', 'Interesse', 
-      'Responsabilidade', 'Sociabilidade', 'Espírito de Equipe', 'Equilíbrio Emocional', 
-      'Ética Profissional', 'Aceitação ao Ensino'
-    ]
-  },
-  {
-    grupo: 'Desempenho nos Registros',
-    valorMax: '2,0',
-    itens: ['Registro de Prescrições', 'Registro de Enfermagem', 'Conhecimento Científico']
-  },
-  {
-    grupo: 'Desempenho das Técnicas',
-    valorMax: '6,0',
-    itens: [
-      'Destreza Manual', 'Eficiência', 'Manuseio de Material Estéril', 'Economia de Material', 
-      'Organização e Limpeza', 'Associação Teoria e Prática', 'Técnicas', 'Cuidados de Enfermagem', 
-      'Administração de Medicamentos', 'Passagem de Plantão'
-    ]
-  }
-];
+import {
+  useAvaliacaoEstagioCalculada,
+  useSaveEstagioEvaluationMutation,
+  useTurmaEstagioAvaliacoes,
+  useTurmaEstagioData,
+} from '../hooks/useTurmaEstagio';
+import { turmaEstagioService } from '../turma-estagio.service';
+import {
+  EstagioCriteriosValores,
+  EstagioProcedimentosLog,
+  ProcedimentoStatus,
+} from '../turma-estagio.types';
 
 interface TurmaEstagioProps {
   turma: Turma;
+  disciplinaIdRestrita?: string;
 }
 
-const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
+const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita }) => {
   const { toasts, removeToast, toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [loadingConfig, setLoadingConfig] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   // Dados da turma e curso
-  const [disciplinasEstagio, setDisciplinasEstagio] = useState<any[]>([]);
   const [selectedDiscId, setSelectedDiscId] = useState<string>('');
-  const [alunos, setAlunos] = useState<any[]>([]);
-  const [avaliacoesExistentes, setAvaliacoesExistentes] = useState<Record<string, any>>({});
+  const { data: estagioData, isLoading: loading } = useTurmaEstagioData(turma.id, turma.cursoId);
+  const disciplinasEstagio = estagioData?.disciplinasEstagio || [];
+  const disciplinasEstagioDisponiveis = disciplinaIdRestrita
+    ? disciplinasEstagio.filter((disciplina: any) => disciplina.id === disciplinaIdRestrita)
+    : disciplinasEstagio;
+  const alunos = estagioData?.alunos || [];
+  const { data: avaliacoesExistentes = {} } = useTurmaEstagioAvaliacoes(turma.id, selectedDiscId);
   
   // Aluno sendo avaliado atualmente
   const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
@@ -65,139 +47,39 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
   const [checklistUcsConfig, setChecklistUcsConfig] = useState<any[]>([]);
 
   // Estados do Formulário de Avaliação do Aluno
-  const [criteriosValores, setCriteriosValores] = useState<Record<string, Record<string, { nota: number; obs: string }>>>({});
-  const [procedimentosLog, setProcedimentosLog] = useState<Record<string, { status: 'A' | 'E' | 'O' | ''; data: string }>>({});
+  const [criteriosValores, setCriteriosValores] = useState<EstagioCriteriosValores>({});
+  const [procedimentosLog, setProcedimentosLog] = useState<EstagioProcedimentosLog>({});
   const [perfilAluno, setPerfilAluno] = useState<string>('');
   const [instrutorNome, setInstrutorNome] = useState<string>('');
   const [dataAvaliacao, setDataAvaliacao] = useState<string>(new Date().toISOString().split('T')[0]);
   const [frequenciaEstagio, setFrequenciaEstagio] = useState<number>(100);
 
-  const { data: avaliacaoCalculada } = useQuery({
-    queryKey: academicLifecycleKeys.avaliacaoEstagio(criteriosValores),
-    queryFn: () => academicLifecycleService.calcularAvaliacaoEstagio(criteriosValores),
-    enabled: !!selectedAluno && !loadingConfig,
-  });
+  const { data: avaliacaoCalculada } = useAvaliacaoEstagioCalculada(
+    criteriosValores,
+    !!selectedAluno && !loadingConfig,
+  );
+  const saveEvaluationMutation = useSaveEstagioEvaluationMutation(turma.id, selectedDiscId);
+  const saving = saveEvaluationMutation.isPending;
 
   useEffect(() => {
-    fetchEstagioData();
-  }, [turma.id]);
-
-  useEffect(() => {
-    if (selectedDiscId) {
-      loadAvaliacoes(selectedDiscId);
+    if (!selectedDiscId && disciplinasEstagioDisponiveis[0]?.id) {
+      setSelectedDiscId(disciplinasEstagioDisponiveis[0].id);
     }
-  }, [selectedDiscId]);
-
-  const fetchEstagioData = async () => {
-    setLoading(true);
-    try {
-      // 1. Carregar Grade Curricular para buscar disciplinas com carga_horaria_estagio > 0
-      const modulos = await cadastrosService.getGrade(turma.cursoId);
-      const discsComEstagio: any[] = [];
-      modulos.forEach(m => {
-        m.disciplinas.forEach((d: any) => {
-          if (d.cargaHorariaEstagio > 0) {
-            discsComEstagio.push(d);
-          }
-        });
-      });
-      setDisciplinasEstagio(discsComEstagio);
-
-      if (discsComEstagio.length > 0) {
-        setSelectedDiscId(discsComEstagio[0].id);
-      }
-
-      // 2. Carregar alunos matriculados na turma
-      const { data: matriculasData, error: mError } = await supabase
-        .from('matriculas')
-        .select('id, status, parceiros(*)')
-        .eq('turma_id', turma.id);
-
-      if (mError) throw mError;
-      
-      const alunosMapeados = (matriculasData || []).map((m: any) => ({
-        matriculaId: m.id,
-        id: m.parceiros?.id,
-        nome: m.parceiros?.nome || 'Estudante sem Nome',
-        cpf: m.parceiros?.cpf_cnpj || '',
-        statusMatricula: m.status
-      }));
-      setAlunos(alunosMapeados);
-    } catch (err) {
-      console.error('Erro ao buscar dados de estágio da turma:', err);
-      toast.error('Erro', 'Não foi possível carregar as informações de estágio.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAvaliacoes = async (disciplinaId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('matriculas_estagios')
-        .select('*')
-        .eq('turma_id', turma.id)
-        .eq('disciplina_id', disciplinaId);
-
-      if (error) throw error;
-
-      const avMap: Record<string, any> = {};
-      (data || []).forEach(av => {
-        avMap[av.aluno_id] = av;
-      });
-      setAvaliacoesExistentes(avMap);
-    } catch (err) {
-      console.error('Erro ao buscar avaliações:', err);
-    }
-  };
+  }, [disciplinasEstagioDisponiveis, selectedDiscId]);
 
   const startEvaluation = async (aluno: any) => {
     setSelectedAluno(aluno);
     setLoadingConfig(true);
     try {
-      // 1. Carrega as configurações de checklist do curso
-      const config = await checklistEstagioService.getByCursoId(turma.cursoId);
-      const insts = config?.instrumentos_avaliativos || JSON.parse(JSON.stringify(DEFAULT_INSTRUMENTOS));
-      const ucs = config?.checklist_ucs || [];
-      
-      setInstrumentosConfig(insts);
-      setChecklistUcsConfig(ucs);
-
-      // 2. Verifica se já existe uma avaliação salva no banco para este aluno
-      const saved = avaliacoesExistentes[aluno.id];
-      if (saved) {
-        setPerfilAluno(saved.perfil_aluno || '');
-        setInstrutorNome(saved.instrutor_nome || '');
-        setDataAvaliacao(saved.data_avaliacao || new Date().toISOString().split('T')[0]);
-        setFrequenciaEstagio(saved.frequencia_estagio || 100);
-        
-        // Mapeia critérios salvos
-        setCriteriosValores(saved.criterios_detalhes || {});
-        
-        // Mapeia checklist de procedimentos
-        const procMap: Record<string, { status: 'A' | 'E' | 'O' | ''; data: string }> = {};
-        (saved.checklist_procedimentos || []).forEach((p: any) => {
-          procMap[p.atividade] = { status: p.status, data: p.data || '' };
-        });
-        setProcedimentosLog(procMap);
-      } else {
-        // Inicializa com dados limpos
-        setPerfilAluno('');
-        setInstrutorNome('');
-        setDataAvaliacao(new Date().toISOString().split('T')[0]);
-        setFrequenciaEstagio(100);
-        
-        // Inicializa critérios com 0 e observação vazia
-        const initCrit: Record<string, Record<string, { nota: number; obs: string }>> = {};
-        insts.forEach((grupo: any) => {
-          initCrit[grupo.grupo] = {};
-          grupo.itens.forEach((item: string) => {
-            initCrit[grupo.grupo][item] = { nota: 0, obs: '' };
-          });
-        });
-        setCriteriosValores(initCrit);
-        setProcedimentosLog({});
-      }
+      const draft = await turmaEstagioService.buildEvaluationDraft(turma.cursoId, avaliacoesExistentes[aluno.id]);
+      setInstrumentosConfig(draft.instrumentosConfig);
+      setChecklistUcsConfig(draft.checklistUcsConfig);
+      setPerfilAluno(draft.perfilAluno);
+      setInstrutorNome(draft.instrutorNome);
+      setDataAvaliacao(draft.dataAvaliacao);
+      setFrequenciaEstagio(draft.frequenciaEstagio);
+      setCriteriosValores(draft.criteriosValores);
+      setProcedimentosLog(draft.procedimentosLog);
     } catch (err) {
       console.error(err);
       toast.error('Erro', 'Erro ao carregar a ficha de estágio do aluno.');
@@ -245,7 +127,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
     });
   };
 
-  const handleProcedureStatus = (atividade: string, status: 'A' | 'E' | 'O' | '') => {
+  const handleProcedureStatus = (atividade: string, status: ProcedimentoStatus) => {
     setProcedimentosLog(prev => {
       const current = prev[atividade] || { status: '', data: '' };
       return {
@@ -275,42 +157,27 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
   // --- SALVAR NO BANCO ---
   const handleSaveEvaluation = async () => {
     if (!selectedAluno || !selectedDiscId) return;
-    setSaving(true);
     try {
-      const currentDisc = disciplinasEstagio.find(d => d.id === selectedDiscId);
+      const currentDisc = disciplinasEstagioDisponiveis.find(d => d.id === selectedDiscId);
       const currentDiscName = currentDisc?.nome || '';
 
-      // Converte procedimentosLog de objeto em Array para salvar
-      const checklistArray = Object.entries(procedimentosLog)
-        .filter(([_, value]: [string, any]) => value.status !== '')
-        .map(([key, value]: [string, any]) => ({
-          atividade: key,
-          status: value.status,
-          data: value.data
-        }));
-
-      await academicLifecycleService.salvarAvaliacaoEstagio({
+      await saveEvaluationMutation.mutateAsync({
         turmaId: turma.id,
         disciplinaId: selectedDiscId,
         alunoId: selectedAluno.id,
         frequencia: frequenciaEstagio,
         criterios: criteriosValores,
-        checklist: checklistArray,
+        procedimentosLog,
         perfilAluno,
         instrutorNome,
         dataAvaliacao,
       });
 
       toast.success('Sucesso', `Avaliação de ${selectedAluno.nome} em ${currentDiscName} salva com sucesso!`);
-      
-      // Recarrega as notas do banco localmente
-      await loadAvaliacoes(selectedDiscId);
       setSelectedAluno(null);
     } catch (err) {
       console.error(err);
       toast.error('Erro', 'Não foi possível salvar a avaliação do estágio.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -320,7 +187,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
   };
 
   // Encontra a lista de procedimentos configurada para a UC selecionada
-  const currentDiscObj = disciplinasEstagio.find(d => d.id === selectedDiscId);
+  const currentDiscObj = disciplinasEstagioDisponiveis.find(d => d.id === selectedDiscId);
   const ucConfig = checklistUcsConfig.find(u => u.uc.toLowerCase().trim() === currentDiscObj?.nome.toLowerCase().trim()) || { uc: currentDiscObj?.nome || '', atividades: [] };
 
   if (loading) {
@@ -491,7 +358,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
               </div>
             </div>
 
-            {disciplinasEstagio.length > 0 && (
+            {disciplinasEstagioDisponiveis.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Unidade:</span>
                 <select
@@ -499,7 +366,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
                   onChange={(e) => setSelectedDiscId(e.target.value)}
                   className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-teal-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
                 >
-                  {disciplinasEstagio.map(d => (
+                  {disciplinasEstagioDisponiveis.map(d => (
                     <option key={d.id} value={d.id}>{d.nome} ({d.cargaHorariaEstagio}h estágio)</option>
                   ))}
                 </select>
@@ -507,7 +374,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma }) => {
             )}
           </div>
 
-          {disciplinasEstagio.length === 0 ? (
+          {disciplinasEstagioDisponiveis.length === 0 ? (
             <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
               <BookOpen className="text-slate-300 mx-auto mb-4" size={48} />
               <h4 className="font-bold text-slate-500">Nenhuma disciplina com estágio</h4>

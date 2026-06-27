@@ -15,7 +15,11 @@ import OutrosCreditosTab from './outros-creditos/OutrosCreditosTab';
 
 type FinancialTab = 'resumo' | 'receber' | 'despesas' | 'transferencias' | 'outros-debitos' | 'outros-creditos';
 
-const FinanceiroPage: React.FC = () => {
+interface FinanceiroPageProps {
+  poloId?: string | null;
+}
+
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId }) => {
   const [activeTab, setActiveTab] = useState<FinancialTab>('resumo');
 
   const tabs = [
@@ -30,7 +34,7 @@ const FinanceiroPage: React.FC = () => {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'resumo':
-        return <ResumoTab />;
+        return <ResumoTab poloId={poloId} />;
       case 'receber':
         return <ReceberTab />;
       case 'despesas':

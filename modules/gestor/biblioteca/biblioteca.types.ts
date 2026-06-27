@@ -38,6 +38,11 @@ export interface LibraryDocument {
   liberacaoDiasValidade?: number | null;
 }
 
+export interface LibraryDocumentUploadPayload extends Omit<LibraryDocument, 'id' | 'createdAt' | 'acessos' | 'authorName'> {
+  file?: File;
+  sizeBytes?: number;
+}
+
 export interface TeacherRepository {
   teacherId: string;
   teacherName: string;
@@ -45,4 +50,11 @@ export interface TeacherRepository {
   specialty: string;
   documentsCount: number;
   lastUpdate: string;
+  storageQuotaGb?: number;
+  storageUsedBytes?: number;
+}
+
+export interface TeacherStorageQuota extends TeacherRepository {
+  storageQuotaGb: number;
+  storageUsedBytes: number;
 }

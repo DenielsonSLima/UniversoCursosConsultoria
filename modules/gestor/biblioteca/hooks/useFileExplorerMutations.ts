@@ -28,6 +28,10 @@ export function useFileExplorerMutations({
     queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.documentsRoot });
   };
 
+  const invalidateTeacherStorageConfigs = () => {
+    queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.teacherStorageConfigs });
+  };
+
   const createFolderMutation = useMutation({
     mutationFn: (nome: string) => bibliotecaService.createFolder(nome, currentFolderId, teacherId),
     onSuccess: () => {
@@ -51,7 +55,10 @@ export function useFileExplorerMutations({
 
   const deleteDocumentMutation = useMutation({
     mutationFn: (id: string) => bibliotecaService.deleteDocument(id),
-    onSuccess: invalidateDocuments
+    onSuccess: () => {
+      invalidateDocuments();
+      invalidateTeacherStorageConfigs();
+    }
   });
 
   const moveFolderMutation = useMutation({
@@ -75,6 +82,7 @@ export function useFileExplorerMutations({
     onSuccess: () => {
       invalidateDocuments();
       onMoveFinished();
+      invalidateTeacherStorageConfigs();
     }
   });
 

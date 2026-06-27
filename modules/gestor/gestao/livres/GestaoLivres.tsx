@@ -7,7 +7,7 @@ import TurmaLivreDetalhes from './detalhes/TurmaLivreDetalhes';
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
-import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
+import { useGestaoLivresTurmas } from './hooks/useGestaoLivresTurmas';
 
 interface GestaoLivresProps {
   onToggleDetails?: (isOpen: boolean) => void;
@@ -19,7 +19,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId }) 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
-  const list = useTurmasPaginadas('LIVRE', poloId);
+  const list = useGestaoLivresTurmas(poloId);
 
   useEffect(() => {
     setSelectedTurma(null);

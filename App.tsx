@@ -26,19 +26,11 @@ import ValidatorPage from './modules/public/validator/ValidatorPage';
 import PasswordRecoveryPage from './modules/login/PasswordRecoveryPage';
 import AlunoFirstAccessPage from './modules/public/login/AlunoFirstAccessPage';
 
-// Páginas do Sistema Interno (somente em desenvolvimento)
+// Páginas do Sistema Interno
 import LoginPage from './modules/login/LoginPage';
 import GestorPage from './modules/gestor/gestor.page';
 import ProfessorPage from './modules/professor/professor.page';
 import AlunoPage from './modules/aluno/aluno.page';
-import CadAedPage from './modules/cad-aed/cad-aed.page';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Modo da aplicação controlado por variável de ambiente
-// .env.local → VITE_APP_MODE=development  (sistema completo)
-// Vercel     → VITE_APP_MODE=production   (apenas site público)
-// ─────────────────────────────────────────────────────────────────────────────
-const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
 
 const App: React.FC = () => {
   return (
@@ -85,23 +77,10 @@ const App: React.FC = () => {
         <Route path="/validator" element={<Navigate to={`/validador${window.location.search}`} replace />} />
 
         {/* ── Rotas do Sistema Interno ── */}
-        {/* Em produção, mantemos o portal do aluno ativo para não redirecionar o login Google para home */}
-        {isDevelopmentMode ? (
-          <>
-            <Route path="/sistema/login" element={<LoginPage />} />
-            <Route path="/gestor/*" element={<GestorPage />} />
-            <Route path="/professor/*" element={<ProfessorPage />} />
-            <Route path="/cad-aed" element={<CadAedPage />} />
-          </>
-        ) : (
-          <>
-            <Route path="/sistema/login" element={<Navigate to="/" replace />} />
-            {/* Em produção, restringe rotas de gestão/secretaria, mas mantém o portal do aluno para retorno do login */}
-            <Route path="/gestor/*" element={<Navigate to="/" replace />} />
-            <Route path="/professor/*" element={<Navigate to="/" replace />} />
-            <Route path="/cad-aed" element={<Navigate to="/" replace />} />
-          </>
-        )}
+        <Route path="/sistema/login" element={<LoginPage />} />
+        <Route path="/gestor/*" element={<GestorPage />} />
+        <Route path="/professor/*" element={<ProfessorPage />} />
+        <Route path="/cad-aed" element={<Navigate to="/sistema/login" replace />} />
         <Route path="/aluno/*" element={<AlunoPage />} />
 
         {/* Redireciona qualquer rota não encontrada para a home */}

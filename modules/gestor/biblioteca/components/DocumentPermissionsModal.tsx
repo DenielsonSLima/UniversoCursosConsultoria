@@ -126,6 +126,32 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (liberacaoTipo === 'POR_DATA' && !liberacaoData) {
+      alert('Para liberação por data, informe a data/hora de liberação.');
+      return;
+    }
+
+    if (
+      liberacaoTipo === 'DISCIPLINA_INICIO' &&
+      (selectedDisciplinas.length === 0 || !liberacaoDisciplinaId)
+    ) {
+      alert('Para liberação por início de disciplina, selecione a disciplina gatilho e ao menos uma disciplina relacionada.');
+      return;
+    }
+
+    if (
+      liberacaoTipo === 'DISCIPLINA_INICIO' &&
+      liberacaoDiasValidade &&
+      !/^\d+$/.test(liberacaoDiasValidade)
+    ) {
+      alert('Período de acesso por dias deve conter apenas números inteiros.');
+      return;
+    }
+
+    const parsedDiasValidade = liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDiasValidade
+      ? parseInt(liberacaoDiasValidade, 10)
+      : null;
+
     try {
       const dataToSave = {
         targetAudience,
@@ -137,7 +163,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
         liberacaoTipo,
         liberacaoData: liberacaoTipo === 'POR_DATA' && liberacaoData ? new Date(liberacaoData).toISOString() : null,
         liberacaoDisciplinaId: liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDisciplinaId ? liberacaoDisciplinaId : null,
-        liberacaoDiasValidade: liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDiasValidade ? parseInt(liberacaoDiasValidade, 10) : null
+        liberacaoDiasValidade: parsedDiasValidade
       };
 
       await bibliotecaService.updateDocumentPermissions(doc.id, dataToSave);

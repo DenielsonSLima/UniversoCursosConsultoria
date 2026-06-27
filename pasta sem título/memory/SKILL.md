@@ -6,6 +6,8 @@ description: >
   Ela gerencia dois arquivos de memória do projeto (RAG): PROJETO_CONTEXTO.md (como o projeto funciona)
   e PROJETO_ALTERACOES.md (histórico de mudanças). NADA de armazenamento em localStorage para configurações,
   templates ou layouts; apenas Supabase (para multi-usuários de uma plataforma escolar online).
+  Operações remotas do Supabase, incluindo migrations, RLS, Storage remoto e deploy de Edge Functions,
+  devem usar MCP Supabase, nunca Supabase CLI, porque a CLI já apresentou 401 neste projeto enquanto o MCP estava autorizado.
   No início de cada sessão, leia esses arquivos para recuperar o contexto. Ao final de cada alteração
   relevante, atualize os arquivos.
 ---
@@ -147,6 +149,7 @@ Após concluir qualquer alteração relevante no projeto:
 | Notificações de UI | NUNCA usar `alert()`, `confirm()` ou popups nativos do navegador. Usar exclusivamente o padrão visual do sistema (como hook `useToast`). |
 | Sincronização de Dados | Utilizar atualizações em tempo real (Supabase realtime/subscriptions) e TanStack Query para sincronizar e gerenciar o cache de dados. |
 | Agentes e Handoff | Criar subagentes especializados para tarefas computacionalmente complexas e manter o histórico RAG atualizado. |
+| Supabase Remoto e Edge Functions | Usar MCP Supabase para migrations, RLS, Storage remoto, consultas e deploy/listagem/leitura de Edge Functions. NUNCA usar Supabase CLI para remoto neste projeto; erro `401 Unauthorized` da CLI não é bloqueio se o MCP estiver disponível. |
 
 ---
 

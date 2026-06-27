@@ -1,57 +1,53 @@
-// File: modules/gestor/cadastros/cursos-especializacao/cursos-especializacao.service.ts
-
+import { Curso } from '../cadastros.types';
 import { cadastrosService } from '../cadastros.service';
-import { CursoEspecializacao } from './cursos-especializacao.types';
+
+export type CursoEspecializacaoStatusFilter = 'ativo' | 'inativo';
+
+export interface CreateCursoEspecializacaoInput {
+  nome: string;
+  descricao: string;
+  area: string;
+  versao: string;
+  cargaHoraria: number;
+  imagemUrl?: string | null;
+  publicarSite?: boolean;
+  duracaoMeses?: number;
+}
+
+export const cursosEspecializacaoQueryKeys = {
+  all: ['cadastros', 'cursos-especializacao'] as const,
+  list: () => [...cursosEspecializacaoQueryKeys.all, 'list'] as const,
+};
 
 export const cursosEspecializacaoService = {
-  async getAll(): Promise<CursoEspecializacao[]> {
-    try {
-      const cursos = await cadastrosService.getCursosByModalidade('ESPECIALIZACAO');
-      const result: CursoEspecializacao[] = [];
-
-      for (const c of cursos) {
-        const modulos = await cadastrosService.getGrade(c.id);
-        result.push({
-          id: c.id,
-          nome: c.nome,
-          descricao: `Curso de especialização de pós-formação em ${c.nome}.`,
-          cargaHorariaTotal: c.carga_horaria,
-          duracaoMeses: c.carga_horaria >= 360 ? 12 : 6,
-          area: 'Saúde',
-          requisito: 'Curso concluído na área de Saúde',
-          modulos: modulos
-        });
-      }
-
-      return result;
-    } catch (err) {
-      console.error('Erro no service de cursos especialização:', err);
-      return [];
-    }
+  async getCursos(): Promise<Curso[]> {
+    return cadastrosService.getCursosByModalidade('ESPECIALIZACAO');
   },
 
-  async getById(id: string): Promise<CursoEspecializacao | undefined> {
-    const list = await this.getAll();
-    return list.find(c => c.id === id);
-  },
-
-  async update(curso: CursoEspecializacao): Promise<void> {
-    await cadastrosService.saveGrade(curso.id, curso.modulos);
-  },
-
-  async create(curso: CursoEspecializacao): Promise<CursoEspecializacao> {
-    const created = await cadastrosService.createCurso({
-      nome: curso.nome,
-      carga_horaria: curso.cargaHorariaTotal,
+  async createCurso(input: CreateCursoEspecializacaoInput): Promise<Curso> {
+    return cadastrosService.createCurso({
+      nome: input.nome,
+      carga_horaria: input.cargaHoraria,
       modalidade: 'ESPECIALIZACAO',
-      status: 'ativo'
+      status: 'ativo',
+      area: input.area,
+      descricao: input.descricao,
+      versao: input.versao,
+      duracao_meses: input.duracaoMeses || null,
+      imagem_url: input.imagemUrl || null,
+      publicar_site: input.publicarSite ?? false
     });
+  },
 
-    await cadastrosService.saveGrade(created.id, curso.modulos);
+  async deleteCurso(cursoId: string): Promise<void> {
+    await cadastrosService.deleteCurso(cursoId);
+  },
 
-    return {
-      ...curso,
-      id: created.id
-    };
+  async duplicateCurso(cursoId: string, nome: string, versao: string): Promise<void> {
+    await cadastrosService.duplicateCurso(cursoId, nome, versao);
+  },
+
+  async toggleStatus(cursoId: string, novoStatus: CursoEspecializacaoStatusFilter): Promise<void> {
+    await cadastrosService.toggleStatus(cursoId, novoStatus);
   }
 };

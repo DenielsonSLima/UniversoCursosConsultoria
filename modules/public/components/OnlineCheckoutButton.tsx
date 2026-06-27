@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import { CheckCircle2, CreditCard, Loader2, X } from 'lucide-react';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
-import { getPortalProfile } from '../../login/portal-session';
+import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '../../login/portal-session';
 
 interface OnlineCheckoutButtonProps {
   courseId: string;
+  disabled?: boolean;
+  disabledReason?: string | null;
+  availabilityLoading?: boolean;
 }
 
-const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({ courseId }) => {
+const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
+  courseId,
+  disabled = false,
+  disabledReason = null,
+  availabilityLoading = false,
+}) => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
+  const effectiveDisabled = loading || disabled || availabilityLoading;
 
   const handleCheckout = async () => {
+    if (effectiveDisabled) return;
     setLoading(true);
     try {
       setToast(null);
-      const profile = await getPortalProfile();
+      const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] })
+        || await ensureLinkedAlunoProfile();
 
       if (!profile || profile.tipo !== 'Aluno') {
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -29,6 +40,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({ courseId })
         return;
       }
 
+      savePortalSession(profile);
       const { url } = await asaasIntegrationService.getPublicCheckout(courseId, profile.id);
       setToast({
         title: 'Pagamento preparado',
@@ -78,15 +90,25 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({ courseId })
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={handleCheckout}
-        disabled={loading}
-        className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-4 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-60"
-      >
-        {loading ? <Loader2 className="animate-spin" size={15} /> : <CreditCard size={15} />}
-        {loading ? 'Preparando pagamento...' : 'Matricular e pagar online'}
+        <button
+          type="button"
+          onClick={handleCheckout}
+          disabled={effectiveDisabled}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-4 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {loading || availabilityLoading ? <Loader2 className="animate-spin" size={15} /> : <CreditCard size={15} />}
+          {loading || availabilityLoading ? 'Verificando disponibilidade...' : 'Matricular e pagar online'}
       </button>
+
+      {effectiveDisabled && !loading && (
+        <p className={`mb-4 text-xs rounded-xl border px-4 py-3 ${
+          availabilityLoading
+            ? 'border-slate-200 bg-slate-50 text-slate-500'
+            : 'border-rose-200 bg-rose-50 text-rose-700'
+        }`}>
+          {availabilityLoading ? 'Verificando vagas e período de inscrição...' : (disabledReason || 'As inscrições estão fechadas para este curso no momento.')}
+        </p>
+      )}
     </>
   );
 };

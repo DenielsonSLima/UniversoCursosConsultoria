@@ -7,6 +7,11 @@ import {
 } from 'lucide-react';
 import QuickPreviewModal from '../../gestor/biblioteca/components/QuickPreviewModal';
 import { LibraryDocument } from '../../gestor/biblioteca/biblioteca.types';
+import {
+  canAccessLibraryDocumentAsAluno,
+  isLibraryUrl,
+  matchesLibrarySearch
+} from './libraryAccess';
 
 interface BibliotecaPageProps {
   alunoId: string;
@@ -21,7 +26,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   // Preview State
   const [previewDoc, setPreviewDoc] = useState<LibraryDocument | null>(null);
 
-  // 1. Busca as matrículas ativas do aluno para obter seus cursos, turmas e polos
+  // 1. Busca as matrículas ativas do aluno para obter cursos, turmas e polos
   const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-matriculas', alunoId],
     queryFn: async () => {
@@ -35,16 +40,14 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     }
   });
 
-  const activeMatricula = matriculas[0];
-  const cursoId = activeMatricula?.turmas?.cursos?.id;
-  const turmaId = activeMatricula?.turma_id;
-  const poloId = activeMatricula?.polo_id;
+  const activeTurmaIds = matriculas.map(m => m.turma_id).filter(Boolean);
+  const activeCursoIds = Array.from(new Set(matriculas.map(m => m.turmas?.cursos?.id).filter(Boolean)));
+  const activePoloIds = Array.from(new Set(matriculas.map(m => m.polo_id).filter(Boolean)));
 
   // 2. Busca os professores vinculados às turmas do aluno
   const { data: activeTeachers = [] } = useQuery<any[]>({
-    queryKey: ['aluno-biblioteca-professores', matriculas],
+    queryKey: ['aluno-biblioteca-professores', activeTurmaIds.join(',')],
     queryFn: async () => {
-      const activeTurmaIds = matriculas.map(m => m.turma_id).filter(Boolean);
       if (activeTurmaIds.length === 0) return [];
       const { data, error } = await supabase
         .from('turmas_disciplinas')
@@ -54,6 +57,20 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
       return data || [];
     },
     enabled: matriculas.length > 0
+  });
+
+  const { data: turmaDisciplinas = [] } = useQuery<any[]>({
+    queryKey: ['aluno-biblioteca-turma-disciplinas', activeTurmaIds.join(',')],
+    queryFn: async () => {
+      if (activeTurmaIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('turmas_disciplinas')
+        .select('turma_id, disciplina_id, created_at, concluida')
+        .in('turma_id', activeTurmaIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: activeTurmaIds.length > 0
   });
 
   const teacherIds = activeTeachers.map(at => at.professor_id).filter(Boolean);
@@ -99,44 +116,17 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     }
   });
 
+  const accessContext = {
+    activeTurmaIds,
+    activeCursoIds,
+    activePoloIds,
+    activeTeacherIds: teacherIds,
+    turmaDisciplinas,
+  };
+
   // 5. Filtro avançado de documentos com base nas regras de liberação do aluno
   const filteredDocuments = (dbDocs || []).filter((doc: any) => {
-    // Regra 1: Público Alvo deve ser ALUNOS ou TODOS
-    const matchAudience = doc.publico_alvo === 'ALUNOS' || doc.publico_alvo === 'TODOS';
-    if (!matchAudience) return false;
-
-    // Regra 2: Polo do Aluno
-    if (doc.abrangencia === 'POLO_ESPECIFICO' && doc.polo_id && doc.polo_id !== poloId) {
-      return false;
-    }
-
-    // Regra 3: Se foi criado por professor, deve ser um professor do aluno
-    if (doc.teacher_id && !teacherIds.includes(doc.teacher_id)) {
-      return false;
-    }
-
-    // Regra 4: Filtro de Cursos específicos
-    if (doc.curso_ids && doc.curso_ids.length > 0 && cursoId && !doc.curso_ids.includes(cursoId)) {
-      return false;
-    }
-
-    // Regra 5: Filtro de Turmas específicas
-    if (doc.turma_ids && doc.turma_ids.length > 0 && turmaId && !doc.turma_ids.includes(turmaId)) {
-      return false;
-    }
-
-    // Regra 6: Agendamento Temporal (se liberacao_tipo for POR_DATA)
-    if (doc.liberacao_tipo === 'POR_DATA' && doc.liberacao_data) {
-      if (new Date() < new Date(doc.liberacao_data)) {
-        return false;
-      }
-    }
-
-    // Filtro de pesquisa digitado
-    const matchSearch = doc.titulo.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        (doc.descricao && doc.descricao.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return matchSearch;
+    return canAccessLibraryDocumentAsAluno(doc, accessContext) && matchesLibrarySearch(doc, searchQuery);
   });
 
   const handleOpenFolder = (folder: any) => {
@@ -322,11 +312,11 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
                         <Eye size={12} />
                         <span>Visualizar</span>
                       </button>
-                      <a 
-                        href={doc.arquivo_url === '#' ? undefined : doc.arquivo_url}
-                        download={doc.titulo}
+                        <a 
+                        href={isLibraryUrl(doc.arquivo_url) ? doc.arquivo_url : undefined}
+                        download={isLibraryUrl(doc.arquivo_url) ? doc.titulo : undefined}
                         onClick={(e) => {
-                          if (doc.arquivo_url === '#') {
+                          if (!isLibraryUrl(doc.arquivo_url)) {
                             e.preventDefault();
                             alert('Download simulado indisponível.');
                           }
@@ -362,10 +352,10 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
                         <Eye size={14} />
                       </button>
                       <a 
-                        href={doc.arquivo_url === '#' ? undefined : doc.arquivo_url}
-                        download={doc.titulo}
+                        href={isLibraryUrl(doc.arquivo_url) ? doc.arquivo_url : undefined}
+                        download={isLibraryUrl(doc.arquivo_url) ? doc.titulo : undefined}
                         onClick={(e) => {
-                          if (doc.arquivo_url === '#') {
+                          if (!isLibraryUrl(doc.arquivo_url)) {
                             e.preventDefault();
                             alert('Download simulado indisponível.');
                           }

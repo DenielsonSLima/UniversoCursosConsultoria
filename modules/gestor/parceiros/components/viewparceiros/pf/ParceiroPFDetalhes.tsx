@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';
 import { useToast } from '../../shared/ToastNotification';
 import ToastNotification from '../../shared/ToastNotification';
+import { formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroPFDetalhesProps {
   pfInicial: any;
@@ -122,7 +123,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
                   </h2>
                   <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                     <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                      Pessoa Física • CPF: <span className="font-mono text-slate-600">{pfData.cpf || 'Não informado'}</span>
+                      Pessoa Física • CPF: <span className="font-mono text-slate-600">{formatCpf(pfData.cpf) || 'Não informado'}</span>
                     </span>
                     {pfData.tipoServico && (
                       <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-black uppercase rounded-full border border-amber-100">
@@ -203,7 +204,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
               {!isEditing ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2"><Field label="Nome Completo" value={pfData.nome} /></div>
-                  <Field label="CPF" value={pfData.cpf} mono />
+                  <Field label="CPF" value={formatCpf(pfData.cpf)} mono />
                   <Field label="Data de Nascimento" value={pfData.dataNascimento} />
                   <Field label="Sexo" value={pfData.sexo} />
                   <Field label="RG" value={pfData.rg} mono />

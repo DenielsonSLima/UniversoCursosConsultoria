@@ -7,7 +7,7 @@ import TurmaEspecializacaoDetalhes from './detalhes/TurmaEspecializacaoDetalhes'
 import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
-import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
+import { useGestaoEspecializacaoTurmas } from './hooks/useGestaoEspecializacaoTurmas';
 
 interface GestaoEspecializacaoProps {
   onToggleDetails?: (isOpen: boolean) => void;
@@ -19,7 +19,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
 
-  const list = useTurmasPaginadas('ESPECIALIZACAO', poloId);
+  const list = useGestaoEspecializacaoTurmas(poloId);
 
   useEffect(() => {
     setSelectedTurma(null);

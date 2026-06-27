@@ -20,12 +20,17 @@ export function useBibliotecaPageMutations() {
     queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.teacherRepositories });
   }, [queryClient]);
 
+  const invalidateTeacherStorageConfigs = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.teacherStorageConfigs });
+  }, [queryClient]);
+
   const uploadMutation = useMutation({
     mutationFn: (uploadData: any) => bibliotecaService.uploadDocument(uploadData),
     onSuccess: () => {
       invalidateDocuments();
       invalidateHighlights();
       invalidateTeacherRepositories();
+      invalidateTeacherStorageConfigs();
     }
   });
 
@@ -34,6 +39,7 @@ export function useBibliotecaPageMutations() {
     onSuccess: () => {
       invalidateDocuments();
       invalidateHighlights();
+      invalidateTeacherStorageConfigs();
     }
   });
 
@@ -42,5 +48,6 @@ export function useBibliotecaPageMutations() {
     deleteMutation,
     invalidateDocuments,
     invalidateHighlights,
+    invalidateTeacherStorageConfigs,
   };
 }

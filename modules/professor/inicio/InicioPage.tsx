@@ -1,7 +1,6 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
-import { BookOpen, GraduationCap, Calendar, MessageSquare, Megaphone, Clock, Award, ShieldCheck } from 'lucide-react';
+import { BookOpen, GraduationCap, Calendar, MessageSquare, Megaphone, Clock, Award, ShieldCheck, PlayCircle } from 'lucide-react';
+import { useProfessorDashboardStats } from '../hooks/useProfessorDashboard';
 
 interface InicioPageProps {
   professorId: string;
@@ -10,34 +9,7 @@ interface InicioPageProps {
 }
 
 const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, onNavigate }) => {
-  // Query to count classes/disciplines taught
-  const { data: turmasCount = 0 } = useQuery({
-    queryKey: ['professor-turmas-count', professorId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('turmas_disciplinas')
-        .select('*', { count: 'exact', head: true })
-        .eq('professor_id', professorId);
-      
-      if (error) throw error;
-      return count || 0;
-    }
-  });
-
-  // Query to count open support chats
-  const { data: chatsCount = 0 } = useQuery({
-    queryKey: ['professor-chats-count', professorId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('comunicacao_chats')
-        .select('*', { count: 'exact', head: true })
-        .eq('remetente_id', professorId)
-        .eq('status', 'pendente');
-      
-      if (error) throw error;
-      return count || 0;
-    }
-  });
+  const { disciplinasCount, chatsCount, meusCursosCount } = useProfessorDashboardStats(professorId);
 
   const avisos = [
     {
@@ -80,7 +52,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, onN
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* KPI 1 */}
         <button
           onClick={() => onNavigate('turmas')}
@@ -88,8 +60,8 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, onN
         >
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Minhas Disciplinas</p>
-            <p className="text-3xl font-black text-[#001a33]">{turmasCount}</p>
-            <p className="text-[10px] text-slate-500 font-medium">Turmas sob sua coordenação</p>
+            <p className="text-3xl font-black text-[#001a33]">{disciplinasCount}</p>
+            <p className="text-[10px] text-slate-500 font-medium">Disciplinas atribuídas pela secretaria</p>
           </div>
           <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
             <GraduationCap size={22} />
@@ -97,6 +69,21 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, onN
         </button>
 
         {/* KPI 2 */}
+        <button
+          onClick={() => onNavigate('meus-cursos')}
+          className="flex items-center justify-between p-6 bg-white border border-slate-100 hover:border-blue-500 rounded-3xl shadow-sm text-left transition-all hover:-translate-y-1 group"
+        >
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Meus Cursos</p>
+            <p className="text-3xl font-black text-[#001a33]">{meusCursosCount}</p>
+            <p className="text-[10px] text-slate-500 font-medium">Cursos comprados como aluno</p>
+          </div>
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <PlayCircle size={22} />
+          </div>
+        </button>
+
+        {/* KPI 3 */}
         <button
           onClick={() => onNavigate('comunicacao')}
           className="flex items-center justify-between p-6 bg-white border border-slate-100 hover:border-purple-500 rounded-3xl shadow-sm text-left transition-all hover:-translate-y-1 group"
@@ -111,7 +98,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, onN
           </div>
         </button>
 
-        {/* KPI 3 */}
+        {/* KPI 4 */}
         <button
           onClick={() => onNavigate('perfil')}
           className="flex items-center justify-between p-6 bg-white border border-slate-100 hover:border-purple-500 rounded-3xl shadow-sm text-left transition-all hover:-translate-y-1 group"

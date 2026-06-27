@@ -15,4 +15,5 @@ export const bibliotecaQueryKeys = {
   topAccessed: ['library-top-accessed'] as const,
   topRecent: ['library-top-recent'] as const,
   teacherRepositories: ['library-teacher-repositories'] as const,
+  teacherStorageConfigs: ['library-teacher-storage-configs'] as const,
 };

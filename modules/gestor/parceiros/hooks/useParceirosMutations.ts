@@ -3,6 +3,7 @@ import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from './useParceirosQueries';
 import { portalActivationService } from '../portal-activation.service';
 import { TERMS_VERSION } from '../../../shared/constants/terms';
+import { buildAuthRedirectUrl } from '../../../../lib/app-url';
 
 interface ToastApi {
   success: (title: string, message: string) => void;
@@ -53,7 +54,7 @@ export const useParceirosMutations = ({
       let manualRecoveryLink: string | null = null;
 
       if (created?.email) {
-        const redirectTo = `${window.location.origin}/login`;
+        const redirectTo = buildAuthRedirectUrl('/login');
         try {
           const result = await portalActivationService.ensureStudentAccess({
             partnerId: created.id,

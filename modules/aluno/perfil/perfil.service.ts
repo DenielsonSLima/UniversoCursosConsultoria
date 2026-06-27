@@ -12,8 +12,10 @@ export const alunoPerfilService = {
 
   getDocuments: (alunoId: string) => parceirosService.getDocumentos(alunoId),
 
-  updateProfile: (alunoId: string, currentProfile: PerfilData, payload: PerfilUpdatePayload) =>
-    parceirosService.update(alunoId, { ...currentProfile, ...payload }),
+  updateProfile: (alunoId: string, currentProfile: PerfilData, payload: PerfilUpdatePayload) => {
+    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
+    return parceirosService.update(alunoId, { ...editableProfile, ...payload });
+  },
 
   uploadDocument: (alunoId: string, docName: string, file: File) =>
     parceirosService.uploadDocumento(alunoId, docName, file),
@@ -38,7 +40,8 @@ export const alunoPerfilService = {
     const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(data.path);
     const publicUrl = urlData.publicUrl;
 
-    await parceirosService.update(alunoId, { ...currentProfile, foto: publicUrl });
+    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
+    await parceirosService.update(alunoId, { ...editableProfile, foto: publicUrl });
     return publicUrl;
   },
 };

@@ -24,6 +24,7 @@ const ValidatorPage: React.FC = () => {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [result, setResult] = useState<DocumentValidationResult | null>(null);
+  const [validationMessage, setValidationMessage] = useState('');
 
   // Rola para o topo e verifica URL ao montar
   useEffect(() => {
@@ -40,11 +41,13 @@ const ValidatorPage: React.FC = () => {
   const validateCode = async (inputCode: string) => {
     setStatus('loading');
     setResult(null);
+    setValidationMessage('');
 
     try {
       const validationResult = await validatorService.validate(inputCode);
       if (!validationResult) {
         setStatus('invalid');
+        setValidationMessage(`Não localizamos nenhum documento ativo com o código ${inputCode}.`);
         return;
       }
 
@@ -53,6 +56,11 @@ const ValidatorPage: React.FC = () => {
     } catch (error) {
       console.error('[ValidatorPage] Erro ao consultar código:', error);
       setStatus('invalid');
+      setValidationMessage(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível processar a validação do documento neste momento.',
+      );
     }
   };
 
@@ -154,7 +162,7 @@ const ValidatorPage: React.FC = () => {
                   </div>
                   <h3 className="text-2xl font-black text-red-800 uppercase tracking-tight mb-2">Código Não Encontrado</h3>
                   <p className="text-red-700 font-medium max-w-md mx-auto">
-                    Não localizamos nenhum documento ativo com o código <strong>{code}</strong>.
+                    {validationMessage || `Não localizamos nenhum documento ativo com o código ${code}.`}
                   </p>
                   <p className="text-xs text-red-500 mt-4 max-w-xs mx-auto">
                     Verifique se digitou corretamente ou entre em contato com a secretaria da unidade emissora.

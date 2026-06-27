@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Save, X, User, Shield, Lock, Mail, Building2, Check, AlertTriangle, 
+  Save, X, User, Shield, Lock, Mail, Phone, Building2, Check, AlertTriangle, 
   LayoutDashboard, Handshake, UserPlus, Briefcase, FileText, ShoppingCart, 
   TrendingUp, BookOpen, BarChart, Settings
 } from 'lucide-react';
 import { polosService } from '../../polos/polos.service';
+import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
 
 interface UserFormAddProps {
   onSave: (data: any) => void;
@@ -34,6 +35,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
     sobrenome: '',
     cpf: '',
     dataNascimento: '',
+    telefone: '',
     email: '',
     senha: '',
     confirmarSenha: '',
@@ -54,13 +56,14 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
 
   // Formatadores
   const formatCPF = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
+    return value ? formatCpf(value) : '';
   };
+
+  const formatPhone = (value: string) => value
+    .replace(/\D/g, '')
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2')
+    .replace(/(-\d{4})\d+?$/, '$1');
 
   const checkPasswordStrength = (pass: string) => {
     let score = 0;
@@ -77,6 +80,10 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
     
     if (name === 'cpf') {
       setFormData(prev => ({ ...prev, [name]: formatCPF(value) }));
+    } else if (name === 'telefone') {
+      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+    } else if (name === 'email') {
+      setFormData(prev => ({ ...prev, [name]: normalizeEmail(value) }));
     } else if (name === 'senha') {
       setFormData(prev => ({ ...prev, [name]: value }));
       checkPasswordStrength(value);
@@ -103,11 +110,27 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidCpf(formData.cpf)) {
+      alert('Informe um CPF válido para o usuário.');
+      return;
+    }
+    if (!formData.dataNascimento) {
+      alert('Informe a data de nascimento do usuário.');
+      return;
+    }
+    if (formData.telefone.length < 14) {
+      alert('Informe o telefone do usuário.');
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      alert('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
+      return;
+    }
     if (formData.senha !== formData.confirmarSenha) {
       alert("As senhas não coincidem!");
       return;
     }
-    onSave(formData);
+    onSave({ ...formData, email: normalizeEmail(formData.email) });
   };
 
   const getStrengthColor = () => {
@@ -177,6 +200,17 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
               />
             </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="tel" name="telefone" value={formData.telefone} onChange={handleChange} maxLength={15} required
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -189,7 +223,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="md:col-span-2 space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail Corporativo (Login)</label>
+              <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail Corporativo (Login - somente gestor altera)</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 

@@ -1,6 +1,30 @@
 // File: modules/gestor/parceiros/parceiros.service.ts
 
 import { supabase } from '../../../lib/supabase';
+import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
+
+
+function validateAlunoProfessorIdentity(data: any) {
+  const tipo = data?.tipo;
+  if (tipo !== 'Aluno' && tipo !== 'Professor') return;
+
+  const hasCpf = Object.prototype.hasOwnProperty.call(data, 'cpf') || Object.prototype.hasOwnProperty.call(data, 'cpf_cnpj');
+  const hasEmail = Object.prototype.hasOwnProperty.call(data, 'email');
+
+  if (hasCpf) {
+    const cpf = data?.cpf || data?.cpf_cnpj;
+    if (!isValidCpf(cpf || '')) {
+      throw new Error(`CPF inválido para cadastro de ${tipo.toLowerCase()}.`);
+    }
+  }
+
+  if (hasEmail) {
+    if (!isValidEmail(data?.email || '')) {
+      throw new Error(`E-mail inválido para cadastro de ${tipo.toLowerCase()}. Ele será usado como login.`);
+    }
+    data.email = normalizeEmail(data.email);
+  }
+}
 
 // Helper to convert YYYY-MM-DD (DB) to DD/MM/AAAA (Frontend)
 function dateDbToBr(dateStr: string | null | undefined): string {
@@ -180,7 +204,7 @@ function toSnake(c: any) {
 }
 
 export const parceirosService = {
-  async getAll(tipo?: string) {
+  async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
     let query = supabase.from('parceiros').select('*, polos(nome)');
     
     if (tipo && tipo !== 'todos') {
@@ -190,6 +214,12 @@ export const parceirosService = {
       if (tipo === 'pj') filterTipo = 'PJ';
       if (tipo === 'pf') filterTipo = 'PF';
       query = query.eq('tipo', filterTipo);
+    }
+
+    if (filters?.poloId && filters.poloId !== 'todos') {
+      query = filters.includeGlobal
+        ? query.or(`polo_id.eq.${filters.poloId},polo_id.is.null,polo_ids.cs.{${filters.poloId}}`)
+        : query.or(`polo_id.eq.${filters.poloId},polo_ids.cs.{${filters.poloId}}`);
     }
     
     const { data, error } = await query.order('nome', { ascending: true });
@@ -218,6 +248,7 @@ export const parceirosService = {
   },
 
   async create(data: any) {
+    validateAlunoProfessorIdentity(data);
     const dbData = toSnake(data);
     const { data: inserted, error } = await supabase
       .from('parceiros')
@@ -234,6 +265,7 @@ export const parceirosService = {
   },
 
   async update(id: string, data: any) {
+    validateAlunoProfessorIdentity(data);
     const dbData = toSnake(data);
     const { data: updated, error } = await supabase
       .from('parceiros')

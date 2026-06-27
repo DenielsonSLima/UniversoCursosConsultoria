@@ -16,9 +16,9 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso } from '../../gestor/cadastros/cadastros.types';
 import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
+import { fetchPublicCourseById } from '../courseAvailability';
 import { buildEadCoursePath, EAD_SITE_URL } from './eadCourseLinks';
 
 const setMetaContent = (selector: string, content: string) => {
@@ -45,7 +45,7 @@ const EadDetailPage: React.FC = () => {
   // Query do Curso EAD
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
     queryKey: ['cursoEadPublicDetail', cursoId],
-    queryFn: () => cadastrosService.getCursoById(cursoId!),
+    queryFn: () => fetchPublicCourseById(cursoId!) as Promise<Curso>,
     enabled: !!cursoId,
   });
 

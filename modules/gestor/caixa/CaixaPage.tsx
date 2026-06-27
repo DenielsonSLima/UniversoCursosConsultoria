@@ -1,6 +1,6 @@
 // File: modules/gestor/caixa/CaixaPage.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   DollarSign, TrendingUp, TrendingDown, Landmark, AlertTriangle, 
@@ -9,14 +9,30 @@ import {
 import { caixaService, PRINCIPAL_POLO_ID } from './caixa.service';
 import { financeiroService } from '../financeiro/financeiro.service';
 
-const CaixaPage: React.FC = () => {
-  const [selectedPolo, setSelectedPolo] = useState<string>('todos');
+interface CaixaPageProps {
+  poloId?: string | null;
+  isGlobal?: boolean;
+}
+
+const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
+  const [selectedPolo, setSelectedPolo] = useState<string>(
+    isGlobal ? (poloId || 'todos') : (poloId || '')
+  );
 
   // Fetch Polos list
   const { data: polos = [] } = useQuery({
     queryKey: ['caixa-polos-list'],
     queryFn: financeiroService.getPolos
   });
+
+  useEffect(() => {
+    setSelectedPolo(isGlobal ? (poloId || 'todos') : (poloId || ''));
+  }, [isGlobal, poloId]);
+
+  const visiblePolos = useMemo(() => {
+    if (isGlobal) return polos;
+    return polos.filter((polo: any) => polo.id === poloId);
+  }, [isGlobal, poloId, polos]);
 
   // Fetch dashboard data reactively based on selectedPolo
   const { data: dashboard, isLoading, error } = useQuery({
@@ -100,22 +116,25 @@ const CaixaPage: React.FC = () => {
         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Filtro por Polo / Unidade</span>
         <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
           {/* Aba Geral */}
-          <button
-            onClick={() => setSelectedPolo('todos')}
-            className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border ${
-              selectedPolo === 'todos'
-                ? 'bg-[#001a33] text-white border-[#001a33] shadow-md'
-                : 'bg-white text-slate-500 hover:bg-slate-50 border-slate-100'
-            }`}
-          >
-            Resultado Geral (Todos os Polos)
-          </button>
+          {isGlobal && (
+            <button
+              onClick={() => setSelectedPolo('todos')}
+              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border ${
+                selectedPolo === 'todos'
+                  ? 'bg-[#001a33] text-white border-[#001a33] shadow-md'
+                  : 'bg-white text-slate-500 hover:bg-slate-50 border-slate-100'
+              }`}
+            >
+              Resultado Geral (Todos os Polos)
+            </button>
+          )}
           
           {/* Abas de Polos Específicos */}
-          {polos.map((polo: any) => (
+          {visiblePolos.map((polo: any) => (
             <button
               key={polo.id}
               onClick={() => setSelectedPolo(polo.id)}
+              disabled={!isGlobal}
               className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border ${
                 selectedPolo === polo.id
                   ? 'bg-blue-600 text-white border-blue-600 shadow-md'
@@ -125,6 +144,9 @@ const CaixaPage: React.FC = () => {
               {polo.nome}
               {polo.id === PRINCIPAL_POLO_ID && (
                 <span className="ml-2 bg-white/20 text-[8px] px-1.5 py-0.5 rounded font-black uppercase">Polo Principal</span>
+              )}
+              {!isGlobal && (
+                <span className="ml-2 bg-white/20 text-[8px] px-1.5 py-0.5 rounded font-black uppercase">Escopo fixo</span>
               )}
             </button>
           ))}

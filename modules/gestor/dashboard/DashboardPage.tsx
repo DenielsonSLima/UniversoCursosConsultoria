@@ -290,10 +290,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
         </div>
 
         {/* Right Column: Quick Actions & Recent Activity */}
-        <div className="space-y-6 flex flex-col justify-between h-[28rem]">
+        <div className="space-y-6 flex flex-col lg:h-[28rem]">
           
           {/* Quick Actions */}
-          <div className="bg-[#001a33] p-5 rounded-3xl text-white shadow-xl relative overflow-hidden flex-1 flex flex-col justify-between mb-4">
+          <div className="bg-[#001a33] p-5 rounded-3xl text-white shadow-xl relative overflow-hidden flex-none flex flex-col min-h-[14rem]">
             <div className="relative z-10">
               <h3 className="text-sm font-black uppercase tracking-wider mb-4">Ações Rápidas</h3>
               <div className="space-y-2.5">

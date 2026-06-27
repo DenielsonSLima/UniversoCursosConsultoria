@@ -1,7 +1,7 @@
 
 // File: modules/gestor/gestor.page.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   LayoutDashboard, 
   Handshake, 
@@ -38,7 +38,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { polosService } from './configuracoes/polos/polos.service';
 import { supabase } from '../../lib/supabase';
-import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 
@@ -68,6 +68,7 @@ import ChecklistEstagioPage from './cadastros/checklist-estagio/ChecklistEstagio
 import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
 
 import { loginService } from '../login/login.service';
+import ConfirmModal from '../shared/components/ConfirmModal';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -106,6 +107,7 @@ const GestorPage: React.FC = () => {
 
   // ─── Badge de chamados pendentes ───────────────────────────────────────────
   const [pendingChatsCount, setPendingChatsCount] = useState(0);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -205,15 +207,22 @@ const GestorPage: React.FC = () => {
 
     const hydrateProfile = async () => {
       try {
-        const portalProfile = await getPortalProfile();
+        const portalProfile = await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] });
         if (!mounted) return;
 
         if (!portalProfile || portalProfile.tipo !== 'Gestor') {
           clearPortalSession();
           await loginService.logout().catch(() => undefined);
           const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-          navigate(`/login?redirect=${redirect}`, { replace: true });
+          navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
           return;
+        }
+
+        const scope = getGestorAccessScope(portalProfile);
+        if (!scope.isGlobal && scope.activePoloId) {
+          setCurrentPoloId(scope.activePoloId);
+          sessionStorage.setItem('current_polo_id', scope.activePoloId);
+          sessionStorage.setItem('active_polo_id', scope.activePoloId);
         }
 
         setProfile(portalProfile);
@@ -222,7 +231,7 @@ const GestorPage: React.FC = () => {
         clearPortalSession();
         await loginService.logout().catch(() => undefined);
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-        navigate(`/login?redirect=${redirect}`, { replace: true });
+        navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
       }
     };
 
@@ -233,23 +242,31 @@ const GestorPage: React.FC = () => {
     };
   }, [navigate]);
 
+  const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
+  const visiblePolos = useMemo(
+    () => gestorScope.isGlobal
+      ? activePolos
+      : activePolos.filter(polo => gestorScope.allowedPoloIds?.includes(polo.id)),
+    [activePolos, gestorScope.allowedPoloIds, gestorScope.isGlobal],
+  );
+
   useEffect(() => {
-    if (activePolos.length > 0) {
-      const isValid = activePolos.some(p => p.id === currentPoloId);
+    if (visiblePolos.length > 0) {
+      const isValid = visiblePolos.some(p => p.id === currentPoloId);
       if (!isValid) {
-        const matriz = activePolos.find(p => p.is_matriz) || activePolos[0];
+        const matriz = visiblePolos.find(p => p.is_matriz) || visiblePolos[0];
         setCurrentPoloId(matriz.id || null);
         if (matriz.id) {
           sessionStorage.setItem('current_polo_id', matriz.id);
         }
       }
     }
-  }, [activePolos, currentPoloId]);
+  }, [visiblePolos, currentPoloId]);
 
   const executeLogout = async () => {
     await loginService.logout();
     clearPortalSession();
-    navigate('/login');
+    navigate('/sistema/login');
   };
 
   useInactivityLogout({
@@ -291,7 +308,11 @@ const GestorPage: React.FC = () => {
   }
 
   const handlePoloChange = (poloId: string) => {
-    const nextPolo = activePolos.find(polo => polo.id === poloId);
+    if (!gestorScope.isGlobal && !gestorScope.allowedPoloIds?.includes(poloId)) {
+      return;
+    }
+
+    const nextPolo = visiblePolos.find(polo => polo.id === poloId);
     setCurrentPoloId(poloId);
     sessionStorage.setItem('current_polo_id', poloId);
     setIsPoloSelectorOpen(false);
@@ -305,7 +326,7 @@ const GestorPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await executeLogout();
+    setIsLogoutConfirmOpen(true);
   };
 
   const toggleMenu = (menuId: string) => {
@@ -336,7 +357,7 @@ const GestorPage: React.FC = () => {
   };
 
   const currentPolo =
-    activePolos.find(polo => polo.id === currentPoloId) || activePolos[0];
+    visiblePolos.find(polo => polo.id === currentPoloId) || visiblePolos[0];
   const isMatrizSelected = currentPolo?.is_matriz === true;
 
   const cadastroSubItems = [
@@ -384,7 +405,7 @@ const GestorPage: React.FC = () => {
     switch (activeModule) {
       case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
-      case 'parceiros': return <ParceirosPage />;
+      case 'parceiros': return <ParceirosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} includeGlobal={gestorScope.isGlobal} />;
       case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} />;
       case 'cadastros-checklist': return <ChecklistEstagioPage />;
       case 'cadastros-ead': return <CursosEadPage readOnly={!isMatrizSelected} />;
@@ -402,11 +423,11 @@ const GestorPage: React.FC = () => {
         />
       );
       case 'secretaria': return <SecretariaPage />;
-      case 'caixa': return <CaixaPage />;
-      case 'financeiro': return <FinanceiroPage />;
+      case 'caixa': return <CaixaPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} isGlobal={gestorScope.isGlobal} />;
+      case 'financeiro': return <FinanceiroPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} />;
       case 'biblioteca': return <BibliotecaPage />;
       case 'comunicacao': return <ComunicacaoPage gestorProfile={profile} />;
-      case 'relatorios': return <RelatoriosPage />;
+      case 'relatorios': return <RelatoriosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} />;
       case 'configuracoes':
         if (!isMatrizSelected) {
           return (
@@ -695,7 +716,7 @@ const GestorPage: React.FC = () => {
                   onClick={() => setIsPoloSelectorOpen(open => !open)}
                   aria-haspopup="listbox"
                   aria-expanded={isPoloSelectorOpen}
-                  disabled={activePolos.length <= 1}
+                  disabled={visiblePolos.length <= 1}
                   className="flex h-14 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left transition-all hover:border-blue-200 hover:bg-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
                 >
                   <Building size={16} className="text-blue-500 flex-shrink-0" />
@@ -718,7 +739,7 @@ const GestorPage: React.FC = () => {
                   </span>
                   <ChevronDown
                     size={15}
-                    className={`text-slate-400 flex-shrink-0 transition-transform ${activePolos.length <= 1 ? 'opacity-0' : ''} ${
+                    className={`text-slate-400 flex-shrink-0 transition-transform ${visiblePolos.length <= 1 ? 'opacity-0' : ''} ${
                       isPoloSelectorOpen ? 'rotate-180' : ''
                     }`}
                   />
@@ -729,7 +750,7 @@ const GestorPage: React.FC = () => {
                     role="listbox"
                     className="absolute top-full right-0 z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-slate-900/15 animate-fadeIn"
                   >
-                    {activePolos.map(polo => {
+                    {visiblePolos.map(polo => {
                       const isSelected = polo.id === currentPoloId;
 
                       return (
@@ -797,6 +818,17 @@ const GestorPage: React.FC = () => {
           {renderContent()}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title="Confirmação"
+        message="Deseja realmente sair?"
+        confirmText="Sair"
+        cancelText="Cancelar"
+        variant="danger"
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        onConfirm={executeLogout}
+      />
     </div>
   );
 };

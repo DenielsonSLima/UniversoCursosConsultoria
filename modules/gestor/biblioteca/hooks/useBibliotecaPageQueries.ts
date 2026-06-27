@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { bibliotecaService } from '../biblioteca.service';
 import { bibliotecaQueryKeys } from '../biblioteca.queryKeys';
 
-type LibraryTab = 'destaques' | 'gerenciador' | 'professores' | 'regras';
+type LibraryTab = 'destaques' | 'gerenciador' | 'professores' | 'regras' | 'configuracao';
 
 export function useBibliotecaPageQueries(activeTab: LibraryTab) {
   const cursosQuery = useQuery({
