@@ -1,4 +1,4 @@
-const PRODUCTION_SITE_ORIGIN = 'https://www.universocc.com.br';
+const PRODUCTION_SITE_ORIGIN = 'https://universocc.com.br';
 
 const configuredSiteOrigin = () => {
   const rawValue = String(import.meta.env.VITE_PUBLIC_SITE_URL || PRODUCTION_SITE_ORIGIN).trim();
