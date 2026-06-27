@@ -50,13 +50,18 @@ const formatPhone = (value: string) => {
   return digits;
 };
 
+const hasOAuthReturnInUrl = () => (
+  window.location.hash.includes('access_token') ||
+  window.location.search.includes('code=')
+);
+
 const AlunoLoginPublicPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialMode = searchParams.get('mode') === 'cadastro' ? 'cadastro' : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(true);
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasOAuthReturnInUrl);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -118,9 +123,7 @@ const AlunoLoginPublicPage: React.FC = () => {
     const checkGoogleReturn = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        const hasOAuthReturn =
-          window.location.hash.includes('access_token') ||
-          window.location.search.includes('code=');
+        const hasOAuthReturn = hasOAuthReturnInUrl();
 
         if (!data.session) {
           if (hasOAuthReturn && mounted) {

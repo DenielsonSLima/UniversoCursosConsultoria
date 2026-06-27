@@ -13,11 +13,16 @@ import {
   getRandomMotivationalPhrase,
 } from './motivationalPhrases';
 
+const hasOAuthReturnInUrl = () => (
+  window.location.hash.includes('access_token') ||
+  window.location.search.includes('code=')
+);
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(true);
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasOAuthReturnInUrl);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [loginStep, setLoginStep] = useState<'credentials' | 'role_select' | 'polo_select'>('credentials');
@@ -114,9 +119,7 @@ const LoginPage: React.FC = () => {
     const finishGoogleReturn = async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        const hasOAuthReturn =
-          window.location.hash.includes('access_token') ||
-          window.location.search.includes('code=');
+        const hasOAuthReturn = hasOAuthReturnInUrl();
 
         if (!data.session) {
           if (hasOAuthReturn) {

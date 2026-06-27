@@ -26,10 +26,15 @@ const navigateToLoginWithError = (searchParams: URLSearchParams, errorCode: stri
   return `/login?${nextParams.toString()}`;
 };
 
+const hasOAuthReturnInUrl = () => (
+  window.location.search.includes('code=') ||
+  window.location.hash.includes('access_token')
+);
+
 const PublicPage: React.FC = () => {
   const navigate = useNavigate();
   const { hash } = useLocation();
-  const [isProcessingOAuth, setIsProcessingOAuth] = React.useState(false);
+  const [isProcessingOAuth, setIsProcessingOAuth] = React.useState(hasOAuthReturnInUrl);
 
   React.useEffect(() => {
     if (hash) {
@@ -44,7 +49,7 @@ const PublicPage: React.FC = () => {
   }, [hash]);
 
   React.useEffect(() => {
-    const hasOAuthReturn = window.location.search.includes('code=') || window.location.hash.includes('access_token');
+    const hasOAuthReturn = hasOAuthReturnInUrl();
     if (!hasOAuthReturn) return;
 
     let mounted = true;
