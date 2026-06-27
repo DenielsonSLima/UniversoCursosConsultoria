@@ -26,26 +26,11 @@ const BLOCKING_ENROLLMENT_STATUSES = new Set([
   'AGUARDANDO_CONFIRMACAO',
 ]);
 
-const todayDate = () => new Date().toISOString().slice(0, 10);
-
-const formatDate = (value: string | null | undefined) => {
-  if (!value) return '';
-  return new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
-};
-
-const getUnavailabilityReason = (turma: any, today: string) => {
+const getUnavailabilityReason = (turma: any) => {
   const alunosMatriculados = getBlockingMatriculasTotal(turma);
   const vagasTotais = Number(turma.vagas_totais || 0);
   const qtdVagasMinima = Number(turma.qtd_vagas_minima || 0);
   const bloquearMatriculasAposCompletarVagas = turma.bloquear_matriculas_apos_completar_vagas !== false;
-
-  if (turma.data_inicio_inscricao && today < turma.data_inicio_inscricao) {
-    return `Abertura das inscrições para esta turma em ${formatDate(turma.data_inicio_inscricao)}.`;
-  }
-
-  if (turma.data_fim_inscricao && today > turma.data_fim_inscricao) {
-    return `As inscrições desta turma foram encerradas em ${formatDate(turma.data_fim_inscricao)}. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.`;
-  }
 
   if (bloquearMatriculasAposCompletarVagas) {
     if (qtdVagasMinima > 0 && alunosMatriculados >= qtdVagasMinima) {
@@ -95,7 +80,7 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
 
       const { data: turmas, error } = await supabase
         .from('turmas')
-        .select('id, nome, vagas_totais, qtd_vagas_minima, bloquear_matriculas_apos_completar_vagas, data_inicio_inscricao, data_fim_inscricao, matriculas(status)')
+        .select('id, nome, vagas_totais, matriculas(status)')
         .eq('curso_id', courseId)
         .eq('status', 'EM_ANDAMENTO')
         .order('data_inicio', { ascending: true });
@@ -112,11 +97,10 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
         };
       }
 
-      const now = todayDate();
       const analyzed = turmas.map((turma: any) => {
         return {
           turma: hydrateTurma(turma),
-          reason: getUnavailabilityReason(turma, now),
+          reason: getUnavailabilityReason(turma),
         };
       });
 

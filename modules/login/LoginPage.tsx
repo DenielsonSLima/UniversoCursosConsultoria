@@ -238,8 +238,8 @@ const LoginPage: React.FC = () => {
   return (
     <div className="relative min-h-screen w-full bg-slate-50 font-sans">
       <DailabsSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
-      <main className="grid min-h-screen min-[1800px]:grid-cols-[1.04fr_0.96fr]">
-        <section className="relative hidden min-h-[640px] overflow-hidden bg-[#001a33] text-white lg:flex min-[1800px]:min-h-screen">
+      <main className="grid min-h-screen xl:grid-cols-[1.04fr_0.96fr]">
+        <section className="relative hidden min-h-[640px] overflow-hidden bg-[#001a33] text-white lg:flex xl:min-h-screen">
           <img src="/banner2.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
           <div
             className="absolute inset-0"
@@ -257,16 +257,16 @@ const LoginPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="absolute left-10 top-8 z-20 rounded-2xl bg-white px-5 py-3 shadow-2xl shadow-black/20 transition hover:scale-[1.02] min-[1800px]:left-16 min-[1800px]:top-10"
+            className="absolute left-10 top-8 z-20 rounded-2xl bg-white px-5 py-3 shadow-2xl shadow-black/20 transition hover:scale-[1.02] xl:left-12 xl:top-10 2xl:left-16"
           >
             <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-12 w-auto object-contain" />
           </button>
-          <div className="relative z-10 flex h-full w-full flex-col justify-center px-10 pb-10 pt-32 min-[1800px]:px-16 min-[1800px]:py-0">
+          <div className="relative z-10 flex h-full w-full flex-col justify-center px-10 pb-10 pt-32 xl:px-12 xl:py-0 2xl:px-16">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-blue-300/25 bg-blue-600/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-blue-100 backdrop-blur-md">
                 <ShieldCheck size={14} /> Portal institucional
               </span>
-              <h1 className="mt-6 text-[2.55rem] font-black uppercase leading-[0.98] tracking-tight xl:text-[3.2rem]">
+              <h1 className="mt-6 text-[2.55rem] font-black uppercase leading-[0.98] tracking-tight xl:text-[2.8rem] 2xl:text-[3.2rem]">
                 Gestão, professores e secretaria em um só acesso.
               </h1>
               <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-slate-200/90">
@@ -301,7 +301,7 @@ const LoginPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="relative flex min-h-screen flex-col items-center justify-center p-6 py-14 sm:p-8 lg:min-h-0 lg:py-16 min-[1800px]:min-h-screen">
+        <section className="relative flex min-h-screen flex-col items-center justify-center p-6 py-14 sm:p-8 lg:min-h-0 lg:py-16 xl:min-h-screen">
           <button
             onClick={() => navigate('/')}
             className="absolute top-6 left-6 flex items-center gap-2 text-slate-500 hover:text-[#4169E1] transition-colors text-sm font-bold uppercase tracking-widest group"

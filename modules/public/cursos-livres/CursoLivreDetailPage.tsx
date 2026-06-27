@@ -9,7 +9,6 @@ import {
   FileText, 
   Send, 
   Loader2, 
-  Sparkles,
   ChevronDown,
   ChevronUp,
   MapPin,
@@ -29,8 +28,6 @@ const CursoLivreDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const isDevelopmentMode = true;
-
   // Força o scroll para o topo ao carregar a página
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -40,14 +37,14 @@ const CursoLivreDetailPage: React.FC = () => {
   const { data: curso, isLoading: loadingCurso, error: errorCurso } = useQuery<Curso>({
     queryKey: ['cursoLivrePublicDetail', id],
     queryFn: () => fetchPublicCourseById(id!) as Promise<Curso>,
-    enabled: !!id && isDevelopmentMode,
+    enabled: !!id,
   });
 
   // Query da Grade Curricular
   const { data: modulos = [], isLoading: loadingGrade } = useQuery<Modulo[]>({
     queryKey: ['cursoLivrePublicGrade', id],
     queryFn: () => cadastrosService.getGrade(id!),
-    enabled: !!id && isDevelopmentMode,
+    enabled: !!id,
   });
 
   const {
@@ -66,7 +63,7 @@ const CursoLivreDetailPage: React.FC = () => {
   const { data: turmasAbertas = [] } = useQuery<any[]>({
     queryKey: ['cursoLivrePublicTurmasAbertas', id],
     queryFn: () => fetchOpenTurmasForCourse(id!),
-    enabled: !!id && isDevelopmentMode,
+    enabled: !!id,
   });
 
   const poloOptions = getPublicTurmaPoloOptions(turmasAbertas);
@@ -142,57 +139,6 @@ const CursoLivreDetailPage: React.FC = () => {
     }, 800);
   };
 
-  // Se não estiver em modo de desenvolvimento, renderiza tela "Em Breve"
-  if (!isDevelopmentMode) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white font-sans">
-        <Header />
-
-        <div className="bg-gradient-to-b from-[#001a33] to-[#003366] py-24 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <img 
-              src="https://images.unsplash.com/photo-1423666639041-f56000c27a9a?auto=format&fit=crop&q=80&w=1920" 
-              alt="Background" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="container mx-auto px-6 relative z-10 text-center">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 uppercase tracking-tighter">
-              Cursos <span className="text-blue-400">Livres</span>
-            </h1>
-            <p className="text-blue-100 text-lg max-w-2xl mx-auto font-light leading-relaxed">
-              Formações de alto nível para impulsionar a sua carreira no mercado.
-            </p>
-          </div>
-        </div>
-
-        <main className="flex-grow flex items-center justify-center py-20 px-6 bg-slate-50">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-lg shadow-blue-500/10">
-              <Sparkles size={30} />
-            </div>
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
-              Em Breve!
-            </h3>
-            <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-4">
-              Página de Detalhes
-            </p>
-            <p className="text-slate-300 text-sm leading-relaxed mb-8 font-light">
-              Estamos implementando as subpáginas detalhadas para cada um dos nossos cursos livres. Em breve você poderá conferir o conteúdo completo de cada curso!
-            </p>
-            <button
-              onClick={() => navigate('/cursos-livres')}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/40 uppercase tracking-widest text-xs hover:scale-[1.02]"
-            >
-              Voltar para o Catálogo
-            </button>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
-  }
 
   // Loading do Curso
   if (loadingCurso) {

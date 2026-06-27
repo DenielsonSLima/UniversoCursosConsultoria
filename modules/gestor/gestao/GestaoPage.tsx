@@ -14,9 +14,10 @@ interface GestaoPageProps {
   poloId?: string;
   poloNome?: string;
   isMatriz: boolean;
+  onRequestScrollTop?: () => void;
 }
 
-const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, poloNome, isMatriz }) => {
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, poloNome, isMatriz, onRequestScrollTop }) => {
   const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
   const queryClient = useQueryClient();
@@ -27,6 +28,12 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, poloNome, isMatriz }) =
       setIsDetailView(false);
     }
   }, [activeTab, isMatriz]);
+
+  useEffect(() => {
+    if (isDetailView) {
+      onRequestScrollTop?.();
+    }
+  }, [isDetailView, onRequestScrollTop]);
 
   useEffect(() => {
     const channel = supabase

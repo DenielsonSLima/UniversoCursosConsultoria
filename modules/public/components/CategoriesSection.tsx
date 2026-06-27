@@ -1,9 +1,8 @@
 
 // File: modules/public/components/CategoriesSection.tsx
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Sparkles } from 'lucide-react';
 import CursosLivresCard from '../categories/cursos-livres/CursosLivresCard';
 import CursosEadCard from '../categories/cursos-ead/CursosEadCard';
 import EspecializacaoTecnicaCard from '../categories/especializacao-tecnica/EspecializacaoTecnicaCard';
@@ -11,14 +10,7 @@ import CursosTecnicosCard from '../categories/cursos-tecnicos/CursosTecnicosCard
 import EnsinoSuperiorCard from '../categories/ensino-superior/EnsinoSuperiorCard';
 
 const CategoriesSection: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
   const navigate = useNavigate();
-
-  const openModal = (name: string) => {
-    setCategoryName(name);
-    setIsOpen(true);
-  };
 
   const handleOpenSuperior = () => {
     navigate('/ensino-superior');
@@ -29,21 +21,11 @@ const CategoriesSection: React.FC = () => {
   };
 
   const handleOpenLivres = () => {
-    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
-    if (isDevelopmentMode) {
-      navigate('/cursos-livres');
-    } else {
-      openModal('Cursos Livres');
-    }
+    navigate('/cursos-livres');
   };
 
   const handleOpenEspecializacao = () => {
-    const isDevelopmentMode = import.meta.env.VITE_APP_MODE === 'development';
-    if (isDevelopmentMode) {
-      navigate('/especializacao');
-    } else {
-      openModal('Especialização Técnica');
-    }
+    navigate('/especializacao');
   };
 
   return (
@@ -101,52 +83,6 @@ const CategoriesSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Custom 'Em Desenvolvimento' Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          {/* Click outside to close */}
-          <div className="absolute inset-0" onClick={() => setIsOpen(false)}></div>
-          
-          {/* Modal Content */}
-          <div className="relative w-full max-w-md overflow-hidden bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center z-10 animate-scaleIn">
-            {/* Close Button */}
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
-            
-            {/* Header Icon */}
-            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-lg shadow-blue-500/10">
-              <Sparkles size={30} />
-            </div>
-
-            {/* Title */}
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
-              Em Breve!
-            </h3>
-
-            {/* Subtitle */}
-            <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-4">
-              {categoryName}
-            </p>
-
-            {/* Description */}
-            <p className="text-slate-300 text-sm leading-relaxed mb-8 font-light">
-              Estamos preparando uma experiência completa de ensino para a área de <strong className="text-white font-bold">{categoryName}</strong>. Em breve, esta seção estará totalmente disponível com matrículas abertas e certificação reconhecida!
-            </p>
-
-            {/* Action Button */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/40 uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95"
-            >
-              Entendi
-            </button>
-          </div>
-        </div>
-      )}
     </section>
   );
 };

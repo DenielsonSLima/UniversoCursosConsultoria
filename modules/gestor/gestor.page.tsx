@@ -1,7 +1,7 @@
 
 // File: modules/gestor/gestor.page.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, 
   Handshake, 
@@ -95,6 +95,7 @@ const POLO_CADASTROS_ALLOWED = new Set([
 ]);
 
 const GestorPage: React.FC = () => {
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
@@ -303,6 +304,12 @@ const GestorPage: React.FC = () => {
     setSearchResults(filtered);
   }, [searchQuery]);
 
+  const scrollContentToTop = useCallback(() => {
+    requestAnimationFrame(() => {
+      contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+  }, []);
+
   if (isAuthLoading || !profile) {
     return <AccessCheckingScreen portal="Gestor" />;
   }
@@ -420,6 +427,7 @@ const GestorPage: React.FC = () => {
           poloId={isMatrizSelected ? undefined : currentPoloId || undefined}
           isMatriz={isMatrizSelected}
           poloNome={currentPolo?.nome}
+          onRequestScrollTop={scrollContentToTop}
         />
       );
       case 'secretaria': return <SecretariaPage />;
@@ -814,7 +822,7 @@ const GestorPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="p-8 flex-1 overflow-auto">
+        <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto">
           {renderContent()}
         </div>
       </main>

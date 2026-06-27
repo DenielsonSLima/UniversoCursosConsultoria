@@ -4,6 +4,7 @@ type PublicCourseModality = 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
 
 const toSingle = (value: any) => Array.isArray(value) ? value[0] : value;
 export const PUBLIC_COURSE_COLUMNS = 'id, nome, modalidade, carga_horaria, status, area, descricao, parceiro_instituicao, parceiro_logo_url, imagem_url, duracao_meses, publicar_site, imagem_detalhe_1, imagem_detalhe_2, valor, asaas_payment_link_url';
+const PUBLIC_TURMA_COLUMNS = 'id, curso_id, nome, codigo, turno, data_inicio, vagas_totais, polos(nome, cidade, estado)';
 
 export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseModality) => {
   const { data: cursos, error } = await supabase
@@ -21,7 +22,7 @@ export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseM
 
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
-    .select('id, curso_id, nome, codigo, turno, data_inicio, data_inicio_inscricao, data_fim_inscricao, vagas_totais, qtd_vagas_minima, bloquear_matriculas_apos_completar_vagas, polos(nome, cidade, estado)')
+    .select(PUBLIC_TURMA_COLUMNS)
     .eq('status', 'EM_ANDAMENTO')
     .in('curso_id', courseIds)
     .order('data_inicio', { ascending: true });
@@ -60,7 +61,7 @@ export const getCursoTurmasAbertas = (curso: any) =>
 export const fetchOpenTurmasForCourse = async (courseId: string) => {
   const { data, error } = await supabase
     .from('turmas')
-    .select('id, curso_id, nome, codigo, turno, data_inicio, data_inicio_inscricao, data_fim_inscricao, vagas_totais, qtd_vagas_minima, bloquear_matriculas_apos_completar_vagas, polos(nome, cidade, estado)')
+    .select(PUBLIC_TURMA_COLUMNS)
     .eq('curso_id', courseId)
     .eq('status', 'EM_ANDAMENTO')
     .order('data_inicio', { ascending: true });

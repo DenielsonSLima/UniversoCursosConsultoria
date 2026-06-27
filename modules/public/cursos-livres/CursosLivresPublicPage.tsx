@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Calendar, Clock, Loader2, Search, Filter, X, Sparkles, ArrowRight, FileText, CheckCircle2, MapPin } from 'lucide-react';
+import { BookOpen, Calendar, Clock, Loader2, Search, Filter, X, ArrowRight, FileText, CheckCircle2, MapPin } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -13,8 +13,6 @@ const CursosLivresPublicPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const isDevelopmentMode = true;
-
   // Estados de Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('Todos');
@@ -24,10 +22,8 @@ const CursosLivresPublicPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname]);
 
-  // Inscrição Realtime para atualizações em tempo real da tabela 'cursos' (apenas em desenvolvimento)
+  // Inscrição Realtime para atualizações em tempo real da tabela 'cursos'
   useEffect(() => {
-    if (!isDevelopmentMode) return;
-
     const channel = supabase
       .channel('cursos_livres_public_realtime')
       .on(
@@ -42,70 +38,16 @@ const CursosLivresPublicPage: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, isDevelopmentMode]);
+  }, [queryClient]);
 
-  // Caching com TanStack Query para carregar os cursos do catálogo (apenas em desenvolvimento)
+  // Caching com TanStack Query para carregar os cursos do catálogo público
   const { data: cursos = [], isLoading: loading } = useQuery<any[]>({
     queryKey: ['cursosLivresPublic'],
     queryFn: async () => {
       return fetchPublicCoursesWithOpenTurmas('LIVRE');
     },
-    enabled: isDevelopmentMode,
+    enabled: true,
   });
-
-  // Se não estiver em modo de desenvolvimento (ex: online no Vercel), exibe o aviso "Em Breve"
-  if (!isDevelopmentMode) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white font-sans">
-        <Header />
-
-        {/* Banner Superior */}
-        <div className="bg-gradient-to-b from-[#001a33] to-[#003366] py-24 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <img 
-              src="https://images.unsplash.com/photo-1423666639041-f56000c27a9a?auto=format&fit=crop&q=80&w=1920" 
-              alt="Background" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="container mx-auto px-6 relative z-10 text-center">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 uppercase tracking-tighter">
-              Cursos <span className="text-blue-400">Livres</span>
-            </h1>
-            <p className="text-blue-100 text-lg max-w-2xl mx-auto font-light leading-relaxed">
-              Formações dinâmicas, práticas e focadas na capacitação rápida para o mercado de trabalho.
-            </p>
-          </div>
-        </div>
-
-        {/* Central Em Desenvolvimento */}
-        <main className="flex-grow flex items-center justify-center py-20 px-6 bg-slate-50">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-12 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30 shadow-lg shadow-blue-500/10">
-              <Sparkles size={30} />
-            </div>
-            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">
-              Em Breve!
-            </h3>
-            <p className="text-blue-400 text-xs font-bold tracking-widest uppercase mb-4">
-              Cursos Livres
-            </p>
-            <p className="text-slate-300 text-sm leading-relaxed mb-8 font-light">
-              Estamos preparando uma experiência operacional completa para as páginas de <strong className="text-white font-bold">Cursos Livres</strong>. Em breve, esta seção estará totalmente disponível com matrículas abertas!
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/40 uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95"
-            >
-              Voltar para a Home
-            </button>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
-  }
 
   // Filtragem combinada
   const filteredCursos = cursos.filter((curso) => {
