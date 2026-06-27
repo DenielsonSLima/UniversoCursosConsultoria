@@ -11,8 +11,6 @@ import {
   LogOut, 
   Menu, 
   X,
-  Sparkles,
-  AlertTriangle,
   FileText
 } from 'lucide-react';
 import { loginService } from '../login/login.service';

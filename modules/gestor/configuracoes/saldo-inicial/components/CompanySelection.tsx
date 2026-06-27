@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Building2, ArrowRight, Wallet } from 'lucide-react';
+import { Building2, ArrowRight } from 'lucide-react';
 
 interface CompanySelectionProps {
   companies: any[];

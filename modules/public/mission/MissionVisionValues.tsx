@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Eye, Heart, Shield, CheckCircle2, Award, Zap, Users, Star, ArrowRight } from 'lucide-react';
+import { Target, Eye, Heart, Shield, CheckCircle2, Award, Zap, Users, Star } from 'lucide-react';
 
 const MissionVisionValues: React.FC = () => {
   const valores = [

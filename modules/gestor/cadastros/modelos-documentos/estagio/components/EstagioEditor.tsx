@@ -131,10 +131,6 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
     document.execCommand('insertText', false, variableCode);
   };
 
-  const handleFormat = (command: string) => {
-    document.execCommand(command, false);
-  };
-
   const handleTextInput = (e: React.FormEvent<HTMLDivElement>) => {
     setTextContent(e.currentTarget.innerHTML);
   };

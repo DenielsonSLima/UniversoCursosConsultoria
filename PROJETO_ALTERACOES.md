@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-06-27 — Ledger MCP de Migrations Financeiro/Biblioteca
+
+**O que foi feito:**
+- Registrado em `ai/rag`, `ai/memoria` e `ai/skil` o ledger das migrations ja aplicadas/validadas no Supabase remoto via MCP.
+- Documentada a regra de consultar `list_migrations` pelo MCP antes de aplicar ou marcar como pendente qualquer migration local.
+- Removidas migrations locais nao rastreadas desta leva que ja estavam aplicadas/validadas no remoto, para evitar falso positivo de pendencia local.
+- Ajustado o formulario de Transferencias para preencher por padrao a descricao `Transferência entre contas` apenas em novo lancamento.
+
+**Por quê:**
+- Evitar repeticao do erro operacional de reaplicar migrations antigas ou reportar como pendente algo que ja existe no remoto.
+- Manter o modulo financeiro seguindo a regra de calculos por RPC no banco, com o frontend apenas visual/cache.
+
+**Arquivos afetados:**
+- `modules/gestor/financeiro/transferencias/TransferenciasTab.tsx`
+- `ai/rag/supabase-mcp-operacoes-remotas.md`
+- `ai/memoria/supabase-mcp-operacoes-remotas.md`
+- `ai/skil/supabase-mcp-operacoes-remotas.md`
+
+---
+
 ## 2026-06-26 — Regra Obrigatória de Supabase Remoto via MCP
 
 **O que foi feito:**

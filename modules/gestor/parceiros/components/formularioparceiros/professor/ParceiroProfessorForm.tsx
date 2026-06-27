@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
-  GraduationCap, Briefcase, DollarSign, ChevronRight, ChevronLeft,
-  CheckCircle2, Shield, Plus, Camera, Upload, Loader2
+  GraduationCap, DollarSign, ChevronRight, ChevronLeft,
+  CheckCircle2, Plus, Upload, Loader2
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
@@ -150,7 +150,9 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
           uf: data.uf || '',
         }));
       }
-    } catch {}
+    } catch {
+      // ViaCEP failures should not block manual address entry.
+    }
   };
 
   const stepValid = () => {

@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/cards/PFCard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { User, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Briefcase } from 'lucide-react';
+import { MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Briefcase } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatCpf } from '../../../../../lib/documentFormatters';

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
-import { User, Phone, Mail, MapPin, Save, Award, Landmark, Wallet } from 'lucide-react';
+import { User, Phone, Mail, Award, Landmark, Wallet } from 'lucide-react';
 import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 
 interface PerfilPageProps {

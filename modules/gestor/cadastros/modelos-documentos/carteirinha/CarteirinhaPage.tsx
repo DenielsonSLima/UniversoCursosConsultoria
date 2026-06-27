@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import CarteirinhaCard from './components/CarteirinhaCard';
 import CarteirinhaEditor from './components/CarteirinhaEditor';
 import { carteirinhaService } from './carteirinha.service';

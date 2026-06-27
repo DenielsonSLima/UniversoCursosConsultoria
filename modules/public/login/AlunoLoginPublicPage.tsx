@@ -12,7 +12,6 @@ import {
   Loader2,
   Lock,
   IdCard,
-  Mail,
   Phone,
   Quote,
   ShieldCheck,

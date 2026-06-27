@@ -1,7 +1,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, CheckCircle2, Loader2, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, Loader2, AlertCircle, Download } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';

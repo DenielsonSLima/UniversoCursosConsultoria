@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Folder, FolderPlus, ArrowUp, ChevronRight, FileText, 
-  Trash2, Edit, MoreVertical, FolderOpen, ArrowRight, Eye, Download, Info,
+  Folder, FolderPlus, ArrowUp, ChevronRight, 
+  Trash2, Edit, FolderOpen, ArrowRight, Eye, Download,
   Copy, Lock
 } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
-import { TargetAudience, Scope, LibraryFolder, LibraryDocument } from '../biblioteca.types';
+import { TargetAudience, LibraryFolder, LibraryDocument } from '../biblioteca.types';
 import DocumentPermissionsModal from './DocumentPermissionsModal';
 import { useFileExplorerQueries } from '../hooks/useFileExplorerQueries';
 import { useFileExplorerMutations } from '../hooks/useFileExplorerMutations';

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Save, X, Building, MapPin, Phone, Mail, FileText, RefreshCw, Search, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, Save, X, Building, MapPin, Phone, RefreshCw, Search, Loader2, AlertCircle } from 'lucide-react';
 import { empresasService } from '../empresas.service';
 
 interface EmpresaFormProps {

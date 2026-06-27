@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Briefcase, Building2, Stethoscope, Users2, FileCheck, Landmark } from 'lucide-react';
+import { GraduationCap, Briefcase, Building2, Stethoscope, Users2, Landmark } from 'lucide-react';
 
 const ConsultingSection: React.FC = () => {
   return (

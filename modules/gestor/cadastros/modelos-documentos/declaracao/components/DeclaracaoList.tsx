@@ -2,7 +2,7 @@
 // File: modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoList.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Building2, ArrowRight, FileText, CheckCircle2, Settings } from 'lucide-react';
+import { Building2, ArrowRight, FileText, Settings } from 'lucide-react';
 import { polosService } from '../../../../configuracoes/polos/polos.service';
 
 interface DeclaracaoListProps {

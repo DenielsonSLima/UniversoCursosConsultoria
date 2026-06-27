@@ -114,7 +114,6 @@ const CursoTecnicoDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    const whatsappLimpo = whatsapp.replace(/\D/g, '');
     const mensagemTexto = `Olá! Meu nome é *${nome}* e tenho interesse no curso técnico *${curso?.nome || 'Técnico'}* no Polo *${polo}*. \n\n*E-mail:* ${email || 'Não informado'} \n*Mensagem:* ${mensagem || 'Gostaria de saber mais informações sobre matrículas e descontos.'}`;
     
     const whatsappUrl = `https://wa.me/557996028316?text=${encodeURIComponent(mensagemTexto)}`;
@@ -165,7 +164,6 @@ const CursoTecnicoDetailPage: React.FC = () => {
   }
 
   const duracao = curso.duracao_meses || (curso.carga_horaria >= 1200 ? 24 : 18);
-  const dataCreated = curso.created_at ? new Date(curso.created_at).toLocaleDateString() : '';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] font-sans">

@@ -10,9 +10,10 @@ import { gestaoService } from '../gestao.service';
 import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
 import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface GestaoTecnicosProps {
-  onToggleDetails?: (isOpen: boolean) => void;
+  onToggleDetails?: React.Dispatch<boolean>;
   poloId?: string;
 }
 
@@ -20,6 +21,8 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const list = useTurmasPaginadas('TECNICO', poloId);
 
@@ -42,6 +45,20 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const handleCloseDetails = () => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
+  };
+
+  const handleDeleteTurma = async () => {
+    if (!deleteTarget || isDeleting) return;
+    try {
+      setIsDeleting(true);
+      await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
+      await list.reload();
+    } catch (error: any) {
+      window.alert(error?.message || 'Nao foi possivel excluir a turma.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   // Se houver uma turma selecionada, exibe a tela de detalhes
@@ -120,6 +137,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
                     colorTheme="emerald"
                     showPoloDetails
                     showDisciplineProgress
+                    onDelete={setDeleteTarget}
                   />
                 </div>
             ))
@@ -132,6 +150,17 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         onSave={handleCreate}
         cursosDisponiveis={cursosDisponiveis}
         selectedPoloId={poloId}
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteTurma}
+        title="Excluir turma"
+        message={`Esta acao apaga a turma ${deleteTarget?.codigo || ''} e remove matriculas, cobrancas, documentos de validacao e vinculos ligados a ela. O banco so bloqueia se a turma ja comecou ou tiver diario, notas, estagio, certificado, fechamento ou movimentacao academica.`}
+        confirmText={isDeleting ? 'Excluindo...' : 'Excluir'}
+        cancelText="Voltar"
+        variant="danger"
       />
     </div>
   );

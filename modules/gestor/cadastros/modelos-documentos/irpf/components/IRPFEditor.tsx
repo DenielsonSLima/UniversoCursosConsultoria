@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic, 
-  GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Building2, Sliders,
+  GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Sliders,
   CheckCircle2, AlertCircle, Calendar
 } from 'lucide-react';
 import { irpfService } from '../irpf.service';

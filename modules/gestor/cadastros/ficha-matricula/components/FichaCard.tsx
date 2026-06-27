@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileSignature, Edit, Trash2, Eye, FileText, CheckCircle2 } from 'lucide-react';
+import { FileSignature, Edit, Trash2, FileText, CheckCircle2 } from 'lucide-react';
 
 interface FichaCardProps {
   ficha: any;

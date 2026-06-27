@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Filter, Search, Award } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import DocumentHeader from '../../components/DocumentHeader';
 

@@ -239,10 +239,6 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     document.execCommand('insertText', false, variableCode);
   };
 
-  const handleFormat = (command: string) => {
-    document.execCommand(command, false);
-  };
-
   const handleTextInput = (e: React.FormEvent<HTMLDivElement>) => {
     setTextContent(e.currentTarget.innerHTML);
   };

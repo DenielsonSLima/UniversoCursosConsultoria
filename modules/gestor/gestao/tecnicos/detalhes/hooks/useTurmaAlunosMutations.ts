@@ -1,8 +1,11 @@
 import { useCallback } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query';
 import { AcademicMovementType, academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAsaasService } from '../turma-asaas.service';
+
+type MutationSuccess<TData, TVariables> = NonNullable<UseMutationOptions<TData, Error, TVariables>['onSuccess']>;
+type MutationError<TVariables> = NonNullable<UseMutationOptions<unknown, Error, TVariables>['onError']>;
 
 export interface EnrollInput {
   alunoId: string;
@@ -54,8 +57,8 @@ export const useTurmaAcademicInvalidation = (turmaId: string) => {
 export const useEnrollStudentMutation = (
   turmaId: string,
   responsavelId: string | null,
-  onSuccess: (result: Awaited<ReturnType<typeof turmaAsaasService.matricularAlunoComCobranca>>) => void | Promise<void>,
-  onError: (error: any) => void,
+  onSuccess: MutationSuccess<Awaited<ReturnType<typeof turmaAsaasService.matricularAlunoComCobranca>>, EnrollInput>,
+  onError: MutationError<EnrollInput>,
 ) => useMutation({
   mutationFn: (input: EnrollInput) => turmaAsaasService.matricularAlunoComCobranca({
     turmaId,
@@ -66,10 +69,19 @@ export const useEnrollStudentMutation = (
   onError,
 });
 
+export const useRemoveEnrollmentMutation = (
+  onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.removerMatricula>>, string>,
+  onError: MutationError<string>,
+) => useMutation({
+  mutationFn: (matriculaId: string) => academicLifecycleService.removerMatricula(matriculaId),
+  onSuccess,
+  onError,
+});
+
 export const useMovementMutation = (
   responsavelId: string | null,
-  onSuccess: () => void | Promise<void>,
-  onError: (error: any) => void,
+  onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.movimentar>>, MovementInput>,
+  onError: MutationError<MovementInput>,
 ) => useMutation({
   mutationFn: (input: MovementInput) => academicLifecycleService.movimentar({
     matriculaId: input.matriculaId,
@@ -85,8 +97,8 @@ export const useMovementMutation = (
 
 export const useTransferMutation = (
   responsavelId: string | null,
-  onSuccess: (result: any, input: TransferInput) => void | Promise<void>,
-  onError: (error: any) => void,
+  onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.transferir>>, TransferInput>,
+  onError: MutationError<TransferInput>,
 ) => useMutation({
   mutationFn: (input: TransferInput) => academicLifecycleService.transferir({
     matriculaId: input.matriculaId,

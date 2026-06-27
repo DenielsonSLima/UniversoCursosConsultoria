@@ -20,12 +20,9 @@ interface EadCourseWizardProps {
 
 import {
   DEFAULT_EAD_RETRY_HOURS,
-  EAD_IMAGE_BUCKET,
   MIN_EAD_PROVA_QUESTOES,
   STORAGE_BASE_PATH,
-  agenteComunitarioTemplate,
   compressImageToWebp,
-  getStoragePathFromPublicUrl,
   parseBRLPrice,
   removeOldStorageImage
 } from './eadCourseWizard.helpers';
@@ -106,10 +103,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   const [emitirAutomatico, setEmitirAutomatico] = useState(true);
   const [minimoAproveitamento, setMinimoAproveitamento] = useState('70');
   const [assinaturaUrl, setAssinaturaUrl] = useState('');
-  const [textoCustomizado, setTextoCustomizado] = useState(
-    'Confere-se o presente certificado por concluir com êxito o curso livre na modalidade de Educação a Distância (EAD).'
-  );
-  const [isUploadingAssinatura, setIsUploadingAssinatura] = useState(false);
   const [modeloCertificadoEad, setModeloCertificadoEad] = useState<any>(null);
   const [isLoadingModeloCertificado, setIsLoadingModeloCertificado] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -174,7 +167,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
         setEmitirAutomatico(config.certificacao.emitirAutomatico ?? (config.certificacao as any).emitirAutomaticamente ?? true);
         setMinimoAproveitamento((config.certificacao.minimoAproveitamento ?? (config.certificacao as any).notaMinima ?? 70).toString());
         setAssinaturaUrl(config.certificacao.assinaturaUrl || '');
-        setTextoCustomizado(config.certificacao.textoCustomizado || '');
       }
     }
   }, [curso]);
@@ -238,7 +230,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   // Upload genérico para o Bucket 'documentos'
   const handleUploadImage = async (file: File, type: 'capa' | 'assinatura') => {
     if (type === 'capa') setIsUploadingCapa(true);
-    else setIsUploadingAssinatura(true);
 
     try {
       const previousUrl = type === 'capa' ? imagemUrl : assinaturaUrl;
@@ -272,7 +263,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
     } finally {
       if (type === 'capa') setIsUploadingCapa(false);
-      else setIsUploadingAssinatura(false);
     }
   };
 
@@ -306,42 +296,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       message: `Tem certeza de que deseja remover a ${label}?`,
       onConfirm: () => void handleRemoveImageConfirmed(type)
     });
-  };
-
-  const applyAgenteTemplate = () => {
-    setNome(prev => prev || 'Agente Comunitário de Saúde');
-    setArea('Saúde');
-    setCargaHoraria(prev => prev || '180');
-    setDescricao(prev => prev || 'Curso EAD para formação introdutória em atuação comunitária, Atenção Básica, SUS, visitas domiciliares, promoção da saúde e prevenção de doenças.');
-    setSubtituloPagina(agenteComunitarioTemplate.pagina?.subtitulo || '');
-    setObjetivosPagina((agenteComunitarioTemplate.pagina?.objetivos || []).join('\n'));
-    setPublicoAlvo(agenteComunitarioTemplate.pagina?.publicoAlvo || '');
-    setRequisitos(agenteComunitarioTemplate.pagina?.requisitos || '');
-    setMetodologia(agenteComunitarioTemplate.pagina?.metodologia || '');
-    setTempoMinimoMinutos((agenteComunitarioTemplate.regras?.tempoMinimoMinutos || 60).toString());
-    setIntervaloReprovacaoHoras((agenteComunitarioTemplate.regras?.intervaloReprovacaoHoras || DEFAULT_EAD_RETRY_HOURS).toString());
-    setLiberarSequencialmente(true);
-    setExigirAtividades(true);
-    setExigirVideosConcluidos(true);
-    setCronograma(agenteComunitarioTemplate.cronograma);
-    setConteudos(agenteComunitarioTemplate.conteudos);
-    setAtividades(agenteComunitarioTemplate.atividades || []);
-    setProvas(agenteComunitarioTemplate.provas);
-    showToast('Modelo de Agente Comunitário aplicado.', 'success');
-  };
-
-  const handleApplyAgenteTemplate = () => {
-    if (conteudos.length > 0 || provas.length > 0 || cronograma.length > 0) {
-      setConfirmModal({
-        isOpen: true,
-        title: 'Aplicar modelo',
-        message: 'Aplicar o modelo de Agente Comunitário de Saúde vai substituir cronograma, etapas, atividades e prova atuais. Deseja continuar?',
-        onConfirm: applyAgenteTemplate
-      });
-      return;
-    }
-
-    applyAgenteTemplate();
   };
 
   // Cronograma

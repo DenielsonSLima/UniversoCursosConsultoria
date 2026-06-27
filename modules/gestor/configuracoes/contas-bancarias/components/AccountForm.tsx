@@ -5,22 +5,25 @@ import { Save, X, Building, User, Hash, CreditCard } from 'lucide-react';
 interface AccountFormProps {
   initialData?: any;
   companyId: string;
+  companies: any[];
   onSave: (data: any) => void;
   onCancel: () => void;
 }
 
-const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(initialData || {
+const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, companies, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
     banco: '',
     titular: '',
     agencia: '',
     conta: '',
-    tipo: 'Corrente'
+    tipo: 'Corrente',
+    ...initialData,
+    poloId: initialData?.poloId || companyId,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, companyId });
+    onSave({ ...formData, poloId: formData.poloId || companyId, companyId: formData.poloId || companyId });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -71,6 +74,26 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, onSav
               <option value="Pagamento">Conta de Pagamento</option>
             </select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
+            <Building size={14} className="text-blue-500" /> Exibir / usar no polo
+          </label>
+          <select
+            name="poloId"
+            value={formData.poloId}
+            onChange={handleChange}
+            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700 cursor-pointer"
+            required
+          >
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.isMatriz ? 'Matriz' : 'Polo'} - {company.nomeFantasia}
+                {company.cidade ? ` (${company.cidade}/${company.estado || ''})` : ''}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Titular */}

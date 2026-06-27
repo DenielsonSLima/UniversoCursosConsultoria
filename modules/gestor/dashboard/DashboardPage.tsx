@@ -32,7 +32,7 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
     );
   }
   
-  let colorClass = '';
+  let colorClass: string;
   const Icon = isPositive ? ArrowUpRight : ArrowDownRight;
   
   if (isPositive) {
@@ -52,7 +52,7 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
 const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => {
   
   // 1. Fetch KPIs
-  const { data: kpis, isLoading: loadingKpis, error: kpisError } = useQuery<DashboardKpis>({
+  const { data: kpis, isLoading: loadingKpis } = useQuery<DashboardKpis>({
     queryKey: ['dashboard_kpis', poloId],
     queryFn: () => dashboardService.getKpis(poloId),
   });

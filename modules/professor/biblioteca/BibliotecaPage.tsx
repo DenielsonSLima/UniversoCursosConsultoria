@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Sparkles, Folder, FileText, Lock } from 'lucide-react';
 
 import FileExplorer from '../../gestor/biblioteca/components/FileExplorer';

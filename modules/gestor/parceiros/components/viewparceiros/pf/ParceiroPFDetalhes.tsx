@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft, User, Briefcase, Edit3, Save, X,
-  MapPin, Phone, Mail, DollarSign, AlertCircle, Loader2, Trash2
+  MapPin, DollarSign, AlertCircle, Loader2, Trash2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, LayoutTemplate, ZoomOut, ZoomIn, Upload, Loader2, Palette, FileText, Image, AlignLeft, AlignCenter, AlignRight, AlignJustify, ShieldCheck, HelpCircle, Trash2 } from 'lucide-react';
 import { supabase } from '../../../../../../lib/supabase';
 import CarteirinhaPreview from './CarteirinhaPreview';
-import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import ToastNotification, { useToast } from '../../../../components/ToastNotification';
 import { usePoloInstitutionalData } from '../../../../../shared/polo-institutional/use-polo-institutional-data';
 

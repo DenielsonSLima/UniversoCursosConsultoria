@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
+import ConfirmModal from '../../../../components/ConfirmModal';
 import { AcademicMovementType, AcademicStudent } from '../academic-lifecycle.service';
 import { isValidStudentCpf } from '../turma-alunos.service';
 import ConfirmarMatriculaModal, { EnrollmentFinance, EnrollmentStep } from './alunos/ConfirmarMatriculaModal';
@@ -20,6 +21,7 @@ import {
 import {
   useEnrollStudentMutation,
   useMovementMutation,
+  useRemoveEnrollmentMutation,
   useTransferMutation,
   useTurmaAcademicInvalidation,
 } from '../hooks/useTurmaAlunosMutations';
@@ -45,6 +47,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
+  const [studentToRemove, setStudentToRemove] = useState<AcademicStudent | null>(null);
   const [operationMode, setOperationMode] = useState<OperationMode>('MOVIMENTACAO');
   const [movementType, setMovementType] = useState<AcademicMovementType>('TRANCAMENTO');
   const [transferType, setTransferType] = useState<TransferType>('INTERNA_TURMA');
@@ -171,6 +174,15 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     (error: any) => toast.error('Transferência não realizada', error.message),
   );
 
+  const removeEnrollmentMutation = useRemoveEnrollmentMutation(
+    async () => {
+      await invalidateAcademicData();
+      setStudentToRemove(null);
+      toast.success('Aluno removido da turma', 'A matrícula e os lançamentos financeiros vinculados foram excluídos.');
+    },
+    (error: any) => toast.error('Remoção não realizada', error.message),
+  );
+
   const closeOperationModal = () => {
     setSelectedStudent(null);
     setReason('');
@@ -227,6 +239,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           students={students}
           onOpenMovement={openMovement}
           onOpenTransfer={openTransfer}
+          onRemoveEnrollment={setStudentToRemove}
         />
       </div>
 
@@ -298,6 +311,21 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
             })}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!studentToRemove}
+        onClose={() => setStudentToRemove(null)}
+        onConfirm={() => {
+          if (studentToRemove) {
+            removeEnrollmentMutation.mutate(studentToRemove.matricula_id);
+          }
+        }}
+        title="Remover aluno"
+        message={`Remover ${studentToRemove?.nome || 'este aluno'} apaga a matrícula desta turma e as cobranças vinculadas. Se houver diário, notas, frequência ou a turma já tiver começado, o banco bloqueará e você deve usar o cancelamento.`}
+        confirmText={removeEnrollmentMutation.isPending ? 'Removendo...' : 'Remover'}
+        cancelText="Voltar"
+        variant="danger"
+      />
 
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

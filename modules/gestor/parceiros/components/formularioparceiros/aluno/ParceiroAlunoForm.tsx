@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
   CheckCircle2, BookOpen, ChevronRight, ChevronLeft, GraduationCap,
-  Shield, Heart, Home, Accessibility, Camera, Upload, Loader2
+  Shield, Heart, Home, Accessibility, Upload, Loader2
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
@@ -143,7 +143,9 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
           uf: data.uf || '',
         }));
       }
-    } catch {}
+    } catch {
+      // ViaCEP failures should not block manual address entry.
+    }
   };
 
   const isMinor = () => {

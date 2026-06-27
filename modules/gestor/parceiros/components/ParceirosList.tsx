@@ -1,14 +1,12 @@
 
 // File: modules/gestor/parceiros/components/ParceirosList.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import PFCard from './cards/PFCard';
 import PJCard from './cards/PJCard';
 import AlunoCard from './cards/AlunoCard';
 import ProfessorCard from './cards/ProfessorCard';
-import { parceirosService } from '../parceiros.service';
 
 interface ParceirosListProps {
   items: any[];

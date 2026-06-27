@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDados.tsx
 
 import React, { useState } from 'react';
-import { User, Camera, MapPin, Phone, Mail, Edit2, Save, X, Upload, Loader2 } from 'lucide-react';
+import { User, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 

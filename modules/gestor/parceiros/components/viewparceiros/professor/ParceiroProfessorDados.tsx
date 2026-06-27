@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/viewparceiros/professor/ParceiroProfessorDados.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Save, Edit2, Camera, Upload, Loader2, User, X } from 'lucide-react';
+import { Save, Edit2, Camera, Loader2, User } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';

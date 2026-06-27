@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Clock, Save,
-  BookOpen, Layers, Plus, Trash2, CornerDownRight, Loader2, X, Calendar, Link as LinkIcon, Copy,
+  BookOpen, Layers, Plus, Trash2, Loader2, Calendar, Link as LinkIcon, Copy,
   Banknote, CreditCard, Percent, Receipt, WalletCards
 } from 'lucide-react';
-import { Curso, CursoFinanceiroConfig, Modulo, Disciplina, Aula } from '../cadastros.types';
+import { Curso, CursoFinanceiroConfig, Modulo, Disciplina } from '../cadastros.types';
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
 import { asaasIntegrationService } from '../../../asaas/asaas.service';
@@ -441,19 +441,18 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const handleAddDisciplina = (moduloId: string) => {
     if (!newDiscName.trim()) return;
 
-    let horas = 0;
     let t = 0;
     let p = 0;
     let e = 0;
 
-    if (curso.modalidade === 'TECNICO') {
-      t = parseInt(newDiscTeoria) || 0;
-      p = parseInt(newDiscPratica) || 0;
-      e = parseInt(newDiscEstagio) || 0;
-      horas = t + p + e;
-    } else {
-      horas = parseInt(newDiscHoras) || 0;
-    }
+    const horas = curso.modalidade === 'TECNICO'
+      ? (() => {
+          t = parseInt(newDiscTeoria) || 0;
+          p = parseInt(newDiscPratica) || 0;
+          e = parseInt(newDiscEstagio) || 0;
+          return t + p + e;
+        })()
+      : parseInt(newDiscHoras) || 0;
 
     const novaDisciplina: Disciplina = {
       id: `temp-disc-${Math.random().toString(36).substr(2, 9)}`,

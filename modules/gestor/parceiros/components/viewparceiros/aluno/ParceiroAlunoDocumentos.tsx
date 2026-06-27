@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDocumentos.tsx
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, CheckCircle2, AlertCircle, Download, Eye, X, Loader } from 'lucide-react';
+import { FileText, Upload, CheckCircle2, AlertCircle, Download, Eye, Loader } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
 import { parceirosService } from '../../../parceiros.service';

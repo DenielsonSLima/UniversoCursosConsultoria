@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Edit, Trash2, FileText, CheckCircle2, Shield } from 'lucide-react';
+import { Edit, Trash2, FileText, CheckCircle2, Shield } from 'lucide-react';
 
 interface CrachaCardProps {
   modelo: any;

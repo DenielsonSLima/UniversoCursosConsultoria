@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, GraduationCap, Calendar, MessageSquare, Megaphone, Clock, Award, ShieldCheck, PlayCircle } from 'lucide-react';
+import { GraduationCap, Calendar, MessageSquare, Megaphone, Award, ShieldCheck, PlayCircle } from 'lucide-react';
 import { useProfessorDashboardStats } from '../hooks/useProfessorDashboard';
 
 interface InicioPageProps {

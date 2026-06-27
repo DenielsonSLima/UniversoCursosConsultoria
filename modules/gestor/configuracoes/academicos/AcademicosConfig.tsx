@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, Landmark, Settings, Sparkles, Check, Save, FileSpreadsheet, BadgeCheck, FileCode, QrCode } from 'lucide-react';
+import { GraduationCap, Settings, Sparkles, Save, FileSpreadsheet, BadgeCheck, FileCode, QrCode } from 'lucide-react';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { academicosService } from './academicos.service';
 
@@ -29,12 +29,10 @@ const AcademicosConfig: React.FC = () => {
   const [templateEspecializacao, setTemplateEspecializacao] = useState('Certificamos que o especialista concluiu a Pós-Graduação Latu Sensu em {CURSO}.');
 
   const [saving, setSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Carrega configs do Supabase — NUNCA do localStorage
   useEffect(() => {
     const loadConfigs = async () => {
-      setIsLoading(true);
       try {
         const configs = await academicosService.getConfigs();
         setMatriculaPrefix(configs.matriculaPrefix);
@@ -52,8 +50,6 @@ const AcademicosConfig: React.FC = () => {
         setValidacaoUrl(configs.validacaoUrl || 'https://www.universocc.com.br/validador');
       } catch (err) {
         console.error('[AcademicosConfig] Erro ao carregar configurações:', err);
-      } finally {
-        setIsLoading(false);
       }
     };
     loadConfigs();

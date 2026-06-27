@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, Filter, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
+import { Printer, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import DocumentHeader from '../../components/DocumentHeader';
 

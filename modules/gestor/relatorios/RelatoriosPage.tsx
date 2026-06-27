@@ -17,8 +17,9 @@ import RelatorioAlunosCursando from './components/RelatorioAlunosCursando';
 import RelatorioAlunosFinalizados from './components/RelatorioAlunosFinalizados';
 import RelatorioMatriculaInicial from './components/RelatorioMatriculaInicial';
 import RelatorioSituacaoAluno from './components/RelatorioSituacaoAluno';
+import RelatorioLucroTurma from './components/RelatorioLucroTurma';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 interface ReportMenuItem {
   id: ReportType;
@@ -106,6 +107,13 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       category: 'financeiro'
     },
     {
+      id: 'lucro-turma',
+      label: 'DRE / Resultado de Turma',
+      description: 'Análise consolidada de lucro confrontando receitas de mensalidades e despesas da turma.',
+      icon: <BarChart3 size={22} />,
+      category: 'financeiro'
+    },
+    {
       id: 'alunos-cursando',
       label: 'Alunos Cursando',
       description: 'Alunos ativos/em curso separados por modalidade, turma, curso e polo.',
@@ -153,6 +161,8 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
         return <RelatorioEstagios company={company} polo={polo} />;
       case 'financeiro-turma-mensal':
         return <RelatorioFinanceiroTurmaMensal company={company} polo={polo} />;
+      case 'lucro-turma':
+        return <RelatorioLucroTurma company={company} polo={polo} />;
       case 'alunos-cursando':
         return <RelatorioAlunosCursando company={company} polo={polo} />;
       case 'alunos-finalizados':

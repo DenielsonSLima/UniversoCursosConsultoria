@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Lock, Check, Search, Calendar, BookOpen, Layers, Users } from 'lucide-react';
+import { X, Lock, Check, Search, Calendar, Layers, Users } from 'lucide-react';
 import { LibraryDocument } from '../biblioteca.types';
 import { bibliotecaService } from '../biblioteca.service';
 
@@ -41,7 +41,6 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
   // Searches
   const [searchCurso, setSearchCurso] = useState('');
   const [searchTurma, setSearchTurma] = useState('');
-  const [searchDisciplina, setSearchDisciplina] = useState('');
 
   // Load data
   useEffect(() => {
@@ -100,11 +99,9 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
     return matchesSearch && matchesCourse;
   });
 
-  const filteredDisciplinas = disciplinas.filter(d => {
-    const matchesSearch = d.nome.toLowerCase().includes(searchDisciplina.toLowerCase());
-    const matchesCourse = selectedCursos.length === 0 || selectedCursos.includes(d.cursoId);
-    return matchesSearch && matchesCourse;
-  });
+  const filteredDisciplinas = disciplinas.filter(d => 
+    selectedCursos.length === 0 || selectedCursos.includes(d.cursoId)
+  );
 
   const handleToggleCurso = (id: string) => {
     setSelectedCursos(prev => 
@@ -114,12 +111,6 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
 
   const handleToggleTurma = (id: string) => {
     setSelectedTurmas(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleDisciplina = (id: string) => {
-    setSelectedDisciplinas(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };

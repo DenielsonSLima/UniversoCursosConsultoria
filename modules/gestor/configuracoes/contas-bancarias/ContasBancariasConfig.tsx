@@ -45,6 +45,7 @@ const ContasBancariasConfig: React.FC = () => {
     return (
       <CompanyAccountsManager 
         company={selectedCompany} 
+        companies={companies}
         onBack={() => setSelectedCompany(null)} 
       />
     );
@@ -100,6 +101,15 @@ const ContasBancariasConfig: React.FC = () => {
                   <div className="bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                     <span className="text-[10px] font-bold text-slate-500 uppercase">
                       {company.contasCount || 0} Contas
+                    </span>
+                  </div>
+                  <div className={`rounded-md border px-2 py-1 ${
+                    company.isMatriz
+                      ? 'border-blue-100 bg-blue-50 text-blue-600'
+                      : 'border-emerald-100 bg-emerald-50 text-emerald-600'
+                  }`}>
+                    <span className="text-[10px] font-black uppercase tracking-wider">
+                      {company.isMatriz ? 'Matriz' : 'Polo'}
                     </span>
                   </div>
                   {!company.ativo && (

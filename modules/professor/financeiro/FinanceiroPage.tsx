@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { CreditCard, TrendingUp, Calendar, CheckCircle2, Clock, AlertTriangle, Coins } from 'lucide-react';
+import { CreditCard, TrendingUp, Calendar, CheckCircle2, Clock, Coins } from 'lucide-react';
 
 interface FinanceiroPageProps {
   professorId: string;

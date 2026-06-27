@@ -25,35 +25,6 @@ import {
 
 
 
-const DEFAULT_SOLICITACOES: Solicitacao[] = [
-  {
-    id: 'sol-001',
-    alunoId: 'a0000000-0000-0000-0000-000000000001',
-    alunoNome: 'ANA CLARA DOS SANTOS E SILVA',
-    alunoMatricula: 'UNIV-26010002',
-    curso: 'TÉCNICO EM ENFERMAGEM',
-    tipo: 'Histórico Escolar',
-    dataSolicitacao: new Date().toISOString().split('T')[0],
-    prazo: '48 horas',
-    status: 'Pendente'
-  },
-  {
-    id: 'sol-002',
-    alunoId: 'a0000000-0000-0000-0000-000000000003',
-    alunoNome: 'JOÃO PEDRO DOS SANTOS ALVES',
-    alunoMatricula: 'UNIV-26010003',
-    curso: 'TÉCNICO EM RADIOLOGIA',
-    tipo: 'Transferência',
-    dataSolicitacao: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    prazo: '3 dias úteis',
-    status: 'Deferido',
-    resposta: 'Guia de transferência emitida e enviada para o e-mail cadastrado.',
-    respostaData: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  }
-];
-
-
-
 const PAGE_SIZE = 8;
 
 // ─── Pagination component ────────────────────────────────────────────────────

@@ -27,7 +27,6 @@ const MODULES = [
 ];
 
 const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
-  const [step, setStep] = useState(1);
   const [companies, setCompanies] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({

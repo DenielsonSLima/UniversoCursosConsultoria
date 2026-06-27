@@ -242,7 +242,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
           </div>
         );
       }
-      case 'table':
+      case 'table': {
         const tableText = replaceVarsPlain(block.content || '', certificado, templateVars);
         const programmaticRows = parseProgrammaticRows(tableText);
         const compactTable = programmaticRows.length > 6;
@@ -298,6 +298,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
             )}
           </div>
         );
+      }
       case 'registry':
         return (
           <div className="w-[300px] rounded-xl border border-slate-250 bg-white/95 p-4 shadow-sm">

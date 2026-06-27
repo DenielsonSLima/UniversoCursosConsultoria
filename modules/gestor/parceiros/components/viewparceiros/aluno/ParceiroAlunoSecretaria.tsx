@@ -5,9 +5,7 @@ import {
   Clock, 
   CheckCircle, 
   XCircle, 
-  Printer, 
-  HelpCircle, 
-  Download,
+  Printer,
   X,
   Check,
   AlertCircle,
@@ -472,8 +470,6 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
       </div>
     );
   }
-
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/validador?code=${encodeURIComponent(formattedMat)}`)}`;
 
   return (
     <div className="space-y-8 animate-fadeIn text-xs font-sans">

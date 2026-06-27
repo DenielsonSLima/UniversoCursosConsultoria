@@ -40,11 +40,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId }) => {
       case 'despesas':
         return <DespesasTab />;
       case 'transferencias':
-        return <TransferenciasTab />;
+        return <TransferenciasTab poloId={poloId} />;
       case 'outros-debitos':
         return <OutrosDebitosTab />;
       case 'outros-creditos':
-        return <OutrosCreditosTab />;
+        return <OutrosCreditosTab poloId={poloId} />;
       default:
         return null;
     }

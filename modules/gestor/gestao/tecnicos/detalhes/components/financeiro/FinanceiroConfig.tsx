@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Settings, Save, Edit2, DollarSign, Calendar, Percent, AlertCircle, 
-  GripVertical, RefreshCw, Plus, Trash2 
+  GripVertical, RefreshCw 
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { Turma } from '../../../../gestao.types';
@@ -130,8 +130,8 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
 
   // --- Renderização dos Itens Arrastáveis ---
   const renderCronogramaItem = (item: CronogramaItem, index: number) => {
-    let colorClass = '';
-    let icon = null;
+    let colorClass: string;
+    let icon: React.ReactNode;
 
     switch (item.tipo) {
       case 'MATRICULA':

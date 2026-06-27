@@ -708,7 +708,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
 
   const renderBlockContent = (block: any) => {
     switch (block.type) {
-      case 'logo':
+      case 'logo': {
         const logoW = `${block.width || 96}px`;
         return (
           <div 
@@ -718,8 +718,9 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
              <Award size={36} className="text-white" />
           </div>
         );
+      }
 
-      case 'text':
+      case 'text': {
         const textStyle: React.CSSProperties = {
           fontSize: `${block.fontSize || 14}px`,
           color: block.color || corTexto,
@@ -737,8 +738,9 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
             <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '') }} />
           </div>
         );
+      }
 
-      case 'signature':
+      case 'signature': {
         const signatureW = `${block.width || 256}px`;
         const signatureLabelFontSize = Number(block.signatureLabelFontSize || 10);
         const signatureUrl = getSignatureUrl(block);
@@ -776,6 +778,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
             </div>
           </div>
         );
+      }
 
       case 'signatureImage': {
         const signatureImageUrl = getSignatureUrl(block);
@@ -829,7 +832,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
         );
       }
 
-      case 'table':
+      case 'table': {
         const tableText = resolvePlainText(block.content || '');
         const programmaticRows = parseProgrammaticRows(tableText);
         const compactTable = programmaticRows.length > 6;
@@ -885,6 +888,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
             )}
           </div>
         );
+      }
 
       case 'image':
         return block.imageUrl ? (

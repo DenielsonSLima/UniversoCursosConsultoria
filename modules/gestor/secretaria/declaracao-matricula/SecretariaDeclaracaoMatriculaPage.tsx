@@ -1,7 +1,7 @@
 // File: modules/gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CreditCard, Users, Search, Printer, Image, ArrowLeft, CheckCircle, Loader2, Download, Trash2, X, ChevronRight, FileBadge } from 'lucide-react';
+import { CreditCard, Users, Search, Printer, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { supabase } from '../../../../lib/supabase';
@@ -62,7 +62,6 @@ const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaP
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryCustom, setSearchQueryCustom] = useState('');
   const [loading, setLoading] = useState(true);
-  const [poloId, setPoloId] = useState('44444444-4444-4444-4444-444444444444');
   const [poloInfo, setPoloInfo] = useState<any>(null);
   
   // Real Database Data
@@ -75,7 +74,6 @@ const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaP
   // Model Configs
   const [templateConfig, setTemplateConfig] = useState<any>(defaultTemplate);
   const [watermark, setWatermark] = useState<any>(null);
-  const [qrConfig, setQrConfig] = useState<any>(null);
   const [academicConfigs, setAcademicConfigs] = useState<any>(null);
 
   // States for printing visualizer
@@ -152,7 +150,6 @@ const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaP
     const initConfigs = async () => {
       try {
         const activePoloId = sessionStorage.getItem('current_polo_id') || '44444444-4444-4444-4444-444444444444';
-        setPoloId(activePoloId);
 
         // Load document template
         const template = await documentService.getTemplate(activePoloId);
@@ -162,10 +159,6 @@ const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaP
         const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
         const wm = watermarks.find(w => w.id === activePoloId);
         setWatermark(wm);
-
-        // Load QR pattern config
-        const qrData = await documentService.getQrConfig();
-        setQrConfig(qrData);
 
         // Load global academic configs
         const academicData = await academicosService.getConfigs();

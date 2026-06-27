@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Users, Calendar, Clock, MoreVertical, GraduationCap, MapPin, CheckCircle2, TrendingUp, BookOpen, PlayCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Calendar, Clock, MoreVertical, GraduationCap, MapPin, CheckCircle2, TrendingUp, BookOpen, PlayCircle, Trash2 } from 'lucide-react';
 import { Turma } from '../gestao.types';
 
 interface TurmaCardProps {
@@ -9,6 +9,7 @@ interface TurmaCardProps {
   showPoloDetails?: boolean;
   showDisciplineProgress?: boolean;
   onClick?: () => void;
+  onDelete?: React.Dispatch<Turma>;
 }
 
 const TurmaCard: React.FC<TurmaCardProps> = ({
@@ -17,7 +18,9 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
   showPoloDetails = true,
   showDisciplineProgress = false,
   onClick,
+  onDelete,
 }) => {
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
   
   // Mapeamento de cores baseado no tema passado
   const getColors = () => {
@@ -71,13 +74,39 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
             {turma.cursoNome}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={(event) => event.stopPropagation()}
-          className="text-slate-300 hover:text-slate-600 p-1 bg-white rounded-full shadow-sm border border-slate-100 shrink-0"
-        >
-          <MoreVertical size={16} />
-        </button>
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsActionsOpen((current) => !current);
+            }}
+            className="text-slate-300 hover:text-slate-600 p-1 bg-white rounded-full shadow-sm border border-slate-100"
+            title="Acoes da turma"
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {isActionsOpen && onDelete && (
+            <div
+              className="absolute right-0 top-8 z-30 w-48 overflow-hidden rounded-2xl border border-slate-100 bg-white p-1 shadow-xl shadow-slate-900/10"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsActionsOpen(false);
+                  onDelete(turma);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 size={14} />
+                Excluir turma
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 mb-6 relative z-10 flex-1">

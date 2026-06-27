@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   ScrollText, 
@@ -9,7 +9,6 @@ import {
   HelpCircle, 
   Send,
   Loader2,
-  Calendar,
   DollarSign,
   Download,
   X,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import CarteirinhaPreview from '../../gestor/cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import CrachaPreview from '../../gestor/cadastros/modelos-documentos/cracha/components/CrachaPreview';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { formatMatricula } from '../../../lib/academicUtils';
 import { declaracaoService } from '../../gestor/cadastros/modelos-documentos/declaracao/declaracao.service';
@@ -28,10 +27,7 @@ import { marcaDaguaService } from '../../gestor/configuracoes/marca-dagua/marca-
 import { academicosService } from '../../gestor/configuracoes/academicos/academicos.service';
 import DocumentHeader from '../../gestor/components/DocumentHeader';
 import { useDocumentValidationCode } from '../../shared/document-validation/use-document-validation-code';
-import {
-  getDocumentValidationQrUrl,
-  getDocumentValidationUrl,
-} from '../../shared/document-validation/document-validation.url';
+import { getDocumentValidationUrl } from '../../shared/document-validation/document-validation.url';
 import { usePoloInstitutionalData } from '../../shared/polo-institutional/use-polo-institutional-data';
 import { secretariaService } from '../../gestor/secretaria/secretaria.service';
 import { carteirinhaService } from '../../gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service';
@@ -67,7 +63,6 @@ const DEFAULT_PRAZOS: Record<string, PrazoConfig> = {
 };
 
 const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
-  const queryClient = useQueryClient();
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [tipoNovaSolicitacao, setTipoNovaSolicitacao] = useState<'Histórico Escolar' | 'Declaração IRPF' | 'Transferência'>('Histórico Escolar');
   const [prazos, setPrazos] = useState<Record<string, PrazoConfig>>(DEFAULT_PRAZOS);
@@ -556,10 +551,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       </div>
     );
   }
-
-  const qrCodeUrl = getDocumentValidationQrUrl(
-    cardValidation.data?.code || formattedMat
-  );
 
   // ── shared aluno data for ID docs ─────────────────────────────────────────
   const alunoData = {

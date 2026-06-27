@@ -3,8 +3,7 @@
 
 import React, { useState } from 'react';
 import {
-  User, MapPin, Phone, Mail, Save, X, FileText, DollarSign, Briefcase,
-  AlertCircle, ChevronRight, ChevronLeft, CheckCircle2, Plus
+  User, MapPin, Save, X, FileText, DollarSign, Briefcase, ChevronRight, ChevronLeft, CheckCircle2, Plus
 } from 'lucide-react';
 
 interface ParceiroPFFormProps {
@@ -114,7 +113,9 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
           uf: data.uf || '',
         }));
       }
-    } catch {}
+    } catch {
+      // ViaCEP failures should not block manual address entry.
+    }
   };
 
   const stepValid = () => {

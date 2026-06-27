@@ -287,6 +287,17 @@ export const gestaoService = {
     }
   },
 
+  async deleteTurmaNaoIniciada(id: string): Promise<void> {
+    const { error } = await supabase.rpc('excluir_turma_nao_iniciada', {
+      p_turma_id: id,
+    });
+
+    if (error) {
+      console.error('Erro ao excluir turma:', error);
+      throw error;
+    }
+  },
+
   async updateTurmaBasic(
     id: string,
     input: {
@@ -443,13 +454,6 @@ export const gestaoService = {
       EAD: number;
     };
   }> {
-    const base = {
-      TECNICO: 0,
-      LIVRE: 0,
-      ESPECIALIZACAO: 0,
-      EAD: 0
-    };
-
     const { data, error } = await supabase.rpc('get_gestao_resumo_kpis', {
       p_polo_id: poloId || null
     });
@@ -459,15 +463,10 @@ export const gestaoService = {
       throw error;
     }
 
-    const result = (data || {}) as any;
+    if (!data) {
+      throw new Error('O banco não retornou os indicadores de gestão.');
+    }
 
-    return {
-      totalTurmas: Number(result.totalTurmas || 0),
-      totalAlunos: Number(result.totalAlunos || 0),
-      turmasPorTipo: { ...base, ...(result.turmasPorTipo || {}) },
-      alunosPorTipo: { ...base, ...(result.alunosPorTipo || {}) },
-      percentTurmasPorTipo: { ...base, ...(result.percentTurmasPorTipo || {}) },
-      percentAlunosPorTipo: { ...base, ...(result.percentAlunosPorTipo || {}) }
-    };
+    return data as any;
   }
 };

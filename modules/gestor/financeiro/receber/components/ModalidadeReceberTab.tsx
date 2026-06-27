@@ -1,10 +1,9 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Clock3,
   Copy,
-  Landmark,
   LayoutGrid,
   Loader2,
   Search,
@@ -15,17 +14,22 @@ import {
   RefreshCw,
   X,
   ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { financeiroService, ContasReceber } from '../../financeiro.service';
 import { asaasIntegrationService } from '../../../../asaas/asaas.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
+import { financeiroQueryKeys } from '../../financeiro.queryKeys';
+import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
+import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
+import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 type ViewMode = 'table' | 'cards';
 type GroupMode = 'none' | 'student' | 'class' | 'polo';
-type StatusScope = 'pending' | 'received' | 'all';
+type StatusScope = 'pending' | 'received' | 'canceled' | 'all';
 type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 
 interface ModalidadeReceberTabProps {
@@ -48,9 +52,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [search, setSearch] = useState('');
   const [statusScope, setStatusScope] = useState<StatusScope>('pending');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [groupMode, setGroupMode] = useState<GroupMode>('none');
-  const [poloFilter, setPoloFilter] = useState('todos');
-  const [isPoloFilterOpen, setIsPoloFilterOpen] = useState(false);
+  const [groupMode, setGroupMode] = useState<GroupMode>('student');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [dueStart, setDueStart] = useState('');
   const [dueEnd, setDueEnd] = useState('');
   const [page, setPage] = useState(1);
@@ -64,17 +67,23 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [reversalReason, setReversalReason] = useState('');
   const [recreateAsaas, setRecreateAsaas] = useState(true);
 
-  const { data: receivables = [], isLoading } = useQuery({
-    queryKey: ['financeiro-recebiveis-modalidade', modality],
-    queryFn: () => financeiroService.getReceivablesByModality(modality),
-    staleTime: 15_000,
-  });
+  useFinanceiroRealtime();
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['financeiro-contas-bancarias-saldos'],
-    queryFn: () => financeiroService.getContasBancariasSaldos(),
-    staleTime: 60_000,
-  });
+  const summaryFilters = useMemo(() => ({
+    search,
+    dueStart,
+    dueEnd,
+  }), [dueEnd, dueStart, search]);
+
+  const {
+    receivablesQuery,
+    summaryQuery,
+  } = useModalidadeReceberQueries(modality, summaryFilters);
+
+  const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
+  const receivables = receivablesQuery.data || [];
+  const accounts = accountsQuery.data || [];
+  const isLoading = receivablesQuery.isLoading;
 
   const paymentMutation = useMutation({
     mutationFn: () => financeiroService.markReceivablePaid(selected!.id!, {
@@ -91,9 +100,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-recebiveis-modalidade', modality] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-resumo-kpis'] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
         queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
         selected?.turmaId
           ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', selected.turmaId] })
@@ -114,7 +124,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const syncMutation = useMutation({
     mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['financeiro-recebiveis-modalidade', modality] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
     onError: (error: any) => console.error('Não foi possível enviar a cobrança ao Asaas:', error),
   });
 
@@ -122,7 +132,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     mutationFn: (receivableId: string) => asaasIntegrationService.refreshReceivableStatus(receivableId),
     onSuccess: async (result) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['financeiro-recebiveis-modalidade', modality] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
         queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
         result.receivable?.turma_id
@@ -141,9 +151,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-recebiveis-modalidade', modality] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-resumo-kpis'] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
         queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
         reversalItem?.turmaId
           ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', reversalItem.turmaId] })
@@ -165,7 +176,6 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const baseFiltered = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR');
     return receivables.filter((item) => {
-      const matchesPolo = poloFilter === 'todos' || item.poloId === poloFilter;
       const matchesDueStart = !dueStart || item.dataVencimento >= dueStart;
       const matchesDueEnd = !dueEnd || item.dataVencimento <= dueEnd;
       const matchesSearch = !term || [
@@ -178,68 +188,37 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         item.poloCidade,
         item.poloUf,
       ].some((value) => value?.toLocaleLowerCase('pt-BR').includes(term));
-      return matchesPolo && matchesDueStart && matchesDueEnd && matchesSearch;
+      return matchesDueStart && matchesDueEnd && matchesSearch;
     });
-  }, [receivables, search, poloFilter, dueStart, dueEnd]);
+  }, [receivables, search, dueStart, dueEnd]);
 
-  const poloOptions = useMemo(() => {
-    const map = new Map<string, {
-      id: string;
-      name: string;
-      cnpj?: string;
-      cidade?: string;
-      uf?: string;
-      isMatriz: boolean;
-    }>();
-    receivables.forEach((item) => {
-      if (!item.poloId) return;
-      const current = map.get(item.poloId);
-      map.set(item.poloId, {
-        id: item.poloId,
-        name: item.poloNome || current?.name || 'Unidade sem nome',
-        cnpj: item.poloCnpj || current?.cnpj,
-        cidade: item.poloCidade || current?.cidade,
-        uf: item.poloUf || current?.uf,
-        isMatriz: Boolean(current?.isMatriz || item.poloCnpj?.endsWith('/0001-54')),
-      });
-    });
-    return Array.from(map.values()).sort((a, b) => Number(b.isMatriz) - Number(a.isMatriz) || a.name.localeCompare(b.name));
-  }, [receivables]);
+  const statusCounts = {
+    pending: summaryQuery.data?.pendingCount || 0,
+    received: summaryQuery.data?.receivedCount || 0,
+    canceled: summaryQuery.data?.canceledCount || 0,
+    all: summaryQuery.data?.allCount || 0,
+  };
 
-  const selectedPolo = poloOptions.find((polo) => polo.id === poloFilter);
-  const formatPoloDetails = (polo?: typeof selectedPolo) =>
-    polo ? [polo.cnpj, [polo.cidade, polo.uf].filter(Boolean).join(' - ')].filter(Boolean).join(' • ') : '';
-
-  const statusCounts = useMemo(() => ({
-    pending: baseFiltered.filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status)).length,
-    received: baseFiltered.filter((item) => item.status === 'PAGO').length,
-    all: baseFiltered.length,
-  }), [baseFiltered]);
+  const kpis = useMemo(() => {
+    const total = baseFiltered.reduce((s, i) => s + i.valor, 0);
+    const recebido = baseFiltered.filter((i) => i.status === 'PAGO').reduce((s, i) => s + (i.valorPago ?? i.valor), 0);
+    const aReceber = baseFiltered.filter((i) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(i.status)).reduce((s, i) => s + i.valor, 0);
+    const vencidos = baseFiltered.filter((i) => i.status === 'VENCIDO').length;
+    return { total, recebido, aReceber, vencidos };
+  }, [baseFiltered]);
 
   const filtered = useMemo(() => {
     if (statusScope === 'received') return baseFiltered.filter((item) => item.status === 'PAGO');
     if (statusScope === 'pending') return baseFiltered.filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status));
+    if (statusScope === 'canceled') return baseFiltered.filter((item) => item.status === 'CANCELADO');
     return baseFiltered;
   }, [baseFiltered, statusScope]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = useMemo(() => {
-    const safePage = Math.min(page, totalPages);
-    return filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-  }, [filtered, page, totalPages]);
+  const allGroups = useMemo(() => {
+    if (groupMode === 'none') return [];
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, poloFilter, dueStart, dueEnd, statusScope, groupMode, modality]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const grouped = useMemo(() => {
-    if (groupMode === 'none') return [{ key: 'all', label: 'Todos os recebíveis', items: paginated }];
     const groups = new Map<string, ContasReceber[]>();
-    paginated.forEach((item) => {
+    filtered.forEach((item) => {
       const key = groupMode === 'student'
         ? item.clienteId || item.clienteNome || 'Aluno não informado'
         : groupMode === 'polo'
@@ -256,7 +235,32 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           : items[0]?.turmaNome || 'Turma não informada',
       items,
     }));
-  }, [paginated, groupMode]);
+  }, [filtered, groupMode]);
+
+  const totalItems = groupMode === 'none' ? filtered.length : allGroups.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginated = useMemo(() => {
+    const safePage = Math.min(page, totalPages);
+    return filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  }, [filtered, page, totalPages]);
+
+  const grouped = useMemo(() => {
+    const safePage = Math.min(page, totalPages);
+    if (groupMode === 'none') return [{ key: 'all', label: 'Todos os recebíveis', items: paginated }];
+    return allGroups.slice((safePage - 1) * pageSize, safePage * pageSize);
+  }, [allGroups, groupMode, page, paginated, totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, dueStart, dueEnd, statusScope, groupMode, modality]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    setExpandedGroups(new Set());
+  }, [search, dueStart, dueEnd, statusScope, groupMode, modality]);
 
   const openPayment = (item: ContasReceber) => {
     setSelected(item);
@@ -329,6 +333,34 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     setReversalItem(item);
     setReversalReason('');
     setRecreateAsaas(Boolean(item.asaasPaymentId));
+  };
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const getGroupSummary = (items: ContasReceber[]) => {
+    const sortedByDue = [...items].sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
+    const pendingItems = items.filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status));
+    const receivedItems = items.filter((item) => item.status === 'PAGO');
+    const canceledItems = items.filter((item) => item.status === 'CANCELADO');
+    const openItems = sortedByDue.filter((item) => item.status !== 'PAGO' && item.status !== 'CANCELADO');
+
+    return {
+      pendingCount: pendingItems.length,
+      receivedCount: receivedItems.length,
+      canceledCount: canceledItems.length,
+      nextDue: openItems[0]?.dataVencimento || sortedByDue[0]?.dataVencimento || '',
+      first: items[0],
+    };
   };
 
   const StatusBadge = ({ item }: { item: ContasReceber }) => (
@@ -423,7 +455,83 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     );
   };
 
-  const ReceivableCard = ({ item }: { item: ContasReceber }) => (
+  const renderReceivableRow = (item: ContasReceber, index: number, compactStudent = false) => (
+    <tr
+      key={item.id}
+      className={`${
+        index % 2 === 0 ? 'bg-white' : compactStudent ? 'bg-emerald-50/45' : 'bg-slate-50/55'
+      } align-top transition-colors hover:bg-emerald-50/70`}
+    >
+      <td className="px-5 py-5">
+        {compactStudent ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-black uppercase tracking-wider text-[#001a33]">
+              {item.parcelaNumero !== undefined ? `Parcela ${item.parcelaNumero}` : item.tipoLancamento || 'Cobrança'}
+            </p>
+            <p className="text-[10px] font-bold text-slate-500">Venc.: {formatDate(item.dataVencimento)}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Matrícula: {formatEnrollment(item)}</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <p className="break-words text-sm font-black leading-tight text-[#001a33]">{item.clienteNome}</p>
+            <p className="whitespace-nowrap text-[10px] font-bold text-slate-400">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Matrícula: {formatEnrollment(item)}</p>
+          </div>
+        )}
+      </td>
+      <td className="px-5 py-5">
+        <div className="space-y-1.5">
+          <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.descricao}</p>
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
+          </p>
+          <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">
+            Asaas: <span className={asaasStatusClass(item.asaasStatus)}>{asaasStatusLabel(item.asaasStatus)}</span>
+          </p>
+        </div>
+      </td>
+      <td className="px-5 py-5">
+        <div className="space-y-1.5">
+          <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
+          <p className="break-words text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
+          <p className="text-[10px] font-medium leading-snug text-slate-400">
+            CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
+          </p>
+        </div>
+      </td>
+      <td className="px-5 py-5">
+        <div className="space-y-2">
+          <StatusBadge item={item} />
+          <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
+          <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
+          {item.asaasStatus === 'DELETED' && (
+            <p className="text-[10px] font-bold text-rose-600">
+              Cobrança cancelada/excluída no Asaas após baixa manual.
+            </p>
+          )}
+          <p className="text-[10px] font-bold text-slate-400">
+            Venc.: {formatDate(item.dataVencimento)}
+          </p>
+          {item.status === 'PAGO' && (
+            <p className="text-[10px] font-bold text-emerald-700">
+              Pago: {formatDate(item.dataPagamento || '')}
+            </p>
+          )}
+        </div>
+      </td>
+      <td className="px-5 py-5">
+        <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        {item.valorPago !== undefined && (
+          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
+            Rec.: {formatCurrency(item.valorPago)}
+          </p>
+        )}
+      </td>
+      <td className="px-5 py-5"><ChargeActions item={item} /></td>
+    </tr>
+  );
+
+  const ReceivableCard: React.FC<{ item: ContasReceber }> = ({ item }) => (
     <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -476,170 +584,121 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
       </div>
 
-      <div className="rounded-2xl border border-slate-100 bg-white p-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.4fr)_minmax(190px,0.8fr)_minmax(190px,0.8fr)_auto]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Aluno, turma, CPF ou polo..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs font-bold outline-none focus:border-emerald-500"
-            />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Previsto', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
+          { label: 'Recebido', value: formatCurrency(kpis.recebido), color: 'text-emerald-600' },
+          { label: 'A Receber', value: formatCurrency(kpis.aReceber), color: 'text-amber-600' },
+          { label: 'Vencidos', value: `${kpis.vencidos}`, color: 'text-rose-600' },
+        ].map((kpi) => (
+          <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
+            <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
           </div>
-          <div
-            className="relative"
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                setIsPoloFilterOpen(false);
-              }
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setIsPoloFilterOpen((open) => !open)}
-              className="flex h-full min-h-[46px] w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 text-left text-xs font-bold text-slate-600 outline-none transition-all hover:border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            >
-              <span className={`h-2 w-2 flex-shrink-0 rounded-full ${selectedPolo ? 'bg-blue-600' : 'bg-slate-300'}`} />
-              <span className="min-w-0 flex-1">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-xs font-extrabold uppercase tracking-wide text-slate-700">
-                    {selectedPolo?.name || 'Todos os polos'}
-                  </span>
-                  {selectedPolo && (
-                    <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${
-                      selectedPolo.isMatriz ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {selectedPolo.isMatriz ? 'Matriz' : 'Polo'}
-                    </span>
-                  )}
-                </span>
-                <span className="mt-0.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-400">
-                  {selectedPolo ? formatPoloDetails(selectedPolo) : 'Todas as unidades financeiras'}
-                </span>
-              </span>
-              <ChevronDown size={15} className={`flex-shrink-0 text-slate-400 transition-transform ${isPoloFilterOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isPoloFilterOpen && (
-              <div className="absolute left-0 top-full z-40 mt-2 w-full min-w-[22rem] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-slate-900/15">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPoloFilter('todos');
-                    setIsPoloFilterOpen(false);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${poloFilter === 'todos' ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-50'}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${poloFilter === 'todos' ? 'bg-blue-600' : 'bg-slate-300'}`} />
-                    <span>
-                      <span className="block text-xs font-extrabold uppercase tracking-wide">Todos os polos</span>
-                      <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-500">Todas as unidades financeiras</span>
-                    </span>
-                  </span>
-                </button>
-                {poloOptions.map((polo) => {
-                  const isSelected = polo.id === poloFilter;
-                  return (
-                    <button
-                      key={polo.id}
-                      type="button"
-                      onClick={() => {
-                        setPoloFilter(polo.id);
-                        setIsPoloFilterOpen(false);
-                      }}
-                      className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${isSelected ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-50'}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className={`h-2 w-2 flex-shrink-0 rounded-full ${isSelected ? 'bg-blue-600' : 'bg-slate-300'}`} />
-                        <span className="min-w-0">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <span className="truncate text-xs font-extrabold uppercase tracking-wide">{polo.name}</span>
-                            <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${
-                              polo.isMatriz ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
-                            }`}>
-                              {polo.isMatriz ? 'Matriz' : 'Polo'}
-                            </span>
-                          </span>
-                          <span className="mt-0.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                            {formatPoloDetails(polo)}
-                          </span>
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <select
-            value={groupMode}
-            onChange={(event) => setGroupMode(event.target.value as GroupMode)}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 outline-none"
-          >
-            <option value="none">Sem agrupamento</option>
-            <option value="student">Agrupar por aluno</option>
-            <option value="class">Agrupar por turma</option>
-            <option value="polo">Agrupar por polo</option>
-          </select>
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button onClick={() => setViewMode('table')} className={`rounded-lg px-3 py-2 ${viewMode === 'table' ? 'bg-[#001a33] text-white' : 'text-slate-500'}`} title="Visualizar como tabela">
-              <Table2 size={15} />
-            </button>
-            <button onClick={() => setViewMode('cards')} className={`rounded-lg px-3 py-2 ${viewMode === 'cards' ? 'bg-[#001a33] text-white' : 'text-slate-500'}`} title="Visualizar como cards">
-              <LayoutGrid size={15} />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
-          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-            Vencimento inicial
-            <input type="date" value={dueStart} onChange={(event) => setDueStart(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 outline-none" />
-          </label>
-          <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-            Vencimento final
-            <input type="date" value={dueEnd} onChange={(event) => setDueEnd(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 outline-none" />
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              setDueStart('');
-              setDueEnd('');
-              setSearch('');
-              setPoloFilter('todos');
-              setStatusScope('pending');
-            }}
-            className="self-end rounded-xl bg-slate-100 px-4 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-200"
-          >
-            Limpar filtros
-          </button>
-        </div>
+        ))}
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-white p-2">
+      {/* Tabs de status */}
+      <div className="flex gap-2 border-b border-slate-100 pb-2">
         {[
           { id: 'pending' as const, label: 'Pendentes', count: statusCounts.pending },
           { id: 'received' as const, label: 'Recebidos', count: statusCounts.received },
+          { id: 'canceled' as const, label: 'Cancelados', count: statusCounts.canceled },
           { id: 'all' as const, label: 'Todos', count: statusCounts.all },
         ].map((tab) => (
           <button
             key={tab.id}
-            type="button"
             onClick={() => setStatusScope(tab.id)}
-            className={`flex min-w-[140px] items-center justify-between gap-3 rounded-xl px-4 py-3 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border flex items-center gap-2 ${
               statusScope === tab.id
-                ? 'bg-[#001a33] text-white shadow-md'
-                : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                : 'text-slate-500 border-transparent hover:bg-slate-50'
             }`}
           >
             <span>{tab.label}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] ${statusScope === tab.id ? 'bg-white/15 text-white' : 'bg-white text-slate-500'}`}>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${statusScope === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
               {tab.count}
             </span>
           </button>
         ))}
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Busca */}
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Aluno, turma, CPF, cobrança ou unidade..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          />
+        </div>
+
+        {/* Data Início */}
+        <input
+          type="date"
+          value={dueStart}
+          onChange={(e) => setDueStart(e.target.value)}
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          title="Vencimento Inicial"
+        />
+
+        {/* Data Fim */}
+        <input
+          type="date"
+          value={dueEnd}
+          onChange={(e) => setDueEnd(e.target.value)}
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          title="Vencimento Final"
+        />
+
+        {/* Agrupamento */}
+        <select
+          value={groupMode}
+          onChange={(e) => setGroupMode(e.target.value as GroupMode)}
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+        >
+          <option value="student">Agrupar por aluno</option>
+          <option value="class">Agrupar por turma</option>
+          <option value="polo">Agrupar por polo</option>
+          <option value="none">Sem agrupamento</option>
+        </select>
+
+        {/* Limpar Filtros */}
+        {(search || dueStart || dueEnd) && (
+          <button
+            onClick={() => {
+              setSearch('');
+              setDueStart('');
+              setDueEnd('');
+            }}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl text-xs font-bold uppercase transition-colors"
+          >
+            Limpar
+          </button>
+        )}
+
+        {/* Toggles */}
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl ml-auto">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+            title="Tabela"
+          >
+            <Table2 size={15} />
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+            title="Cards"
+          >
+            <LayoutGrid size={15} />
+          </button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
@@ -685,80 +744,63 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
                 </thead>
                 {filtered.length === 0 ? (
                   <tbody><tr><td colSpan={6} className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</td></tr></tbody>
-                ) : grouped.map((group) => (
-                  <tbody key={group.key} className="divide-y divide-slate-100">
-                    {groupMode !== 'none' && (
-                      <tr className="bg-slate-100/70">
-                        <td colSpan={6} className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                          {group.label} · {group.items.length} cobrança(s)
-                        </td>
-                      </tr>
-                    )}
-                    {group.items.map((item, index) => (
-                      <tr
-                        key={item.id}
-                        className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/55'} align-top transition-colors hover:bg-emerald-50/35`}
-                      >
-                        <td className="px-5 py-5">
-                          <div className="space-y-1.5">
-                            <p className="break-words text-sm font-black leading-tight text-[#001a33]">{item.clienteNome}</p>
-                            <p className="whitespace-nowrap text-[10px] font-bold text-slate-400">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Matrícula: {formatEnrollment(item)}</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-5">
-                          <div className="space-y-1.5">
-                            <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.descricao}</p>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                              {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
-                            </p>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">
-                              Asaas: <span className={asaasStatusClass(item.asaasStatus)}>{asaasStatusLabel(item.asaasStatus)}</span>
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-5">
-                          <div className="space-y-1.5">
-                            <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
-                            <p className="break-words text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
-                            <p className="text-[10px] font-medium leading-snug text-slate-400">
-                              CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-5">
-                          <div className="space-y-2">
-                            <StatusBadge item={item} />
-                            <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-                            <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
-                            {item.asaasStatus === 'DELETED' && (
-                              <p className="text-[10px] font-bold text-rose-600">
-                                Cobrança cancelada/excluída no Asaas após baixa manual.
-                              </p>
-                            )}
-                            <p className="text-[10px] font-bold text-slate-400">
-                              Venc.: {formatDate(item.dataVencimento)}
-                            </p>
-                            {item.status === 'PAGO' && (
-                              <p className="text-[10px] font-bold text-emerald-700">
-                                Pago: {formatDate(item.dataPagamento || '')}
-                              </p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-5">
-                          <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-                          {item.valorPago !== undefined && (
-                            <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
-                              Rec.: {formatCurrency(item.valorPago)}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-5 py-5"><ChargeActions item={item} /></td>
-                      </tr>
-                    ))}
+                ) : groupMode === 'none' ? (
+                  <tbody className="divide-y divide-slate-100">
+                    {paginated.map((item, index) => renderReceivableRow(item, index))}
                   </tbody>
-                ))}
+                ) : grouped.map((group) => {
+                  const isExpanded = expandedGroups.has(group.key);
+                  const summary = getGroupSummary(group.items);
+                  const first = summary.first;
+
+                  return (
+                    <tbody key={group.key} className="divide-y divide-slate-100">
+                      <tr className="bg-slate-50/80 transition-colors hover:bg-blue-50/70">
+                        <td colSpan={6} className="p-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(group.key)}
+                            className="grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(180px,0.9fr)_minmax(180px,0.9fr)_minmax(140px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
+                          >
+                            <span className="flex min-w-0 items-center gap-3">
+                              <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
+                                isExpanded ? 'bg-[#001a33] text-white' : 'bg-white text-slate-500'
+                              }`}>
+                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-black text-[#001a33]">{group.label}</span>
+                                <span className="mt-1 block truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  {groupMode === 'student'
+                                    ? `CPF: ${first?.clienteCpfCnpj || 'não informado'} · Matrícula: ${first ? formatEnrollment(first) : 'sem matrícula'}`
+                                    : groupMode === 'polo'
+                                      ? `${first?.poloCnpj || 'CNPJ não informado'} · ${first?.poloCidade || 'Cidade não informada'} / ${first?.poloUf || 'UF'}`
+                                      : first?.cursoNome || 'Curso não informado'}
+                                </span>
+                              </span>
+                            </span>
+
+                            <span className="text-xs font-bold text-slate-600">
+                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Parcelas</span>
+                              {group.items.length} cobrança(s)
+                            </span>
+
+                            <span className="text-xs font-bold text-slate-600">
+                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Situação</span>
+                              {summary.pendingCount} pend. · {summary.receivedCount} rec. · {summary.canceledCount} canc.
+                            </span>
+
+                            <span className="text-right text-xs font-bold text-slate-600">
+                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Próximo vencimento</span>
+                              <span className="text-[10px] text-slate-400">{summary.nextDue ? formatDate(summary.nextDue) : '—'}</span>
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && group.items.map((item, index) => renderReceivableRow(item, index, groupMode === 'student'))}
+                    </tbody>
+                  );
+                })}
               </table>
             </div>
           )
@@ -768,7 +810,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       {!isLoading && filtered.length > 0 && (
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Mostrando {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filtered.length)} de {filtered.length} cobrança(s)
+            {groupMode === 'none'
+              ? `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, filtered.length)} de ${filtered.length} cobrança(s)`
+              : `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, allGroups.length)} de ${allGroups.length} grupo(s), ${filtered.length} cobrança(s)`}
           </span>
           <div className="flex items-center gap-2">
             <button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import CrachaCard from './components/CrachaCard';
 import CrachaEditor from './components/CrachaEditor';
 import { crachaService } from './cracha.service';

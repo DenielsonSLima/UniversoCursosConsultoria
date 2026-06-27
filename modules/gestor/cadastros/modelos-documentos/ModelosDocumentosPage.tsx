@@ -28,6 +28,7 @@ import IRPFPage from './irpf/IRPFPage';
 import BoletimPage from './boletim/BoletimPage';
 import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenciaPage';
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
+import ReciboDespesaPage from './recibo/ReciboDespesaPage';
 
 const ModelosDocumentosPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
@@ -45,6 +46,7 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'estagio', title: 'Termo de Estágio', desc: 'Contrato e plano de atividades do estagiário.', icon: <Briefcase size={24} />, color: 'bg-teal-600' },
     { id: 'diploma', title: 'Modelo Diploma', desc: 'Certificado de conclusão de curso.', icon: <Award size={24} />, color: 'bg-purple-600' },
     { id: 'irpf', title: 'Declaração de IRPF', desc: 'Modelo de declaração financeira para fins de Imposto de Renda.', icon: <FileText size={24} />, color: 'bg-emerald-700' },
+    { id: 'recibo', title: 'Modelo Recibo', desc: 'Recibo de pagamento de despesas fixas, variáveis e outros débitos.', icon: <FileText size={24} />, color: 'bg-rose-600' },
   ];
 
   const renderContent = () => {
@@ -61,6 +63,7 @@ const ModelosDocumentosPage: React.FC = () => {
       case 'estagio': return <EstagioPage />;
       case 'diploma': return <DiplomaPage />;
       case 'irpf': return <IRPFPage />;
+      case 'recibo': return <ReciboDespesaPage />;
       default: return null;
     }
   };

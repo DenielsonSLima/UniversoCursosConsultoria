@@ -6,7 +6,6 @@ import {
   CreditCard,
   GraduationCap,
   Loader2,
-  MonitorPlay,
   Plus,
   Search,
   Settings,

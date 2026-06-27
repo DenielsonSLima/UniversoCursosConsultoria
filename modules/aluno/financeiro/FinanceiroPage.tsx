@@ -252,7 +252,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       const imgWidth = 190;
       const pageHeight = 277;
       const ratio = imgWidth / canvas.width;
-      const imgHeight = canvas.height * ratio;
       let remainingHeight = canvas.height;
       const pagePixelHeight = pageHeight / ratio;
       let position = 0;

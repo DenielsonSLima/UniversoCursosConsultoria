@@ -29,14 +29,10 @@ import {
   Award,
   FileSignature,
   Building,
-  MessageSquare,
-  LayoutGrid,
-  GraduationCap,
-  Users
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { polosService } from './configuracoes/polos/polos.service';
 import { supabase } from '../../lib/supabase';
 import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
@@ -45,7 +41,6 @@ import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 // Importação dos Submódulos
 import DashboardPage from './dashboard/DashboardPage';
 import ParceirosPage from './parceiros/ParceirosPage';
-import ParceiroDocumentosPage from './parceiros/ParceiroDocumentosPage';
 import CadastrosPage from './cadastros/CadastrosPage';
 import GestaoPage from './gestao/GestaoPage';
 import SecretariaPage from './secretaria/SecretariaPage';

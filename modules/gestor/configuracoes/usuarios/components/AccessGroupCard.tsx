@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Users, Building2, ShieldCheck, ArrowRight, Lock } from 'lucide-react';
+import { Building2, ShieldCheck, ArrowRight } from 'lucide-react';
 
 interface AccessGroupCardProps {
   title: string;

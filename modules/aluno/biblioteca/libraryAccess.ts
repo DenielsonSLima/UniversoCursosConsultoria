@@ -78,6 +78,14 @@ export const canAccessLibraryDocumentAsAluno = (
     if (now < releaseDate) {
       return false;
     }
+
+    const diasValidade = Number(doc.liberacao_dias_validade);
+    if (Number.isFinite(diasValidade) && diasValidade > 0) {
+      const prazoMs = diasValidade * 24 * 60 * 60 * 1000;
+      if (now > releaseDate + prazoMs) {
+        return false;
+      }
+    }
   }
 
   // 7) Liberação por início de disciplina

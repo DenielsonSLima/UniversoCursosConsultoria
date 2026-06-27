@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Plus, Save, Smartphone, User, Play, Sparkles, Send, MessageSquare } from 'lucide-react';
+import { Trash2, Plus, Save, Smartphone, User, Play, Sparkles, Send } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 

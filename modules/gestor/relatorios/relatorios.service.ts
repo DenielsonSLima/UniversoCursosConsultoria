@@ -251,4 +251,43 @@ export const relatoriosService = {
       };
     });
   },
+
+  async getLucroTurmaRevenues(turmaId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('contas_receber')
+      .select('id, descricao, valor, valor_pago, data_vencimento, data_pagamento, status, parceiros(nome)')
+      .eq('turma_id', turmaId)
+      .order('data_vencimento', { ascending: true });
+    if (error) throw error;
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      descricao: row.descricao || 'Recebimento',
+      valor: Number(row.valor || 0),
+      valorPago: Number(row.valor_pago || (row.status === 'PAGO' ? row.valor : 0) || 0),
+      dataVencimento: row.data_vencimento,
+      dataPagamento: row.data_pagamento,
+      status: row.status,
+      alunoNome: row.parceiros?.nome || 'Cliente Geral'
+    }));
+  },
+
+  async getLucroTurmaExpenses(turmaId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('despesas_lancamentos')
+      .select('id, descricao, valor, valor_pago, data_vencimento, data_pagamento, status, categorias_financeiras(nome), parceiros(nome)')
+      .eq('turma_id', turmaId)
+      .order('data_vencimento', { ascending: true });
+    if (error) throw error;
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      descricao: row.descricao || 'Despesa',
+      valor: Number(row.valor || 0),
+      valorPago: Number(row.valor_pago || (row.status === 'PAGO' ? row.valor : 0) || 0),
+      dataVencimento: row.data_vencimento,
+      dataPagamento: row.data_pagamento,
+      status: row.status,
+      categoriaNome: row.categorias_financeiras?.nome || 'Despesa Geral',
+      fornecedorNome: row.parceiros?.nome || 'Fornecedor Geral'
+    }));
+  },
 };

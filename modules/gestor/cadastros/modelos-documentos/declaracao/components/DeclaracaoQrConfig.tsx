@@ -2,7 +2,7 @@
 // File: modules/gestor/cadastros/modelos-documentos/declaracao/components/DeclaracaoQrConfig.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Save, ArrowLeft, QrCode, Plus, X, GripHorizontal } from 'lucide-react';
+import { Save, ArrowLeft, QrCode, Plus, X } from 'lucide-react';
 import { declaracaoService } from '../declaracao.service';
 
 interface DeclaracaoQrConfigProps {

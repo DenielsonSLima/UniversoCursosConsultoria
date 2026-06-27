@@ -79,14 +79,51 @@ export interface TransferenciaConta {
   id?: string;
   poloId: string;
   poloNome?: string;
+  poloCnpj?: string;
+  poloCidade?: string;
+  poloUf?: string;
   contaOrigemId: string;
   contaOrigemNome?: string;
+  contaOrigemBanco?: string;
+  contaOrigemTitular?: string;
+  contaOrigemAgencia?: string;
+  contaOrigemConta?: string;
+  poloDestinoId: string;
+  poloDestinoNome?: string;
+  poloDestinoCnpj?: string;
+  poloDestinoCidade?: string;
+  poloDestinoUf?: string;
   contaDestinoId: string;
   contaDestinoNome?: string;
+  contaDestinoBanco?: string;
+  contaDestinoTitular?: string;
+  contaDestinoAgencia?: string;
+  contaDestinoConta?: string;
   valor: number;
   dataTransferencia: string;
   observacao?: string;
   createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TransferenciasFilters {
+  poloId?: string | null;
+  search?: string;
+  contaOrigemId?: string;
+  contaDestinoId?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  mesAtual?: boolean;
+}
+
+export interface TransferenciaInput {
+  poloOrigemId: string;
+  contaOrigemId: string;
+  poloDestinoId: string;
+  contaDestinoId: string;
+  valor: number;
+  dataTransferencia: string;
+  observacao?: string;
 }
 
 export interface FluxoMensal {
@@ -106,6 +143,35 @@ export interface FinanceiroSummary {
   totalAPagar: number;
   saldoCaixa: number;
 }
+
+export interface ReceivablesSummary {
+  pendingCount: number;
+  receivedCount: number;
+  canceledCount: number;
+  allCount: number;
+  pendingValue: number;
+  receivedValue: number;
+  canceledValue: number;
+  allValue: number;
+}
+
+export interface ReceivablesSummaryFilters {
+  poloId?: string;
+  search?: string;
+  dueStart?: string;
+  dueEnd?: string;
+}
+
+const mapReceivablesSummary = (row: any = {}): ReceivablesSummary => ({
+  pendingCount: Number(row.pending_count || 0),
+  receivedCount: Number(row.received_count || 0),
+  canceledCount: Number(row.canceled_count || 0),
+  allCount: Number(row.all_count || 0),
+  pendingValue: Number(row.pending_value || 0),
+  receivedValue: Number(row.received_value || 0),
+  canceledValue: Number(row.canceled_value || 0),
+  allValue: Number(row.all_value || 0),
+});
 
 export const financeiroService = {
   // 1. Bancos & Saldos (Sem criação de conta aqui - agora é em configurações)
@@ -298,6 +364,26 @@ export const financeiroService = {
     return this.getReceivablesByModality('TECNICO');
   },
 
+  async getReceivablesModalitySummary(
+    modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
+    filters: ReceivablesSummaryFilters = {}
+  ): Promise<ReceivablesSummary> {
+    const { data, error } = await supabase.rpc('get_receivables_modality_summary', {
+      p_modality: modality,
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_due_start: filters.dueStart || null,
+      p_due_end: filters.dueEnd || null
+    });
+
+    if (error) {
+      console.error(`Erro ao buscar resumo de recebíveis da modalidade ${modality}:`, error);
+      throw error;
+    }
+
+    return mapReceivablesSummary(data?.[0]);
+  },
+
   async createReceivable(cr: Omit<ContasReceber, 'id'>): Promise<void> {
     const { error } = await supabase.from('contas_receber').insert({
       polo_id: cr.poloId,
@@ -321,6 +407,22 @@ export const financeiroService = {
 
   async getOutrosCreditos(): Promise<ContasReceber[]> {
     return this.getContasReceber({ categoria: 'OUTROS_CREDITOS' });
+  },
+
+  async getOutrosCreditosSummary(filters: ReceivablesSummaryFilters = {}): Promise<ReceivablesSummary> {
+    const { data, error } = await supabase.rpc('get_outros_creditos_summary', {
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_due_start: filters.dueStart || null,
+      p_due_end: filters.dueEnd || null
+    });
+
+    if (error) {
+      console.error('Erro ao buscar resumo de outros créditos:', error);
+      throw error;
+    }
+
+    return mapReceivablesSummary(data?.[0]);
   },
 
   async createOtherCredit(input: {
@@ -565,16 +667,16 @@ export const financeiroService = {
   },
 
   // 5. Transferências entre Contas
-  async getTransferencias(filters?: { poloId?: string }): Promise<TransferenciaConta[]> {
-    let query = supabase
-      .from('transferencias_contas')
-      .select('*, c_origem:contas_bancarias!conta_origem_id(*), c_destino:contas_bancarias!conta_destino_id(*), polos(nome)');
-
-    if (filters?.poloId && filters.poloId !== 'todos') {
-      query = query.eq('polo_id', filters.poloId);
-    }
-
-    const { data, error } = await query.order('data_transferencia', { ascending: false });
+  async getTransferencias(filters: TransferenciasFilters = {}): Promise<TransferenciaConta[]> {
+    const { data, error } = await supabase.rpc('get_transferencias_contas', {
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_conta_origem_id: filters.contaOrigemId || null,
+      p_conta_destino_id: filters.contaDestinoId || null,
+      p_data_inicio: filters.dataInicio || null,
+      p_data_fim: filters.dataFim || null,
+      p_mes_atual: filters.mesAtual === true
+    });
     if (error) {
       console.error('Erro ao buscar transferências:', error);
       throw error;
@@ -582,36 +684,74 @@ export const financeiroService = {
 
     return (data || []).map((t: any) => ({
       id: t.id,
-      poloId: t.polo_id,
-      poloNome: t.polos?.nome || '',
+      poloId: t.polo_origem_id,
+      poloNome: t.polo_origem_nome || '',
+      poloCnpj: t.polo_origem_cnpj || '',
+      poloCidade: t.polo_origem_cidade || '',
+      poloUf: t.polo_origem_uf || '',
       contaOrigemId: t.conta_origem_id,
-      contaOrigemNome: `${t.c_origem?.banco} (Ag: ${t.c_origem?.agencia} CC: ${t.c_origem?.conta})`,
+      contaOrigemBanco: t.conta_origem_banco || '',
+      contaOrigemTitular: t.conta_origem_titular || '',
+      contaOrigemAgencia: t.conta_origem_agencia || '',
+      contaOrigemConta: t.conta_origem_conta || '',
+      contaOrigemNome: `${t.conta_origem_banco || ''} - ${t.conta_origem_conta || ''}`,
+      poloDestinoId: t.polo_destino_id,
+      poloDestinoNome: t.polo_destino_nome || '',
+      poloDestinoCnpj: t.polo_destino_cnpj || '',
+      poloDestinoCidade: t.polo_destino_cidade || '',
+      poloDestinoUf: t.polo_destino_uf || '',
       contaDestinoId: t.conta_destino_id,
-      contaDestinoNome: `${t.c_destino?.banco} (Ag: ${t.c_destino?.agencia} CC: ${t.c_destino?.conta})`,
+      contaDestinoBanco: t.conta_destino_banco || '',
+      contaDestinoTitular: t.conta_destino_titular || '',
+      contaDestinoAgencia: t.conta_destino_agencia || '',
+      contaDestinoConta: t.conta_destino_conta || '',
+      contaDestinoNome: `${t.conta_destino_banco || ''} - ${t.conta_destino_conta || ''}`,
       valor: Number(t.valor),
       dataTransferencia: t.data_transferencia,
       observacao: t.observacao,
-      createdAt: t.created_at
+      createdAt: t.created_at,
+      updatedAt: t.updated_at
     }));
   },
 
-  async createTransferencia(t: Omit<TransferenciaConta, 'id'>): Promise<void> {
-    const { error } = await supabase.from('transferencias_contas').insert({
-      polo_id: t.poloId,
-      conta_origem_id: t.contaOrigemId,
-      conta_destino_id: t.contaDestinoId,
-      valor: t.valor,
-      data_transferencia: t.dataTransferencia,
-      observacao: t.observacao || null
+  async createTransferencia(t: TransferenciaInput): Promise<string> {
+    const { data, error } = await supabase.rpc('registrar_transferencia_conta', {
+      p_polo_origem_id: t.poloOrigemId,
+      p_conta_origem_id: t.contaOrigemId,
+      p_polo_destino_id: t.poloDestinoId,
+      p_conta_destino_id: t.contaDestinoId,
+      p_valor: t.valor,
+      p_data_transferencia: t.dataTransferencia,
+      p_observacao: t.observacao || null
     });
     if (error) {
       console.error('Erro ao registrar transferência:', error);
       throw error;
     }
+    return data as string;
+  },
+
+  async updateTransferencia(id: string, t: TransferenciaInput): Promise<void> {
+    const { error } = await supabase.rpc('editar_transferencia_conta', {
+      p_transferencia_id: id,
+      p_polo_origem_id: t.poloOrigemId,
+      p_conta_origem_id: t.contaOrigemId,
+      p_polo_destino_id: t.poloDestinoId,
+      p_conta_destino_id: t.contaDestinoId,
+      p_valor: t.valor,
+      p_data_transferencia: t.dataTransferencia,
+      p_observacao: t.observacao || null
+    });
+    if (error) {
+      console.error('Erro ao editar transferência:', error);
+      throw error;
+    }
   },
 
   async deleteTransferencia(id: string): Promise<void> {
-    const { error } = await supabase.from('transferencias_contas').delete().eq('id', id);
+    const { error } = await supabase.rpc('excluir_transferencia_conta', {
+      p_transferencia_id: id
+    });
     if (error) {
       console.error('Erro ao excluir transferência:', error);
       throw error;
@@ -639,6 +779,18 @@ export const financeiroService = {
       .order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar parceiros no financeiro:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+  async getTurmas(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('turmas')
+      .select('id, nome, codigo, polo_id')
+      .order('nome', { ascending: true });
+    if (error) {
+      console.error('Erro ao buscar turmas no financeiro:', error);
       throw error;
     }
     return data || [];

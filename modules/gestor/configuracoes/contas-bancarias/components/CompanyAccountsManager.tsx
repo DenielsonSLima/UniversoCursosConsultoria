@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Trash2, Copy, Building2, CreditCard, Power, PowerOff, RefreshCw } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, Pencil, Building2, CreditCard, Power, PowerOff, RefreshCw } from 'lucide-react';
 import AccountForm from './AccountForm';
 import { contasBancariasService } from '../contas-bancarias.service';
 import ConfirmModal from '../../../components/ConfirmModal';
@@ -9,10 +9,11 @@ import { supabase } from '../../../../../lib/supabase';
 
 interface CompanyAccountsManagerProps {
   company: any;
+  companies: any[];
   onBack: () => void;
 }
 
-const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company, onBack }) => {
+const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company, companies, onBack }) => {
   const [viewState, setViewState] = useState<'list' | 'form'>('list');
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
   const queryClient = useQueryClient();
@@ -59,8 +60,11 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
         return contasBancariasService.createAccount(data);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['accounts', company.id] });
+      if (variables?.poloId && variables.poloId !== company.id) {
+        queryClient.invalidateQueries({ queryKey: ['accounts', variables.poloId] });
+      }
       queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
       setViewState('list');
       setSelectedAccount(null);
@@ -133,6 +137,7 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
     return (
       <AccountForm 
         companyId={company.id}
+        companies={companies}
         initialData={selectedAccount}
         onSave={handleSave}
         onCancel={() => {
@@ -247,10 +252,10 @@ const CompanyAccountsManager: React.FC<CompanyAccountsManagerProps> = ({ company
                           setSelectedAccount(account);
                           setViewState('form');
                         }}
-                        className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Editar / Copiar"
+                        className="p-1.5 bg-white/20 rounded-lg hover:bg-white/30 backdrop-blur-md transition-colors"
+                        title="Editar conta"
                       >
-                        <Copy size={14} />
+                        <Pencil size={14} />
                       </button>
                       <button 
                         onClick={() => confirmDelete(account.id)}

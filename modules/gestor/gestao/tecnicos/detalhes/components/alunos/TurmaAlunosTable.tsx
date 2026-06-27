@@ -1,12 +1,13 @@
 import React from 'react';
-import { ArrowRightLeft, PauseCircle, RotateCcw, UserX } from 'lucide-react';
+import { ArrowRightLeft, PauseCircle, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
 import { AcademicStudent } from '../../academic-lifecycle.service';
 
 interface TurmaAlunosTableProps {
   students: AcademicStudent[];
-  onOpenMovement: (student: AcademicStudent) => void;
-  onOpenTransfer: (student: AcademicStudent) => void;
+  onOpenMovement: React.Dispatch<AcademicStudent>;
+  onOpenTransfer: React.Dispatch<AcademicStudent>;
+  onRemoveEnrollment: React.Dispatch<AcademicStudent>;
 }
 
 const getStatusStyle = (status: string) => {
@@ -25,6 +26,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
   students,
   onOpenMovement,
   onOpenTransfer,
+  onRemoveEnrollment,
 }) => {
   if (students.length === 0) {
     return (
@@ -97,6 +99,16 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                     className="p-2.5 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ArrowRightLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => onRemoveEnrollment(student)}
+                    disabled={!student.pode_remover}
+                    title={student.pode_remover
+                      ? 'Remover aluno da turma'
+                      : 'So e possivel remover antes do inicio e sem lancamentos academicos'}
+                    className="p-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </td>

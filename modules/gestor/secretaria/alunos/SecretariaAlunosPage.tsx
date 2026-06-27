@@ -34,7 +34,7 @@ const SecretariaAlunosPage: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery({
+  const { data: matriculas = [] } = useQuery({
     queryKey: ['aluno-matriculas', selectedAluno?.id],
     queryFn: async () => {
       if (!selectedAluno?.id) return [];

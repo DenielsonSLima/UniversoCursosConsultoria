@@ -72,7 +72,7 @@ const AlunoFirstAccessPage: React.FC = () => {
 
   const termsAccepted = useMemo(() => Boolean(acceptedTerms), [acceptedTerms]);
   const requiresPasswordChange = Boolean(profile?.requiresPasswordReset);
-  const needsTermsAcceptance = !Boolean(profile?.acceptedTermsAt);
+  const needsTermsAcceptance = !profile?.acceptedTermsAt;
   const canSubmit =
     (needsTermsAcceptance ? termsAccepted : true) &&
     (!requiresPasswordChange || (hasStrongPassword(newPassword) && newPassword === confirmPassword));

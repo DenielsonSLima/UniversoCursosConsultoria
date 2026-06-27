@@ -6,6 +6,7 @@ import {
   Stamp, 
   Landmark, 
   Wallet, 
+  Wallet2,
   FileText, 
   CreditCard, 
   Server,
@@ -34,6 +35,7 @@ import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensCo
 import PolosConfig from './polos/PolosConfig';
 import AcademicosConfig from './academicos/AcademicosConfig';
 import AssinaturasConfig from './assinaturas/AssinaturasConfig';
+import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -43,6 +45,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
+    { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Despesas fixas, variáveis e outros débitos', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
@@ -63,6 +66,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'polos': return <PolosConfig />;
       case 'academicos': return <AcademicosConfig />;
       case 'categorias': return <CategoriasConfig />;
+      case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
       case 'assinaturas': return <AssinaturasConfig />;

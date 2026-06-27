@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import {
-  Building, MapPin, Phone, Mail, Save, X, FileText, User,
-  AlertCircle, CheckCircle2, Handshake, Upload, Loader2, Search, Plus
+  Building, MapPin, Save, X, FileText, User,
+  AlertCircle, Upload, Loader2, Search, Plus
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 
@@ -173,7 +173,9 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
           uf: data.uf || '',
         }));
       }
-    } catch {}
+    } catch {
+      // ViaCEP failures should not block manual address entry.
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {

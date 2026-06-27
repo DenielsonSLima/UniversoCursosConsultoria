@@ -46,6 +46,7 @@ function mapToDatabaseUpdate(fe: any) {
   if (fe.saldoInicial !== undefined) data.saldo_inicial = Number(fe.saldoInicial);
   if (fe.dataSaldo !== undefined) data.data_saldo = fe.dataSaldo || null;
   if (fe.ativo !== undefined) data.ativo = fe.ativo;
+  if (fe.poloId !== undefined || fe.companyId !== undefined) data.polo_id = fe.poloId || fe.companyId;
   return data;
 }
 
@@ -56,7 +57,8 @@ export const contasBancariasService = {
   async getCompanies(): Promise<any[]> {
     const { data, error } = await supabase
       .from('polos')
-      .select('id, nome, cnpj, status, contas_bancarias(count)')
+      .select('id, nome, cnpj, cidade, estado, status, is_matriz, contas_bancarias(count)')
+      .order('is_matriz', { ascending: false })
       .order('nome', { ascending: true });
 
     if (error) {
@@ -68,6 +70,9 @@ export const contasBancariasService = {
       id: p.id,
       nomeFantasia: p.nome,
       cnpj: p.cnpj,
+      cidade: p.cidade,
+      estado: p.estado,
+      isMatriz: p.is_matriz === true,
       ativo: p.status === 'ativo',
       contasCount: p.contas_bancarias?.[0]?.count || 0
     }));

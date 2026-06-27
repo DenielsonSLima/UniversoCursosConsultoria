@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Edit, Trash2, FileText, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Edit, FileText, CheckCircle2 } from 'lucide-react';
 
 interface CarteirinhaCardProps {
   modelo: any;

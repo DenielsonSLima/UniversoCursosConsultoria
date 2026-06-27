@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Tag } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { EventType } from '../calendario.types';
 
 interface TypeManagerModalProps {

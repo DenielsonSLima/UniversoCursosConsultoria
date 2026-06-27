@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Turma } from '../../../gestao.types';
 import { 
-  Activity, BookOpen, User, ClipboardCheck, Calendar, 
-  FileText, CheckCircle2, ChevronRight, Loader2, Save, Printer, ArrowLeft
+  Activity, BookOpen, ClipboardCheck, 
+  FileText, Loader2, Save, Printer, ArrowLeft
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import {

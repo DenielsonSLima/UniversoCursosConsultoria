@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmModalProps {
@@ -24,6 +25,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   variant = 'danger'
 }) => {
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const getColors = () => {
     switch (variant) {
@@ -36,8 +38,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const colors = getColors();
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center p-4">
       {/* Backdrop com Blur */}
       <div 
         className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" 
@@ -85,7 +87,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

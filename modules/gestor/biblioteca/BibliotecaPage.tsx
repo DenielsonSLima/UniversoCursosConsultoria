@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { 
   BookOpen, LayoutGrid, Users, Award, Eye, 
-  Clock, Calendar, Sparkles, Folder, Lock, Search, Trash2, Settings2
+  Clock, Calendar, Sparkles, Lock, Search, Trash2, Settings2
 } from 'lucide-react';
 
 import FileExplorer from './components/FileExplorer';

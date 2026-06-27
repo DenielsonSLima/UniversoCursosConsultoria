@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit2, Building2, RefreshCw, MapPin, Phone, Mail, Globe, Shield, CreditCard } from 'lucide-react';
+import { Edit2, Building2, RefreshCw, MapPin, Phone, Mail, Shield } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import EmpresaForm from './components/EmpresaForm';
 import { empresasService } from './empresas.service';

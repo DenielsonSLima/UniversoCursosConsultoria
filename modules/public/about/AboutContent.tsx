@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Award, Users2, ShieldCheck, GraduationCap } from 'lucide-react';
+import { CheckCircle2, Users2, ShieldCheck, GraduationCap } from 'lucide-react';
 
 const AboutContent: React.FC = () => {
   const consultoriaItems = [

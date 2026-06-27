@@ -50,8 +50,6 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
         const semester = month <= 6 ? 1 : 2;
 
         if (curso && polo && !isNaN(year)) {
-            // Siglas
-            const cursoSigla = curso.nome.substring(0, 3).toUpperCase(); // Ex: TEC -> TEC (Melhorar logica real depois)
             // Pegar sigla melhor do curso: Ex: "Técnico em Enfermagem" -> "ENF"
             const siglaCursoSmart = curso.nome.includes('Enfermagem') ? 'ENF' : curso.nome.includes('Radiologia') ? 'RAD' : curso.nome.substring(0,4).toUpperCase().replace(/\s/g, '');
             

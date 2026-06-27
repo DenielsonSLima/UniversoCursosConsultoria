@@ -28,7 +28,7 @@ const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, teache
 
   // Formatador de data simples (DD/MM)
   const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
+    const [, month, day] = dateStr.split('-');
     return `${day}/${month}`;
   };
 

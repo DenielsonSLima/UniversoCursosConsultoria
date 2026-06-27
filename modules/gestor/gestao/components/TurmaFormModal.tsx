@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, Save, Layers } from 'lucide-react';
-import { Turno, Turma } from '../gestao.types';
+import { Turno } from '../gestao.types';
 
 interface TurmaFormModalProps {
   isOpen: boolean;

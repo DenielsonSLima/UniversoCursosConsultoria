@@ -2,7 +2,7 @@
 // File: modules/gestor/cadastros/modelos-documentos/declaracao/DeclaracaoPage.tsx
 
 import React, { useState } from 'react';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import DeclaracaoList from './components/DeclaracaoList';
 import DeclaracaoEditor from './components/DeclaracaoEditor';
 import DeclaracaoQrConfig from './components/DeclaracaoQrConfig';

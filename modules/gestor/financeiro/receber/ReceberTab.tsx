@@ -13,10 +13,10 @@ const ReceberTab: React.FC = () => {
   const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('tecnico');
 
   const subtabs = [
+    { id: 'tecnico' as const, label: 'Técnico', icon: <Landmark size={14} /> },
     { id: 'livres' as const, label: 'Cursos Livres', icon: <Award size={14} /> },
     { id: 'especializacao' as const, label: 'Especialização', icon: <GraduationCap size={14} /> },
     { id: 'ead' as const, label: 'EAD', icon: <Laptop size={14} /> },
-    { id: 'tecnico' as const, label: 'Técnico', icon: <Landmark size={14} /> },
   ];
 
   const renderSubTab = () => {

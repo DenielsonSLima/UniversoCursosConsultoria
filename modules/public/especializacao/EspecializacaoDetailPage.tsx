@@ -13,7 +13,8 @@ import {
   ChevronUp,
   MapPin,
   CheckCircle2,
-  Award
+  Award,
+  Sparkles
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
@@ -129,7 +130,6 @@ const EspecializacaoDetailPage: React.FC = () => {
 
     setIsSubmitting(true);
 
-    const whatsappLimpo = whatsapp.replace(/\D/g, '');
     const mensagemTexto = `Olá! Meu nome é *${nome}* e tenho interesse na especialização técnica *${curso?.nome || 'Especialização'}* no Polo *${polo}*. \n\n*E-mail:* ${email || 'Não informado'} \n*Mensagem:* ${mensagem || 'Gostaria de saber mais informações sobre matrículas e descontos.'}`;
     
     const whatsappUrl = `https://wa.me/557996028316?text=${encodeURIComponent(mensagemTexto)}`;

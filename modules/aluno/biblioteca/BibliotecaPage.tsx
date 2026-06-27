@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { 
-  BookOpen, Folder, FolderOpen, FileText, Download, 
-  Search, LayoutGrid, List, ChevronRight, Eye, Sparkles, Clock
+  BookOpen, Folder, FolderOpen, Download, 
+  Search, LayoutGrid, List, ChevronRight, Eye
 } from 'lucide-react';
 import QuickPreviewModal from '../../gestor/biblioteca/components/QuickPreviewModal';
 import { LibraryDocument } from '../../gestor/biblioteca/biblioteca.types';

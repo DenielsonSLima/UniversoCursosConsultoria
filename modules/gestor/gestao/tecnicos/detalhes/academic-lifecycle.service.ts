@@ -16,6 +16,8 @@ export interface AcademicStudent {
   data_matricula: string;
   status: string;
   frequencia_percent: number | null;
+  tem_lancamentos_academicos?: boolean;
+  pode_remover?: boolean;
 }
 
 export interface AcademicPeriod {
@@ -173,6 +175,13 @@ export const academicLifecycleService = {
       p_observacao: input.observacao || null,
       p_data_transferencia: input.dataTransferencia || new Date().toISOString().slice(0, 10),
       p_responsavel_id: input.responsavelId || null,
+    });
+    return requireData(data, error);
+  },
+
+  async removerMatricula(matriculaId: string) {
+    const { data, error } = await supabase.rpc('remover_matricula_turma', {
+      p_matricula_id: matriculaId,
     });
     return requireData(data, error);
   },

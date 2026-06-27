@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, MoreVertical, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import ComunicacaoConfig from './components/ComunicacaoConfig';
 import ToastNotification, { useToast } from '../components/ToastNotification';

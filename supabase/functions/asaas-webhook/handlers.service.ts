@@ -307,13 +307,12 @@ export const createAsaasWebhookHandlers = (
     if (turmaError) throw turmaError;
     if (!turma) throw new Error("Pagamento recebido, mas não há turma aberta para matrícula.");
 
-    let matricula: any = null;
     const { data: existing } = await admin.from("matriculas")
       .select("*")
       .eq("aluno_id", aluno.id)
       .eq("turma_id", turma.id)
       .maybeSingle();
-    matricula = existing;
+    let matricula: any = existing;
     if (!matricula) {
       const { data, error } = await admin.from("matriculas").insert({
         aluno_id: aluno.id,
