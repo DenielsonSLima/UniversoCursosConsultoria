@@ -106,7 +106,13 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
         {activeTab === 'financeiro' && (
             <div className="text-slate-500 text-center py-20">Em desenvolvimento: Financeiro (A pagar/Receber)</div>
         )}
-        {activeTab === 'acesso' && <ParceiroAcesso email={professorData.email || `${professorData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
+        {activeTab === 'acesso' && (
+          <ParceiroAcesso
+            parceiroId={professorData.id}
+            tipo="Professor"
+            email={professorData.email || `${professorData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`}
+          />
+        )}
       </div>
 
     </div>

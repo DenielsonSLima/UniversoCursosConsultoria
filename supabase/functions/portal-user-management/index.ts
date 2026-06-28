@@ -18,6 +18,8 @@ type FunctionResponse = {
   success: boolean;
   action?: string;
   userId?: string | null;
+  partnerDeleted?: boolean;
+  authUserDeleted?: boolean;
   inviteSent?: boolean;
   recoveryEmailSent?: boolean;
   message?: string;
@@ -108,6 +110,9 @@ const isActiveGestor = (status?: string | null) => {
   return current !== 'INATIVO' && current !== 'INACTIVE' && current !== 'BLOQUEADO';
 };
 
+const isUuid = (value?: string | null) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+
 const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
   if (!bearer) {
     return { authorized: false, error: 'Não autenticado.' };
@@ -120,7 +125,7 @@ const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
 
   const { data: gestor, error: gestorError } = await admin
     .from('usuarios_sistema')
-    .select('id, status')
+    .select('id, status, context')
     .eq('email', authData.user.email.toLowerCase())
     .maybeSingle();
 
@@ -128,7 +133,61 @@ const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
     return { authorized: false, error: 'Acesso restrito para administradores.' };
   }
 
-  return { authorized: true, gestorEmail: authData.user.email };
+  return { authorized: true, gestor, gestorEmail: authData.user.email.toLowerCase() };
+};
+
+const getGestorScope = async (admin: any, gestor: any) => {
+  const context = String(gestor?.context || '').trim();
+  if (!context || context.toLowerCase() === 'global') {
+    return { global: true, poloId: null };
+  }
+
+  if (!isUuid(context)) {
+    return { global: false, poloId: null };
+  }
+
+  const { data: polo } = await admin
+    .from('polos')
+    .select('id, is_matriz')
+    .eq('id', context)
+    .maybeSingle();
+
+  return {
+    global: Boolean(polo?.is_matriz),
+    poloId: context,
+  };
+};
+
+const isPartnerInGestorScope = async (admin: any, gestor: any, partner: any) => {
+  const scope = await getGestorScope(admin, gestor);
+  if (scope.global) return true;
+  if (!scope.poloId) return false;
+
+  const partnerPoloId = partner?.polo_id || null;
+  const partnerPoloIds = Array.isArray(partner?.polo_ids) ? partner.polo_ids : [];
+
+  return !partnerPoloId
+    || partnerPoloId === scope.poloId
+    || partnerPoloIds.includes(scope.poloId);
+};
+
+const findAuthUserByEmail = async (admin: any, email: string) => {
+  const targetEmail = normalizeEmail(email);
+  let page = 1;
+  const perPage = 1000;
+
+  while (page <= 20) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const user = (data?.users || []).find((item: any) => normalizeEmail(item.email) === targetEmail);
+    if (user) return user;
+
+    if (!data?.users?.length || data.users.length < perPage) return null;
+    page += 1;
+  }
+
+  return null;
 };
 
 Deno.serve(async (req: Request) => {
@@ -163,7 +222,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = String(payload.action || '').trim();
-  if (action !== 'send-student-invite') {
+  if (!['send-student-invite', 'delete-partner'].includes(action)) {
     return json({ success: false, error: 'Ação inválida.' }, 400);
   }
 
@@ -184,7 +243,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: partner, error: partnerError } = await admin
     .from('parceiros')
-    .select('id, tipo, nome, email')
+    .select('id, tipo, nome, email, polo_id, polo_ids')
     .eq('id', partnerId)
     .maybeSingle();
 
@@ -192,7 +251,76 @@ Deno.serve(async (req: Request) => {
     return json({ success: false, error: partnerError.message }, 500);
   }
 
-  if (!partner || partner.tipo !== 'Aluno') {
+  if (!partner) {
+    return json({ success: false, error: 'Parceiro não encontrado.' }, 404);
+  }
+
+  const canManagePartner = await isPartnerInGestorScope(admin, authorization.gestor, partner);
+  if (!canManagePartner) {
+    return json({ success: false, error: 'Você não tem permissão para gerenciar este parceiro.' }, 403);
+  }
+
+  if (action === 'delete-partner') {
+    const email = normalizeEmail(partner.email);
+    const shouldDeleteAuthUser = ['Aluno', 'Professor'].includes(partner.tipo) && Boolean(email);
+    let authUserDeleted = false;
+
+    if (shouldDeleteAuthUser) {
+      if (email === authorization.gestorEmail) {
+        return json({
+          success: false,
+          error: 'Não é possível excluir o usuário de autenticação da sessão atual. Use outro administrador para esta remoção.',
+        }, 400);
+      }
+
+      let authUser = null;
+      try {
+        authUser = await findAuthUserByEmail(admin, email);
+      } catch (error) {
+        return json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Não foi possível localizar o usuário no Supabase Auth.',
+        }, 500);
+      }
+
+      if (authUser?.id) {
+        const { error: deleteAuthError } = await admin.auth.admin.deleteUser(authUser.id);
+        if (deleteAuthError) {
+          return json({
+            success: false,
+            error: deleteAuthError.message || 'Não foi possível excluir o usuário no Supabase Auth.',
+          }, 500);
+        }
+        authUserDeleted = true;
+      }
+    }
+
+    const { error: deletePartnerError } = await admin
+      .from('parceiros')
+      .delete()
+      .eq('id', partner.id);
+
+    if (deletePartnerError) {
+      return json({
+        success: false,
+        error: deletePartnerError.message || 'Não foi possível excluir o parceiro.',
+      }, 500);
+    }
+
+    return json({
+      success: true,
+      action: 'delete-partner',
+      partnerDeleted: true,
+      authUserDeleted,
+      message: shouldDeleteAuthUser
+        ? authUserDeleted
+          ? 'Parceiro e usuário de autenticação excluídos com sucesso.'
+          : 'Parceiro excluído. Nenhum usuário correspondente foi encontrado no Supabase Auth.'
+        : 'Parceiro excluído com sucesso.',
+    });
+  }
+
+  if (partner.tipo !== 'Aluno') {
     return json({ success: false, error: 'Só é possível enviar convite para alunos.' }, 400);
   }
 

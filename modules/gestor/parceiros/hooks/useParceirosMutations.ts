@@ -151,12 +151,12 @@ export const useParceirosMutations = ({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => parceirosService.delete(id),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       invalidatePartners();
-      toast.success('Parceiro excluído!', 'O registro foi removido com sucesso.');
+      toast.success('Parceiro excluído!', result?.message || 'O registro foi removido com sucesso.');
       setDeletingParceiro(null);
     },
-    onError: () => toast.error('Erro ao excluir', 'Não foi possível remover o registro.')
+    onError: (error: any) => toast.error('Erro ao excluir', error?.message || 'Não foi possível remover o registro.')
   });
 
   return {

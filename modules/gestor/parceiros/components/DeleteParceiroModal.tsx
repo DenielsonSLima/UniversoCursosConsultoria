@@ -23,6 +23,7 @@ const DeleteParceiroModal: React.FC<DeleteParceiroModalProps> = ({
         <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight mb-2">Excluir Parceiro?</h3>
         <p className="text-sm text-slate-500 mb-7 leading-relaxed">
           O registro de <strong>{parceiro.nome}</strong> será removido permanentemente.
+          {['Aluno', 'Professor'].includes(parceiro.tipo) && ' O usuário de autenticação vinculado ao e-mail também será excluído.'}
         </p>
         <div className="flex gap-3 w-full">
           <button

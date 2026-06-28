@@ -147,7 +147,13 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
         {activeTab === 'docs' && <ParceiroAlunoDocumentos alunoId={alunoData.id} />}
         {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro alunoId={alunoData.id} />}
         {activeTab === 'secretaria' && <ParceiroAlunoSecretaria alunoId={alunoData.id} />}
-        {activeTab === 'acesso' && <ParceiroAcesso email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`} />}
+        {activeTab === 'acesso' && (
+          <ParceiroAcesso
+            parceiroId={alunoData.id}
+            tipo="Aluno"
+            email={alunoData.email || `${alunoData.nome.toLowerCase().replace(/\s/g, '.')}@email.com`}
+          />
+        )}
       </div>
 
       {isFichaOpen && (

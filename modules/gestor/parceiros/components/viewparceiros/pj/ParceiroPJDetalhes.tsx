@@ -65,13 +65,13 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
 
   const deleteMutation = useMutation({
     mutationFn: () => parceirosService.delete(pjInicial.id),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      toast.success('Parceiro excluído!', 'O registro foi removido com sucesso.');
+      toast.success('Parceiro excluído!', result?.message || 'O registro foi removido com sucesso.');
       setTimeout(() => onBack(), 1200);
     },
-    onError: () => {
-      toast.error('Erro ao excluir', 'Não foi possível remover o registro.');
+    onError: (error: any) => {
+      toast.error('Erro ao excluir', error?.message || 'Não foi possível remover o registro.');
     },
   });
 

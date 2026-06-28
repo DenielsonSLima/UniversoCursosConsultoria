@@ -2,6 +2,7 @@
 
 import { supabase } from '../../../lib/supabase';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
+import { portalActivationService } from './portal-activation.service';
 
 
 function validateAlunoProfessorIdentity(data: any) {
@@ -283,17 +284,7 @@ export const parceirosService = {
   },
 
   async delete(id: string) {
-    const { error } = await supabase
-      .from('parceiros')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      console.error('Erro ao deletar parceiro:', error);
-      throw error;
-    }
-    
-    return true;
+    return portalActivationService.deletePartner(id);
   },
 
   // Documentos Métodos

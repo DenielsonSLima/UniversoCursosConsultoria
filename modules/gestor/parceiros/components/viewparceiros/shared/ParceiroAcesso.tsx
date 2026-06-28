@@ -1,16 +1,60 @@
 // File: modules/gestor/parceiros/components/viewparceiros/shared/ParceiroAcesso.tsx
 
 import React, { useState } from 'react';
-import { KeyRound, Mail, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, KeyRound, Loader2, Mail, ShieldCheck, Unlink2 } from 'lucide-react';
+import GoogleLogo from '../../../../../shared/auth/GoogleLogo';
+import { portalActivationService } from '../../../portal-activation.service';
 
 interface ParceiroAcessoProps {
+  parceiroId: string;
   email: string;
+  tipo?: 'Aluno' | 'Professor';
 }
 
-const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({ email }) => {
+const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({ parceiroId, email, tipo = 'Aluno' }) => {
+  const queryClient = useQueryClient();
   const [novoEmail, setNovoEmail] = useState(email);
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [googleHint, setGoogleHint] = useState('');
+
+  React.useEffect(() => {
+    setNovoEmail(email);
+  }, [email]);
+
+  const googleStatusQuery = useQuery({
+    queryKey: ['partner-google-identity-status', parceiroId],
+    queryFn: () => portalActivationService.getPartnerGoogleIdentityStatus(parceiroId),
+    enabled: Boolean(parceiroId),
+    staleTime: 15_000,
+  });
+
+  const googleStatus = googleStatusQuery.data;
+  const googleLinked = Boolean(googleStatus?.google_linked);
+
+  const unlinkGoogleMutation = useMutation({
+    mutationFn: () => portalActivationService.unlinkPartnerGoogleIdentity(parceiroId),
+    onSuccess: (message) => {
+      setGoogleHint(message);
+      queryClient.invalidateQueries({ queryKey: ['partner-google-identity-status', parceiroId] });
+    },
+    onError: (error: any) => {
+      const message = error?.message || 'Não foi possível desvincular o Google.';
+      setGoogleHint(message);
+      alert(message);
+    },
+  });
+
+  const googleDescription = (() => {
+    if (googleStatusQuery.isLoading) return 'Verificando vínculo Google...';
+    if (googleStatusQuery.error) return googleStatusQuery.error instanceof Error ? googleStatusQuery.error.message : 'Não foi possível verificar o vínculo Google.';
+    if (googleHint) return googleHint;
+    if (!googleStatus?.email) return 'Este cadastro ainda não possui e-mail de login informado.';
+    if (!googleStatus.has_auth_user) return 'Nenhum usuário de autenticação foi encontrado para este e-mail.';
+    if (googleLinked) return `Google vinculado${googleStatus.google_email ? ` em ${googleStatus.google_email}` : ''}.`;
+    return `Nenhum Google vinculado para este ${tipo.toLowerCase()}.`;
+  })();
   
   return (
     <div className="space-y-8 animate-fadeIn max-w-3xl">
@@ -43,6 +87,37 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({ email }) => {
                   </div>
                   <button className="px-6 py-3 bg-[#001a33] text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-900 transition-colors shrink-0">
                       Atualizar E-mail
+                  </button>
+              </div>
+          </div>
+
+          <div className={`p-6 border rounded-2xl ${googleLinked ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-3">
+                      <div className={`w-11 h-11 rounded-2xl flex shrink-0 items-center justify-center ${googleLinked ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                          {googleLinked ? <CheckCircle2 size={20} /> : <GoogleLogo className="h-5 w-5" />}
+                      </div>
+                      <div>
+                          <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-1">
+                              Login com Google
+                          </h4>
+                          <p className="text-xs font-medium leading-relaxed text-slate-500">
+                              {googleDescription}
+                          </p>
+                      </div>
+                  </div>
+                  <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Deseja desvincular a conta Google deste ${tipo.toLowerCase()}?`)) {
+                          unlinkGoogleMutation.mutate();
+                        }
+                      }}
+                      disabled={!googleLinked || unlinkGoogleMutation.isPending || googleStatusQuery.isLoading}
+                      className="px-6 py-3 bg-white border border-red-100 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center justify-center gap-2"
+                  >
+                      {unlinkGoogleMutation.isPending ? <Loader2 className="animate-spin" size={14} /> : <Unlink2 size={14} />}
+                      Desvincular Google
                   </button>
               </div>
           </div>
