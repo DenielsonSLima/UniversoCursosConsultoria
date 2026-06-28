@@ -29,7 +29,9 @@ const GoogleIdentityCard: React.FC<GoogleIdentityCardProps> = ({ tone = 'blue' }
   const accent = tone === 'purple' ? 'purple' : 'blue';
   const pendingCardClass = accent === 'purple' ? 'border-purple-100 bg-purple-50' : 'border-blue-100 bg-blue-50';
   const pendingIconClass = accent === 'purple' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
-  const pendingButtonClass = accent === 'purple' ? 'bg-purple-650 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700';
+  const pendingButtonClass = accent === 'purple'
+    ? 'bg-[#001a33] hover:bg-purple-700'
+    : 'bg-blue-600 hover:bg-blue-700';
 
   const { data, isLoading } = useQuery({
     queryKey: ['auth-identities-google'],
@@ -97,7 +99,7 @@ const GoogleIdentityCard: React.FC<GoogleIdentityCardProps> = ({ tone = 'blue' }
           type="button"
           onClick={handleLinkGoogle}
           disabled={isLoading || googleLinked || linkingBlocked}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
             googleLinked ? 'bg-emerald-600' : pendingButtonClass
           }`}
         >

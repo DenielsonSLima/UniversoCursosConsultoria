@@ -20,6 +20,7 @@ interface FileExplorerProps {
   onNewUploadClick?: (pastaId: string | null) => void;
   readOnly?: boolean;
   allowedAudiences?: TargetAudience[];
+  restrictPermissionsToTeacherScope?: boolean;
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ 
@@ -27,7 +28,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   onPreviewClick,
   onNewUploadClick,
   readOnly = false,
-  allowedAudiences
+  allowedAudiences,
+  restrictPermissionsToTeacherScope = false
 }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
@@ -503,6 +505,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         isOpen={!!permissionsDoc}
         onClose={() => setPermissionsDoc(null)}
         document={permissionsDoc}
+        teacherScopeOnly={restrictPermissionsToTeacherScope}
         onSave={() => {
           invalidateDocuments();
           setPermissionsDoc(null);

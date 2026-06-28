@@ -51,17 +51,20 @@ export const secretariaDocumentosService = {
     poloId: string,
     technicalOnly: boolean,
     completedOnly = false,
-    activeOnly = false
+    activeEnrollmentOnly = false,
+    activeTurmaOnly = false,
+    enrollmentStatuses: string[] = []
   ): Promise<SecretariaMatriculaResumo[]> {
     let query = supabase
       .from('matriculas')
-      .select('id, status, turma_id, turmas!inner(id, nome, codigo, polo_id, cursos!inner(nome, modalidade))')
+      .select('id, status, data_matricula, turma_id, turmas!inner(id, nome, codigo, status, polo_id, cursos!inner(nome, modalidade))')
       .eq('aluno_id', alunoId)
       .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
-    if (activeOnly) query = query.eq('status', 'ATIVO');
-    if (activeOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (activeEnrollmentOnly) query = query.eq('status', 'ATIVO');
+    if (activeTurmaOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (enrollmentStatuses.length) query = query.in('status', enrollmentStatuses);
     if (completedOnly) query = query.eq('status', 'CONCLUIDO');
 
     const { data, error } = await query.order('data_matricula', { ascending: false });
@@ -70,6 +73,7 @@ export const secretariaDocumentosService = {
     return (data || []).map((matricula: any) => ({
       id: matricula.id,
       status: matricula.status,
+      dataMatricula: matricula.data_matricula || null,
       turmaId: matricula.turma_id,
       turmaNome: matricula.turmas?.nome || '',
       turmaCodigo: matricula.turmas?.codigo || '',
@@ -82,16 +86,16 @@ export const secretariaDocumentosService = {
   async getTurmas(
     poloId: string,
     technicalOnly: boolean,
-    _activeOnly = false
+    activeTurmaOnly = false
   ): Promise<SecretariaTurmaResumo[]> {
     let query = supabase
       .from('turmas')
       .select('id, nome, codigo, turno, status, cursos!inner(nome, modalidade)')
       .or(`polo_id.eq.${poloId},polo_id.is.null`)
-      .eq('status', 'EM_ANDAMENTO')
       .order('nome', { ascending: true });
 
     if (technicalOnly) query = query.eq('cursos.modalidade', 'TECNICO');
+    if (activeTurmaOnly) query = query.eq('status', 'EM_ANDAMENTO');
 
     const { data, error } = await query;
     if (error) throw error;
@@ -129,8 +133,11 @@ export const secretariaDocumentosService = {
     matriculaId?: string;
     turmaId?: string;
     technicalOnly?: boolean;
-    activeOnly?: boolean;
+    activeEnrollmentOnly?: boolean;
+    activeTurmaOnly?: boolean;
     completedOnly?: boolean;
+    enrollmentStatuses?: string[];
+    referencePeriod?: string;
   }) {
     let query = supabase
       .from('matriculas')
@@ -144,11 +151,12 @@ export const secretariaDocumentosService = {
     if (input.modo === 'individual') {
       query = query.eq('id', input.matriculaId!);
     } else {
-      query = query.eq('turma_id', input.turmaId!).eq('status', 'ATIVO');
+      query = query.eq('turma_id', input.turmaId!);
     }
     if (input.technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
-    if (input.activeOnly) query = query.eq('status', 'ATIVO');
-    if (input.activeOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (input.activeEnrollmentOnly) query = query.eq('status', 'ATIVO');
+    if (input.activeTurmaOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
+    if (input.enrollmentStatuses?.length) query = query.in('status', input.enrollmentStatuses);
     if (input.completedOnly) query = query.eq('status', 'CONCLUIDO');
 
     const { data: matriculas, error: matriculasError } = await query;
@@ -161,8 +169,11 @@ export const secretariaDocumentosService = {
           type: input.documento,
           enrollmentId: matricula.id,
           issuedBy: input.context.userId,
+          referencePeriod: input.referencePeriod,
           sourceReference:
-            input.documento === 'termo_estagio'
+            input.documento === 'transferencia'
+              ? `${matricula.id}_transferencia`
+              : input.documento === 'termo_estagio'
               ? `${matricula.id}_contrato_principal`
               : undefined,
           registerReissue: true,

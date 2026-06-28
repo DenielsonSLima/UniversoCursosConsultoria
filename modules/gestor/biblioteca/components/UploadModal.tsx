@@ -33,10 +33,11 @@ interface UploadModalProps {
   onUpload: (data: any) => void;
   pastaId: string | null;
   teacherId: string | null;
+  restrictToTeacherScope?: boolean;
 }
 
 type WizardStep = 0 | 1 | 2 | 3;
-type AccessMode = 'PUBLICO' | 'ALUNOS' | 'PROFESSORES' | 'CURSOS' | 'TURMAS' | 'INTERNO';
+type AccessMode = 'PUBLICO' | 'ALUNOS' | 'PROFESSORES' | 'CURSOS' | 'TURMAS' | 'INTERNO' | 'PRIVADO';
 type AvailabilityMode = 'FREE' | 'PERIOD';
 
 const UploadModal: React.FC<UploadModalProps> = ({
@@ -44,7 +45,8 @@ const UploadModal: React.FC<UploadModalProps> = ({
   onClose,
   onUpload,
   pastaId,
-  teacherId
+  teacherId,
+  restrictToTeacherScope = false
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
   const [cursos, setCursos] = useState<any[]>([]);
@@ -73,22 +75,38 @@ const UploadModal: React.FC<UploadModalProps> = ({
 
   const [searchCurso, setSearchCurso] = useState('');
   const [searchTurma, setSearchTurma] = useState('');
+  const isProfessorUpload = Boolean(restrictToTeacherScope && teacherId);
 
   useEffect(() => {
     polosService.getAll().then(setPolos);
+    if (isProfessorUpload && teacherId) {
+      bibliotecaService.getTeacherActiveTurmas(teacherId).then((teacherTurmas) => {
+        setTurmas(teacherTurmas);
+        const cursoIds = Array.from(new Set(teacherTurmas.map((turma: any) => turma.curso_id).filter(Boolean)));
+        if (cursoIds.length === 0) {
+          setCursos([]);
+          return;
+        }
+        bibliotecaService.getCursos().then((allCursos) => {
+          setCursos(allCursos.filter((curso: any) => cursoIds.includes(curso.id)));
+        });
+      });
+      return;
+    }
+
     bibliotecaService.getCursos().then(setCursos);
     bibliotecaService.getTurmas().then(setTurmas);
-  }, []);
+  }, [teacherId, isProfessorUpload]);
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0);
-      setAccessMode('ALUNOS');
+      setAccessMode(isProfessorUpload ? 'PRIVADO' : 'ALUNOS');
       setAvailabilityMode('FREE');
       setFormData({
         title: '',
         description: '',
-        targetAudience: 'ALUNOS',
+        targetAudience: isProfessorUpload ? 'INTERNO' : 'ALUNOS',
         scope: 'GLOBAL',
         poloId: '',
         file: null
@@ -101,7 +119,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
       setSearchCurso('');
       setSearchTurma('');
     }
-  }, [isOpen]);
+  }, [isOpen, isProfessorUpload]);
 
   useEffect(() => {
     if (!formData.file) {
@@ -146,7 +164,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
   const filteredTurmas = turmas.filter(t => {
     const turmaNome = `${t.nome || ''} ${t.codigo || ''}`.toLowerCase();
     const matchesSearch = turmaNome.includes(searchTurma.toLowerCase());
-    const matchesCourse = selectedCursos.length === 0 || selectedCursos.includes(t.curso_id);
+    const matchesCourse = isProfessorUpload || selectedCursos.length === 0 || selectedCursos.includes(t.curso_id);
     return matchesSearch && matchesCourse;
   });
 
@@ -173,7 +191,20 @@ const UploadModal: React.FC<UploadModalProps> = ({
     title: string;
     description: string;
     icon: React.ElementType;
-  }> = [
+  }> = isProfessorUpload ? [
+    {
+      mode: 'PRIVADO',
+      title: 'Somente para mim',
+      description: 'Arquivo privado no seu repositório docente.',
+      icon: Lock
+    },
+    {
+      mode: 'TURMAS',
+      title: 'Turmas vinculadas',
+      description: 'Libere para alunos das turmas ativas em que você leciona.',
+      icon: Layers
+    }
+  ] : [
     {
       mode: 'PUBLICO',
       title: 'Publico para todos',
@@ -218,12 +249,17 @@ const UploadModal: React.FC<UploadModalProps> = ({
     const targetAudience: TargetAudience =
       mode === 'PUBLICO' ? 'TODOS' :
       mode === 'PROFESSORES' ? 'PROFESSORES' :
-      mode === 'INTERNO' ? 'INTERNO' :
+      mode === 'INTERNO' || mode === 'PRIVADO' ? 'INTERNO' :
       'ALUNOS';
 
-    setFormData(prev => ({ ...prev, targetAudience }));
+    setFormData(prev => ({
+      ...prev,
+      targetAudience,
+      scope: isProfessorUpload ? 'GLOBAL' : prev.scope,
+      poloId: isProfessorUpload ? '' : prev.poloId
+    }));
 
-    if (mode === 'PUBLICO' || mode === 'ALUNOS' || mode === 'PROFESSORES' || mode === 'INTERNO') {
+    if (mode === 'PUBLICO' || mode === 'ALUNOS' || mode === 'PROFESSORES' || mode === 'INTERNO' || mode === 'PRIVADO') {
       setSelectedCursos([]);
       setSelectedTurmas([]);
     }
@@ -316,6 +352,13 @@ const UploadModal: React.FC<UploadModalProps> = ({
       if (accessMode === 'TURMAS' && selectedTurmas.length === 0) {
         return 'Selecione ao menos uma turma.';
       }
+      if (isProfessorUpload && accessMode === 'TURMAS') {
+        const allowedIds = new Set(turmas.map((turma) => turma.id));
+        const invalidSelection = selectedTurmas.some((turmaId) => !allowedIds.has(turmaId));
+        if (invalidSelection) {
+          return 'Selecione apenas turmas ativas vinculadas ao professor.';
+        }
+      }
     }
 
     if (step === 2 && availabilityMode === 'PERIOD') {
@@ -356,6 +399,15 @@ const UploadModal: React.FC<UploadModalProps> = ({
 
     const { fileType } = detectFileType(formData.file.name);
     const poloSelected = polos.find(p => p.id === formData.poloId);
+    const selectedTeacherTurmas = isProfessorUpload
+      ? turmas.filter((turma) => selectedTurmas.includes(turma.id))
+      : [];
+    const uploadCursoIds = isProfessorUpload
+      ? Array.from(new Set(selectedTeacherTurmas.map((turma) => turma.curso_id).filter(Boolean)))
+      : selectedCursos;
+    const uploadTurmaIds = isProfessorUpload && accessMode === 'PRIVADO'
+      ? []
+      : selectedTurmas;
     const parsedDiasValidade = availabilityMode === 'PERIOD'
       ? getPeriodDays()
       : null;
@@ -370,15 +422,16 @@ const UploadModal: React.FC<UploadModalProps> = ({
         sizeBytes: formData.file.size,
         url: '',
         file: formData.file,
-        targetAudience: formData.targetAudience,
-        scope: formData.scope,
-        poloId: formData.scope === 'GLOBAL' ? null : formData.poloId || null,
-        poloName: formData.scope === 'GLOBAL' ? undefined : poloSelected?.nome,
+        targetAudience: isProfessorUpload && accessMode === 'PRIVADO' ? 'INTERNO' : formData.targetAudience,
+        scope: isProfessorUpload ? 'GLOBAL' : formData.scope,
+        poloId: isProfessorUpload || formData.scope === 'GLOBAL' ? null : formData.poloId || null,
+        poloName: isProfessorUpload || formData.scope === 'GLOBAL' ? undefined : poloSelected?.nome,
         pastaId: pastaId || null,
         teacherId: teacherId || null,
-        cursoIds: selectedCursos,
-        turmaIds: selectedTurmas,
+        cursoIds: uploadCursoIds,
+        turmaIds: uploadTurmaIds,
         disciplinaIds: [],
+        enforceTeacherScope: isProfessorUpload,
         liberacaoTipo,
         liberacaoData: availabilityMode === 'PERIOD' && liberacaoData
           ? new Date(`${liberacaoData}T00:00:00`).toISOString()
@@ -626,68 +679,77 @@ const UploadModal: React.FC<UploadModalProps> = ({
                   })}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-5">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                      <Globe size={12} /> Abrangencia
-                    </label>
-                    <select
-                      className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-500 cursor-pointer font-black uppercase text-slate-650"
-                      value={formData.scope}
-                      onChange={(e) => setFormData({ ...formData, scope: e.target.value as Scope, poloId: '' })}
-                    >
-                      <option value="GLOBAL">Todos os polos</option>
-                      <option value="POLO_ESPECIFICO">Polo especifico</option>
-                    </select>
-                  </div>
-
-                  {formData.scope === 'POLO_ESPECIFICO' && (
-                    <div className="md:col-span-2 space-y-2 animate-fadeIn">
+                {!isProfessorUpload && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-5">
+                    <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                        <MapPin size={12} /> Polo
+                        <Globe size={12} /> Abrangencia
                       </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {polos.map(p => {
-                          const isSelected = formData.poloId === p.id;
-
-                          return (
-                            <button
-                              type="button"
-                              key={p.id}
-                              onClick={() => setFormData({ ...formData, poloId: p.id })}
-                              aria-pressed={isSelected}
-                              className={`min-h-20 text-left px-4 py-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                                isSelected
-                                  ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
-                                  : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50 hover:border-slate-300'
-                              }`}
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-xs font-black uppercase tracking-wider truncate">
-                                  {p.nome}
-                                </span>
-                                <span className="block text-[11px] font-bold text-slate-500 mt-1 truncate">
-                                  {getPoloMeta(p)}
-                                </span>
-                              </span>
-                              {isSelected && <Check size={16} className="shrink-0 text-blue-600" />}
-                            </button>
-                          );
-                        })}
-
-                        {polos.length === 0 && (
-                          <div className="md:col-span-2 rounded-2xl border border-dashed border-slate-250 bg-slate-50 p-5 text-center text-[11px] font-bold uppercase text-slate-400">
-                            Nenhum polo encontrado.
-                          </div>
-                        )}
-                      </div>
+                      <select
+                        className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-blue-500 cursor-pointer font-black uppercase text-slate-650"
+                        value={formData.scope}
+                        onChange={(e) => setFormData({ ...formData, scope: e.target.value as Scope, poloId: '' })}
+                      >
+                        <option value="GLOBAL">Todos os polos</option>
+                        <option value="POLO_ESPECIFICO">Polo especifico</option>
+                      </select>
                     </div>
-                  )}
-                </div>
+
+                    {formData.scope === 'POLO_ESPECIFICO' && (
+                      <div className="md:col-span-2 space-y-2 animate-fadeIn">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                          <MapPin size={12} /> Polo
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {polos.map(p => {
+                            const isSelected = formData.poloId === p.id;
+
+                            return (
+                              <button
+                                type="button"
+                                key={p.id}
+                                onClick={() => setFormData({ ...formData, poloId: p.id })}
+                                aria-pressed={isSelected}
+                                className={`min-h-20 text-left px-4 py-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                                  isSelected
+                                    ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
+                                    : 'bg-white border-slate-200 text-slate-650 hover:bg-slate-50 hover:border-slate-300'
+                                }`}
+                              >
+                                <span className="min-w-0">
+                                  <span className="block text-xs font-black uppercase tracking-wider truncate">
+                                    {p.nome}
+                                  </span>
+                                  <span className="block text-[11px] font-bold text-slate-500 mt-1 truncate">
+                                    {getPoloMeta(p)}
+                                  </span>
+                                </span>
+                                {isSelected && <Check size={16} className="shrink-0 text-blue-600" />}
+                              </button>
+                            );
+                          })}
+
+                          {polos.length === 0 && (
+                            <div className="md:col-span-2 rounded-2xl border border-dashed border-slate-250 bg-slate-50 p-5 text-center text-[11px] font-bold uppercase text-slate-400">
+                              Nenhum polo encontrado.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isProfessorUpload && accessMode === 'PRIVADO' && (
+                  <div className="rounded-2xl border border-slate-150 bg-slate-50 p-5 text-xs font-bold text-slate-600 leading-relaxed">
+                    Este documento ficará disponível apenas no seu repositório docente. Para liberar aos alunos, escolha a opção de turmas vinculadas.
+                  </div>
+                )}
 
                 {(accessMode === 'CURSOS' || accessMode === 'TURMAS') && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-fadeIn">
-                    <div className="space-y-3">
+                  <div className={`grid grid-cols-1 ${isProfessorUpload ? '' : 'lg:grid-cols-2'} gap-5 animate-fadeIn`}>
+                    {!isProfessorUpload && (
+                      <div className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <label className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                           <GraduationCap size={14} className="text-blue-500" /> Cursos ({selectedCursos.length})
@@ -710,6 +772,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
                       </div>
                       {renderSelectionList('curso', filteredCursos, selectedCursos, toggleCurso)}
                     </div>
+                    )}
 
                     {accessMode === 'TURMAS' && (
                       <div className="space-y-3">
@@ -727,12 +790,17 @@ const UploadModal: React.FC<UploadModalProps> = ({
                           <Search size={12} className="text-slate-400 mr-2 shrink-0" />
                           <input
                             type="text"
-                            placeholder={selectedCursos.length > 0 ? 'Buscar turma nos cursos selecionados...' : 'Buscar turma...'}
+                            placeholder={isProfessorUpload ? 'Buscar turma vinculada...' : selectedCursos.length > 0 ? 'Buscar turma nos cursos selecionados...' : 'Buscar turma...'}
                             value={searchTurma}
                             onChange={(e) => setSearchTurma(e.target.value)}
                             className="bg-transparent border-none outline-none w-full font-medium"
                           />
                         </div>
+                        {isProfessorUpload && turmas.length === 0 && (
+                          <div className="rounded-2xl border border-dashed border-slate-250 bg-slate-50 p-5 text-center text-[11px] font-bold uppercase text-slate-400">
+                            Nenhuma turma ativa vinculada ao professor.
+                          </div>
+                        )}
                         {renderSelectionList('turma', filteredTurmas, selectedTurmas, toggleTurma)}
                       </div>
                     )}

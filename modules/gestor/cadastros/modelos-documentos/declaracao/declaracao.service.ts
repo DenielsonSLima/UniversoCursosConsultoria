@@ -93,14 +93,26 @@ export const declaracaoService = {
       const { data, error } = await supabase
         .from('documentos_templates')
         .select('conteudo')
-        .eq('id', `declaracao_${poloId}`)
+        .eq('id', 'declaracao')
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
         return data.conteudo;
       }
+
+      if (poloId) {
+        const { data: legacyData, error: legacyError } = await supabase
+          .from('documentos_templates')
+          .select('conteudo')
+          .eq('id', `declaracao_${poloId}`)
+          .maybeSingle();
+
+        if (!legacyError && legacyData?.conteudo) {
+          return legacyData.conteudo;
+        }
+      }
     } catch (e) {
-      console.error(`[declaracaoService] Erro ao buscar template declaracao_${poloId}:`, e);
+      console.error('[declaracaoService] Erro ao buscar template declaracao:', e);
     }
 
     return JSON.parse(JSON.stringify(defaultTemplate));
@@ -111,7 +123,7 @@ export const declaracaoService = {
       const { error } = await supabase
         .from('documentos_templates')
         .upsert({
-          id: `declaracao_${poloId}`,
+          id: 'declaracao',
           conteudo: data,
           updated_at: new Date().toISOString()
         });
@@ -119,7 +131,7 @@ export const declaracaoService = {
       if (error) throw error;
       return true;
     } catch (e) {
-      console.error(`[declaracaoService] Erro ao salvar template declaracao_${poloId}:`, e);
+      console.error('[declaracaoService] Erro ao salvar template declaracao:', e);
       return false;
     }
   },

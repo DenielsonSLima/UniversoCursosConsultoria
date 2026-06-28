@@ -22,9 +22,13 @@ export interface SecretariaDocumentoDefinition {
   softAccent: string;
   technicalOnly?: boolean;
   activeOnly?: boolean;
+  activeEnrollmentOnly?: boolean;
+  activeTurmaOnly?: boolean;
   completedOnly?: boolean;
+  enrollmentStatuses?: string[];
   allowBatch?: boolean;
   academicPreview?: 'boletim_tecnico' | 'atestado_conclusao_tecnico';
+  referenceMode?: 'irpf_annual';
 }
 
 export interface SecretariaContext {
@@ -44,6 +48,7 @@ export interface SecretariaAlunoResumo {
 export interface SecretariaMatriculaResumo {
   id: string;
   status: string;
+  dataMatricula: string | null;
   turmaId: string;
   turmaNome: string;
   turmaCodigo: string;

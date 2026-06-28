@@ -45,6 +45,39 @@ const normalizeStringArray = (value: unknown): string[] => {
     .filter((item) => item.length > 0);
 };
 
+const resolvePartnerPoloScope = (selectedPartner: any) => {
+  const arrayPoloIds = normalizeStringArray(selectedPartner?.polo_ids);
+  const legacyPoloId = typeof selectedPartner?.polo_id === 'string'
+    ? selectedPartner.polo_id.trim()
+    : null;
+
+  if (arrayPoloIds.length > 0) {
+    return {
+      activePoloId: arrayPoloIds[0],
+      poloIds: arrayPoloIds,
+    };
+  }
+
+  if (legacyPoloId) {
+    return {
+      activePoloId: legacyPoloId,
+      poloIds: [legacyPoloId],
+    };
+  }
+
+  if (selectedPartner?.tipo === 'Professor') {
+    return {
+      activePoloId: MATRIZ_POLO_ID,
+      poloIds: [MATRIZ_POLO_ID],
+    };
+  }
+
+  return {
+    activePoloId: null,
+    poloIds: [],
+  };
+};
+
 const getAuthenticatedEmail = async () => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user?.email) return null;
@@ -126,7 +159,7 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
 const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string): Promise<PortalAuthProfile | null> => {
   if (!selectedPartner || !isActiveStatus(selectedPartner.status)) return null;
 
-  const poloIds = normalizeStringArray(selectedPartner.polo_ids);
+  const { activePoloId, poloIds } = resolvePartnerPoloScope(selectedPartner);
   let acceptedTermsAt: string | null = null;
   let acceptedTermsVersion: string | null = null;
   let requiresPasswordReset = false;
@@ -158,7 +191,7 @@ const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string):
     nome: selectedPartner.nome,
     email: selectedPartner.email || fallbackEmail,
     tipo: selectedPartner.tipo as PortalRole,
-    activePoloId: poloIds[0] || selectedPartner.polo_id || null,
+    activePoloId,
     poloIds,
     status: selectedPartner.status || null,
     acceptedTermsAt,

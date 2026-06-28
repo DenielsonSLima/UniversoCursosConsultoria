@@ -36,6 +36,11 @@ import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/
 import { carteirinhaService } from '../../cadastros/modelos-documentos/carteirinha/carteirinha.service';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
 import { declaracaoService } from '../../cadastros/modelos-documentos/declaracao/declaracao.service';
+import { declaracaoFrequenciaService } from '../../cadastros/modelos-documentos/declaracao-frequencia/declaracao-frequencia.service';
+import { irpfService } from '../../cadastros/modelos-documentos/irpf/irpf.service';
+import { boletimService } from '../../cadastros/modelos-documentos/boletim/boletim.service';
+import { historicoService } from '../../cadastros/modelos-documentos/historico/historico.service';
+import { transferenciaService } from '../../cadastros/modelos-documentos/transferencia/transferencia.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
@@ -316,6 +321,16 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         template = await crachaService.getTemplate();
       } else if (emission.documento === 'declaracao_matricula') {
         template = await declaracaoService.getTemplate(poloId);
+      } else if (emission.documento === 'declaracao_frequencia') {
+        template = await declaracaoFrequenciaService.getTemplate(poloId);
+      } else if (emission.documento === 'declaracao_irpf') {
+        template = await irpfService.getTemplate(poloId);
+      } else if (emission.documento === 'boletim') {
+        template = await boletimService.getTemplate('TECNICO');
+      } else if (emission.documento === 'historico_escolar') {
+        template = await historicoService.getTemplate(poloId);
+      } else if (emission.documento === 'transferencia') {
+        template = await transferenciaService.getTemplate(poloId);
       } else if (isCertificateDocument(emission.documento)) {
         const certificate = await fetchCertificateForEmission(emission);
         setCertificatePreview(certificate);

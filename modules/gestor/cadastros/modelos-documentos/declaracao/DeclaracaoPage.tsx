@@ -22,6 +22,7 @@ const DeclaracaoPage: React.FC = () => {
       <DeclaracaoEditor 
         polo={selectedPolo} 
         onBack={() => setSelectedPolo(null)} 
+        scopeLabel="Todos os polos"
       />
     );
   }
@@ -40,7 +41,7 @@ const DeclaracaoPage: React.FC = () => {
                 Declaração de Matrícula
             </h2>
             <p className="text-slate-500 font-medium mt-1">
-                Configure os modelos de declaração (Cursando) para cada unidade.
+                Configure um modelo único; os dados do polo são preenchidos automaticamente na emissão.
             </p>
         </div>
       </div>
@@ -48,6 +49,9 @@ const DeclaracaoPage: React.FC = () => {
       <DeclaracaoList 
         onSelectPolo={setSelectedPolo} 
         onConfigureQr={() => setIsConfiguringQr(true)}
+        sharedTemplate
+        sharedTitle="Declaração de Matrícula / Cursando"
+        accent="emerald"
       />
     </div>
   );

@@ -24,6 +24,8 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
+const matrizPoloId = '44444444-4444-4444-4444-444444444444';
+
 const accounts = [
   {
     tipo: 'Aluno',
@@ -35,9 +37,15 @@ const accounts = [
   {
     tipo: 'Professor',
     email: 'professor.ead@universo.com',
-    password: 'ead-prof-2026',
+    password: '1234',
     profileTable: 'parceiros',
-    profile: { nome: 'Professor EAD (teste)', tipo: 'Professor', status: 'ATIVO' },
+    profile: {
+      nome: 'Professor EAD (teste)',
+      tipo: 'Professor',
+      status: 'ATIVO',
+      polo_id: matrizPoloId,
+      polo_ids: [matrizPoloId],
+    },
   },
   {
     tipo: 'Gestor',

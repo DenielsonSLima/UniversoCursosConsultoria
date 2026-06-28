@@ -25,4 +25,4 @@ export const historicoService = createDocumentTemplateService('historico', {
   ],
   validityDays: 365,
   v: 2
-});
+}, { sharedTemplate: true });

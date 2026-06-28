@@ -27,6 +27,7 @@ const DeclaracaoFrequenciaPage: React.FC = () => {
         documentTitle="Declaração de Frequência"
         validationPrefix="FREQ"
         onBack={() => setSelectedPolo(null)}
+        scopeLabel="Todos os polos"
       />
     );
   }
@@ -42,13 +43,16 @@ const DeclaracaoFrequenciaPage: React.FC = () => {
           Declaração de Frequência
         </h2>
         <p className="mt-1 font-medium text-slate-500">
-          Configure o texto e a apresentação da declaração de frequência de cada unidade.
+          Configure um modelo único; os dados do polo são preenchidos automaticamente na emissão.
         </p>
       </div>
 
       <DeclaracaoList
         onSelectPolo={setSelectedPolo}
         onConfigureQr={() => setIsConfiguringQr(true)}
+        sharedTemplate
+        sharedTitle="Declaração de Frequência"
+        accent="sky"
       />
     </div>
   );

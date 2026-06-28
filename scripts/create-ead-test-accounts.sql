@@ -10,7 +10,7 @@
 --
 -- Acessos:
 --   Aluno     : aluno.ead@universo.com / ead-aluno-2026
---   Professor : professor.ead@universo.com / ead-prof-2026
+--   Professor : professor.ead@universo.com / 1234
 --   Gestor    : gestor.ead@universo.com / ead-gestor-2026
 -- =========================================================
 
@@ -79,7 +79,7 @@ BEGIN
       'authenticated',
       'authenticated',
       'professor.ead@universo.com',
-      crypt('ead-prof-2026', gen_salt('bf', 10)),
+      crypt('1234', gen_salt('bf', 10)),
       now(),
       '',
       '',
@@ -166,15 +166,17 @@ BEGIN
       now()
     );
 
-  INSERT INTO public.parceiros (id, nome, email, tipo, status)
+  INSERT INTO public.parceiros (id, nome, email, tipo, status, polo_id, polo_ids)
   VALUES
-    (v_aluno_user_id, 'Aluno EAD (teste)', 'aluno.ead@universo.com', 'Aluno', 'ATIVO'),
-    (v_professor_user_id, 'Professor EAD (teste)', 'professor.ead@universo.com', 'Professor', 'ATIVO')
+    (v_aluno_user_id, 'Aluno EAD (teste)', 'aluno.ead@universo.com', 'Aluno', 'ATIVO', NULL, '{}'),
+    (v_professor_user_id, 'Professor EAD (teste)', 'professor.ead@universo.com', 'Professor', 'ATIVO', '44444444-4444-4444-4444-444444444444', ARRAY['44444444-4444-4444-4444-444444444444']::uuid[])
   ON CONFLICT (id) DO UPDATE
   SET nome = EXCLUDED.nome,
       email = EXCLUDED.email,
       tipo = EXCLUDED.tipo,
-      status = EXCLUDED.status;
+      status = EXCLUDED.status,
+      polo_id = EXCLUDED.polo_id,
+      polo_ids = EXCLUDED.polo_ids;
 
   INSERT INTO public.usuarios_sistema (id, nome, email, perfil, status, context)
   VALUES (v_gestor_user_id, 'Gestor EAD (teste)', 'gestor.ead@universo.com', 'Gestor', 'ATIVO', 'global')

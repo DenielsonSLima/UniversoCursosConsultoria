@@ -19,12 +19,22 @@ export const declaracaoFrequenciaService = {
       const { data, error } = await supabase
         .from('documentos_templates')
         .select('conteudo')
-        .eq('id', `declaracao_frequencia_${poloId}`)
+        .eq('id', 'declaracao_frequencia')
         .maybeSingle();
 
       if (!error && data?.conteudo) return data.conteudo;
+
+      if (poloId) {
+        const { data: legacyData, error: legacyError } = await supabase
+          .from('documentos_templates')
+          .select('conteudo')
+          .eq('id', `declaracao_frequencia_${poloId}`)
+          .maybeSingle();
+
+        if (!legacyError && legacyData?.conteudo) return legacyData.conteudo;
+      }
     } catch (error) {
-      console.error(`[declaracaoFrequenciaService] Erro ao buscar template do polo ${poloId}:`, error);
+      console.error('[declaracaoFrequenciaService] Erro ao buscar template compartilhado:', error);
     }
 
     return JSON.parse(JSON.stringify(frequenciaDefaultTemplate));
@@ -35,7 +45,7 @@ export const declaracaoFrequenciaService = {
       const { error } = await supabase
         .from('documentos_templates')
         .upsert({
-          id: `declaracao_frequencia_${poloId}`,
+          id: 'declaracao_frequencia',
           conteudo,
           updated_at: new Date().toISOString(),
         });
@@ -43,7 +53,7 @@ export const declaracaoFrequenciaService = {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error(`[declaracaoFrequenciaService] Erro ao salvar template do polo ${poloId}:`, error);
+      console.error('[declaracaoFrequenciaService] Erro ao salvar template compartilhado:', error);
       return false;
     }
   },

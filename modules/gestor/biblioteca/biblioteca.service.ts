@@ -199,6 +199,12 @@ const assertTeacherStorageCapacity = async (teacherId: string, newFileBytes: num
   }
 };
 
+const activeClassStatuses = new Set(['EM_ANDAMENTO', 'ATIVO']);
+
+const normalizeIdList = (values?: string[] | null) => Array.from(
+  new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))
+);
+
 export const bibliotecaService = {
   // 1. Buscar Documentos
   async getDocuments(filters?: { 
@@ -381,6 +387,36 @@ export const bibliotecaService = {
     const fileSizeBytes = Number.isFinite(Number(doc.sizeBytes))
       ? Number(doc.sizeBytes)
       : (doc.file ? doc.file.size : 0);
+    const normalizedTeacherId = doc.teacherId || null;
+    let cursoIds = normalizeIdList(doc.cursoIds);
+    let turmaIds = normalizeIdList(doc.turmaIds);
+
+    if (normalizedTeacherId && doc.enforceTeacherScope) {
+      const allowedTurmas = await this.getTeacherActiveTurmas(normalizedTeacherId);
+      const allowedTurmaIds = new Set(allowedTurmas.map((turma: any) => turma.id));
+
+      if (doc.targetAudience === 'INTERNO') {
+        cursoIds = [];
+        turmaIds = [];
+      } else if (doc.targetAudience === 'ALUNOS') {
+        if (turmaIds.length === 0) {
+          throw new Error('Selecione ao menos uma turma ativa vinculada ao professor.');
+        }
+
+        const invalidTurmaIds = turmaIds.filter((turmaId) => !allowedTurmaIds.has(turmaId));
+        if (invalidTurmaIds.length > 0) {
+          throw new Error('O professor só pode publicar para turmas ativas em que possui vínculo.');
+        }
+
+        cursoIds = normalizeIdList(
+          turmaIds
+            .map((turmaId) => allowedTurmas.find((turma: any) => turma.id === turmaId)?.curso_id)
+            .filter(Boolean) as string[]
+        );
+      } else {
+        throw new Error('Professor só pode publicar documentos privados ou para turmas vinculadas ativas.');
+      }
+    }
 
     if (doc.file) {
       if (!doc.file.name?.trim()) {
@@ -389,8 +425,8 @@ export const bibliotecaService = {
       if (!isAllowedLibraryFile(doc.file)) {
         throw new Error('Formato ou tamanho de arquivo não permitido. Aceitos: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF, WEBP (até 10MB).');
       }
-      if (doc.teacherId) {
-        await assertTeacherStorageCapacity(doc.teacherId, fileSizeBytes);
+      if (normalizedTeacherId) {
+        await assertTeacherStorageCapacity(normalizedTeacherId, fileSizeBytes);
       }
       const uploaded = await uploadLibraryFile(doc.file, doc.title || 'documento');
       if (!uploaded) {
@@ -414,10 +450,10 @@ export const bibliotecaService = {
       publico_alvo: doc.targetAudience,
       abrangencia: doc.scope,
       polo_id: doc.poloId || null,
-      teacher_id: doc.teacherId || null,
+      teacher_id: normalizedTeacherId,
       author_name: doc.authorName || 'Gestor',
-      curso_ids: doc.cursoIds || [],
-      turma_ids: doc.turmaIds || [],
+      curso_ids: cursoIds,
+      turma_ids: turmaIds,
       disciplina_ids: doc.disciplinaIds || [],
       liberacao_tipo: doc.liberacaoTipo || 'IMEDIATO',
       liberacao_data: doc.liberacaoData || null,
@@ -732,6 +768,36 @@ export const bibliotecaService = {
     return data || [];
   },
 
+  async getTeacherActiveTurmas(teacherId: string): Promise<any[]> {
+    if (!teacherId) return [];
+
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('turmas_disciplinas')
+      .select('turma_id')
+      .eq('professor_id', teacherId);
+
+    if (assignmentsError) {
+      console.error('Erro ao buscar vínculos de turma do professor:', assignmentsError);
+      throw assignmentsError;
+    }
+
+    const turmaIds = normalizeIdList((assignments || []).map((item: any) => item.turma_id));
+    if (turmaIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('turmas')
+      .select('id, nome, codigo, curso_id, status, polo_id')
+      .in('id', turmaIds)
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar turmas ativas do professor:', error);
+      throw error;
+    }
+
+    return (data || []).filter((turma: any) => activeClassStatuses.has(String(turma.status || '').toUpperCase()));
+  },
+
   // 16. Buscar Disciplinas
   async getDisciplinas(): Promise<any[]> {
     const { data, error } = await supabase
@@ -752,15 +818,55 @@ export const bibliotecaService = {
   },
 
   // 17. Atualizar Permissões e Regras de Liberação do Documento
-  async updateDocumentPermissions(docId: string, data: Partial<LibraryDocument>): Promise<void> {
+  async updateDocumentPermissions(
+    docId: string,
+    data: Partial<LibraryDocument>,
+    options: { teacherScopeOnly?: boolean } = {}
+  ): Promise<void> {
+    const { data: currentDoc, error: currentDocError } = await supabase
+      .from('biblioteca_documentos')
+      .select('teacher_id')
+      .eq('id', docId)
+      .single();
+
+    if (currentDocError) {
+      console.error('Erro ao buscar documento para atualizar permissões:', currentDocError);
+      throw currentDocError;
+    }
+
+    let cursoIds = normalizeIdList(data.cursoIds);
+    let turmaIds = normalizeIdList(data.turmaIds);
+    let targetAudience = data.targetAudience || 'TODOS';
+
+    if (options.teacherScopeOnly && currentDoc?.teacher_id) {
+      const allowedTurmas = await this.getTeacherActiveTurmas(currentDoc.teacher_id);
+      const allowedTurmaIds = new Set(allowedTurmas.map((turma: any) => turma.id));
+
+      if (turmaIds.length === 0) {
+        targetAudience = 'INTERNO';
+        cursoIds = [];
+      } else {
+        targetAudience = 'ALUNOS';
+        const invalidTurmaIds = turmaIds.filter((turmaId) => !allowedTurmaIds.has(turmaId));
+        if (invalidTurmaIds.length > 0) {
+          throw new Error('O professor só pode liberar documentos para turmas ativas em que possui vínculo.');
+        }
+        cursoIds = normalizeIdList(
+          turmaIds
+            .map((turmaId) => allowedTurmas.find((turma: any) => turma.id === turmaId)?.curso_id)
+            .filter(Boolean) as string[]
+        );
+      }
+    }
+
     const { error } = await supabase
       .from('biblioteca_documentos')
       .update({
-        publico_alvo: data.targetAudience,
-        abrangencia: data.scope,
-        polo_id: data.poloId || null,
-        curso_ids: data.cursoIds || [],
-        turma_ids: data.turmaIds || [],
+        publico_alvo: targetAudience,
+        abrangencia: options.teacherScopeOnly && currentDoc?.teacher_id ? 'GLOBAL' : data.scope,
+        polo_id: options.teacherScopeOnly && currentDoc?.teacher_id ? null : data.poloId || null,
+        curso_ids: cursoIds,
+        turma_ids: turmaIds,
         disciplina_ids: data.disciplinaIds || [],
         liberacao_tipo: data.liberacaoTipo || 'IMEDIATO',
         liberacao_data: data.liberacaoData || null,

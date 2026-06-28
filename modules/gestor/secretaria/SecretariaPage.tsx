@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import { FileText, ArrowLeft } from 'lucide-react';
 import SecretariaDashboard from './components/SecretariaDashboard';
 import SecretariaAlunosPage from './alunos/SecretariaAlunosPage';
-import SecretariaDocumentosPage from './documentos/SecretariaDocumentosPage';
 import SecretariaBoletinsPage from './boletins/SecretariaBoletinsPage';
 import SecretariaCarteirinhasPage from './carteirinhas/SecretariaCarteirinhasPage';
 import SecretariaSolicitacoesPage from './solicitacoes/SecretariaSolicitacoesPage';
@@ -20,6 +19,8 @@ import SecretariaConsultaFinanceiraPage from './consulta-financeira/SecretariaCo
 import SecretariaHistoricoEmissoesPage from './historico-emissoes/SecretariaHistoricoEmissoesPage';
 import SecretariaCertificadosPage from './certificados/SecretariaCertificadosPage';
 import SecretariaAtestadoConclusaoPage from './atestado-conclusao/SecretariaAtestadoConclusaoPage';
+import SecretariaDocumentoEmissionPage from './shared/SecretariaDocumentoEmissionPage';
+import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
   alunos: {
@@ -122,7 +123,7 @@ const SecretariaPage: React.FC = () => {
       case 'consulta-financeira':
         return <SecretariaConsultaFinanceiraPage />;
       case 'transferencia':
-        return <SecretariaDocumentosPage initialType={activeModule} />;
+        return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.transferencia} />;
       case 'boletim':
         return <SecretariaBoletinsPage />;
       case 'atestado-conclusao':

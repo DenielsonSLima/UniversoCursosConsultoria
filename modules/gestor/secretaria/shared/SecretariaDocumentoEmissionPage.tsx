@@ -9,6 +9,10 @@ import {
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import {
+  getDefaultIrpfCalendarYear,
+  getIrpfCalendarYearOptions,
+} from '../../../../lib/irpfYearUtils';
 import { secretariaDocumentosKeys } from './secretaria-documentos.keys';
 import {
   getSecretariaContext,
@@ -40,6 +44,17 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedAluno, setSelectedAluno] = useState<SecretariaAlunoResumo | null>(null);
   const [selectedMatriculaId, setSelectedMatriculaId] = useState('');
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [selectedReferenceYear, setSelectedReferenceYear] = useState(() => getDefaultIrpfCalendarYear());
+
+  const isIrpfAnnual = definition.referenceMode === 'irpf_annual';
+  const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
+  const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
+  const enrollmentStatuses = definition.enrollmentStatuses || [];
+  const irpfYearOptions = useMemo(
+    () => getIrpfCalendarYearOptions(undefined, new Date(), 10),
+    []
+  );
+  const selectedIrpfYear = irpfYearOptions.find((option) => option.year === selectedReferenceYear);
 
   const normalizedTerm = searchTerm.trim();
   const { data: alunos = [], isFetching: isSearching } = useQuery({
@@ -54,7 +69,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
       context,
       definition.id,
       selectedAluno?.id || 'nenhum',
-      !!definition.activeOnly
+      activeEnrollmentOnly,
+      activeTurmaOnly,
+      definition.completedOnly,
+      enrollmentStatuses
     ),
     queryFn: () =>
       secretariaDocumentosService.getMatriculas(
@@ -62,7 +80,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         context.poloId,
         !!definition.technicalOnly,
         !!definition.completedOnly,
-        !!definition.activeOnly
+        activeEnrollmentOnly,
+        activeTurmaOnly,
+        enrollmentStatuses
       ),
     enabled: !!selectedAluno,
     staleTime: 60_000,
@@ -73,13 +93,13 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
       context,
       definition.id,
       !!definition.technicalOnly,
-      !!definition.activeOnly
+      activeTurmaOnly
     ),
     queryFn: () =>
       secretariaDocumentosService.getTurmas(
         context.poloId,
         !!definition.technicalOnly,
-        !!definition.activeOnly
+        activeTurmaOnly
       ),
     enabled: mode === 'lote',
     staleTime: 60_000,
@@ -125,8 +145,11 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         matriculaId: mode === 'individual' ? selectedMatriculaId : undefined,
         turmaId: mode === 'lote' ? selectedTurmaId : undefined,
         technicalOnly: !!definition.technicalOnly,
-        activeOnly: !!definition.activeOnly,
+        activeEnrollmentOnly,
+        activeTurmaOnly,
         completedOnly: !!definition.completedOnly,
+        enrollmentStatuses,
+        referencePeriod: isIrpfAnnual ? String(selectedReferenceYear) : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -140,7 +163,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
   const canContinue =
     mode === 'individual'
-      ? !!selectedAluno && !!selectedMatriculaId
+      ? !!selectedAluno && !!selectedMatriculaId && (!isIrpfAnnual || !!selectedIrpfYear?.released)
       : !!selectedTurmaId;
 
   const resetFlow = (nextMode = mode) => {
@@ -150,6 +173,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSelectedAluno(null);
     setSelectedMatriculaId('');
     setSelectedTurmaId('');
+    setSelectedReferenceYear(getDefaultIrpfCalendarYear());
   };
 
   return (
@@ -257,10 +281,30 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                       {!matriculas.length && <option value="">Nenhuma matrícula compatível</option>}
                       {matriculas.map((matricula) => (
                         <option key={matricula.id} value={matricula.id}>
-                          {matricula.cursoNome} — {matricula.turmaNome}
+                          {matricula.cursoNome} — {matricula.turmaNome} ({matricula.status})
                         </option>
                       ))}
                     </select>
+                  )}
+
+                  {isIrpfAnnual && (
+                    <div className="mt-5">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Ano-calendário</label>
+                      <select
+                        value={selectedReferenceYear}
+                        onChange={(event) => setSelectedReferenceYear(Number(event.target.value))}
+                        className="w-full mt-2 p-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-slate-700"
+                      >
+                        {irpfYearOptions.map((option) => (
+                          <option key={option.year} value={option.year} disabled={!option.released}>
+                            {option.year} {option.released ? '' : `(libera em ${option.releaseLabel})`}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                        O registro fica separado pelo ano de referência e pode ser localizado no histórico mesmo depois do encerramento da turma.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -270,7 +314,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           {step === 1 && mode === 'lote' && (
             <div>
               <h4 className="text-lg font-black text-[#001a33] uppercase">Selecionar turma</h4>
-              <p className="text-sm text-slate-500 mt-1 mb-6">A emissão será preparada para os alunos ativos da turma.</p>
+              <p className="text-sm text-slate-500 mt-1 mb-6">
+                A emissão será preparada conforme a regra acadêmica deste documento.
+              </p>
               {isLoadingTurmas ? (
                 <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-slate-400" /></div>
               ) : (
@@ -315,6 +361,12 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                       : `${selectedTurma?.cursoNome || ''} · ${selectedTurma?.nome || ''}`}
                   </span>
                 </div>
+                {isIrpfAnnual && (
+                  <div className="p-4 flex justify-between gap-4">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Ano-calendário</span>
+                    <span className="text-sm font-black text-[#001a33]">{selectedReferenceYear}</span>
+                  </div>
+                )}
               </div>
               {emissionMutation.isError && (
                 <p className="mt-4 text-sm font-bold text-red-600">Não foi possível preparar a emissão. Verifique a conexão e tente novamente.</p>

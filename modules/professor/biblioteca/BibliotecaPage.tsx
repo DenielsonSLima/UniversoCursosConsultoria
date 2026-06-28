@@ -104,6 +104,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
               teacherId={professorId} 
               onPreviewClick={handleOpenPreview}
               onNewUploadClick={handleOpenUpload}
+              restrictPermissionsToTeacherScope={true}
             />
           </div>
         ) : (
@@ -137,6 +138,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
         onUpload={handleUploadSubmit}
         pastaId={uploadPastaId}
         teacherId={professorId}
+        restrictToTeacherScope={true}
       />
 
       {/* Quick Preview Modal Wrapper */}

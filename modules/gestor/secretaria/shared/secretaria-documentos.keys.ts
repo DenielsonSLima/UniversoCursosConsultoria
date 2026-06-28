@@ -12,16 +12,24 @@ export const secretariaDocumentosKeys = {
     context: SecretariaContext,
     documentId: SecretariaDocumentoId,
     alunoId: string,
-    activeOnly: boolean
+    activeEnrollmentOnly: boolean,
+    activeTurmaOnly: boolean,
+    completedOnly = false,
+    enrollmentStatuses: string[] = []
   ) =>
-    [...secretariaDocumentosKeys.document(context, documentId), 'matriculas', alunoId, { activeOnly }] as const,
+    [
+      ...secretariaDocumentosKeys.document(context, documentId),
+      'matriculas',
+      alunoId,
+      { activeEnrollmentOnly, activeTurmaOnly, completedOnly, enrollmentStatuses },
+    ] as const,
   turmas: (
     context: SecretariaContext,
     documentId: SecretariaDocumentoId,
     technicalOnly: boolean,
-    activeOnly: boolean
+    activeTurmaOnly: boolean
   ) =>
-    [...secretariaDocumentosKeys.document(context, documentId), 'turmas', { technicalOnly, activeOnly }] as const,
+    [...secretariaDocumentosKeys.document(context, documentId), 'turmas', { technicalOnly, activeTurmaOnly }] as const,
   turmaSummary: (context: SecretariaContext, documentId: SecretariaDocumentoId, turmaId: string) =>
     [...secretariaDocumentosKeys.document(context, documentId), 'turma', turmaId] as const,
   emissions: (context: SecretariaContext, documentId: SecretariaDocumentoId) =>

@@ -7,6 +7,10 @@ export interface DocumentTemplate {
   v?: number;
 }
 
+interface DocumentTemplateServiceOptions {
+  sharedTemplate?: boolean;
+}
+
 const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{CURSO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
   separator: '-'
@@ -14,17 +18,29 @@ const DEFAULT_QR_CONFIG = {
 
 export const createDocumentTemplateService = (
   documentId: string,
-  defaultTemplate: DocumentTemplate
+  defaultTemplate: DocumentTemplate,
+  options: DocumentTemplateServiceOptions = {}
 ) => ({
   async getTemplate(poloId: string): Promise<DocumentTemplate> {
     try {
+      const templateId = options.sharedTemplate ? documentId : `${documentId}_${poloId}`;
       const { data, error } = await supabase
         .from('documentos_templates')
         .select('conteudo')
-        .eq('id', `${documentId}_${poloId}`)
+        .eq('id', templateId)
         .maybeSingle();
 
       if (!error && data?.conteudo) return data.conteudo;
+
+      if (options.sharedTemplate && poloId) {
+        const { data: legacyData, error: legacyError } = await supabase
+          .from('documentos_templates')
+          .select('conteudo')
+          .eq('id', `${documentId}_${poloId}`)
+          .maybeSingle();
+
+        if (!legacyError && legacyData?.conteudo) return legacyData.conteudo;
+      }
     } catch (error) {
       console.error(`[${documentId}Service] Erro ao buscar o modelo:`, error);
     }
@@ -34,10 +50,11 @@ export const createDocumentTemplateService = (
 
   async saveTemplate(poloId: string, conteudo: DocumentTemplate): Promise<boolean> {
     try {
+      const templateId = options.sharedTemplate ? documentId : `${documentId}_${poloId}`;
       const { error } = await supabase
         .from('documentos_templates')
         .upsert({
-          id: `${documentId}_${poloId}`,
+          id: templateId,
           conteudo,
           updated_at: new Date().toISOString()
         });

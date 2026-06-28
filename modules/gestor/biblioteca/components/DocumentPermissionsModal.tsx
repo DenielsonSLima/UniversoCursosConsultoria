@@ -11,13 +11,15 @@ interface DocumentPermissionsModalProps {
   onClose: () => void;
   document: LibraryDocument | null;
   onSave: () => void;
+  teacherScopeOnly?: boolean;
 }
 
 const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
   isOpen,
   onClose,
   document: doc,
-  onSave
+  onSave,
+  teacherScopeOnly = false
 }) => {
   const [cursos, setCursos] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -46,11 +48,21 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
   useEffect(() => {
     if (isOpen && doc) {
       setIsLoading(true);
-      Promise.all([
-        bibliotecaService.getCursos(),
-        bibliotecaService.getTurmas(),
-        bibliotecaService.getDisciplinas()
-      ]).then(([c, t, d]) => {
+      const baseDataPromise = teacherScopeOnly && doc.teacherId
+        ? bibliotecaService.getTeacherActiveTurmas(doc.teacherId).then(async (teacherTurmas) => {
+          const cursoIds = Array.from(new Set(teacherTurmas.map((turma: any) => turma.curso_id).filter(Boolean)));
+          const allCursos = cursoIds.length > 0 ? await bibliotecaService.getCursos() : [];
+          const cursosFiltrados = allCursos.filter((curso: any) => cursoIds.includes(curso.id));
+          const disciplinas = await bibliotecaService.getDisciplinas();
+          return [cursosFiltrados, teacherTurmas, disciplinas];
+        })
+        : Promise.all([
+          bibliotecaService.getCursos(),
+          bibliotecaService.getTurmas(),
+          bibliotecaService.getDisciplinas()
+        ]);
+
+      baseDataPromise.then(([c, t, d]) => {
         setCursos(c);
         setTurmas(t);
         setDisciplinas(d);
@@ -61,13 +73,13 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
       });
 
       // Populate document values
-      setTargetAudience(doc.targetAudience);
-      setScope(doc.scope);
-      setPoloId(doc.poloId || null);
-      setSelectedCursos(doc.cursoIds || []);
+      setTargetAudience(teacherScopeOnly ? (doc.turmaIds?.length ? 'ALUNOS' : 'INTERNO') : doc.targetAudience);
+      setScope(teacherScopeOnly ? 'GLOBAL' : doc.scope);
+      setPoloId(teacherScopeOnly ? null : doc.poloId || null);
+      setSelectedCursos(teacherScopeOnly ? [] : doc.cursoIds || []);
       setSelectedTurmas(doc.turmaIds || []);
       setSelectedDisciplinas(doc.disciplinaIds || []);
-      setLiberacaoTipo(doc.liberacaoTipo || 'IMEDIATO');
+      setLiberacaoTipo(teacherScopeOnly && doc.liberacaoTipo === 'DISCIPLINA_INICIO' ? 'IMEDIATO' : doc.liberacaoTipo || 'IMEDIATO');
       
       if (doc.liberacaoData) {
         // Convert to YYYY-MM-DDTHH:MM local format for input
@@ -82,7 +94,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
       setLiberacaoDisciplinaId(doc.liberacaoDisciplinaId || '');
       setLiberacaoDiasValidade(doc.liberacaoDiasValidade?.toString() || '');
     }
-  }, [isOpen, doc]);
+  }, [isOpen, doc, teacherScopeOnly]);
 
   if (!isOpen || !doc) return null;
   if (typeof window === 'undefined') return null;
@@ -95,7 +107,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
   const filteredTurmas = turmas.filter(t => {
     const matchesSearch = t.nome.toLowerCase().includes(searchTurma.toLowerCase()) || 
                           t.codigo.toLowerCase().includes(searchTurma.toLowerCase());
-    const matchesCourse = selectedCursos.length === 0 || selectedCursos.includes(t.curso_id);
+    const matchesCourse = teacherScopeOnly || selectedCursos.length === 0 || selectedCursos.includes(t.curso_id);
     return matchesSearch && matchesCourse;
   });
 
@@ -142,13 +154,22 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
     const parsedDiasValidade = liberacaoTipo === 'DISCIPLINA_INICIO' && liberacaoDiasValidade
       ? parseInt(liberacaoDiasValidade, 10)
       : null;
+    const selectedTeacherTurmas = teacherScopeOnly
+      ? turmas.filter((turma) => selectedTurmas.includes(turma.id))
+      : [];
+    const finalTargetAudience = teacherScopeOnly
+      ? selectedTurmas.length > 0 ? 'ALUNOS' : 'INTERNO'
+      : targetAudience;
+    const finalCursoIds = teacherScopeOnly
+      ? Array.from(new Set(selectedTeacherTurmas.map((turma) => turma.curso_id).filter(Boolean)))
+      : selectedCursos;
 
     try {
       const dataToSave = {
-        targetAudience,
-        scope,
-        poloId,
-        cursoIds: selectedCursos,
+        targetAudience: finalTargetAudience,
+        scope: teacherScopeOnly ? 'GLOBAL' : scope,
+        poloId: teacherScopeOnly ? null : poloId,
+        cursoIds: finalCursoIds,
         turmaIds: selectedTurmas,
         disciplinaIds: selectedDisciplinas,
         liberacaoTipo,
@@ -157,7 +178,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
         liberacaoDiasValidade: parsedDiasValidade
       };
 
-      await bibliotecaService.updateDocumentPermissions(doc.id, dataToSave);
+      await bibliotecaService.updateDocumentPermissions(doc.id, dataToSave, { teacherScopeOnly });
       onSave();
       onClose();
     } catch (err) {
@@ -195,10 +216,17 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
           <form onSubmit={handleSave} className="space-y-6 flex-1">
             
             {/* 1. SELEÇÃO DE CURSOS E TURMAS (GRID) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {teacherScopeOnly && (
+              <div className="rounded-2xl border border-purple-100 bg-purple-50 p-4 text-xs font-bold text-purple-900 leading-relaxed">
+                No portal do professor, deixe sem turma para manter o documento privado ou selecione apenas turmas ativas vinculadas ao docente.
+              </div>
+            )}
+
+            <div className={`grid grid-cols-1 ${teacherScopeOnly ? '' : 'md:grid-cols-2'} gap-6`}>
               
               {/* Box Cursos */}
-              <div className="border border-slate-150 rounded-2xl p-4 bg-slate-50 space-y-3">
+              {!teacherScopeOnly && (
+                <div className="border border-slate-150 rounded-2xl p-4 bg-slate-50 space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Layers size={14} className="text-blue-550 text-blue-500" /> Cursos Ativos ({selectedCursos.length} selecionados)
@@ -236,6 +264,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                   )}
                 </div>
               </div>
+              )}
 
               {/* Box Turmas */}
               <div className="border border-slate-150 rounded-2xl p-4 bg-slate-50 space-y-3">
@@ -248,7 +277,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                   <Search size={12} className="text-slate-400 mr-2 shrink-0" />
                   <input 
                     type="text" 
-                    placeholder={selectedCursos.length > 0 ? "Filtrar turmas do curso..." : "Filtrar todas as turmas..."}
+                    placeholder={teacherScopeOnly ? "Filtrar turmas vinculadas..." : selectedCursos.length > 0 ? "Filtrar turmas do curso..." : "Filtrar todas as turmas..."}
                     value={searchTurma}
                     onChange={(e) => setSearchTurma(e.target.value)}
                     className="bg-transparent border-none outline-none w-full font-medium"
@@ -273,7 +302,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                   })}
                   {filteredTurmas.length === 0 && (
                     <p className="text-[10px] text-slate-400 text-center py-4">
-                      {selectedCursos.length > 0 ? 'Nenhuma turma para os cursos selecionados.' : 'Nenhuma turma encontrada.'}
+                      {teacherScopeOnly ? 'Nenhuma turma ativa vinculada.' : selectedCursos.length > 0 ? 'Nenhuma turma para os cursos selecionados.' : 'Nenhuma turma encontrada.'}
                     </p>
                   )}
                 </div>
@@ -300,7 +329,7 @@ const DocumentPermissionsModal: React.FC<DocumentPermissionsModalProps> = ({
                   >
                     <option value="IMEDIATO">Disponibilidade Imediata</option>
                     <option value="POR_DATA">Liberar em Data Específica</option>
-                    <option value="DISCIPLINA_INICIO">Ao Iniciar uma Disciplina</option>
+                    {!teacherScopeOnly && <option value="DISCIPLINA_INICIO">Ao Iniciar uma Disciplina</option>}
                   </select>
                 </div>
 

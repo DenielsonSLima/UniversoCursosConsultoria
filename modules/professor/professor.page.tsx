@@ -10,9 +10,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  Sparkles,
   Building,
-  AlertTriangle
+  ChevronDown,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
@@ -36,6 +35,7 @@ const ProfessorPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
+  const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -43,6 +43,12 @@ const ProfessorPage: React.FC = () => {
   const professorId = profile?.id || '';
   const professorNome = profile?.nome || '';
   const professorEmail = profile?.email || '';
+
+  const formatPoloLocation = (polo: any) =>
+    [polo?.cidade, polo?.estado].filter(Boolean).join(' - ');
+
+  const formatPoloDetails = (polo: any) =>
+    [polo?.cnpj ? `CNPJ: ${polo.cnpj}` : null, formatPoloLocation(polo)].filter(Boolean).join(' • ');
 
   useEffect(() => {
     let mounted = true;
@@ -84,7 +90,7 @@ const ProfessorPage: React.FC = () => {
   }, [navigate]);
 
   // Fetch active polos for seletor
-  const { data: activePolos = [] } = useQuery<any[]>({
+  const { data: activePolos = [], isLoading: isLoadingActivePolos } = useQuery<any[]>({
     queryKey: ['professor-active-polos', profile?.id],
     enabled: !!profile,
     queryFn: async () => {
@@ -107,15 +113,25 @@ const ProfessorPage: React.FC = () => {
   // Redireciona apenas depois da autenticação se o professor não tiver polo ativo.
   useEffect(() => {
     if (isAuthLoading || !profile) return;
-    if (!currentPoloId) {
-      navigate('/sistema/login');
-    }
-  }, [currentPoloId, isAuthLoading, navigate, profile]);
+    if (currentPoloId) return;
+    if (isLoadingActivePolos) return;
 
-  const handlePoloChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setCurrentPoloId(val);
-    sessionStorage.setItem('active_polo_id', val);
+    const fallbackPoloId = activePolos[0]?.id || null;
+    if (fallbackPoloId) {
+      setCurrentPoloId(fallbackPoloId);
+      sessionStorage.setItem('active_polo_id', fallbackPoloId);
+      return;
+    }
+
+    navigate('/sistema/login');
+  }, [activePolos, currentPoloId, isAuthLoading, isLoadingActivePolos, navigate, profile]);
+
+  const currentPolo = activePolos.find((polo) => polo.id === currentPoloId) || activePolos[0] || null;
+
+  const handlePoloChange = (poloId: string) => {
+    setCurrentPoloId(poloId);
+    sessionStorage.setItem('active_polo_id', poloId);
+    setIsPoloSelectorOpen(false);
     // Invalidate related queries
     queryClient.invalidateQueries();
   };
@@ -156,7 +172,7 @@ const ProfessorPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'inicio':
-        return <InicioPage professorId={professorId} professorNome={professorNome} onNavigate={setActiveModule} />;
+        return <InicioPage professorId={professorId} professorNome={professorNome} poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'turmas':
         return <TurmasPage professorId={professorId} />;
       case 'financeiro':
@@ -205,11 +221,11 @@ const ProfessorPage: React.FC = () => {
               onClick={() => setActiveModule(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group ${
                 activeModule === item.id 
-                  ? 'bg-purple-650 text-white shadow-lg shadow-purple-900/50 font-bold' 
+                  ? 'bg-[#092744] text-white shadow-lg shadow-purple-950/30 font-black border border-purple-400/35 ring-1 ring-purple-500/20' 
                   : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
               }`}
             >
-              <div className={`${activeModule === item.id ? 'text-white' : 'text-slate-400 group-hover:text-purple-400'}`}>
+              <div className={`${activeModule === item.id ? 'text-purple-300' : 'text-slate-400 group-hover:text-purple-400'}`}>
                 {item.icon}
               </div>
               <span className="text-sm tracking-wide">{item.label}</span>
@@ -252,7 +268,7 @@ const ProfessorPage: React.FC = () => {
                   key={item.id}
                   onClick={() => { setActiveModule(item.id); setIsMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeModule === item.id ? 'bg-purple-650 font-bold' : 'text-slate-400'
+                    activeModule === item.id ? 'bg-[#092744] text-white font-black shadow-lg shadow-purple-950/30 border border-purple-400/35' : 'text-slate-400'
                   }`}
                 >
                   {item.icon}
@@ -283,31 +299,81 @@ const ProfessorPage: React.FC = () => {
              <h2 className="text-lg font-black text-[#001a33] uppercase tracking-tight">
               Portal do Professor
              </h2>
-             
-             {/* Elegant "In Development" Badge */}
-             <div className="flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-150 animate-pulse">
-               <Sparkles size={9} />
-               <span>Desenvolvimento</span>
-             </div>
           </div>
 
           <div className="flex items-center gap-6">
             
-            {/* Polo Seletor for teachers */}
-            {activePolos.length > 0 && (
-              <div className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
-                <Building size={16} className="text-slate-400" />
-                <select 
-                  value={currentPoloId || ''} 
-                  onChange={handlePoloChange}
-                  className="bg-transparent border-none outline-none text-[10px] font-black text-slate-700 uppercase tracking-wider cursor-pointer"
+            {currentPolo && (
+              <div
+                className="relative hidden h-14 w-[23rem] md:block"
+                onBlur={event => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    setIsPoloSelectorOpen(false);
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsPoloSelectorOpen(open => !open)}
+                  aria-haspopup="listbox"
+                  aria-expanded={isPoloSelectorOpen}
+                  disabled={activePolos.length <= 1}
+                  className="flex h-14 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left transition-all hover:border-purple-200 hover:bg-white focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
                 >
-                  {activePolos.map(polo => (
-                    <option key={polo.id} value={polo.id}>
-                      {polo.nome}
-                    </option>
-                  ))}
-                </select>
+                  <Building size={16} className="shrink-0 text-purple-600" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-extrabold uppercase tracking-wide text-[#001a33]">
+                      {currentPolo.nome}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                      {formatPoloDetails(currentPolo) || 'Dados do polo não informados'}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    size={15}
+                    className={`shrink-0 text-slate-400 transition-transform ${activePolos.length <= 1 ? 'opacity-0' : ''} ${
+                      isPoloSelectorOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {isPoloSelectorOpen && (
+                  <div
+                    role="listbox"
+                    className="absolute right-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-slate-900/15 animate-fadeIn"
+                  >
+                    {activePolos.map((polo) => {
+                      const isSelected = polo.id === currentPoloId;
+
+                      return (
+                        <button
+                          key={polo.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handlePoloChange(polo.id)}
+                          className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${
+                            isSelected
+                              ? 'bg-purple-50 text-purple-950'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="flex items-start gap-2">
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isSelected ? 'bg-purple-650' : 'bg-slate-300'}`} />
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-extrabold uppercase tracking-wide">
+                                {polo.nome}
+                              </span>
+                              <span className="mt-0.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                                {formatPoloDetails(polo) || 'Dados do polo não informados'}
+                              </span>
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -328,18 +394,6 @@ const ProfessorPage: React.FC = () => {
 
         {/* Dynamic page contents wrapper */}
         <div className="p-8 flex-1 overflow-auto bg-slate-50">
-          
-          {/* Warning banner indicating active development state */}
-          <div className="mb-6 p-4.5 bg-amber-50/40 border border-amber-100 rounded-3xl flex items-start gap-3 text-xs text-amber-800">
-            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">Portal em Homologação</p>
-              <p className="text-[11px] text-slate-655 mt-0.5">
-                Você está visualizando a área do professor em ambiente de testes. Todas as conexões ao Supabase e notificações em tempo real estão ativas.
-              </p>
-            </div>
-          </div>
-
           {renderContent()}
         </div>
       </main>

@@ -17,6 +17,7 @@ const TransferenciaPage: React.FC = () => (
     validationPrefix="TRF"
     defaultValidityDays={90}
     showValidity
+    sharedTemplate
   />
 );
 

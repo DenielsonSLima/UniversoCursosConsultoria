@@ -1,67 +1,86 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 
+export interface ProfessorDashboardLesson {
+  id: string;
+  titulo: string;
+  dataAula: string | null;
+  cargaHoraria: number | null;
+  turmaId: string;
+  turmaNome: string;
+  turmaCodigo: string | null;
+  disciplinaId: string;
+  disciplinaNome: string | null;
+  cursoNome: string | null;
+  poloNome: string | null;
+  poloCidade: string | null;
+  poloUf: string | null;
+}
+
+export interface ProfessorDashboardTurma {
+  id: string;
+  codigo: string | null;
+  nome: string;
+  status: string | null;
+  dataInicio: string | null;
+  cursoNome: string | null;
+  poloNome: string | null;
+  poloCidade: string | null;
+  poloUf: string | null;
+  disciplinasCount: number;
+  proximaAula: string | null;
+}
+
+export interface ProfessorDashboardStats {
+  disciplinasCount: number;
+  turmasCount: number;
+  chatsCount: number;
+  meusCursosCount: number;
+  proximasAulas: ProfessorDashboardLesson[];
+  turmas: ProfessorDashboardTurma[];
+}
+
 export const professorDashboardKeys = {
   all: ['professor-dashboard'] as const,
-  professor: (professorId: string) => [...professorDashboardKeys.all, professorId] as const,
-  disciplinasCount: (professorId: string) => [...professorDashboardKeys.professor(professorId), 'disciplinas-count'] as const,
-  chatsCount: (professorId: string) => [...professorDashboardKeys.professor(professorId), 'chats-count'] as const,
-  meusCursosCount: (professorId: string) => [...professorDashboardKeys.professor(professorId), 'meus-cursos-count'] as const,
+  professor: (professorId: string, poloId?: string | null) => [...professorDashboardKeys.all, professorId, poloId || 'todos'] as const,
 };
 
-export const useProfessorDashboardStats = (professorId: string) => {
-  const disciplinas = useQuery<number>({
-    queryKey: professorDashboardKeys.disciplinasCount(professorId),
+const emptyDashboard: ProfessorDashboardStats = {
+  disciplinasCount: 0,
+  turmasCount: 0,
+  chatsCount: 0,
+  meusCursosCount: 0,
+  proximasAulas: [],
+  turmas: [],
+};
+
+const normalizeDashboard = (payload: any): ProfessorDashboardStats => ({
+  disciplinasCount: Number(payload?.disciplinasCount || 0),
+  turmasCount: Number(payload?.turmasCount || 0),
+  chatsCount: Number(payload?.chatsCount || 0),
+  meusCursosCount: Number(payload?.meusCursosCount || 0),
+  proximasAulas: Array.isArray(payload?.proximasAulas) ? payload.proximasAulas : [],
+  turmas: Array.isArray(payload?.turmas) ? payload.turmas : [],
+});
+
+export const useProfessorDashboardStats = (professorId: string, poloId?: string | null) => {
+  const dashboard = useQuery<ProfessorDashboardStats>({
+    queryKey: professorDashboardKeys.professor(professorId, poloId),
     enabled: Boolean(professorId),
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('turmas_disciplinas')
-        .select('*', { count: 'exact', head: true })
-        .eq('professor_id', professorId);
+      const { data, error } = await supabase.rpc('get_professor_dashboard', {
+        p_polo_id: poloId || null,
+      });
 
       if (error) throw error;
-      return count || 0;
-    },
-    staleTime: 30_000,
-  });
-
-  const chats = useQuery<number>({
-    queryKey: professorDashboardKeys.chatsCount(professorId),
-    enabled: Boolean(professorId),
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('comunicacao_chats')
-        .select('*', { count: 'exact', head: true })
-        .eq('remetente_id', professorId)
-        .eq('status', 'pendente');
-
-      if (error) throw error;
-      return count || 0;
-    },
-    staleTime: 20_000,
-  });
-
-  const meusCursos = useQuery<number>({
-    queryKey: professorDashboardKeys.meusCursosCount(professorId),
-    enabled: Boolean(professorId),
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('matriculas')
-        .select('*', { count: 'exact', head: true })
-        .eq('aluno_id', professorId)
-        .in('status', ['ATIVO', 'CONCLUIDO']);
-
-      if (error) throw error;
-      return count || 0;
+      return normalizeDashboard(data);
     },
     staleTime: 30_000,
   });
 
   return {
-    disciplinasCount: disciplinas.data || 0,
-    chatsCount: chats.data || 0,
-    meusCursosCount: meusCursos.data || 0,
-    isLoading: disciplinas.isLoading || chats.isLoading || meusCursos.isLoading,
-    isError: disciplinas.isError || chats.isError || meusCursos.isError,
+    ...(dashboard.data || emptyDashboard),
+    isLoading: dashboard.isLoading,
+    isError: dashboard.isError,
   };
 };

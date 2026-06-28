@@ -22,6 +22,12 @@ import { academicosService } from '../../../../configuracoes/academicos/academic
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { useDocumentValidationCode } from '../../../../../shared/document-validation/use-document-validation-code';
 import { getDocumentValidationUrl } from '../../../../../shared/document-validation/document-validation.url';
+import {
+  formatIrpfReleaseDate,
+  getDefaultIrpfCalendarYear,
+  getIrpfCalendarYearOptions,
+  isIrpfYearReleased,
+} from '../../../../../../lib/irpfYearUtils';
 
 interface ParceiroAlunoSecretariaProps {
   alunoId: string;
@@ -38,6 +44,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   const [isBoletimOpen, setIsBoletimOpen] = useState(false);
   const [isDeclaracaoOpen, setIsDeclaracaoOpen] = useState(false);
   const [isIRPFOpen, setIsIRPFOpen] = useState(false);
+  const [selectedIrpfYear, setSelectedIrpfYear] = useState(() => getDefaultIrpfCalendarYear());
 
   // 1. Busca dados cadastrais do aluno
   const { data: aluno, isLoading: loadingAluno } = useQuery({
@@ -73,6 +80,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
       m.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO' &&
       m.turmas?.cursos?.modalidade === 'TECNICO'
   );
+  const irpfMatricula = activeMatricula || matriculas[0] || null;
   const isTechnicalIdentityAvailable = Boolean(activeTechnicalMatricula);
   const formattedMat = activeMatricula 
     ? formatMatricula(activeMatricula.id, activeMatricula.data_matricula, activeMatricula.polo_id) 
@@ -86,16 +94,6 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
       : null,
     isDeclaracaoOpen
   );
-  const irpfValidation = useDocumentValidationCode(
-    activeTechnicalMatricula
-      ? {
-          type: 'declaracao_irpf',
-          enrollmentId: activeTechnicalMatricula.id,
-        }
-      : null,
-    isIRPFOpen
-  );
-
   // 3. Busca notas do diário de classe
   const { data: notas = [] } = useQuery<any[]>({
     queryKey: ['secretaria-aluno-notas', activeMatricula?.turma_id],
@@ -132,13 +130,35 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
     enabled: !!activeMatricula?.polo_id,
   });
 
-  // Busca pagamentos do aluno no ano anterior para IRPF
+  const irpfLiberacaoDate = irpfTemplateData?.liberacaoDate || '03-01';
+  const irpfYearOptions = getIrpfCalendarYearOptions(irpfLiberacaoDate);
+  const selectedIrpfYearReleaseLabel = formatIrpfReleaseDate(selectedIrpfYear, irpfLiberacaoDate);
+  const isSelectedIrpfYearReleased = isIrpfYearReleased(selectedIrpfYear, irpfLiberacaoDate);
+  const irpfValidation = useDocumentValidationCode(
+    irpfMatricula
+      ? {
+          type: 'declaracao_irpf',
+          enrollmentId: irpfMatricula.id,
+          referencePeriod: String(selectedIrpfYear),
+          registerReissue: true,
+        }
+      : null,
+    isIRPFOpen && isSelectedIrpfYearReleased
+  );
+
+  useEffect(() => {
+    const defaultYear = getDefaultIrpfCalendarYear(irpfLiberacaoDate);
+    setSelectedIrpfYear((currentYear) =>
+      isIrpfYearReleased(currentYear, irpfLiberacaoDate) ? currentYear : defaultYear
+    );
+  }, [irpfLiberacaoDate]);
+
+  // Busca pagamentos do aluno no ano-calendário selecionado para IRPF
   const { data: irpfPayments = [] } = useQuery<any[]>({
-    queryKey: ['secretaria-aluno-irpf-payments', alunoId],
+    queryKey: ['secretaria-aluno-irpf-payments', alunoId, selectedIrpfYear],
     queryFn: async () => {
-      const lastYear = new Date().getFullYear() - 1;
-      const startDate = `${lastYear}-01-01`;
-      const endDate = `${lastYear}-12-31`;
+      const startDate = `${selectedIrpfYear}-01-01`;
+      const endDate = `${selectedIrpfYear}-12-31`;
       
       const { data, error } = await supabase
         .from('contas_receber')
@@ -150,7 +170,8 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: isSelectedIrpfYearReleased,
   });
 
   // Busca o polo completo
@@ -365,7 +386,6 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
     const poloNome = activeMatricula?.turmas?.polos?.nome || poloData?.nomeFantasia || '';
     const cidadePolo = poloData?.cidade || poloNome || 'Aracaju';
 
-    const lastYear = new Date().getFullYear() - 1;
     const irpfTotalValue = irpfPayments.length > 0
       ? irpfPayments.reduce((acc, curr) => acc + Number(curr.valor_pago || curr.valor || 0), 0)
       : 0;
@@ -397,12 +417,14 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
       .replace(/\{DATA_ATUAL\}/g, dataAtual)
       .replace(/\{\{HORA_ATUAL\}\}/g, horaAtual)
       .replace(/\{HORA_ATUAL\}/g, horaAtual)
+      .replace(/\{\{DATA_GERACAO\}\}/g, `${new Date().toLocaleDateString('pt-BR')} às ${horaAtual}`)
+      .replace(/\{DATA_GERACAO\}/g, `${new Date().toLocaleDateString('pt-BR')} às ${horaAtual}`)
       .replace(/\{\{VALIDADE_DIAS\}\}/g, String(vDays))
       .replace(/\{VALIDADE_DIAS\}/g, String(vDays))
       .replace(/\{\{VALIDADE_DATA\}\}/g, getValidadeData(vDays))
       .replace(/\{VALIDADE_DATA\}/g, getValidadeData(vDays))
-      .replace(/\{\{ANO_CALENDARIO\}\}/g, String(lastYear))
-      .replace(/\{ANO_CALENDARIO\}/g, String(lastYear))
+      .replace(/\{\{ANO_CALENDARIO\}\}/g, String(selectedIrpfYear))
+      .replace(/\{ANO_CALENDARIO\}/g, String(selectedIrpfYear))
       .replace(/\{\{VALOR_TOTAL\}\}/g, formattedIrpfTotal)
       .replace(/\{VALOR_TOTAL\}/g, formattedIrpfTotal)
       .replace(/\{\{VALOR_EXTENSO\}\}/g, irpfTotalExtenso)
@@ -774,9 +796,10 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                     )}
 
                     {field.type === 'text' && (
-                      <span className="whitespace-pre-line">
-                        {replaceVariables(field.value)}
-                      </span>
+                      <span
+                        className="whitespace-pre-line"
+                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                      />
                     )}
                   </div>
                 ))}
@@ -811,7 +834,11 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                 <h4 className="font-black text-[#001a33] text-base uppercase tracking-tight">Declaração de Rendimentos (IRPF)</h4>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => printRegisteredDocument(irpfValidation.data?.code, 'declaração de IRPF')} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001a33] text-white hover:bg-blue-900 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors">
+                <button
+                  onClick={() => printRegisteredDocument(irpfValidation.data?.code, 'declaração de IRPF')}
+                  disabled={!isSelectedIrpfYearReleased}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001a33] text-white hover:bg-blue-900 disabled:bg-slate-300 disabled:cursor-not-allowed rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors"
+                >
                   <Printer size={13} /> Imprimir
                 </button>
                 <button onClick={() => setIsIRPFOpen(false)} className="p-2 bg-white border border-slate-250 text-slate-400 hover:text-rose-500 rounded-xl transition-colors shadow-sm">
@@ -820,7 +847,39 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
               </div>
             </div>
             
-            <div className="overflow-auto flex-1 bg-slate-100 flex justify-center p-8 custom-scrollbar">
+            <div className="overflow-auto flex-1 bg-slate-100 flex flex-col items-center gap-4 p-8 custom-scrollbar">
+              <div className="print:hidden w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Ano-calendário</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <select
+                        value={selectedIrpfYear}
+                        onChange={(event) => setSelectedIrpfYear(Number(event.target.value))}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-[#001a33] outline-none focus:border-teal-500"
+                      >
+                        {irpfYearOptions.map((option) => (
+                          <option key={option.year} value={option.year}>
+                            {option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}
+                          </option>
+                        ))}
+                      </select>
+                      <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                        isSelectedIrpfYearReleased
+                          ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                          : 'border-amber-100 bg-amber-50 text-amber-700'
+                      }`}>
+                        {isSelectedIrpfYearReleased ? 'Disponível' : 'Aguardando liberação'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="max-w-sm text-[11px] font-bold leading-relaxed text-slate-500">
+                    {isSelectedIrpfYearReleased
+                      ? `Pode emitir a declaração referente aos pagamentos de ${selectedIrpfYear}.`
+                      : `A declaração do ano-calendário ${selectedIrpfYear} estará disponível a partir de ${selectedIrpfYearReleaseLabel}.`}
+                  </p>
+                </div>
+              </div>
               <div 
                 id="print-area-irpf"
                 className="bg-white shadow-md relative shrink-0 text-black text-justify"
@@ -903,9 +962,10 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                     )}
 
                     {field.type === 'text' && (
-                      <span className="whitespace-pre-line">
-                        {replaceVariables(field.value)}
-                      </span>
+                      <span
+                        className="whitespace-pre-line"
+                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                      />
                     )}
                   </div>
                 ))}
@@ -921,7 +981,8 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
               </button>
               <button 
                 onClick={() => printRegisteredDocument(irpfValidation.data?.code, 'declaração de IRPF')}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-900 transition-colors shadow-lg"
+                disabled={!isSelectedIrpfYearReleased}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-900 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors shadow-lg"
               >
                 <Printer size={14} /> Imprimir IRPF
               </button>

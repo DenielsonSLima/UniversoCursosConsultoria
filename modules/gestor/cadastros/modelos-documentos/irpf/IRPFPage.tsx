@@ -21,6 +21,7 @@ const IRPFPage: React.FC = () => {
       <IRPFEditor 
         polo={selectedPolo} 
         onBack={() => setSelectedPolo(null)} 
+        scopeLabel="Todos os polos"
       />
     );
   }
@@ -39,7 +40,7 @@ const IRPFPage: React.FC = () => {
                 Declaração de IRPF
             </h2>
             <p className="text-slate-500 font-medium mt-1">
-                Configure os modelos de declaração de rendimentos para imposto de renda de cada unidade.
+                Configure um modelo único de declaração de rendimentos para todos os polos.
             </p>
         </div>
       </div>
@@ -47,6 +48,7 @@ const IRPFPage: React.FC = () => {
       <IRPFList 
         onSelectPolo={setSelectedPolo} 
         onConfigureQr={() => setIsConfiguringQr(true)}
+        sharedTemplate
       />
     </div>
   );

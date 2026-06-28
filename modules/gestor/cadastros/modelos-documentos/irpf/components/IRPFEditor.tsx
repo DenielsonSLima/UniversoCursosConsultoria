@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic, 
+  Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, AlignJustify, Bold, Italic, 
   GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Sliders,
   CheckCircle2, AlertCircle, Calendar
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import DocumentHeader from '../../../../components/DocumentHeader';
 interface IRPFEditorProps {
   polo: any;
   onBack: () => void;
+  scopeLabel?: string;
 }
 
 const VARIABLES = [
@@ -28,6 +29,7 @@ const VARIABLES = [
   { code: '{{CIDADE_POLO}}', label: 'Cidade do Polo' },
   { code: '{{DATA_ATUAL}}', label: 'Data Atual (Extenso)' },
   { code: '{{HORA_ATUAL}}', label: 'Hora Atual' },
+  { code: '{{DATA_GERACAO}}', label: 'Data/Hora de Geração' },
 ];
 
 interface AbsoluteField {
@@ -41,7 +43,7 @@ interface AbsoluteField {
   style?: React.CSSProperties;
 }
 
-const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
+const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [watermark, setWatermark] = useState<any>(null);
@@ -61,6 +63,13 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
   };
   
   const selectedField = absoluteFields.find(f => f.id === selectedFieldId);
+  const selectedTextAlign = String(selectedField?.style?.textAlign || 'left');
+  const selectedTextAlignLabel = {
+    left: 'Esquerda',
+    center: 'Centralizado',
+    right: 'Direita',
+    justify: 'Justificado',
+  }[selectedTextAlign] || 'Esquerda';
 
   const updateSelectedField = (updates: Partial<AbsoluteField>) => {
     if (!selectedFieldId) return;
@@ -138,11 +147,20 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
         {
           id: 'footer_url',
           type: 'text',
-          value: 'Para verificar a autenticidade deste documento acesse: www.universocc.com.br/#/validador',
+          value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
           x: 50,
           y: 1015,
           width: 694,
           style: { textAlign: 'center', fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase' }
+        },
+        {
+          id: 'footer_generation',
+          type: 'text',
+          value: 'DOCUMENTO GERADO EM: {{DATA_GERACAO}}',
+          x: 50,
+          y: 1035,
+          width: 694,
+          style: { textAlign: 'center', fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase' }
         }
       ];
 
@@ -282,7 +300,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
           liberacaoDate,
           v: 2
       });
-      showToast(`Modelo de IRPF para ${polo.nomeFantasia} salvo com sucesso!`, 'success');
+      showToast(`Modelo de IRPF para ${scopeLabel || polo.nomeFantasia} salvo com sucesso!`, 'success');
     } catch (error) {
       showToast('Erro ao salvar as alterações do modelo.', 'error');
     } finally {
@@ -303,7 +321,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
   };
 
   const getValidationUrl = () => {
-    return 'https://www.universocc.com.br/#/validador';
+    return 'https://www.universocc.com.br/validador';
   };
 
   const getQrCodeExampleUrl = () => {
@@ -327,7 +345,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
             <div>
                 <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Editor de Declaração de IRPF</h3>
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
-                    Unidade: <span className="text-emerald-650 text-emerald-600">{polo.nomeFantasia}</span>
+                    {scopeLabel ? 'Escopo' : 'Unidade'}: <span className="text-emerald-650 text-emerald-600">{scopeLabel || polo.nomeFantasia}</span>
                 </p>
             </div>
         </div>
@@ -660,15 +678,27 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
                                     </button>
                                 </div>
 
-                                <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
-                                    {(['left', 'center', 'right'] as const).map((align) => {
-                                        const Icon = align === 'left' ? AlignLeft : align === 'center' ? AlignCenter : AlignRight;
+                                <div>
+                                  <div className="flex items-center justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                    <span>Alinhamento</span>
+                                    <span className="text-emerald-600">{selectedTextAlignLabel}</span>
+                                  </div>
+                                  <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
+                                    {([
+                                        { value: 'left', icon: AlignLeft, title: 'Esquerda' },
+                                        { value: 'center', icon: AlignCenter, title: 'Centralizado' },
+                                        { value: 'right', icon: AlignRight, title: 'Direita' },
+                                        { value: 'justify', icon: AlignJustify, title: 'Justificado' },
+                                    ] as const).map(({ value: align, icon: Icon, title }) => {
                                         const isAligned = selectedField.style?.textAlign === align || (!selectedField.style?.textAlign && align === 'left');
                                         return (
                                             <button
                                                 key={align}
+                                                type="button"
+                                                title={title}
+                                                aria-label={title}
                                                 onClick={() => updateSelectedFieldStyle({ textAlign: align })}
-                                                className={`flex-1 flex items-center justify-center py-1 rounded-lg transition-colors ${
+                                                className={`flex-1 flex items-center justify-center py-1.5 rounded-lg transition-colors ${
                                                     isAligned
                                                     ? 'bg-white text-emerald-600 shadow-sm font-bold'
                                                     : 'text-slate-400 hover:text-slate-600'
@@ -678,6 +708,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
                                             </button>
                                         );
                                     })}
+                                  </div>
                                 </div>
                             </div>
                         )}
@@ -706,7 +737,12 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
                     minHeight: '1123px', 
                     height: '1123px',
                     padding: '60px 80px', 
-                    position: 'relative'
+                    position: 'relative',
+                    backgroundImage: `
+                      linear-gradient(to right, rgba(16, 185, 129, 0.08) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(16, 185, 129, 0.08) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '20px 20px'
                 }}
                 onDrop={handleDropOnCanvas}
                 onDragOver={handleDragOver}
@@ -716,6 +752,18 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
                     }
                 }}
             >
+                <div className="pointer-events-none absolute inset-0 z-[1]">
+                    <div className="absolute top-0 bottom-0 left-1/2 border-l border-emerald-500/35" />
+                    <div className="absolute left-0 right-0 top-1/2 border-t border-emerald-500/25" />
+                    <div className="absolute border border-dashed border-slate-300/80" style={{ left: 80, right: 80, top: 60, bottom: 60 }} />
+                    {selectedField && (
+                      <>
+                        <div className="absolute top-0 bottom-0 border-l border-blue-500/45" style={{ left: selectedField.x }} />
+                        <div className="absolute left-0 right-0 border-t border-blue-500/45" style={{ top: selectedField.y }} />
+                      </>
+                    )}
+                </div>
+
                 {/* 1. Marca D'água */}
                 {watermark?.watermarkUrl && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
@@ -743,6 +791,11 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
 
                 {/* 3. Corpo do Texto */}
                 <div className="relative z-20 group mb-20">
+                    <div className="mb-2 flex justify-end">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                            <AlignJustify size={11} className="text-emerald-600" /> Texto justificado
+                        </span>
+                    </div>
                     <div 
                         ref={editorRef}
                         contentEditable
@@ -807,7 +860,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack }) => {
                             {field.type === 'text' && (
                                 <>
                                     <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1" />
-                                    {field.value}
+                                    <span dangerouslySetInnerHTML={{ __html: field.value }} />
                                 </>
                             )}
 

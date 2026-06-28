@@ -16,6 +16,7 @@ const HistoricoPage: React.FC = () => (
     variables={HISTORICO_VARIABLES}
     validationPrefix="HIS"
     defaultValidityDays={365}
+    sharedTemplate
   />
 );
 

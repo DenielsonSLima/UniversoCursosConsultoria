@@ -25,4 +25,4 @@ export const transferenciaService = createDocumentTemplateService('transferencia
   ],
   validityDays: 90,
   v: 2
-});
+}, { sharedTemplate: true });

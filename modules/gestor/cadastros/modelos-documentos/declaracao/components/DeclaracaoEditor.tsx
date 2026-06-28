@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic, 
+  Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, AlignJustify, Bold, Italic, 
   GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Building2, Sliders,
   CheckCircle2, AlertCircle
 } from 'lucide-react';
@@ -97,6 +97,13 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   };
   
   const selectedField = absoluteFields.find(f => f.id === selectedFieldId);
+  const selectedTextAlign = String(selectedField?.style?.textAlign || 'left');
+  const selectedTextAlignLabel = {
+    left: 'Esquerda',
+    center: 'Centralizado',
+    right: 'Direita',
+    justify: 'Justificado',
+  }[selectedTextAlign] || 'Esquerda';
 
   // --- Helpers de Edição de Campos Absolutos ---
   const updateSelectedField = (updates: Partial<AbsoluteField>) => {
@@ -359,7 +366,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
           v: 2
       });
       if (!saved) throw new Error('Não foi possível salvar o modelo.');
-      showToast(`Modelo para ${polo.nomeFantasia} salvo com sucesso!`, 'success');
+      showToast(`Modelo para ${scopeLabel || polo.nomeFantasia} salvo com sucesso!`, 'success');
     } catch (error) {
       showToast('Erro ao salvar as alterações do modelo.', 'error');
     } finally {
@@ -724,15 +731,27 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                                 </div>
 
                                 {/* Alinhamento de Texto */}
-                                <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
-                                    {(['left', 'center', 'right'] as const).map((align) => {
-                                        const Icon = align === 'left' ? AlignLeft : align === 'center' ? AlignCenter : AlignRight;
+                                <div>
+                                  <div className="flex items-center justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                                    <span>Alinhamento</span>
+                                    <span className="text-blue-600">{selectedTextAlignLabel}</span>
+                                  </div>
+                                  <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
+                                    {([
+                                        { value: 'left', icon: AlignLeft, title: 'Esquerda' },
+                                        { value: 'center', icon: AlignCenter, title: 'Centralizado' },
+                                        { value: 'right', icon: AlignRight, title: 'Direita' },
+                                        { value: 'justify', icon: AlignJustify, title: 'Justificado' },
+                                    ] as const).map(({ value: align, icon: Icon, title }) => {
                                         const isAligned = selectedField.style?.textAlign === align || (!selectedField.style?.textAlign && align === 'left');
                                         return (
                                             <button
                                                 key={align}
+                                                type="button"
+                                                title={title}
+                                                aria-label={title}
                                                 onClick={() => updateSelectedFieldStyle({ textAlign: align })}
-                                                className={`flex-1 flex items-center justify-center py-1 rounded-lg transition-colors ${
+                                                className={`flex-1 flex items-center justify-center py-1.5 rounded-lg transition-colors ${
                                                     isAligned
                                                     ? 'bg-white text-blue-600 shadow-sm font-bold'
                                                     : 'text-slate-400 hover:text-slate-650 hover:text-slate-600'
@@ -742,6 +761,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                                             </button>
                                         );
                                     })}
+                                  </div>
                                 </div>
                             </div>
                         )}
@@ -772,7 +792,12 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                     minHeight: '1123px', 
                     height: '1123px',
                     padding: '60px 80px', 
-                    position: 'relative'
+                    position: 'relative',
+                    backgroundImage: `
+                      linear-gradient(to right, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(14, 165, 233, 0.08) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '20px 20px'
                 }}
                 onDrop={handleDropOnCanvas}
                 onDragOver={handleDragOver}
@@ -782,6 +807,18 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                     }
                 }}
             >
+                <div className="pointer-events-none absolute inset-0 z-[1]">
+                    <div className="absolute top-0 bottom-0 left-1/2 border-l border-blue-500/35" />
+                    <div className="absolute left-0 right-0 top-1/2 border-t border-blue-500/25" />
+                    <div className="absolute border border-dashed border-slate-300/80" style={{ left: 80, right: 80, top: 60, bottom: 60 }} />
+                    {selectedField && (
+                      <>
+                        <div className="absolute top-0 bottom-0 border-l border-emerald-500/45" style={{ left: selectedField.x }} />
+                        <div className="absolute left-0 right-0 border-t border-emerald-500/45" style={{ top: selectedField.y }} />
+                      </>
+                    )}
+                </div>
+
                 {/* 1. Marca D'água */}
                 {watermark?.watermarkUrl && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
@@ -809,6 +846,11 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
 
                 {/* 3. Corpo do Texto */}
                 <div className="relative z-20 group mb-20">
+                    <div className="mb-2 flex justify-end">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                            <AlignJustify size={11} className="text-blue-600" /> Texto justificado
+                        </span>
+                    </div>
                     <div 
                         ref={editorRef}
                         contentEditable

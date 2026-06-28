@@ -24,4 +24,4 @@ export const boletimService = createDocumentTemplateService('boletim_tecnico', {
   ],
   validityDays: 30,
   v: 2
-});
+}, { sharedTemplate: true });

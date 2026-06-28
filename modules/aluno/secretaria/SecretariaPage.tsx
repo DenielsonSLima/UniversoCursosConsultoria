@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import CarteirinhaPreview from '../../gestor/cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import CrachaPreview from '../../gestor/cadastros/modelos-documentos/cracha/components/CrachaPreview';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { formatMatricula } from '../../../lib/academicUtils';
 import { declaracaoService } from '../../gestor/cadastros/modelos-documentos/declaracao/declaracao.service';
@@ -29,43 +29,25 @@ import DocumentHeader from '../../gestor/components/DocumentHeader';
 import { useDocumentValidationCode } from '../../shared/document-validation/use-document-validation-code';
 import { getDocumentValidationUrl } from '../../shared/document-validation/document-validation.url';
 import { usePoloInstitutionalData } from '../../shared/polo-institutional/use-polo-institutional-data';
-import { secretariaService } from '../../gestor/secretaria/secretaria.service';
 import { carteirinhaService } from '../../gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service';
 import { crachaService } from '../../gestor/cadastros/modelos-documentos/cracha/cracha.service';
+import {
+  formatIrpfReleaseDate,
+  getDefaultIrpfCalendarYear,
+  getIrpfCalendarYearOptions,
+  isIrpfYearReleased,
+} from '../../../lib/irpfYearUtils';
+import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.service';
+import { useAlunoSecretariaData } from './useAlunoSecretariaData';
+import { AlunoSecretariaSolicitacaoTipo } from './secretaria-aluno.types';
 
 interface SecretariaPageProps {
   alunoId: string;
 }
 
-interface Solicitacao {
-  id: string;
-  alunoId: string;
-  alunoNome: string;
-  alunoMatricula: string;
-  curso: string;
-  tipo: 'Histórico Escolar' | 'Declaração IRPF' | 'Transferência';
-  dataSolicitacao: string;
-  prazo: string;
-  status: 'Pendente' | 'Deferido' | 'Indeferido';
-  resposta?: string;
-  respostaData?: string;
-}
-
-interface PrazoConfig {
-  prazo: string;
-  descricao: string;
-}
-
-const DEFAULT_PRAZOS: Record<string, PrazoConfig> = {
-  'Histórico Escolar': { prazo: '48 horas', descricao: 'O Histórico Escolar oficial consolida todas as disciplinas do curso, notas, cargas horárias e frequência. Emissão via PDF em até 48 horas.' },
-  'Declaração IRPF': { prazo: '48 horas', descricao: 'A declaração financeira de Imposto de Renda fornece o relatório de todas as mensalidades quitadas no ano-calendário anterior para dedução fiscal de instrução escolar. Emissão em até 48 horas.' },
-  'Transferência': { prazo: '3 dias úteis', descricao: 'A solicitação de transferência prepara a sua pasta acadêmica (incluindo guia de transferência e notas acumuladas) para submissão à outra instituição. Prazo regulamentar de 3 dias úteis.' }
-};
-
 const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
-  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
-  const [tipoNovaSolicitacao, setTipoNovaSolicitacao] = useState<'Histórico Escolar' | 'Declaração IRPF' | 'Transferência'>('Histórico Escolar');
-  const [prazos, setPrazos] = useState<Record<string, PrazoConfig>>(DEFAULT_PRAZOS);
+  const queryClient = useQueryClient();
+  const [tipoNovaSolicitacao, setTipoNovaSolicitacao] = useState<AlunoSecretariaSolicitacaoTipo>('Histórico Escolar');
   
   // Documentos de Identificação
   const [docTab, setDocTab] = useState<'carteirinha' | 'cracha'>('carteirinha');
@@ -76,6 +58,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const [isBoletimOpen, setIsBoletimOpen] = useState(false);
   const [isDeclaracaoOpen, setIsDeclaracaoOpen] = useState(false);
   const [isIRPFOpen, setIsIRPFOpen] = useState(false);
+  const [selectedIrpfYear, setSelectedIrpfYear] = useState(() => getDefaultIrpfCalendarYear());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -85,47 +68,29 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     }, 4000);
   };
 
-  // 1. Busca dados cadastrais do aluno
-  const { data: aluno, isLoading: loadingAluno } = useQuery({
-    queryKey: ['secretaria-aluno-profile', alunoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('parceiros')
-        .select('*')
-        .eq('id', alunoId)
-        .single();
-      if (error) throw error;
-      return data;
-    }
-  });
+  const {
+    aluno,
+    matriculas,
+    solicitacoes,
+    prazos,
+    eligibility,
+    isLoading: loadingSecretaria,
+  } = useAlunoSecretariaData(alunoId);
 
-  // 2. Busca as matrículas do aluno e turmas
-  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
-    queryKey: ['secretaria-aluno-matriculas', alunoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas')
-        .select('*, turmas(*, cursos(*), polos(nome))')
-        .eq('aluno_id', alunoId);
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  const activeMatricula = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
-  const activeTechnicalMatricula = matriculas.find(
-    (m) =>
-      m.status?.toUpperCase() === 'ATIVO' &&
-      m.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO' &&
-      m.turmas?.cursos?.modalidade === 'TECNICO'
-  );
-  const hasTechnicalActiveMatricula = Boolean(activeTechnicalMatricula);
-  const identityMatricula = hasTechnicalActiveMatricula ? activeTechnicalMatricula : null;
-  const isTechnicalIdentityAvailable = hasTechnicalActiveMatricula;
+  const activeMatricula = eligibility.primaryEnrollment;
+  const identityMatricula = eligibility.technicalIdentityEnrollment;
+  const boletimMatricula = eligibility.bulletinEnrollment;
+  const declaracaoMatricula = eligibility.declarationEnrollment;
+  const irpfMatricula = eligibility.irpfEnrollment;
+  const isTechnicalIdentityAvailable = eligibility.canEmitStudentCard && eligibility.canEmitInternshipBadge;
   const activePoloId = activeMatricula?.turmas?.polo_id || activeMatricula?.polo_id;
+  const declaracaoPoloId = declaracaoMatricula?.turmas?.polo_id || declaracaoMatricula?.polo_id || activePoloId;
+  const irpfPoloId = irpfMatricula?.turmas?.polo_id || irpfMatricula?.polo_id || activePoloId;
+  const documentPoloId = isIRPFOpen ? irpfPoloId : declaracaoPoloId;
+  const alunoCpf = aluno?.cpf || aluno?.cpf_cnpj || '';
   const { data: cardInstitutionalData } = usePoloInstitutionalData(activePoloId);
   const formattedMat = activeMatricula 
-    ? formatMatricula(activeMatricula.id, activeMatricula.data_matricula, activeMatricula.polo_id) 
+    ? formatMatricula(activeMatricula.id, activeMatricula.data_matricula, activeMatricula.turmas?.polo_id || activeMatricula.polo_id) 
     : 'PENDENTE';
   const cardValidation = useDocumentValidationCode(
     identityMatricula
@@ -134,7 +99,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
           enrollmentId: identityMatricula.id,
         }
       : null,
-    docTab === 'carteirinha'
+    docTab === 'carteirinha' && eligibility.canEmitStudentCard
   );
   const badgeValidation = useDocumentValidationCode(
     identityMatricula
@@ -143,70 +108,82 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
           enrollmentId: identityMatricula.id,
         }
       : null,
-    docTab === 'cracha'
+    docTab === 'cracha' && eligibility.canEmitInternshipBadge
   );
   const enrollmentDeclarationValidation = useDocumentValidationCode(
-    activeMatricula
+    declaracaoMatricula
       ? {
           type: 'declaracao_matricula',
-          enrollmentId: activeMatricula.id,
+          enrollmentId: declaracaoMatricula.id,
         }
       : null,
-    isDeclaracaoOpen
+    isDeclaracaoOpen && eligibility.canEmitEnrollmentDeclaration
   );
-  const irpfValidation = useDocumentValidationCode(
-    identityMatricula
-      ? {
-          type: 'declaracao_irpf',
-          enrollmentId: identityMatricula.id,
-        }
-      : null,
-    isIRPFOpen
-  );
-
   // 3. Busca notas do diário de classe
   const { data: notas = [] } = useQuery<any[]>({
-    queryKey: ['secretaria-aluno-notas', activeMatricula?.turma_id],
+    queryKey: ['secretaria-aluno-notas', boletimMatricula?.turma_id],
     queryFn: async () => {
-      if (!activeMatricula?.turma_id) return [];
+      if (!boletimMatricula?.turma_id) return [];
       const { data, error } = await supabase
         .from('diario_notas')
         .select('*, disciplinas(*)')
-        .eq('turma_id', activeMatricula.turma_id)
+        .eq('turma_id', boletimMatricula.turma_id)
         .eq('aluno_id', alunoId);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!activeMatricula?.turma_id
+    enabled: eligibility.canEmitBulletin && !!boletimMatricula?.turma_id
   });
 
   // Busca o template de declaração do polo
   const { data: templateData } = useQuery({
-    queryKey: ['print-declaracao-template', activeMatricula?.polo_id],
+    queryKey: ['print-declaracao-template', declaracaoPoloId],
     queryFn: async () => {
-      if (!activeMatricula?.polo_id) return null;
-      return declaracaoService.getTemplate(activeMatricula.polo_id);
+      if (!declaracaoPoloId) return null;
+      return declaracaoService.getTemplate(declaracaoPoloId);
     },
-    enabled: !!activeMatricula?.polo_id,
+    enabled: !!declaracaoPoloId,
   });
 
   // Busca o template de IRPF do polo
   const { data: irpfTemplateData } = useQuery({
-    queryKey: ['print-irpf-template', activeMatricula?.polo_id],
+    queryKey: ['print-irpf-template', irpfPoloId],
     queryFn: async () => {
-      if (!activeMatricula?.polo_id) return null;
-      return irpfService.getTemplate(activeMatricula.polo_id);
+      if (!irpfPoloId) return null;
+      return irpfService.getTemplate(irpfPoloId);
     },
-    enabled: !!activeMatricula?.polo_id,
+    enabled: !!irpfPoloId,
   });
 
-  // Busca pagamentos do aluno no ano anterior para IRPF
+  const irpfLiberacaoDate = irpfTemplateData?.liberacaoDate || '03-01';
+  const irpfYearOptions = getIrpfCalendarYearOptions(irpfLiberacaoDate);
+  const selectedIrpfYearReleaseLabel = formatIrpfReleaseDate(selectedIrpfYear, irpfLiberacaoDate);
+  const isSelectedIrpfYearReleased = isIrpfYearReleased(selectedIrpfYear, irpfLiberacaoDate);
+  const irpfValidation = useDocumentValidationCode(
+    irpfMatricula
+      ? {
+          type: 'declaracao_irpf',
+          enrollmentId: irpfMatricula.id,
+          referencePeriod: String(selectedIrpfYear),
+          registerReissue: true,
+        }
+      : null,
+    isIRPFOpen && eligibility.canEmitIrpf && isSelectedIrpfYearReleased
+  );
+
+  useEffect(() => {
+    const defaultYear = getDefaultIrpfCalendarYear(irpfLiberacaoDate);
+    setSelectedIrpfYear((currentYear) =>
+      isIrpfYearReleased(currentYear, irpfLiberacaoDate) ? currentYear : defaultYear
+    );
+  }, [irpfLiberacaoDate]);
+
+  // Busca pagamentos do aluno no ano-calendário selecionado para IRPF
   const { data: irpfPayments = [] } = useQuery<any[]>({
-    queryKey: ['secretaria-aluno-irpf-payments', alunoId],
+    queryKey: ['secretaria-aluno-irpf-payments', alunoId, selectedIrpfYear],
     queryFn: async () => {
-      const lastYear = new Date().getFullYear() - 1;
-      const startDate = `${lastYear}-01-01`;
-      const endDate = `${lastYear}-12-31`;
+      const startDate = `${selectedIrpfYear}-01-01`;
+      const endDate = `${selectedIrpfYear}-12-31`;
       
       const { data, error } = await supabase
         .from('contas_receber')
@@ -218,23 +195,24 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: eligibility.canEmitIrpf && isSelectedIrpfYearReleased,
   });
 
   // Busca o polo completo
   const { data: poloData } = useQuery({
-    queryKey: ['print-polo-details', activeMatricula?.polo_id],
+    queryKey: ['print-polo-details', documentPoloId],
     queryFn: async () => {
-      if (!activeMatricula?.polo_id) return null;
+      if (!documentPoloId) return null;
       const { data, error } = await supabase
         .from('polos')
         .select('*')
-        .eq('id', activeMatricula.polo_id)
+        .eq('id', documentPoloId)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!activeMatricula?.polo_id,
+    enabled: !!documentPoloId,
   });
 
   // Busca as marcas d'água
@@ -245,7 +223,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     },
   });
 
-  const watermark = watermarkData?.find((w: any) => w.id === activeMatricula?.polo_id);
+  const watermark = watermarkData?.find((w: any) => w.id === documentPoloId);
 
   // Busca a configuração do QR Code
   const { data: qrConfig } = useQuery({
@@ -276,16 +254,16 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       return enrollmentDeclarationValidation.data.code;
     }
     let codeStr = formattedMat; // fallback
-    if (qrConfig && qrConfig.pattern && activeMatricula) {
+    if (qrConfig && qrConfig.pattern && declaracaoMatricula) {
       codeStr = qrConfig.pattern.map((token: string) => {
-          if (token === '{POLO_ID}') return (activeMatricula.polo_id || '').slice(0,3).toUpperCase();
-          if (token === '{CURSO_ID}') return (activeMatricula.turmas?.cursos?.id || '').slice(0,4).toUpperCase();
-          if (token === '{ALUNO_MATRICULA}') return activeMatricula.id.toString();
-          if (token === '{ALUNO_CPF}') return (aluno?.cpf || '').replace(/\D/g, '');
+          if (token === '{POLO_ID}') return (declaracaoMatricula.turmas?.polo_id || declaracaoMatricula.polo_id || '').slice(0,3).toUpperCase();
+          if (token === '{CURSO_ID}') return (declaracaoMatricula.turmas?.cursos?.id || '').slice(0,4).toUpperCase();
+          if (token === '{ALUNO_MATRICULA}') return declaracaoMatricula.id.toString();
+          if (token === '{ALUNO_CPF}') return alunoCpf.replace(/\D/g, '');
           if (token === '{DATA_DIA}') return new Date().getDate().toString().padStart(2, '0');
           if (token === '{DATA_MES}') return (new Date().getMonth() + 1).toString().padStart(2, '0');
           if (token === '{ANO_ATUAL}') return new Date().getFullYear().toString();
-          if (token === '{RANDOM_HASH}') return activeMatricula.id.slice(-6).toUpperCase();
+          if (token === '{RANDOM_HASH}') return declaracaoMatricula.id.slice(-6).toUpperCase();
           return token.replace(/[{}]/g, '').substring(0, 4);
       }).join(qrConfig.separator || '-');
     }
@@ -304,16 +282,16 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const getValidationCodeIRPF = () => {
     if (irpfValidation.data?.code) return irpfValidation.data.code;
     let codeStr = formattedMat; // fallback
-    if (irpfQrConfig && irpfQrConfig.pattern && activeMatricula) {
+    if (irpfQrConfig && irpfQrConfig.pattern && irpfMatricula) {
       codeStr = irpfQrConfig.pattern.map((token: string) => {
-          if (token === '{POLO_ID}') return (activeMatricula.polo_id || '').slice(0,3).toUpperCase();
-          if (token === '{CURSO_ID}') return (activeMatricula.turmas?.cursos?.id || '').slice(0,4).toUpperCase();
-          if (token === '{ALUNO_MATRICULA}') return activeMatricula.id.toString();
-          if (token === '{ALUNO_CPF}') return (aluno?.cpf || '').replace(/\D/g, '');
+          if (token === '{POLO_ID}') return (irpfMatricula.turmas?.polo_id || irpfMatricula.polo_id || '').slice(0,3).toUpperCase();
+          if (token === '{CURSO_ID}') return (irpfMatricula.turmas?.cursos?.id || '').slice(0,4).toUpperCase();
+          if (token === '{ALUNO_MATRICULA}') return irpfMatricula.id.toString();
+          if (token === '{ALUNO_CPF}') return alunoCpf.replace(/\D/g, '');
           if (token === '{DATA_DIA}') return new Date().getDate().toString().padStart(2, '0');
           if (token === '{DATA_MES}') return (new Date().getMonth() + 1).toString().padStart(2, '0');
           if (token === '{ANO_ATUAL}') return new Date().getFullYear().toString();
-          if (token === '{RANDOM_HASH}') return activeMatricula.id.slice(-6).toUpperCase();
+          if (token === '{RANDOM_HASH}') return irpfMatricula.id.slice(-6).toUpperCase();
           return token.replace(/[{}]/g, '').substring(0, 4);
       }).join(irpfQrConfig.separator || '-');
     }
@@ -330,16 +308,16 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   };
 
   useEffect(() => {
-    if (!isTechnicalIdentityAvailable && (docTab === 'carteirinha' || docTab === 'cracha')) {
+    if ((!eligibility.canEmitStudentCard && docTab === 'carteirinha') || (!eligibility.canEmitInternshipBadge && docTab === 'cracha')) {
       setDocTab('servicos' as any);
     }
-  }, [isTechnicalIdentityAvailable, docTab]);
+  }, [eligibility.canEmitStudentCard, eligibility.canEmitInternshipBadge, docTab]);
 
   useEffect(() => {
-    if (!isTechnicalIdentityAvailable && tipoNovaSolicitacao !== 'Histórico Escolar') {
-      setTipoNovaSolicitacao('Histórico Escolar');
+    if (!eligibility.allowedRequests.includes(tipoNovaSolicitacao) && eligibility.allowedRequests[0]) {
+      setTipoNovaSolicitacao(eligibility.allowedRequests[0]);
     }
-  }, [isTechnicalIdentityAvailable, tipoNovaSolicitacao]);
+  }, [eligibility.allowedRequests, tipoNovaSolicitacao]);
 
   // Portuguese number to words helper
   const valorPorExtenso = (valor: number): string => {
@@ -432,13 +410,15 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     };
 
     const vDays = templateData?.validityDays || 30;
+    const variableEnrollment = isIRPFOpen
+      ? irpfMatricula
+      : declaracaoMatricula || activeMatricula;
     const alunoNome = aluno?.nome || '';
-    const cursoNome = activeMatricula?.turmas?.cursos?.nome || '';
-    const turmaNome = activeMatricula?.turmas?.nome || '';
-    const poloNome = activeMatricula?.turmas?.polos?.nome || poloData?.nomeFantasia || '';
+    const cursoNome = variableEnrollment?.turmas?.cursos?.nome || '';
+    const turmaNome = variableEnrollment?.turmas?.nome || '';
+    const poloNome = variableEnrollment?.turmas?.polos?.nome || poloData?.nomeFantasia || '';
     const cidadePolo = poloData?.cidade || poloNome || 'Aracaju';
 
-    const lastYear = new Date().getFullYear() - 1;
     const irpfTotalValue = irpfPayments.length > 0
       ? irpfPayments.reduce((acc, curr) => acc + Number(curr.valor_pago || curr.valor || 0), 0)
       : 3000.00;
@@ -448,8 +428,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     return text
       .replace(/\{\{ALUNO_NOME\}\}/g, alunoNome.toUpperCase())
       .replace(/\{ALUNO_NOME\}/g, alunoNome.toUpperCase())
-      .replace(/\{\{ALUNO_CPF\}\}/g, aluno?.cpf || '')
-      .replace(/\{ALUNO_CPF\}/g, aluno?.cpf || '')
+      .replace(/\{\{ALUNO_CPF\}\}/g, alunoCpf)
+      .replace(/\{ALUNO_CPF\}/g, alunoCpf)
       .replace(/\{\{ALUNO_RG\}\}/g, aluno?.rg || '')
       .replace(/\{ALUNO_RG\}/g, aluno?.rg || '')
       .replace(/\{\{ALUNO_MATRICULA\}\}/g, formattedMat || '')
@@ -466,26 +446,23 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       .replace(/\{DATA_ATUAL\}/g, dataAtual)
       .replace(/\{\{HORA_ATUAL\}\}/g, horaAtual)
       .replace(/\{HORA_ATUAL\}/g, horaAtual)
+      .replace(/\{\{DATA_GERACAO\}\}/g, `${new Date().toLocaleDateString('pt-BR')} às ${horaAtual}`)
+      .replace(/\{DATA_GERACAO\}/g, `${new Date().toLocaleDateString('pt-BR')} às ${horaAtual}`)
       .replace(/\{\{VALIDADE_DIAS\}\}/g, String(vDays))
       .replace(/\{VALIDADE_DIAS\}/g, String(vDays))
       .replace(/\{\{VALIDADE_DATA\}\}/g, getValidadeData(vDays))
       .replace(/\{VALIDADE_DATA\}/g, getValidadeData(vDays))
-      .replace(/\{\{ANO_CALENDARIO\}\}/g, String(lastYear))
-      .replace(/\{ANO_CALENDARIO\}/g, String(lastYear))
+      .replace(/\{\{ANO_CALENDARIO\}\}/g, String(selectedIrpfYear))
+      .replace(/\{ANO_CALENDARIO\}/g, String(selectedIrpfYear))
       .replace(/\{\{VALOR_TOTAL\}\}/g, formattedIrpfTotal)
       .replace(/\{VALOR_TOTAL\}/g, formattedIrpfTotal)
       .replace(/\{\{VALOR_EXTENSO\}\}/g, irpfTotalExtenso)
       .replace(/\{VALOR_EXTENSO\}/g, irpfTotalExtenso);
   };
 
-  // Carrega prazos, templates e solicitações do Supabase — NUNCA localStorage
+  // Carrega templates de cartões do Supabase — NUNCA localStorage
   useEffect(() => {
     const loadData = async () => {
-      // Prazos configurados pelo admin
-      const prz = await secretariaService.getPrazos();
-      setPrazos(prz);
-
-      // Templates de cartões
       const savedCarteirinha = await carteirinhaService.getTemplate();
       if (savedCarteirinha) {
         setCarteirinhaFormData(savedCarteirinha);
@@ -499,37 +476,47 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       } else {
         setCrachaFormData({ corPrimaria: '#001a33', corSecundaria: '#3b82f6', textoFrente: 'ALUNO', textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal e obrigatório nas dependências da instituição.', cargoPadrao: 'ALUNO(A)', exibirRotulos: true });
       }
-
-      // Solicitações do Supabase
-      const sols = await secretariaService.getSolicitacoesByAluno(alunoId);
-      setSolicitacoes(sols);
     };
     loadData();
-  }, [alunoId]);
+  }, []);
+
+  const createSolicitacaoMutation = useMutation({
+    mutationFn: async (tipo: AlunoSecretariaSolicitacaoTipo) => {
+      if (!aluno || !eligibility.requestEnrollment) {
+        throw new Error('Nenhum vínculo elegível para solicitação.');
+      }
+
+      const prazo = prazos[tipo]?.prazo || (tipo === 'Transferência' ? '3 dias úteis' : '48 horas');
+      const created = await alunoSecretariaService.createSolicitacao({
+        alunoId,
+        alunoNome: aluno.nome.toUpperCase(),
+        alunoMatricula: formattedMat,
+        curso: eligibility.requestEnrollment.turmas?.cursos?.nome || 'CURSO GERAL',
+        tipo,
+        dataSolicitacao: new Date().toISOString().split('T')[0],
+        prazo,
+        status: 'Pendente'
+      });
+
+      if (!created) throw new Error('Erro ao registrar solicitação.');
+      return created;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alunoSecretariaKeys.solicitacoes(alunoId) });
+      showToast('Sua solicitação foi registrada. Aguarde o prazo regulamentar.', 'success');
+    },
+    onError: (error: any) => {
+      showToast(error?.message || 'Erro ao registrar solicitação. Tente novamente.', 'error');
+    },
+  });
 
   const handleCriarSolicitacao = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!aluno) return;
-
-    const prazo = prazos[tipoNovaSolicitacao]?.prazo || (tipoNovaSolicitacao === 'Transferência' ? '3 dias úteis' : '48 horas');
-
-    const newRequest = await secretariaService.createSolicitacao({
-      alunoId,
-      alunoNome: aluno.nome.toUpperCase(),
-      alunoMatricula: formattedMat,
-      curso: activeMatricula?.turmas?.cursos?.nome || 'CURSO GERAL',
-      tipo: tipoNovaSolicitacao,
-      dataSolicitacao: new Date().toISOString().split('T')[0],
-      prazo,
-      status: 'Pendente'
-    });
-
-    if (newRequest) {
-      setSolicitacoes(prev => [newRequest, ...prev]);
-      alert('Sua solicitação foi registrada! Aguarde o prazo regulamentar para recebimento.');
-    } else {
-      alert('Erro ao registrar solicitação. Tente novamente.');
+    if (!eligibility.allowedRequests.includes(tipoNovaSolicitacao)) {
+      showToast('Este documento não está disponível para o seu tipo de matrícula.', 'warning');
+      return;
     }
+    createSolicitacaoMutation.mutate(tipoNovaSolicitacao);
   };
 
   const getStatusBadge = (status: string) => {
@@ -543,7 +530,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     }
   };
 
-  if (loadingAluno || loadingMatriculas) {
+  if (loadingSecretaria) {
     return (
       <div className="flex justify-center items-center py-20 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
         <Loader2 className="animate-spin text-blue-600 mr-2" size={24} />
@@ -555,56 +542,35 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   // ── shared aluno data for ID docs ─────────────────────────────────────────
   const alunoData = {
     nome: aluno?.nome?.toUpperCase() || 'NOME DO ALUNO',
-    cpf: aluno?.cpf || 'CPF não cadastrado',
+    cpf: alunoCpf || 'CPF não cadastrado',
     rg: aluno?.rg || 'Doc. não cadastrado',
     nascimento: aluno?.data_nascimento
       ? new Date(aluno.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR')
       : 'Não informado',
     matricula: formattedMat,
-    curso: activeMatricula?.turmas?.cursos?.nome || 'CURSO GERAL',
+    curso: identityMatricula?.turmas?.cursos?.nome || activeMatricula?.turmas?.cursos?.nome || 'CURSO GERAL',
     instituicao: cardInstitutionalData?.poloNome || 'UNIVERSO CURSOS E CONSULTORIA',
     validade: `01/${new Date().getFullYear() + 1}`,
     fotoUrl: aluno?.foto_url || null,
     tipoDocumento: aluno?.tipo_documento || 'RG',
     cargo: 'ALUNO(A)',
-    polo: activeMatricula?.turmas?.polos?.nome || 'Polo Principal',
+    polo: identityMatricula?.turmas?.polos?.nome || activeMatricula?.turmas?.polos?.nome || 'Polo Principal',
     poloRazaoSocial: cardInstitutionalData?.razaoSocial,
     poloCnpj: cardInstitutionalData?.cnpj,
     poloTelefone: cardInstitutionalData?.telefone,
   };
 
   const handleOpenIRPF = () => {
-    if (!isTechnicalIdentityAvailable) {
+    if (!eligibility.canEmitIrpf) {
       showToast(
-        'A Declaração de Rendimentos (IRPF) só está disponível para matrícula ativa em curso técnico.',
+        'A Declaração de Rendimentos (IRPF) está disponível apenas para vínculo em curso técnico.',
         'warning'
       );
       return;
     }
 
-    const dateLimit = irpfTemplateData?.liberacaoDate || '03-01';
-    const [monthStr, dayStr] = dateLimit.split('-');
-    const limitMonth = parseInt(monthStr, 10) || 3;
-    const limitDay = parseInt(dayStr, 10) || 1;
-
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1; // 1-indexed
-    const currentDay = now.getDate();
-
-    let isReleased = false;
-    if (currentMonth > limitMonth) {
-      isReleased = true;
-    } else if (currentMonth === limitMonth && currentDay >= limitDay) {
-      isReleased = true;
-    }
-
-    if (!isReleased) {
-      const monthsList = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-      ];
-      const limitMonthName = monthsList[limitMonth - 1] || 'Março';
-      showToast(`A Declaração de Rendimentos (IRPF) só estará disponível a partir de ${limitDay} de ${limitMonthName}.`, 'warning');
+    if (!isSelectedIrpfYearReleased) {
+      showToast(`O IRPF do ano-calendário ${selectedIrpfYear} estará disponível a partir de ${selectedIrpfYearReleaseLabel}.`, 'warning');
       return;
     }
 
@@ -686,33 +652,37 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                   <p className="text-slate-500 font-medium mt-0.5">Clique para visualizar ou imprimir seus comprovantes oficiais.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button
-                    onClick={() => setIsBoletimOpen(true)}
-                    className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
-                  >
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
-                      <ScrollText size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Boletim Escolar</h4>
-                      <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Acompanhe suas notas parciais, médias finais e percentual de frequência.</p>
-                    </div>
-                  </button>
+                  {eligibility.canEmitBulletin && (
+                    <button
+                      onClick={() => setIsBoletimOpen(true)}
+                      className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
+                    >
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
+                        <ScrollText size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Boletim Escolar</h4>
+                        <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Acompanhe suas notas parciais, médias finais e percentual de frequência.</p>
+                      </div>
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => setIsDeclaracaoOpen(true)}
-                    className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
-                  >
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Declaração Cursando</h4>
-                      <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Comprovante de matrícula oficial ativo com autenticação por QR Code.</p>
-                    </div>
-                  </button>
+                  {eligibility.canEmitEnrollmentDeclaration && (
+                    <button
+                      onClick={() => setIsDeclaracaoOpen(true)}
+                      className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
+                    >
+                      <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:bg-white/10 group-hover:text-white transition-colors shadow-sm">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm group-hover:text-white transition-colors">Declaração Cursando</h4>
+                        <p className="text-slate-500 font-medium text-[10px] leading-relaxed mt-1 group-hover:text-slate-400 transition-colors">Comprovante de matrícula oficial ativo com autenticação por QR Code.</p>
+                      </div>
+                    </button>
+                  )}
 
-                  {isTechnicalIdentityAvailable && (
+                  {eligibility.canEmitIrpf && (
                     <button
                       onClick={handleOpenIRPF}
                       className="group p-5 bg-slate-50 hover:bg-[#001a33] hover:text-white rounded-2xl border border-slate-150 flex flex-col justify-between items-start text-left transition-all duration-300 min-h-[150px]"
@@ -727,9 +697,15 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     </button>
                   )}
                 </div>
-                {!isTechnicalIdentityAvailable && (
+                {!eligibility.canEmitBulletin && !eligibility.canEmitEnrollmentDeclaration && !eligibility.canEmitIrpf && (
+                  <div className="rounded-2xl border border-slate-150 bg-slate-50 p-5 text-center">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-500">Nenhum documento de emissão imediata disponível neste vínculo.</p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-400">Certificados de EAD, cursos livres e especializações ficam disponíveis na área de cursos quando aplicável.</p>
+                  </div>
+                )}
+                {eligibility.blockedSummary && (
                   <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-2 mt-4">
-                    Carteirinha, crachá e Declaração de IRPF estão disponíveis apenas para matrícula ativa em curso técnico.
+                    {eligibility.blockedSummary}
                   </p>
                 )}
               </div>
@@ -795,38 +771,45 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                 <h3 className="font-black text-[#001a33] text-sm uppercase tracking-tight">Nova Solicitação</h3>
                 <p className="text-slate-500 font-medium mt-0.5">Abra um chamado acadêmico regulamentar.</p>
               </div>
-              <form onSubmit={handleCriarSolicitacao} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Tipo de Documento</label>
-                  <select
-                    value={tipoNovaSolicitacao}
-                    onChange={(e) => setTipoNovaSolicitacao(e.target.value as any)}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-blue-500 font-bold text-slate-700 cursor-pointer"
+              {eligibility.allowedRequests.length ? (
+                <form onSubmit={handleCriarSolicitacao} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Tipo de Documento</label>
+                    <select
+                      value={tipoNovaSolicitacao}
+                      onChange={(e) => setTipoNovaSolicitacao(e.target.value as AlunoSecretariaSolicitacaoTipo)}
+                      className="w-full p-3.5 bg-slate-50 border border-slate-200 outline-none rounded-xl focus:border-blue-500 font-bold text-slate-700 cursor-pointer"
+                    >
+                      {eligibility.allowedRequests.map((tipo) => (
+                        <option key={tipo} value={tipo}>{tipo} (Prazo: {prazos[tipo]?.prazo || '48h'})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-150 space-y-1.5">
+                    <h4 className="font-bold text-slate-700 uppercase tracking-wide text-[9px] flex items-center gap-1.5">
+                      <HelpCircle size={12} className="text-slate-400" /> Detalhes Regulamentares
+                    </h4>
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
+                      {prazos[tipoNovaSolicitacao]?.descricao || ''}
+                    </p>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={createSolicitacaoMutation.isPending}
+                    className="w-full py-4 bg-[#001a33] hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
                   >
-                    <option value="Histórico Escolar">Histórico Escolar (Prazo: {prazos['Histórico Escolar']?.prazo || '48h'})</option>
-                    {isTechnicalIdentityAvailable && (
-                      <>
-                        <option value="Declaração IRPF">Declaração IRPF (Prazo: {prazos['Declaração IRPF']?.prazo || '48h'})</option>
-                        <option value="Transferência">Transferência Escolar (Prazo: {prazos['Transferência']?.prazo || '3 dias úteis'})</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-150 space-y-1.5">
-                  <h4 className="font-bold text-slate-700 uppercase tracking-wide text-[9px] flex items-center gap-1.5">
-                    <HelpCircle size={12} className="text-slate-400" /> Detalhes Regulamentares
-                  </h4>
-                  <p className="text-[10px] text-slate-500 leading-relaxed font-semibold">
-                    {prazos[tipoNovaSolicitacao]?.descricao || ''}
+                    {createSolicitacaoMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                    Enviar Solicitação
+                  </button>
+                </form>
+              ) : (
+                <div className="rounded-2xl border border-slate-150 bg-slate-50 p-5">
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-600">Sem solicitações disponíveis</p>
+                  <p className="mt-2 text-[11px] font-semibold leading-relaxed text-slate-500">
+                    Para EAD, cursos livres e especializações, os documentos emitíveis ficam vinculados ao certificado/curso. Histórico, IRPF e transferência são processos restritos ao ensino técnico.
                   </p>
                 </div>
-                <button
-                  type="submit"
-                  className="w-full py-4 bg-[#001a33] hover:bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-md flex items-center justify-center gap-2"
-                >
-                  <Send size={15} /> Enviar Solicitação
-                </button>
-              </form>
+              )}
             </div>
           </div>
         </>
@@ -927,15 +910,15 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 border border-slate-150 rounded-2xl">
                 <div>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">Curso</span>
-                  <span className="font-black text-slate-800 text-xs uppercase">{activeMatricula?.turmas?.cursos?.nome || 'CURSO GERAL'}</span>
+                  <span className="font-black text-slate-800 text-xs uppercase">{boletimMatricula?.turmas?.cursos?.nome || 'CURSO GERAL'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">Turma</span>
-                  <span className="font-black text-slate-800 text-xs uppercase">{activeMatricula?.turmas?.codigo || 'N/A'}</span>
+                  <span className="font-black text-slate-800 text-xs uppercase">{boletimMatricula?.turmas?.codigo || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block">Polo Vinculado</span>
-                  <span className="font-black text-slate-800 text-xs uppercase">{activeMatricula?.turmas?.polos?.nome || 'Matriz'}</span>
+                  <span className="font-black text-slate-800 text-xs uppercase">{boletimMatricula?.turmas?.polos?.nome || 'Matriz'}</span>
                 </div>
               </div>
               <table className="w-full text-left border-collapse text-xs">
@@ -1095,9 +1078,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     )}
 
                     {field.type === 'text' && (
-                      <span className="whitespace-pre-line">
-                        {replaceVariables(field.value)}
-                      </span>
+                      <span
+                        className="whitespace-pre-line"
+                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                      />
                     )}
                   </div>
                 ))}
@@ -1117,7 +1101,11 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                 <h4 className="font-black text-[#001a33] text-base uppercase tracking-tight">Declaração de Rendimentos (IRPF)</h4>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => printRegisteredDocument(irpfValidation.data?.code, 'declaração de IRPF')} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001a33] text-white hover:bg-blue-900 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors">
+                <button
+                  onClick={() => printRegisteredDocument(irpfValidation.data?.code, 'declaração de IRPF')}
+                  disabled={!isSelectedIrpfYearReleased}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001a33] text-white hover:bg-blue-900 disabled:bg-slate-300 disabled:cursor-not-allowed rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors"
+                >
                   <Printer size={13} /> Imprimir
                 </button>
                 <button onClick={() => setIsIRPFOpen(false)} className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 rounded-xl transition-colors shadow-sm">
@@ -1126,7 +1114,39 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
               </div>
             </div>
             
-            <div className="overflow-auto flex-1 bg-slate-100 flex justify-center p-8 custom-scrollbar">
+            <div className="overflow-auto flex-1 bg-slate-100 flex flex-col items-center gap-4 p-8 custom-scrollbar">
+              <div className="print:hidden w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Ano-calendário</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <select
+                        value={selectedIrpfYear}
+                        onChange={(event) => setSelectedIrpfYear(Number(event.target.value))}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-[#001a33] outline-none focus:border-teal-500"
+                      >
+                        {irpfYearOptions.map((option) => (
+                          <option key={option.year} value={option.year}>
+                            {option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}
+                          </option>
+                        ))}
+                      </select>
+                      <span className={`rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                        isSelectedIrpfYearReleased
+                          ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                          : 'border-amber-100 bg-amber-50 text-amber-700'
+                      }`}>
+                        {isSelectedIrpfYearReleased ? 'Disponível' : 'Aguardando liberação'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="max-w-sm text-[11px] font-bold leading-relaxed text-slate-500">
+                    {isSelectedIrpfYearReleased
+                      ? `Você pode emitir a declaração referente aos pagamentos de ${selectedIrpfYear}.`
+                      : `A declaração do ano-calendário ${selectedIrpfYear} estará disponível a partir de ${selectedIrpfYearReleaseLabel}.`}
+                  </p>
+                </div>
+              </div>
               <div 
                 id="print-area-irpf"
                 className="bg-white shadow-md relative shrink-0 text-black text-justify"
@@ -1209,9 +1229,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     )}
 
                     {field.type === 'text' && (
-                      <span className="whitespace-pre-line">
-                        {replaceVariables(field.value)}
-                      </span>
+                      <span
+                        className="whitespace-pre-line"
+                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                      />
                     )}
                   </div>
                 ))}
