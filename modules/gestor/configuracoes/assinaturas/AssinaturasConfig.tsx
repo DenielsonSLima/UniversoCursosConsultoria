@@ -87,7 +87,14 @@ const AssinaturasConfig: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const success = await assinaturasService.saveSignatures(signatures);
+    const signaturesToSave = {
+      ...signatures,
+      diretoriaGeralCargo: 'Diretor(a) Geral',
+      secretariaCargo: 'Secretária Acadêmica',
+      coordenacaoCargo: 'Coordenador(a) Pedagógico(a)',
+      financeiroCargo: 'Setor Financeiro',
+    };
+    const success = await assinaturasService.saveSignatures(signaturesToSave);
     if (success) {
       toast.success('Assinaturas Salvas', 'Configurações de assinaturas salvas com sucesso!');
       setSaveSuccess(true);
@@ -145,17 +152,6 @@ const AssinaturasConfig: React.FC = () => {
                 placeholder="Ex: Prof. Denielson S. Lima"
                 value={nome}
                 onChange={(e) => setSignatures(prev => ({ ...prev, [nomeKey]: e.target.value }))}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-pink-500 transition-all"
-              />
-            </label>
-
-            <label className="block">
-              <span className="block mb-1 text-[9px] font-black text-slate-400 uppercase tracking-widest text-left">Cargo / Função</span>
-              <input 
-                type="text"
-                placeholder="Ex: Diretor Geral"
-                value={cargo}
-                onChange={(e) => setSignatures(prev => ({ ...prev, [cargoKey]: e.target.value }))}
                 className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-pink-500 transition-all"
               />
             </label>

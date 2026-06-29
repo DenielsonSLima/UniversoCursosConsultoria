@@ -700,6 +700,7 @@ const DiariosPage: React.FC = () => {
                                       top: `${field.y}%`,
                                       width: `${field.width}%`,
                                       cursor: isDragging ? 'grabbing' : 'grab',
+                                      mixBlendMode: field.mixBlendMode || 'multiply',
                                     }}
                                   >
                                     {isSelected && (
