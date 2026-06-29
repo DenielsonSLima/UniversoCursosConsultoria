@@ -113,6 +113,7 @@ export const createAsaasWebhookHandlers = (
       tipo_lancamento: "MATRICULA",
       origem_pagamento: paid ? "ASAAS" : "ASAAS_ONLINE",
       asaas_payment_id: params.payment.id,
+      asaas_payment_link_id: params.payment.paymentLink || null,
       nosso_numero_asaas: params.payment.id,
       asaas_invoice_url: params.payment.invoiceUrl || null,
       asaas_bank_slip_url: params.payment.bankSlipUrl || null,
@@ -210,10 +211,23 @@ export const createAsaasWebhookHandlers = (
       receivable = referencedReceivable;
     }
 
+    if (!receivable && payment.paymentLink) {
+      const { data: linkedReceivable, error: linkedReceivableError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("asaas_payment_link_id", payment.paymentLink)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (linkedReceivableError) throw linkedReceivableError;
+      receivable = linkedReceivable;
+    }
+
     if (!receivable) return;
 
     const updates: Record<string, unknown> = {
       asaas_payment_id: payment.id || receivable.asaas_payment_id,
+      asaas_payment_link_id: payment.paymentLink || receivable.asaas_payment_link_id || null,
       nosso_numero_asaas: payment.id || receivable.nosso_numero_asaas,
       asaas_status: payment.status || eventType.replace("PAYMENT_", ""),
       asaas_invoice_url: payment.invoiceUrl || receivable.asaas_invoice_url,

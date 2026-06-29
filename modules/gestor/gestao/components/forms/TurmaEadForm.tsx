@@ -18,6 +18,10 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
     dataInicio: '',
     dataPrevisaoTermino: '',
     vagasTotais: 100,
+    origemFinanceira: 'NORMAL',
+    financeiroHerdado: false,
+    gerarCobrancasFuturas: true,
+    sincronizarAsaasFuturo: true,
     nomeAutomatico: '',
     codigoAutomatico: ''
   });
@@ -56,6 +60,10 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
         ...formData,
         nome: formData.nomeAutomatico,
         codigo: formData.codigoAutomatico,
+        origemFinanceira: formData.origemFinanceira,
+        financeiroHerdado: formData.financeiroHerdado,
+        gerarCobrancasFuturas: formData.gerarCobrancasFuturas,
+        sincronizarAsaasFuturo: formData.sincronizarAsaasFuturo,
         cursoNome: curso.nome,
         turno: 'EAD' as Turno,
         modalidade: 'EAD',
@@ -134,6 +142,44 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
                 onChange={(e) => setFormData({...formData, vagasTotais: parseInt(e.target.value)})}
                 required
              />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              Configuração financeira para turma em andamento
+            </p>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.origemFinanceira === 'LEGADO'}
+                onChange={(e) => setFormData((current) => ({
+                  ...current,
+                  origemFinanceira: e.target.checked ? 'LEGADO' : 'NORMAL',
+                  financeiroHerdado: e.target.checked ? true : current.financeiroHerdado,
+                  gerarCobrancasFuturas: e.target.checked ? false : current.gerarCobrancasFuturas,
+                }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Turma com histórico financeiro anterior
+            </label>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.gerarCobrancasFuturas}
+                onChange={(e) => setFormData((current) => ({ ...current, gerarCobrancasFuturas: e.target.checked }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Gerar cobranças futuras
+            </label>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.sincronizarAsaasFuturo}
+                onChange={(e) => setFormData((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Sincronizar futuras cobranças com Asaas
+            </label>
           </div>
 
           <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 space-y-3">

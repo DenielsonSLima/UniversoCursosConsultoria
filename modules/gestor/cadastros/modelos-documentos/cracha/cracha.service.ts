@@ -55,29 +55,29 @@ const DEFAULT_TEMPLATE = {
     {
       id: 'matricula',
       type: 'text',
-      value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+      value: 'MATRÍCULA\n{{ALUNO_MATRICULA}}',
       x: 5.5,
       y: 60.0,
       page: 'frente',
-      style: { fontSize: '6.8px', color: '#1e293b' }
+      style: { fontSize: '6.8px', lineHeight: '1.12', fontWeight: 'bold', color: '#1e293b' }
     },
     {
       id: 'cpf',
       type: 'text',
-      value: 'CPF: {{ALUNO_CPF}}',
+      value: 'CPF\n{{ALUNO_CPF}}',
       x: 5.5,
       y: 66.2,
       page: 'frente',
-      style: { fontSize: '6.8px', color: '#1e293b' }
+      style: { fontSize: '6.8px', lineHeight: '1.12', fontWeight: 'bold', color: '#1e293b' }
     },
     {
-      id: 'polo',
+      id: 'curso',
       type: 'text',
-      value: 'POLO: {{POLO_NOME}}',
+      value: 'CURSO\n{{ALUNO_CURSO}}',
       x: 5.5,
       y: 72.4,
       page: 'frente',
-      style: { fontSize: '6.8px', color: '#1e293b' }
+      style: { fontSize: '6.8px', lineHeight: '1.12', fontWeight: 'bold', color: '#1e293b' }
     },
     {
       id: 'qrcode',

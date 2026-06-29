@@ -19,6 +19,7 @@ export interface Turma {
   dataPrevisaoTermino: string;
   dataInicioInscricao?: string;
   dataFimInscricao?: string;
+  permitirInscricoesOnline?: boolean;
   exigeMatricula?: boolean;
   bloquearMatriculasAposCompletarVagas?: boolean;
   qtdVagasMinima?: number;
@@ -36,6 +37,11 @@ export interface Turma {
   jurosAtraso: number;
   multaAtraso: number;
   diaVencimentoPadrao?: number;
+  origemFinanceira?: 'LEGADO' | 'NORMAL';
+  financeiroHerdado?: boolean;
+  gerarCobrancasFuturas?: boolean;
+  sincronizarAsaasFuturo?: boolean;
+  obsFinanceiraOrigem?: string;
   cronogramaFinanceiro?: any[];
   aplicarDescontoMatricula?: boolean;
   aplicarMultaJurosMatricula?: boolean;

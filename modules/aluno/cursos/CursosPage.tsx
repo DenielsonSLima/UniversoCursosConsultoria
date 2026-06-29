@@ -22,11 +22,13 @@ import {
   ListChecks,
   Lock,
   Loader2,
+  MapPin,
   MonitorPlay,
   Play,
   Printer,
   Search,
   ShieldCheck,
+  X,
   Zap,
   ZoomIn,
   ZoomOut
@@ -144,6 +146,10 @@ const getTurmaUnavailabilityReason = (turma: any, today: string) => {
   const qtdVagasMinima = Number(turma?.qtd_vagas_minima || 0);
   const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
 
+  if (turma?.permitir_inscricoes_online !== true) {
+    return 'Inscrições online não liberadas para esta turma.';
+  }
+
   if (turma?.data_inicio_inscricao && today < turma.data_inicio_inscricao) {
     return `Inscrições abrem em ${formatDate(turma.data_inicio_inscricao)}.`;
   }
@@ -171,13 +177,22 @@ const getCourseEnrollmentAvailability = (turmas: any[]) => {
     turma,
     reason: getTurmaUnavailabilityReason(turma, today),
   }));
-  const available = analyzed.find((item) => !item.reason);
-  if (available) return { isAvailable: true, reason: null, turma: available.turma };
+  const availableTurmas = analyzed.filter((item) => !item.reason).map((item) => item.turma);
+  const available = availableTurmas[0];
+  if (available) return { isAvailable: true, reason: null, turma: available, availableTurmas };
   return {
     isAvailable: false,
     reason: analyzed[0]?.reason || 'Sem turma aberta para inscrição no momento.',
     turma: analyzed[0]?.turma || null,
+    availableTurmas: [],
   };
+};
+
+const getPoloLabel = (turma: any) => {
+  const polo = Array.isArray(turma?.polos) ? turma.polos[0] : turma?.polos;
+  return [polo?.nome, polo?.cidade && polo?.estado ? `${polo.cidade}/${polo.estado}` : polo?.cidade || polo?.estado]
+    .filter(Boolean)
+    .join(' - ') || 'Polo a confirmar';
 };
 
 const getEnrollmentRank = (status?: string | null) => {
@@ -480,6 +495,9 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const [certificateZoom, setCertificateZoom] = useState(65);
   const [showCompletedLessons, setShowCompletedLessons] = useState(false);
   const [activityCompletionPrompt, setActivityCompletionPrompt] = useState<{ activityId: string; title: string } | null>(null);
+  const [checkoutReview, setCheckoutReview] = useState<{ course: any; turma: any } | null>(null);
+  const [acceptedOnlineTerms, setAcceptedOnlineTerms] = useState(false);
+  const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
 
   const invalidateStudentCourseAccess = React.useCallback(() => {
@@ -509,16 +527,20 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
             id,
             curso_id,
             nome,
+            data_inicio,
             vagas_totais,
+            permitir_inscricoes_online,
             qtd_vagas_minima,
             bloquear_matriculas_apos_completar_vagas,
             data_inicio_inscricao,
             data_fim_inscricao,
             status,
             cursos!inner(id, modalidade),
+            polos(nome, cidade, estado),
             matriculas(status)
           `)
           .eq('status', 'EM_ANDAMENTO')
+          .eq('permitir_inscricoes_online', true)
           .in('cursos.modalidade', ['LIVRE', 'ESPECIALIZACAO', 'TECNICO'])
           .order('data_inicio', { ascending: true })
       ]);
@@ -597,9 +619,9 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async ({ course, checkoutWindow }: { course: any; checkoutWindow: Window | null }) => {
+    mutationFn: async ({ course, turmaId, checkoutWindow }: { course: any; turmaId?: string | null; checkoutWindow: Window | null }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId);
+      const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId);
       return { url: result.url, checkoutWindow };
     },
     onMutate: () => {
@@ -624,13 +646,13 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     }
   });
 
-  const startCheckout = (course: any) => {
+  const startCheckout = (course: any, turma?: any | null) => {
     const checkoutWindow = window.open('', '_blank');
     if (checkoutWindow) {
       checkoutWindow.document.title = 'Preparando pagamento';
       checkoutWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 24px;">Preparando pagamento...</p>';
     }
-    checkoutMutation.mutate({ course, checkoutWindow });
+    checkoutMutation.mutate({ course, turmaId: turma?.id || null, checkoutWindow });
   };
 
   useEffect(() => {
@@ -1852,6 +1874,87 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         </div>
       )}
 
+      {checkoutReview && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-[2rem] bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Confirmação de matrícula online</p>
+                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">{checkoutReview.course.nome}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckoutReview(null)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                  <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-blue-700">
+                    <MapPin size={13} />
+                    Polo escolhido
+                  </p>
+                  <p className="mt-1 text-sm font-black text-[#001a33]">{getPoloLabel(checkoutReview.turma)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Turma</p>
+                  <p className="mt-1 text-sm font-black text-[#001a33]">{checkoutReview.turma?.nome || 'Turma aberta'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800">
+                O pagamento confirma a matrícula nesta turma e neste polo após a baixa do Asaas. Documentos e dados complementares poderão ser preenchidos depois no portal do aluno.
+              </div>
+
+              {String(checkoutReview.course.modalidade || '').toUpperCase() === 'TECNICO' && (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-bold leading-relaxed text-blue-800">
+                  Para curso técnico, a secretaria poderá solicitar documentos acadêmicos adicionais depois da matrícula online. A liberação acadêmica segue as regras da turma e do polo informado acima.
+                </div>
+              )}
+
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-100 p-4 text-xs font-bold leading-relaxed text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={acceptedOnlineTerms}
+                  onChange={(event) => setAcceptedOnlineTerms(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+                />
+                <span>
+                  Declaro que li e aceito os termos da matrícula online, autorizo o uso dos meus dados para emissão da cobrança e confirmo que escolhi o polo correto.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCheckoutReview(null)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+              >
+                Revisar depois
+              </button>
+              <button
+                type="button"
+                disabled={!acceptedOnlineTerms || checkoutMutation.isPending}
+                onClick={() => {
+                  const review = checkoutReview;
+                  setCheckoutReview(null);
+                  startCheckout(review.course, review.turma);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
+              >
+                {checkoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                Continuar para pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -1887,6 +1990,9 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                   const pendingPayment = isEad && hasPendingEadPayment(course);
                   const onlineAvailability = course.onlineAvailability;
                   const onlineClassAvailable = Boolean(onlineAvailability?.isAvailable);
+                  const availableTurmas = onlineAvailability?.availableTurmas || [];
+                  const selectedTurmaId = selectedTurmaByCourse[course.id] || onlineAvailability?.turma?.id || availableTurmas[0]?.id || null;
+                  const selectedTurma = availableTurmas.find((turma: any) => turma.id === selectedTurmaId) || onlineAvailability?.turma || null;
                   const courseProgress = progressByCourseId.get(course.id);
                   const courseProgressPercent = getCourseProgressPercent(courseProgress, course.alunoMatricula?.status);
                   const showCourseProgress = Boolean(course.alunoMatricula);
@@ -1958,6 +2064,30 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                           </div>
                         )}
 
+                        {isOnlineClassModality && onlineClassAvailable && selectedTurma && (
+                          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3">
+                            <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-700">
+                              <MapPin size={12} />
+                              Polo da turma
+                            </p>
+                            <p className="mt-1 text-xs font-black text-[#001a33]">{getPoloLabel(selectedTurma)}</p>
+                            <p className="mt-0.5 text-[10px] font-bold text-slate-500">{selectedTurma.nome || 'Turma aberta'}</p>
+                            {availableTurmas.length > 1 && (
+                              <select
+                                value={selectedTurmaId || ''}
+                                onChange={(event) => setSelectedTurmaByCourse((current) => ({ ...current, [course.id]: event.target.value }))}
+                                className="mt-3 w-full rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:border-emerald-400"
+                              >
+                                {availableTurmas.map((turma: any) => (
+                                  <option key={turma.id} value={turma.id}>
+                                    {turma.nome || 'Turma aberta'} - {getPoloLabel(turma)}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+
                         {isEad ? (
                           canAccess ? (
                             <button
@@ -1980,7 +2110,10 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                         ) : isOnlineClassModality ? (
                           onlineClassAvailable ? (
                             <button
-                              onClick={() => startCheckout(course)}
+                              onClick={() => {
+                                setAcceptedOnlineTerms(false);
+                                setCheckoutReview({ course, turma: selectedTurma });
+                              }}
                               disabled={isCheckoutLoading}
                               className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 rounded-xl py-3 transition-all"
                             >

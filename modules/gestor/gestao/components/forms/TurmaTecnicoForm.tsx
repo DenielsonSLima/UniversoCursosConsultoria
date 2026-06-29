@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Layers, MapPin, Calendar, Clock, Lock } from 'lucide-react';
+import { X, Save, Layers, MapPin, Calendar, CalendarClock, Clock, Lock, MonitorPlay, Settings, Users2 } from 'lucide-react';
 import { Turno } from '../../gestao.types';
 import { polosService } from '../../../configuracoes/polos/polos.service';
 
@@ -21,8 +21,18 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     poloId: '',
     dataInicio: '',
     dataPrevisaoTermino: '',
+    dataInicioInscricao: '',
+    dataFimInscricao: '',
+    permitirInscricoesOnline: false,
+    exigeMatricula: true,
+    qtdVagasMinima: 0,
+    bloquearMatriculasAposCompletarVagas: true,
     turno: 'NOTURNO' as Turno,
     vagasTotais: 40,
+    origemFinanceira: 'NORMAL' as const,
+    financeiroHerdado: false,
+    gerarCobrancasFuturas: true,
+    sincronizarAsaasFuturo: true,
     // Campos calculados
     nomeAutomatico: '',
     codigoAutomatico: ''
@@ -80,6 +90,10 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
         ...formData,
         nome: formData.nomeAutomatico,
         codigo: formData.codigoAutomatico,
+        origemFinanceira: formData.origemFinanceira,
+        financeiroHerdado: formData.financeiroHerdado,
+        gerarCobrancasFuturas: formData.gerarCobrancasFuturas,
+        sincronizarAsaasFuturo: formData.sincronizarAsaasFuturo,
         cursoNome: curso.nome,
         poloNome: polo.cidade,
         modalidade: 'TECNICO',
@@ -144,6 +158,44 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
              </div>
           </div>
 
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              Configuração financeira para turma em andamento
+            </p>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.origemFinanceira === 'LEGADO'}
+                onChange={(e) => setFormData((current) => ({
+                  ...current,
+                  origemFinanceira: e.target.checked ? 'LEGADO' : 'NORMAL',
+                  financeiroHerdado: e.target.checked ? true : current.financeiroHerdado,
+                  gerarCobrancasFuturas: e.target.checked ? false : current.gerarCobrancasFuturas,
+                }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Turma com histórico financeiro anterior
+            </label>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.gerarCobrancasFuturas}
+                onChange={(e) => setFormData((current) => ({ ...current, gerarCobrancasFuturas: e.target.checked }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Gerar cobranças futuras
+            </label>
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.sincronizarAsaasFuturo}
+                onChange={(e) => setFormData((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Sincronizar futuras cobranças com Asaas
+            </label>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
@@ -193,9 +245,97 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
                 type="number" 
                 className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 bg-slate-50"
                 value={formData.vagasTotais}
-                onChange={(e) => setFormData({...formData, vagasTotais: parseInt(e.target.value)})}
+                onChange={(e) => setFormData({...formData, vagasTotais: parseInt(e.target.value, 10) || 0})}
                 required
              />
+          </div>
+
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 space-y-4">
+            <label className="flex items-start gap-3 text-xs font-bold uppercase text-emerald-700">
+              <input
+                type="checkbox"
+                checked={formData.permitirInscricoesOnline}
+                onChange={(e) => setFormData((current) => ({ ...current, permitirInscricoesOnline: e.target.checked }))}
+                className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600"
+              />
+              <span>
+                <span className="flex items-center gap-2 text-[#001a33]">
+                  <MonitorPlay size={14} className="text-emerald-600" />
+                  Permitir inscrições online
+                </span>
+                <span className="mt-1 block text-[10px] font-bold normal-case leading-relaxed text-emerald-700/70">
+                  Mostra o botão de matrícula no portal do aluno e no site para esta turma.
+                </span>
+              </span>
+            </label>
+
+            {formData.permitirInscricoesOnline && (
+              <div className="space-y-4 border-t border-emerald-100 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
+                      <CalendarClock size={14} />
+                      Início Inscrições
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full p-3 rounded-xl border border-emerald-100 outline-none focus:border-emerald-500 bg-white"
+                      value={formData.dataInicioInscricao}
+                      onChange={(e) => setFormData((current) => ({ ...current, dataInicioInscricao: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
+                      <CalendarClock size={14} />
+                      Fim Inscrições
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full p-3 rounded-xl border border-emerald-100 outline-none focus:border-emerald-500 bg-white"
+                      value={formData.dataFimInscricao}
+                      onChange={(e) => setFormData((current) => ({ ...current, dataFimInscricao: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
+                      <Users2 size={14} />
+                      Limite de alunos online
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full p-3 rounded-xl border border-emerald-100 outline-none focus:border-emerald-500 bg-white"
+                      value={formData.qtdVagasMinima}
+                      onChange={(e) => setFormData((current) => ({ ...current, qtdVagasMinima: parseInt(e.target.value, 10) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-3 md:pt-7">
+                    <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.bloquearMatriculasAposCompletarVagas}
+                        onChange={(e) => setFormData((current) => ({ ...current, bloquearMatriculasAposCompletarVagas: e.target.checked }))}
+                        className="h-4 w-4 rounded border-emerald-300 text-emerald-600"
+                      />
+                      Fechar matrícula ao completar vagas
+                    </label>
+                    <label className="text-xs font-bold text-emerald-700 uppercase flex items-center gap-2">
+                      <Settings size={14} />
+                      <input
+                        type="checkbox"
+                        checked={formData.exigeMatricula}
+                        onChange={(e) => setFormData((current) => ({ ...current, exigeMatricula: e.target.checked }))}
+                        className="h-4 w-4 rounded border-emerald-300 text-emerald-600"
+                      />
+                      Exigir pagamento de matrícula
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Área de Automação Visual */}

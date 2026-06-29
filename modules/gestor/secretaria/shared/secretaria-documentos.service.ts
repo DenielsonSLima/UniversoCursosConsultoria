@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import { formatMatricula } from '../../../../lib/academicUtils';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import {
   SecretariaAlunoResumo,
@@ -143,7 +144,7 @@ export const secretariaDocumentosService = {
       .from('matriculas')
       .select(`
         id, status, data_matricula, aluno_id, turma_id,
-        parceiros!inner(nome, cpf_cnpj, data_nascimento),
+        parceiros!inner(nome, cpf_cnpj, data_nascimento, foto_url),
         turmas!inner(nome, codigo, polo_id, cursos!inner(nome, modalidade), polos!inner(nome))
       `)
       .or(`polo_id.eq.${input.context.poloId},polo_id.is.null`, { foreignTable: 'turmas' });
@@ -190,6 +191,17 @@ export const secretariaDocumentosService = {
       issuedAt,
       expiresAt,
       codes: records.map((record) => record.code),
+      items: matriculas.map((matricula: any, index: number) => ({
+        alunoId: matricula.aluno_id,
+        nome: matricula.parceiros?.nome || '',
+        cpf: matricula.parceiros?.cpf_cnpj || '',
+        matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
+        curso: matricula.turmas?.cursos?.nome || '',
+        turma: matricula.turmas?.nome || '',
+        polo: matricula.turmas?.polos?.nome || '',
+        fotoUrl: matricula.parceiros?.foto_url || null,
+        validationCode: records[index]?.code,
+      })),
     };
   },
 };

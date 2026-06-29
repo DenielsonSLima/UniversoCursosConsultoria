@@ -2,7 +2,7 @@
 // Mini-modal inline para criar nova categoria financeira sem sair da tela
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, X, Loader2, Check } from 'lucide-react';
+import { X, Loader2, Check } from 'lucide-react';
 import { DespesaTipo } from '../despesas.queryKeys';
 import { useCreateCategoriaFinanceiraMutation } from '../hooks/useCategoriasFinanceirasQuery';
 

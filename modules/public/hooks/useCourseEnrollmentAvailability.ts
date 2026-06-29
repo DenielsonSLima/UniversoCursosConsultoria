@@ -6,6 +6,7 @@ interface CourseEnrollmentTurma {
   nome: string;
   alunosMatriculados: number;
   vagasTotais: number;
+  permitirInscricoesOnline: boolean;
   qtdVagasMinima: number;
   bloquearMatriculasAposCompletarVagas: boolean;
   dataInicioInscricao: string | null;
@@ -29,8 +30,13 @@ const BLOCKING_ENROLLMENT_STATUSES = new Set([
 const getUnavailabilityReason = (turma: any) => {
   const alunosMatriculados = getBlockingMatriculasTotal(turma);
   const vagasTotais = Number(turma.vagas_totais || 0);
+  const permitirInscricoesOnline = turma.permitir_inscricoes_online === true;
   const qtdVagasMinima = Number(turma.qtd_vagas_minima || 0);
   const bloquearMatriculasAposCompletarVagas = turma.bloquear_matriculas_apos_completar_vagas !== false;
+
+  if (!permitirInscricoesOnline) {
+    return 'Inscrições online não liberadas para esta turma.';
+  }
 
   if (bloquearMatriculasAposCompletarVagas) {
     if (qtdVagasMinima > 0 && alunosMatriculados >= qtdVagasMinima) {
@@ -59,6 +65,7 @@ const hydrateTurma = (turma: any): CourseEnrollmentTurma => {
     nome: turma.nome,
     alunosMatriculados: getBlockingMatriculasTotal(turma),
     vagasTotais: Number(turma.vagas_totais || 0),
+    permitirInscricoesOnline: turma.permitir_inscricoes_online === true,
     qtdVagasMinima: Number(turma.qtd_vagas_minima || 0),
     bloquearMatriculasAposCompletarVagas: turma.bloquear_matriculas_apos_completar_vagas !== false,
     dataInicioInscricao: turma.data_inicio_inscricao || null,
@@ -80,9 +87,20 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
 
       const { data: turmas, error } = await supabase
         .from('turmas')
-        .select('id, nome, vagas_totais, matriculas(status)')
+        .select(`
+          id,
+          nome,
+          vagas_totais,
+          permitir_inscricoes_online,
+          qtd_vagas_minima,
+          bloquear_matriculas_apos_completar_vagas,
+          data_inicio_inscricao,
+          data_fim_inscricao,
+          matriculas(status)
+        `)
         .eq('curso_id', courseId)
         .eq('status', 'EM_ANDAMENTO')
+        .eq('permitir_inscricoes_online', true)
         .order('data_inicio', { ascending: true });
 
       if (error) {

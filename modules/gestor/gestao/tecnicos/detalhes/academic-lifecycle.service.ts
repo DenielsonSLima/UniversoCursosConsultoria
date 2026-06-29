@@ -116,6 +116,10 @@ export const academicLifecycleService = {
     turmaId: string;
     alunoId: string;
     responsavelId?: string | null;
+    financeiro_herdado?: boolean;
+    gerar_cobranca_inicial?: boolean;
+    gerar_cobranca_futura?: boolean | null;
+    sincronizar_asaas?: boolean | null;
     valorMatricula: number;
     dataVencimentoMatricula: string;
     valorParcela: number;
@@ -131,6 +135,10 @@ export const academicLifecycleService = {
       p_valor_parcela: input.valorParcela,
       p_valor_rematricula: input.valorRematricula,
       p_dia_vencimento: input.diaVencimento,
+      p_financeiro_herdado: input.financeiro_herdado ?? false,
+      p_gerar_cobranca_inicial: input.gerar_cobranca_inicial ?? true,
+      p_gerar_cobranca_futura: input.gerar_cobranca_futura,
+      p_sincronizar_asaas: input.sincronizar_asaas ?? true,
     });
     return requireData(data, error);
   },

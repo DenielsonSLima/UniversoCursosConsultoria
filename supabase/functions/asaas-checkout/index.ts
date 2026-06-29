@@ -123,7 +123,7 @@ const getMatriculasTotal = (turma: any) => {
   ).length;
 };
 
-const getTurmaUnavailabilityReason = (turma: any) => {
+const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
   const today = currentIsoDate();
   const alunosMatriculados = getMatriculasTotal(turma);
   const vagasTotais = Number(turma?.vagas_totais || 0);
@@ -132,6 +132,10 @@ const getTurmaUnavailabilityReason = (turma: any) => {
 
   const inicioInscricao = toDateString(turma?.data_inicio_inscricao);
   const fimInscricao = toDateString(turma?.data_fim_inscricao);
+
+  if (requireOnlinePermission && turma?.permitir_inscricoes_online !== true) {
+    return "Inscrições online não liberadas para esta turma.";
+  }
 
   if (inicioInscricao && today < inicioInscricao) {
     return `As inscrições ainda não abriram. Abertura prevista para ${formatDatePtBr(inicioInscricao)}.`;
@@ -154,11 +158,11 @@ const getTurmaUnavailabilityReason = (turma: any) => {
   return null;
 };
 
-const getAvailableTurmaForEnrollment = (turmas: any[]) => {
+const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission = true) => {
   const evaluated = (turmas || []).map((turma) => {
     return {
       turma,
-      reason: getTurmaUnavailabilityReason(turma),
+      reason: getTurmaUnavailabilityReason(turma, requireOnlinePermission),
     };
   });
 
@@ -186,7 +190,7 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    const { courseId, alunoId } = await req.json();
+    const { courseId, alunoId, turmaId } = await req.json();
     if (!courseId) throw new Error("Curso não informado.");
     if (!alunoId) throw new Error("Entre como aluno antes de comprar o curso.");
 
@@ -215,13 +219,15 @@ Deno.serve(async (req: Request) => {
       throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
     }
 
-    const { data: turmas, error: turmasError } = await admin
+    const requireOnlinePermission = course.modalidade !== "EAD";
+    let turmasQuery = admin
       .from("turmas")
       .select(`
         id,
         nome,
         polo_id,
         vagas_totais,
+        permitir_inscricoes_online,
         qtd_vagas_minima,
         bloquear_matriculas_apos_completar_vagas,
         data_inicio_inscricao,
@@ -229,10 +235,19 @@ Deno.serve(async (req: Request) => {
         matriculas(status)
       `)
       .eq("curso_id", course.id)
-      .eq("status", "EM_ANDAMENTO")
-      .order("data_inicio", { ascending: true });
+      .eq("status", "EM_ANDAMENTO");
+    if (turmaId) {
+      turmasQuery = turmasQuery.eq("id", turmaId);
+    }
+    if (requireOnlinePermission) {
+      turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
+    }
+    const { data: turmas, error: turmasError } = await turmasQuery.order("data_inicio", { ascending: true });
     if (turmasError) throw turmasError;
-    const availableSelection = getAvailableTurmaForEnrollment(turmas || []);
+    if (turmaId && (!turmas || turmas.length === 0)) {
+      throw new Error("A turma escolhida não está aberta para matrícula online.");
+    }
+    const availableSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
     if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
     const turma = availableSelection.turma;
 
@@ -447,6 +462,7 @@ Deno.serve(async (req: Request) => {
       .from("contas_receber")
       .update({
         asaas_payment_id: null,
+        asaas_payment_link_id: paymentLink.id,
         nosso_numero_asaas: paymentLink.id,
         asaas_invoice_url: paymentLink.url || null,
         asaas_bank_slip_url: null,

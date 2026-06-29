@@ -38,7 +38,7 @@ export const createAsaasOnlineService = (
     ).length;
   };
 
-  const getTurmaUnavailabilityReason = (turma: any) => {
+  const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
     const today = currentIsoDate();
     const alunosMatriculados = getMatriculasTotal(turma);
     const vagasTotais = Number(turma?.vagas_totais || 0);
@@ -46,6 +46,10 @@ export const createAsaasOnlineService = (
     const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
     const inicioInscricao = toDateString(turma?.data_inicio_inscricao);
     const fimInscricao = toDateString(turma?.data_fim_inscricao);
+
+    if (requireOnlinePermission && turma?.permitir_inscricoes_online !== true) {
+      return "Inscrições online não liberadas para esta turma.";
+    }
 
     if (inicioInscricao && today < inicioInscricao) {
       return `As inscrições ainda não abriram. Abertura prevista para ${formatDatePtBr(inicioInscricao)}.`;
@@ -68,10 +72,10 @@ export const createAsaasOnlineService = (
     return null;
   };
 
-  const getAvailableTurmaForEnrollment = (turmas: any[]) => {
+  const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission = true) => {
     const evaluated = (turmas || []).map((turma) => ({
       turma,
-      reason: getTurmaUnavailabilityReason(turma),
+      reason: getTurmaUnavailabilityReason(turma, requireOnlinePermission),
     }));
 
     const available = evaluated.find((row) => !row.reason);
@@ -153,11 +157,13 @@ export const createAsaasOnlineService = (
       const targetCourse = course || (() => {
         throw new Error("Curso obrigatório para reconciliar pagamento sem link antigo.");
       })();
-      const { data: turmas, error: turmaError } = await admin.from("turmas")
+      const requireOnlinePermission = targetCourse.modalidade !== "EAD";
+      let turmasQuery = admin.from("turmas")
         .select(`
           id,
           polo_id,
           vagas_totais,
+          permitir_inscricoes_online,
           qtd_vagas_minima,
           bloquear_matriculas_apos_completar_vagas,
           data_inicio_inscricao,
@@ -165,10 +171,13 @@ export const createAsaasOnlineService = (
           matriculas(status)
         `)
         .eq("curso_id", targetCourse.id)
-        .eq("status", "EM_ANDAMENTO")
-        .order("data_inicio", { ascending: true });
+        .eq("status", "EM_ANDAMENTO");
+      if (requireOnlinePermission) {
+        turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
+      }
+      const { data: turmas, error: turmaError } = await turmasQuery.order("data_inicio", { ascending: true });
       if (turmaError) throw turmaError;
-      const turmaSelection = getAvailableTurmaForEnrollment(turmas || []);
+      const turmaSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
       const turma = turmaSelection.turma;
       if (!turma) throw new Error(`Não há turma aberta para ${targetCourse.nome}.`);
 
@@ -278,10 +287,12 @@ export const createAsaasOnlineService = (
       ? Math.max(1, Number(financeiroConfig.cartao?.maxParcelas || financeiroConfig.parcelasPadrao || 1))
       : 1;
 
-    const { data: turmas, error: turmaError } = await admin.from("turmas")
+    const requireOnlinePermission = course.modalidade !== "EAD";
+    let turmasQuery = admin.from("turmas")
       .select(`
         id,
         vagas_totais,
+        permitir_inscricoes_online,
         qtd_vagas_minima,
         bloquear_matriculas_apos_completar_vagas,
         data_inicio_inscricao,
@@ -289,10 +300,13 @@ export const createAsaasOnlineService = (
         matriculas(status)
       `)
       .eq("curso_id", courseId)
-      .eq("status", "EM_ANDAMENTO")
-      .order("data_inicio", { ascending: true });
+      .eq("status", "EM_ANDAMENTO");
+    if (requireOnlinePermission) {
+      turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
+    }
+    const { data: turmas, error: turmaError } = await turmasQuery.order("data_inicio", { ascending: true });
     if (turmaError) throw turmaError;
-    const turmaSelection = getAvailableTurmaForEnrollment(turmas || []);
+    const turmaSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
     if (!turmaSelection.turma) throw new Error(turmaSelection.reason || "Abra uma turma para este curso antes de gerar o link.");
     if (!body.recreate && course.asaas_payment_link_id && course.asaas_payment_link_url) {
       return { success: true, url: course.asaas_payment_link_url };

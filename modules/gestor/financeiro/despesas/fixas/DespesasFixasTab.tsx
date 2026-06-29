@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Plus, Search, LayoutGrid, LayoutList, Tag, RefreshCw,
-  Building, CheckCircle2, AlertCircle, Layers, Printer, Trash2,
+  Building, CheckCircle2, Layers,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { despesasService, DespesaLancamento } from '../despesas.service';

@@ -33,6 +33,17 @@ export const alunoSecretariaService = {
     return data || [];
   },
 
+  async getPagamentosIrpf(alunoId: string, ano: string, turmaId?: string | null) {
+    const { data, error } = await supabase.rpc('get_pagamentos_irpf_aluno', {
+      p_aluno_id: alunoId,
+      p_ano: ano,
+      p_turma_id: turmaId || null,
+    });
+
+    if (error) throw error;
+    return data || [];
+  },
+
   getSolicitacoes: (alunoId: string) => secretariaService.getSolicitacoesByAluno(alunoId),
   getPrazos: () => secretariaService.getPrazos(),
   createSolicitacao: secretariaService.createSolicitacao,

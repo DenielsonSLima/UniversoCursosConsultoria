@@ -12,6 +12,17 @@ export interface TurmaFinanceiroMatriculaConfig {
   valorParcela: number;
   diaVencimento: number;
   qtdParcelas: number;
+  origemFinanceira: 'LEGADO' | 'NORMAL';
+  financeiroHerdado: boolean;
+  gerarCobrancasFuturas: boolean;
+  sincronizarAsaasFuturo: boolean;
+}
+
+export interface PrevisaoFinanceiraTurma {
+  turma_id: string;
+  referencia: string;
+  gerar_cobrancas_futuras: boolean;
+  quantidade_prevista: string;
 }
 
 export const isValidStudentCpf = (value?: string | null) => {
@@ -44,7 +55,7 @@ export const turmaAlunosService = {
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('valor_matricula, valor_rematricula, valor_parcela, dia_vencimento_padrao, qtd_parcelas')
+      .select('valor_matricula, valor_rematricula, valor_parcela, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
       .eq('id', turmaId)
       .single();
 
@@ -56,6 +67,20 @@ export const turmaAlunosService = {
       valorParcela: Number(data.valor_parcela || 0),
       diaVencimento: Number(data.dia_vencimento_padrao || 10),
       qtdParcelas: Number(data.qtd_parcelas || 11),
+      origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
+      financeiroHerdado: data.financeiro_herdado ?? false,
+      gerarCobrancasFuturas: data.gerar_cobrancas_futuras ?? false,
+      sincronizarAsaasFuturo: data.sincronizar_asaas_futuro !== false,
     };
+  },
+
+  async preverGeracaoCobrancasFuturas(turmaId: string): Promise<PrevisaoFinanceiraTurma> {
+    const { data, error } = await supabase.rpc('prever_geracao_cobrancas_futuras', {
+      p_turma_id: turmaId,
+      p_data_referencia: new Date().toISOString().slice(0, 10),
+    });
+
+    if (error) throw error;
+    return ((data || [])[0] || {}) as PrevisaoFinanceiraTurma;
   },
 };

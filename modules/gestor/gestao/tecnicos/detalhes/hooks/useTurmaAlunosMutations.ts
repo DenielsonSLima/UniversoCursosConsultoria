@@ -14,6 +14,10 @@ export interface EnrollInput {
   valorRematricula: number;
   dataVencimentoMatricula: string;
   diaVencimento: number;
+  financeiro_herdado?: boolean;
+  gerar_cobranca_inicial?: boolean;
+  gerar_cobranca_futura?: boolean | null;
+  sincronizar_asaas?: boolean | null;
 }
 
 export interface MovementInput {

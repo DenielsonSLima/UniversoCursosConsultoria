@@ -273,7 +273,7 @@ Deno.serve(async (req: Request) => {
         }, 400);
       }
 
-      let authUser = null;
+      let authUser: any;
       try {
         authUser = await findAuthUserByEmail(admin, email);
       } catch (error) {

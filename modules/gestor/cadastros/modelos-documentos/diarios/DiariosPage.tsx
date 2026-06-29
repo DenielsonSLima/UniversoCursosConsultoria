@@ -4,7 +4,6 @@ import { supabase } from '../../../../../lib/supabase';
 import {
   BookOpenCheck,
   Check,
-  ChevronRight,
   Image as ImageIcon,
   Loader2,
   Save,
@@ -20,8 +19,6 @@ import {
   AlignRight,
   Bold,
   RotateCcw,
-  QrCode,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../parceiros/components/shared/ToastNotification';
@@ -29,7 +26,6 @@ import capaDiarioPadrao from '../../../../../Documentos/Capa-Diario.jpg';
 import {
   DEFAULT_DIARIO_TEMPLATE,
   DEFAULT_CAPA_CAMPOS,
-  DEFAULT_CONTRACAPA_CAMPOS,
   DiarioTemplate,
   CapaCampo,
   diariosService,
@@ -119,7 +115,7 @@ const DiariosPage: React.FC = () => {
   // Track Canvas width to scale fonts dynamically
   useEffect(() => {
     if (!canvasRef.current) return;
-    const observer = new ResizeObserver((entries) => {
+    const observer = new window.ResizeObserver((entries) => {
       for (let entry of entries) {
         setCanvasWidth(entry.contentRect.width);
       }
@@ -294,7 +290,7 @@ const DiariosPage: React.FC = () => {
       const currentFields = prev.contracapaCampos || [];
       const exists = currentFields.some(f => f.id === fieldId);
 
-      let nextFields = currentFields;
+      let nextFields: CapaCampo[];
       if (exists) {
         nextFields = currentFields.map(f => f.id === fieldId ? { ...f, imageUrl: url, visible: true } : f);
       } else {

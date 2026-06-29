@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import capaDiarioPadrao from '../../../../../../../Documentos/Capa-Diario.jpg';
-import { DiarioTemplate, DEFAULT_CONTRACAPA_CAMPOS } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
+import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import { getDocumentValidationUrl, getDocumentValidationQrUrl } from '../../../../../../shared/document-validation/document-validation.url';
 
 interface DiarioPrintDocumentProps {

@@ -1,4 +1,4 @@
-import { Curso } from '../../cadastros/cadastros.types';
+import { Curso } from '../../../cadastros/cadastros.types';
 
 export interface TurmaDisciplinaConfig {
   professor: string | null;

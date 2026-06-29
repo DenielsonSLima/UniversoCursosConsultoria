@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award } from 'lucide-react';
+import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award, MapPin, CreditCard } from 'lucide-react';
 import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 
 interface InicioPageProps {
@@ -119,6 +119,43 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
     }
   });
 
+  const { data: turmasAbertas = [], isLoading: loadingTurmasAbertas } = useQuery<any[]>({
+    queryKey: ['aluno-inicio-turmas-abertas-online'],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from('turmas')
+        .select(`
+          id,
+          nome,
+          data_inicio,
+          data_inicio_inscricao,
+          data_fim_inscricao,
+          cursos!inner(id, nome, modalidade, area, imagem_url, status, publicar_site),
+          polos(nome, cidade, estado)
+        `)
+        .eq('status', 'EM_ANDAMENTO')
+        .eq('permitir_inscricoes_online', true)
+        .in('cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
+        .eq('cursos.status', 'ativo')
+        .eq('cursos.publicar_site', true)
+        .or(`data_inicio_inscricao.is.null,data_inicio_inscricao.lte.${today}`)
+        .or(`data_fim_inscricao.is.null,data_fim_inscricao.gte.${today}`)
+        .order('data_inicio', { ascending: true })
+        .limit(8);
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const getPoloLabel = (turma: any) => {
+    const polo = Array.isArray(turma?.polos) ? turma.polos[0] : turma?.polos;
+    return [polo?.nome, polo?.cidade && polo?.estado ? `${polo.cidade}/${polo.estado}` : polo?.cidade || polo?.estado]
+      .filter(Boolean)
+      .join(' - ') || 'Polo a confirmar';
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Welcome Banner (Premium Gradient) */}
@@ -188,6 +225,76 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
           </div>
         </button>
       </div>
+
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Matrículas online</p>
+            <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Turmas em aberto</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('cursos')}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:border-blue-300"
+          >
+            <BookOpen size={14} />
+            Ver todos
+          </button>
+        </div>
+
+        {loadingTurmasAbertas ? (
+          <div className="rounded-[2rem] border border-slate-100 bg-white p-6 text-xs font-bold text-slate-400 shadow-sm">
+            Carregando turmas abertas...
+          </div>
+        ) : turmasAbertas.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {turmasAbertas.map((turma) => {
+              const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
+              return (
+                <button
+                  key={turma.id}
+                  type="button"
+                  onClick={() => onNavigate('cursos')}
+                  className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white text-left shadow-sm transition-all hover:-translate-y-1 hover:border-blue-300 hover:shadow-md"
+                >
+                  <div className="h-32 bg-slate-100">
+                    {curso?.imagem_url ? (
+                      <img src={curso.imagem_url} alt={curso.nome} className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-blue-300">
+                        <BookOpen size={34} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3 p-4">
+                    <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-blue-700">
+                      {curso?.modalidade || 'Curso'}
+                    </span>
+                    <div>
+                      <h3 className="line-clamp-2 text-sm font-black leading-tight text-[#001a33]">{curso?.nome}</h3>
+                      <p className="mt-1 text-[10px] font-bold text-slate-400">{turma.nome || 'Turma aberta'}</p>
+                    </div>
+                    <p className="flex items-start gap-1.5 text-[11px] font-bold leading-relaxed text-slate-600">
+                      <MapPin size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                      {getPoloLabel(turma)}
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                      <CreditCard size={13} />
+                      Matricular e pagar
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-6 text-center shadow-sm">
+            <BookOpen size={24} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-xs font-black text-[#001a33]">Nenhuma turma aberta para matrícula online agora</p>
+            <p className="mt-1 text-[10px] font-bold text-slate-400">Quando a secretaria liberar novas turmas, elas aparecerão aqui por polo.</p>
+          </div>
+        )}
+      </section>
 
       {/* Main Content Grid: Announcements & Calendar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

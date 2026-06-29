@@ -1,0 +1,8 @@
+01-confirm-sign-up: Confirme seu e-mail | Universo Cursos e Consultoria
+02-invite-user: Seu convite para a Universo Cursos e Consultoria
+03-magic-link-ou-otp: Seu link de acesso | Universo Cursos e Consultoria
+04-change-email-address: Confirme seu novo e-mail | Universo Cursos e Consultoria
+05-reset-password: Redefina sua senha | Universo Cursos e Consultoria
+06-reauthentication: {{ .Token }} e seu codigo de verificacao
+07-password-changed: Sua senha foi alterada | Universo Cursos e Consultoria
+08-email-address-changed: Seu e-mail foi alterado | Universo Cursos e Consultoria

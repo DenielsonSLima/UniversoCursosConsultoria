@@ -233,9 +233,67 @@ Deno.serve(async (req: Request) => {
       return json({ success: true });
     }
 
-    const runtime = await getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
+    if (action === "sync-enrollment") {
+      const matriculaId = String(body.matriculaId || "");
+      const { data: matricula, error: matriculaError } = await admin
+        .from("matriculas")
+        .select(`
+          id,
+          financeiro_herdado,
+          gerar_cobranca_inicial,
+          sincronizar_asaas,
+          turmas(
+            origem_financeira,
+            financeiro_herdado,
+            sincronizar_asaas_futuro
+          )
+        `)
+        .eq("id", matriculaId)
+        .maybeSingle();
+      if (matriculaError) throw matriculaError;
+      if (!matricula) throw new Error("Matrícula não encontrada.");
+
+      const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+      const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
+      const financeiroHerdado = matricula.financeiro_herdado === true
+        || turma?.financeiro_herdado === true
+        || origem === "LEGADO";
+      const gerarInicial = matricula.gerar_cobranca_inicial ?? !financeiroHerdado;
+      const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
+
+      if (gerarInicial === false || syncEnabled === false) {
+        return json({
+          success: true,
+          skipped: true,
+          skippedReason: gerarInicial === false
+            ? "Cobrança inicial bloqueada por regra de financeiro legado."
+            : "Sincronização Asaas desativada na matrícula/turma.",
+        });
+      }
+
+      const { data, error } = await admin
+        .from("contas_receber")
+        .select("id")
+        .eq("matricula_id", matriculaId)
+        .eq("tipo_lancamento", "MATRICULA")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Cobrança de matrícula não encontrada.");
+
+      const runtime = await getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
+      const receivable = await syncReceivable(runtime, data.id);
+      return json({
+        success: true,
+        receivable,
+        skipped: receivable?.asaas_sync_skipped === true,
+        skippedReason: receivable?.asaas_skip_reason || null,
+      });
+    }
+
+    const getRuntimeForAction = () => getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
 
     if (action === "test-connection") {
+      const runtime = await getRuntimeForAction();
       await callAsaas(runtime, "/customers?limit=1");
       await admin.from("asaas_config").update({
         last_test_at: new Date().toISOString(),
@@ -246,6 +304,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "ensure-webhook") {
+      const runtime = await getRuntimeForAction();
       const webhookUrl = `${supabaseUrl}/functions/v1/asaas-webhook`;
       const webhookToken = await ensureWebhookToken(runtime.environment);
       const events = [
@@ -294,10 +353,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "reconcile-online-payment") {
+      const runtime = await getRuntimeForAction();
       return json(await online.reconcileOnlinePayment(runtime, body));
     }
 
     if (action === "sync-receivable") {
+      const runtime = await getRuntimeForAction();
       const receivable = await syncReceivable(runtime, String(body.receivableId));
       return json({ success: true, receivable });
     }
@@ -372,6 +433,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "generate-official-carnet") {
+      const runtime = await getRuntimeForAction();
       const receivableIds = Array.isArray(body.receivableIds)
         ? body.receivableIds.map((id) => String(id)).filter(Boolean)
         : [];
@@ -379,6 +441,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "refresh-receivable-status") {
+      const runtime = await getRuntimeForAction();
       const { data: receivable, error } = await admin
         .from("contas_receber")
         .select("*")
@@ -389,21 +452,7 @@ Deno.serve(async (req: Request) => {
       return json({ success: true, receivable: refreshed });
     }
 
-    if (action === "sync-enrollment") {
-      const { data, error } = await admin
-        .from("contas_receber")
-        .select("id")
-        .eq("matricula_id", String(body.matriculaId))
-        .eq("tipo_lancamento", "MATRICULA")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("Cobrança de matrícula não encontrada.");
-      const receivable = await syncReceivable(runtime, data.id);
-      return json({ success: true, receivable });
-    }
-
     if (action === "manual-settlement") {
-      const runtime = await getRuntime(normalizeEnvironment(body.environment));
       const receivableId = String(body.receivableId);
       const { data: receivable, error } = await admin
         .from("contas_receber")
@@ -412,9 +461,11 @@ Deno.serve(async (req: Request) => {
         .single();
       if (error) throw error;
 
+      let settlementRuntime: Awaited<ReturnType<typeof getRuntime>> | null = null;
       let asaasCanceled = false;
       if (receivable.asaas_payment_id && !["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
-        await callAsaas(runtime, `/payments/${receivable.asaas_payment_id}`, { method: "DELETE" });
+        settlementRuntime = await getRuntime(normalizeEnvironment(body.environment));
+        await callAsaas(settlementRuntime, `/payments/${receivable.asaas_payment_id}`, { method: "DELETE" });
         asaasCanceled = true;
       }
 
@@ -431,7 +482,19 @@ Deno.serve(async (req: Request) => {
       if (updateError) throw updateError;
 
       if (receivable.matricula_id) {
-        await syncFutureInstallments(runtime, receivable.matricula_id);
+        const { data: matricula, error: matriculaError } = await admin
+          .from("matriculas")
+          .select("gerar_cobranca_futura, sincronizar_asaas, turmas(gerar_cobrancas_futuras, sincronizar_asaas_futuro)")
+          .eq("id", receivable.matricula_id)
+          .maybeSingle();
+        if (matriculaError) throw matriculaError;
+        const turma = Array.isArray(matricula?.turmas) ? matricula?.turmas[0] : matricula?.turmas;
+        const gerarFutura = matricula?.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
+        const syncEnabled = matricula?.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
+        if (gerarFutura && syncEnabled) {
+          settlementRuntime = settlementRuntime || await getRuntime(normalizeEnvironment(body.environment));
+          await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
+        }
       }
       return json({
         success: true,
@@ -441,7 +504,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "reverse-manual-settlement") {
-      const runtime = await getRuntime(normalizeEnvironment(body.environment));
       const receivableId = String(body.receivableId);
       const recreateAsaas = body.recreateAsaas !== false;
       const { data: receivable, error } = await admin
@@ -487,7 +549,7 @@ Deno.serve(async (req: Request) => {
       if (updateError) throw updateError;
 
       const finalReceivable = shouldRecreateAsaas
-        ? await syncReceivable(runtime, reverted.id)
+        ? await syncReceivable(await getRuntime(normalizeEnvironment(body.environment)), reverted.id)
         : reverted;
 
       return json({
@@ -498,6 +560,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "create-course-link") {
+      const runtime = await getRuntimeForAction();
       return json(await online.createCourseLink(runtime, body));
     }
 

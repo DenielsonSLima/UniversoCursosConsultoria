@@ -32,8 +32,14 @@ const posicoesPadrao: Record<string, { x: number; y: number }> = {
   cargo: { x: 3.7, y: 53.0 },
   matricula: { x: 5.5, y: 60.0 },
   cpf: { x: 5.5, y: 66.2 },
-  polo: { x: 5.5, y: 72.4 },
+  curso: { x: 5.5, y: 72.4 },
   qrcode: { x: 62.0, y: 60.0 }
+};
+
+const frontInfoFieldValues: Record<string, string> = {
+  matricula: 'MATRÍCULA\n{{ALUNO_MATRICULA}}',
+  cpf: 'CPF\n{{ALUNO_CPF}}',
+  curso: 'CURSO\n{{ALUNO_CURSO}}'
 };
 
 const CrachaPreview: React.FC<CrachaPreviewProps> = ({ 
@@ -197,21 +203,41 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
 
   // Resolvendo a lista de campos com fallback para compatibilidade retroativa
   const getActiveFields = (): any[] => {
+    const normalizeField = (field: any) => {
+      const normalizedId = field.id === 'polo' ? 'curso' : field.id;
+      const normalizedValue = frontInfoFieldValues[normalizedId];
+
+      if (!normalizedValue) return field;
+
+      return {
+        ...field,
+        id: normalizedId,
+        value: normalizedValue,
+        style: {
+          ...(field.style || {}),
+          lineHeight: field.style?.lineHeight || '1.12',
+          fontWeight: field.style?.fontWeight || 'bold'
+        }
+      };
+    };
+
     if (formData.fields && Array.isArray(formData.fields) && formData.fields.length > 0) {
+      const normalizedSavedFields = formData.fields.map(normalizeField);
+
       // Migração em tempo de renderização: detecta verso antigo e substitui
       const oldVersoIds = ['admissao_label', 'admissao_valor', 'assinatura_linha', 'assinatura_cargo', 'assinatura_instituicao'];
-      const hasOldVerso = formData.fields.some((f: any) => oldVersoIds.includes(f.id));
-      const hasNewVerso = formData.fields.some((f: any) => f.id === 'verso_qrcode');
+      const hasOldVerso = normalizedSavedFields.some((f: any) => oldVersoIds.includes(f.id));
+      const hasNewVerso = normalizedSavedFields.some((f: any) => f.id === 'verso_qrcode');
 
       if (hasOldVerso && !hasNewVerso) {
-        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const frenteFields = normalizedSavedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
         return [...frenteFields, ...getNewVersoFields()];
       }
       if (!hasNewVerso) {
-        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const frenteFields = normalizedSavedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
         return [...frenteFields, ...getNewVersoFields()];
       }
-      return formData.fields;
+      return normalizedSavedFields;
     }
 
     // Fallback: se não houver fields, reconstrói usando posições antigas/padrão
@@ -248,29 +274,29 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
       {
         id: 'matricula',
         type: 'text',
-        value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+        value: frontInfoFieldValues.matricula,
         x: pos.matricula?.x ?? 5.5,
         y: pos.matricula?.y ?? 60.0,
         page: 'frente',
-        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
       },
       {
         id: 'cpf',
         type: 'text',
-        value: 'CPF: {{ALUNO_CPF}}',
+        value: frontInfoFieldValues.cpf,
         x: pos.cpf?.x ?? 5.5,
         y: pos.cpf?.y ?? 66.2,
         page: 'frente',
-        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
       },
       {
-        id: 'polo',
+        id: 'curso',
         type: 'text',
-        value: 'POLO: {{POLO_NOME}}',
-        x: pos.polo?.x ?? 5.5,
-        y: pos.polo?.y ?? 72.4,
+        value: frontInfoFieldValues.curso,
+        x: pos.curso?.x ?? pos.polo?.x ?? 5.5,
+        y: pos.curso?.y ?? pos.polo?.y ?? 72.4,
         page: 'frente',
-        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+        style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
       },
       {
         id: 'qrcode',
@@ -467,9 +493,17 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  const zoomScale = zoomLevel / 100;
+
+  const previewFrameStyle: React.CSSProperties = {
+    width: `${54 * zoomScale}mm`,
+    height: `${85.6 * zoomScale}mm`,
+    position: 'relative',
+    flexShrink: 0
+  };
+
   const containerStyle: React.CSSProperties = {
-    transform: `scale(${zoomLevel / 100})`, 
-    marginBottom: zoomLevel < 100 ? `-${85.6 * (1 - zoomLevel / 100)}mm` : '0',
+    transform: `scale(${zoomScale})`, 
     backgroundColor: 'white',
     width: '54mm',
     height: '85.6mm',
@@ -480,7 +514,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
     overflow: 'hidden',
     boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
     flexShrink: 0,
-    transformOrigin: 'top',
+    transformOrigin: 'top left',
     transition: 'transform 0.1s ease-out',
     userSelect: 'none'
   };
@@ -498,7 +532,43 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   const filteredFields = getActiveFields().filter((f: any) => (f.page || 'frente') === page);
 
   return (
-    <div style={containerStyle} className="bg-white">
+    <div style={previewFrameStyle}>
+      <div style={containerStyle} className="bg-white">
+      {isEditable && (
+        <div className="absolute inset-0 z-[8] pointer-events-none">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(37, 99, 235, 0.16) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(37, 99, 235, 0.16) 1px, transparent 1px),
+                linear-gradient(to right, rgba(15, 23, 42, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(15, 23, 42, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '10% 10%, 10% 10%, 50% 50%, 50% 50%'
+            }}
+          />
+          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((mark) => (
+            <React.Fragment key={mark}>
+              <span
+                className="absolute font-mono font-black text-blue-500/60"
+                style={{ left: `${mark}%`, top: '1.2mm', fontSize: '3px', transform: 'translateX(-50%)' }}
+              >
+                {mark}
+              </span>
+              <span
+                className="absolute font-mono font-black text-blue-500/60"
+                style={{ top: `${mark}%`, left: '1.2mm', fontSize: '3px', transform: 'translateY(-50%)' }}
+              >
+                {mark}
+              </span>
+            </React.Fragment>
+          ))}
+          <div className="absolute left-1/2 top-0 bottom-0 border-l border-dashed border-blue-500/45" />
+          <div className="absolute top-1/2 left-0 right-0 border-t border-dashed border-blue-500/45" />
+        </div>
+      )}
+
       {/* 1. Elementos Decorativos de Fundo (Design Padrão se não estiver ocultado) */}
       {!ocultarDesign && page === 'frente' && (
         <>
@@ -548,7 +618,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
                 width: `${field.width || 45}%`,
                 height: `${field.height || 28.5}%`,
                 border: isSelected ? 'none' : '2px solid rgba(226, 232, 240, 0.7)',
-                borderRadius: '50%',
+                borderRadius: '3mm',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -648,6 +718,7 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
           </div>
         );
       })}
+      </div>
     </div>
   );
 };

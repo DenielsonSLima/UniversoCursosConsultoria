@@ -107,9 +107,7 @@ const AssinaturasConfig: React.FC = () => {
   const renderSignatureInput = (role: 'diretoriaGeral' | 'secretaria' | 'coordenacao' | 'financeiro', title: string) => {
     const url = signatures[role] || '';
     const nomeKey = `${role}Nome` as keyof AssinaturasData;
-    const cargoKey = `${role}Cargo` as keyof AssinaturasData;
     const nome = (signatures[nomeKey] as string) || '';
-    const cargo = (signatures[cargoKey] as string) || '';
     const loading = isUploading[role];
 
     return (

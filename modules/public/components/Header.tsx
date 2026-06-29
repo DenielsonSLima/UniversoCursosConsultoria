@@ -1,6 +1,7 @@
 import React from 'react';
 import { Menu, X, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import PublicTickerBar from './PublicTickerBar';
 
 const Header: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -58,6 +59,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-white text-slate-800 border-b border-slate-200/80 shadow-sm">
+      <PublicTickerBar />
       <div className="container mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}

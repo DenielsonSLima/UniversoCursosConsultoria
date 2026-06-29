@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../lib/academicUtils';
 import { secretariaService, type Solicitacao } from '../../../../secretaria/secretaria.service';
+import { alunoSecretariaService } from '../../../../../aluno/secretaria/secretaria-aluno.service';
 import { declaracaoService } from '../../../../cadastros/modelos-documentos/declaracao/declaracao.service';
 import { irpfService } from '../../../../cadastros/modelos-documentos/irpf/irpf.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
@@ -157,19 +158,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   const { data: irpfPayments = [] } = useQuery<any[]>({
     queryKey: ['secretaria-aluno-irpf-payments', alunoId, selectedIrpfYear],
     queryFn: async () => {
-      const startDate = `${selectedIrpfYear}-01-01`;
-      const endDate = `${selectedIrpfYear}-12-31`;
-      
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select('*')
-        .eq('cliente_id', alunoId)
-        .eq('status', 'PAGO')
-        .gte('data_pagamento', startDate)
-        .lte('data_pagamento', endDate);
-
-      if (error) throw error;
-      return data || [];
+      return alunoSecretariaService.getPagamentosIrpf(alunoId, String(selectedIrpfYear), irpfMatricula?.turma_id);
     },
     enabled: isSelectedIrpfYearReleased,
   });

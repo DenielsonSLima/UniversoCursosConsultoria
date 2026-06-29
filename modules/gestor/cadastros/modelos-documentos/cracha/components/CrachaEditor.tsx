@@ -39,8 +39,32 @@ const posicoesPadrao: Record<string, { x: number; y: number }> = {
   cargo: { x: 3.7, y: 53.0 },
   matricula: { x: 5.5, y: 60.0 },
   cpf: { x: 5.5, y: 66.2 },
-  polo: { x: 5.5, y: 72.4 },
+  curso: { x: 5.5, y: 72.4 },
   qrcode: { x: 62.0, y: 60.0 }
+};
+
+const frontInfoFieldValues: Record<string, string> = {
+  matricula: 'MATRÍCULA\n{{ALUNO_MATRICULA}}',
+  cpf: 'CPF\n{{ALUNO_CPF}}',
+  curso: 'CURSO\n{{ALUNO_CURSO}}'
+};
+
+const normalizeFrontInfoField = (field: any) => {
+  const normalizedId = field.id === 'polo' ? 'curso' : field.id;
+  const normalizedValue = frontInfoFieldValues[normalizedId];
+
+  if (!normalizedValue) return field;
+
+  return {
+    ...field,
+    id: normalizedId,
+    value: normalizedValue,
+    style: {
+      ...(field.style || {}),
+      lineHeight: field.style?.lineHeight || '1.12',
+      fontWeight: field.style?.fontWeight || 'bold'
+    }
+  };
 };
 
 const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel }) => {
@@ -225,29 +249,29 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
         {
           id: 'matricula',
           type: 'text',
-          value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+          value: frontInfoFieldValues.matricula,
           x: pos.matricula?.x ?? 5.5,
           y: pos.matricula?.y ?? 60.0,
           page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
         },
         {
           id: 'cpf',
           type: 'text',
-          value: 'CPF: {{ALUNO_CPF}}',
+          value: frontInfoFieldValues.cpf,
           x: pos.cpf?.x ?? 5.5,
           y: pos.cpf?.y ?? 66.2,
           page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
         },
         {
-          id: 'polo',
+          id: 'curso',
           type: 'text',
-          value: 'POLO: {{POLO_NOME}}',
-          x: pos.polo?.x ?? 5.5,
-          y: pos.polo?.y ?? 72.4,
+          value: frontInfoFieldValues.curso,
+          x: pos.curso?.x ?? pos.polo?.x ?? 5.5,
+          y: pos.curso?.y ?? pos.polo?.y ?? 72.4,
           page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, color: formData.corTexto || '#1e293b' }
+          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
         },
         {
           id: 'qrcode',
@@ -269,16 +293,20 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
       const hasOldVerso = formData.fields.some((f: any) => oldVersoIds.includes(f.id));
       const hasNewVerso = formData.fields.some((f: any) => f.id === 'verso_qrcode');
 
+      const normalizedFields = formData.fields.map(normalizeFrontInfoField);
+
       if (hasOldVerso && !hasNewVerso) {
         // Remove todos os campos do verso antigo e insere os novos
-        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const frenteFields = normalizedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
         const migratedFields = [...frenteFields, ...getNewVersoFields()];
         setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
       } else if (!hasNewVerso) {
         // Template salvo sem os novos campos do verso — adicionar
-        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const frenteFields = normalizedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
         const migratedFields = [...frenteFields, ...getNewVersoFields()];
         setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
+      } else if (normalizedFields.some((field: any, index: number) => field !== formData.fields[index])) {
+        setFormData((prev: any) => ({ ...prev, fields: normalizedFields }));
       }
     }
   }, []);
@@ -301,6 +329,17 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
     }
   };
 
+  const getUploadExtension = (file: File) => {
+    const extensionFromName = file.name.split('.').pop()?.toLowerCase();
+    if (extensionFromName && ['png', 'jpg', 'jpeg', 'webp'].includes(extensionFromName)) {
+      return extensionFromName === 'jpeg' ? 'jpg' : extensionFromName;
+    }
+
+    if (file.type === 'image/png') return 'png';
+    if (file.type === 'image/webp') return 'webp';
+    return 'jpg';
+  };
+
   // Upload Imagem de Fundo (Storage Supabase)
   const handleUploadBg = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'bgFrenteUrl' | 'bgVersoUrl') => {
     const file = e.target.files?.[0];
@@ -308,13 +347,15 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
 
     setIsUploading(true);
     try {
-      const filePath = `templates/bg_${Date.now()}_${fieldName}.png`;
+      const side = fieldName === 'bgFrenteUrl' ? 'frente' : 'verso';
+      const uniqueId = crypto.randomUUID?.() || `${Date.now()}`;
+      const filePath = `templates/cracha-${side}-${uniqueId}.${getUploadExtension(file)}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
         .upload(filePath, file, {
           cacheControl: '31536000',
-          upsert: true
+          upsert: false
         });
 
       if (error) throw error;
@@ -330,6 +371,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
       showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -839,7 +881,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 resize-y custom-scrollbar min-h-[60px]"
                       />
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CPF}}', '{{POLO_NOME}}', '{{ALUNO_CURSO}}', '{{DATA_HOJE}}', '{{DATA_VALIDADE}}'].map((v) => (
+                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CPF}}', '{{ALUNO_CURSO}}', '{{DATA_HOJE}}', '{{DATA_VALIDADE}}'].map((v) => (
                           <button
                             key={v}
                             type="button"
@@ -993,9 +1035,9 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
             </div>
           </div>
           
-          <div className="flex-1 overflow-auto custom-scrollbar p-8 bg-slate-200 flex flex-col sm:flex-row items-center justify-center gap-8 min-h-0 select-none">
+          <div className="flex-1 overflow-auto custom-scrollbar p-8 bg-slate-200 flex flex-col sm:flex-row items-start justify-start gap-8 min-h-0 select-none">
              {(previewMode === 'frente' || previewMode === 'ambos') && (
-               <div className="flex flex-col items-center gap-2">
+               <div className="flex flex-col items-center gap-2 mx-auto">
                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Frente</span>
                  <CrachaPreview 
                    formData={formData} 
@@ -1009,7 +1051,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
                </div>
              )}
              {(previewMode === 'verso' || previewMode === 'ambos') && formData.hasVerso && (
-               <div className="flex flex-col items-center gap-2">
+               <div className="flex flex-col items-center gap-2 mx-auto">
                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Verso</span>
                  <CrachaPreview 
                    formData={formData} 

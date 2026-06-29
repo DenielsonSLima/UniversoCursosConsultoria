@@ -16,7 +16,8 @@ import {
   Calculator,
   MessageCircle,
   FileCode2,
-  GraduationCap
+  GraduationCap,
+  Megaphone
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -36,6 +37,7 @@ import PolosConfig from './polos/PolosConfig';
 import AcademicosConfig from './academicos/AcademicosConfig';
 import AssinaturasConfig from './assinaturas/AssinaturasConfig';
 import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
+import SitePublicoConfig from './site-publico/SitePublicoConfig';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -44,6 +46,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'empresas', title: 'Dados da Empresa', desc: 'CNPJ, Endereço e Logo', icon: <Building2 size={24} />, color: 'bg-blue-500' },
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
+    { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
     { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Despesas fixas, variáveis e outros débitos', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
@@ -65,6 +68,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'empresas': return <EmpresasConfig />;
       case 'polos': return <PolosConfig />;
       case 'academicos': return <AcademicosConfig />;
+      case 'site-publico': return <SitePublicoConfig />;
       case 'categorias': return <CategoriasConfig />;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;

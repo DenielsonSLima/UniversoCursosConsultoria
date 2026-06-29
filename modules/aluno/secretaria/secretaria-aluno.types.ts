@@ -54,3 +54,18 @@ export interface AlunoSecretariaData {
   solicitacoes: Solicitacao[];
   prazos: Record<string, PrazoConfig>;
 }
+
+export interface AlunoSecretariaIrpfPagamento {
+  turma_id: string;
+  turma_nome: string | null;
+  parcela_id: string;
+  matricula_id: string;
+  status: string;
+  valor: number;
+  valor_pago?: number | null;
+  data_pagamento: string | null;
+  data_vencimento: string | null;
+  numero_parcela: number | null;
+  total_parcelas: number | null;
+  asaas_invoice: string | null;
+}

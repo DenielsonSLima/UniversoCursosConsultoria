@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   GraduationCap, 
@@ -55,6 +56,29 @@ const AlunoPage: React.FC = () => {
   const alunoId = profile?.id || '';
   const alunoNome = profile?.nome || '';
   const alunoEmail = profile?.email || '';
+
+  const { data: canViewCalendar = false } = useQuery({
+    queryKey: ['aluno-calendario-elegibilidade', alunoId],
+    enabled: !!alunoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('matriculas')
+        .select(`
+          id,
+          turmas!inner(
+            id,
+            cursos!inner(id, modalidade)
+          )
+        `)
+        .eq('aluno_id', alunoId)
+        .in('status', ['ATIVO', 'CONCLUIDO'])
+        .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
+        .limit(1);
+
+      if (error) throw error;
+      return (data?.length || 0) > 0;
+    }
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -182,6 +206,12 @@ const AlunoPage: React.FC = () => {
     onTimeout: executeLogout,
   });
 
+  useEffect(() => {
+    if (activeModule === 'calendario' && !canViewCalendar) {
+      setActiveModule('inicio');
+    }
+  }, [activeModule, canViewCalendar]);
+
   if (isAuthLoading || !profile) {
     return <AccessCheckingScreen portal="Aluno" />;
   }
@@ -194,7 +224,7 @@ const AlunoPage: React.FC = () => {
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={20} /> },
-    { id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> },
+    ...(canViewCalendar ? [{ id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> }] : []),
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: unreadChatsCount },

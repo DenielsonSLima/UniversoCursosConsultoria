@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, DollarSign, X } from 'lucide-react';
 import { Turma } from '../../../../gestao.types';
-import { TurmaFinanceiroMatriculaConfig } from '../../turma-alunos.service';
+import { TurmaFinanceiroMatriculaConfig, PrevisaoFinanceiraTurma } from '../../turma-alunos.service';
 
 export type EnrollmentStep = 'PREVIEW' | 'FINANCEIRO';
 
@@ -19,6 +19,19 @@ interface ConfirmarMatriculaModalProps {
   step: EnrollmentStep;
   finance: EnrollmentFinance;
   turmaFinanceiroConfig?: TurmaFinanceiroMatriculaConfig;
+  previsao?: PrevisaoFinanceiraTurma;
+  enrollmentFlags: {
+    financeiro_herdado: boolean;
+    gerar_cobranca_inicial: boolean;
+    gerar_cobranca_futura: boolean | null;
+    sincronizar_asaas: boolean | null;
+  };
+  onFlagsChange: (next: {
+    financeiro_herdado: boolean;
+    gerar_cobranca_inicial: boolean;
+    gerar_cobranca_futura: boolean | null;
+    sincronizar_asaas: boolean | null;
+  }) => void;
   isPending: boolean;
   onStepChange: (step: EnrollmentStep) => void;
   onFinanceChange: (field: keyof EnrollmentFinance, value: string) => void;
@@ -29,12 +42,23 @@ interface ConfirmarMatriculaModalProps {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
+const getResumoPrevisao = (previsao?: PrevisaoFinanceiraTurma) => {
+  if (!previsao) return 'Sem previsão de cobranças futuras definida.';
+  const quantidade = Number(previsao.quantidade_prevista || 0);
+  return `Previsão: ${quantidade} parcelas futuras com geração ${previsao.gerar_cobrancas_futuras ? 'ativa' : 'inativa'}.`;
+};
+
+const textoInicial = (gerar: boolean) => (gerar ? 'Será criada' : 'Não será criada');
+
 const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   turma,
   student,
   step,
   finance,
   turmaFinanceiroConfig,
+  previsao,
+  enrollmentFlags,
+  onFlagsChange,
   isPending,
   onStepChange,
   onFinanceChange,
@@ -99,8 +123,20 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
               </div>
             </div>
             <p className="rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-500">
-              A matrícula será a única cobrança inicial. Após a confirmação do pagamento, o sistema gera o carnê de mensalidades; ao fim do ciclo, gera a rematrícula e repete o processo após a baixa.
+              {textoInicial(enrollmentFlags.gerar_cobranca_inicial)} a cobrança inicial nesta matrícula. {getResumoPrevisao(previsao)}
             </p>
+            <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
+              <input
+                type="checkbox"
+                checked={enrollmentFlags.financeiro_herdado}
+                onChange={(event) => onFlagsChange({
+                  ...enrollmentFlags,
+                  financeiro_herdado: event.target.checked,
+                  gerar_cobranca_inicial: !event.target.checked,
+                })}
+              />
+              Registrar como herdado (sem nova cobrança inicial)
+            </label>
             <div className="flex gap-3 pt-2">
               <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-3 text-xs font-black uppercase text-slate-500">
                 Cancelar
@@ -183,6 +219,41 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                 {formatCurrency(finance.valorParcela)}. A rematrícula será de{' '}
                 {formatCurrency(finance.valorRematricula)} após o ciclo.
               </p>
+              <div className="mt-3 space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={enrollmentFlags.gerar_cobranca_inicial}
+                    onChange={(event) => onFlagsChange({
+                      ...enrollmentFlags,
+                      gerar_cobranca_inicial: event.target.checked,
+                    })}
+                  />
+                  Cobrança inicial
+                </label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={enrollmentFlags.gerar_cobranca_futura ?? false}
+                    onChange={(event) => onFlagsChange({
+                      ...enrollmentFlags,
+                      gerar_cobranca_futura: event.target.checked,
+                    })}
+                  />
+                  Cobranças futuras
+                </label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={enrollmentFlags.sincronizar_asaas ?? true}
+                    onChange={(event) => onFlagsChange({
+                      ...enrollmentFlags,
+                      sincronizar_asaas: event.target.checked,
+                    })}
+                  />
+                  Sincronizar com Asaas
+                </label>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">

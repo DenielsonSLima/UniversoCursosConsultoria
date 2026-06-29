@@ -32,6 +32,7 @@ const mapTurma = (t: any): Turma => {
     modalidade: t.cursos?.modalidade || 'TECNICO',
     dataInicioInscricao: t.data_inicio_inscricao || null,
     dataFimInscricao: t.data_fim_inscricao || null,
+    permitirInscricoesOnline: t.permitir_inscricoes_online ?? false,
     exigeMatricula: t.exige_matricula ?? true,
     bloquearMatriculasAposCompletarVagas: t.bloquear_matriculas_apos_completar_vagas ?? true,
     qtdVagasMinima: t.qtd_vagas_minima === null || t.qtd_vagas_minima === undefined
@@ -57,6 +58,11 @@ const mapTurma = (t: any): Turma => {
     descontoPontualidade: Number(t.desconto_pontualidade),
     jurosAtraso: Number(t.juros_atraso),
     multaAtraso: Number(t.multa_atraso),
+    origemFinanceira: (t.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
+    financeiroHerdado: t.financeiro_herdado ?? false,
+    gerarCobrancasFuturas: t.gerar_cobrancas_futuras ?? false,
+    sincronizarAsaasFuturo: t.sincronizar_asaas_futuro ?? true,
+    obsFinanceiraOrigem: t.obs_financeira_origem || '',
   };
 };
 
@@ -211,6 +217,7 @@ export const gestaoService = {
       data_previsao_termino: turma.dataPrevisaoTermino || null,
       data_inicio_inscricao: turma.dataInicioInscricao || null,
       data_fim_inscricao: turma.dataFimInscricao || null,
+      permitir_inscricoes_online: turma.permitirInscricoesOnline ?? false,
       exige_matricula: turma.exigeMatricula === false ? false : true,
       qtd_vagas_minima: turma.qtdVagasMinima === null || turma.qtdVagasMinima === undefined
         ? null
@@ -228,6 +235,12 @@ export const gestaoService = {
       dia_vencimento_padrao: Number(turma.diaVencimentoPadrao || 10),
       cronograma_financeiro: Array.isArray(turma.cronogramaFinanceiro) ? turma.cronogramaFinanceiro : [],
       vagas_totais: Number(turma.vagasTotais) || 40
+      ,
+      origem_financeira: turma.origemFinanceira || 'NORMAL',
+      financeiro_herdado: turma.financeiroHerdado || false,
+      gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? false,
+      sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? true,
+      obs_financeira_origem: turma.obsFinanceiraOrigem || null,
     };
 
     const { data, error } = await supabase
@@ -254,6 +267,7 @@ export const gestaoService = {
       dataPrevisaoTermino: data.data_previsao_termino,
       dataInicioInscricao: data.data_inicio_inscricao || null,
       dataFimInscricao: data.data_fim_inscricao || null,
+      permitirInscricoesOnline: data.permitir_inscricoes_online ?? false,
       exigeMatricula: data.exige_matricula ?? true,
       bloquearMatriculasAposCompletarVagas: data.bloquear_matriculas_apos_completar_vagas ?? true,
       qtdVagasMinima: data.qtd_vagas_minima === null || data.qtd_vagas_minima === undefined
@@ -272,6 +286,12 @@ export const gestaoService = {
       descontoPontualidade: Number(data.desconto_pontualidade),
       jurosAtraso: Number(data.juros_atraso),
       multaAtraso: Number(data.multa_atraso)
+      ,
+      origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
+      financeiroHerdado: data.financeiro_herdado || false,
+      gerarCobrancasFuturas: data.gerar_cobrancas_futuras || false,
+      sincronizarAsaasFuturo: data.sincronizar_asaas_futuro ?? true,
+      obsFinanceiraOrigem: data.obs_financeira_origem || '',
     };
   },
 
@@ -304,6 +324,17 @@ export const gestaoService = {
       nome: string;
       dataInicio: string | null;
       dataPrevisaoTermino: string | null;
+      dataInicioInscricao?: string | null;
+      dataFimInscricao?: string | null;
+      permitirInscricoesOnline?: boolean;
+      exigeMatricula?: boolean;
+      qtdVagasMinima?: number;
+      bloquearMatriculasAposCompletarVagas?: boolean;
+      origemFinanceira?: 'NORMAL' | 'LEGADO';
+      financeiroHerdado?: boolean;
+      gerarCobrancasFuturas?: boolean;
+      sincronizarAsaasFuturo?: boolean;
+      obsFinanceiraOrigem?: string;
     }
   ): Promise<void> {
     const { error } = await supabase
@@ -312,6 +343,19 @@ export const gestaoService = {
         nome: input.nome.trim(),
         data_inicio: input.dataInicio || null,
         data_previsao_termino: input.dataPrevisaoTermino || null,
+        data_inicio_inscricao: input.dataInicioInscricao || null,
+        data_fim_inscricao: input.dataFimInscricao || null,
+        permitir_inscricoes_online: input.permitirInscricoesOnline === true,
+        exige_matricula: input.exigeMatricula === false ? false : true,
+        qtd_vagas_minima: input.qtdVagasMinima === null || input.qtdVagasMinima === undefined
+          ? 0
+          : Number(input.qtdVagasMinima),
+        bloquear_matriculas_apos_completar_vagas: input.bloquearMatriculasAposCompletarVagas ?? true,
+        origem_financeira: input.origemFinanceira,
+        financeiro_herdado: input.financeiroHerdado,
+        gerar_cobrancas_futuras: input.gerarCobrancasFuturas,
+        sincronizar_asaas_futuro: input.sincronizarAsaasFuturo,
+        obs_financeira_origem: input.obsFinanceiraOrigem,
       })
       .eq('id', id);
 
@@ -381,6 +425,33 @@ export const gestaoService = {
 
     if (error) {
       console.error('Erro ao salvar configurações financeiras da turma:', error);
+      throw error;
+    }
+  },
+
+  async updateTurmaFinanceiroFlags(
+    id: string,
+    flags: {
+      origemFinanceira: 'NORMAL' | 'LEGADO';
+      financeiroHerdado: boolean;
+      gerarCobrancasFuturas: boolean;
+      sincronizarAsaasFuturo: boolean;
+      obsFinanceiraOrigem?: string | null;
+    },
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('turmas')
+      .update({
+        origem_financeira: flags.origemFinanceira,
+        financeiro_herdado: flags.financeiroHerdado,
+        gerar_cobrancas_futuras: flags.gerarCobrancasFuturas,
+        sincronizar_asaas_futuro: flags.sincronizarAsaasFuturo,
+        obs_financeira_origem: flags.obsFinanceiraOrigem || null,
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao atualizar flags financeiras da turma:', error);
       throw error;
     }
   },

@@ -50,6 +50,13 @@ export const useTurmaFinanceiroMatriculaConfig = (turmaId: string, enabled: bool
   staleTime: 30_000,
 });
 
+export const usePrevisaoFinanceiraTurma = (turmaId: string, enabled: boolean) => useQuery({
+  queryKey: ['previsao-financeira-turma', turmaId],
+  queryFn: () => turmaAlunosService.preverGeracaoCobrancasFuturas(turmaId),
+  enabled,
+  staleTime: 30_000,
+});
+
 export const useDestinationClasses = (
   turmaId: string,
   enabled: boolean,

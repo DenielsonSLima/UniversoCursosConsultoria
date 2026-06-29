@@ -6,11 +6,11 @@ export const json = (body: unknown, status = 200) =>
 
 export type Environment = "sandbox" | "production";
 
-export const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO"];
+export const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 export const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 
 export const buildCoursePaymentDescription = (courseName: string) =>
-  `${courseName} - Inscricao Curso EAD - Universo Cursos e Consultoria`;
+  `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
 
 export const mapBillingType = (billingType?: string | null) => {
   if (billingType === "CREDIT_CARD") return "CARTAO";

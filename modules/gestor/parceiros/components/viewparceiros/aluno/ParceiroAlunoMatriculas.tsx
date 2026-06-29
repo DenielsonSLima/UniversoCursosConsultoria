@@ -18,7 +18,7 @@ import {
   AcademicMovementType,
   academicLifecycleService,
 } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
-import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
+import { turmaAsaasService } from '../../../../gestao/tecnicos/detalhes/turma-asaas.service';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 
 interface Props {
@@ -49,6 +49,8 @@ const formatDate = (value?: string | null) =>
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const isValidCpf = (value?: string | null) => {
   const cpf = String(value || '').replace(/\D/g, '');
@@ -139,7 +141,23 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('turmas')
-        .select('id, nome, codigo, turno, status, valor_matricula, cursos(id, nome, modalidade), polos(nome)')
+        .select(`
+          id,
+          nome,
+          codigo,
+          turno,
+          status,
+          valor_matricula,
+          valor_rematricula,
+          valor_parcela,
+          dia_vencimento_padrao,
+          origem_financeira,
+          financeiro_herdado,
+          gerar_cobrancas_futuras,
+          sincronizar_asaas_futuro,
+          cursos(id, nome, modalidade),
+          polos(nome)
+        `)
         .eq('status', 'EM_ANDAMENTO')
         .order('nome');
       if (error) throw error;
@@ -174,32 +192,36 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const newEnrollmentMutation = useMutation({
     mutationFn: async () => {
       const selectedClass = allClasses.find((item) => item.id === newClassId);
-      if (selectedClass?.cursos?.modalidade === 'TECNICO') {
-        await asaasIntegrationService.testConnection();
+      const modalidade = selectedClass?.cursos?.modalidade;
+
+      if (modalidade === 'TECNICO') {
+        const origem = selectedClass?.origem_financeira || 'NORMAL';
+        const financeiroHerdado = Boolean(selectedClass?.financeiro_herdado) || origem === 'LEGADO';
+
+        return turmaAsaasService.matricularAlunoComCobranca({
+          turmaId: newClassId,
+          alunoId,
+          responsavelId,
+          valorMatricula: Number(selectedClass?.valor_matricula || 0),
+          valorParcela: Number(selectedClass?.valor_parcela || 0),
+          valorRematricula: Number(selectedClass?.valor_rematricula || 0),
+          dataVencimentoMatricula: todayISO(),
+          diaVencimento: Number(selectedClass?.dia_vencimento_padrao || 10),
+          financeiro_herdado: financeiroHerdado,
+          gerar_cobranca_inicial: !financeiroHerdado,
+          gerar_cobranca_futura: selectedClass?.gerar_cobrancas_futuras ?? false,
+          sincronizar_asaas: selectedClass?.sincronizar_asaas_futuro ?? true,
+        });
       }
 
       const matricula = await academicLifecycleService.matricularAluno(newClassId, alunoId, responsavelId);
-      if (selectedClass?.cursos?.modalidade !== 'TECNICO') return { matricula, asaasSynced: false };
-
-      try {
-        await asaasIntegrationService.syncEnrollment(matricula.id);
-        return { matricula, asaasSynced: true };
-      } catch (error) {
-        return {
-          matricula,
-          asaasSynced: false,
-          asaasError: error instanceof Error ? error.message : 'Falha na integração Asaas',
-        };
-      }
+      return { matricula, asaasSynced: false };
     },
     onSuccess: async (result) => {
       await invalidate();
       setShowNew(false);
       setPendingNewEnrollment(null);
       setNewClassId('');
-      if (result.asaasError) {
-        toast.error('Sincronização Asaas pendente', result.asaasError);
-      }
     },
     onError: (error: any) => {
       toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no Asaas: ${error.message}`);
@@ -211,7 +233,13 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
     if (!selectedClass) return;
 
     const isTechnical = selectedClass.cursos?.modalidade === 'TECNICO';
-    if (isTechnical && !isValidCpf(aluno?.cpf_cnpj)) {
+    const origem = selectedClass?.origem_financeira || 'NORMAL';
+    const financeiroHerdado = Boolean(selectedClass?.financeiro_herdado) || origem === 'LEGADO';
+    const deveSincronizarAsaas = isTechnical
+      && !financeiroHerdado
+      && (selectedClass?.sincronizar_asaas_futuro ?? true);
+
+    if (deveSincronizarAsaas && !isValidCpf(aluno?.cpf_cnpj)) {
       toast.error(
         'CPF inválido para cobrança',
         'Atualize o CPF do aluno com um documento válido antes de gerar a matrícula no Asaas.'

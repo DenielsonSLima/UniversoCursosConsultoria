@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRightLeft,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Landmark,
@@ -14,7 +13,6 @@ import {
   Plus,
   Search,
   Trash2,
-  WalletCards,
   X,
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';

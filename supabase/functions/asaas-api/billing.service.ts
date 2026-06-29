@@ -145,6 +145,57 @@ export const createAsaasBillingService = (
     return null;
   };
 
+  const getReceivableSyncDecision = async (receivable: any) => {
+    if (!receivable.matricula_id) {
+      return { allowed: true, reason: null as string | null };
+    }
+
+    const { data: matricula, error } = await admin
+      .from("matriculas")
+      .select(`
+        id,
+        financeiro_herdado,
+        gerar_cobranca_inicial,
+        gerar_cobranca_futura,
+        sincronizar_asaas,
+        turmas(
+          origem_financeira,
+          financeiro_herdado,
+          gerar_cobrancas_futuras,
+          sincronizar_asaas_futuro
+        )
+      `)
+      .eq("id", receivable.matricula_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!matricula) return { allowed: true, reason: null as string | null };
+
+    const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+    const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
+    const financeiroHerdado = matricula.financeiro_herdado === true
+      || turma?.financeiro_herdado === true
+      || origem === "LEGADO";
+    const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
+    if (syncEnabled === false) {
+      return { allowed: false, reason: "Sincronização Asaas desativada na matrícula/turma." };
+    }
+
+    const launchType = String(receivable.tipo_lancamento || "").toUpperCase();
+    if (launchType === "MATRICULA") {
+      const gerarInicial = matricula.gerar_cobranca_inicial ?? !financeiroHerdado;
+      if (gerarInicial === false) {
+        return { allowed: false, reason: "Cobrança inicial bloqueada por regra de financeiro legado." };
+      }
+    } else {
+      const gerarFutura = matricula.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
+      if (gerarFutura === false) {
+        return { allowed: false, reason: "Cobranças futuras desativadas na matrícula/turma." };
+      }
+    }
+
+    return { allowed: true, reason: null as string | null };
+  };
+
   const syncFutureInstallments = async (
     runtime: AsaasRuntime,
     matriculaId: string,
@@ -241,6 +292,18 @@ export const createAsaasBillingService = (
         }
       }
       return refreshReceivableStatus(runtime, receivable);
+    }
+
+    const syncDecision = await getReceivableSyncDecision(receivable);
+    if (!syncDecision.allowed) {
+      await admin.from("contas_receber")
+        .update({
+          origem_pagamento: receivable.origem_pagamento || "LOCAL",
+          asaas_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivable.id);
+      return { ...receivable, asaas_sync_skipped: true, asaas_skip_reason: syncDecision.reason };
     }
 
     if (!receivable.cliente_id) throw new Error("A cobrança não possui aluno vinculado.");

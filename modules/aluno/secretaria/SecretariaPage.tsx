@@ -40,6 +40,7 @@ import {
 import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.service';
 import { useAlunoSecretariaData } from './useAlunoSecretariaData';
 import { AlunoSecretariaSolicitacaoTipo } from './secretaria-aluno.types';
+import { useIRPFFiscalData } from './useIRPFFiscalData';
 
 interface SecretariaPageProps {
   alunoId: string;
@@ -70,7 +71,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
 
   const {
     aluno,
-    matriculas,
     solicitacoes,
     prazos,
     eligibility,
@@ -179,25 +179,12 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   }, [irpfLiberacaoDate]);
 
   // Busca pagamentos do aluno no ano-calendário selecionado para IRPF
-  const { data: irpfPayments = [] } = useQuery<any[]>({
-    queryKey: ['secretaria-aluno-irpf-payments', alunoId, selectedIrpfYear],
-    queryFn: async () => {
-      const startDate = `${selectedIrpfYear}-01-01`;
-      const endDate = `${selectedIrpfYear}-12-31`;
-      
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select('*')
-        .eq('cliente_id', alunoId)
-        .eq('status', 'PAGO')
-        .gte('data_pagamento', startDate)
-        .lte('data_pagamento', endDate);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: eligibility.canEmitIrpf && isSelectedIrpfYearReleased,
-  });
+  const { data: irpfPayments = [] } = useIRPFFiscalData(
+    alunoId,
+    selectedIrpfYear,
+    irpfMatricula?.turma_id,
+    eligibility.canEmitIrpf && isSelectedIrpfYearReleased,
+  );
 
   // Busca o polo completo
   const { data: poloData } = useQuery({

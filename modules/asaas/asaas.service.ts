@@ -23,7 +23,12 @@ export const asaasIntegrationService = {
   },
 
   async syncEnrollment(matriculaId: string) {
-    return invokeAdmin<{ success: boolean; receivable: any }>('sync-enrollment', { matriculaId });
+    return invokeAdmin<{
+      success: boolean;
+      receivable?: any;
+      skipped?: boolean;
+      skippedReason?: string | null;
+    }>('sync-enrollment', { matriculaId });
   },
 
   async syncReceivable(receivableId: string) {
@@ -82,9 +87,9 @@ export const asaasIntegrationService = {
     return invokeAdmin<{ success: boolean; url: string }>('create-course-link', { courseId, recreate });
   },
 
-  async getPublicCheckout(courseId: string, alunoId: string) {
+  async getPublicCheckout(courseId: string, alunoId: string, turmaId?: string | null) {
     const { data, error } = await supabase.functions.invoke('asaas-checkout', {
-      body: { courseId, alunoId },
+      body: { courseId, alunoId, turmaId },
     });
     if (error) {
       const context = (error as any).context;

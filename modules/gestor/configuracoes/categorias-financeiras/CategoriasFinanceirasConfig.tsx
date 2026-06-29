@@ -112,7 +112,6 @@ const ColunaCategorias: React.FC<ColunaCategoriasProps> = ({
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<CategoriaFinanceira | null>(null);
-  const queryClient = useQueryClient();
 
   const handleDelete = (id: string) => {
     if (confirm('Excluir esta categoria? Os lançamentos vinculados não serão excluídos.')) {

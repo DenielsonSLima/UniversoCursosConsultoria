@@ -17,8 +17,16 @@ const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) =>
       // 1. Buscar turmas do aluno via matrículas
       const { data: matriculas, error: errMat } = await supabase
         .from('matriculas')
-        .select('turma_id')
-        .eq('aluno_id', alunoId);
+        .select(`
+          turma_id,
+          turmas!inner(
+            id,
+            cursos!inner(id, modalidade)
+          )
+        `)
+        .eq('aluno_id', alunoId)
+        .in('status', ['ATIVO', 'CONCLUIDO'])
+        .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO']);
 
       if (errMat) throw errMat;
 
