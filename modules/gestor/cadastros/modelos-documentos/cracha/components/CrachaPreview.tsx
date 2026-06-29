@@ -13,6 +13,7 @@ interface CrachaPreviewProps {
     matricula: string;
     cargo?: string;
     polo?: string;
+    curso?: string;
     validade?: string;
     fotoUrl?: string | null;
     foto?: string | null;
@@ -45,14 +46,21 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   onSelectField,
   onChangePositions
 }) => {
+  // Calcular data de validade (1 ano a partir da emissão)
+  const today = new Date();
+  const validadeDate = new Date(today);
+  validadeDate.setFullYear(validadeDate.getFullYear() + 1);
+
   const collaboratorData = aluno ? {
     nome: aluno.nome,
     cargo: aluno.cargo || formData.cargoPadrao || 'ESTAGIÁRIO',
     matricula: aluno.matricula,
     cpf: aluno.cpf,
     polo: aluno.polo || 'POLO JAPOATÃ (MATRIZ)',
+    curso: aluno.curso || 'TÉCNICO EM ENFERMAGEM',
     admissao: '05/01/2024',
-    emissao: new Date().toLocaleDateString('pt-BR'),
+    emissao: today.toLocaleDateString('pt-BR'),
+    validade: aluno.validade || validadeDate.toLocaleDateString('pt-BR'),
     instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
     fotoUrl: aluno.fotoUrl || aluno.foto || null,
     validationCode: aluno.validationCode,
@@ -62,8 +70,10 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
     matricula: '2026F987',
     cpf: '987.654.321-99',
     polo: 'POLO JAPOATÃ (MATRIZ)',
+    curso: 'TÉCNICO EM ENFERMAGEM',
     admissao: '05/01/2024',
-    emissao: '18/06/2026',
+    emissao: today.toLocaleDateString('pt-BR'),
+    validade: validadeDate.toLocaleDateString('pt-BR'),
     instituicao: 'UNIVERSO CURSOS E CONSULTORIA',
     fotoUrl: null,
     validationCode: undefined,
@@ -75,9 +85,132 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   const useCustomBg = page === 'frente' ? !!formData.bgFrenteUrl : !!formData.bgVersoUrl;
   const ocultarDesign = useCustomBg && !!formData.ocultarDesignPadrao;
 
+  // Novos campos padrão do verso (v2)
+  const getNewVersoFields = (): any[] => [
+    {
+      id: 'verso_qrcode',
+      type: 'qrcode',
+      value: 'QR_VALIDADOR_CRACHA',
+      x: 27.0,
+      y: 10.0,
+      width: 46,
+      height: 26,
+      page: 'verso'
+    },
+    {
+      id: 'verso_nome',
+      type: 'text',
+      value: '{{ALUNO_NOME}}',
+      x: 3.7,
+      y: 38.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '6px', fontWeight: 'bold', color: '#1e293b', textAlign: 'center' }
+    },
+    {
+      id: 'verso_matricula',
+      type: 'text',
+      value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+      x: 3.7,
+      y: 43.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_cpf',
+      type: 'text',
+      value: 'CPF: {{ALUNO_CPF}}',
+      x: 3.7,
+      y: 47.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_curso',
+      type: 'text',
+      value: 'CURSO: {{ALUNO_CURSO}}',
+      x: 3.7,
+      y: 51.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_url_validador',
+      type: 'text',
+      value: 'www.universocc.com.br/validador',
+      x: 3.7,
+      y: 55.5,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '4.5px', fontWeight: 'bold', color: '#dc2626', textAlign: 'center' }
+    },
+    {
+      id: 'instrucoes',
+      type: 'text',
+      value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
+      x: 5.0,
+      y: 60.0,
+      width: 90.0,
+      page: 'verso',
+      style: { fontSize: '4.2px', fontWeight: 'normal', color: '#64748b', textAlign: 'left' }
+    },
+    {
+      id: 'emissao_label',
+      type: 'text',
+      value: 'EMISSÃO',
+      x: 5.0,
+      y: 86.0,
+      page: 'verso',
+      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
+    },
+    {
+      id: 'emissao_valor',
+      type: 'text',
+      value: '{{DATA_HOJE}}',
+      x: 5.0,
+      y: 89.0,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
+    },
+    {
+      id: 'validade_label',
+      type: 'text',
+      value: 'VALIDADE',
+      x: 55.0,
+      y: 86.0,
+      page: 'verso',
+      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
+    },
+    {
+      id: 'validade_valor',
+      type: 'text',
+      value: '{{DATA_VALIDADE}}',
+      x: 55.0,
+      y: 89.0,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
+    }
+  ];
+
   // Resolvendo a lista de campos com fallback para compatibilidade retroativa
   const getActiveFields = (): any[] => {
     if (formData.fields && Array.isArray(formData.fields) && formData.fields.length > 0) {
+      // Migração em tempo de renderização: detecta verso antigo e substitui
+      const oldVersoIds = ['admissao_label', 'admissao_valor', 'assinatura_linha', 'assinatura_cargo', 'assinatura_instituicao'];
+      const hasOldVerso = formData.fields.some((f: any) => oldVersoIds.includes(f.id));
+      const hasNewVerso = formData.fields.some((f: any) => f.id === 'verso_qrcode');
+
+      if (hasOldVerso && !hasNewVerso) {
+        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        return [...frenteFields, ...getNewVersoFields()];
+      }
+      if (!hasNewVerso) {
+        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        return [...frenteFields, ...getNewVersoFields()];
+      }
       return formData.fields;
     }
 
@@ -149,78 +282,116 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
         height: 14,
         page: 'frente'
       },
+      // --- VERSO: QR Code ---
       {
-        id: 'instrucoes',
+        id: 'verso_qrcode',
+        type: 'qrcode',
+        value: 'QR_VALIDADOR_CRACHA',
+        x: 27.0,
+        y: 10.0,
+        width: 46,
+        height: 26,
+        page: 'verso'
+      },
+      // --- VERSO: Dados do Aluno ---
+      {
+        id: 'verso_nome',
         type: 'text',
-        value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
-        x: 7.4,
-        y: 14.0,
-        width: 85.2,
+        value: '{{ALUNO_NOME}}',
+        x: 3.7,
+        y: 38.0,
+        width: 92.6,
+        page: 'verso',
+        style: { fontSize: '6px', fontWeight: 'bold', color: '#1e293b', textAlign: 'center' }
+      },
+      {
+        id: 'verso_matricula',
+        type: 'text',
+        value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+        x: 3.7,
+        y: 43.0,
+        width: 92.6,
         page: 'verso',
         style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
       },
       {
-        id: 'admissao_label',
+        id: 'verso_cpf',
         type: 'text',
-        value: 'ADMISSÃO',
-        x: 7.4,
-        y: 56.0,
+        value: 'CPF: {{ALUNO_CPF}}',
+        x: 3.7,
+        y: 47.0,
+        width: 92.6,
         page: 'verso',
-        style: { fontSize: '4px', fontWeight: 'bold', color: '#94a3b8' }
+        style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
       },
       {
-        id: 'admissao_valor',
+        id: 'verso_curso',
         type: 'text',
-        value: '05/01/2024',
-        x: 7.4,
-        y: 59.0,
+        value: 'CURSO: {{ALUNO_CURSO}}',
+        x: 3.7,
+        y: 51.0,
+        width: 92.6,
         page: 'verso',
-        style: { fontSize: '5.8px', fontWeight: 'bold', color: '#475569' }
+        style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
       },
+      // --- VERSO: URL de Validação em vermelho ---
+      {
+        id: 'verso_url_validador',
+        type: 'text',
+        value: 'www.universocc.com.br/validador',
+        x: 3.7,
+        y: 55.5,
+        width: 92.6,
+        page: 'verso',
+        style: { fontSize: '4.5px', fontWeight: 'bold', color: '#dc2626', textAlign: 'center' }
+      },
+      // --- VERSO: Instruções de Uso ---
+      {
+        id: 'instrucoes',
+        type: 'text',
+        value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
+        x: 5.0,
+        y: 60.0,
+        width: 90.0,
+        page: 'verso',
+        style: { fontSize: '4.2px', fontWeight: 'normal', color: '#64748b', textAlign: 'left' }
+      },
+      // --- VERSO: Data de Emissão e Validade ---
       {
         id: 'emissao_label',
         type: 'text',
         value: 'EMISSÃO',
-        x: 50.0,
-        y: 56.0,
+        x: 5.0,
+        y: 86.0,
         page: 'verso',
-        style: { fontSize: '4px', fontWeight: 'bold', color: '#94a3b8' }
+        style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
       },
       {
         id: 'emissao_valor',
         type: 'text',
         value: '{{DATA_HOJE}}',
-        x: 50.0,
-        y: 59.0,
+        x: 5.0,
+        y: 89.0,
         page: 'verso',
-        style: { fontSize: '5.8px', fontWeight: 'bold', color: '#475569' }
+        style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
       },
       {
-        id: 'assinatura_linha',
+        id: 'validade_label',
         type: 'text',
-        value: '_____________________________________',
-        x: 7.4,
-        y: 70.0,
+        value: 'VALIDADE',
+        x: 55.0,
+        y: 86.0,
         page: 'verso',
-        style: { fontSize: '5px', textAlign: 'center', color: '#94a3b8' }
+        style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
       },
       {
-        id: 'assinatura_cargo',
+        id: 'validade_valor',
         type: 'text',
-        value: 'Diretoria de Recursos Humanos',
-        x: 7.4,
-        y: 74.0,
+        value: '{{DATA_VALIDADE}}',
+        x: 55.0,
+        y: 89.0,
         page: 'verso',
-        style: { fontSize: '4.5px', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center' }
-      },
-      {
-        id: 'assinatura_instituicao',
-        type: 'text',
-        value: 'UNIVERSO CURSOS E CONSULTORIA',
-        x: 7.4,
-        y: 78.0,
-        page: 'verso',
-        style: { fontSize: '5.5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+        style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
       }
     ];
   };
@@ -232,7 +403,9 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
       .replace(/{{ALUNO_MATRICULA}}/g, collaboratorData.matricula)
       .replace(/{{ALUNO_CPF}}/g, collaboratorData.cpf)
       .replace(/{{POLO_NOME}}/g, collaboratorData.polo)
-      .replace(/{{DATA_HOJE}}/g, collaboratorData.emissao);
+      .replace(/{{ALUNO_CURSO}}/g, collaboratorData.curso)
+      .replace(/{{DATA_HOJE}}/g, collaboratorData.emissao)
+      .replace(/{{DATA_VALIDADE}}/g, collaboratorData.validade);
   };
 
   // Drag & Drop Handler
@@ -402,24 +575,30 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
               style={{
                 ...commonStyle,
                 width: `${field.width || 22}%`,
-                height: `${field.height || 14}%`,
+                height: 'auto',
                 backgroundColor: 'white',
-                padding: '1%',
+                padding: '2%',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '4px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                border: '1px solid rgba(226, 232, 240, 0.7)'
               }}
               onMouseDown={(e) => handleDragStart(e, field.id)}
               onClick={(e) => { e.stopPropagation(); if (isEditable && onSelectField) onSelectField(field.id); }}
               className={`${hoverOutlineStyle} transition-all`}
             >
-              <img src={qrCodeUrl} alt="QR" className="w-full h-full object-contain pointer-events-none" />
-              <p style={{ fontSize: '3px', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '1.5px', lineHeight: 1 }} className="pointer-events-none">
-                VALIDAR
-              </p>
+              <img src={qrCodeUrl} alt="QR" className="w-full object-contain pointer-events-none" style={{ aspectRatio: '1/1' }} />
+              <div className="w-full flex flex-col items-center pointer-events-none" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '2px', marginTop: '2px' }}>
+                <p style={{ fontSize: '2.8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1, marginBottom: '1px' }}>
+                  CÓD. VALIDAÇÃO
+                </p>
+                <p style={{ fontSize: '3.5px', fontWeight: 900, color: '#2563eb', fontFamily: 'monospace', letterSpacing: '0.06em', lineHeight: 1, wordBreak: 'break-all', textAlign: 'center' }}>
+                  {codeValidador}
+                </p>
+              </div>
             </div>
           );
         }

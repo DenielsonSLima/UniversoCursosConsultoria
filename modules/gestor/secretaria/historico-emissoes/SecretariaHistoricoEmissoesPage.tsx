@@ -934,6 +934,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                           matricula: selectedEmission.dados_emissao?.studentMatricula || '',
                           cargo: 'ESTUDANTE',
                           polo: selectedEmission.dados_emissao?.unitName || '',
+                          curso: selectedEmission.dados_emissao?.courseName || '',
                           fotoUrl: selectedEmission.dados_emissao?.studentPhotoUrl || selectedEmission.aluno?.foto_url || null,
                           validationCode: selectedEmission.codigo
                         }}
@@ -952,6 +953,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                           matricula: selectedEmission.dados_emissao?.studentMatricula || '',
                           cargo: 'ESTUDANTE',
                           polo: selectedEmission.dados_emissao?.unitName || '',
+                          curso: selectedEmission.dados_emissao?.courseName || '',
                           fotoUrl: selectedEmission.dados_emissao?.studentPhotoUrl || selectedEmission.aluno?.foto_url || null,
                           validationCode: selectedEmission.codigo
                         }}

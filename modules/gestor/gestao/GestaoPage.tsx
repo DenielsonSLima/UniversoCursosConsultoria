@@ -30,10 +30,8 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, poloNome, isMatriz, onR
   }, [activeTab, isMatriz]);
 
   useEffect(() => {
-    if (isDetailView) {
-      onRequestScrollTop?.();
-    }
-  }, [isDetailView, onRequestScrollTop]);
+    onRequestScrollTop?.();
+  }, [activeTab, isDetailView, onRequestScrollTop]);
 
   useEffect(() => {
     const channel = supabase

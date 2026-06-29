@@ -305,6 +305,11 @@ const GestorPage: React.FC = () => {
     });
   }, []);
 
+  // Força o scroll para o topo ao trocar de módulo/página
+  useEffect(() => {
+    scrollContentToTop();
+  }, [activeModule, scrollContentToTop]);
+
   if (isAuthLoading || !profile) {
     return <AccessCheckingScreen portal="Gestor" />;
   }

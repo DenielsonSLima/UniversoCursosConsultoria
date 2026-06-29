@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -33,12 +33,24 @@ import CalendarioAlunoPage from './calendario/CalendarioAlunoPage';
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
+  const scrollContentToTop = useCallback(() => {
+    requestAnimationFrame(() => {
+      contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
+  }, []);
+
+  // Força o scroll para o topo ao trocar de módulo/página
+  useEffect(() => {
+    scrollContentToTop();
+  }, [activeModule, scrollContentToTop]);
 
   const alunoId = profile?.id || '';
   const alunoNome = profile?.nome || '';
@@ -367,7 +379,7 @@ const AlunoPage: React.FC = () => {
         </header>
 
         {/* Dynamic page contents wrapper */}
-        <div className="p-8 flex-1 overflow-auto bg-slate-50">
+        <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto bg-slate-50">
           
           {renderContent()}
         </div>

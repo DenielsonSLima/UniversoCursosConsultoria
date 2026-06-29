@@ -78,9 +78,120 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Novos campos padrão do verso (v2)
+  const getNewVersoFields = () => [
+    {
+      id: 'verso_qrcode',
+      type: 'qrcode',
+      value: 'QR_VALIDADOR_CRACHA',
+      x: 27.0,
+      y: 10.0,
+      width: 46,
+      height: 26,
+      page: 'verso'
+    },
+    {
+      id: 'verso_nome',
+      type: 'text',
+      value: '{{ALUNO_NOME}}',
+      x: 3.7,
+      y: 38.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '6px', fontWeight: 'bold', color: '#1e293b', textAlign: 'center' }
+    },
+    {
+      id: 'verso_matricula',
+      type: 'text',
+      value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
+      x: 3.7,
+      y: 43.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_cpf',
+      type: 'text',
+      value: 'CPF: {{ALUNO_CPF}}',
+      x: 3.7,
+      y: 47.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_curso',
+      type: 'text',
+      value: 'CURSO: {{ALUNO_CURSO}}',
+      x: 3.7,
+      y: 51.0,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
+    },
+    {
+      id: 'verso_url_validador',
+      type: 'text',
+      value: 'www.universocc.com.br/validador',
+      x: 3.7,
+      y: 55.5,
+      width: 92.6,
+      page: 'verso',
+      style: { fontSize: '4.5px', fontWeight: 'bold', color: '#dc2626', textAlign: 'center' }
+    },
+    {
+      id: 'instrucoes',
+      type: 'text',
+      value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
+      x: 5.0,
+      y: 60.0,
+      width: 90.0,
+      page: 'verso',
+      style: { fontSize: '4.2px', fontWeight: 'normal', color: '#64748b', textAlign: 'left' }
+    },
+    {
+      id: 'emissao_label',
+      type: 'text',
+      value: 'EMISSÃO',
+      x: 5.0,
+      y: 86.0,
+      page: 'verso',
+      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
+    },
+    {
+      id: 'emissao_valor',
+      type: 'text',
+      value: '{{DATA_HOJE}}',
+      x: 5.0,
+      y: 89.0,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
+    },
+    {
+      id: 'validade_label',
+      type: 'text',
+      value: 'VALIDADE',
+      x: 55.0,
+      y: 86.0,
+      page: 'verso',
+      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
+    },
+    {
+      id: 'validade_valor',
+      type: 'text',
+      value: '{{DATA_VALIDADE}}',
+      x: 55.0,
+      y: 89.0,
+      page: 'verso',
+      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
+    }
+  ];
+
   // Migração/inicialização automática de templates antigos para o novo array de fields
   useEffect(() => {
     if (!formData.fields || !Array.isArray(formData.fields) || formData.fields.length === 0) {
+      // Caso 1: Template sem fields — inicializa tudo do zero
       const pos = formData.posicoes || posicoesPadrao;
       const initialFields = [
         {
@@ -148,82 +259,27 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
           height: 14,
           page: 'frente'
         },
-        {
-          id: 'instrucoes',
-          type: 'text',
-          value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
-          x: 7.4,
-          y: 14.0,
-          width: 85.2,
-          page: 'verso',
-          style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
-        },
-        {
-          id: 'admissao_label',
-          type: 'text',
-          value: 'ADMISSÃO',
-          x: 7.4,
-          y: 56.0,
-          page: 'verso',
-          style: { fontSize: '4px', fontWeight: 'bold', color: '#94a3b8' }
-        },
-        {
-          id: 'admissao_valor',
-          type: 'text',
-          value: '05/01/2024',
-          x: 7.4,
-          y: 59.0,
-          page: 'verso',
-          style: { fontSize: '5.8px', fontWeight: 'bold', color: '#475569' }
-        },
-        {
-          id: 'emissao_label',
-          type: 'text',
-          value: 'EMISSÃO',
-          x: 50.0,
-          y: 56.0,
-          page: 'verso',
-          style: { fontSize: '4px', fontWeight: 'bold', color: '#94a3b8' }
-        },
-        {
-          id: 'emissao_valor',
-          type: 'text',
-          value: '{{DATA_HOJE}}',
-          x: 50.0,
-          y: 59.0,
-          page: 'verso',
-          style: { fontSize: '5.8px', fontWeight: 'bold', color: '#475569' }
-        },
-        {
-          id: 'assinatura_linha',
-          type: 'text',
-          value: '_____________________________________',
-          x: 7.4,
-          y: 70.0,
-          page: 'verso',
-          style: { fontSize: '5px', textAlign: 'center', color: '#94a3b8' }
-        },
-        {
-          id: 'assinatura_cargo',
-          type: 'text',
-          value: 'Diretoria de Recursos Humanos',
-          x: 7.4,
-          y: 74.0,
-          page: 'verso',
-          style: { fontSize: '4.5px', fontWeight: 'bold', color: '#94a3b8', textAlign: 'center' }
-        },
-        {
-          id: 'assinatura_instituicao',
-          type: 'text',
-          value: 'UNIVERSO CURSOS E CONSULTORIA',
-          x: 7.4,
-          y: 78.0,
-          page: 'verso',
-          style: { fontSize: '5.5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
-        }
+        ...getNewVersoFields()
       ];
 
       setFormData((prev: any) => ({ ...prev, fields: initialFields }));
+    } else {
+      // Caso 2: Template já tem fields salvos — migrar verso antigo para novo layout
+      const oldVersoIds = ['admissao_label', 'admissao_valor', 'assinatura_linha', 'assinatura_cargo', 'assinatura_instituicao'];
+      const hasOldVerso = formData.fields.some((f: any) => oldVersoIds.includes(f.id));
+      const hasNewVerso = formData.fields.some((f: any) => f.id === 'verso_qrcode');
+
+      if (hasOldVerso && !hasNewVerso) {
+        // Remove todos os campos do verso antigo e insere os novos
+        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const migratedFields = [...frenteFields, ...getNewVersoFields()];
+        setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
+      } else if (!hasNewVerso) {
+        // Template salvo sem os novos campos do verso — adicionar
+        const frenteFields = formData.fields.filter((f: any) => (f.page || 'frente') !== 'verso');
+        const migratedFields = [...frenteFields, ...getNewVersoFields()];
+        setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
+      }
     }
   }, []);
 
@@ -783,7 +839,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 resize-y custom-scrollbar min-h-[60px]"
                       />
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CPF}}', '{{POLO_NOME}}', '{{DATA_HOJE}}'].map((v) => (
+                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CPF}}', '{{POLO_NOME}}', '{{ALUNO_CURSO}}', '{{DATA_HOJE}}', '{{DATA_VALIDADE}}'].map((v) => (
                           <button
                             key={v}
                             type="button"
