@@ -681,7 +681,7 @@ const DiariosPage: React.FC = () => {
 
                             {/* Render draggable, resizable absolute fields (Logos and Signatures) */}
                             {(form.contracapaCampos || [])
-                              .filter((field) => field.visible)
+                              .filter((field) => field.visible && field.isImage)
                               .map((field) => {
                                 const isSelected = selectedFieldId === field.id;
                                 const isDragging = draggingField === field.id;
