@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  FileText
+  FileText,
+  CalendarDays,
 } from 'lucide-react';
 import { loginService } from '../login/login.service';
 import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
@@ -28,6 +29,7 @@ import BibliotecaPage from './biblioteca/BibliotecaPage';
 import ComunicacaoPage from './comunicacao/ComunicacaoPage';
 import PerfilPage from './perfil/PerfilPage';
 import SecretariaPage from './secretaria/SecretariaPage';
+import CalendarioAlunoPage from './calendario/CalendarioAlunoPage';
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
@@ -180,6 +182,7 @@ const AlunoPage: React.FC = () => {
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={20} /> },
+    { id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: unreadChatsCount },
@@ -195,6 +198,8 @@ const AlunoPage: React.FC = () => {
         return <TurmasPage alunoId={alunoId} />;
       case 'cursos':
         return <CursosPage alunoId={alunoId} />;
+      case 'calendario':
+        return <CalendarioAlunoPage alunoId={alunoId} />;
       case 'financeiro':
         return <FinanceiroPage alunoId={alunoId} />;
       case 'biblioteca':

@@ -231,15 +231,32 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({ matriculaId, type 
         </button>
       </div>
       <div className="max-h-[680px] overflow-auto rounded-2xl bg-slate-900 p-5">
-        <div className="mx-auto min-h-[1050px] w-[794px] bg-white p-14 shadow-2xl" style={{ fontFamily: '"Times New Roman", serif' }}>
+        <div className="mx-auto min-h-[1050px] w-[794px] bg-white p-14 shadow-2xl relative" style={{ fontFamily: '"Times New Roman", serif' }}>
+
+          {/* Marca d'água */}
+          {data.polo?.watermark_url && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+              <img
+                src={data.polo.watermark_url}
+                alt="Watermark"
+                style={{
+                  opacity: data.polo.watermark_opacity ?? 0.1,
+                  width: `${data.polo.watermark_scale ?? 50}%`,
+                  transform: data.polo.watermark_rotate !== false ? 'rotate(-45deg)' : 'none',
+                }}
+              />
+            </div>
+          )}
+
           <DocumentHeader polo={data.polo} orientation="portrait" />
           <h2 className="my-8 text-center text-2xl font-bold uppercase text-[#001a33] underline underline-offset-8">
             {type === 'boletim_tecnico' ? 'Boletim Escolar — Cursos Técnicos' : 'Atestado de Conclusão'}
           </h2>
-          <div className="text-justify text-base leading-loose text-black" dangerouslySetInnerHTML={{ __html: parsedText }} />
+          <div className="text-justify text-base leading-loose text-black relative z-10" dangerouslySetInnerHTML={{ __html: parsedText }} />
         </div>
       </div>
     </div>
+
   );
 };
 

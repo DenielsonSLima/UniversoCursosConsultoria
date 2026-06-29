@@ -1,5 +1,20 @@
 import { supabase } from '../../../../../lib/supabase';
 
+export interface CapaCampo {
+  id: string;
+  label: string;
+  valuePlaceholder: string;
+  x: number;
+  y: number;
+  width: number;
+  fontSize: number;
+  visible: boolean;
+  color: string;
+  bold: boolean;
+  borderTop?: boolean;
+  align?: 'left' | 'center' | 'right';
+}
+
 export interface DiarioTemplate {
   capaUrl: string | null;
   contracapaUrl: string | null;
@@ -8,6 +23,7 @@ export interface DiarioTemplate {
   imprimirInstrucoes: boolean;
   orientacao: 'landscape';
   versao: number;
+  capaCampos?: CapaCampo[];
 }
 
 export interface DiarioCurso {
@@ -15,6 +31,88 @@ export interface DiarioCurso {
   nome: string;
   modalidade: string;
 }
+
+export const DEFAULT_CAPA_CAMPOS: CapaCampo[] = [
+  {
+    id: 'curso',
+    label: 'CURSO: ',
+    valuePlaceholder: '[Nome do Curso]',
+    x: 29.6,
+    y: 52.8,
+    width: 50.5,
+    fontSize: 11,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'modulo',
+    label: 'MÓDULO: ',
+    valuePlaceholder: '[Módulo I]',
+    x: 29.6,
+    y: 58.8,
+    width: 50.5,
+    fontSize: 11,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'areaTematica',
+    label: 'ÁREA TEMÁTICA: ',
+    valuePlaceholder: '[Nome da Área Temática]',
+    x: 29.6,
+    y: 64.8,
+    width: 50.5,
+    fontSize: 11,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'disciplina',
+    label: 'UNIDADE EDUCACIONAL: ',
+    valuePlaceholder: '[Nome da Disciplina]',
+    x: 29.6,
+    y: 70.8,
+    width: 50.5,
+    fontSize: 11,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'turma',
+    label: 'TURMA: ',
+    valuePlaceholder: '[Nome da Turma]',
+    x: 29.6,
+    y: 76.8,
+    width: 50.5,
+    fontSize: 11,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'professor',
+    label: '',
+    valuePlaceholder: '[Nome do Professor]',
+    x: 66.3,
+    y: 83.5,
+    width: 23.5,
+    fontSize: 10,
+    visible: true,
+    color: '#071a33',
+    bold: false,
+    borderTop: true,
+    align: 'center',
+  },
+];
 
 export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   capaUrl: null,
@@ -24,42 +122,66 @@ export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   imprimirInstrucoes: true,
   orientacao: 'landscape',
   versao: 1,
+  capaCampos: DEFAULT_CAPA_CAMPOS,
 };
 
-const templateId = (cursoId: string) => `diario_${cursoId}`;
+const templateId = (key: string) => `diario_${key}`;
 
 export const diariosService = {
   async getCursos(): Promise<DiarioCurso[]> {
-    const { data, error } = await supabase
-      .from('cursos')
-      .select('id, nome, modalidade')
-      .in('modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'EAD'])
-      .order('modalidade')
-      .order('nome');
-
-    if (error) throw error;
-    return (data || []) as DiarioCurso[];
+    return [
+      { id: 'TECNICO', nome: 'Cursos Técnicos', modalidade: 'TECNICO' },
+      { id: 'LIVRE', nome: 'Cursos Livres', modalidade: 'LIVRE' },
+      { id: 'ESPECIALIZACAO', nome: 'Cursos de Especialização', modalidade: 'ESPECIALIZACAO' },
+    ];
   },
 
-  async getTemplate(cursoId: string): Promise<DiarioTemplate> {
+  async getTemplate(cursoIdOrModality: string): Promise<DiarioTemplate> {
+    let key = cursoIdOrModality;
+    if (cursoIdOrModality && !['TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(cursoIdOrModality)) {
+      const { data } = await supabase
+        .from('cursos')
+        .select('modalidade')
+        .eq('id', cursoIdOrModality)
+        .maybeSingle();
+      if (data?.modalidade) {
+        key = data.modalidade;
+      }
+    }
+
     const { data, error } = await supabase
       .from('documentos_templates')
       .select('conteudo')
-      .eq('id', templateId(cursoId))
+      .eq('id', templateId(key))
       .maybeSingle();
 
     if (error) throw error;
+    
+    const parsedConteudo = (data?.conteudo || {}) as Partial<DiarioTemplate>;
     return {
       ...DEFAULT_DIARIO_TEMPLATE,
-      ...((data?.conteudo || {}) as Partial<DiarioTemplate>),
+      ...parsedConteudo,
+      capaCampos: parsedConteudo.capaCampos || DEFAULT_CAPA_CAMPOS,
     };
   },
 
-  async saveTemplate(cursoId: string, conteudo: DiarioTemplate): Promise<void> {
+  async saveTemplate(cursoIdOrModality: string, conteudo: DiarioTemplate): Promise<void> {
+    let key = cursoIdOrModality;
+    if (cursoIdOrModality && !['TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(cursoIdOrModality)) {
+      const { data } = await supabase
+        .from('cursos')
+        .select('modalidade')
+        .eq('id', cursoIdOrModality)
+        .maybeSingle();
+      if (data?.modalidade) {
+        key = data.modalidade;
+      }
+    }
+
     const { error } = await supabase
       .from('documentos_templates')
       .upsert({
-        id: templateId(cursoId),
+        id: templateId(key),
         conteudo,
         updated_at: new Date().toISOString(),
       });

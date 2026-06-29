@@ -12,6 +12,7 @@ import {
   X,
   Building,
   ChevronDown,
+  CalendarDays,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
@@ -28,6 +29,7 @@ import FinanceiroPage from './financeiro/FinanceiroPage';
 import BibliotecaPage from './biblioteca/BibliotecaPage';
 import ComunicacaoPage from './comunicacao/ComunicacaoPage';
 import PerfilPage from './perfil/PerfilPage';
+import CalendarioProfessorPage from './calendario/CalendarioProfessorPage';
 
 const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
@@ -163,6 +165,7 @@ const ProfessorPage: React.FC = () => {
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'turmas', label: 'Disciplinas', icon: <GraduationCap size={20} /> },
+    { id: 'calendario', label: 'Agenda', icon: <CalendarDays size={20} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} /> },
@@ -177,6 +180,8 @@ const ProfessorPage: React.FC = () => {
         return <TurmasPage professorId={professorId} />;
       case 'financeiro':
         return <FinanceiroPage professorId={professorId} />;
+      case 'calendario':
+        return <CalendarioProfessorPage professorId={professorId} />;
       case 'biblioteca':
         return <BibliotecaPage professorId={professorId} />;
       case 'comunicacao':

@@ -116,7 +116,19 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
 
     // 2. Carrega Marca D'água
     const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
-    const wm = watermarks.find(w => w.id === polo.id);
+    const wm = watermarks.find(w => w.id === polo.id) || 
+               watermarks.find(w => w.id === polo.company_id) ||
+               (polo.watermark_url ? {
+                 id: polo.id,
+                 nomeFantasia: polo.nome || '',
+                 cidade: polo.cidade || '',
+                 uf: polo.estado || '',
+                 watermarkUrl: polo.watermark_url,
+                 watermarkOpacity: Number(polo.watermark_opacity ?? 0.1),
+                 watermarkScale: Number(polo.watermark_scale ?? 50),
+                 watermarkRotate: polo.watermark_rotate !== false
+               } : null) || 
+               watermarks[0];
     setWatermark(wm);
 
     // 3. Carrega Configuração de QR Code
