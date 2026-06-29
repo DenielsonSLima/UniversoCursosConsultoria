@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import capaDiarioPadrao from '../../../../../../../Documentos/Capa-Diario.jpg';
-import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
+import { DiarioTemplate, DEFAULT_CONTRACAPA_CAMPOS } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
+import { getDocumentValidationUrl, getDocumentValidationQrUrl } from '../../../../../../shared/document-validation/document-validation.url';
 
 interface DiarioPrintDocumentProps {
   template: DiarioTemplate;
@@ -13,11 +14,14 @@ interface DiarioPrintDocumentProps {
   gradesMap: Record<string, any>;
   praticasMap: Record<string, string>;
   observacoes: string;
+  watermark?: any;
+  diretorSigUrl?: string | null;
+  secretarioSigUrl?: string | null;
 }
 
-const chunks = <T,>(items: T[], size: number): T[][] => {
+const chunks = (items: any[], size: number): any[][] => {
   if (!items.length) return [[]];
-  const result: T[][] = [];
+  const result: any[][] = [];
   for (let index = 0; index < items.length; index += size) {
     result.push(items.slice(index, index + size));
   }
@@ -40,6 +44,9 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
   gradesMap,
   praticasMap,
   observacoes,
+  watermark,
+  diretorSigUrl,
+  secretarioSigUrl,
 }, ref) => {
   const studentGroups = chunks(students, 18);
   const aulaGroups = chunks(aulas, 12);
@@ -87,16 +94,58 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
 
       <section className="diario-print-page">
         <img src={capaUrl} alt="" crossOrigin="anonymous" className="absolute inset-0 h-full w-full object-fill" />
-        <div className="absolute left-[88mm] top-[111mm] w-[150mm] text-[11pt] leading-[1.75] text-[#071a33]">
-          <p><strong>CURSO:</strong> {turma.cursoNome || '—'}</p>
-          <p><strong>MÓDULO:</strong> {moduloNumero(moduloNome)}</p>
-          <p><strong>ÁREA TEMÁTICA:</strong> {moduloNome.replace(/^M[ÓO]DULO\s+[IVXLC]+\s*[-–—]?\s*/i, '')}</p>
-          <p><strong>UNIDADE EDUCACIONAL:</strong> {disciplina.nome}</p>
-          <p><strong>TURMA:</strong> {turma.nome || turma.codigo || '—'}</p>
-        </div>
-        <div className="absolute bottom-[28mm] right-[30mm] w-[70mm] border-t border-[#071a33] pt-2 text-center text-[10pt]">
-          {disciplina.professor && disciplina.professor !== 'Não atribuído' ? disciplina.professor : 'Professor(a)'}
-        </div>
+        {template.capaCampos && template.capaCampos.length > 0 ? (
+          template.capaCampos
+            .filter((c) => c.visible)
+            .map((c) => {
+              let value = '—';
+              if (c.id === 'curso') value = turma.cursoNome || '—';
+              else if (c.id === 'modulo') value = moduloNumero(moduloNome);
+              else if (c.id === 'areaTematica') value = moduloNome.replace(/^M[ÓO]DULO\s+[IVXLC]+\s*[-–—]?\s*/i, '');
+              else if (c.id === 'disciplina') value = disciplina.nome;
+              else if (c.id === 'turma') value = turma.nome || turma.codigo || '—';
+              else if (c.id === 'professor') {
+                value = disciplina.professor && disciplina.professor !== 'Não atribuído'
+                  ? disciplina.professor
+                  : 'Professor(a)';
+              }
+
+              return (
+                <div
+                  key={c.id}
+                  className="absolute"
+                  style={{
+                    left: `${c.x}%`,
+                    top: `${c.y}%`,
+                    width: `${c.width}%`,
+                    fontSize: `${c.fontSize}pt`,
+                    color: c.color || '#071a33',
+                    fontWeight: c.bold ? 'bold' : 'normal',
+                    textAlign: c.align || 'left',
+                    borderTop: c.borderTop ? `1px solid ${c.color || '#071a33'}` : 'none',
+                    paddingTop: c.borderTop ? '3px' : '0px',
+                    lineHeight: '1.2',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <strong>{c.label}</strong>{value}
+                </div>
+              );
+            })
+        ) : (
+          <>
+            <div className="absolute left-[88mm] top-[111mm] w-[150mm] text-[11pt] leading-[1.75] text-[#071a33]">
+              <p><strong>CURSO:</strong> {turma.cursoNome || '—'}</p>
+              <p><strong>MÓDULO:</strong> {moduloNumero(moduloNome)}</p>
+              <p><strong>ÁREA TEMÁTICA:</strong> {moduloNome.replace(/^M[ÓO]DULO\s+[IVXLC]+\s*[-–—]?\s*/i, '')}</p>
+              <p><strong>UNIDADE EDUCACIONAL:</strong> {disciplina.nome}</p>
+              <p><strong>TURMA:</strong> {turma.nome || turma.codigo || '—'}</p>
+            </div>
+            <div className="absolute bottom-[28mm] right-[30mm] w-[70mm] border-t border-[#071a33] pt-2 text-center text-[10pt]">
+              {disciplina.professor && disciplina.professor !== 'Não atribuído' ? disciplina.professor : 'Professor(a)'}
+            </div>
+          </>
+        )}
       </section>
 
       {aulaGroups.flatMap((aulaGroup, aulaIndex) =>
@@ -251,9 +300,121 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
         </PrintPage>
       )}
 
-      {template.contracapaUrl && (
+      {(template.contracapaUrl || template.imprimirValidacaoContracapa) && (
         <section className="diario-print-page">
-          <img src={template.contracapaUrl} alt="" crossOrigin="anonymous" className="absolute inset-0 h-full w-full object-fill" />
+          {template.contracapaUrl && (
+            <img src={template.contracapaUrl} alt="" crossOrigin="anonymous" className="absolute inset-0 h-full w-full object-fill z-0" />
+          )}
+          
+          {/* Background Landscape Watermark if no contracapaUrl */}
+          {!template.contracapaUrl && watermark?.url && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 select-none overflow-hidden">
+              <img
+                src={watermark.url}
+                alt="Marca d'água"
+                crossOrigin="anonymous"
+                style={{
+                  width: `${watermark.scale}%`,
+                  opacity: watermark.opacity,
+                  transform: watermark.rotate ? 'rotate(-22deg)' : 'none',
+                  objectFit: 'contain',
+                }}
+              />
+            </div>
+          )}
+
+          {template.imprimirValidacaoContracapa && (
+            <div className="absolute inset-[12mm_15mm_12mm_20mm] border border-[#071a33]/25 p-8 flex flex-col justify-between rounded-2xl text-[#071a33] z-10 overflow-hidden text-left bg-transparent">
+              {/* Header */}
+              <div className="relative z-10 flex justify-between items-start border-b border-[#071a33]/15 pb-3">
+                <div>
+                  <h3 className="text-[12pt] font-black uppercase tracking-tight">Registro de Validação e Assinatura Eletrônica</h3>
+                  <p className="text-[7.5pt] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{template.cabecalho || 'UNIVERSO CURSOS E CONSULTORIA'}</p>
+                </div>
+                <span className="bg-[#071a33] text-white text-[7.5pt] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+                  Documento Oficial
+                </span>
+              </div>
+
+              {/* Details & QR Code */}
+              {(() => {
+                const validationCode = `DIA-${(turma.codigo || turma.nome || 'TURMA').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}-${disciplina.id.slice(0, 8).toUpperCase()}`;
+                return (
+                  <div className="relative z-10 grid grid-cols-[1fr_150px] gap-6 my-4 text-[8.5pt] leading-normal">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div><strong>CURSO:</strong> {turma.cursoNome || '—'}</div>
+                        <div><strong>TURMA:</strong> {turma.nome || turma.codigo || '—'}</div>
+                        <div className="col-span-2"><strong>UNIDADE EDUCACIONAL:</strong> {disciplina.nome}</div>
+                        <div><strong>MÓDULO:</strong> {moduloNumero(moduloNome)}</div>
+                        <div><strong>PROFESSOR(A):</strong> {disciplina.professor && disciplina.professor !== 'Não atribuído' ? disciplina.professor : '—'}</div>
+                      </div>
+                      
+                      <div className="border-t border-[#071a33]/10 pt-2 text-slate-600 font-medium leading-relaxed bg-transparent">
+                        {template.mensagemValidacao || 'Este diário de classe eletrônico foi gerado e assinado digitalmente nos termos do Regimento Escolar da instituição e da legislação de validação de documentos acadêmicos do Ministério da Educação.'}
+                      </div>
+                      
+                      <div className="bg-slate-50/20 border border-slate-100/30 p-2 rounded font-mono text-[7.5pt] text-slate-500">
+                        <div><strong>Chave de Autenticação:</strong> {validationCode}</div>
+                        <div className="mt-0.5"><strong>Endereço de Validação:</strong> {getDocumentValidationUrl(validationCode)}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Actual QR Code image with size customized from templates */}
+                    <div className="flex flex-col items-center justify-center border-l border-slate-200/20 pl-4">
+                      <img
+                        src={getDocumentValidationQrUrl(validationCode, 180)}
+                        alt="QR Code"
+                        style={{
+                          width: `${template.qrCodeSize || 28}mm`,
+                          height: `${template.qrCodeSize || 28}mm`,
+                          objectFit: 'contain',
+                        }}
+                        className="bg-white p-1 border border-slate-200 rounded"
+                      />
+                      <div className="text-center mt-1">
+                        <span className="block text-[5pt] font-black text-slate-400 tracking-widest uppercase">CÓD. VALIDAÇÃO</span>
+                        <span className="block text-[6pt] font-mono font-bold text-blue-600 leading-tight whitespace-pre-line">{validationCode}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Signatures */}
+              <div className="relative z-10 grid grid-cols-2 gap-12 text-center border-t border-[#071a33]/10 pt-4 text-[9pt]">
+                <div className="flex flex-col items-center justify-end relative h-14">
+                  {diretorSigUrl && (
+                    <img
+                      src={diretorSigUrl}
+                      alt="Assinatura Diretor"
+                      crossOrigin="anonymous"
+                      className="absolute -top-10 h-14 object-contain pointer-events-none"
+                      style={{ mixBlendMode: 'multiply' }}
+                    />
+                  )}
+                  <div className="border-b border-slate-400 w-full mb-1"></div>
+                  <p className="font-bold">{template.diretorNome || '—'}</p>
+                  <p className="text-[7pt] text-slate-500 uppercase font-black">{template.diretorCargo || 'Direção Geral'}</p>
+                </div>
+
+                <div className="flex flex-col items-center justify-end relative h-14">
+                  {secretarioSigUrl && (
+                    <img
+                      src={secretarioSigUrl}
+                      alt="Assinatura Secretário"
+                      crossOrigin="anonymous"
+                      className="absolute -top-10 h-14 object-contain pointer-events-none"
+                      style={{ mixBlendMode: 'multiply' }}
+                    />
+                  )}
+                  <div className="border-b border-slate-400 w-full mb-1"></div>
+                  <p className="font-bold">{template.secretarioNome || '—'}</p>
+                  <p className="text-[7pt] text-slate-500 uppercase font-black">{template.secretarioCargo || 'Secretaria Acadêmica'}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>

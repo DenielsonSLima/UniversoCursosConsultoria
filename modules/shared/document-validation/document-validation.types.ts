@@ -13,7 +13,8 @@ export type ValidatableDocumentType =
   | 'certificado_tecnico'
   | 'certificado_livre'
   | 'certificado_ead'
-  | 'certificado_especializacao';
+  | 'certificado_especializacao'
+  | 'diario_classe';
 
 export interface DocumentValidationPolicy {
   prefix: string;

@@ -24,6 +24,16 @@ export interface DiarioTemplate {
   orientacao: 'landscape';
   versao: number;
   capaCampos?: CapaCampo[];
+  contracapaCampos?: CapaCampo[];
+  imprimirValidacaoContracapa?: boolean;
+  diretorNome?: string;
+  diretorCargo?: string;
+  secretarioNome?: string;
+  secretarioCargo?: string;
+  diretorAssinaturaRole?: 'diretoriaGeral' | 'secretaria' | 'coordenacao' | 'financeiro' | null;
+  secretarioAssinaturaRole?: 'diretoriaGeral' | 'secretaria' | 'coordenacao' | 'financeiro' | null;
+  mensagemValidacao?: string;
+  qrCodeSize?: number;
 }
 
 export interface DiarioCurso {
@@ -114,6 +124,154 @@ export const DEFAULT_CAPA_CAMPOS: CapaCampo[] = [
   },
 ];
 
+export const DEFAULT_CONTRACAPA_CAMPOS: CapaCampo[] = [
+  {
+    id: 'contracapaTitulo',
+    label: 'REGISTRO DE VALIDAÇÃO E ASSINATURA ELETRÔNICA',
+    valuePlaceholder: '',
+    x: 10,
+    y: 10,
+    width: 80,
+    fontSize: 12,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'center',
+  },
+  {
+    id: 'contracapaCurso',
+    label: 'CURSO: ',
+    valuePlaceholder: '[Nome do Curso]',
+    x: 10,
+    y: 25,
+    width: 45,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'contracapaTurma',
+    label: 'TURMA: ',
+    valuePlaceholder: '[Turma 101]',
+    x: 58,
+    y: 25,
+    width: 25,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'contracapaDisciplina',
+    label: 'DISCIPLINA: ',
+    valuePlaceholder: '[Componente Curricular]',
+    x: 10,
+    y: 31,
+    width: 45,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'contracapaModulo',
+    label: 'MÓDULO: ',
+    valuePlaceholder: '[Módulo I]',
+    x: 58,
+    y: 31,
+    width: 25,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'contracapaProfessor',
+    label: 'PROFESSOR(A): ',
+    valuePlaceholder: '[Nome do Professor]',
+    x: 10,
+    y: 37,
+    width: 73,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'left',
+  },
+  {
+    id: 'contracapaRegulamento',
+    label: '',
+    valuePlaceholder: '[Texto de Validação e Assinatura Eletrônica]',
+    x: 10,
+    y: 47,
+    width: 58,
+    fontSize: 8,
+    visible: true,
+    color: '#071a33',
+    bold: false,
+    align: 'left',
+  },
+  {
+    id: 'contracapaAutenticacao',
+    label: 'CHAVE DE AUTENTICAÇÃO: ',
+    valuePlaceholder: 'DIA-TECNICO-XXXXXXXX',
+    x: 10,
+    y: 65,
+    width: 58,
+    fontSize: 7.5,
+    visible: true,
+    color: '#64748b',
+    bold: false,
+    align: 'left',
+  },
+  {
+    id: 'contracapaQrCode',
+    label: 'ESCANEAR PARA VALIDAR',
+    valuePlaceholder: '[QR Code]',
+    x: 72,
+    y: 25,
+    width: 18,
+    fontSize: 7,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'center',
+  },
+  {
+    id: 'contracapaDiretor',
+    label: '',
+    valuePlaceholder: 'Diretor(a) Geral',
+    x: 10,
+    y: 80,
+    width: 35,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'center',
+    borderTop: true,
+  },
+  {
+    id: 'contracapaSecretario',
+    label: '',
+    valuePlaceholder: 'Secretária Acadêmica',
+    x: 55,
+    y: 80,
+    width: 35,
+    fontSize: 9,
+    visible: true,
+    color: '#071a33',
+    bold: true,
+    align: 'center',
+    borderTop: true,
+  },
+];
+
 export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   capaUrl: null,
   contracapaUrl: null,
@@ -123,6 +281,16 @@ export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   orientacao: 'landscape',
   versao: 1,
   capaCampos: DEFAULT_CAPA_CAMPOS,
+  contracapaCampos: DEFAULT_CONTRACAPA_CAMPOS,
+  imprimirValidacaoContracapa: true,
+  diretorNome: 'Prof. Denielson S. Lima',
+  diretorCargo: 'Diretor(a) Geral',
+  secretarioNome: 'Maria Eduarda Santos',
+  secretarioCargo: 'Secretário(a) Acadêmico(a)',
+  diretorAssinaturaRole: null,
+  secretarioAssinaturaRole: null,
+  mensagemValidacao: 'Este diário de classe eletrônico foi gerado e assinado digitalmente nos termos do Regimento Escolar da instituição e da legislação de validação de documentos acadêmicos do Ministério da Educação.',
+  qrCodeSize: 28,
 };
 
 const templateId = (key: string) => `diario_${key}`;
@@ -213,5 +381,30 @@ export const diariosService = {
 
     if (error) throw error;
     return supabase.storage.from('documentos').getPublicUrl(data.path).data.publicUrl;
+  },
+
+  async getLandscapeWatermark(poloId: string) {
+    if (!poloId) return null;
+    
+    const { data: templateData } = await supabase
+      .from('documentos_templates')
+      .select('conteudo')
+      .eq('id', `watermark_landscape_${poloId}`)
+      .maybeSingle();
+
+    const landscape = (templateData?.conteudo || {}) as any;
+
+    const { data: poloData } = await supabase
+      .from('polos')
+      .select('watermark_url, watermark_opacity, watermark_scale, watermark_rotate')
+      .eq('id', poloId)
+      .maybeSingle();
+
+    return {
+      url: landscape.url || poloData?.watermark_url || null,
+      opacity: Number(landscape.opacity ?? poloData?.watermark_opacity ?? 0.1),
+      scale: Number(landscape.scale ?? poloData?.watermark_scale ?? 50),
+      rotate: landscape.rotate !== undefined ? landscape.rotate === true : poloData?.watermark_rotate !== false,
+    };
   },
 };

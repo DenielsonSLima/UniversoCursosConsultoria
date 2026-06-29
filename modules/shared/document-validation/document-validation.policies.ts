@@ -73,4 +73,8 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'CERT-ESP',
     title: 'Certificado de Especialização',
   },
+  diario_classe: {
+    prefix: 'DIA',
+    title: 'Diário de Classe',
+  },
 };

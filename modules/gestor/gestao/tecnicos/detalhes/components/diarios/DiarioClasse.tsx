@@ -20,6 +20,10 @@ import {
   useToggleDiarioAttendanceMutation,
 } from './hooks/useDiarioClasse';
 import { useDiarioRealtime } from './hooks/useDiarioRealtime';
+import { useQuery } from '@tanstack/react-query';
+import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
+import { assinaturasService } from '../../../../../configuracoes/assinaturas/assinaturas.service';
+import { supabase } from '../../../../../../../lib/supabase';
 
 interface DiarioClasseProps {
   disciplina: any;
@@ -35,6 +39,15 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
+  const { data: watermark } = useQuery({
+    queryKey: ['polo-watermark', turma.poloId],
+    queryFn: () => diariosService.getLandscapeWatermark(turma.poloId),
+    enabled: Boolean(turma.poloId),
+  });
+  const { data: centralSignatures } = useQuery({
+    queryKey: ['central-signatures'],
+    queryFn: () => assinaturasService.getSignatures(),
+  });
   const { data: students = [], isLoading: loadingStudents } = useDiarioStudents(turma.id);
   const { data: aulas = [], isLoading: loadingAulas } = useDiarioAulas(turma.id, disciplina.id);
   const { data: dbAttendance = [], isLoading: loadingAttendance } = useDiarioAttendance(turma.id, disciplina.id);
@@ -190,7 +203,30 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
 
     setDownloadingPdf(true);
     try {
-      const images = Array.from(container.querySelectorAll('img'));
+      if (diarioTemplate?.imprimirValidacaoContracapa) {
+        const validationCode = `DIA-${(turma.codigo || turma.nome || 'TURMA').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}-${disciplina.id.slice(0, 8).toUpperCase()}`;
+        await supabase
+          .from('documentos_templates')
+          .upsert({
+            id: `validation_${validationCode}`,
+            conteudo: {
+              type: 'diario_classe',
+              status: 'VALID',
+              courseName: turma.cursoNome || 'Curso não informado',
+              className: turma.nome || turma.codigo || 'Turma não informada',
+              unitName: disciplina.nome,
+              issuedAt: new Date().toISOString(),
+              studentName: 'Diário de Classe Oficial',
+              studentCpf: null,
+              studentBirthDate: null,
+              studentMotherName: null,
+              enrollmentNumber: null,
+            },
+            updated_at: new Date().toISOString(),
+          });
+      }
+
+      const images = Array.from(container.querySelectorAll('img')) as HTMLImageElement[];
       await Promise.all(images.map((image) => image.complete
         ? Promise.resolve()
         : new Promise<void>((resolve) => {
@@ -198,7 +234,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
             image.onerror = () => resolve();
           })));
 
-      const pages = Array.from(container.querySelectorAll<HTMLElement>('.diario-print-page'));
+      const pages = Array.from(container.querySelectorAll('.diario-print-page')) as HTMLElement[];
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
       for (let index = 0; index < pages.length; index += 1) {
@@ -697,6 +733,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
             gradesMap={gradesMap}
             praticasMap={praticasMap}
             observacoes={localObservacoes}
+            watermark={watermark}
+            diretorSigUrl={diarioTemplate.diretorAssinaturaRole ? centralSignatures?.[diarioTemplate.diretorAssinaturaRole] : null}
+            secretarioSigUrl={diarioTemplate.secretarioAssinaturaRole ? centralSignatures?.[diarioTemplate.secretarioAssinaturaRole] : null}
           />
         </div>
       )}
