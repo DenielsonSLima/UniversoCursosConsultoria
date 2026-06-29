@@ -327,13 +327,11 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
             <div className="absolute inset-[12mm_15mm_12mm_20mm] border border-[#071a33]/25 p-8 flex flex-col justify-between rounded-2xl text-[#071a33] z-10 overflow-hidden text-left bg-transparent">
               {/* Header */}
               <div className="relative z-10 flex justify-between items-start border-b border-[#071a33]/15 pb-3">
-                <div>
-                  <h3 className="text-[12pt] font-black uppercase tracking-tight">Registro de Validação e Assinatura Eletrônica</h3>
-                  <p className="text-[7.5pt] font-bold text-slate-500 uppercase tracking-wider mt-0.5">{template.cabecalho || 'UNIVERSO CURSOS E CONSULTORIA'}</p>
+                <div className="w-full">
+                  <h3 className="text-[14pt] font-black uppercase tracking-tight leading-snug w-[75%]">
+                    Registro de Validação<br />e Assinatura Eletrônica
+                  </h3>
                 </div>
-                <span className="bg-[#071a33] text-white text-[7.5pt] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                  Documento Oficial
-                </span>
               </div>
 
               {/* Details & QR Code */}
@@ -383,36 +381,39 @@ const DiarioPrintDocument = forwardRef<HTMLDivElement, DiarioPrintDocumentProps>
 
               {/* Signatures */}
               <div className="relative z-10 grid grid-cols-2 gap-12 text-center border-t border-[#071a33]/10 pt-4 text-[9pt]">
-                <div className="flex flex-col items-center justify-end relative h-14">
-                  {diretorSigUrl && (
-                    <img
-                      src={diretorSigUrl}
-                      alt="Assinatura Diretor"
-                      crossOrigin="anonymous"
-                      className="absolute -top-10 h-14 object-contain pointer-events-none"
-                      style={{ mixBlendMode: 'multiply' }}
-                    />
-                  )}
+                <div className="flex flex-col items-center justify-end h-14">
                   <div className="border-b border-slate-400 w-full mb-1"></div>
                   <p className="font-bold">{template.diretorNome || '—'}</p>
-                  <p className="text-[7pt] text-slate-500 uppercase font-black">{template.diretorCargo || 'Direção Geral'}</p>
+                  <p className="text-[7pt] text-slate-500 uppercase font-black">{template.diretorCargo || 'Diretor(a) Geral'}</p>
                 </div>
 
-                <div className="flex flex-col items-center justify-end relative h-14">
-                  {secretarioSigUrl && (
-                    <img
-                      src={secretarioSigUrl}
-                      alt="Assinatura Secretário"
-                      crossOrigin="anonymous"
-                      className="absolute -top-10 h-14 object-contain pointer-events-none"
-                      style={{ mixBlendMode: 'multiply' }}
-                    />
-                  )}
+                <div className="flex flex-col items-center justify-end h-14">
                   <div className="border-b border-slate-400 w-full mb-1"></div>
                   <p className="font-bold">{template.secretarioNome || '—'}</p>
                   <p className="text-[7pt] text-slate-500 uppercase font-black">{template.secretarioCargo || 'Secretaria Acadêmica'}</p>
                 </div>
               </div>
+
+              {/* Render absolute image fields (Logos and Signatures) */}
+              {template.contracapaCampos
+                ?.filter((field) => field.visible && field.isImage)
+                .map((field) => (
+                  <img
+                    key={field.id}
+                    src={field.imageUrl}
+                    alt={field.label}
+                    crossOrigin="anonymous"
+                    style={{
+                      position: 'absolute',
+                      left: `${field.x}%`,
+                      top: `${field.y}%`,
+                      width: `${field.width}%`,
+                      height: 'auto',
+                      mixBlendMode: field.mixBlendMode || 'multiply',
+                      zIndex: 30,
+                    }}
+                  />
+                ))}
             </div>
           )}
         </section>

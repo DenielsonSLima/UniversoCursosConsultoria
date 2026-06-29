@@ -13,6 +13,9 @@ export interface CapaCampo {
   bold: boolean;
   borderTop?: boolean;
   align?: 'left' | 'center' | 'right';
+  isImage?: boolean;
+  imageUrl?: string;
+  mixBlendMode?: 'normal' | 'multiply' | 'screen';
 }
 
 export interface DiarioTemplate {
@@ -359,7 +362,7 @@ export const diariosService = {
 
   async uploadImage(
     cursoId: string,
-    kind: 'capa' | 'contracapa',
+    kind: string,
     file: File,
   ): Promise<string> {
     if (!file.type.startsWith('image/')) {

@@ -9,6 +9,14 @@ export interface AssinaturasData {
   secretaria: string;
   coordenacao: string;
   financeiro: string;
+  diretoriaGeralNome?: string;
+  diretoriaGeralCargo?: string;
+  secretariaNome?: string;
+  secretariaCargo?: string;
+  coordenacaoNome?: string;
+  coordenacaoCargo?: string;
+  financeiroNome?: string;
+  financeiroCargo?: string;
 }
 
 const DEFAULT_ASSINATURAS: AssinaturasData = {
@@ -16,6 +24,14 @@ const DEFAULT_ASSINATURAS: AssinaturasData = {
   secretaria: '',
   coordenacao: '',
   financeiro: '',
+  diretoriaGeralNome: '',
+  diretoriaGeralCargo: '',
+  secretariaNome: '',
+  secretariaCargo: '',
+  coordenacaoNome: '',
+  coordenacaoCargo: '',
+  financeiroNome: '',
+  financeiroCargo: '',
 };
 
 // Cache em memória — válido apenas durante a vida da página (sem localStorage)
