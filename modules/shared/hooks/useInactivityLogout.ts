@@ -16,9 +16,9 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'keydown',
   'touchstart',
   'scroll',
-  'visibilitychange',
   'focus',
 ];
+const DOCUMENT_ACTIVITY_EVENTS: Array<keyof DocumentEventMap> = ['visibilitychange'];
 
 export const useInactivityLogout = ({
   isEnabled = true,
@@ -61,13 +61,18 @@ export const useInactivityLogout = ({
     ACTIVITY_EVENTS.forEach((eventName) => {
       window.addEventListener(eventName, handleActivity, { passive: true });
     });
+    DOCUMENT_ACTIVITY_EVENTS.forEach((eventName) => {
+      document.addEventListener(eventName, handleActivity, { passive: true });
+    });
 
     return () => {
       ACTIVITY_EVENTS.forEach((eventName) => {
         window.removeEventListener(eventName, handleActivity);
       });
+      DOCUMENT_ACTIVITY_EVENTS.forEach((eventName) => {
+        document.removeEventListener(eventName, handleActivity);
+      });
       clearExistingTimeout();
     };
   }, [isEnabled, timeoutMs]);
 };
-

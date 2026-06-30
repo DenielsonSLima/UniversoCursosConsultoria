@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Save, Type, Trash2, AlignLeft, AlignCenter, AlignRight, AlignJustify, Bold, Italic, 
   GripVertical, ArrowLeft, QrCode, Image as ImageIcon, Upload, Building2, Sliders,
-  CheckCircle2, AlertCircle
+  CheckCircle2, AlertCircle, Palette
 } from 'lucide-react';
 import { declaracaoService } from '../declaracao.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
@@ -62,6 +62,17 @@ interface AbsoluteField {
   style?: React.CSSProperties;
 }
 
+const PAGE_WIDTH = 794;
+const PAGE_HEIGHT = 1123;
+const PAGE_BREAK_HTML = '<div data-page-break="true"></div>';
+const pageBreakRegex = /<div[^>]*data-page-break=["']true["'][\s\S]*?<\/div>/i;
+
+const splitDocumentPages = (html: string, count: number) => {
+  const pages = String(html || '').split(pageBreakRegex);
+  while (pages.length < count) pages.push('');
+  return pages.slice(0, count);
+};
+
 const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   polo,
   onBack,
@@ -87,6 +98,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   const [absoluteFields, setAbsoluteFields] = useState<AbsoluteField[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [validityDays, setValidityDays] = useState<number>(defaultValidityDays);
+  const [pageCount, setPageCount] = useState<number>(1);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -145,6 +157,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     const template = await service.getTemplate(polo.id);
     setTextContent(template.textContent);
     setValidityDays(template.validityDays || defaultValidityDays);
+    setPageCount(Math.max(1, Number(template.pageCount || 1)));
     
     let loadedFields = (template.absoluteFields || []).map((f: any) => ({
         ...f,
@@ -258,8 +271,15 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     document.execCommand('insertText', false, variableCode);
   };
 
-  const handleTextInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setTextContent(e.currentTarget.innerHTML);
+  const handleTextInput = (e: React.FormEvent<HTMLDivElement>, pageIndex = 0) => {
+    if (pageCount <= 1) {
+      setTextContent(e.currentTarget.innerHTML);
+      return;
+    }
+
+    const pages = splitDocumentPages(textContent, pageCount);
+    pages[pageIndex] = e.currentTarget.innerHTML;
+    setTextContent(pages.join(PAGE_BREAK_HTML));
   };
 
   // --- Upload de Assinatura ---
@@ -292,13 +312,13 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  const handleDropOnCanvas = (e: React.DragEvent) => {
+  const handleDropOnCanvas = (e: React.DragEvent, pageIndex = 0) => {
     e.preventDefault();
-    if (!canvasRef.current || !draggedItem) return;
+    if (!draggedItem) return;
 
-    const rect = canvasRef.current.getBoundingClientRect();
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const x = e.clientX - rect.left; 
-    const y = e.clientY - rect.top;
+    const y = (pageIndex * PAGE_HEIGHT) + e.clientY - rect.top;
 
     let newField: AbsoluteField;
 
@@ -375,6 +395,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
           textContent,
           absoluteFields,
           validityDays,
+          pageCount,
           v: 2
       });
       if (!saved) throw new Error('Não foi possível salvar o modelo.');
@@ -405,6 +426,82 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   // Retorna a URL completa para o validador
   const getQrCodeExampleUrl = () => {
     return `${getValidationUrl()}?q=${getValidationCode()}`;
+  };
+
+  const textPages = splitDocumentPages(textContent, pageCount);
+  const pageIndexForField = (field: AbsoluteField) => Math.max(0, Math.min(pageCount - 1, Math.floor(Number(field.y || 0) / PAGE_HEIGHT)));
+
+  const renderAbsoluteField = (field: AbsoluteField, pageIndex = 0) => {
+    const isSelected = selectedFieldId === field.id;
+    const pageTop = Number(field.y || 0) - (pageIndex * PAGE_HEIGHT);
+
+    return (
+      <div
+        key={field.id}
+        onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
+        onClick={(e) => e.stopPropagation()}
+        className={`absolute z-30 cursor-move group flex items-center justify-center transition-all ${
+          isSelected
+            ? 'border-2 border-blue-500 shadow-md ring-2 ring-blue-500/20'
+            : field.type === 'text'
+              ? 'bg-yellow-50/20 border border-yellow-200/50 hover:bg-yellow-100 hover:border-yellow-400 px-2 py-1 rounded'
+              : 'border-2 border-transparent hover:border-blue-400 hover:bg-slate-50/5'
+        }`}
+        style={{
+          left: field.x,
+          top: pageTop,
+          color: '#000',
+          width: field.width ? `${field.width}px` : 'auto',
+          height: 'auto',
+          ...field.style
+        }}
+      >
+        {field.type === 'qrcode' && (
+          <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
+            <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`}
+                alt="QR Code"
+                className="w-full h-full object-contain pointer-events-none"
+              />
+            </div>
+            <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none">CÓD. VALIDAÇÃO</p>
+              <p className="text-[9px] font-mono font-black text-blue-600 tracking-wider mt-1 leading-none">
+                {getValidationCode()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {field.type === 'image' && (
+          <img
+            src={field.value}
+            alt="Assinatura"
+            className="w-full h-auto object-contain pointer-events-none"
+          />
+        )}
+
+        {field.type === 'text' && (
+          <div className="flex items-center w-full">
+            <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1 shrink-0" />
+            <span dangerouslySetInnerHTML={{ __html: field.value }} className="w-full break-words" />
+          </div>
+        )}
+
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveField(field.id);
+          }}
+          className="absolute -top-3 -right-3 ml-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-md border border-slate-100 z-50"
+          title="Remover"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+    );
   };
 
   if (loading) return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
@@ -687,6 +784,42 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                                     />
                                 </div>
 
+                                <div>
+                                    <label className="mb-1 flex items-center gap-1.5 text-[9px] font-black text-slate-500 uppercase">
+                                        <Palette size={12} /> Cor da fonte
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="color"
+                                            value={String(selectedField.style?.color || '#000000')}
+                                            onChange={(e) => updateSelectedFieldStyle({ color: e.target.value })}
+                                            className="h-9 w-12 rounded-lg border border-slate-200 bg-white p-1"
+                                        />
+                                        <input
+                                            value={String(selectedField.style?.color || '#000000')}
+                                            onChange={(e) => updateSelectedFieldStyle({ color: e.target.value })}
+                                            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-[9px] font-black text-slate-500 uppercase">
+                                        Fonte
+                                    </label>
+                                    <select
+                                        value={String(selectedField.style?.fontFamily || 'Arial, sans-serif')}
+                                        onChange={(e) => updateSelectedFieldStyle({ fontFamily: e.target.value })}
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 outline-none focus:border-blue-500"
+                                    >
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                                        <option value="Georgia, serif">Georgia</option>
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                        <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+                                    </select>
+                                </div>
+
                                 {/* Largura do Bloco de Texto */}
                                 <div>
                                     <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
@@ -790,165 +923,100 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
             )}
         </div>
 
-        {/* Área Central: Canvas A4 Scrollável */}
-        <div 
-            onClick={() => setSelectedFieldId(null)}
-            className="flex-1 bg-slate-200/50 rounded-[2rem] border border-slate-300/50 overflow-auto flex justify-center p-8 custom-scrollbar shadow-inner relative animate-fadeIn"
+        {/* Área Central: páginas A4 separadas */}
+        <div
+          onClick={() => setSelectedFieldId(null)}
+          className="flex-1 bg-slate-200/50 rounded-[2rem] border border-slate-300/50 overflow-auto p-8 custom-scrollbar shadow-inner relative animate-fadeIn"
         >
-            
-            <div 
-                ref={canvasRef}
-                className="bg-white shadow-2xl relative transition-transform duration-300 shrink-0"
-                style={{ 
-                    width: '794px', 
-                    minHeight: '1123px', 
-                    height: '1123px',
-                    padding: '60px 80px', 
+          <div ref={canvasRef} className="flex min-w-[860px] flex-col items-center gap-10">
+            {Array.from({ length: pageCount }).map((_, pageIndex) => (
+              <div key={`page-${pageIndex}`} className="relative">
+                <div className="mb-3 flex items-center justify-center">
+                  <span className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                    Página {pageIndex + 1} de {pageCount}
+                  </span>
+                </div>
+
+                <div
+                  className="bg-white shadow-2xl relative transition-transform duration-300 shrink-0 overflow-hidden"
+                  style={{
+                    width: `${PAGE_WIDTH}px`,
+                    height: `${PAGE_HEIGHT}px`,
+                    padding: '60px 80px',
                     position: 'relative',
                     backgroundImage: `
                       linear-gradient(to right, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
                       linear-gradient(to bottom, rgba(14, 165, 233, 0.08) 1px, transparent 1px)
                     `,
                     backgroundSize: '20px 20px'
-                }}
-                onDrop={handleDropOnCanvas}
-                onDragOver={handleDragOver}
-                onClick={(e) => {
-                    if (e.target === canvasRef.current) {
-                        setSelectedFieldId(null);
+                  }}
+                  onDrop={(e) => handleDropOnCanvas(e, pageIndex)}
+                  onDragOver={handleDragOver}
+                  onClick={(e) => {
+                    if (e.currentTarget === e.target) {
+                      setSelectedFieldId(null);
                     }
-                }}
-            >
-                <div className="pointer-events-none absolute inset-0 z-[1]">
+                  }}
+                >
+                  <div className="pointer-events-none absolute inset-0 z-[1]">
                     <div className="absolute top-0 bottom-0 left-1/2 border-l border-blue-500/35" />
                     <div className="absolute left-0 right-0 top-1/2 border-t border-blue-500/25" />
                     <div className="absolute border border-dashed border-slate-300/80" style={{ left: 80, right: 80, top: 60, bottom: 60 }} />
-                    {selectedField && (
+                    {selectedField && pageIndexForField(selectedField) === pageIndex && (
                       <>
                         <div className="absolute top-0 bottom-0 border-l border-emerald-500/45" style={{ left: selectedField.x }} />
-                        <div className="absolute left-0 right-0 border-t border-emerald-500/45" style={{ top: selectedField.y }} />
+                        <div className="absolute left-0 right-0 border-t border-emerald-500/45" style={{ top: Number(selectedField.y || 0) - (pageIndex * PAGE_HEIGHT) }} />
                       </>
                     )}
-                </div>
+                  </div>
 
-                {/* 1. Marca D'água */}
-                {watermark?.watermarkUrl && (
+                  {watermark?.watermarkUrl && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-                        <img 
-                            src={watermark.watermarkUrl} 
-                            alt="Watermark" 
-                            style={{
-                                opacity: watermark.watermarkOpacity || 0.1,
-                                width: `${watermark.watermarkScale || 50}%`,
-                                transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none'
-                            }}
-                        />
+                      <img
+                        src={watermark.watermarkUrl}
+                        alt="Watermark"
+                        style={{
+                          opacity: watermark.watermarkOpacity || 0.1,
+                          width: `${watermark.watermarkScale || 50}%`,
+                          transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none'
+                        }}
+                      />
                     </div>
-                )}
+                  )}
 
-                {/* 2. Cabeçalho */}
-                <DocumentHeader polo={polo} orientation="portrait" />
+                  <DocumentHeader polo={polo} orientation="portrait" />
 
-                {/* Título */}
-                <div className="text-center mb-12 relative z-10">
-                    <h2 className="text-2xl font-bold text-[#001a33] uppercase underline decoration-2 decoration-blue-600 underline-offset-4">
+                  {pageIndex === 0 && (
+                    <div className="text-center mb-12 relative z-10">
+                      <h2 className="text-2xl font-bold text-[#001a33] uppercase underline decoration-2 decoration-blue-600 underline-offset-4">
                         {documentTitle}
-                    </h2>
-                </div>
+                      </h2>
+                    </div>
+                  )}
 
-                {/* 3. Corpo do Texto */}
-                <div className="relative z-20 group mb-20">
+                  <div className="relative z-20 group mb-20">
                     <div className="mb-2 flex justify-end">
-                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                            <AlignJustify size={11} className="text-blue-600" /> Texto justificado
-                        </span>
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
+                        <AlignJustify size={11} className="text-blue-600" /> Texto justificado
+                      </span>
                     </div>
-                    <div 
-                        ref={editorRef}
-                        contentEditable
-                        onInput={handleTextInput}
-                        dangerouslySetInnerHTML={{ __html: textContent }}
-                        className="min-h-[200px] outline-none text-justify leading-loose text-lg p-4 border border-transparent hover:border-blue-100 rounded-lg transition-colors cursor-text text-black"
-                        style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
-                    >
-                    </div>
+                    <div
+                      ref={pageIndex === 0 ? editorRef : undefined}
+                      contentEditable
+                      onInput={(e) => handleTextInput(e, pageIndex)}
+                      dangerouslySetInnerHTML={{ __html: textPages[pageIndex] || '' }}
+                      className="min-h-[160px] outline-none text-justify leading-loose text-lg p-4 border border-transparent hover:border-blue-100 rounded-lg transition-colors cursor-text text-black"
+                      style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
+                    />
+                  </div>
+
+                  {absoluteFields
+                    .filter(field => pageIndexForField(field) === pageIndex)
+                    .map(field => renderAbsoluteField(field, pageIndex))}
                 </div>
-
-                {/* 4. Campos Absolutos */}
-                {absoluteFields.map(field => {
-                    const isSelected = selectedFieldId === field.id;
-                    return (
-                        <div 
-                            key={field.id}
-                            onMouseDown={(e) => handleFieldMouseDown(e, field.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`absolute z-30 cursor-move group flex items-center justify-center transition-all ${
-                                isSelected 
-                                ? 'border-2 border-blue-500 shadow-md ring-2 ring-blue-500/20' 
-                                : field.type === 'text' 
-                                  ? 'bg-yellow-50/20 border border-yellow-200/50 hover:bg-yellow-100 hover:border-yellow-400 px-2 py-1 rounded' 
-                                  : 'border-2 border-transparent hover:border-blue-400 hover:bg-slate-50/5'
-                            }`}
-                            style={{ 
-                                left: field.x, 
-                                top: field.y,
-                                color: '#000',
-                                width: field.width ? `${field.width}px` : 'auto',
-                                height: 'auto',
-                                ...field.style
-                            }}
-                        >
-                            {field.type === 'qrcode' && (
-                                <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
-                                    <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
-                                        <img 
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(getQrCodeExampleUrl())}`} 
-                                            alt="QR Code"
-                                            className="w-full h-full object-contain pointer-events-none"
-                                        />
-                                    </div>
-                                    <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
-                                        <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none">CÓD. VALIDAÇÃO</p>
-                                        <p className="text-[9px] font-mono font-black text-blue-600 tracking-wider mt-1 leading-none">
-                                            {getValidationCode()}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {field.type === 'image' && (
-                                <img 
-                                    src={field.value} 
-                                    alt="Assinatura" 
-                                    className="w-full h-auto object-contain pointer-events-none"
-                                />
-                            )}
-
-                            {field.type === 'text' && (
-                                <div className="flex items-center w-full">
-                                    <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1 shrink-0" />
-                                    <span dangerouslySetInnerHTML={{ __html: field.value }} className="w-full break-words" />
-                                </div>
-                            )}
-
-                            <button 
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveField(field.id);
-                                }}
-                                className="absolute -top-3 -right-3 ml-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-1 shadow-md border border-slate-100 z-50"
-                                title="Remover"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
-                    );
-                })}
-
-
-
-            </div>
+              </div>
+            ))}
+          </div>
         </div>
 
       {/* Toast Notification */}

@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import {
   ShowCursoPresencialToast,
   useCursosPresenciaisMutations,
@@ -24,7 +25,7 @@ export function useCursosEspecializacaoMutations({
   setIsCreatingCurso,
   setIsDuplicating,
 }: UseCursosEspecializacaoMutationsParams) {
-  return useCursosPresenciaisMutations<CursoEspecializacaoStatusFilter>({
+  const baseMutations = useCursosPresenciaisMutations<CursoEspecializacaoStatusFilter>({
     service: cursosEspecializacaoService,
     invalidateCursos: invalidateCursosEspecializacao,
     showToast,
@@ -43,4 +44,17 @@ export function useCursosEspecializacaoMutations({
       deleteError: 'Erro ao excluir a especialização.',
     },
   });
+
+  const uploadImagemMutation = useMutation({
+    mutationFn: (file: File) => cursosEspecializacaoService.uploadImagem(file),
+    onError: (err: any) => {
+      console.error('Erro ao fazer upload da imagem:', err);
+      showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
+    }
+  });
+
+  return {
+    ...baseMutations,
+    uploadImagemMutation
+  };
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award, MapPin, CreditCard } from 'lucide-react';
+import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award, MapPin, CreditCard, AlertTriangle, CheckCircle2, WalletCards } from 'lucide-react';
 import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 
 interface InicioPageProps {
@@ -119,6 +119,47 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
     }
   });
 
+  const { data: financeiroResumo, isLoading: loadingFinanceiro } = useQuery<any>({
+    queryKey: ['aluno-inicio-financeiro-resumo', alunoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contas_receber')
+        .select(`
+          id,
+          descricao,
+          valor,
+          status,
+          data_vencimento,
+          asaas_invoice_url,
+          turmas!left(nome, cursos!left(nome, modalidade))
+        `)
+        .eq('cliente_id', alunoId)
+        .not('status', 'in', '("CANCELADO","ESTORNADO")')
+        .order('data_vencimento', { ascending: true });
+
+      if (error) throw error;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const openItems = (data || []).filter((item) => ['PENDENTE', 'VENCIDO'].includes(String(item.status || '').toUpperCase()));
+      const overdueItems = openItems.filter((item) => {
+        const due = item.data_vencimento ? new Date(`${item.data_vencimento}T00:00:00`) : null;
+        return String(item.status || '').toUpperCase() === 'VENCIDO' || (due && due < today);
+      });
+      const nextPayment = openItems.find((item) => {
+        const due = item.data_vencimento ? new Date(`${item.data_vencimento}T00:00:00`) : null;
+        return due && due >= today;
+      }) || openItems[0] || null;
+
+      return {
+        nextPayment,
+        overdueCount: overdueItems.length,
+        overdueTotal: overdueItems.reduce((sum, item) => sum + Number(item.valor || 0), 0),
+        openTotal: openItems.reduce((sum, item) => sum + Number(item.valor || 0), 0),
+      };
+    }
+  });
+
   const { data: turmasAbertas = [], isLoading: loadingTurmasAbertas } = useQuery<any[]>({
     queryKey: ['aluno-inicio-turmas-abertas-online'],
     queryFn: async () => {
@@ -154,6 +195,14 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
     return [polo?.nome, polo?.cidade && polo?.estado ? `${polo.cidade}/${polo.estado}` : polo?.cidade || polo?.estado]
       .filter(Boolean)
       .join(' - ') || 'Polo a confirmar';
+  };
+
+  const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return 'Sem vencimento';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
   };
 
   return (
@@ -225,6 +274,65 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
           </div>
         </button>
       </div>
+
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <button
+          type="button"
+          onClick={() => onNavigate('financeiro')}
+          className="rounded-[2rem] border border-slate-100 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+        >
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                financeiroResumo?.overdueCount > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+              }`}>
+                {financeiroResumo?.overdueCount > 0 ? <AlertTriangle size={22} /> : <CheckCircle2 size={22} />}
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Financeiro</p>
+                <h2 className="mt-1 text-xl font-black tracking-tight text-[#001a33]">
+                  {loadingFinanceiro
+                    ? 'Carregando situação...'
+                    : financeiroResumo?.overdueCount > 0
+                      ? `${financeiroResumo.overdueCount} pagamento(s) em atraso`
+                      : 'Você está em dia'}
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {financeiroResumo?.nextPayment
+                    ? `Próximo vencimento: ${formatDate(financeiroResumo.nextPayment.data_vencimento)}`
+                    : 'Nenhuma cobrança aberta encontrada.'}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 md:min-w-48">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Aberto agora</p>
+              <p className="mt-1 text-2xl font-black text-[#001a33]">{formatCurrency(financeiroResumo?.openTotal || 0)}</p>
+              <p className="mt-1 text-[10px] font-bold text-rose-500">Atrasado: {formatCurrency(financeiroResumo?.overdueTotal || 0)}</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('financeiro')}
+          className="rounded-[2rem] border border-slate-100 bg-[#001a33] p-6 text-left text-white shadow-sm transition hover:-translate-y-0.5"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-blue-200">
+              <WalletCards size={21} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">Próximo pagamento</p>
+              <h3 className="mt-1 text-lg font-black">
+                {financeiroResumo?.nextPayment ? formatCurrency(Number(financeiroResumo.nextPayment.valor || 0)) : 'Sem cobrança aberta'}
+              </h3>
+            </div>
+          </div>
+          <p className="mt-4 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-300">
+            {financeiroResumo?.nextPayment?.descricao || 'Quando houver mensalidade, boleto ou PIX pendente, ele aparecerá aqui para facilitar o acompanhamento.'}
+          </p>
+        </button>
+      </section>
 
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

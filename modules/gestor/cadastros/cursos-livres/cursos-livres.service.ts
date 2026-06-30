@@ -1,7 +1,8 @@
 // File: modules/gestor/cadastros/cursos-livres/cursos-livres.service.ts
 
-import { Curso } from '../cadastros.types';
+import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
 import { cadastrosService } from '../cadastros.service';
+import { uploadCursoImagem } from '../cursoImageUpload.service';
 
 export type CursoLivreStatusFilter = 'ativo' | 'inativo';
 
@@ -14,6 +15,7 @@ export interface CreateCursoLivreInput {
   imagemUrl?: string | null;
   publicarSite?: boolean;
   duracaoMeses?: number;
+  financeiroConfig?: CursoFinanceiroConfig;
 }
 
 export const cursosLivresQueryKeys = {
@@ -38,7 +40,8 @@ export const cursosLivresService = {
       duracao_meses: input.duracaoMeses || null,
       imagem_url: input.imagemUrl || null,
       publicar_site: input.publicarSite ?? false,
-      valor: null
+      valor: null,
+      financeiro_config: input.financeiroConfig
     });
   },
 
@@ -52,5 +55,9 @@ export const cursosLivresService = {
 
   async toggleStatus(cursoId: string, novoStatus: CursoLivreStatusFilter): Promise<void> {
     await cadastrosService.toggleStatus(cursoId, novoStatus);
+  },
+
+  async uploadImagem(file: File): Promise<string> {
+    return uploadCursoImagem(file);
   },
 };

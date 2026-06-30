@@ -4,7 +4,22 @@ import { empresasService } from '../../../../configuracoes/empresas/empresas.ser
 import { polosService } from '../../../../configuracoes/polos/polos.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
 
-const PdfTemplate: React.FC = () => {
+interface PdfTemplateProps {
+  filtrosAtuais?: {
+    statusFilter?: string;
+    alunoModalidadeFilter?: string[];
+    turmaFilter?: string;
+  };
+}
+
+const modalidadeLabels: Record<string, string> = {
+  EAD: 'EAD',
+  LIVRE: 'Livres',
+  ESPECIALIZACAO: 'Especialização',
+  TECNICO: 'Técnico',
+};
+
+const PdfTemplate: React.FC<PdfTemplateProps> = ({ filtrosAtuais }) => {
   const { data: company } = useQuery<any>({
     queryKey: ['empresa_principal'],
     queryFn: () => empresasService.getCompanyPrincipal(),
@@ -17,6 +32,11 @@ const PdfTemplate: React.FC = () => {
     queryFn: () => poloId ? polosService.getById(poloId) : Promise.resolve(null),
     enabled: !!poloId,
   });
+
+  const modalidadesSelecionadas = filtrosAtuais?.alunoModalidadeFilter || [];
+  const modalidadeLabel = modalidadesSelecionadas.length > 0
+    ? modalidadesSelecionadas.map((item) => modalidadeLabels[item] || item).join(', ')
+    : 'Todos os alunos';
 
   return (
     <div className="text-slate-800 relative min-h-[inherit] flex flex-col justify-between text-left">
@@ -54,9 +74,9 @@ const PdfTemplate: React.FC = () => {
           <h2 className="text-sm font-bold bg-slate-100 px-3 py-2 uppercase tracking-widest text-[#001a33]">Resumo dos Filtros</h2>
           <ul className="text-xs font-medium text-slate-600 mt-2 px-3 space-y-1">
             <li>• Aba / Tipo: Todos</li>
-            <li>• Status: Todos</li>
-            <li>• Curso: Todos os cursos</li>
-            <li>• Turma: Todas as turmas</li>
+            <li>• Status: {filtrosAtuais?.statusFilter && filtrosAtuais.statusFilter !== 'todos' ? filtrosAtuais.statusFilter : 'Todos'}</li>
+            <li>• Filtro de alunos: {modalidadeLabel}</li>
+            <li>• Turma: {filtrosAtuais?.turmaFilter && filtrosAtuais.turmaFilter !== 'todas' ? filtrosAtuais.turmaFilter : 'Todas as turmas'}</li>
           </ul>
         </div>
 

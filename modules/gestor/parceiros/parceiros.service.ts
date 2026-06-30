@@ -125,6 +125,9 @@ function toCamel(s: any) {
     termosUsoVersao: s.termos_uso_versao,
     trocaSenhaObrigatoria: s.troca_senha_obrigatoria,
     poloIds: s.polo_ids || [],
+    modalidadesAluno: s.modalidadesAluno || [],
+    cursosAlunoIds: s.cursosAlunoIds || [],
+    turmasAlunoIds: s.turmasAlunoIds || [],
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };
@@ -230,7 +233,56 @@ export const parceirosService = {
       throw error;
     }
     
-    return (data || []).map(toCamel);
+    const partners = (data || []).map(toCamel);
+    const alunoIds = partners.filter((partner) => partner?.tipo === 'Aluno').map((partner) => partner.id).filter(Boolean);
+
+    if (alunoIds.length === 0) {
+      return partners;
+    }
+
+    const { data: matriculas, error: matriculasError } = await supabase
+      .from('matriculas')
+      .select('aluno_id, turma_id, status, turmas(id, curso_id, cursos(id, nome, modalidade))')
+      .in('aluno_id', alunoIds);
+
+    if (matriculasError) {
+      console.error('Erro ao buscar modalidades dos alunos:', matriculasError);
+      throw matriculasError;
+    }
+
+    const alunoCursos = new Map<string, { modalidades: Set<string>; cursos: Set<string>; turmas: Set<string> }>();
+
+    (matriculas || []).forEach((matricula: any) => {
+      const status = String(matricula.status || '').toUpperCase();
+      if (['CANCELADO', 'CANCELADA', 'DESISTENTE'].includes(status)) return;
+
+      const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+      const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
+      if (!matricula.aluno_id || !curso?.modalidade) return;
+
+      const current = alunoCursos.get(matricula.aluno_id) || {
+        modalidades: new Set<string>(),
+        cursos: new Set<string>(),
+        turmas: new Set<string>(),
+      };
+
+      current.modalidades.add(String(curso.modalidade).toUpperCase());
+      if (curso.id) current.cursos.add(curso.id);
+      if (matricula.turma_id) current.turmas.add(matricula.turma_id);
+      alunoCursos.set(matricula.aluno_id, current);
+    });
+
+    return partners.map((partner) => {
+      const alunoInfo = alunoCursos.get(partner.id);
+      if (!alunoInfo) return partner;
+
+      return {
+        ...partner,
+        modalidadesAluno: Array.from(alunoInfo.modalidades),
+        cursosAlunoIds: Array.from(alunoInfo.cursos),
+        turmasAlunoIds: Array.from(alunoInfo.turmas),
+      };
+    });
   },
 
   async getById(id: string) {
@@ -281,6 +333,36 @@ export const parceirosService = {
     }
     
     return toCamel(updated);
+  },
+
+  async uploadProfilePhoto(alunoId: string, currentProfile: any, file: File) {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Envie uma imagem em JPG, PNG ou WEBP.');
+    }
+
+    const filePath = `${alunoId}/perfil/foto_${Date.now()}.jpg`;
+    const { data, error: uploadError } = await supabase.storage
+      .from('documentos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        contentType: file.type || 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Erro no upload da foto do aluno:', uploadError);
+      throw uploadError;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('documentos')
+      .getPublicUrl(data.path);
+
+    const publicUrl = urlData.publicUrl;
+    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
+    await this.update(alunoId, { ...editableProfile, foto: publicUrl });
+
+    return publicUrl;
   },
 
   async delete(id: string) {

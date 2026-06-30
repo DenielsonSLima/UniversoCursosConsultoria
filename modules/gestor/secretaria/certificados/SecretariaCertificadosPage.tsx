@@ -74,7 +74,7 @@ const SecretariaCertificadosPage: React.FC = () => {
 
   useEffect(() => { void load(); }, [modalidade, status, turmaId]);
 
-  const grouped = useMemo(() => {
+  const grouped = useMemo<Record<string, CertificadoAcademico[]>>(() => {
     const filtered = search.trim()
       ? items.filter(item => item.aluno.nome.toLowerCase().includes(search.toLowerCase()) || item.aluno.cpf_cnpj.includes(search))
       : items;
@@ -88,6 +88,7 @@ const SecretariaCertificadosPage: React.FC = () => {
       return acc;
     }, {});
   }, [groupBy, items, search]);
+  const groupedEntries = Object.entries(grouped) as Array<[string, CertificadoAcademico[]]>;
 
   const openIssue = (item: CertificadoAcademico) => {
     setSelected(item);
@@ -181,7 +182,7 @@ const SecretariaCertificadosPage: React.FC = () => {
         <div className="py-20 text-center"><Loader2 className="mx-auto animate-spin text-blue-600" size={34} /></div>
       ) : Object.keys(grouped).length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white py-20 text-center text-sm font-bold text-slate-400">Nenhum certificado encontrado.</div>
-      ) : Object.entries(grouped).map(([group, rows]) => (
+      ) : groupedEntries.map(([group, rows]) => (
         <section key={group} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-3">
             <h4 className="font-black uppercase tracking-wider text-[#001a33]">{group}</h4>

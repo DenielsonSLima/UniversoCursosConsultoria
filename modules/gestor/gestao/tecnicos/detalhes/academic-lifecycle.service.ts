@@ -33,6 +33,15 @@ export interface AcademicPeriod {
   reaberto_em: string | null;
 }
 
+export interface AcademicClosingPendencies {
+  disciplinasNaoConcluidas: number;
+  disciplinasSemAula: number;
+  lancamentosDeNotaPendentes: number;
+  frequenciasPendentes?: number;
+  recuperacoesPendentes?: number;
+  podeFechar: boolean;
+}
+
 const requireData = <T>(data: T | null, error: any): T => {
   if (error) throw error;
   if (data === null) throw new Error('O banco não retornou o registro solicitado.');
@@ -217,11 +226,11 @@ export const academicLifecycleService = {
     return requireData(data, error);
   },
 
-  async getPendencias(periodoId: string) {
+  async getPendencias(periodoId: string): Promise<AcademicClosingPendencies> {
     const { data, error } = await supabase.rpc('get_pendencias_fechamento_periodo', {
       p_periodo_letivo_id: periodoId,
     });
-    return requireData(data, error);
+    return requireData(data, error) as AcademicClosingPendencies;
   },
 
   async fecharPeriodo(periodoId: string, responsavelId?: string | null) {

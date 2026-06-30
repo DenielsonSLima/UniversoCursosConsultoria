@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { AlunoModalidadeFilter } from '../components/ParceirosFilters';
 
 export type ParceirosTabType = 'todos' | 'professores' | 'alunos' | 'pj' | 'pf';
 
@@ -13,9 +14,17 @@ const expectedTipoByTab: Record<ParceirosTabType, string> = {
 export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabType) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [cursoFilter, setCursoFilter] = useState('todos');
+  const [alunoModalidadeFilter, setAlunoModalidadeFilter] = useState<AlunoModalidadeFilter[]>([]);
   const [turmaFilter, setTurmaFilter] = useState('todas');
   const [sortOrder, setSortOrder] = useState('az');
+
+  const toggleAlunoModalidadeFilter = (modalidade: AlunoModalidadeFilter) => {
+    setAlunoModalidadeFilter((current) => (
+      current.includes(modalidade)
+        ? current.filter((item) => item !== modalidade)
+        : [...current, modalidade]
+    ));
+  };
 
   const filteredPartners = useMemo(() => {
     return allPartners.filter(item => {
@@ -32,19 +41,24 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
         if (!contentStr.includes(lowerTerm)) return false;
       }
 
-      if (cursoFilter !== 'todos') {
-        if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') return false;
-        if (item.cursoId !== cursoFilter) return false;
+      if (alunoModalidadeFilter.length > 0) {
+        if (item.tipo !== 'Aluno') return false;
+        const modalidadesAluno = Array.isArray(item.modalidadesAluno) ? item.modalidadesAluno : [];
+        const matchesAlunoModalidade = alunoModalidadeFilter.some((modalidade) => (
+          modalidadesAluno.includes(modalidade)
+        ));
+        if (!matchesAlunoModalidade) return false;
       }
 
       if (turmaFilter !== 'todas') {
         if (item.tipo !== 'Aluno' && item.tipo !== 'Professor') return false;
-        if (item.turmaId !== turmaFilter) return false;
+        const turmasAlunoIds = Array.isArray(item.turmasAlunoIds) ? item.turmasAlunoIds : [];
+        if (item.turmaId !== turmaFilter && !turmasAlunoIds.includes(turmaFilter)) return false;
       }
 
       return true;
     });
-  }, [allPartners, activeTab, searchTerm, statusFilter, cursoFilter, turmaFilter]);
+  }, [allPartners, activeTab, searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter]);
 
   const sortedAndFilteredPartners = useMemo(() => {
     const sorted = [...filteredPartners];
@@ -89,10 +103,11 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
   return {
     searchTerm,
     statusFilter,
-    cursoFilter,
+    alunoModalidadeFilter,
     turmaFilter,
     setStatusFilter,
-    setCursoFilter,
+    toggleAlunoModalidadeFilter,
+    clearAlunoModalidadeFilter: () => setAlunoModalidadeFilter([]),
     setTurmaFilter,
     handleSearch: setSearchTerm,
     handleSort: setSortOrder,

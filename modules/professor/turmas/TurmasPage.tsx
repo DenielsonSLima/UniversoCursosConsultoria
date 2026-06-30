@@ -83,9 +83,16 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                       <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-purple-100">
                         {assignment.disciplinaNome}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-bold font-mono">
-                        {assignment.cargaHoraria || 0}h total
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] text-slate-400 font-bold font-mono">
+                          {assignment.cargaHoraria || 0}h total
+                        </span>
+                        {assignment.disciplinaForDiario?.periodoStatus === 'FECHADO' && (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-700">
+                            Período fechado
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -144,9 +151,13 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                       setSelectedAssignment(assignment);
                       setActiveDetailTab('diario');
                     }}
-                    className="mt-6 w-full flex items-center justify-center gap-2 py-3 bg-slate-50 group-hover:bg-purple-600 text-slate-600 group-hover:text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all"
+                    className={`mt-6 w-full flex items-center justify-center gap-2 py-3 font-bold text-xs uppercase tracking-widest rounded-xl transition-all ${
+                      assignment.disciplinaForDiario?.periodoStatus === 'FECHADO'
+                        ? 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                        : 'bg-slate-50 group-hover:bg-purple-600 text-slate-600 group-hover:text-white'
+                    }`}
                   >
-                    <span>Abrir diário da disciplina</span>
+                    <span>{assignment.disciplinaForDiario?.periodoStatus === 'FECHADO' ? 'Consultar diário fechado' : 'Abrir diário da disciplina'}</span>
                     <ChevronRight size={14} />
                   </button>
                 </div>

@@ -1,3 +1,4 @@
+import { useMutation } from '@tanstack/react-query';
 import {
   CreateCursoPresencialInput,
   ShowCursoPresencialToast,
@@ -27,7 +28,7 @@ export function useCursosLivresMutations({
   setIsCreatingCurso,
   setIsDuplicating,
 }: UseCursosLivresMutationsParams) {
-  return useCursosPresenciaisMutations<CursoLivreStatusFilter>({
+  const baseMutations = useCursosPresenciaisMutations<CursoLivreStatusFilter>({
     service: cursosLivresService,
     invalidateCursos: invalidateCursosLivres,
     showToast,
@@ -46,4 +47,17 @@ export function useCursosLivresMutations({
       deleteError: 'Erro ao excluir o curso.',
     },
   });
+
+  const uploadImagemMutation = useMutation({
+    mutationFn: (file: File) => cursosLivresService.uploadImagem(file),
+    onError: (err: any) => {
+      console.error('Erro ao fazer upload da imagem:', err);
+      showToast('Erro ao fazer upload da imagem: ' + err.message, 'error');
+    }
+  });
+
+  return {
+    ...baseMutations,
+    uploadImagemMutation
+  };
 }

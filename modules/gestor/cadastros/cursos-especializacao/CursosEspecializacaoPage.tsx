@@ -1,10 +1,10 @@
 // File: modules/gestor/cadastros/cursos-especializacao/CursosEspecializacaoPage.tsx
 
 import React, { useState } from 'react';
-import { Award, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Award, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle, Image as ImageIcon, Save, Banknote, Receipt, CreditCard } from 'lucide-react';
 import CursoEspecializacaoCard from './components/CursoEspecializacaoCard';
 import CursoGradeCurricularDetails from '../components/CursoGradeCurricularDetails';
-import { Curso } from '../cadastros.types';
+import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
 import { CursoEspecializacaoStatusFilter } from './cursos-especializacao.service';
 import { useCursosEspecializacaoQueries } from './hooks/useCursosEspecializacaoQueries';
 import { useCursosEspecializacaoRealtime } from './hooks/useCursosEspecializacaoRealtime';
@@ -27,6 +27,14 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
   const [newCursoArea, setNewCursoArea] = useState('Saúde');
   const [newCursoVersao, setNewCursoVersao] = useState('1.0');
   const [newCursoCargaHoraria, setNewCursoCargaHoraria] = useState(120);
+  const [newCursoDuracaoMeses, setNewCursoDuracaoMeses] = useState(6);
+  const [newCursoImagemUrl, setNewCursoImagemUrl] = useState('');
+  const [newCursoPublicarSite, setNewCursoPublicarSite] = useState(true);
+  const [financeiroPix, setFinanceiroPix] = useState(true);
+  const [financeiroBoleto, setFinanceiroBoleto] = useState(true);
+  const [financeiroCartao, setFinanceiroCartao] = useState(true);
+  const [financeiroMaxParcelas, setFinanceiroMaxParcelas] = useState(2);
+  const [isUploading, setIsUploading] = useState(false);
   const [isCreatingCurso, setIsCreatingCurso] = useState(false);
 
   // Estados para Modal de Duplicação
@@ -52,7 +60,9 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
     setTimeout(() => setToast(null), 4000);
   };
 
-  const areasDisponiveis = ['Saúde', 'Gestão', 'Tecnologia', 'Educação', 'Outros'];
+  const [areasDisponiveis, setAreasDisponiveis] = useState(['Saúde', 'Gestão', 'Tecnologia', 'Educação', 'Outros']);
+  const [showNewAreaInput, setShowNewAreaInput] = useState(false);
+  const [newAreaName, setNewAreaName] = useState('');
 
   const resetCreateForm = () => {
     setShowCreateModal(false);
@@ -61,12 +71,55 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
     setNewCursoArea('Saúde');
     setNewCursoVersao('1.0');
     setNewCursoCargaHoraria(120);
+    setNewCursoDuracaoMeses(6);
+    setNewCursoImagemUrl('');
+    setNewCursoPublicarSite(true);
+    setFinanceiroPix(true);
+    setFinanceiroBoleto(true);
+    setFinanceiroCartao(true);
+    setFinanceiroMaxParcelas(2);
   };
 
   const closeDuplicateModal = () => {
     setShowDuplicateModal(false);
     setDuplicateTargetId(null);
   };
+
+  const handleAddArea = () => {
+    const area = newAreaName.trim();
+    if (!area) return;
+
+    setAreasDisponiveis((prev) => prev.some((item) => item.toLowerCase() === area.toLowerCase()) ? prev : [...prev, area]);
+    setNewCursoArea(area);
+    setNewAreaName('');
+    setShowNewAreaInput(false);
+  };
+
+  const buildFinanceiroConfig = (): CursoFinanceiroConfig => ({
+    valorBase: 0,
+    descontoPontualidade: 0,
+    parcelasPadrao: 1,
+    taxaPagaPor: 'aluno',
+    metodosRecebimento: {
+      pix: financeiroPix,
+      boleto: financeiroBoleto,
+      cartao: financeiroCartao
+    },
+    descontoMetodo: {
+      pix: false,
+      boleto: false,
+      cartao: false
+    },
+    cartao: {
+      aceitar: financeiroCartao,
+      maxParcelas: financeiroCartao ? Math.max(1, financeiroMaxParcelas) : 1,
+      aplicarDescontoPontualidade: false
+    },
+    asaas: {
+      gerarParcelamentoMensalidades: false,
+      tipoCarnePreferencial: 'COBRANCAS_AVULSAS'
+    }
+  });
 
   const { cursosQuery, invalidateCursosEspecializacao } = useCursosEspecializacaoQueries();
   useCursosEspecializacaoRealtime(invalidateCursosEspecializacao);
@@ -75,7 +128,8 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
     createMutation,
     duplicateMutation,
     toggleStatusMutation,
-    deleteMutation
+    deleteMutation,
+    uploadImagemMutation
   } = useCursosEspecializacaoMutations({
     invalidateCursosEspecializacao,
     showToast,
@@ -87,6 +141,22 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
 
   const cursos = cursosQuery.data || [];
   const loading = cursosQuery.isLoading;
+
+  const handleUploadImagem = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const publicUrl = await uploadImagemMutation.mutateAsync(file);
+      setNewCursoImagemUrl(publicUrl);
+    } catch {
+      // O toast de erro fica centralizado na mutation.
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSelectCurso = (curso: Curso) => {
     setSelectedCurso(curso);
@@ -111,6 +181,10 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
       area: newCursoArea,
       versao: newCursoVersao,
       cargaHoraria: Number.isFinite(newCursoCargaHoraria) ? newCursoCargaHoraria : 120,
+      duracaoMeses: Number.isFinite(newCursoDuracaoMeses) ? newCursoDuracaoMeses : 6,
+      imagemUrl: newCursoImagemUrl || null,
+      publicarSite: newCursoPublicarSite,
+      financeiroConfig: buildFinanceiroConfig(),
     });
   };
 
@@ -189,6 +263,184 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
         onBack={handleBack} 
         onUpdate={invalidateCursosEspecializacao}
       />
+    );
+  }
+
+  if (!readOnly && showCreateModal) {
+    return (
+      <div className="flex min-w-0 flex-col h-full animate-fadeIn bg-slate-50 min-h-screen overflow-x-hidden">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white px-4 py-5 sm:px-6 border-b border-slate-200">
+          <div className="flex min-w-0 items-center gap-4">
+            <button
+              type="button"
+              onClick={() => resetCreateForm()}
+              className="flex-shrink-0 p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-colors bg-white shadow-sm"
+              aria-label="Voltar"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest bg-rose-50 px-2.5 py-1 rounded-md">
+                Especialização Técnica
+              </span>
+              <h3 className="truncate text-lg sm:text-xl font-black text-[#001a33] mt-1.5 uppercase tracking-tight">
+                Nova Especialização
+              </h3>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            form="create-especializacao-form"
+            disabled={isCreatingCurso || isUploading}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#001a33] hover:bg-rose-600 text-white px-5 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all disabled:opacity-70 shadow-lg shadow-rose-900/20"
+          >
+            {isCreatingCurso ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            Criar Especialização
+          </button>
+        </div>
+
+        <div className="bg-white border-b border-slate-200 px-3 py-3 sm:px-6 sm:py-4">
+          <div className="mx-auto grid w-full max-w-5xl grid-cols-1">
+            <div className="group relative flex min-w-0 flex-col items-center gap-2 px-1">
+              <span className="relative z-10 w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/20">
+                1
+              </span>
+              <span className="block w-full truncate text-center text-[10px] font-black uppercase tracking-wide text-rose-600">
+                Informações Básicas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0 max-w-4xl w-full mx-auto p-4 sm:p-6 md:p-8">
+          <form id="create-especializacao-form" onSubmit={handleCreateCurso} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <span className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                <Award size={20} />
+              </span>
+              <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">
+                Informações Principais do Curso
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome do Curso *</label>
+                <input required type="text" value={newCursoNome} onChange={(e) => setNewCursoNome(e.target.value)} placeholder="Ex: Especialização em Instrumentação Cirúrgica" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-semibold text-slate-800 transition-all" />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Área de Formação</label>
+                  <button type="button" onClick={() => setShowNewAreaInput((prev) => !prev)} className="text-[10px] font-black uppercase tracking-wider text-rose-600 hover:text-rose-700">
+                    + Nova área
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <select value={newCursoArea} onChange={(e) => setNewCursoArea(e.target.value)} className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-bold text-slate-800 transition-all cursor-pointer">
+                    {areasDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                  {showNewAreaInput && (
+                    <div className="flex gap-2">
+                      <input type="text" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddArea())} placeholder="Nome da nova área" className="min-w-0 flex-1 px-4 py-2.5 text-xs bg-white border border-rose-200 rounded-xl focus:ring-2 focus:ring-rose-100 outline-none font-bold text-slate-800" />
+                      <button type="button" onClick={handleAddArea} className="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider hover:bg-rose-700">Adicionar</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Carga Horária (Horas) *</label>
+                <input required type="number" min="1" value={newCursoCargaHoraria} onChange={(e) => setNewCursoCargaHoraria(parseInt(e.target.value, 10) || 0)} placeholder="Ex: 120" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-semibold text-slate-800 transition-all" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Versão do Curso</label>
+                <input required type="text" value={newCursoVersao} onChange={(e) => setNewCursoVersao(e.target.value)} placeholder="Ex: 1.0" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-semibold text-slate-800 transition-all" />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Duração (Meses)</label>
+                <input required type="number" min="1" value={newCursoDuracaoMeses} onChange={(e) => setNewCursoDuracaoMeses(parseInt(e.target.value, 10) || 0)} placeholder="Ex: 6" className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-semibold text-slate-800 transition-all" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo do Curso (Exibido no Catálogo)</label>
+              <textarea value={newCursoDesc} onChange={(e) => setNewCursoDesc(e.target.value)} rows={4} placeholder="Forneça um breve resumo descrevendo os objetivos do curso, público-alvo e diferenciais." className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-semibold text-slate-800 transition-all resize-none" />
+            </div>
+
+            <div className="border border-slate-200 rounded-3xl p-5 bg-slate-50/60 space-y-4">
+              <div className="flex items-center gap-2">
+                <Banknote size={18} className="text-rose-600" />
+                <h5 className="font-black text-sm text-[#001a33] uppercase tracking-tight">Opções Financeiras do Curso</h5>
+              </div>
+              <p className="text-xs font-semibold leading-relaxed text-slate-500">
+                Aqui ficam apenas os meios aceitos e o limite do cartão. Valor, número de parcelas, desconto, juros e multa serão definidos na turma.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { label: 'Pix', icon: Banknote, enabled: financeiroPix, onToggle: () => setFinanceiroPix((prev) => !prev) },
+                  { label: 'Boleto', icon: Receipt, enabled: financeiroBoleto, onToggle: () => setFinanceiroBoleto((prev) => !prev) },
+                  { label: 'Cartão', icon: CreditCard, enabled: financeiroCartao, onToggle: () => setFinanceiroCartao((prev) => !prev) }
+                ].map((method) => {
+                  const Icon = method.icon;
+                  return (
+                    <button type="button" key={method.label} onClick={method.onToggle} className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all ${method.enabled ? 'border-rose-200 bg-white text-rose-700 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-400'}`}>
+                      <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide">
+                        <Icon size={16} />
+                        {method.label}
+                      </span>
+                      <span className={`h-5 w-5 rounded-full border ${method.enabled ? 'border-rose-500 bg-rose-500' : 'border-slate-300 bg-white'}`} />
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="flex flex-col gap-2 md:max-w-xs">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Máximo de parcelas no cartão</span>
+                <input type="number" min={1} max={12} disabled={!financeiroCartao} value={financeiroMaxParcelas} onChange={(e) => setFinanceiroMaxParcelas(Math.max(1, Math.min(12, Number(e.target.value) || 1)))} className="w-full px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-100 focus:border-rose-500 outline-none font-black text-slate-800 disabled:opacity-50" />
+              </label>
+            </div>
+
+            <div className="border border-slate-200 rounded-3xl p-5 bg-slate-50/60 space-y-4">
+              <div className="flex items-center gap-2">
+                <ImageIcon size={18} className="text-rose-600" />
+                <h5 className="font-black text-sm text-[#001a33] uppercase tracking-tight">Imagem de Capa do Curso</h5>
+              </div>
+              <div className="border-2 border-dashed border-slate-200 rounded-3xl p-6 text-center bg-white flex flex-col items-center justify-center gap-4">
+                {newCursoImagemUrl ? (
+                  <>
+                    <img src={newCursoImagemUrl} alt="Capa da especialização" className="max-h-48 rounded-2xl object-cover border border-slate-200 shadow-sm" />
+                    <button type="button" onClick={() => setNewCursoImagemUrl('')} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase tracking-wider rounded-xl transition-all border border-red-200">Remover</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center border border-slate-200 shadow-inner">
+                      <ImageIcon size={24} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700">Selecione a imagem de capa do curso</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-medium">Recomendado formato horizontal (16:9)</p>
+                    </div>
+                  </>
+                )}
+                <label className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-all shadow-md shadow-rose-600/15">
+                  {isUploading ? 'Enviando...' : newCursoImagemUrl ? 'Alterar Imagem' : 'Carregar Foto'}
+                  <input type="file" accept="image/*" onChange={handleUploadImagem} disabled={isUploading} className="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <input type="checkbox" id="newCursoEspecializacaoPublicarSitePage" checked={newCursoPublicarSite} onChange={(e) => setNewCursoPublicarSite(e.target.checked)} className="h-4 w-4 cursor-pointer rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
+              <label htmlFor="newCursoEspecializacaoPublicarSitePage" className="cursor-pointer select-none text-xs font-bold text-slate-700">
+                Publicar no site público
+              </label>
+            </div>
+          </form>
+        </div>
+      </div>
     );
   }
 
@@ -281,14 +533,17 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
       {/* Modal Criar Novo Curso */}
       {!readOnly && showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
+          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-2xl w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-100 relative">
             <button 
               onClick={() => setShowCreateModal(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 rounded-xl hover:bg-slate-50 transition-all"
             >
               <X size={20} />
             </button>
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight mb-6">Nova Especialização</h3>
+            <div className="mb-6 pr-10">
+              <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Especialização</h3>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Cadastro próprio da especialização com capa, publicação e dados para o site.</p>
+            </div>
             
             <form onSubmit={handleCreateCurso} className="space-y-4">
               <div>
@@ -303,7 +558,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Área / Categoria</label>
                   <select 
@@ -328,6 +583,9 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Versão</label>
                   <input 
@@ -339,6 +597,68 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Duração (meses)</label>
+                  <input 
+                    required
+                    type="number"
+                    min="1"
+                    value={newCursoDuracaoMeses}
+                    onChange={(e) => setNewCursoDuracaoMeses(parseInt(e.target.value, 10) || 0)}
+                    placeholder="Ex: 6"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Imagem de capa do curso</label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  {newCursoImagemUrl ? (
+                    <div className="relative aspect-video w-full sm:w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                      <img src={newCursoImagemUrl} alt="Capa da especialização" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewCursoImagemUrl('')}
+                        className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-colors hover:bg-red-600"
+                        title="Remover imagem"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video w-full sm:w-40 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-slate-400">
+                      <ImageIcon size={24} />
+                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[#001a33] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-rose-600">
+                      {isUploading ? 'Enviando...' : newCursoImagemUrl ? 'Alterar imagem' : 'Carregar imagem'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadImagem}
+                        disabled={isUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="mt-2 text-[10px] font-semibold text-slate-400">Formato recomendado: horizontal 16:9.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <input 
+                  type="checkbox"
+                  id="newCursoEspecializacaoPublicarSite"
+                  checked={newCursoPublicarSite}
+                  onChange={(e) => setNewCursoPublicarSite(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                />
+                <label htmlFor="newCursoEspecializacaoPublicarSite" className="cursor-pointer select-none text-xs font-bold text-slate-700">
+                  Publicar no site público
+                </label>
               </div>
 
               <div>
@@ -454,7 +774,7 @@ const CursosEspecializacaoPage: React.FC<CursosEspecializacaoPageProps> = ({ rea
                   confirmModal.onConfirm();
                   setConfirmModal(null);
                 }}
-                className="flex-1 py-3 bg-red-650 hover:bg-red-750 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all shadow-md animate-none"
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all shadow-md shadow-red-600/20 animate-none border border-red-700/10"
               >
                 Confirmar
               </button>

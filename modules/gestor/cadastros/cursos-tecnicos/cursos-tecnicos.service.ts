@@ -1,6 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { cadastrosService } from '../cadastros.service';
-import { Curso } from '../cadastros.types';
+import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
 
 export type CursoTecnicoStatusFilter = 'ativo' | 'inativo';
 
@@ -13,6 +13,7 @@ export interface CreateCursoTecnicoInput {
   duracao_meses: number;
   imagem_url: string | null;
   publicar_site: boolean;
+  financeiro_config?: CursoFinanceiroConfig;
 }
 
 export const cursosTecnicosQueryKeys = {
@@ -72,7 +73,8 @@ export const cursosTecnicosService = {
       versao: input.versao,
       duracao_meses: input.duracao_meses,
       imagem_url: input.imagem_url,
-      publicar_site: input.publicar_site
+      publicar_site: input.publicar_site,
+      financeiro_config: input.financeiro_config
     });
   },
 

@@ -3,15 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Clock, Save,
-  BookOpen, Layers, Plus, Trash2, Loader2, Calendar, Link as LinkIcon, Copy,
+  BookOpen, Layers, Plus, Trash2, Loader2, Calendar,
   Banknote, CreditCard, Percent, Receipt, WalletCards
 } from 'lucide-react';
 import { Curso, CursoFinanceiroConfig, Modulo, Disciplina } from '../cadastros.types';
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
-import { asaasIntegrationService } from '../../../asaas/asaas.service';
-import { cursosLivresAsaasService } from '../cursos-livres/asaasLivres.service';
-import { cursosEspecializacaoAsaasService } from '../cursos-especializacao/asaasEspecializacao.service';
 
 interface CursoGradeCurricularDetailsProps {
   curso: Curso;
@@ -55,10 +52,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [isUploadingD2, setIsUploadingD2] = useState(false);
   const [valorCurso, setValorCurso] = useState('');
   const [isSavingValor, setIsSavingValor] = useState(false);
-  const [isGeneratingAsaasLink, setIsGeneratingAsaasLink] = useState(false);
-  const [financeiroConfig, setFinanceiroConfig] = useState<CursoFinanceiroConfig>(() => normalizeCursoFinanceiroConfig(curso.financeiro_config));
-  const [valorBaseInput, setValorBaseInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config).valorBase));
-  const [descontoInput, setDescontoInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config).descontoPontualidade));
+  const [financeiroConfig, setFinanceiroConfig] = useState<CursoFinanceiroConfig>(() => normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade));
+  const [valorBaseInput, setValorBaseInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade).valorBase));
+  const [descontoInput, setDescontoInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade).descontoPontualidade));
   const [isSavingFinanceiro, setIsSavingFinanceiro] = useState(false);
 
   // Estados para inputs de novos itens
@@ -73,6 +69,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
 
   // Obter configurações visuais com base no tipo de curso
   const config = getModalidadeConfig(curso.modalidade);
+  const usesTurmaFinanceiro = ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(curso.modalidade);
 
   // Carregar dados iniciais do Supabase
   useEffect(() => {
@@ -84,7 +81,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     setImagemDetalhe1(curso.imagem_detalhe_1 || '');
     setImagemDetalhe2(curso.imagem_detalhe_2 || '');
     setValorCurso(curso.valor !== null && curso.valor !== undefined ? curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
-    const nextFinanceiroConfig = normalizeCursoFinanceiroConfig(curso.financeiro_config);
+    const nextFinanceiroConfig = normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade);
     setFinanceiroConfig(nextFinanceiroConfig);
     setValorBaseInput(moneyInputValue(nextFinanceiroConfig.valorBase));
     setDescontoInput(moneyInputValue(nextFinanceiroConfig.descontoPontualidade));
@@ -180,31 +177,11 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     }
   };
 
-  const handleGenerateAsaasLink = async () => {
-    setIsGeneratingAsaasLink(true);
-    try {
-      const result = curso.modalidade === 'LIVRE'
-        ? await cursosLivresAsaasService.createCourseProduct(curso)
-        : curso.modalidade === 'ESPECIALIZACAO'
-          ? await cursosEspecializacaoAsaasService.createCourseProduct(curso)
-          : await asaasIntegrationService.createCourseLink(curso.id);
-      const url = 'url' in result ? result.url : result.linkPagamento;
-      if (!url) throw new Error('Link Asaas não retornado.');
-      await navigator.clipboard.writeText(url);
-      alert('Link de pagamento Asaas gerado e copiado para a área de transferência.');
-      onUpdate();
-    } catch (err: any) {
-      alert(`Não foi possível gerar o link Asaas: ${err.message}`);
-    } finally {
-      setIsGeneratingAsaasLink(false);
-    }
-  };
-
   const updateFinanceiroConfig = (patch: Partial<CursoFinanceiroConfig>) => {
     setFinanceiroConfig(prev => normalizeCursoFinanceiroConfig({
       ...prev,
       ...patch
-    }));
+    }, curso.modalidade));
   };
 
   const updateFinanceiroNested = <K extends keyof CursoFinanceiroConfig>(
@@ -217,15 +194,28 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         ...(prev[key] as any),
         ...patch
       }
-    }));
+    }, curso.modalidade));
   };
 
   const handleSaveFinanceiroCurso = async () => {
-    const normalized = normalizeCursoFinanceiroConfig({
-      ...financeiroConfig,
-      valorBase: parseMoneyInput(valorBaseInput, financeiroConfig.valorBase),
-      descontoPontualidade: parseMoneyInput(descontoInput, financeiroConfig.descontoPontualidade)
-    });
+    const normalized = normalizeCursoFinanceiroConfig(
+      usesTurmaFinanceiro
+        ? {
+            ...financeiroConfig,
+            descontoPontualidade: 0,
+            descontoMetodo: {
+              pix: false,
+              boleto: false,
+              cartao: false
+            }
+          }
+        : {
+            ...financeiroConfig,
+            valorBase: parseMoneyInput(valorBaseInput, financeiroConfig.valorBase),
+            descontoPontualidade: parseMoneyInput(descontoInput, financeiroConfig.descontoPontualidade)
+          },
+      curso.modalidade
+    );
     setIsSavingFinanceiro(true);
     try {
       await cadastrosService.updateCurso({
@@ -234,13 +224,15 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
         imagem_url: imagemUrl || null,
         imagem_detalhe_1: imagemDetalhe1 || null,
         imagem_detalhe_2: imagemDetalhe2 || null,
-        valor: normalized.valorBase,
+        valor: usesTurmaFinanceiro ? (curso.valor ?? null) : normalized.valorBase,
         financeiro_config: normalized
       });
       setFinanceiroConfig(normalized);
-      setValorCurso(moneyInputValue(normalized.valorBase));
-      setValorBaseInput(moneyInputValue(normalized.valorBase));
-      setDescontoInput(moneyInputValue(normalized.descontoPontualidade));
+      if (!usesTurmaFinanceiro) {
+        setValorCurso(moneyInputValue(normalized.valorBase));
+        setValorBaseInput(moneyInputValue(normalized.valorBase));
+        setDescontoInput(moneyInputValue(normalized.descontoPontualidade));
+      }
       onUpdate();
     } catch (err) {
       console.error('Erro ao salvar política financeira do curso:', err);
@@ -722,9 +714,13 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                 <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
                   <WalletCards size={14} /> Política Financeira
                 </span>
-                <h4 className="mt-2 text-xl font-black text-[#001a33]">Regras padrão do curso</h4>
+                <h4 className="mt-2 text-xl font-black text-[#001a33]">
+                  {usesTurmaFinanceiro ? 'Meios de pagamento aceitos' : 'Regras padrão do curso'}
+                </h4>
                 <p className="mt-1 max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
-                  Essas regras servem como base para novas turmas técnicas. Matrícula e rematrícula continuam podendo ter valores próprios na turma.
+                  {usesTurmaFinanceiro
+                    ? 'O curso define apenas quais meios a turma poderá usar. Valores, parcelas, descontos, juros e multa são configurados na turma.'
+                    : 'Essas regras servem como base financeira do curso.'}
                 </p>
               </div>
               <button
@@ -738,7 +734,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {!usesTurmaFinanceiro && <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <label className="space-y-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Valor base da mensalidade</span>
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-emerald-300 focus-within:bg-white">
@@ -774,17 +770,17 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                   />
                 </div>
               </label>
-            </div>
+            </div>}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { key: 'pix' as const, label: 'Pix', icon: Banknote, note: 'Recebe desconto se marcado.' },
-                { key: 'boleto' as const, label: 'Boleto', icon: Receipt, note: 'Recebe desconto se marcado.' },
-                { key: 'cartao' as const, label: 'Cartão', icon: CreditCard, note: `Sem desconto. Até ${financeiroConfig.cartao.maxParcelas}x.` }
+                { key: 'pix' as const, label: 'Pix', icon: Banknote, note: usesTurmaFinanceiro ? 'Disponível para turmas deste curso.' : 'Recebe desconto se marcado.' },
+                { key: 'boleto' as const, label: 'Boleto', icon: Receipt, note: usesTurmaFinanceiro ? 'Disponível para turmas deste curso.' : 'Recebe desconto se marcado.' },
+                { key: 'cartao' as const, label: 'Cartão', icon: CreditCard, note: `Até ${financeiroConfig.cartao.maxParcelas}x.` }
               ].map((method) => {
                 const Icon = method.icon;
                 const enabled = financeiroConfig.metodosRecebimento[method.key];
-                const discountEnabled = financeiroConfig.descontoMetodo[method.key];
+                const discountEnabled = !usesTurmaFinanceiro && financeiroConfig.descontoMetodo[method.key];
                 return (
                   <div key={method.key} className={`rounded-2xl border p-5 transition-colors ${enabled ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-slate-50'}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -807,7 +803,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                       </button>
                     </div>
 
-                    <label className={`mt-5 flex items-center justify-between rounded-xl border px-3 py-2 ${enabled ? 'bg-white border-slate-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+                    {!usesTurmaFinanceiro && <label className={`mt-5 flex items-center justify-between rounded-xl border px-3 py-2 ${enabled ? 'bg-white border-slate-200' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Aplicar desconto</span>
                       <input
                         type="checkbox"
@@ -816,7 +812,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                         onChange={(e) => updateFinanceiroNested('descontoMetodo', { [method.key]: e.target.checked })}
                         className="h-4 w-4 accent-emerald-600"
                       />
-                    </label>
+                    </label>}
                   </div>
                 );
               })}
@@ -829,7 +825,9 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                     <CreditCard size={15} /> Regra do cartão
                   </span>
                   <p className="mt-1 text-xs font-semibold text-slate-500">
-                    Por padrão, cartão não recebe desconto de pontualidade e pode parcelar até duas vezes.
+                    {usesTurmaFinanceiro
+                      ? 'Define o limite máximo que as turmas deste curso poderão oferecer no cartão.'
+                      : 'Por padrão, cartão não recebe desconto de pontualidade e pode parcelar até duas vezes.'}
                   </p>
                 </div>
                 <label className="flex items-center gap-3">
@@ -850,26 +848,36 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
           <div className="space-y-5">
             <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm">
               <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
-                <Percent size={14} /> Simulação
+                <Percent size={14} /> {usesTurmaFinanceiro ? 'Valores por turma' : 'Simulação'}
               </span>
-              <h4 className="mt-2 text-lg font-black text-[#001a33]">Como fica para o aluno</h4>
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-emerald-700">Pix/Boleto até vencimento</span>
-                  <span className="text-lg font-black text-emerald-700">
-                    {formatMoney(Math.max(0, financeiroConfig.valorBase - financeiroConfig.descontoPontualidade))}
-                  </span>
+              {usesTurmaFinanceiro ? (
+                <div className="mt-5 space-y-3 text-xs font-semibold leading-relaxed text-slate-600">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-800">
+                    Preço, quantidade de parcelas, desconto de pontualidade, juros e multa devem ser definidos na criação ou configuração da turma.
+                  </div>
+                  <p>
+                    Assim cada turma pode ter seu próprio valor conforme ano, campanha, duração, polo ou condição comercial, sem alterar o cadastro base do curso.
+                  </p>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-600">Cartão</span>
-                  <span className="text-lg font-black text-[#001a33]">
-                    {formatMoney(financeiroConfig.valorBase)}
-                  </span>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-700">Pix/Boleto até vencimento</span>
+                    <span className="text-lg font-black text-emerald-700">
+                      {formatMoney(Math.max(0, financeiroConfig.valorBase - financeiroConfig.descontoPontualidade))}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-600">Cartão</span>
+                    <span className="text-lg font-black text-[#001a33]">
+                      {formatMoney(financeiroConfig.valorBase)}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+                    A simulação é visual. A cobrança real deve ser calculada e criada no backend/Asaas usando esta política salva no curso.
+                  </p>
                 </div>
-                <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
-                  A simulação é visual. A cobrança real deve ser calculada e criada no backend/Asaas usando esta política salva no curso e as regras específicas da turma.
-                </p>
-              </div>
+              )}
             </div>
 
             <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm">
@@ -915,79 +923,64 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
               </button>
             </div>
 
-            {/* Valor do Curso (Preço Comercial) */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Valor do Curso (Preço Comercial)
-              </label>
-              <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                <span className="text-slate-500 font-black text-sm">R$</span>
-                <input
-                  type="text"
-                  placeholder="Ex: 299,90 (Deixe em branco para 'Sob Consulta')"
-                  className="w-full bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 py-2.5"
-                  value={valorCurso}
-                  onChange={(e) => setValorCurso(e.target.value)}
-                  onBlur={() => {
-                    const parsed = parseBRLPrice(valorCurso);
-                    setValorCurso(parsed !== null && !isNaN(parsed) ? parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveValorCurso(valorCurso)}
-                />
-                <button
-                  type="button"
-                  disabled={isSavingValor}
-                  onClick={() => handleSaveValorCurso(valorCurso)}
-                  className="px-4 py-2 bg-[#001a33] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm shrink-0 disabled:opacity-70 flex items-center gap-1.5"
-                >
-                  {isSavingValor ? (
-                    <>
-                      <Loader2 className="animate-spin" size={12} />
-                      <span>Salvando...</span>
-                    </>
-                  ) : (
-                    'Salvar'
-                  )}
-                </button>
-              </div>
-              <p className="text-[9px] text-slate-400 font-medium leading-normal">
-                Insira o preço comercial para divulgação pública no site. Digite o valor com duas casas decimais e clique em Salvar (ex: 299,90). Deixe em branco para ocultar o preço no catálogo e exibir apenas o formulário de contato.
-              </p>
-            </div>
-
-            {['LIVRE', 'ESPECIALIZACAO', 'EAD'].includes(curso.modalidade) && (
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
-                <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700">
-                  <LinkIcon size={14} /> Link de pagamento Asaas
+            {usesTurmaFinanceiro ? (
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-800">
+                  Valor definido na turma
                 </span>
-                <p className="mt-1 text-[10px] font-semibold leading-relaxed text-blue-700/75">
-                  Use este link para vender o curso online. O aluno só ganha matrícula/acesso após pagamento confirmado.
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-amber-800">
+                  O cadastro do curso não define preço. Cada turma informa seus valores, parcelas, descontos, juros e multa, e o site deve usar a turma disponível para exibir/gerar o checkout correto.
                 </p>
-                {curso.asaas_payment_link_url ? (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-white p-3">
-                    <code className="min-w-0 flex-1 truncate text-[11px] font-bold text-slate-600">
-                      {curso.asaas_payment_link_url}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => navigator.clipboard.writeText(curso.asaas_payment_link_url || '')}
-                      className="rounded-lg bg-blue-50 p-2 text-blue-600 hover:bg-blue-100"
-                      title="Copiar link"
-                    >
-                      <Copy size={15} />
-                    </button>
-                  </div>
-                ) : (
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Valor do Curso (Preço Comercial)
+                </label>
+                <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                  <span className="text-slate-500 font-black text-sm">R$</span>
+                  <input
+                    type="text"
+                    placeholder="Ex: 299,90 (Deixe em branco para 'Sob Consulta')"
+                    className="w-full bg-transparent border-none outline-none text-sm font-bold text-slate-800 placeholder-slate-400 py-2.5"
+                    value={valorCurso}
+                    onChange={(e) => setValorCurso(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parseBRLPrice(valorCurso);
+                      setValorCurso(parsed !== null && !isNaN(parsed) ? parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveValorCurso(valorCurso)}
+                  />
                   <button
                     type="button"
-                    disabled={isGeneratingAsaasLink}
-                    onClick={handleGenerateAsaasLink}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60"
+                    disabled={isSavingValor}
+                    onClick={() => handleSaveValorCurso(valorCurso)}
+                    className="px-4 py-2 bg-[#001a33] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm shrink-0 disabled:opacity-70 flex items-center gap-1.5"
                   >
-                    {isGeneratingAsaasLink ? <Loader2 className="animate-spin" size={14} /> : <LinkIcon size={14} />}
-                    Gerar link de pagamento
+                    {isSavingValor ? (
+                      <>
+                        <Loader2 className="animate-spin" size={12} />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      'Salvar'
+                    )}
                   </button>
-                )}
+                </div>
+                <p className="text-[9px] text-slate-400 font-medium leading-normal">
+                  Insira o preço comercial para divulgação pública no site. Digite o valor com duas casas decimais e clique em Salvar (ex: 299,90).
+                </p>
+              </div>
+            )}
+
+            {['LIVRE', 'ESPECIALIZACAO'].includes(curso.modalidade) && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                <span className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-800">
+                  <Receipt size={14} /> Checkout individual do aluno
+                </span>
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-emerald-800">
+                  Na compra pelo site, o checkout Asaas é gerado individualmente para cada aluno usando as regras financeiras do curso e fica vinculado à matrícula. Não é necessário gerar link de pagamento fixo.
+                </p>
               </div>
             )}
 
@@ -1208,7 +1201,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                 <span className="font-bold">{(curso as any).duracao_meses || (curso.carga_horaria >= 1200 ? 24 : 18)} Meses</span>
               </div>
 
-              {(() => {
+              {!usesTurmaFinanceiro && (() => {
                 const normalized = valorCurso.replace(/\./g, '').replace(',', '.').trim();
                 const parsedVal = normalized === '' ? 0 : parseFloat(normalized);
                 return parsedVal > 0 ? (

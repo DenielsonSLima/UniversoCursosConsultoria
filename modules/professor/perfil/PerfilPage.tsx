@@ -68,7 +68,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedFields: any) => {
-      const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = profile || {};
+      const { email, cpf, cnpj, nome, nomeCompleto, ...editableProfile } = profile || {};
       const merged = { ...editableProfile, ...updatedFields };
       return parceirosService.update(professorId, merged);
     },

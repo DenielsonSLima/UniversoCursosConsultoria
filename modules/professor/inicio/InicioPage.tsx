@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CalendarDays, GraduationCap, Library, MapPin, MessageSquare, PlayCircle, ShieldCheck, UserCog } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarCheck2, CalendarDays, ClipboardList, GraduationCap, Library, MapPin, MessageSquare, PlayCircle, ShieldCheck, UserCog } from 'lucide-react';
 import { useProfessorDashboardStats } from '../hooks/useProfessorDashboard';
 
 interface InicioPageProps {
@@ -36,6 +36,9 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, pol
     turmas,
   } = useProfessorDashboardStats(professorId, poloId);
 
+  const aulasHoje = proximasAulas.filter((aula) => aula.dataAula === new Date().toISOString().slice(0, 10)).length;
+  const turmasSemProximaAula = turmas.filter((turma) => !turma.proximaAula).length;
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Welcome Banner (Vibrant Purple-Petroleum Gradient for Teachers) */}
@@ -58,7 +61,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, pol
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* KPI 1 */}
         <button
           onClick={() => onNavigate('turmas')}
@@ -101,6 +104,79 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, pol
           </div>
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
             <CalendarDays size={22} />
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigate('turmas')}
+          className="flex items-center justify-between p-6 bg-white border border-slate-100 hover:border-purple-500 rounded-3xl shadow-sm text-left transition-all hover:-translate-y-1 group"
+        >
+          <div className="space-y-1">
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Aulas Hoje</p>
+            <p className="text-3xl font-black text-[#001a33]">{aulasHoje}</p>
+            <p className="text-[10px] text-slate-500 font-medium">Diário, presença e conteúdo</p>
+          </div>
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <ClipboardList size={22} />
+          </div>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => onNavigate('turmas')}
+          className="rounded-[2rem] border border-purple-100 bg-purple-50/70 p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-purple-650 shadow-sm">
+              <ClipboardList size={21} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-650">Diário</p>
+              <h2 className="mt-1 text-sm font-black uppercase tracking-tight text-[#001a33]">Lançar presença e conteúdo</h2>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                Entre direto nas turmas para registrar frequência, conteúdo ministrado e andamento das disciplinas.
+              </p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('turmas')}
+          className="rounded-[2rem] border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-100"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+              <CalendarCheck2 size={21} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Agenda docente</p>
+              <h2 className="mt-1 text-sm font-black uppercase tracking-tight text-[#001a33]">{proximasAulas.length} próximas aulas</h2>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                Acompanhe as datas cadastradas por disciplina e turma.
+              </p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onNavigate('turmas')}
+          className="rounded-[2rem] border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-amber-100"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+              <AlertTriangle size={21} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Atenção</p>
+              <h2 className="mt-1 text-sm font-black uppercase tracking-tight text-[#001a33]">{turmasSemProximaAula} turma(s) sem próxima aula</h2>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                Use este sinal para conferir diário, calendário e planejamento junto à coordenação.
+              </p>
+            </div>
           </div>
         </button>
       </div>

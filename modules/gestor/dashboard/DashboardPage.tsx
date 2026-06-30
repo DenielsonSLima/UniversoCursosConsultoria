@@ -50,7 +50,6 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
 };
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => {
-  
   // 1. Fetch KPIs
   const { data: kpis, isLoading: loadingKpis } = useQuery<DashboardKpis>({
     queryKey: ['dashboard_kpis', poloId],

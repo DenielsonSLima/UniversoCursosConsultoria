@@ -12,7 +12,8 @@ import {
   ArrowLeft,
   Contact,
   ClipboardCheck,
-  BadgeCheck
+  BadgeCheck,
+  FileSignature
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -29,12 +30,14 @@ import BoletimPage from './boletim/BoletimPage';
 import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenciaPage';
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 import ReciboDespesaPage from './recibo/ReciboDespesaPage';
+import FichaCadastralPage from './ficha-cadastral/FichaCadastralPage';
 
 const ModelosDocumentosPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
 
   const models = [
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
+    { id: 'ficha-cadastral', title: 'Ficha Cadastral do Aluno', desc: 'Ficha impressa do cadastro com dados, marca d’água e assinaturas.', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
     { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Comprovante de frequência acadêmica regular.', icon: <BadgeCheck size={24} />, color: 'bg-sky-600' },
@@ -52,6 +55,7 @@ const ModelosDocumentosPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'carteirinha': return <CarteirinhaPage />;
+      case 'ficha-cadastral': return <FichaCadastralPage />;
       case 'cracha': return <CrachaPage />;
       case 'declaracao': return <DeclaracaoPage />;
       case 'declaracao-frequencia': return <DeclaracaoFrequenciaPage />;

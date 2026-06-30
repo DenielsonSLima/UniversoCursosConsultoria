@@ -412,7 +412,7 @@ const GestorPage: React.FC = () => {
     switch (activeModule) {
       case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
-      case 'parceiros': return <ParceirosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} includeGlobal={gestorScope.isGlobal} />;
+      case 'parceiros': return <ParceirosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
       case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} />;
       case 'cadastros-checklist': return <ChecklistEstagioPage />;
       case 'cadastros-ead': return <CursosEadPage readOnly={!isMatrizSelected} />;

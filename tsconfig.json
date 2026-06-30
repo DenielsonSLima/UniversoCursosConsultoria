@@ -30,6 +30,7 @@
   "exclude": [
     "node_modules",
     "pasta sem título",
+    "supabase/functions",
     "dist"
   ]
 }

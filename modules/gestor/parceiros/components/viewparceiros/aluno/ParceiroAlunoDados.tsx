@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { User, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
-import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
+import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroAlunoDadosProps {
   aluno: any;
@@ -14,14 +15,21 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
   const [formData, setFormData] = useState(aluno);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    setPendingPhotoFile(file);
+  };
+
+  const confirmPhotoUpload = async (file: File) => {
     setIsUploadingPhoto(true);
     try {
-      const url = await empresasService.uploadLogo(file);
+      const url = await parceirosService.uploadProfilePhoto(aluno.id, formData, file);
       setFormData((prev: any) => ({ ...prev, foto: url }));
+      setPendingPhotoFile(null);
     } catch (err: any) {
       alert('Erro ao enviar foto: ' + (err.message || err));
     } finally {
@@ -71,6 +79,15 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
   return (
     <div className="space-y-8 animate-fadeIn relative">
+      {pendingPhotoFile && (
+        <ProfilePhotoAdjustModal
+          file={pendingPhotoFile}
+          isProcessing={isUploadingPhoto}
+          onCancel={() => setPendingPhotoFile(null)}
+          onConfirm={confirmPhotoUpload}
+        />
+      )}
+
       {/* Header Actions */}
       <div className="flex justify-end absolute top-0 right-0">
         {!isEditing ? (

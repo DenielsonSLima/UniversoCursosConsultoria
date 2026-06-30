@@ -1,4 +1,3 @@
-import { supabase } from '../../../lib/supabase';
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
 import { PerfilData, PerfilUpdatePayload } from './perfil.types';
 
@@ -20,28 +19,6 @@ export const alunoPerfilService = {
   uploadDocument: (alunoId: string, docName: string, file: File) =>
     parceirosService.uploadDocumento(alunoId, docName, file),
 
-  async uploadProfilePhoto(alunoId: string, currentProfile: PerfilData, file: File) {
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Envie uma imagem em JPG, PNG ou WEBP.');
-    }
-
-    const fileExt = file.name.split('.').pop() || 'jpg';
-    const filePath = `${alunoId}/perfil/foto_${Date.now()}.${fileExt}`;
-
-    const { data, error: uploadError } = await supabase.storage
-      .from('documentos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(data.path);
-    const publicUrl = urlData.publicUrl;
-
-    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
-    await parceirosService.update(alunoId, { ...editableProfile, foto: publicUrl });
-    return publicUrl;
-  },
+  uploadProfilePhoto: (alunoId: string, currentProfile: PerfilData, file: File) =>
+    parceirosService.uploadProfilePhoto(alunoId, currentProfile, file),
 };

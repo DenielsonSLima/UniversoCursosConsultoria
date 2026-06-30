@@ -9,6 +9,7 @@ import {
   Upload,
   User,
 } from 'lucide-react';
+import ProfilePhotoAdjustModal from '../../shared/components/ProfilePhotoAdjustModal';
 import { PerfilData, PerfilUpdatePayload } from './perfil.types';
 
 interface PerfilDadosTabProps {
@@ -16,7 +17,7 @@ interface PerfilDadosTabProps {
   saving: boolean;
   uploadingPhoto: boolean;
   onSave: React.Dispatch<PerfilUpdatePayload>;
-  onPhotoUpload: React.Dispatch<File>;
+  onPhotoUpload: (file: File) => void | Promise<void>;
 }
 
 interface TextFieldConfig {
@@ -64,6 +65,7 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
   const [responsavelTelefone, setResponsavelTelefone] = useState('');
   const [responsavelEmail, setResponsavelEmail] = useState('');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState(false);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     setTelefone(profile?.telefone || '');
@@ -151,6 +153,18 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.8fr_2fr]">
+      {pendingPhotoFile && (
+        <ProfilePhotoAdjustModal
+          file={pendingPhotoFile}
+          isProcessing={uploadingPhoto}
+          onCancel={() => setPendingPhotoFile(null)}
+          onConfirm={async (file) => {
+            await onPhotoUpload(file);
+            setPendingPhotoFile(null);
+          }}
+        />
+      )}
+
       <aside className="space-y-4">
         <div className="rounded-[2.5rem] border border-blue-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
@@ -181,7 +195,8 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                 className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) onPhotoUpload(file);
+                  event.target.value = '';
+                  if (file) setPendingPhotoFile(file);
                 }}
               />
             </label>

@@ -10,6 +10,33 @@ import {
 } from '../../../public/siteTicker.service';
 import { sitePublicoConfigService } from './site-publico.service';
 
+type SiteTickerCursoOption = {
+  id: string;
+  nome: string;
+  modalidade: SiteTickerModality;
+};
+
+type SiteTickerPoloOption = {
+  nome?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+};
+
+type SiteTickerTurmaOption = {
+  id: string;
+  nome: string;
+  curso_id: string;
+  cursos?: SiteTickerCursoOption | SiteTickerCursoOption[] | null;
+  polos?: SiteTickerPoloOption | SiteTickerPoloOption[] | null;
+};
+
+type SiteTickerFraseOption = {
+  id: string;
+  texto: string;
+  categoria: SiteTickerPhraseCategory;
+  ordem: number | null;
+};
+
 const MODALIDADES: { value: SiteTickerModality; label: string }[] = [
   { value: 'EAD', label: 'EAD' },
   { value: 'TECNICO', label: 'Técnico' },
@@ -36,7 +63,7 @@ const SitePublicoConfig: React.FC = () => {
     if (configQuery.data) setConfig(configQuery.data);
   }, [configQuery.data]);
 
-  const { data: cursos = [] } = useQuery<any[]>({
+  const { data: cursos = [] } = useQuery<SiteTickerCursoOption[]>({
     queryKey: ['gestor-site-publico-ticker-cursos', config.modalidades],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,12 +73,12 @@ const SitePublicoConfig: React.FC = () => {
         .in('modalidade', config.modalidades)
         .order('nome', { ascending: true });
       if (error) throw error;
-      return data || [];
+      return (data || []) as SiteTickerCursoOption[];
     },
     enabled: config.modalidades.length > 0,
   });
 
-  const { data: turmas = [] } = useQuery<any[]>({
+  const { data: turmas = [] } = useQuery<SiteTickerTurmaOption[]>({
     queryKey: ['gestor-site-publico-ticker-turmas', config.modalidades, config.cursoIds],
     queryFn: async () => {
       let query = supabase
@@ -66,12 +93,12 @@ const SitePublicoConfig: React.FC = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data || []) as SiteTickerTurmaOption[];
     },
     enabled: config.modalidades.some((item) => item !== 'EAD'),
   });
 
-  const { data: frases = [] } = useQuery<any[]>({
+  const { data: frases = [] } = useQuery<SiteTickerFraseOption[]>({
     queryKey: ['gestor-site-publico-ticker-frases', config.automaticCategory],
     queryFn: async () => {
       let query = supabase
@@ -87,7 +114,7 @@ const SitePublicoConfig: React.FC = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data || []) as SiteTickerFraseOption[];
     },
     enabled: config.mode === 'automatic_phrases',
   });
@@ -112,9 +139,9 @@ const SitePublicoConfig: React.FC = () => {
   };
 
   const selectedOptions = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    Array.from(event.target.selectedOptions).map((option) => option.value);
+    Array.from<HTMLOptionElement>(event.target.selectedOptions).map((option) => option.value);
 
-  const formatPolo = (turma: any) => {
+  const formatPolo = (turma: SiteTickerTurmaOption) => {
     const polo = Array.isArray(turma.polos) ? turma.polos[0] : turma.polos;
     return [polo?.nome, polo?.cidade && polo?.estado ? `${polo.cidade}/${polo.estado}` : polo?.cidade || polo?.estado]
       .filter(Boolean)

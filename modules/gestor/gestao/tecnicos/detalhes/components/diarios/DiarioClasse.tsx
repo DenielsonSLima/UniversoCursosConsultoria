@@ -1,7 +1,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Save, Printer, Calendar, BookOpen, Calculator, Loader2, AlertCircle, Download } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar, BookOpen, Calculator, Loader2, AlertCircle, Download, CheckCircle2, LockKeyhole } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -37,6 +37,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   const [activeTab, setActiveTab] = useState<'frequencia' | 'resultado' | 'conteudo' | 'observacoes'>('frequencia');
   const printDocumentRef = useRef<HTMLDivElement>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const isReadOnly =
+    String(disciplina?.periodoStatus || '').toUpperCase() === 'FECHADO' ||
+    String(turma?.status || '').toUpperCase() === 'FINALIZADA';
 
   const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
   const { data: watermark } = useQuery({
@@ -151,12 +154,14 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
 
   // Funções controladoras locais
   const handleToggleAttendance = (studentId: string, classId: string) => {
+    if (isReadOnly) return;
     const current = attendanceMap[studentId]?.[classId] || null;
     const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
     toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });
   };
 
   const handleLocalGradeChange = (studentId: string, field: string, value: string) => {
+    if (isReadOnly) return;
     setLocalGrades(prev => {
       const studentFields = prev[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
       
@@ -178,6 +183,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   };
 
   const handleSaveGrade = (studentId: string) => {
+    if (isReadOnly) return;
     const fields = localGrades[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
     saveStudentGradesMutation.mutate({
       alunoId: studentId,
@@ -191,10 +197,6 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
         o: fields.o ?? 0,
       },
     });
-  };
-
-  const handleSave = () => {
-    toast.success("Sucesso", "Todas as alterações foram sincronizadas em tempo real com o banco de dados.");
   };
 
   const handleDownloadPdf = async () => {
@@ -313,11 +315,34 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
            <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 shadow-sm">
              <Printer size={16} /> Imprimir Diário
            </button>
-           <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 flex items-center gap-2 shadow-md">
-             <Save size={16} /> Salvar Alterações
+           <button
+             type="button"
+             disabled
+             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm ${
+               isReadOnly
+                 ? 'bg-slate-100 text-slate-500 border border-slate-200'
+                 : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+             }`}
+           >
+             {isReadOnly ? <LockKeyhole size={16} /> : <CheckCircle2 size={16} />}
+             {isReadOnly ? 'Período fechado' : 'Salvamento automático'}
            </button>
         </div>
       </div>
+
+      {isReadOnly && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+          <div className="flex items-start gap-3">
+            <LockKeyhole size={18} className="mt-0.5 shrink-0 text-amber-700" />
+            <div>
+              <p className="font-black uppercase tracking-wider text-[11px]">Diário em modo leitura</p>
+              <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                Este período foi fechado. Notas, frequência, conteúdo e observações ficam bloqueados até a coordenação reabrir o período com justificativa.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Diary Header Info */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm">
@@ -433,13 +458,14 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                         <td key={aula.id} className="p-2 border-r border-slate-100 text-center">
                                            <button 
                                              onClick={() => handleToggleAttendance(aluno.id, aula.id)}
+                                             disabled={isReadOnly}
                                              className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
                                                 foiFalta
                                                    ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                                                    : foiPresente
                                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
                                                      : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
-                                             }`}
+                                             } disabled:cursor-not-allowed disabled:opacity-70`}
                                            >
                                                {foiFalta ? 'F' : foiPresente ? 'P' : '—'}
                                            </button>
@@ -479,7 +505,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                             <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase text-left" rowSpan={2}>Nome do Aluno</th>
                             <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-blue-700 bg-blue-50/50" colSpan={6}>INSTRUMENTOS AVALIATIVOS (0.0 a 10.0)</th>
                             <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA PARCIAL</th>
-                            <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC</th>
+                            <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>REC<br /><span className="font-bold text-slate-400">SUBST.</span></th>
                             <th className="p-4 border-b border-slate-200 border-r text-[10px] font-black text-slate-500 bg-slate-50" rowSpan={2}>MÉDIA FINAL</th>
                             <th className="p-2 border-b border-slate-200 border-r text-xs font-black text-amber-700 bg-amber-50/50" colSpan={2}>FREQUÊNCIA</th>
                             <th className="p-4 border-b border-slate-200 text-xs font-black text-[#001a33] uppercase" rowSpan={2}>RESULTADO FINAL</th>
@@ -509,7 +535,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.p ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'p', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -520,7 +546,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.ti ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'ti', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -531,7 +557,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.tg ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'tg', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -542,7 +568,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.s ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 's', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -553,7 +579,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.cq ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'cq', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -564,7 +590,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       type="number" min="0" max="10" step="0.1" 
                                       className="w-full text-center text-xs font-bold text-slate-700 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.o ?? ''}
-                                      disabled={isCredited}
+                                      disabled={isReadOnly || isCredited}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'o', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -580,7 +606,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                       className="w-full text-center text-xs font-bold text-blue-600 bg-transparent outline-none focus:bg-blue-50/50 rounded py-1" 
                                       value={studentGrades.rec === null || studentGrades.rec === undefined ? '' : studentGrades.rec} 
                                       placeholder="—"
-                                      disabled={isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
+                                      disabled={isReadOnly || isCredited || (stats.mediaParcial !== null && stats.mediaParcial >= 6)}
                                       onChange={(e) => handleLocalGradeChange(aluno.id, 'rec', e.target.value)}
                                       onBlur={() => handleSaveGrade(aluno.id)}
                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -599,8 +625,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                      <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
                                        ['APROVADO', 'APROVEITADO'].includes(stats.resultado)
                                          ? 'bg-emerald-100 text-emerald-800'
-                                         : stats.resultado === 'SEM_LANCAMENTO'
-                                           ? 'bg-slate-100 text-slate-500'
+                                         : ['EM_RECUPERACAO', 'FREQUENCIA_PENDENTE', 'SEM_LANCAMENTO'].includes(stats.resultado)
+                                           ? 'bg-amber-100 text-amber-800'
                                            : 'bg-red-100 text-red-800'
                                      }`}>
                                         {stats.resultado.replaceAll('_', ' ')}
@@ -624,6 +650,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                     <span><strong>CQ</strong> - Critérios Qualitativos (assiduidade, participação, etc.)</span>
                     <span><strong>O</strong> - Outros / Atividades Práticas</span>
                     <span><strong>REC</strong> - Recuperação Semestral</span>
+                 </div>
+                 <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
+                    Regra da recuperação: quando a média parcial fica abaixo de 6,0, o aluno entra em recuperação.
+                    A nota REC é substitutiva: se for maior que a média parcial, ela passa a ser a média final; se for menor, a média parcial é preservada.
+                    O período só pode ser fechado depois que todas as recuperações pendentes forem lançadas.
                  </div>
               </div>
             </div>
@@ -663,10 +694,14 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                                     className="w-full bg-transparent outline-none text-xs text-slate-700 resize-none h-12 focus:bg-blue-50/20 p-1.5 rounded border border-transparent focus:border-slate-200" 
                                     value={localPraticas[aula.id] || ''}
                                     onChange={(e) => {
+                                      if (isReadOnly) return;
                                       const text = e.target.value;
                                       setLocalPraticas(prev => ({ ...prev, [aula.id]: text }));
                                     }}
-                                    onBlur={(e) => savePraticaMutation.mutate({ aulaId: aula.id, text: e.target.value })}
+                                    onBlur={(e) => {
+                                      if (!isReadOnly) savePraticaMutation.mutate({ aulaId: aula.id, text: e.target.value });
+                                    }}
+                                    readOnly={isReadOnly}
                                     placeholder="Descreva a prática pedagógica executada..."
                                   ></textarea>
                                </td>
@@ -688,8 +723,13 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
                      <textarea 
                         className="w-full rounded-2xl border border-slate-200 p-5 text-sm font-medium text-slate-700 min-h-[300px] outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all bg-slate-50 focus:bg-white resize-none" 
                         value={localObservacoes}
-                        onChange={(e) => setLocalObservacoes(e.target.value)}
-                        onBlur={(e) => saveObservacoesMutation.mutate(e.target.value)}
+                        onChange={(e) => {
+                          if (!isReadOnly) setLocalObservacoes(e.target.value);
+                        }}
+                        onBlur={(e) => {
+                          if (!isReadOnly) saveObservacoesMutation.mutate(e.target.value);
+                        }}
+                        readOnly={isReadOnly}
                         placeholder="Digite aqui as observações gerais sobre a unidade educacional, ocorrências em sala, rendimento da turma, etc..."
                      ></textarea>
                   </div>

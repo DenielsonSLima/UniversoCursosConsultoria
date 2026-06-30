@@ -1,7 +1,7 @@
 
 // File: modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoDetalhes.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, User, BookOpen, ClipboardList, FileText, DollarSign, KeyRound, FileBadge, ScrollText } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAlunoDados from './ParceiroAlunoDados';
@@ -19,12 +19,18 @@ import { supabase } from '../../../../../../lib/supabase';
 interface ParceiroAlunoDetalhesProps {
   alunoInicial: any;
   onBack: () => void;
+  onRequestScrollTop?: () => void;
 }
 
-const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack }) => {
+const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack, onRequestScrollTop }) => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'matriculas' | 'docs' | 'financeiro' | 'secretaria' | 'acesso'>('dados');
   const [isFichaOpen, setIsFichaOpen] = useState(false);
+
+  useEffect(() => {
+    setActiveTab('dados');
+    onRequestScrollTop?.();
+  }, [alunoInicial.id, onRequestScrollTop]);
 
   // Carregar dados reais usando React Query com initialData do parceiro selecionado
   const { data: alunoData = alunoInicial } = useQuery({
@@ -115,7 +121,10 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
+                        onClick={() => {
+                          setActiveTab(tab.id as any);
+                          onRequestScrollTop?.();
+                        }}
                         className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                             activeTab === tab.id 
                             ? 'bg-[#001a33] text-white shadow-lg shadow-blue-900/20' 

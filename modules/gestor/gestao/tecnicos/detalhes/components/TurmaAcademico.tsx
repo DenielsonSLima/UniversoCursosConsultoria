@@ -61,7 +61,7 @@ const PeriodCard: React.FC<{
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-5">
         {isLoading ? (
           <div className="col-span-3 py-3 flex justify-center"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
         ) : (
@@ -77,6 +77,14 @@ const PeriodCard: React.FC<{
             <div className="rounded-xl bg-slate-50 p-3 text-center">
               <p className="text-lg font-black text-[#001a33]">{pending?.lancamentosDeNotaPendentes ?? 0}</p>
               <p className="text-[8px] font-black uppercase text-slate-400">Notas pendentes</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-3 text-center">
+              <p className="text-lg font-black text-[#001a33]">{pending?.frequenciasPendentes ?? 0}</p>
+              <p className="text-[8px] font-black uppercase text-slate-400">Freq. pendentes</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-3 text-center">
+              <p className="text-lg font-black text-[#001a33]">{pending?.recuperacoesPendentes ?? 0}</p>
+              <p className="text-[8px] font-black uppercase text-slate-400">Recuperações</p>
             </div>
           </>
         )}

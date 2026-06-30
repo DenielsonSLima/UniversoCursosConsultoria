@@ -11,6 +11,7 @@ import { academicosService } from '../../configuracoes/academicos/academicos.ser
 import { polosService } from '../../configuracoes/polos/polos.service';
 import { parceirosService } from '../../parceiros/parceiros.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import DocumentHeader from '../../components/DocumentHeader';
 
@@ -40,6 +41,9 @@ const TEMPLATE_DEFAULT = {
   v: 2
 };
 
+type DeclaracaoDocumentType = Extract<ValidatableDocumentType, 'declaracao_matricula' | 'declaracao_frequencia'>;
+const DEFAULT_DOCUMENT_TYPE: DeclaracaoDocumentType = 'declaracao_matricula';
+
 interface SecretariaDeclaracaoMatriculaPageProps {
   documentService?: {
     getTemplate: (poloId: string) => Promise<any>;
@@ -47,17 +51,17 @@ interface SecretariaDeclaracaoMatriculaPageProps {
   };
   defaultTemplate?: any;
   documentTitle?: string;
-  documentType?: 'declaracao_matricula' | 'declaracao_frequencia';
+  documentType?: DeclaracaoDocumentType;
   fileSlug?: string;
 }
 
-const SecretariaDeclaracaoMatriculaPage: React.FC<SecretariaDeclaracaoMatriculaPageProps> = ({
+const SecretariaDeclaracaoMatriculaPage = ({
   documentService = declaracaoService,
   defaultTemplate = TEMPLATE_DEFAULT,
   documentTitle = 'Declaração de Matrícula',
-  documentType = 'declaracao_matricula',
+  documentType = DEFAULT_DOCUMENT_TYPE,
   fileSlug = 'declaracoes-matricula',
-}) => {
+}: SecretariaDeclaracaoMatriculaPageProps) => {
   const [mode, setMode] = useState<'individual' | 'lote' | 'custom'>('individual');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryCustom, setSearchQueryCustom] = useState('');

@@ -2,7 +2,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Server, Database, ShieldCheck, Globe, CreditCard, AlertCircle } from 'lucide-react';
-import { asaasService } from '../asaas/asaas.service';
+import { AsaasConfigData, asaasService } from '../asaas/asaas.service';
 
 const formatDateTime = (value?: string) => {
   if (!value) return 'Sem teste recente';
@@ -30,9 +30,9 @@ const statusBadge = (status: 'online' | 'warning' | 'offline', label: string) =>
 };
 
 const ApiStatusConfig: React.FC = () => {
-  const { data: asaasConfig, isLoading: isLoadingAsaas, isError: isAsaasError } = useQuery({
+  const { data: asaasConfig, isLoading: isLoadingAsaas, isError: isAsaasError } = useQuery<AsaasConfigData>({
     queryKey: ['asaas_config'],
-    queryFn: asaasService.getConfig,
+    queryFn: () => asaasService.getConfig(),
   });
 
   const asaasHasOkTest = asaasConfig?.configured && asaasConfig.lastTestStatus === 'OK';

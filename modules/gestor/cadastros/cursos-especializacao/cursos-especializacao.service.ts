@@ -1,5 +1,6 @@
-import { Curso } from '../cadastros.types';
+import { Curso, CursoFinanceiroConfig } from '../cadastros.types';
 import { cadastrosService } from '../cadastros.service';
+import { uploadCursoImagem } from '../cursoImageUpload.service';
 
 export type CursoEspecializacaoStatusFilter = 'ativo' | 'inativo';
 
@@ -12,6 +13,7 @@ export interface CreateCursoEspecializacaoInput {
   imagemUrl?: string | null;
   publicarSite?: boolean;
   duracaoMeses?: number;
+  financeiroConfig?: CursoFinanceiroConfig;
 }
 
 export const cursosEspecializacaoQueryKeys = {
@@ -35,7 +37,8 @@ export const cursosEspecializacaoService = {
       versao: input.versao,
       duracao_meses: input.duracaoMeses || null,
       imagem_url: input.imagemUrl || null,
-      publicar_site: input.publicarSite ?? false
+      publicar_site: input.publicarSite ?? false,
+      financeiro_config: input.financeiroConfig
     });
   },
 
@@ -49,5 +52,9 @@ export const cursosEspecializacaoService = {
 
   async toggleStatus(cursoId: string, novoStatus: CursoEspecializacaoStatusFilter): Promise<void> {
     await cadastrosService.toggleStatus(cursoId, novoStatus);
+  },
+
+  async uploadImagem(file: File): Promise<string> {
+    return uploadCursoImagem(file);
   }
 };

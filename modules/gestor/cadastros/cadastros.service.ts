@@ -52,32 +52,37 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
 export const normalizeCursoFinanceiroConfig = (
   config?: Partial<CursoFinanceiroConfig> | null,
   modalidade?: Curso['modalidade']
-): CursoFinanceiroConfig => ({
-  ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG),
+): CursoFinanceiroConfig => {
+  const usesIndividualCheckout = modalidade === 'EAD' || modalidade === 'LIVRE' || modalidade === 'ESPECIALIZACAO';
+  const baseConfig = usesIndividualCheckout ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG;
+
+  return {
+  ...baseConfig,
   ...(config || {}),
   metodosRecebimento: {
-    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).metodosRecebimento,
+    ...baseConfig.metodosRecebimento,
     ...(config?.metodosRecebimento || {})
   },
   descontoMetodo: {
-    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).descontoMetodo,
+    ...baseConfig.descontoMetodo,
     ...(config?.descontoMetodo || {})
   },
   cartao: {
-    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).cartao,
+    ...baseConfig.cartao,
     ...(config?.cartao || {})
   },
   asaas: {
-    ...(modalidade === 'EAD' ? DEFAULT_EAD_FINANCEIRO_CONFIG : DEFAULT_CURSO_FINANCEIRO_CONFIG).asaas,
+    ...baseConfig.asaas,
     ...(config?.asaas || {}),
-    ...(modalidade === 'EAD'
+    ...(usesIndividualCheckout
       ? {
           gerarParcelamentoMensalidades: false,
           tipoCarnePreferencial: 'COBRANCAS_AVULSAS' as const
         }
       : {})
   }
-});
+  };
+};
 
 const buildCursoCreatePayload = (curso: Omit<Curso, 'id'>) => {
   const payload: any = {
@@ -99,7 +104,7 @@ const buildCursoCreatePayload = (curso: Omit<Curso, 'id'>) => {
     ead_config: curso.ead_config || {}
   };
 
-  if (curso.modalidade === 'TECNICO' || curso.financeiro_config) {
+  if (curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' || curso.modalidade === 'ESPECIALIZACAO' || curso.financeiro_config) {
     payload.financeiro_config = normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade);
   }
 
@@ -125,7 +130,7 @@ const buildCursoUpdatePayload = (curso: Curso) => {
     ead_config: curso.ead_config !== undefined ? curso.ead_config : null
   };
 
-  if (curso.financeiro_config !== undefined || curso.modalidade === 'TECNICO') {
+  if (curso.financeiro_config !== undefined || curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' || curso.modalidade === 'ESPECIALIZACAO') {
     payload.financeiro_config = normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade);
   }
 

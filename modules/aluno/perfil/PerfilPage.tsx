@@ -98,7 +98,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ alunoId }) => {
           saving={updateProfileMutation.isPending}
           uploadingPhoto={uploadPhotoMutation.isPending}
           onSave={(payload) => updateProfileMutation.mutate(payload)}
-          onPhotoUpload={(file) => uploadPhotoMutation.mutate(file)}
+          onPhotoUpload={(file) => uploadPhotoMutation.mutateAsync(file)}
         />
       )}
 

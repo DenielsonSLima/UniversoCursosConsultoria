@@ -142,10 +142,13 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
                           <div className="flex pt-4">
                             <button
                               onClick={() => handleOpenDiario(disc, modulo.nome)}
-                              disabled={disc.periodoStatus === 'FECHADO'}
-                              className="w-full py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 disabled:bg-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
+                              className={`w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg ${
+                                disc.periodoStatus === 'FECHADO'
+                                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-none'
+                                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/20'
+                              }`}
                             >
-                              <BookOpen size={14} /> {disc.periodoStatus === 'FECHADO' ? 'Período Fechado' : 'Acessar Diário'}
+                              <BookOpen size={14} /> {disc.periodoStatus === 'FECHADO' ? 'Ver diário fechado' : 'Acessar Diário'}
                             </button>
                           </div>
                         </div>

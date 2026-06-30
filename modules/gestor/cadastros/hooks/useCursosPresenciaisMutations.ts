@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { CursoFinanceiroConfig } from '../cadastros.types';
 
 export type CursoPresencialStatusFilter = 'ativo' | 'inativo';
 export type CursoPresencialToastType = 'success' | 'error' | 'warning';
@@ -13,6 +14,7 @@ export interface CreateCursoPresencialInput {
   imagemUrl?: string | null;
   publicarSite?: boolean;
   duracaoMeses?: number;
+  financeiroConfig?: CursoFinanceiroConfig;
 }
 
 interface CursosPresenciaisMutationService<TStatus extends CursoPresencialStatusFilter> {

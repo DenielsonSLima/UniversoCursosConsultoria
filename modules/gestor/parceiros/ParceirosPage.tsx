@@ -33,6 +33,7 @@ interface ParceirosPageProps {
   activeTabInicial?: ParceirosTabType;
   poloId?: string | null;
   includeGlobal?: boolean;
+  onRequestScrollTop?: () => void;
 }
 
 const tabs = [
@@ -43,7 +44,7 @@ const tabs = [
   { id: 'pf', label: 'Pessoa Física', icon: User },
 ] as const;
 
-const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos', poloId, includeGlobal = false }) => {
+const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos', poloId, includeGlobal = false, onRequestScrollTop }) => {
   const { toasts, removeToast, toast } = useToast();
   const [showForm, setShowForm] = useState<FormType>(null);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -68,10 +69,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   const {
     searchTerm,
     statusFilter,
-    cursoFilter,
+    alunoModalidadeFilter,
     turmaFilter,
     setStatusFilter,
-    setCursoFilter,
+    toggleAlunoModalidadeFilter,
+    clearAlunoModalidadeFilter,
     setTurmaFilter,
     handleSearch,
     handleSort,
@@ -97,10 +99,13 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   });
 
   if (selectedParceiro) {
-    const handleBackFromDetails = () => setSelectedParceiro(null);
+    const handleBackFromDetails = () => {
+      setSelectedParceiro(null);
+      onRequestScrollTop?.();
+    };
 
     if (selectedParceiro.tipo === 'Aluno') {
-      return <ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} />;
+      return <ParceiroAlunoDetalhes alunoInicial={selectedParceiro} onBack={handleBackFromDetails} onRequestScrollTop={onRequestScrollTop} />;
     }
     if (selectedParceiro.tipo === 'Professor') {
       return <ParceiroProfessorDetalhes professorInicial={selectedParceiro} onBack={handleBackFromDetails} />;
@@ -186,6 +191,16 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         totalProfessoresInativos={kpis.totalProfessoresInativos || 0}
       />
 
+      <ParceirosFilters
+        onSearch={handleSearch}
+        onSortChange={handleSort}
+        onStatusChange={setStatusFilter}
+        selectedAlunoModalidades={alunoModalidadeFilter}
+        onToggleAlunoModalidade={toggleAlunoModalidadeFilter}
+        onClearAlunoModalidades={clearAlunoModalidadeFilter}
+        onTurmaChange={setTurmaFilter}
+      />
+
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm w-full md:w-fit">
         <div className="flex p-1 gap-1 w-full md:w-auto overflow-x-auto">
           {tabs.map(({ id, label, icon: Icon }) => (
@@ -205,25 +220,20 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         </div>
       </div>
 
-      <ParceirosFilters
-        onSearch={handleSearch}
-        onSortChange={handleSort}
-        onStatusChange={setStatusFilter}
-        onCursoChange={setCursoFilter}
-        onTurmaChange={setTurmaFilter}
-      />
-
       <ParceirosList
         items={sortedAndFilteredPartners}
         isLoading={loadingPartners}
-        onSelectParceiro={setSelectedParceiro}
+        onSelectParceiro={(parceiro) => {
+          setSelectedParceiro(parceiro);
+          onRequestScrollTop?.();
+        }}
         onDeleteParceiro={setDeletingParceiro}
       />
 
       <ParceirosExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
-        filtrosAtuais={{ searchTerm, statusFilter, cursoFilter, turmaFilter }}
+        filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter }}
       />
 
       {showEnrollmentModalForAlunoId && (

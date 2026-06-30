@@ -39,6 +39,7 @@ export interface LibraryDocument {
 }
 
 export interface LibraryDocumentUploadPayload extends Omit<LibraryDocument, 'id' | 'createdAt' | 'acessos' | 'authorName'> {
+  authorName?: string;
   file?: File;
   sizeBytes?: number;
   enforceTeacherScope?: boolean;

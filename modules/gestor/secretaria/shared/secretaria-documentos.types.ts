@@ -9,6 +9,7 @@ export type SecretariaDocumentoId =
   | 'historico_escolar'
   | 'cracha_estagio'
   | 'rematricula'
+  | 'transferencia'
   | 'termo_estagio';
 
 export interface SecretariaDocumentoDefinition {

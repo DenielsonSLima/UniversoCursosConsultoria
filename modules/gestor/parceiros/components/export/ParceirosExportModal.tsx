@@ -67,7 +67,7 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
             <div className="h-full flex flex-col animate-fadeIn">
               <div className="bg-slate-200 flex-1 rounded-2xl overflow-y-auto border border-slate-300 p-4 shadow-inner">
                   <div className="bg-white mx-auto shadow-md min-h-[900px] w-full max-w-[750px] p-10 relative print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 flex flex-col" id="print-area">
-                     <PdfTemplate />
+                     <PdfTemplate filtrosAtuais={filtrosAtuais} />
                   </div>
               </div>
             </div>
