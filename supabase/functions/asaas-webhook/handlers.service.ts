@@ -12,6 +12,27 @@ export const createAsaasWebhookHandlers = (
   admin: any,
   callAsaas: CallAsaas,
 ) => {
+  const callbackSuccessUrl = () => {
+    const candidates = [
+      Deno.env.get("PUBLIC_SITE_URL"),
+      Deno.env.get("SITE_URL"),
+      Deno.env.get("APP_URL"),
+      Deno.env.get("VITE_PUBLIC_SITE_URL"),
+      "https://universocc.com.br",
+    ];
+    for (const candidate of candidates) {
+      try {
+        const url = new URL(String(candidate || ""));
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          return `${url.origin.replace(/\/+$/, "")}/aluno?asaas=success`;
+        }
+      } catch {
+        // Try the next configured source.
+      }
+    }
+    return "https://universocc.com.br/aluno?asaas=success";
+  };
+
   const upsertOnlineInscription = async (
     payload: {
       course: any;
@@ -46,7 +67,33 @@ export const createAsaasWebhookHandlers = (
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await admin.from("inscricoes_online").upsert(row, { onConflict: "asaas_payment_id" });
+    let existing: any = null;
+    if (row.asaas_payment_id) {
+      const { data, error } = await admin
+        .from("inscricoes_online")
+        .select("id")
+        .eq("asaas_payment_id", row.asaas_payment_id)
+        .maybeSingle();
+      if (error) throw error;
+      existing = data;
+    }
+
+    if (!existing?.id && row.matricula_id) {
+      const { data, error } = await admin
+        .from("inscricoes_online")
+        .select("id")
+        .eq("matricula_id", row.matricula_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      existing = data;
+    }
+
+    const query = existing?.id
+      ? admin.from("inscricoes_online").update(row).eq("id", existing.id)
+      : admin.from("inscricoes_online").insert(row);
+    const { error } = await query;
     if (error) throw error;
   };
 
@@ -118,6 +165,7 @@ export const createAsaasWebhookHandlers = (
       asaas_invoice_url: params.payment.invoiceUrl || null,
       asaas_bank_slip_url: params.payment.bankSlipUrl || null,
       asaas_installment_id: params.payment.installment || params.payment.installmentId || null,
+      asaas_transaction_receipt_url: params.payment.transactionReceiptUrl || null,
       asaas_status: params.payment.status || null,
       asaas_synced_at: new Date().toISOString(),
       asaas_last_error: null,
@@ -177,6 +225,7 @@ export const createAsaasWebhookHandlers = (
         description: item.descricao,
         externalReference: item.id,
         postalService: false,
+        callback: { successUrl: callbackSuccessUrl() },
       }),
     });
     await admin.from("contas_receber").update({
@@ -185,10 +234,24 @@ export const createAsaasWebhookHandlers = (
       asaas_invoice_url: generated.invoiceUrl || null,
       asaas_bank_slip_url: generated.bankSlipUrl || null,
       asaas_installment_id: generated.installment || generated.installmentId || null,
+      asaas_transaction_receipt_url: generated.transactionReceiptUrl || null,
       asaas_status: generated.status,
       asaas_synced_at: new Date().toISOString(),
       asaas_last_error: null,
     }).eq("id", item.id);
+  };
+
+  const syncOpenInstallments = async (matriculaId: string) => {
+    const { data: installments, error: installmentsError } = await admin
+      .from("contas_receber")
+      .select("*")
+      .eq("matricula_id", matriculaId)
+      .in("status", ["PENDENTE", "VENCIDO"])
+      .is("asaas_payment_id", null)
+      .neq("tipo_lancamento", "MATRICULA")
+      .order("data_vencimento");
+    if (installmentsError) throw installmentsError;
+    for (const installment of installments || []) await syncReceivable(installment);
   };
 
   const handleReceivablePayment = async (
@@ -233,6 +296,7 @@ export const createAsaasWebhookHandlers = (
       asaas_invoice_url: payment.invoiceUrl || receivable.asaas_invoice_url,
       asaas_bank_slip_url: payment.bankSlipUrl || receivable.asaas_bank_slip_url,
       asaas_installment_id: payment.installment || payment.installmentId || receivable.asaas_installment_id,
+      asaas_transaction_receipt_url: payment.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
       updated_at: new Date().toISOString(),
     };
     if (localStatus && localStatus !== "AGUARDANDO_CONFIRMACAO") updates.status = localStatus;
@@ -251,16 +315,7 @@ export const createAsaasWebhookHandlers = (
     await activateOnlineEnrollmentForReceivable(receivable, payment, localStatus);
 
     if (receivable.matricula_id && localStatus === "PAGO") {
-      const { data: installments, error: installmentsError } = await admin
-        .from("contas_receber")
-        .select("*")
-        .eq("matricula_id", receivable.matricula_id)
-        .in("status", ["PENDENTE", "VENCIDO"])
-        .is("asaas_payment_id", null)
-        .neq("tipo_lancamento", "MATRICULA")
-        .order("data_vencimento");
-      if (installmentsError) throw installmentsError;
-      for (const installment of installments || []) await syncReceivable(installment);
+      await syncOpenInstallments(receivable.matricula_id);
     }
   };
 
@@ -344,6 +399,13 @@ export const createAsaasWebhookHandlers = (
 
     await upsertReceivableFromPaymentLink({ course, turma, aluno, matricula, payment, isConfirmed });
     await upsertOnlineInscription({ course, turma, aluno, matricula, customer, payment, isConfirmed });
+    if (isConfirmed) {
+      const { error: parcelasError } = await admin.rpc("gerar_parcelas_matricula", {
+        p_matricula_id: matricula.id,
+      });
+      if (parcelasError) throw parcelasError;
+      await syncOpenInstallments(matricula.id);
+    }
   };
 
   return {

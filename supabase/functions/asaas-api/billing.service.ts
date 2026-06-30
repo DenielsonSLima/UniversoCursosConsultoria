@@ -134,6 +134,7 @@ export const createAsaasBillingService = (
     if (interestApplies) payload.interest = { value: interestPercent };
     if (fineApplies) payload.fine = { value: fineValue, type: "FIXED" };
     if (fineApplies || interestApplies) payload.daysAfterDueDateToRegistrationCancellation = 30;
+    payload.callback = { successUrl: callbackSuccessUrl() };
 
     return payload;
   };
@@ -143,6 +144,86 @@ export const createAsaasBillingService = (
     if (billingType === "PIX") return "PIX";
     if (billingType === "BOLETO") return "BOLETO";
     return null;
+  };
+
+  const mapReceivableBillingType = (formaPagamento?: string | null) => {
+    const value = String(formaPagamento || "").toUpperCase();
+    if (value === "CARTAO" || value === "CREDIT_CARD") return "CREDIT_CARD";
+    if (value === "PIX") return "PIX";
+    if (value === "BOLETO") return "BOLETO";
+    return "UNDEFINED";
+  };
+
+  const dueDateLimitDays = (dueDate?: string | null) => {
+    if (!dueDate) return 30;
+    const today = new Date();
+    const due = new Date(`${String(dueDate).slice(0, 10)}T12:00:00`);
+    today.setHours(12, 0, 0, 0);
+    return Math.max(1, Math.ceil((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)));
+  };
+
+  const callbackSuccessUrl = () => {
+    const candidates = [
+      Deno.env.get("PUBLIC_SITE_URL"),
+      Deno.env.get("SITE_URL"),
+      Deno.env.get("APP_URL"),
+      Deno.env.get("VITE_PUBLIC_SITE_URL"),
+      "https://universocc.com.br",
+    ];
+    for (const candidate of candidates) {
+      try {
+        const url = new URL(String(candidate || ""));
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          return `${url.origin.replace(/\/+$/, "")}/aluno?asaas=success`;
+        }
+      } catch {
+        // Try the next configured source.
+      }
+    }
+    return "https://universocc.com.br/aluno?asaas=success";
+  };
+
+  const createDetachedPaymentLink = async (runtime: AsaasRuntime, receivable: any) => {
+    if (receivable.asaas_payment_link_id && receivable.asaas_invoice_url) {
+      return receivable;
+    }
+
+    const value = roundMoney(Number(receivable.valor || 0));
+    if (!value || value <= 0) throw new Error("Valor inválido para gerar link Asaas.");
+
+    const paymentLink = await callAsaas(runtime, "/paymentLinks", {
+      method: "POST",
+      body: JSON.stringify({
+        name: String(receivable.descricao || "Cobrança Universo Cursos").slice(0, 100),
+        description: String(receivable.descricao || "Cobrança Universo Cursos").slice(0, 500),
+        value,
+        billingType: mapReceivableBillingType(receivable.forma_pagamento),
+        chargeType: "DETACHED",
+        dueDateLimitDays: dueDateLimitDays(receivable.data_vencimento),
+        externalReference: receivable.id,
+        callback: { successUrl: callbackSuccessUrl() },
+      }),
+    });
+
+    const { data: updated, error } = await admin
+      .from("contas_receber")
+      .update({
+        asaas_payment_id: null,
+        asaas_payment_link_id: paymentLink.id,
+        nosso_numero_asaas: paymentLink.id,
+        asaas_invoice_url: paymentLink.url || null,
+        asaas_bank_slip_url: null,
+        asaas_installment_id: null,
+        asaas_status: "PAYMENT_LINK_CREATED",
+        asaas_synced_at: new Date().toISOString(),
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receivable.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated;
   };
 
   const getReceivableSyncDecision = async (receivable: any) => {
@@ -224,6 +305,7 @@ export const createAsaasBillingService = (
       asaas_invoice_url: payment?.invoiceUrl || receivable.asaas_invoice_url,
       asaas_bank_slip_url: payment?.bankSlipUrl || receivable.asaas_bank_slip_url,
       asaas_installment_id: payment?.installment || payment?.installmentId || receivable.asaas_installment_id,
+      asaas_transaction_receipt_url: payment?.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
       asaas_synced_at: new Date().toISOString(),
       asaas_last_error: null,
       updated_at: new Date().toISOString(),
@@ -306,7 +388,12 @@ export const createAsaasBillingService = (
       return { ...receivable, asaas_sync_skipped: true, asaas_skip_reason: syncDecision.reason };
     }
 
-    if (!receivable.cliente_id) throw new Error("A cobrança não possui aluno vinculado.");
+    if (!receivable.cliente_id) {
+      if (String(receivable.categoria || "").toUpperCase() === "OUTROS_CREDITOS" || !receivable.matricula_id) {
+        return createDetachedPaymentLink(runtime, receivable);
+      }
+      throw new Error("A cobrança não possui aluno vinculado.");
+    }
 
     const { data: parceiro, error: parceiroError } = await admin
       .from("parceiros")
@@ -331,6 +418,7 @@ export const createAsaasBillingService = (
           asaas_invoice_url: payment.invoiceUrl || null,
           asaas_bank_slip_url: payment.bankSlipUrl || null,
           asaas_installment_id: payment.installment || payment.installmentId || null,
+          asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
           asaas_status: payment.status,
           asaas_synced_at: new Date().toISOString(),
           asaas_last_error: null,

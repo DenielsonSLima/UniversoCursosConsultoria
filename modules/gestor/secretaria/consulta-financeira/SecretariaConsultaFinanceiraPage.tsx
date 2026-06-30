@@ -10,6 +10,7 @@ import {
   FileStack,
   Loader2,
   Printer,
+  ReceiptText,
   Search,
   Users,
   WalletCards,
@@ -516,6 +517,11 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                           {item.asaasBankSlipUrl && (
                             <a href={item.asaasBankSlipUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 p-1.5 text-slate-600" title="Abrir boleto oficial">
                               <Download size={13} />
+                            </a>
+                          )}
+                          {item.asaasTransactionReceiptUrl && (
+                            <a href={item.asaasTransactionReceiptUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-cyan-200 p-1.5 text-cyan-700" title="Abrir comprovante Asaas">
+                              <ReceiptText size={13} />
                             </a>
                           )}
                         </div>

@@ -24,7 +24,8 @@ export const paymentDate = (payment: any) =>
 
 export const isPaymentConfirmedEvent = (eventType: string, payment: any) =>
   eventType === "PAYMENT_CONFIRMED"
-  || String(payment?.status || "").toUpperCase() === "CONFIRMED";
+  || eventType === "PAYMENT_RECEIVED"
+  || ["CONFIRMED", "RECEIVED"].includes(String(payment?.status || "").toUpperCase());
 
 export const localStatusForPaymentEvent = (
   eventType: string,
@@ -32,7 +33,6 @@ export const localStatusForPaymentEvent = (
 ) =>
   eventType === "PAYMENT_OVERDUE" ? "VENCIDO"
   : eventType === "PAYMENT_DELETED" ? "CANCELADO"
-  : eventType === "PAYMENT_RECEIVED" && isPaymentConfirmed ? "PAGO"
-  : eventType === "PAYMENT_RECEIVED" ? "AGUARDANDO_CONFIRMACAO"
+  : eventType === "PAYMENT_RECEIVED" ? "PAGO"
   : eventType === "PAYMENT_CONFIRMED" ? "PAGO"
   : null;

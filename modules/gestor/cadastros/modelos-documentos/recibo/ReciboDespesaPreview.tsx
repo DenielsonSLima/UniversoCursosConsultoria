@@ -11,6 +11,10 @@ const formatDate = (value?: string) =>
   value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
 
 export interface ReciboData {
+  reciboTitulo?: string;
+  reciboNumero?: string;
+  contraparteLabel?: string;
+  assinaturaNome?: string;
   descricao: string;
   valor: number;
   dataVencimento: string;
@@ -112,6 +116,7 @@ export const printReciboDespesa = (data: ReciboData) => {
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 8mm; }
   .field label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; display: block; margin-bottom: 1mm; }
   .field span { font-size: 12px; font-weight: 600; color: #001a33; }
+  .field small { display: block; font-size: 10px; font-weight: 600; color: #64748b; margin-top: 1mm; }
   .descricao-box { background: #f1f5f9; border-radius: 8px; padding: 5mm; margin-bottom: 8mm; }
   .descricao-box label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; display: block; margin-bottom: 2mm; }
   .descricao-box p { font-size: 13px; font-weight: 600; color: #001a33; }
@@ -134,8 +139,8 @@ export const printReciboDespesa = (data: ReciboData) => {
       ${data.poloNome ? `<p>Unidade: ${data.poloNome}</p>` : ''}
     </div>
     <div class="recibo-label">
-      <div class="badge">Recibo de Despesa</div>
-      <div class="num">${data.totalParcelas && data.totalParcelas > 1 ? `Parcela ${data.parcelaNumero}/${data.totalParcelas}` : ''}</div>
+      <div class="badge">${data.reciboTitulo || 'Recibo de Despesa'}</div>
+      <div class="num">${data.reciboNumero || (data.totalParcelas && data.totalParcelas > 1 ? `Parcela ${data.parcelaNumero}/${data.totalParcelas}` : '')}</div>
     </div>
   </div>
 
@@ -152,8 +157,9 @@ export const printReciboDespesa = (data: ReciboData) => {
 
   <div class="grid">
     <div class="field">
-      <label>Fornecedor / Credor</label>
+      <label>${data.contraparteLabel || 'Fornecedor / Credor'}</label>
       <span>${data.fornecedorNome || 'Não informado'}</span>
+      ${data.fornecedorId ? `<small>CPF/CNPJ: ${data.fornecedorId}</small>` : ''}
     </div>
     <div class="field">
       <label>Data de Vencimento</label>
@@ -192,7 +198,7 @@ export const printReciboDespesa = (data: ReciboData) => {
     <div style="font-size:10px;color:#94a3b8;">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
     <div class="assinatura">
       <div class="linha"></div>
-      <p>${data.empresaNome || 'Responsável Financeiro'}</p>
+      <p>${data.assinaturaNome || data.empresaNome || 'Responsável Financeiro'}</p>
       <p style="font-size:9px;">${data.poloNome || ''}</p>
     </div>
   </div>
@@ -226,6 +232,7 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
     dataVencimento: data?.dataVencimento || new Date().toISOString().slice(0, 10),
     dataPagamento: data?.dataPagamento || new Date().toISOString().slice(0, 10),
     fornecedorNome: data?.fornecedorNome || 'João Silva Imóveis',
+    fornecedorId: data?.fornecedorId,
     categoriaNome: data?.categoriaNome || 'Aluguel',
     formaPagamento: data?.formaPagamento || 'PIX',
     status: data?.status || 'PAGO',
@@ -249,8 +256,9 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
         </div>
         <div className="text-right">
           <span className="inline-block bg-[#001a33] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg">
-            Recibo de Despesa
+            {sample.reciboTitulo || 'Recibo de Despesa'}
           </span>
+          {sample.reciboNumero && <p className="text-sm font-black text-[#001a33] mt-1">{sample.reciboNumero}</p>}
         </div>
       </div>
 
@@ -272,7 +280,11 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
       {/* Grid de campos */}
       <div className="grid grid-cols-2 gap-4 mb-5">
         {[
-          { label: 'Fornecedor', value: sample.fornecedorNome || '—' },
+          {
+            label: sample.contraparteLabel || 'Fornecedor',
+            value: sample.fornecedorNome || '—',
+            detail: sample.fornecedorId ? `CPF/CNPJ: ${sample.fornecedorId}` : undefined,
+          },
           { label: 'Data Vencimento', value: formatDate(sample.dataVencimento) },
           { label: 'Data Pagamento', value: formatDate(sample.dataPagamento) },
           { label: 'Forma de Pagamento', value: sample.formaPagamento || '—' },
@@ -282,6 +294,7 @@ const ReciboDespesaPreview: React.FC<ReciboDespesaPreviewProps> = ({ data }) => 
           <div key={f.label}>
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">{f.label}</p>
             <p className="text-sm font-semibold text-slate-700">{f.value}</p>
+            {'detail' in f && f.detail && <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{f.detail}</p>}
           </div>
         ))}
       </div>

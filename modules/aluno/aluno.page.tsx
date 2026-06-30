@@ -53,6 +53,14 @@ const AlunoPage: React.FC = () => {
     scrollContentToTop();
   }, [activeModule, scrollContentToTop]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('asaas') === 'success') {
+      setActiveModule('turmas');
+      navigate('/aluno', { replace: true });
+    }
+  }, [navigate]);
+
   const alunoId = profile?.id || '';
   const alunoNome = profile?.nome || '';
   const alunoEmail = profile?.email || '';

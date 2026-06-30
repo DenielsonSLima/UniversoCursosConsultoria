@@ -44,9 +44,11 @@ export interface ContasReceber {
   contaBancariaId?: string;
   nossoNumeroAsaas?: string;
   asaasPaymentId?: string;
+  asaasPaymentLinkId?: string;
   asaasInvoiceUrl?: string;
   asaasBankSlipUrl?: string;
   asaasInstallmentId?: string;
+  asaasTransactionReceiptUrl?: string;
   asaasStatus?: string;
   asaasLastError?: string;
   createdAt?: string;
@@ -288,9 +290,11 @@ export const financeiroService = {
       contaBancariaId: cr.conta_bancaria_id,
       nossoNumeroAsaas: cr.nosso_numero_asaas,
       asaasPaymentId: cr.asaas_payment_id,
+      asaasPaymentLinkId: cr.asaas_payment_link_id,
       asaasInvoiceUrl: cr.asaas_invoice_url,
       asaasBankSlipUrl: cr.asaas_bank_slip_url,
       asaasInstallmentId: cr.asaas_installment_id,
+      asaasTransactionReceiptUrl: cr.asaas_transaction_receipt_url,
       asaasStatus: cr.asaas_status,
       asaasLastError: cr.asaas_last_error,
       createdAt: cr.created_at,
@@ -348,9 +352,11 @@ export const financeiroService = {
       contaBancariaId: cr.conta_bancaria_id,
       nossoNumeroAsaas: cr.nosso_numero_asaas,
       asaasPaymentId: cr.asaas_payment_id,
+      asaasPaymentLinkId: cr.asaas_payment_link_id,
       asaasInvoiceUrl: cr.asaas_invoice_url,
       asaasBankSlipUrl: cr.asaas_bank_slip_url,
       asaasInstallmentId: cr.asaas_installment_id,
+      asaasTransactionReceiptUrl: cr.asaas_transaction_receipt_url,
       asaasStatus: cr.asaas_status,
       asaasLastError: cr.asaas_last_error,
       tipoLancamento: cr.tipo_lancamento,
@@ -436,10 +442,6 @@ export const financeiroService = {
     markAsPaid?: boolean;
     generateAsaas?: boolean;
   }): Promise<ContasReceber> {
-    if (input.generateAsaas && !input.clienteId) {
-      throw new Error('Selecione um parceiro cadastrado para gerar cobrança no Asaas.');
-    }
-
     const payload = {
       polo_id: input.poloId,
       descricao: input.descricao,
@@ -504,9 +506,11 @@ export const financeiroService = {
         contaBancariaId: synced.conta_bancaria_id,
         nossoNumeroAsaas: synced.nosso_numero_asaas,
         asaasPaymentId: synced.asaas_payment_id,
+        asaasPaymentLinkId: synced.asaas_payment_link_id,
         asaasInvoiceUrl: synced.asaas_invoice_url,
         asaasBankSlipUrl: synced.asaas_bank_slip_url,
         asaasInstallmentId: synced.asaas_installment_id,
+        asaasTransactionReceiptUrl: synced.asaas_transaction_receipt_url,
         asaasStatus: synced.asaas_status,
         asaasLastError: synced.asaas_last_error,
         createdAt: synced.created_at,
@@ -535,9 +539,11 @@ export const financeiroService = {
       contaBancariaId: data.conta_bancaria_id,
       nossoNumeroAsaas: data.nosso_numero_asaas,
       asaasPaymentId: data.asaas_payment_id,
+      asaasPaymentLinkId: data.asaas_payment_link_id,
       asaasInvoiceUrl: data.asaas_invoice_url,
       asaasBankSlipUrl: data.asaas_bank_slip_url,
       asaasInstallmentId: data.asaas_installment_id,
+      asaasTransactionReceiptUrl: data.asaas_transaction_receipt_url,
       asaasStatus: data.asaas_status,
       asaasLastError: data.asaas_last_error,
       createdAt: data.created_at,

@@ -48,7 +48,7 @@ description: >
 
 ---
 
-## ⚡ As 19 Regras de Ouro (Imutáveis — Nunca Quebre)
+## ⚡ As 20 Regras de Ouro (Imutáveis — Nunca Quebre)
 
 ```
 REGRA 1  → Componentes NUNCA fazem chamadas de API diretas
@@ -70,6 +70,7 @@ REGRA 16 → Persistência segura em multi-usuários: EM HIPÓTESE ALGUMA utiliz
 REGRA 17 → Notificações do Sistema: NUNCA utilize mensagens ou diálogos nativos e genéricos do próprio navegador (como alert(), confirm() ou prompt()). Siga rigorosamente o padrão visual do sistema utilizando o hook useToast ou componentes customizados.
 REGRA 18 → Agentes e Handoff: Delegue tarefas complexas de desenvolvimento a subagentes autônomos dedicados, mantendo sempre o RAG (PROJETO_CONTEXTO.md e PROJETO_ALTERACOES.md) atualizado para continuidade do fluxo de trabalho.
 REGRA 19 → Supabase remoto SEMPRE via MCP: migrations remotas, RLS, Storage remoto, consultas administrativas e deploy/listagem/leitura de Edge Functions devem usar MCP Supabase. NUNCA use Supabase CLI para operações remotas neste projeto; erro 401 da CLI não é bloqueio se o MCP estiver disponível.
+REGRA 20 → Modularização de portais e acessos: divida o código de cada perfil de acesso (Público, Login, Gestor, Afiliado/Aluno) em subpastas dedicadas (/src/modules) contendo seus próprios subcomponentes, hooks, services de mock e types para facilitar a manutenção futura.
 ```
 
 ---

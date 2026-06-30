@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildOnlinePaymentPayload,
+  mapBillingType,
+  resolveOnlineCharge,
+} from "./checkout-rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,47 +28,31 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const buildCoursePaymentDescription = (courseName: string) =>
-  `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
-
 const dueDateInDays = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const onlyDigits = (value?: string | null) => String(value || "").replace(/\D/g, "");
 
-const normalizeCourseFinanceiroConfig = (config: any = {}) => {
-  const metodos = config?.metodosRecebimento || {};
-  const cartao = config?.cartao || {};
-  const parcelasPadrao = Math.max(1, Number(config?.parcelasPadrao || 1));
-  const maxParcelas = cartao?.aceitar
-    ? Math.max(parcelasPadrao, Number(cartao?.maxParcelas || parcelasPadrao))
-    : 1;
-
-  return {
-    metodosRecebimento: {
-      pix: metodos.pix !== false,
-      boleto: metodos.boleto !== false,
-      cartao: metodos.cartao !== false,
-    },
-    cartao: {
-      aceitar: cartao.aceitar !== false,
-      maxParcelas,
-    },
-  };
-};
-
-const resolveBillingType = (metodos: { pix: boolean; boleto: boolean; cartao: boolean }) => {
-  const metodosAtivos = [
-    metodos.pix ? "PIX" : null,
-    metodos.boleto ? "BOLETO" : null,
-    metodos.cartao ? "CREDIT_CARD" : null,
-  ].filter(Boolean);
-
-  if (metodosAtivos.length === 0) {
-    throw new Error("Nenhuma forma de recebimento configurada para este curso.");
+const resolvePublicBaseUrl = (req: Request) => {
+  const candidates = [
+    Deno.env.get("PUBLIC_SITE_URL"),
+    Deno.env.get("SITE_URL"),
+    Deno.env.get("APP_URL"),
+    Deno.env.get("VITE_PUBLIC_SITE_URL"),
+    req.headers.get("origin"),
+    "https://universocc.com.br",
+  ];
+  for (const candidate of candidates) {
+    try {
+      const url = new URL(String(candidate || ""));
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        return url.origin.replace(/\/+$/, "");
+      }
+    } catch {
+      // Try the next configured source.
+    }
   }
-
-  return metodosAtivos.length === 1 ? metodosAtivos[0] : "UNDEFINED";
+  return null;
 };
 
 const isValidCpf = (value: string) => {
@@ -108,6 +97,12 @@ const toDateString = (value: unknown) => {
 };
 
 const currentIsoDate = () => new Date().toISOString().slice(0, 10);
+
+const paymentDate = (payment: any) =>
+  String(payment.paymentDate || payment.clientPaymentDate || payment.confirmedDate || new Date().toISOString()).slice(0, 10);
+
+const isPaidPayment = (payment: any) =>
+  ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
 
 const formatDatePtBr = (value: unknown) => {
   const date = toDateString(value);
@@ -202,7 +197,6 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
     if (!ONLINE_MODALIDADES.includes(course.modalidade)) throw new Error("Modalidade sem checkout online.");
-    if (!course.valor || Number(course.valor) <= 0) throw new Error("Valor do curso ainda não configurado.");
 
     const { data: aluno, error: alunoError } = await admin
       .from("parceiros")
@@ -232,6 +226,14 @@ Deno.serve(async (req: Request) => {
         bloquear_matriculas_apos_completar_vagas,
         data_inicio_inscricao,
         data_fim_inscricao,
+        valor_matricula,
+        valor_parcela,
+        qtd_parcelas,
+        desconto_pontualidade,
+        juros_atraso,
+        multa_atraso,
+        aplicar_desconto_matricula,
+        aplicar_multa_juros_matricula,
         matriculas(status)
       `)
       .eq("curso_id", course.id)
@@ -263,17 +265,21 @@ Deno.serve(async (req: Request) => {
     const existingMatricula = existingMatriculas?.[0] || null;
 
     if (existingMatricula) {
-      matricula = existingMatricula;
-      if (["CANCELADO", "DESISTENTE", "TRANCADO", "VENCIDO"].includes(String(existingMatricula.status))) {
-        const { data, error } = await admin
-          .from("matriculas")
-          .update({ status: "PENDENTE" })
-          .eq("id", existingMatricula.id)
-          .select()
-          .single();
-        if (error) throw error;
-        matricula = data;
-      }
+      const shouldReopen = ["CANCELADO", "DESISTENTE", "TRANCADO", "VENCIDO"].includes(String(existingMatricula.status));
+      const { data, error } = await admin
+        .from("matriculas")
+        .update({
+          status: shouldReopen ? "PENDENTE" : existingMatricula.status,
+          financeiro_herdado: false,
+          gerar_cobranca_inicial: true,
+          gerar_cobranca_futura: true,
+          sincronizar_asaas: true,
+        })
+        .eq("id", existingMatricula.id)
+        .select()
+        .single();
+      if (error) throw error;
+      matricula = data;
     } else {
       const { data, error } = await admin
         .from("matriculas")
@@ -281,6 +287,10 @@ Deno.serve(async (req: Request) => {
           aluno_id: aluno.id,
           turma_id: turma.id,
           status: "PENDENTE",
+          financeiro_herdado: false,
+          gerar_cobranca_inicial: true,
+          gerar_cobranca_futura: true,
+          sincronizar_asaas: true,
         })
         .select()
         .single();
@@ -389,7 +399,7 @@ Deno.serve(async (req: Request) => {
       .select("*")
       .eq("matricula_id", matricula.id)
       .eq("categoria", "MENSALIDADE")
-      .eq("origem_pagamento", "ASAAS_ONLINE")
+      .eq("tipo_lancamento", "MATRICULA")
       .order("created_at", { ascending: false })
       .limit(1);
     if (existingReceivableError) throw existingReceivableError;
@@ -400,16 +410,91 @@ Deno.serve(async (req: Request) => {
       return json({ url: existingReceivable.asaas_invoice_url || existingReceivable.asaas_bank_slip_url, alreadyPaid: true });
     }
 
-    if (existingReceivable?.asaas_invoice_url) {
+    if (existingReceivable?.asaas_invoice_url && existingReceivable?.asaas_payment_id) {
       return json({ url: existingReceivable.asaas_invoice_url });
     }
 
-    const description = buildCoursePaymentDescription(course.nome);
+    if (existingReceivable?.asaas_payment_link_id && !existingReceivable?.asaas_payment_id) {
+      const search = await callAsaas(`/payments?externalReference=${encodeURIComponent(existingReceivable.id)}&limit=20`);
+      const matchedPayment = (search?.data || []).find(isPaidPayment) || search?.data?.[0] || null;
+      if (matchedPayment?.id) {
+        const paid = isPaidPayment(matchedPayment);
+        const updates = {
+          asaas_payment_id: matchedPayment.id,
+          asaas_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          nosso_numero_asaas: matchedPayment.id,
+          asaas_invoice_url: matchedPayment.invoiceUrl || existingReceivable.asaas_invoice_url || null,
+          asaas_bank_slip_url: matchedPayment.bankSlipUrl || null,
+          asaas_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
+          asaas_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
+          asaas_status: matchedPayment.status || null,
+          status: paid ? "PAGO" : existingReceivable.status,
+          valor_pago: paid ? Number(matchedPayment.value || existingReceivable.valor) : existingReceivable.valor_pago,
+          data_pagamento: paid ? paymentDate(matchedPayment) : existingReceivable.data_pagamento,
+          forma_pagamento: paid ? mapBillingType(matchedPayment.billingType) : existingReceivable.forma_pagamento,
+          origem_pagamento: paid ? "ASAAS" : existingReceivable.origem_pagamento,
+          asaas_synced_at: new Date().toISOString(),
+          asaas_last_error: null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: reconciledReceivable, error: reconcileError } = await admin
+          .from("contas_receber")
+          .update(updates)
+          .eq("id", existingReceivable.id)
+          .select()
+          .single();
+        if (reconcileError) throw reconcileError;
+
+        const inscriptionPayload = {
+          curso_id: course.id,
+          turma_id: turma.id,
+          aluno_id: aluno.id,
+          matricula_id: matricula.id,
+          asaas_payment_id: matchedPayment.id,
+          asaas_customer_id: matchedPayment.customer || aluno.asaas_customer_id || null,
+          asaas_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          nome: aluno.nome,
+          cpf_cnpj: cpfCnpj || null,
+          email: aluno.email || null,
+          telefone: aluno.telefone || null,
+          valor: Number(matchedPayment.value || course.valor || 0),
+          status: paid ? "PAGO" : PENDENTE_INSCRICAO_STATUS,
+          pago_em: paid ? new Date().toISOString() : null,
+          confirmado_em: paid ? new Date().toISOString() : null,
+          forma_pagamento: matchedPayment.billingType || null,
+          erro: null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
+          .from("inscricoes_online")
+          .select("id")
+          .eq("matricula_id", matricula.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (pendingInscricaoError) throw pendingInscricaoError;
+        const inscriptionQuery = pendingInscricoes?.[0]
+          ? admin.from("inscricoes_online").update(inscriptionPayload).eq("id", pendingInscricoes[0].id)
+          : admin.from("inscricoes_online").insert(inscriptionPayload);
+        const { error: inscriptionError } = await inscriptionQuery;
+        if (inscriptionError) throw inscriptionError;
+
+        if (paid) {
+          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+          return json({ url: reconciledReceivable.asaas_invoice_url || reconciledReceivable.asaas_bank_slip_url, alreadyPaid: true });
+        }
+
+        if (reconciledReceivable.asaas_invoice_url) {
+          return json({ url: reconciledReceivable.asaas_invoice_url });
+        }
+      }
+    }
+
     const dataVencimento = dueDateInDays(7);
+    const charge = resolveOnlineCharge(course, turma, dataVencimento);
     const receivablePayload = {
       polo_id: turma.polo_id,
-      descricao: description,
-      valor: Number(course.valor),
+      descricao: charge.description,
+      valor: charge.value,
       data_vencimento: dataVencimento,
       status: "PENDENTE",
       cliente_id: aluno.id,
@@ -417,57 +502,109 @@ Deno.serve(async (req: Request) => {
       turma_id: turma.id,
       categoria: "MENSALIDADE",
       tipo_lancamento: "MATRICULA",
+      origem_cronograma_id: "matricula",
       origem_pagamento: "ASAAS_ONLINE",
       updated_at: new Date().toISOString(),
     };
 
-    const receivable = existingReceivable
+    let receivable = existingReceivable
       ? (await admin
         .from("contas_receber")
         .update(receivablePayload)
         .eq("id", existingReceivable.id)
+        .neq("status", "PAGO")
         .select()
-        .single()).data
-      : (await admin
+        .maybeSingle()).data || existingReceivable
+      : null;
+
+    if (!receivable) {
+      const { data: insertedReceivable, error: insertReceivableError } = await admin
         .from("contas_receber")
         .insert(receivablePayload)
         .select()
-        .single()).data;
+        .single();
+
+      if (insertReceivableError) {
+        const { data: duplicatedReceivable, error: duplicatedReceivableError } = await admin
+          .from("contas_receber")
+          .select("*")
+          .eq("matricula_id", matricula.id)
+          .eq("categoria", "MENSALIDADE")
+          .eq("tipo_lancamento", "MATRICULA")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (duplicatedReceivableError || !duplicatedReceivable) throw insertReceivableError;
+        receivable = duplicatedReceivable;
+      } else {
+        receivable = insertedReceivable;
+      }
+    }
 
     if (!receivable) throw new Error("Não foi possível registrar a cobrança interna.");
+    if (receivable.status === "PAGO") {
+      await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      return json({ url: receivable.asaas_invoice_url || receivable.asaas_bank_slip_url, alreadyPaid: true });
+    }
 
     const customerId = await ensureCustomer();
-    const financeiroConfig = normalizeCourseFinanceiroConfig(course.financeiro_config || {});
-    const billingType = resolveBillingType(financeiroConfig.metodosRecebimento);
-    const maxInstallmentCount = financeiroConfig.metodosRecebimento.cartao
-      && financeiroConfig.cartao.aceitar
-      ? financeiroConfig.cartao.maxParcelas
-      : 1;
+    const publicBaseUrl = resolvePublicBaseUrl(req);
+    const successUrl = publicBaseUrl ? `${publicBaseUrl}/aluno?asaas=success` : null;
+    const { data: lockedReceivable, error: lockReceivableError } = await admin
+      .from("contas_receber")
+      .update({
+        asaas_status: "CREATING",
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receivable.id)
+      .is("asaas_payment_id", null)
+      .or("asaas_status.is.null,asaas_status.neq.CREATING")
+      .select()
+      .maybeSingle();
+    if (lockReceivableError) throw lockReceivableError;
+    if (!lockedReceivable) {
+      const { data: inProgressReceivable } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivable.id)
+        .maybeSingle();
+      if (inProgressReceivable?.asaas_invoice_url) {
+        return json({ url: inProgressReceivable.asaas_invoice_url });
+      }
+      throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
+    }
+    receivable = lockedReceivable;
 
-    const paymentLink = await callAsaas("/paymentLinks", {
-      method: "POST",
-      body: JSON.stringify({
-        name: course.nome,
-        description,
-        value: Number(course.valor),
-        billingType,
-        chargeType: "DETACHED",
-        maxInstallmentCount,
-        dueDateLimitDays: 7,
-        externalReference: receivable.id,
-      }),
-    });
+    let payment: any;
+    try {
+      payment = await callAsaas("/payments", {
+        method: "POST",
+        body: JSON.stringify(buildOnlinePaymentPayload(customerId, receivable.id, charge, successUrl)),
+      });
+    } catch (paymentError) {
+      await admin
+        .from("contas_receber")
+        .update({
+          asaas_status: null,
+          asaas_last_error: normalizeErrorMessage(paymentError),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivable.id);
+      throw paymentError;
+    }
 
     const { data: updatedReceivable, error: updateReceivableError } = await admin
       .from("contas_receber")
       .update({
-        asaas_payment_id: null,
-        asaas_payment_link_id: paymentLink.id,
-        nosso_numero_asaas: paymentLink.id,
-        asaas_invoice_url: paymentLink.url || null,
-        asaas_bank_slip_url: null,
-        asaas_installment_id: null,
-        asaas_status: "PAYMENT_LINK_CREATED",
+        asaas_payment_id: payment.id,
+        asaas_payment_link_id: null,
+        nosso_numero_asaas: payment.id,
+        asaas_invoice_url: payment.invoiceUrl || null,
+        asaas_bank_slip_url: payment.bankSlipUrl || null,
+        asaas_installment_id: payment.installment || payment.installmentId || null,
+        asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
+        asaas_status: payment.status || null,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),
@@ -482,16 +619,16 @@ Deno.serve(async (req: Request) => {
       turma_id: turma.id,
       aluno_id: aluno.id,
       matricula_id: matricula.id,
-      asaas_payment_id: null,
+      asaas_payment_id: payment.id,
       asaas_customer_id: customerId,
-      asaas_payment_link_id: paymentLink.id,
+      asaas_payment_link_id: null,
       nome: aluno.nome,
       cpf_cnpj: cpfCnpj || null,
       email: aluno.email || null,
       telefone: aluno.telefone || null,
-      valor: Number(course.valor || 0),
+      valor: charge.value,
       status: PENDENTE_INSCRICAO_STATUS,
-      forma_pagamento: null,
+      forma_pagamento: mapBillingType(payment.billingType),
       erro: null,
       updated_at: new Date().toISOString(),
     };
@@ -515,7 +652,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
     }
 
-    return json({ url: updatedReceivable.asaas_invoice_url || paymentLink.url });
+    return json({ url: updatedReceivable.asaas_invoice_url || payment.invoiceUrl });
   } catch (error) {
     const errorMessage = normalizeErrorMessage(error);
     console.error("Erro ao gerar checkout público:", error);

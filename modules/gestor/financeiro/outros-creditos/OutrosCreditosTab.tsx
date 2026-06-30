@@ -64,7 +64,7 @@ const statusClass = (status: string) => {
 };
 
 const origemLabel = (item: ContasReceber) => {
-  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId) return 'Asaas';
+  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId || item.asaasPaymentLinkId) return 'Asaas';
   if (item.origemPagamento === 'PRESENCIAL') return 'Local/Caixa';
   return 'Conta local';
 };
@@ -190,7 +190,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       ]);
       toast.success(
         'Recebimento confirmado',
-        receiveItem?.asaasPaymentId
+        receiveItem?.asaasPaymentId || receiveItem?.asaasPaymentLinkId
           ? 'A baixa manual foi registrada e a cobrança no Asaas foi cancelada.'
           : 'O crédito foi baixado na conta/caixa selecionada.',
       );
@@ -337,10 +337,6 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.warning('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
       return;
     }
-    if (mode === 'ASAAS' && !partnerId) {
-      toast.warning('Parceiro obrigatório', 'Para gerar link Asaas, selecione um parceiro cadastrado.');
-      return;
-    }
     createMutation.mutate();
   };
 
@@ -430,7 +426,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           {item.status}
         </span>
         <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {origemLabel(item)}</p>
-        <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId ? 'Link Asaas' : 'Não definida')}</p>
+        <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId || item.asaasPaymentLinkId ? 'Link Asaas' : 'Não definida')}</p>
         {item.asaasStatus && <p className="text-[10px] font-black uppercase text-blue-500">Asaas: {item.asaasStatus}</p>}
       </td>
       <td className="px-5 py-4">
@@ -447,7 +443,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               <CheckCircle2 size={13} /> Receber
             </button>
           )}
-          {!item.asaasPaymentId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && item.clienteId && (
+          {!item.asaasPaymentId && !item.asaasPaymentLinkId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
             <button
               onClick={() => syncMutation.mutate(item.id!)}
               disabled={syncMutation.isPending}
@@ -456,7 +452,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               <LinkIcon size={13} /> Gerar link
             </button>
           )}
-          {item.asaasPaymentId && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
+          {(item.asaasPaymentId || item.asaasPaymentLinkId) && item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status) && (
             <button
               onClick={() => refreshMutation.mutate(item.id!)}
               disabled={refreshMutation.isPending}
@@ -803,7 +799,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                 </div>
                 <label className="space-y-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Parceiro {mode === 'ASAAS' ? '(obrigatório)' : '(opcional)'}
+                    Parceiro (opcional)
                   </span>
                   <select
                     value={partnerId}
@@ -897,7 +893,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               </button>
             </div>
 
-            {receiveItem.asaasPaymentId && (
+            {(receiveItem.asaasPaymentId || receiveItem.asaasPaymentLinkId) && (
               <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold text-amber-700">
                 Esta cobrança possui link Asaas. Ao confirmar uma baixa manual, o sistema registra o recebimento local e cancela a cobrança no Asaas para evitar cobrança duplicada.
               </div>

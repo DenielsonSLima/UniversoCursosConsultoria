@@ -124,6 +124,7 @@ Deno.serve(async (req: Request) => {
         asaas_status: "DELETED",
         asaas_invoice_url: null,
         asaas_bank_slip_url: null,
+        asaas_transaction_receipt_url: null,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),

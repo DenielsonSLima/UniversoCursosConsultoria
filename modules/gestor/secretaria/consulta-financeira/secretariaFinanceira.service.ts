@@ -53,6 +53,7 @@ export interface SecretariaFinanceiraRecebivel {
   asaasInvoiceUrl?: string;
   asaasBankSlipUrl?: string;
   asaasInstallmentId?: string;
+  asaasTransactionReceiptUrl?: string;
 }
 
 const normalizeSearchTerm = (term: string) =>
@@ -100,6 +101,7 @@ const mapRecebivel = (row: any): SecretariaFinanceiraRecebivel => {
     asaasInvoiceUrl: row.asaas_invoice_url || undefined,
     asaasBankSlipUrl: row.asaas_bank_slip_url || undefined,
     asaasInstallmentId: row.asaas_installment_id || undefined,
+    asaasTransactionReceiptUrl: row.asaas_transaction_receipt_url || undefined,
   };
 };
 
@@ -124,6 +126,7 @@ const RECEBIVEIS_SELECT = `
   asaas_invoice_url,
   asaas_bank_slip_url,
   asaas_installment_id,
+  asaas_transaction_receipt_url,
   asaas_status,
   parceiros(nome, cpf_cnpj, email, telefone),
   matriculas(id, data_matricula, status),

@@ -218,6 +218,7 @@ export const createAsaasOnlineService = (
         asaas_invoice_url: payment.invoiceUrl || null,
         asaas_bank_slip_url: payment.bankSlipUrl || null,
         asaas_installment_id: payment.installment || payment.installmentId || null,
+        asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
         asaas_status: payment.status || null,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
@@ -264,75 +265,9 @@ export const createAsaasOnlineService = (
   };
 
   const createCourseLink = async (runtime: AsaasRuntime, body: any) => {
-    const courseId = String(body.courseId);
-    const { data: course, error } = await admin
-      .from("cursos")
-      .select("*")
-      .eq("id", courseId)
-      .single();
-    if (error) throw error;
-    if (!["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"].includes(course.modalidade)) {
-      throw new Error("Links automáticos estão disponíveis apenas para EAD, cursos livres e especializações.");
-    }
-    if (!course.valor || Number(course.valor) <= 0) throw new Error("Defina o valor do curso antes de gerar o link.");
-    const financeiroConfig = course.financeiro_config || {};
-    const metodos = financeiroConfig.metodosRecebimento || {};
-    const metodosAtivos = [
-      metodos.pix ? "PIX" : null,
-      metodos.boleto ? "BOLETO" : null,
-      metodos.cartao ? "CREDIT_CARD" : null,
-    ].filter(Boolean);
-    const billingType = metodosAtivos.length === 1 ? metodosAtivos[0] : "UNDEFINED";
-    const maxParcelas = financeiroConfig.cartao?.aceitar
-      ? Math.max(1, Number(financeiroConfig.cartao?.maxParcelas || financeiroConfig.parcelasPadrao || 1))
-      : 1;
-
-    const requireOnlinePermission = course.modalidade !== "EAD";
-    let turmasQuery = admin.from("turmas")
-      .select(`
-        id,
-        vagas_totais,
-        permitir_inscricoes_online,
-        qtd_vagas_minima,
-        bloquear_matriculas_apos_completar_vagas,
-        data_inicio_inscricao,
-        data_fim_inscricao,
-        matriculas(status)
-      `)
-      .eq("curso_id", courseId)
-      .eq("status", "EM_ANDAMENTO");
-    if (requireOnlinePermission) {
-      turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
-    }
-    const { data: turmas, error: turmaError } = await turmasQuery.order("data_inicio", { ascending: true });
-    if (turmaError) throw turmaError;
-    const turmaSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
-    if (!turmaSelection.turma) throw new Error(turmaSelection.reason || "Abra uma turma para este curso antes de gerar o link.");
-    if (!body.recreate && course.asaas_payment_link_id && course.asaas_payment_link_url) {
-      return { success: true, url: course.asaas_payment_link_url };
-    }
-
-    const link = await callAsaas(runtime, "/paymentLinks", {
-      method: "POST",
-      body: JSON.stringify({
-        name: course.nome,
-        description: buildCoursePaymentDescription(course.nome),
-        value: Number(course.valor),
-        billingType,
-        chargeType: "DETACHED",
-        maxInstallmentCount: maxParcelas,
-        dueDateLimitDays: 7,
-        externalReference: course.id,
-      }),
-    });
-    await admin.from("cursos").update({
-      asaas_payment_link_id: link.id,
-      asaas_payment_link_url: link.url,
-      asaas_link_status: "ACTIVE",
-      asaas_link_updated_at: new Date().toISOString(),
-    }).eq("id", course.id);
-
-    return { success: true, url: link.url };
+    void runtime;
+    void body;
+    throw new Error("Links genéricos de curso foram desativados. Use o checkout online do aluno para gerar cobrança no nome do aluno.");
   };
 
   return {

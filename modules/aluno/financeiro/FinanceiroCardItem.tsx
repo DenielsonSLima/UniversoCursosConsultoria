@@ -34,6 +34,11 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
     .filter(Boolean);
 
   const hasReferenceInfo = paymentLabel.length > 0;
+  const isPaidThroughAsaas = String(installment.status || '').toUpperCase() === 'PAGO' && (
+    String(installment.origem_pagamento || '').toUpperCase() === 'ASAAS'
+    || ['RECEIVED', 'CONFIRMED'].includes(String(installment.asaas_status || '').toUpperCase())
+    || Boolean(installment.asaas_transaction_receipt_url)
+  );
 
   const renderActions = () => {
     if (['PENDENTE', 'VENCIDO'].includes(installment.status)) {
@@ -86,7 +91,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
         className="inline-flex w-full items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
       >
         <ReceiptText size={13} />
-        Recibo
+        {isPaidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
       </button>
     );
   };

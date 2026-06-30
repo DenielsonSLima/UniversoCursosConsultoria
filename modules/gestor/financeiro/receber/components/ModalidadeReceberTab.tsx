@@ -12,6 +12,7 @@ import {
   WalletCards,
   ExternalLink,
   RefreshCw,
+  ReceiptText,
   X,
   ChevronDown,
   ChevronRight,
@@ -24,6 +25,7 @@ import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
+import { printReciboDespesa } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -329,6 +331,60 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const canReverseManualSettlement = (item: ContasReceber) =>
     item.status === 'PAGO' && item.origemPagamento === 'PRESENCIAL';
 
+  const isPaidThroughAsaas = (item: ContasReceber) => {
+    const asaasStatus = String(item.asaasStatus || '').toUpperCase();
+    return item.status === 'PAGO' && (
+      String(item.origemPagamento || '').toUpperCase() === 'ASAAS'
+      || ['RECEIVED', 'CONFIRMED'].includes(asaasStatus)
+      || Boolean(item.asaasTransactionReceiptUrl)
+    );
+  };
+
+  const openAsaasReceipt = (item: ContasReceber) => {
+    if (item.asaasTransactionReceiptUrl) {
+      window.open(item.asaasTransactionReceiptUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    toast.info(
+      'Comprovante Asaas indisponível',
+      'O Asaas ainda não retornou o comprovante oficial desta cobrança. Use Atualizar Asaas para consultar novamente.',
+    );
+  };
+
+  const printInstitutionalReceipt = (item: ContasReceber) => {
+    printReciboDespesa({
+      reciboTitulo: 'Recibo de Pagamento',
+      reciboNumero: item.id ? item.id.slice(0, 8).toUpperCase() : undefined,
+      contraparteLabel: 'Aluno / Pagador',
+      assinaturaNome: 'Responsável Financeiro',
+      empresaNome: 'Universo Cursos e Consultoria',
+      empresaCnpj: item.poloCnpj,
+      descricao: item.descricao,
+      valor: item.valor,
+      valorPago: item.valorPago ?? item.valor,
+      dataVencimento: item.dataVencimento,
+      dataPagamento: item.dataPagamento,
+      fornecedorNome: item.clienteNome,
+      fornecedorId: item.clienteCpfCnpj,
+      categoriaNome: [item.cursoNome, item.turmaNome, item.tipoLancamento].filter(Boolean).join(' • '),
+      formaPagamento: paymentMethodLabel(item),
+      poloNome: item.poloNome,
+      parcelaNumero: item.parcelaNumero,
+      observacao: 'Pagamento manual registrado no sistema da Universo Cursos e Consultoria.',
+      status: item.status,
+    });
+  };
+
+  const openPaidReceipt = (item: ContasReceber) => {
+    if (isPaidThroughAsaas(item)) {
+      openAsaasReceipt(item);
+      return;
+    }
+
+    printInstitutionalReceipt(item);
+  };
+
   const openReversal = (item: ContasReceber) => {
     setReversalItem(item);
     setReversalReason('');
@@ -382,9 +438,35 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const ChargeActions = ({ item }: { item: ContasReceber }) => {
     if (item.status === 'PAGO') {
+      const paidThroughAsaas = isPaidThroughAsaas(item);
       return (
-        <div className="flex max-w-[180px] flex-col gap-2">
+        <div className="flex max-w-[190px] flex-col gap-2">
           <span className="text-[10px] font-bold text-slate-400">Recebido em {formatDate(item.dataPagamento || '')}</span>
+          <button
+            type="button"
+            onClick={() => openPaidReceipt(item)}
+            className={`inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
+              paidThroughAsaas
+                ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+            }`}
+            title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Imprimir recibo interno da Universo'}
+          >
+            {paidThroughAsaas ? <ExternalLink size={12} /> : <ReceiptText size={12} />}
+            {paidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
+          </button>
+          {paidThroughAsaas && !item.asaasTransactionReceiptUrl && item.id && (
+            <button
+              type="button"
+              onClick={() => refreshMutation.mutate(item.id!)}
+              disabled={refreshMutation.isPending}
+              className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 disabled:opacity-50"
+              title="Consultar novamente o comprovante no Asaas"
+            >
+              <RefreshCw className={refreshMutation.isPending ? 'animate-spin' : ''} size={12} />
+              Atualizar Asaas
+            </button>
+          )}
           {canReverseManualSettlement(item) && (
             <button
               type="button"

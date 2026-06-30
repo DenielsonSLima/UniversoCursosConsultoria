@@ -415,6 +415,7 @@ Deno.serve(async (req: Request) => {
           asaas_status: "DELETED",
           asaas_invoice_url: null,
           asaas_bank_slip_url: null,
+          asaas_transaction_receipt_url: null,
           asaas_synced_at: new Date().toISOString(),
           asaas_last_error: null,
           updated_at: new Date().toISOString(),
@@ -477,6 +478,7 @@ Deno.serve(async (req: Request) => {
         forma_pagamento: body.formaPagamento,
         origem_pagamento: "PRESENCIAL",
         asaas_status: receivable.asaas_payment_id ? "DELETED" : null,
+        asaas_transaction_receipt_url: null,
         updated_at: new Date().toISOString(),
       }).eq("id", receivableId);
       if (updateError) throw updateError;
@@ -535,6 +537,7 @@ Deno.serve(async (req: Request) => {
           nosso_numero_asaas: shouldRecreateAsaas ? null : receivable.nosso_numero_asaas,
           asaas_invoice_url: shouldRecreateAsaas ? null : receivable.asaas_invoice_url,
           asaas_bank_slip_url: shouldRecreateAsaas ? null : receivable.asaas_bank_slip_url,
+          asaas_transaction_receipt_url: shouldRecreateAsaas ? null : receivable.asaas_transaction_receipt_url,
           asaas_installment_id: shouldRecreateAsaas ? null : receivable.asaas_installment_id,
           asaas_status: shouldRecreateAsaas ? null : receivable.asaas_status,
           asaas_synced_at: shouldRecreateAsaas ? null : receivable.asaas_synced_at,
@@ -560,8 +563,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "create-course-link") {
-      const runtime = await getRuntimeForAction();
-      return json(await online.createCourseLink(runtime, body));
+      return json(await online.createCourseLink(null as any, body));
     }
 
     return json({ error: "Ação desconhecida." }, 400);

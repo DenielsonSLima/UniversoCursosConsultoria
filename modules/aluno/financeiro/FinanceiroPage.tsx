@@ -41,7 +41,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               modalidade,
               nome
             )
-          )
+          ),
+          parceiros!left(nome, cpf_cnpj)
         `)
         .eq('cliente_id', alunoId)
         .order('data_vencimento', { ascending: true });
@@ -71,6 +72,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     return curso?.nome || 'Sem curso vinculado';
   };
+
+  const getRelatedPartner = (inst: any) =>
+    Array.isArray(inst.parceiros) ? inst.parceiros[0] : inst.parceiros;
 
   const getInstallmentClassName = (modality: string) => {
     const palette = {
@@ -223,9 +227,32 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return dateStr;
   };
 
+  const isPaidThroughAsaas = (inst: any) => {
+    const status = String(inst.status || '').toUpperCase();
+    const asaasStatus = String(inst.asaas_status || '').toUpperCase();
+    return status === 'PAGO' && (
+      String(inst.origem_pagamento || '').toUpperCase() === 'ASAAS'
+      || ['RECEIVED', 'CONFIRMED'].includes(asaasStatus)
+      || Boolean(inst.asaas_transaction_receipt_url)
+    );
+  };
+
+  const getPaidReceiptLabel = (inst: any) =>
+    isPaidThroughAsaas(inst) ? 'Comprovante Asaas' : 'Recibo Universo';
+
   const openReceipt = (inst: any) => {
     if (String(inst.status || '').toUpperCase() !== 'PAGO') {
       setNotice('O recibo fica disponível somente para cobranças pagas.');
+      return;
+    }
+
+    if (isPaidThroughAsaas(inst)) {
+      if (inst.asaas_transaction_receipt_url) {
+        window.open(inst.asaas_transaction_receipt_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      setNotice('O comprovante oficial do Asaas ainda não foi retornado. Aguarde a atualização do pagamento ou fale com a secretaria.');
+      setTimeout(() => setNotice(''), 4500);
       return;
     }
 
@@ -307,6 +334,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getReceiptPayload = (inst: any) => {
     const receiptNumber = String(inst?.id || '').slice(0, 8).toUpperCase() || 'RECIBO';
+    const parceiro = getRelatedPartner(inst);
+    const payerName = parceiro?.nome || 'Aluno';
+    const payerDocument = parceiro?.cpf_cnpj || '';
+    const courseName = inst?.cursoNome || getInstallmentCourseName(inst);
+    const turmaNome = inst?.turmaNome || 'N/A';
     return {
       receiptNumber,
       paidAt: formatDate(inst?.data_pagamento || inst?.updated_at || inst?.data_vencimento),
@@ -315,8 +347,10 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       description: inst?.descricao || 'Recibo de pagamento',
       paidValue: formatCurrency(Number(inst?.valor_pago || inst?.valor || 0)),
       status: String(inst?.status || 'PAGO').toUpperCase(),
-      courseName: inst?.cursoNome || getInstallmentCourseName(inst),
-      turmaNome: inst?.turmaNome || 'N/A',
+      courseName,
+      turmaNome,
+      payerName,
+      payerDocument,
       enrollment: inst?.turma_id || 'Sem vínculo',
       generatedAt: formatDate(new Date().toISOString().slice(0, 10))
     };
@@ -413,7 +447,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         onClick={() => openReceipt(inst)}
         className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
       >
-        Recibo
+        {getPaidReceiptLabel(inst)}
       </button>
     );
   };
@@ -902,70 +936,63 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Universo Cursos e Consultoria</p>
               <h4 className="text-xl font-black text-[#001a33]">Recibo de pagamento</h4>
               <p className="text-[10px] text-slate-500 font-medium">
-                Comprovante financeiro para consulta e conferência
+                Recibo institucional para pagamentos recebidos manualmente.
               </p>
             </div>
 
             <div
               ref={receiptRef}
-              className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 print-area"
+              className="rounded-2xl border border-slate-200 bg-white p-6 print-area"
             >
-              <div className="flex flex-col gap-4 md:flex-row md:justify-between">
+              <div className="flex flex-col gap-4 border-b-2 border-[#001a33] pb-5 md:flex-row md:justify-between">
                 <div>
-                  <p className="text-[9px] font-black uppercase text-slate-500 tracking-[0.2em]">Número do Recibo</p>
-                  <p className="text-base font-black text-[#001a33] mt-1">{receiptPayload?.receiptNumber}</p>
+                  <h1 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Universo Cursos e Consultoria</h1>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-500">Documento financeiro emitido pelo Portal do Aluno</p>
                 </div>
                 <div className="text-right">
-                  <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest">
-                    {receiptPayload?.status}
+                  <span className="inline-block rounded-lg bg-[#001a33] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
+                    Recibo de Pagamento
                   </span>
-                  <p className="text-[9px] font-black uppercase text-slate-500 mt-1.5">Gerado em {receiptPayload?.generatedAt}</p>
+                  <p className="mt-1 text-sm font-black text-[#001a33]">{receiptPayload?.receiptNumber}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                <div className="rounded-xl border border-slate-150 bg-white p-3">
-                  <p className="text-[9px] text-slate-400 font-black uppercase">Pagamento</p>
-                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.paidAt}</p>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">{receiptPayload?.paymentMethod}</p>
-                </div>
-                <div className="rounded-xl border border-slate-150 bg-white p-3">
-                  <p className="text-[9px] text-slate-400 font-black uppercase">Vencimento original</p>
-                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.dueDate || '—'}</p>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Data de referência</p>
-                </div>
-                <div className="rounded-xl border border-slate-150 bg-white p-3">
-                  <p className="text-[9px] text-slate-400 font-black uppercase">Curso</p>
-                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.courseName}</p>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Turma: {receiptPayload?.turmaNome}</p>
-                </div>
-                <div className="rounded-xl border border-slate-150 bg-white p-3">
-                  <p className="text-[9px] text-slate-400 font-black uppercase">Associação</p>
-                  <p className="text-xs font-bold mt-1.5 text-slate-700">{receiptPayload?.enrollment}</p>
-                  <p className="text-[10px] text-slate-500 mt-1 font-medium">Matrícula / vínculo</p>
-                </div>
+              <div className="my-6 rounded-2xl border-2 border-[#001a33] bg-slate-50 p-6 text-center">
+                <p className="text-4xl font-black text-[#001a33]">{receiptPayload?.paidValue}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Valor recebido</p>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-indigo-700">Descrição</p>
-                <p className="text-xs text-indigo-900 font-semibold mt-1.5 leading-relaxed">{receiptPayload?.description}</p>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">Descrição</p>
+                <p className="text-sm font-semibold leading-relaxed text-slate-800">{receiptPayload?.description}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {receiptPayload?.courseName} • Turma: {receiptPayload?.turmaNome}
+                </p>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-[#001a33] text-white p-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-                <div>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-indigo-200">Valor recebido</p>
-                  <p className="text-3xl font-black mt-1 text-white">{receiptPayload?.paidValue}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-indigo-200">Status</p>
-                  <p className="text-sm font-black mt-1 text-emerald-300">{receiptPayload?.status}</p>
-                </div>
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  { label: 'Aluno / Pagador', value: receiptPayload?.payerName },
+                  { label: 'CPF/CNPJ', value: receiptPayload?.payerDocument || 'Não informado' },
+                  { label: 'Data de vencimento', value: receiptPayload?.dueDate || '—' },
+                  { label: 'Data de pagamento', value: receiptPayload?.paidAt },
+                  { label: 'Forma de pagamento', value: receiptPayload?.paymentMethod },
+                  { label: 'Status', value: receiptPayload?.status },
+                ].map((field) => (
+                  <div key={field.label}>
+                    <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">{field.label}</p>
+                    <p className="text-sm font-semibold text-slate-700">{field.value}</p>
+                  </div>
+                ))}
               </div>
 
-              <p className="mt-4 text-[9px] text-slate-500 leading-relaxed">
-                Este documento foi emitido automaticamente em razão de pagamento confirmado no Portal do Aluno.
-                Em caso de inconsistência, conserve este comprovante e procure a secretaria.
-              </p>
+              <div className="mt-6 flex items-end justify-between border-t border-dashed border-slate-300 pt-5">
+                <p className="text-[10px] font-semibold text-slate-400">Gerado em {receiptPayload?.generatedAt}</p>
+                <div className="text-center">
+                  <div className="mx-auto mb-2 w-40 border-t border-slate-800" />
+                  <p className="text-xs font-semibold text-slate-600">Universo Cursos e Consultoria</p>
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
