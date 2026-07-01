@@ -32,6 +32,10 @@ const dueDateInDays = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 const onlyDigits = (value?: string | null) => String(value || "").replace(/\D/g, "");
+const normalize = (value: unknown) => String(value || "").trim().toLowerCase();
+const isActiveStatus = (status: unknown) =>
+  ["ativo", "active"].includes(normalize(status));
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const resolvePublicBaseUrl = (req: Request) => {
   const candidates = [
@@ -185,9 +189,43 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    const { courseId, alunoId, turmaId } = await req.json();
+    const { courseId, alunoId: requestedAlunoId, turmaId } = await req.json();
     if (!courseId) throw new Error("Curso não informado.");
-    if (!alunoId) throw new Error("Entre como aluno antes de comprar o curso.");
+
+    const authorization = req.headers.get("Authorization") || "";
+    const token = authorization.replace(/^Bearer\s+/i, "").trim();
+    if (!token) throw new Error("Entre como aluno antes de comprar o curso.");
+
+    const { data: authData, error: authError } = await admin.auth.getUser(token);
+    const authEmail = authData?.user?.email ? String(authData.user.email).trim().toLowerCase() : "";
+    if (authError || !authEmail) throw new Error("Sessão inválida para checkout.");
+
+    const { data: usuarioSistema, error: usuarioError } = await admin
+      .from("usuarios_sistema")
+      .select("id, perfil, status, context")
+      .ilike("email", authEmail)
+      .maybeSingle();
+    if (usuarioError) throw usuarioError;
+    const gestorContext = usuarioSistema?.context ? String(usuarioSistema.context).trim() : null;
+    let gestorPoloId = UUID_RE.test(gestorContext || "") ? gestorContext : null;
+    let gestorGlobal = normalize(gestorContext) === "global";
+    if (gestorPoloId) {
+      const { data: polo, error: poloError } = await admin
+        .from("polos")
+        .select("is_matriz")
+        .eq("id", gestorPoloId)
+        .maybeSingle();
+      if (poloError) throw poloError;
+      if (polo?.is_matriz === true) gestorGlobal = true;
+    }
+    const isGestorAtivo = Boolean(
+      usuarioSistema
+      && normalize(usuarioSistema.perfil) === "gestor"
+      && isActiveStatus(usuarioSistema.status)
+    );
+    if (requestedAlunoId && isGestorAtivo && !gestorGlobal && !gestorPoloId) {
+      throw new Error("Gestor sem polo definido não pode gerar checkout para outro aluno.");
+    }
 
     const { data: course, error } = await admin
       .from("cursos")
@@ -198,14 +236,31 @@ Deno.serve(async (req: Request) => {
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
     if (!ONLINE_MODALIDADES.includes(course.modalidade)) throw new Error("Modalidade sem checkout online.");
 
-    const { data: aluno, error: alunoError } = await admin
+    let alunoQuery = admin
       .from("parceiros")
       .select("*")
-      .eq("id", alunoId)
-      .in("tipo", ["Aluno", "Professor"])
+      .in("tipo", ["Aluno", "Professor"]);
+    if (isGestorAtivo && requestedAlunoId) {
+      alunoQuery = alunoQuery.eq("id", requestedAlunoId);
+    } else {
+      alunoQuery = alunoQuery.ilike("email", authEmail);
+    }
+    const { data: aluno, error: alunoError } = await alunoQuery
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (alunoError) throw alunoError;
     if (!aluno) throw new Error("Comprador não encontrado. Faça seu cadastro antes de comprar.");
+    if (!isGestorAtivo && requestedAlunoId && requestedAlunoId !== aluno.id) {
+      throw new Error("Você só pode gerar checkout para o seu próprio cadastro.");
+    }
+    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
+      const alunoPoloIds = Array.isArray(aluno.polo_ids) ? aluno.polo_ids.map(String) : [];
+      const alunoNoPolo = aluno.polo_id === gestorPoloId || alunoPoloIds.includes(String(gestorPoloId));
+      if (!alunoNoPolo) {
+        throw new Error("Gestor sem permissão para gerar checkout deste aluno.");
+      }
+    }
 
     const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
     if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para comprar pelo Asaas.");
@@ -234,12 +289,16 @@ Deno.serve(async (req: Request) => {
         multa_atraso,
         aplicar_desconto_matricula,
         aplicar_multa_juros_matricula,
+        gerar_cobrancas_futuras,
         matriculas(status)
       `)
       .eq("curso_id", course.id)
       .eq("status", "EM_ANDAMENTO");
     if (turmaId) {
       turmasQuery = turmasQuery.eq("id", turmaId);
+    }
+    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
+      turmasQuery = turmasQuery.eq("polo_id", gestorPoloId);
     }
     if (requireOnlinePermission) {
       turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
@@ -252,6 +311,9 @@ Deno.serve(async (req: Request) => {
     const availableSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
     if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
     const turma = availableSelection.turma;
+    const gerarCobrancaFutura = course.modalidade === "EAD"
+      ? false
+      : turma.gerar_cobrancas_futuras === true;
 
     let matricula: any = null;
     const { data: existingMatriculas, error: existingMatriculaError } = await admin
@@ -272,7 +334,7 @@ Deno.serve(async (req: Request) => {
           status: shouldReopen ? "PENDENTE" : existingMatricula.status,
           financeiro_herdado: false,
           gerar_cobranca_inicial: true,
-          gerar_cobranca_futura: true,
+          gerar_cobranca_futura: gerarCobrancaFutura,
           sincronizar_asaas: true,
         })
         .eq("id", existingMatricula.id)
@@ -289,7 +351,7 @@ Deno.serve(async (req: Request) => {
           status: "PENDENTE",
           financeiro_herdado: false,
           gerar_cobranca_inicial: true,
-          gerar_cobranca_futura: true,
+          gerar_cobranca_futura: gerarCobrancaFutura,
           sincronizar_asaas: true,
         })
         .select()
@@ -334,6 +396,41 @@ Deno.serve(async (req: Request) => {
         throw new Error(message);
       }
       return payload;
+    };
+
+    const recoverPaymentByReceivableId = async (receivableId: string) => {
+      const response = await callAsaas(
+        `/payments?externalReference=${encodeURIComponent(receivableId)}&limit=10`,
+      ).catch(() => null);
+      const recoveredPayment = (response?.data || []).find((item: any) =>
+        String(item.externalReference || "") === receivableId
+        && !["DELETED", "REFUNDED"].includes(String(item.status || "").toUpperCase())
+      );
+      if (!recoveredPayment?.id) return null;
+
+      const { data: recoveredReceivable, error: recoveredError } = await admin
+        .from("contas_receber")
+        .update({
+          asaas_payment_id: recoveredPayment.id,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: recoveredPayment.id,
+          asaas_invoice_url: recoveredPayment.invoiceUrl || null,
+          asaas_bank_slip_url: recoveredPayment.bankSlipUrl || null,
+          asaas_installment_id: recoveredPayment.installment || recoveredPayment.installmentId || null,
+          asaas_transaction_receipt_url: recoveredPayment.transactionReceiptUrl || null,
+          asaas_status: recoveredPayment.status || null,
+          asaas_synced_at: new Date().toISOString(),
+          asaas_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .select()
+        .single();
+      if (recoveredError) throw recoveredError;
+      return {
+        receivable: recoveredReceivable,
+        payment: recoveredPayment,
+      };
     };
 
     const ensureCustomer = async () => {
@@ -571,6 +668,12 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (inProgressReceivable?.asaas_invoice_url) {
         return json({ url: inProgressReceivable.asaas_invoice_url });
+      }
+      if (String(inProgressReceivable?.asaas_status || "").toUpperCase() === "CREATING") {
+        const recovered = await recoverPaymentByReceivableId(receivable.id);
+        if (recovered?.receivable?.asaas_invoice_url || recovered?.payment?.invoiceUrl) {
+          return json({ url: recovered.receivable.asaas_invoice_url || recovered.payment.invoiceUrl });
+        }
       }
       throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
     }

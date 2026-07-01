@@ -48,12 +48,13 @@ export const useParceirosMutations = ({
       }),
     onSuccess: async (created, data) => {
       invalidatePartners();
+      const isExistingAluno = Boolean(created?.existingAluno);
       let inviteDispatched = false;
       let recoverySent = false;
       let lastMessage: string | null = null;
       let manualRecoveryLink: string | null = null;
 
-      if (created?.email) {
+      if (created?.email && !isExistingAluno) {
         const redirectTo = buildAuthRedirectUrl('/login');
         try {
           const result = await portalActivationService.ensureStudentAccess({
@@ -78,8 +79,19 @@ export const useParceirosMutations = ({
       if (data.matricularAgora) {
         setCreatedAlunoNome(created.nome);
         setShowEnrollmentModalForAlunoId(created.id);
+        if (isExistingAluno) {
+          toast.success(
+            'Aluno localizado',
+            `${created.nome} já estava cadastrado. Escolha a turma para vincular ao polo atual.`,
+          );
+        }
       } else {
-        if (created?.email && inviteDispatched) {
+        if (isExistingAluno) {
+          toast.success(
+            'Aluno já cadastrado',
+            `${created.nome} foi localizado. Para aparecer neste polo, vincule o aluno a uma turma deste polo.`,
+          );
+        } else if (created?.email && inviteDispatched) {
           toast.success(
             'Aluno cadastrado!',
             lastMessage || `${created.nome} foi registrado com sucesso e receberá e-mail para primeiro acesso.`,
@@ -103,7 +115,7 @@ export const useParceirosMutations = ({
       }
       setShowForm(null);
     },
-    onError: () => toast.error('Erro ao salvar aluno', 'Verifique se o CPF já está cadastrado.')
+    onError: (error: any) => toast.error('Erro ao salvar aluno', error?.message || 'Verifique se o CPF já está cadastrado.')
   });
 
   const saveProfessorMutation = useMutation({

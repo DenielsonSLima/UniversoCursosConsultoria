@@ -1,15 +1,37 @@
 import { supabase } from '../../../../lib/supabase';
+import {
+  buildGestorPermissionsPayload,
+  normalizeGestorPermissions,
+} from '../../access-control';
+import { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 
-export interface UsuarioSistema {
-  id?: string;
-  nome: string;
-  email: string;
-  cpf?: string;
-  telefone?: string;
-  perfil: string;
-  status: 'Ativo' | 'Inativo';
-  context: string;
-}
+export type { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
+
+const USER_SELECT = 'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, created_at';
+
+const normalizeUser = (row: any): UsuarioSistema => ({
+  id: row.id,
+  nome: row.nome,
+  email: row.email,
+  cpf: row.cpf || undefined,
+  telefone: row.telefone || undefined,
+  perfil: row.perfil,
+  status: row.status,
+  context: row.context,
+  polo_ids: Array.isArray(row.polo_ids) ? row.polo_ids : [],
+  permissoes: normalizeGestorPermissions(row.permissoes),
+  created_at: row.created_at,
+});
+
+const normalizeUsers = (rows: any[] | null): UsuarioSistema[] => (rows || []).map(normalizeUser);
+
+const getFunctionErrorMessage = async (error: any, fallback: string) => {
+  const body = error?.context ? await error.context.json().catch(() => null) : null;
+  if (body && typeof body === 'object' && 'error' in body) {
+    return String((body as { error?: string }).error || fallback);
+  }
+  return error?.message || fallback;
+};
 
 export const usuariosService = {
   /**
@@ -18,7 +40,7 @@ export const usuariosService = {
   async getUsersByContext(contextId: string): Promise<UsuarioSistema[]> {
     const { data, error } = await supabase
       .from('usuarios_sistema')
-      .select('*')
+      .select(USER_SELECT)
       .eq('context', contextId)
       .order('nome', { ascending: true });
 
@@ -27,7 +49,7 @@ export const usuariosService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    return normalizeUsers(data);
   },
 
   /**
@@ -36,7 +58,7 @@ export const usuariosService = {
   async getGlobalUsers(): Promise<UsuarioSistema[]> {
     const { data, error } = await supabase
       .from('usuarios_sistema')
-      .select('*')
+      .select(USER_SELECT)
       .eq('context', 'global')
       .order('nome', { ascending: true });
 
@@ -45,45 +67,57 @@ export const usuariosService = {
       throw new Error(error.message);
     }
 
-    return data || [];
+    return normalizeUsers(data);
   },
 
   /**
    * Cria um novo usuário na tabela usuarios_sistema.
    */
-  async createUser(user: Omit<UsuarioSistema, 'id'>): Promise<UsuarioSistema> {
-    const insertUser = async (payload: Omit<UsuarioSistema, 'id'> | Omit<UsuarioSistema, 'id' | 'cpf'>) => supabase
-      .from('usuarios_sistema')
-      .insert(payload)
-      .select()
-      .single();
+  async createUser(user: UsuarioSistemaInput): Promise<UsuarioSistema> {
+    const { senha, ...dbUser } = user;
+    const payload = {
+      ...dbUser,
+      polo_ids: user.permissoes.allPolos ? [] : user.polo_ids,
+      permissoes: buildGestorPermissionsPayload(user.permissoes),
+    };
 
-    let { data, error } = await insertUser(user);
-
-    if (error && (error.message?.includes('cpf') || error.message?.includes('telefone'))) {
-      const { cpf, telefone, ...withoutIdentityExtras } = user;
-      const retry = await insertUser(withoutIdentityExtras);
-      data = retry.data;
-      error = retry.error;
-    }
-
+    const { data, error } = await supabase.functions.invoke('portal-user-management', {
+      body: {
+        action: 'upsert-gestor-user',
+        password: senha,
+        user: payload,
+      },
+    });
     if (error) {
       console.error('Erro ao criar usuário:', error);
-      throw new Error(error.message);
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível criar o usuário.'));
     }
 
-    return data;
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    return normalizeUser(data?.user || data);
   },
 
   /**
    * Atualiza dados de um usuário existente.
    */
-  async updateUser(id: string, user: Partial<UsuarioSistema>): Promise<UsuarioSistema> {
+  async updateUser(id: string, user: Partial<UsuarioSistemaInput>): Promise<UsuarioSistema> {
+    const { senha, ...dbUser } = user;
+    const payload = dbUser.permissoes
+      ? {
+          ...dbUser,
+          polo_ids: dbUser.permissoes.allPolos ? [] : dbUser.polo_ids,
+          permissoes: buildGestorPermissionsPayload(dbUser.permissoes),
+        }
+      : dbUser;
+
     const { data, error } = await supabase
       .from('usuarios_sistema')
-      .update(user)
+      .update(payload)
       .eq('id', id)
-      .select()
+      .select(USER_SELECT)
       .single();
 
     if (error) {
@@ -91,7 +125,7 @@ export const usuariosService = {
       throw new Error(error.message);
     }
 
-    return data;
+    return normalizeUser(data);
   },
 
   /**

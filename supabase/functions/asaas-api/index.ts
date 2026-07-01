@@ -4,6 +4,7 @@ import { createAsaasBillingService } from "./billing.service.ts";
 import { createAsaasCarnetService } from "./carnet.service.ts";
 import { createAsaasOnlineService } from "./online.service.ts";
 import { callAsaas } from "./asaas-http.ts";
+import { requireFinanceWriteAccess, requireGestorAtivo, requireGestorGlobal, requireGestorForPolo } from "./authz.ts";
 import type { Environment } from "./shared.ts";
 import {
   UUID_RE,
@@ -14,6 +15,38 @@ import {
   normalizeEnvironment,
   webhookSecretName,
 } from "./shared.ts";
+
+const GESTOR_ACTIONS = new Set([
+  "get-config",
+  "save-config",
+  "save-notification-preferences",
+  "sync-enrollment",
+  "test-connection",
+  "ensure-webhook",
+  "reconcile-online-payment",
+  "sync-receivable",
+  "cancel-receivable",
+  "generate-official-carnet",
+  "refresh-receivable-status",
+  "manual-settlement",
+  "reverse-manual-settlement",
+  "create-course-link",
+]);
+
+const GLOBAL_CONFIG_ACTIONS = new Set([
+  "save-config",
+  "save-notification-preferences",
+  "test-connection",
+  "ensure-webhook",
+  "create-course-link",
+]);
+
+const FINANCE_WRITE_ACTIONS = new Set([
+  "reconcile-online-payment",
+  "cancel-receivable",
+  "manual-settlement",
+  "reverse-manual-settlement",
+]);
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -28,6 +61,15 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const action = String(body.action || "");
+    const gestor = GESTOR_ACTIONS.has(action)
+      ? await requireGestorAtivo(req, admin)
+      : null;
+    if (gestor && GLOBAL_CONFIG_ACTIONS.has(action)) {
+      requireGestorGlobal(gestor);
+    }
+    if (gestor && FINANCE_WRITE_ACTIONS.has(action)) {
+      requireFinanceWriteAccess(gestor);
+    }
 
     const getConfig = async () => {
       const { data, error } = await admin
@@ -98,29 +140,6 @@ Deno.serve(async (req: Request) => {
       };
     };
 
-    const requireGestorAtivo = async () => {
-      const authorization = req.headers.get("Authorization") || "";
-      const token = authorization.replace(/^Bearer\s+/i, "").trim();
-      if (!token) throw new Error("Autenticação obrigatória para esta ação.");
-
-      const { data: authData, error: authError } = await admin.auth.getUser(token);
-      if (authError || !authData.user?.email) {
-        throw new Error("Sessão inválida para esta ação.");
-      }
-
-      const { data: usuario, error: usuarioError } = await admin
-        .from("usuarios_sistema")
-        .select("id, perfil, status")
-        .eq("email", authData.user.email)
-        .maybeSingle();
-      if (usuarioError) throw usuarioError;
-      if (!usuario || String(usuario.status).toLowerCase() !== "ativo" || String(usuario.perfil).toLowerCase() !== "gestor") {
-        throw new Error("Apenas gestor ativo pode cancelar cobrança no Asaas.");
-      }
-
-      return usuario;
-    };
-
     const billing = createAsaasBillingService(admin, anyNotificationChannelEnabled);
     const {
       mapBillingType,
@@ -147,7 +166,6 @@ Deno.serve(async (req: Request) => {
         notificationEmailEnabled: config.notification_email_enabled === true,
         notificationSmsEnabled: config.notification_sms_enabled === true,
         webhookUrl: `${supabaseUrl}/functions/v1/asaas-webhook`,
-        webhookToken,
       });
     }
 
@@ -243,6 +261,7 @@ Deno.serve(async (req: Request) => {
           gerar_cobranca_inicial,
           sincronizar_asaas,
           turmas(
+            polo_id,
             origem_financeira,
             financeiro_herdado,
             sincronizar_asaas_futuro
@@ -254,6 +273,7 @@ Deno.serve(async (req: Request) => {
       if (!matricula) throw new Error("Matrícula não encontrada.");
 
       const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+      if (gestor) requireGestorForPolo(gestor, turma?.polo_id);
       const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
       const financeiroHerdado = matricula.financeiro_herdado === true
         || turma?.financeiro_herdado === true
@@ -280,7 +300,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
       if (!data) throw new Error("Cobrança de matrícula não encontrada.");
 
-      const runtime = await getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
+      const runtime = await getRuntime();
       const receivable = await syncReceivable(runtime, data.id);
       return json({
         success: true,
@@ -291,6 +311,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const getRuntimeForAction = () => getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
+    const getRuntimeForMovement = () => getRuntime();
 
     if (action === "test-connection") {
       const runtime = await getRuntimeForAction();
@@ -353,20 +374,35 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "reconcile-online-payment") {
-      const runtime = await getRuntimeForAction();
-      return json(await online.reconcileOnlinePayment(runtime, body));
+      if (gestor && !gestor.isGlobal && !gestor.poloId) {
+        throw new Error("Usuário financeiro sem polo definido não pode reconciliar pagamento online.");
+      }
+      const runtime = await getRuntimeForMovement();
+      return json(await online.reconcileOnlinePayment(runtime, body, {
+        poloId: gestor && !gestor.isGlobal ? gestor.poloId : null,
+      }));
     }
 
     if (action === "sync-receivable") {
-      const runtime = await getRuntimeForAction();
-      const receivable = await syncReceivable(runtime, String(body.receivableId));
+      const receivableId = String(body.receivableId || "").trim();
+      if (!UUID_RE.test(receivableId)) {
+        throw new Error("Cobrança inválida para sincronização.");
+      }
+      const { data: receivableToSync, error: receivableToSyncError } = await admin
+        .from("contas_receber")
+        .select("id, polo_id")
+        .eq("id", receivableId)
+        .single();
+      if (receivableToSyncError) throw receivableToSyncError;
+      if (gestor) requireGestorForPolo(gestor, receivableToSync.polo_id);
+
+      const runtime = await getRuntimeForMovement();
+      const receivable = await syncReceivable(runtime, receivableId);
       return json({ success: true, receivable });
     }
 
     if (action === "cancel-receivable") {
-      await requireGestorAtivo();
-
-      const runtime = await getRuntime(normalizeEnvironment(body.environment));
+      const runtime = await getRuntimeForMovement();
       const receivableId = String(body.receivableId || "").trim();
       if (!UUID_RE.test(receivableId)) {
         throw new Error("Cobrança inválida para cancelamento.");
@@ -378,6 +414,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", receivableId)
         .single();
       if (error) throw error;
+      if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
 
       if (receivable.status === "PAGO" || ["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
         throw new Error("Cobranças pagas/confirmadas não podem ser canceladas por este fluxo.");
@@ -385,6 +422,8 @@ Deno.serve(async (req: Request) => {
 
       let asaasCanceled = false;
       let asaasDeleteStatus: number | null = null;
+      let asaasPaymentLinkCanceled = false;
+      let asaasPaymentLinkDeleteStatus: number | null = null;
 
       if (receivable.asaas_payment_id) {
         const response = await fetch(`${runtime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
@@ -400,10 +439,41 @@ Deno.serve(async (req: Request) => {
 
         if (response.ok) {
           asaasCanceled = true;
-        } else if (response.status !== 404) {
+        } else if (response.status === 404) {
+          if (String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
+            throw new Error("Cobrança Asaas não encontrada no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.");
+          }
+        } else {
           const message = payload?.errors?.map((item: any) => item.description).join(" ")
             || payload?.message
             || `Erro ${response.status} ao cancelar cobrança no Asaas.`;
+          throw new Error(message);
+        }
+      }
+
+      if (receivable.asaas_payment_link_id) {
+        const response = await fetch(`${runtime.baseUrl}/paymentLinks/${receivable.asaas_payment_link_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Gestao",
+            access_token: runtime.apiKey,
+          },
+        });
+        asaasPaymentLinkDeleteStatus = response.status;
+        const payload = response.status === 204 ? null : await response.json().catch(() => null);
+
+        if (response.ok) {
+          asaasPaymentLinkCanceled = true;
+        } else if (response.status === 404) {
+          if (!asaasCanceled && String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
+            throw new Error("Link de pagamento Asaas não encontrado no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.");
+          }
+          asaasPaymentLinkCanceled = true;
+        } else {
+          const message = payload?.errors?.map((item: any) => item.description).join(" ")
+            || payload?.message
+            || `Erro ${response.status} ao remover link de pagamento no Asaas.`;
           throw new Error(message);
         }
       }
@@ -413,6 +483,8 @@ Deno.serve(async (req: Request) => {
         .update({
           status: "CANCELADO",
           asaas_status: "DELETED",
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: receivable.asaas_payment_link_id && !receivable.asaas_payment_id ? null : receivable.nosso_numero_asaas,
           asaas_invoice_url: null,
           asaas_bank_slip_url: null,
           asaas_transaction_receipt_url: null,
@@ -421,67 +493,207 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivable.id)
+        .in("status", ["PENDENTE", "VENCIDO"])
         .select()
-        .single();
+        .maybeSingle();
       if (updateError) throw updateError;
+      if (!canceled) {
+        throw new Error("Cobrança mudou de status antes do cancelamento. Atualize a tela e tente novamente.");
+      }
 
       return json({
         success: true,
         receivable: canceled,
         asaasCanceled,
         asaasDeleteStatus,
+        asaasPaymentLinkCanceled,
+        asaasPaymentLinkDeleteStatus,
       });
     }
 
     if (action === "generate-official-carnet") {
-      const runtime = await getRuntimeForAction();
       const receivableIds = Array.isArray(body.receivableIds)
         ? body.receivableIds.map((id) => String(id)).filter(Boolean)
         : [];
-      return json(await carnet.generateOfficialCarnet(runtime, receivableIds));
+      const uniqueReceivableIds = [...new Set(receivableIds)];
+      if (!uniqueReceivableIds.length) {
+        throw new Error("Selecione ao menos uma cobrança para gerar o carnê oficial.");
+      }
+      if (uniqueReceivableIds.some((id) => !UUID_RE.test(id))) {
+        throw new Error("A seleção do carnê possui cobrança inválida.");
+      }
+      const { data: selectedReceivables, error: selectedReceivablesError } = await admin
+        .from("contas_receber")
+        .select("id, polo_id")
+        .in("id", uniqueReceivableIds);
+      if (selectedReceivablesError) throw selectedReceivablesError;
+      if ((selectedReceivables || []).length !== uniqueReceivableIds.length) {
+        throw new Error("Uma ou mais cobranças selecionadas não foram encontradas.");
+      }
+      if (gestor) {
+        for (const row of selectedReceivables || []) requireGestorForPolo(gestor, row.polo_id);
+      }
+      const runtime = await getRuntimeForMovement();
+      return json(await carnet.generateOfficialCarnet(runtime, uniqueReceivableIds));
     }
 
     if (action === "refresh-receivable-status") {
-      const runtime = await getRuntimeForAction();
-      const { data: receivable, error } = await admin
-        .from("contas_receber")
-        .select("*")
-        .eq("id", String(body.receivableId))
-        .single();
-      if (error) throw error;
-      const refreshed = await refreshReceivableStatus(runtime, receivable);
-      return json({ success: true, receivable: refreshed });
-    }
-
-    if (action === "manual-settlement") {
-      const receivableId = String(body.receivableId);
+      const receivableId = String(body.receivableId || "").trim();
+      if (!UUID_RE.test(receivableId)) {
+        throw new Error("Cobrança inválida para atualização.");
+      }
+      const runtime = await getRuntimeForMovement();
       const { data: receivable, error } = await admin
         .from("contas_receber")
         .select("*")
         .eq("id", receivableId)
         .single();
       if (error) throw error;
+      if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
+      const refreshed = await refreshReceivableStatus(runtime, receivable);
+      return json({ success: true, receivable: refreshed });
+    }
+
+    if (action === "manual-settlement") {
+      const receivableId = String(body.receivableId || "").trim();
+      if (!UUID_RE.test(receivableId)) {
+        throw new Error("Cobrança inválida para baixa manual.");
+      }
+      const { data: receivable, error } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivableId)
+        .single();
+      if (error) throw error;
+      if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
+
+      if (!["PENDENTE", "VENCIDO"].includes(String(receivable.status || "").toUpperCase())) {
+        throw new Error("Baixa manual permitida apenas para cobranças pendentes ou vencidas.");
+      }
+      if (["RECEIVED", "CONFIRMED"].includes(String(receivable.asaas_status || "").toUpperCase())) {
+        throw new Error("Cobrança já confirmada no Asaas. Atualize o status e use o comprovante oficial.");
+      }
+
+      const valorPago = Number(body.valorPago);
+      if (!Number.isFinite(valorPago) || valorPago <= 0) {
+        throw new Error("Valor pago inválido para baixa manual.");
+      }
+      const dataPagamento = String(body.dataPagamento || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) {
+        throw new Error("Data de pagamento inválida para baixa manual.");
+      }
+      const formaPagamento = String(body.formaPagamento || "").trim();
+      if (!formaPagamento) throw new Error("Forma de pagamento obrigatória para baixa manual.");
+
+      const contaBancariaId = String(body.contaBancariaId || "").trim();
+      if (!UUID_RE.test(contaBancariaId)) {
+        throw new Error("Conta bancária obrigatória para baixa manual.");
+      }
+      const { data: contaBancaria, error: contaError } = await admin
+        .from("contas_bancarias")
+        .select("id, polo_id, ativo")
+        .eq("id", contaBancariaId)
+        .maybeSingle();
+      if (contaError) throw contaError;
+      if (!contaBancaria || contaBancaria.ativo !== true) {
+        throw new Error("Conta bancária inativa ou não encontrada.");
+      }
+      if (receivable.polo_id && contaBancaria.polo_id !== receivable.polo_id) {
+        throw new Error("Conta bancária pertence a outro polo.");
+      }
 
       let settlementRuntime: Awaited<ReturnType<typeof getRuntime>> | null = null;
       let asaasCanceled = false;
+      let asaasPaymentLinkCanceled = false;
       if (receivable.asaas_payment_id && !["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
-        settlementRuntime = await getRuntime(normalizeEnvironment(body.environment));
-        await callAsaas(settlementRuntime, `/payments/${receivable.asaas_payment_id}`, { method: "DELETE" });
+        settlementRuntime = await getRuntimeForMovement();
+        const remotePaymentResponse = await fetch(`${settlementRuntime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Gestao",
+            access_token: settlementRuntime.apiKey,
+          },
+        });
+        const remotePayment = remotePaymentResponse.status === 204
+          ? null
+          : await remotePaymentResponse.json().catch(() => null);
+        if (remotePaymentResponse.status === 404) {
+          if (String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
+            throw new Error("Cobrança Asaas não encontrada no ambiente configurado. Atualize/reconcilie antes da baixa manual.");
+          }
+        } else if (!remotePaymentResponse.ok) {
+          const message = remotePayment?.errors?.map((item: any) => item.description).join(" ")
+            || remotePayment?.message
+            || `Erro ${remotePaymentResponse.status} ao consultar cobrança no Asaas.`;
+          throw new Error(message);
+        }
+        if (["RECEIVED", "CONFIRMED"].includes(String(remotePayment?.status || "").toUpperCase())) {
+          throw new Error("O Asaas já confirmou este pagamento. Não é permitido converter para baixa manual.");
+        }
+        const deletePaymentResponse = await fetch(`${settlementRuntime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Gestao",
+            access_token: settlementRuntime.apiKey,
+          },
+        });
+        if (!deletePaymentResponse.ok && deletePaymentResponse.status !== 404) {
+          const payload = await deletePaymentResponse.json().catch(() => null);
+          const message = payload?.errors?.map((item: any) => item.description).join(" ")
+            || payload?.message
+            || `Erro ${deletePaymentResponse.status} ao cancelar cobrança no Asaas.`;
+          throw new Error(message);
+        }
         asaasCanceled = true;
       }
+      if (receivable.asaas_payment_link_id) {
+        settlementRuntime = settlementRuntime || await getRuntimeForMovement();
+        const response = await fetch(`${settlementRuntime.baseUrl}/paymentLinks/${receivable.asaas_payment_link_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Gestao",
+            access_token: settlementRuntime.apiKey,
+          },
+        });
+        if (!response.ok && response.status !== 404) {
+          const payload = await response.json().catch(() => null);
+          const message = payload?.errors?.map((item: any) => item.description).join(" ")
+            || payload?.message
+            || `Erro ${response.status} ao remover link de pagamento no Asaas.`;
+          throw new Error(message);
+        }
+        if (response.status === 404 && !receivable.asaas_payment_id && String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
+          throw new Error("Link de pagamento Asaas não encontrado no ambiente configurado. Atualize/reconcilie antes da baixa manual.");
+        }
+        asaasPaymentLinkCanceled = true;
+      }
 
-      const { error: updateError } = await admin.from("contas_receber").update({
-        status: "PAGO",
-        conta_bancaria_id: body.contaBancariaId,
-        valor_pago: Number(body.valorPago),
-        data_pagamento: body.dataPagamento,
-        forma_pagamento: body.formaPagamento,
-        origem_pagamento: "PRESENCIAL",
-        asaas_status: receivable.asaas_payment_id ? "DELETED" : null,
-        asaas_transaction_receipt_url: null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", receivableId);
+      const { data: settled, error: updateError } = await admin.from("contas_receber")
+        .update({
+          status: "PAGO",
+          conta_bancaria_id: contaBancariaId,
+          valor_pago: valorPago,
+          data_pagamento: dataPagamento,
+          forma_pagamento: formaPagamento,
+          origem_pagamento: "PRESENCIAL",
+          asaas_status: receivable.asaas_payment_id || receivable.asaas_payment_link_id ? "DELETED" : null,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: receivable.asaas_payment_link_id && !receivable.asaas_payment_id ? null : receivable.nosso_numero_asaas,
+          asaas_invoice_url: null,
+          asaas_bank_slip_url: null,
+          asaas_transaction_receipt_url: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .in("status", ["PENDENTE", "VENCIDO"])
+        .select("id")
+        .maybeSingle();
       if (updateError) throw updateError;
+      if (!settled) {
+        throw new Error("Cobrança mudou de status antes da baixa. Atualize a tela e tente novamente.");
+      }
 
       if (receivable.matricula_id) {
         const { data: matricula, error: matriculaError } = await admin
@@ -494,19 +706,23 @@ Deno.serve(async (req: Request) => {
         const gerarFutura = matricula?.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
         const syncEnabled = matricula?.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
         if (gerarFutura && syncEnabled) {
-          settlementRuntime = settlementRuntime || await getRuntime(normalizeEnvironment(body.environment));
+          settlementRuntime = settlementRuntime || await getRuntimeForMovement();
           await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
         }
       }
       return json({
         success: true,
         asaasCanceled,
+        asaasPaymentLinkCanceled,
         asaasPaymentId: receivable.asaas_payment_id || null,
       });
     }
 
     if (action === "reverse-manual-settlement") {
-      const receivableId = String(body.receivableId);
+      const receivableId = String(body.receivableId || "").trim();
+      if (!UUID_RE.test(receivableId)) {
+        throw new Error("Cobrança inválida para estorno.");
+      }
       const recreateAsaas = body.recreateAsaas !== false;
       const { data: receivable, error } = await admin
         .from("contas_receber")
@@ -514,6 +730,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", receivableId)
         .single();
       if (error) throw error;
+      if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
       if (receivable.status !== "PAGO") {
         throw new Error("Somente cobranças pagas podem ser estornadas.");
       }
@@ -552,7 +769,7 @@ Deno.serve(async (req: Request) => {
       if (updateError) throw updateError;
 
       const finalReceivable = shouldRecreateAsaas
-        ? await syncReceivable(await getRuntime(normalizeEnvironment(body.environment)), reverted.id)
+        ? await syncReceivable(await getRuntimeForMovement(), reverted.id)
         : reverted;
 
       return json({

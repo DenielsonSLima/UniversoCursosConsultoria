@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, CircleDollarSign, GraduationCap, ReceiptText, ExternalLink, Copy, QrCode, FileText } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, Clock, GraduationCap, ReceiptText, ExternalLink, Copy } from 'lucide-react';
 
 interface FinanceiroCardItemProps {
   installment: any;
@@ -10,8 +10,6 @@ interface FinanceiroCardItemProps {
   getInstallmentStatusBadge: (status: string) => React.ReactNode;
   onCopyLink: (url: string) => void;
   onOpenReceipt: (installment: any) => void;
-  onOpenPix: (installment: any) => void;
-  onOpenBoleto: (installment: any) => void;
 }
 
 const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
@@ -23,8 +21,6 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
   getInstallmentStatusBadge,
   onCopyLink,
   onOpenReceipt,
-  onOpenPix,
-  onOpenBoleto,
 }) => {
   const paymentLabel = [
     installment.turmaNome,
@@ -39,6 +35,10 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
     || ['RECEIVED', 'CONFIRMED'].includes(String(installment.asaas_status || '').toUpperCase())
     || Boolean(installment.asaas_transaction_receipt_url)
   );
+  const formatPaymentMethod = (method?: string | null) => {
+    const normalized = String(method || '').trim();
+    return normalized || 'Forma não informada';
+  };
 
   const renderActions = () => {
     if (['PENDENTE', 'VENCIDO'].includes(installment.status)) {
@@ -66,33 +66,29 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
       }
 
       return (
-        <div className="space-y-2">
-          <button
-            onClick={() => onOpenPix(installment)}
-            className="inline-flex w-full items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
-          >
-            <QrCode size={13} />
-            Pagar via PIX
-          </button>
-          <button
-            onClick={() => onOpenBoleto(installment)}
-            className="inline-flex w-full items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
-          >
-            <FileText size={13} />
-            Boleto
-          </button>
+        <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <Clock size={13} />
+          Cobrança em emissão
         </div>
       );
     }
 
+    if (String(installment.status || '').toUpperCase() === 'PAGO') {
+      return (
+        <button
+          onClick={() => onOpenReceipt(installment)}
+          className="inline-flex w-full items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
+        >
+          <ReceiptText size={13} />
+          {isPaidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
+        </button>
+      );
+    }
+
     return (
-      <button
-        onClick={() => onOpenReceipt(installment)}
-        className="inline-flex w-full items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
-      >
-        <ReceiptText size={13} />
-        {isPaidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
-      </button>
+      <div className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        Sem comprovante
+      </div>
     );
   };
 
@@ -148,7 +144,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
               <span>
                 <span className="block text-slate-400 text-[10px] font-black uppercase tracking-widest">Pagamento</span>
                 <span className="font-bold text-slate-700">
-                  {formatDate(installment.data_pagamento)} via {installment.forma_pagamento || 'Pix'}
+                  {formatDate(installment.data_pagamento)} via {formatPaymentMethod(installment.forma_pagamento)}
                 </span>
               </span>
             </p>

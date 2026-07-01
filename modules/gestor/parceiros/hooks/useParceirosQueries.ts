@@ -7,7 +7,7 @@ export const parceirosQueryKeys = {
   list: (poloId?: string | null, includeGlobal?: boolean) => ['parceiros', 'todos', poloId || 'todos', includeGlobal ? 'global' : 'local'] as const,
   kpis: ['parceiros_kpis'] as const,
   detail: (id: string) => ['parceiro', id] as const,
-  turmasDisponiveis: ['turmas_disponiveis'] as const,
+  turmasDisponiveis: (poloId?: string | null) => ['turmas_disponiveis', poloId || 'todos'] as const,
   matriculas: ['matriculas'] as const,
 };
 
@@ -26,8 +26,8 @@ export const useParceirosQueries = (
   });
 
   const turmasDisponiveisQuery = useQuery({
-    queryKey: parceirosQueryKeys.turmasDisponiveis,
-    queryFn: parceirosService.getTurmasDisponiveis,
+    queryKey: parceirosQueryKeys.turmasDisponiveis(scope.poloId),
+    queryFn: () => parceirosService.getTurmasDisponiveis(scope.poloId || undefined),
     enabled: !!showEnrollmentModalForAlunoId,
   });
 

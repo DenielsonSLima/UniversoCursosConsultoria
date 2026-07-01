@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
     const payload = await req.json();
     eventId = String(payload.id || crypto.randomUUID());
     const eventType = String(payload.event || "");
-    const payment = payload.payment || {};
+    let payment = payload.payment || {};
 
     const apiKey = await getSecret(
       environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key",
@@ -51,8 +51,42 @@ Deno.serve(async (req: Request) => {
       payment_id: payment.id || null,
       payload,
     });
-    if (insertError?.code === "23505") return json({ received: true, duplicate: true });
-    if (insertError) throw insertError;
+    if (insertError?.code === "23505") {
+      const { data: existingEvent, error: existingError } = await admin
+        .from("asaas_webhook_events")
+        .select("processed")
+        .eq("event_id", eventId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existingEvent?.processed === true) {
+        return json({ received: true, duplicate: true });
+      }
+      const { error: retryUpdateError } = await admin
+        .from("asaas_webhook_events")
+        .update({
+          event_type: eventType,
+          payment_id: payment.id || null,
+          payload,
+          processed: false,
+          processing_error: null,
+          received_at: new Date().toISOString(),
+        })
+        .eq("event_id", eventId);
+      if (retryUpdateError) throw retryUpdateError;
+    }
+    if (insertError && insertError.code !== "23505") throw insertError;
+
+    if (
+      payment?.id
+      && ["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED", "PAYMENT_DELETED"].includes(eventType)
+    ) {
+      try {
+        const remotePayment = await callAsaas(`/payments/${payment.id}`);
+        payment = { ...payment, ...remotePayment };
+      } catch (verifyError) {
+        if (eventType !== "PAYMENT_DELETED") throw verifyError;
+      }
+    }
 
     const isPaymentConfirmed = isPaymentConfirmedEvent(eventType, payment);
     const localStatus = localStatusForPaymentEvent(eventType, isPaymentConfirmed);
@@ -62,6 +96,7 @@ Deno.serve(async (req: Request) => {
 
     await admin.from("asaas_webhook_events").update({
       processed: true,
+      processing_error: null,
       processed_at: new Date().toISOString(),
     }).eq("event_id", eventId);
     return json({ received: true });
@@ -69,6 +104,7 @@ Deno.serve(async (req: Request) => {
     console.error(error);
     if (eventId) {
       await admin.from("asaas_webhook_events").update({
+        processed: false,
         processing_error: error instanceof Error ? error.message : String(error),
         processed_at: new Date().toISOString(),
       }).eq("event_id", eventId);

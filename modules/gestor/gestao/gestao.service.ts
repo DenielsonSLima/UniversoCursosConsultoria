@@ -4,6 +4,21 @@ import { Turma, TurmasPageFilters, TurmasPageResult } from './gestao.types';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
 
+export type GestaoResumoModalidade = {
+  modalidade: 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
+  label: string;
+  turmasAtivas: number;
+  alunos: number;
+  inscricoesMesAtual: number | null;
+};
+
+export type GestaoResumoKpis = {
+  totalTurmasAtivas: number;
+  totalAlunos: number;
+  totalInscricoesEadMesAtual: number;
+  cards: GestaoResumoModalidade[];
+};
+
 const normalizeStatus = (status?: string | null) =>
   String(status || '')
     .normalize('NFD')
@@ -497,34 +512,7 @@ export const gestaoService = {
     };
   },
 
-  async getGestaoResumoKpis(poloId?: string): Promise<{
-    totalTurmas: number;
-    totalAlunos: number;
-    turmasPorTipo: {
-      TECNICO: number;
-      LIVRE: number;
-      ESPECIALIZACAO: number;
-      EAD: number;
-    };
-    alunosPorTipo: {
-      TECNICO: number;
-      LIVRE: number;
-      ESPECIALIZACAO: number;
-      EAD: number;
-    };
-    percentTurmasPorTipo: {
-      TECNICO: number;
-      LIVRE: number;
-      ESPECIALIZACAO: number;
-      EAD: number;
-    };
-    percentAlunosPorTipo: {
-      TECNICO: number;
-      LIVRE: number;
-      ESPECIALIZACAO: number;
-      EAD: number;
-    };
-  }> {
+  async getGestaoResumoKpis(poloId?: string): Promise<GestaoResumoKpis> {
     const { data, error } = await supabase.rpc('get_gestao_resumo_kpis', {
       p_polo_id: poloId || null
     });

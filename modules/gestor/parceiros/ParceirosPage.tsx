@@ -134,6 +134,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         onSaveProfessor={(data) => saveProfessorMutation.mutate(data)}
         onSavePF={(data) => savePFMutation.mutate(data)}
         onSavePJ={(data) => savePJMutation.mutate(data)}
+        defaultPoloId={poloId}
       />
     );
   }

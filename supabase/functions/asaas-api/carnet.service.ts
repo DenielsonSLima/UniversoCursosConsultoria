@@ -31,13 +31,18 @@ export const createAsaasCarnetService = (
     let renderedSlipCount = 0;
 
     for (const row of orderedRows) {
-      if (row.status === "PAGO") {
-        throw new Error("Remova cobranças já pagas da seleção para emitir carnê oficial.");
+      const rowStatus = String(row.status || "").toUpperCase();
+      if (!["PENDENTE", "VENCIDO"].includes(rowStatus)) {
+        throw new Error("Carnê oficial só pode incluir cobranças pendentes ou vencidas.");
       }
 
       const synced = row.asaas_payment_id
         ? await refreshReceivableStatus(runtime, row)
         : await syncReceivable(runtime, row.id);
+      const syncedStatus = String(synced.status || "").toUpperCase();
+      if (!["PENDENTE", "VENCIDO"].includes(syncedStatus)) {
+        throw new Error("Uma cobrança selecionada deixou de estar pendente/vencida após a atualização Asaas.");
+      }
 
       const bankSlipUrl = synced.asaas_bank_slip_url;
       if (!bankSlipUrl) {

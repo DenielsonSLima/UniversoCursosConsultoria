@@ -558,7 +558,7 @@ export const financeiroService = {
       dataPagamento: string;
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     }
-  ): Promise<{ success: boolean; asaasCanceled?: boolean; asaasPaymentId?: string }> {
+  ): Promise<{ success: boolean; asaasCanceled?: boolean; asaasPaymentLinkCanceled?: boolean; asaasPaymentId?: string }> {
     return asaasIntegrationService.settleInPerson(id, params);
   },
 

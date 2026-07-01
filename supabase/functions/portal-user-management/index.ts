@@ -11,7 +11,9 @@ type IncomingPayload = {
   action?: string;
   partnerId?: string;
   email?: string | null;
+  password?: string | null;
   redirectTo?: string;
+  user?: Record<string, unknown>;
 };
 
 type FunctionResponse = {
@@ -24,6 +26,7 @@ type FunctionResponse = {
   recoveryEmailSent?: boolean;
   message?: string;
   recoveryLink?: string | null;
+  user?: Record<string, unknown> | null;
   error?: string;
 };
 
@@ -43,6 +46,25 @@ const normalizeEmail = (value?: string | null) =>
 
 const normalizeRedirectInput = (value?: string | null) =>
   String(value || '').trim();
+
+const normalizeStringArray = (value: unknown) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0);
+};
+
+const normalizePermissionsPayload = (value: unknown) => {
+  const permissions = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+
+  return {
+    modules: normalizeStringArray(permissions.modules),
+    financeiroTabs: normalizeStringArray(permissions.financeiroTabs),
+    allPolos: typeof permissions.allPolos === 'boolean' ? permissions.allPolos : false,
+  };
+};
 
 const extractTextFromResponse = async (response: Response) => {
   const raw = await response.text().catch(() => '');
@@ -125,7 +147,7 @@ const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
 
   const { data: gestor, error: gestorError } = await admin
     .from('usuarios_sistema')
-    .select('id, status, context')
+    .select('id, status, context, polo_ids, permissoes')
     .eq('email', authData.user.email.toLowerCase())
     .maybeSingle();
 
@@ -138,12 +160,18 @@ const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
 
 const getGestorScope = async (admin: any, gestor: any) => {
   const context = String(gestor?.context || '').trim();
+  const permissions = normalizePermissionsPayload(gestor?.permissoes);
+  const explicitPoloIds = normalizeStringArray(gestor?.polo_ids);
   if (!context || context.toLowerCase() === 'global') {
-    return { global: true, poloId: null };
+    return {
+      global: permissions.allPolos || explicitPoloIds.length === 0,
+      poloId: explicitPoloIds[0] || null,
+      allowedPoloIds: explicitPoloIds,
+    };
   }
 
   if (!isUuid(context)) {
-    return { global: false, poloId: null };
+    return { global: false, poloId: null, allowedPoloIds: explicitPoloIds };
   }
 
   const { data: polo } = await admin
@@ -153,9 +181,18 @@ const getGestorScope = async (admin: any, gestor: any) => {
     .maybeSingle();
 
   return {
-    global: Boolean(polo?.is_matriz),
+    global: Boolean(polo?.is_matriz) && (permissions.allPolos || explicitPoloIds.length === 0),
     poloId: context,
+    allowedPoloIds: explicitPoloIds.length > 0 ? explicitPoloIds : [context],
   };
+};
+
+const gestorHasModule = (gestor: any, moduleId: string) => {
+  const rawPermissions = gestor?.permissoes;
+  if (!rawPermissions || typeof rawPermissions !== 'object') return true;
+  const permissions = normalizePermissionsPayload(rawPermissions);
+  if (permissions.modules.length === 0) return true;
+  return permissions.modules.includes(moduleId);
 };
 
 const isPartnerInGestorScope = async (admin: any, gestor: any, partner: any) => {
@@ -165,10 +202,11 @@ const isPartnerInGestorScope = async (admin: any, gestor: any, partner: any) => 
 
   const partnerPoloId = partner?.polo_id || null;
   const partnerPoloIds = Array.isArray(partner?.polo_ids) ? partner.polo_ids : [];
+  const allowedPoloIds = Array.isArray(scope.allowedPoloIds) ? scope.allowedPoloIds : [];
 
   return !partnerPoloId
-    || partnerPoloId === scope.poloId
-    || partnerPoloIds.includes(scope.poloId);
+    || allowedPoloIds.includes(partnerPoloId)
+    || partnerPoloIds.some((poloId: string) => allowedPoloIds.includes(poloId));
 };
 
 const findAuthUserByEmail = async (admin: any, email: string) => {
@@ -222,7 +260,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = String(payload.action || '').trim();
-  if (!['send-student-invite', 'delete-partner'].includes(action)) {
+  if (!['send-student-invite', 'delete-partner', 'upsert-gestor-user'].includes(action)) {
     return json({ success: false, error: 'Ação inválida.' }, 400);
   }
 
@@ -234,6 +272,114 @@ Deno.serve(async (req: Request) => {
   const authorization = await ensureAuthorizedGestor(admin, bearer);
   if (!authorization.authorized) {
     return json({ success: false, error: authorization.error || 'Não autorizado.' }, 401);
+  }
+
+  if (action === 'upsert-gestor-user') {
+    const scope = await getGestorScope(admin, authorization.gestor);
+    if (!scope.global || !gestorHasModule(authorization.gestor, 'configuracoes')) {
+      return json({ success: false, error: 'Apenas gestor global com acesso a Configurações pode criar usuários.' }, 403);
+    }
+
+    const incomingUser = payload.user || {};
+    const email = normalizeEmail(incomingUser.email as string | null);
+    const password = String(payload.password || '').trim();
+    const permissions = normalizePermissionsPayload(incomingUser.permissoes);
+    const allPolos = permissions.allPolos;
+    const poloIds = allPolos ? [] : normalizeStringArray(incomingUser.polo_ids);
+
+    if (!email) {
+      return json({ success: false, error: 'E-mail do usuário é obrigatório.' }, 400);
+    }
+
+    if (password.length < 6) {
+      return json({ success: false, error: 'A senha precisa ter ao menos 6 caracteres.' }, 400);
+    }
+
+    if (!allPolos && poloIds.length === 0) {
+      return json({ success: false, error: 'Selecione ao menos um polo para o usuário.' }, 400);
+    }
+
+    if (permissions.modules.length === 0) {
+      return json({ success: false, error: 'Selecione ao menos um módulo para o usuário.' }, 400);
+    }
+
+    if (permissions.modules.includes('financeiro') && permissions.financeiroTabs.length === 0) {
+      return json({ success: false, error: 'Selecione ao menos uma aba financeira.' }, 400);
+    }
+
+    let authUser: any = null;
+    try {
+      authUser = await findAuthUserByEmail(admin, email);
+    } catch (error) {
+      return json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Não foi possível localizar usuário no Supabase Auth.',
+      }, 500);
+    }
+
+    if (authUser?.id) {
+      const { error: updateAuthError } = await admin.auth.admin.updateUserById(authUser.id, {
+        password,
+        user_metadata: {
+          nome: incomingUser.nome,
+          origem: 'usuarios_sistema',
+        },
+      });
+
+      if (updateAuthError) {
+        return json({ success: false, error: updateAuthError.message }, 500);
+      }
+    } else {
+      const { data: createdAuth, error: createAuthError } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          nome: incomingUser.nome,
+          origem: 'usuarios_sistema',
+        },
+      });
+
+      if (createAuthError) {
+        return json({ success: false, error: createAuthError.message }, 500);
+      }
+
+      authUser = createdAuth?.user || null;
+    }
+
+    const userPayload = {
+      nome: String(incomingUser.nome || '').trim(),
+      email,
+      cpf: incomingUser.cpf ? String(incomingUser.cpf) : null,
+      telefone: incomingUser.telefone ? String(incomingUser.telefone) : null,
+      perfil: String(incomingUser.perfil || 'Operacional').trim(),
+      status: String(incomingUser.status || 'Ativo').trim(),
+      context: String(incomingUser.context || 'global').trim(),
+      polo_ids: poloIds,
+      permissoes: permissions,
+    };
+
+    if (!userPayload.nome) {
+      return json({ success: false, error: 'Nome do usuário é obrigatório.' }, 400);
+    }
+
+    const { data: savedUser, error: saveUserError } = await admin
+      .from('usuarios_sistema')
+      .upsert(userPayload, { onConflict: 'email' })
+      .select('id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, created_at')
+      .single();
+
+    if (saveUserError) {
+      return json({ success: false, error: saveUserError.message }, 500);
+    }
+
+    return json({
+      success: true,
+      action: 'upsert-gestor-user',
+      userId: authUser?.id || null,
+      user: savedUser,
+      message: authUser?.id ? 'Usuário cadastrado com acesso ao portal.' : 'Usuário salvo.',
+    });
   }
 
   const partnerId = String(payload.partnerId || '').trim();

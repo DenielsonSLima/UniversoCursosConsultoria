@@ -186,8 +186,128 @@ export const createAsaasWebhookHandlers = (
     if (error) throw error;
   };
 
+  const canSyncReceivableStatus = (status: unknown) =>
+    ["PENDENTE", "VENCIDO"].includes(String(status || "").toUpperCase());
+
+  const recoverReceivablePayment = async (item: any) => {
+    if (!item?.id) return false;
+    const response = await callAsaas(`/payments?externalReference=${encodeURIComponent(item.id)}&limit=10`)
+      .catch(() => null);
+    const payment = (response?.data || []).find((candidate: any) =>
+      String(candidate.externalReference || "") === String(item.id)
+      && !["DELETED", "REFUNDED"].includes(String(candidate.status || "").toUpperCase())
+    );
+    if (!payment?.id) return false;
+
+    const { error } = await admin.from("contas_receber").update({
+      asaas_payment_id: payment.id,
+      nosso_numero_asaas: payment.id,
+      asaas_invoice_url: payment.invoiceUrl || null,
+      asaas_bank_slip_url: payment.bankSlipUrl || null,
+      asaas_installment_id: payment.installment || payment.installmentId || null,
+      asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
+      asaas_status: payment.status || null,
+      asaas_synced_at: new Date().toISOString(),
+      asaas_last_error: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", item.id);
+    if (error) throw error;
+    return true;
+  };
+
+  const getReceivableSyncDecision = async (item: any) => {
+    if (!item.matricula_id) return { allowed: true, reason: null as string | null };
+
+    const { data: matricula, error } = await admin
+      .from("matriculas")
+      .select(`
+        id,
+        financeiro_herdado,
+        gerar_cobranca_inicial,
+        gerar_cobranca_futura,
+        sincronizar_asaas,
+        turmas(
+          origem_financeira,
+          financeiro_herdado,
+          gerar_cobrancas_futuras,
+          sincronizar_asaas_futuro
+        )
+      `)
+      .eq("id", item.matricula_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!matricula) return { allowed: true, reason: null as string | null };
+
+    const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+    const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
+    const financeiroHerdado = matricula.financeiro_herdado === true
+      || turma?.financeiro_herdado === true
+      || origem === "LEGADO";
+    const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
+    if (syncEnabled === false) {
+      return { allowed: false, reason: "Sincronização Asaas desativada na matrícula/turma." };
+    }
+
+    const launchType = String(item.tipo_lancamento || "").toUpperCase();
+    if (launchType === "MATRICULA") {
+      const gerarInicial = matricula.gerar_cobranca_inicial ?? !financeiroHerdado;
+      if (gerarInicial === false) {
+        return { allowed: false, reason: "Cobrança inicial bloqueada por regra de financeiro legado." };
+      }
+    } else {
+      const gerarFutura = matricula.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
+      if (gerarFutura === false) {
+        return { allowed: false, reason: "Cobranças futuras desativadas na matrícula/turma." };
+      }
+    }
+
+    return { allowed: true, reason: null as string | null };
+  };
+
   const syncReceivable = async (item: any) => {
     if (item.asaas_payment_id || !item.cliente_id) return;
+    if (!canSyncReceivableStatus(item.status)) return;
+
+    const syncDecision = await getReceivableSyncDecision(item);
+    if (!syncDecision.allowed) {
+      const { error } = await admin.from("contas_receber").update({
+        origem_pagamento: item.origem_pagamento || "LOCAL",
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", item.id);
+      if (error) throw error;
+      return;
+    }
+
+    const { data: lockedReceivable, error: lockError } = await admin
+      .from("contas_receber")
+      .update({
+        asaas_status: "CREATING",
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", item.id)
+      .is("asaas_payment_id", null)
+      .in("status", ["PENDENTE", "VENCIDO"])
+      .or("asaas_status.is.null,asaas_status.neq.CREATING")
+      .select()
+      .maybeSingle();
+    if (lockError) throw lockError;
+    if (!lockedReceivable) {
+      const { data: current, error: currentError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", item.id)
+        .maybeSingle();
+      if (currentError) throw currentError;
+      if (current?.asaas_payment_id) return;
+      if (String(current?.asaas_status || "").toUpperCase() === "CREATING") {
+        await recoverReceivablePayment(current);
+      }
+      return;
+    }
+    item = lockedReceivable;
+
     const { data: partner, error } = await admin.from("parceiros").select("*").eq("id", item.cliente_id).single();
     if (error) throw error;
     let customerId = partner.asaas_customer_id;
@@ -215,30 +335,52 @@ export const createAsaasWebhookHandlers = (
       customerId = customer.id;
       await admin.from("parceiros").update({ asaas_customer_id: customerId }).eq("id", partner.id);
     }
-    const generated = await callAsaas("/payments", {
-      method: "POST",
-      body: JSON.stringify({
-        customer: customerId,
-        billingType: "UNDEFINED",
-        value: Number(item.valor),
-        dueDate: item.data_vencimento,
-        description: item.descricao,
-        externalReference: item.id,
-        postalService: false,
-        callback: { successUrl: callbackSuccessUrl() },
-      }),
-    });
-    await admin.from("contas_receber").update({
-      asaas_payment_id: generated.id,
-      nosso_numero_asaas: generated.id,
-      asaas_invoice_url: generated.invoiceUrl || null,
-      asaas_bank_slip_url: generated.bankSlipUrl || null,
-      asaas_installment_id: generated.installment || generated.installmentId || null,
-      asaas_transaction_receipt_url: generated.transactionReceiptUrl || null,
-      asaas_status: generated.status,
-      asaas_synced_at: new Date().toISOString(),
-      asaas_last_error: null,
-    }).eq("id", item.id);
+    let paymentCreated = false;
+    try {
+      const generated = await callAsaas("/payments", {
+        method: "POST",
+        body: JSON.stringify({
+          customer: customerId,
+          billingType: "UNDEFINED",
+          value: Number(item.valor),
+          dueDate: item.data_vencimento,
+          description: item.descricao,
+          externalReference: item.id,
+          postalService: false,
+          callback: { successUrl: callbackSuccessUrl() },
+        }),
+      });
+      paymentCreated = true;
+
+      const { data: updated, error: updateError } = await admin.from("contas_receber").update({
+        asaas_payment_id: generated.id,
+        nosso_numero_asaas: generated.id,
+        asaas_invoice_url: generated.invoiceUrl || null,
+        asaas_bank_slip_url: generated.bankSlipUrl || null,
+        asaas_installment_id: generated.installment || generated.installmentId || null,
+        asaas_transaction_receipt_url: generated.transactionReceiptUrl || null,
+        asaas_status: generated.status,
+        asaas_synced_at: new Date().toISOString(),
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+        .eq("id", item.id)
+        .is("asaas_payment_id", null)
+        .in("status", ["PENDENTE", "VENCIDO"])
+        .select("id")
+        .maybeSingle();
+      if (updateError) throw updateError;
+      if (!updated) {
+        throw new Error("Cobrança mudou de status antes de gravar a cobrança Asaas.");
+      }
+    } catch (syncError) {
+      await admin.from("contas_receber").update({
+        asaas_status: paymentCreated ? "CREATING" : null,
+        asaas_last_error: syncError instanceof Error ? syncError.message : String(syncError),
+        updated_at: new Date().toISOString(),
+      }).eq("id", item.id);
+      throw syncError;
+    }
   };
 
   const syncOpenInstallments = async (matriculaId: string) => {
@@ -288,6 +430,34 @@ export const createAsaasWebhookHandlers = (
 
     if (!receivable) return;
 
+    const currentStatus = String(receivable.status || "").toUpperCase();
+    const currentAsaasStatus = String(receivable.asaas_status || "").toUpperCase();
+    const currentPaid = currentStatus === "PAGO" || ["RECEIVED", "CONFIRMED"].includes(currentAsaasStatus);
+    const incomingRegressiveStatus = ["CANCELADO", "VENCIDO"].includes(String(localStatus || "").toUpperCase());
+    if (currentPaid && incomingRegressiveStatus) {
+      const { error: monotonicError } = await admin.from("contas_receber").update({
+        asaas_status: payment.status || eventType.replace("PAYMENT_", ""),
+        asaas_last_error: `Evento ${eventType} ignorado: cobrança já estava paga e não pode regredir automaticamente.`,
+        updated_at: new Date().toISOString(),
+      }).eq("id", receivable.id);
+      if (monotonicError) throw monotonicError;
+      return;
+    }
+
+    const currentManualSettlement = currentStatus === "PAGO" && receivable.origem_pagamento === "PRESENCIAL";
+    if (currentManualSettlement && localStatus === "PAGO") {
+      const { error: manualConflictError } = await admin.from("contas_receber").update({
+        asaas_payment_id: payment.id || receivable.asaas_payment_id,
+        asaas_payment_link_id: payment.paymentLink || receivable.asaas_payment_link_id || null,
+        asaas_status: payment.status || eventType.replace("PAYMENT_", ""),
+        asaas_transaction_receipt_url: payment.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
+        asaas_last_error: `Evento ${eventType} recebido após baixa manual. Revisar possível recebimento duplicado no Asaas.`,
+        updated_at: new Date().toISOString(),
+      }).eq("id", receivable.id);
+      if (manualConflictError) throw manualConflictError;
+      return;
+    }
+
     const updates: Record<string, unknown> = {
       asaas_payment_id: payment.id || receivable.asaas_payment_id,
       asaas_payment_link_id: payment.paymentLink || receivable.asaas_payment_link_id || null,
@@ -327,7 +497,7 @@ export const createAsaasWebhookHandlers = (
   ) => {
     if (!["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"].includes(eventType) || !payment.paymentLink) return;
 
-    const isConfirmed = localStatus === "PAGO" || isPaymentConfirmed || eventType === "PAYMENT_CONFIRMED";
+    const isConfirmed = localStatus === "PAGO" || isPaymentConfirmed;
     const { data: course, error: courseError } = await admin.from("cursos")
       .select("id, nome, modalidade")
       .eq("asaas_payment_link_id", payment.paymentLink)

@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
-import { CalendarDays, CheckCircle, Clock, Copy, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download } from 'lucide-react';
+import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 
 interface FinanceiroPageProps {
   alunoId: string;
 }
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
-  const [showPixModal, setShowPixModal] = useState<any | null>(null);
-  const [showBoletoModal, setShowBoletoModal] = useState<any | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [asaasReceiptPreview, setAsaasReceiptPreview] = useState<{ url: string; title: string } | null>(null);
   const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
-  const [pixCopied, setPixCopied] = useState(false);
   const [notice, setNotice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -158,20 +158,34 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const hasOpenModal = Boolean(showPixModal || showBoletoModal || selectedReceipt);
+    const hasOpenModal = Boolean(selectedReceipt || asaasReceiptPreview);
     if (!hasOpenModal) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (selectedReceipt) closeReceipt();
-        if (showPixModal) setShowPixModal(null);
-        if (showBoletoModal) setShowBoletoModal(null);
+        if (asaasReceiptPreview) closeAsaasReceiptPreview();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showPixModal, showBoletoModal, selectedReceipt]);
+  }, [selectedReceipt, asaasReceiptPreview]);
+
+  useEffect(() => {
+    const hasOpenOverlay = Boolean(selectedReceipt || asaasReceiptPreview);
+    if (!hasOpenOverlay) return;
+
+    const bodyOverflow = document.body.style.overflow;
+    const rootOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow = rootOverflow;
+    };
+  }, [selectedReceipt, asaasReceiptPreview]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInstallments.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -200,12 +214,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     .filter(i => i.status === 'PENDENTE' || i.status === 'VENCIDO')
     .reduce((acc, i) => acc + Number(i.valor), 0);
 
-  const handleCopyPix = (key: string) => {
-    navigator.clipboard.writeText(key);
-    setPixCopied(true);
-    setTimeout(() => setPixCopied(false), 2000);
-  };
-
   const copyPaymentLink = async (url?: string | null) => {
     if (!url) {
       setNotice('Esta cobrança ainda não possui link de pagamento. Fale com a secretaria para reenviar a cobrança.');
@@ -225,6 +233,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const parts = dateStr.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return dateStr;
+  };
+
+  const formatPaymentMethod = (method?: string | null) => {
+    const normalized = String(method || '').trim();
+    return normalized || 'Forma não informada';
   };
 
   const isPaidThroughAsaas = (inst: any) => {
@@ -248,7 +261,10 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
     if (isPaidThroughAsaas(inst)) {
       if (inst.asaas_transaction_receipt_url) {
-        window.open(inst.asaas_transaction_receipt_url, '_blank', 'noopener,noreferrer');
+        setAsaasReceiptPreview({
+          url: inst.asaas_transaction_receipt_url,
+          title: inst.descricao || 'Comprovante Asaas',
+        });
         return;
       }
       setNotice('O comprovante oficial do Asaas ainda não foi retornado. Aguarde a atualização do pagamento ou fale com a secretaria.');
@@ -261,6 +277,10 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const closeReceipt = () => {
     setSelectedReceipt(null);
+  };
+
+  const closeAsaasReceiptPreview = () => {
+    setAsaasReceiptPreview(null);
   };
 
   const downloadReceiptPdf = async () => {
@@ -332,7 +352,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     }
   };
 
-  const getReceiptPayload = (inst: any) => {
+  const getReceiptPayload = (inst: any): ReciboData => {
     const receiptNumber = String(inst?.id || '').slice(0, 8).toUpperCase() || 'RECIBO';
     const parceiro = getRelatedPartner(inst);
     const payerName = parceiro?.nome || 'Aluno';
@@ -340,19 +360,22 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const courseName = inst?.cursoNome || getInstallmentCourseName(inst);
     const turmaNome = inst?.turmaNome || 'N/A';
     return {
-      receiptNumber,
-      paidAt: formatDate(inst?.data_pagamento || inst?.updated_at || inst?.data_vencimento),
-      paymentMethod: inst?.forma_pagamento || inst?.origem_pagamento || 'Pagamento confirmado',
-      dueDate: formatDate(inst?.data_vencimento),
-      description: inst?.descricao || 'Recibo de pagamento',
-      paidValue: formatCurrency(Number(inst?.valor_pago || inst?.valor || 0)),
+      reciboTitulo: 'Recibo de Pagamento',
+      reciboNumero: receiptNumber,
+      contraparteLabel: 'Aluno / Pagador',
+      assinaturaNome: 'Universo Cursos e Consultoria',
+      empresaNome: 'Universo Cursos e Consultoria',
+      descricao: inst?.descricao || 'Recibo de pagamento',
+      valor: Number(inst?.valor || 0),
+      valorPago: Number(inst?.valor_pago || inst?.valor || 0),
+      dataVencimento: inst?.data_vencimento || new Date().toISOString().slice(0, 10),
+      dataPagamento: inst?.data_pagamento || String(inst?.updated_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+      fornecedorNome: payerName,
+      fornecedorId: payerDocument,
+      categoriaNome: courseName ? `${courseName}${turmaNome && turmaNome !== 'N/A' ? ` - Turma ${turmaNome}` : ''}` : undefined,
+      formaPagamento: inst?.forma_pagamento || inst?.origem_pagamento || 'Recebimento manual',
       status: String(inst?.status || 'PAGO').toUpperCase(),
-      courseName,
-      turmaNome,
-      payerName,
-      payerDocument,
-      enrollment: inst?.turma_id || 'Sem vínculo',
-      generatedAt: formatDate(new Date().toISOString().slice(0, 10))
+      observacao: 'Recibo interno emitido para pagamento registrado manualmente no financeiro.'
     };
   };
 
@@ -425,30 +448,27 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       }
 
       return (
-        <div className="flex justify-start gap-2">
-          <button
-            onClick={() => setShowPixModal(inst)}
-            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-          >
-            Pagar Pix
-          </button>
-          <button
-            onClick={() => setShowBoletoModal(inst)}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-          >
-            Boleto
-          </button>
-        </div>
+        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider rounded-lg border border-slate-100">
+          <Clock size={12} /> Cobrança em emissão
+        </span>
+      );
+    }
+
+    if (String(inst.status || '').toUpperCase() === 'PAGO') {
+      return (
+        <button
+          onClick={() => openReceipt(inst)}
+          className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+        >
+          {getPaidReceiptLabel(inst)}
+        </button>
       );
     }
 
     return (
-      <button
-        onClick={() => openReceipt(inst)}
-        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
-      >
-        {getPaidReceiptLabel(inst)}
-      </button>
+      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider rounded-lg border border-slate-100">
+        Sem comprovante
+      </span>
     );
   };
 
@@ -469,7 +489,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             <CreditCard className="text-blue-600" />
             Financeiro Acadêmico
           </h2>
-          <p className="text-xs text-slate-450 font-medium">Gerencie suas mensalidades, boletos e pagamentos via PIX</p>
+          <p className="text-xs text-slate-450 font-medium">Gerencie suas mensalidades e comprovantes oficiais</p>
         </div>
       </div>
 
@@ -664,7 +684,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                     <td className="py-4.5 px-4">
                       {inst.status === 'PAGO' ? (
                         <span className="text-[10px] font-bold text-slate-650 bg-slate-100 px-2 py-0.5 rounded">
-                          {formatDate(inst.data_pagamento)} via {inst.forma_pagamento || 'Pix'}
+                          {formatDate(inst.data_pagamento)} via {formatPaymentMethod(inst.forma_pagamento)}
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-400 font-bold">—</span>
@@ -708,8 +728,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                         getInstallmentStatusBadge={getInstallmentStatusBadge}
                         onCopyLink={copyPaymentLink}
                         onOpenReceipt={openReceipt}
-                        onOpenPix={setShowPixModal}
-                        onOpenBoleto={setShowBoletoModal}
                       />
                     ))}
                   </div>
@@ -742,181 +760,58 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         </div>
       </div>
 
-      {/* PIX Modal Overlay */}
-      {showPixModal && (
+      {/* Comprovante Asaas Fullscreen Preview */}
+      {asaasReceiptPreview && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
-          onClick={() => setShowPixModal(null)}
+          className="fixed left-0 top-0 right-0 bottom-0 z-[10000] h-dvh w-screen overflow-hidden bg-slate-950 pointer-events-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Prévia do comprovante Asaas"
         >
-          <div
-            className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fadeIn flex flex-col items-center text-center"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <button 
-              onClick={() => setShowPixModal(null)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
-              <CreditCard size={24} />
-            </div>
-
-            <h4 className="text-base font-bold text-[#001a33] uppercase tracking-tight">Pagar via PIX</h4>
-            <p className="text-slate-500 text-xs mt-1">Escaneie o QR Code abaixo ou copie a chave Pix Copia e Cola para realizar o pagamento.</p>
-
-            <div className="bg-slate-50 p-4 rounded-3xl border border-slate-150 my-6 flex justify-center items-center">
-              {/* Fake QR code representation */}
-              <div className="w-40 h-40 bg-white border border-slate-200 p-2 flex flex-col justify-center items-center">
-                <div className="grid grid-cols-4 gap-1 w-full h-full opacity-70">
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div key={i} className={`rounded-sm ${i % 3 === 0 || i % 7 === 0 ? 'bg-[#001a33]' : 'bg-transparent'}`} />
-                  ))}
-                </div>
+          <div className="flex h-full w-full flex-col">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Comprovante oficial Asaas</p>
+                <h4 className="truncate text-sm font-black uppercase tracking-tight text-white sm:text-base">
+                  {asaasReceiptPreview.title}
+                </h4>
               </div>
-            </div>
-
-            <div className="w-full space-y-4">
-              <div className="text-left bg-slate-50 p-3 rounded-xl border border-slate-150 flex justify-between items-center">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] uppercase text-slate-400 font-bold">Chave Pix Copia e Cola</p>
-                  <p className="text-[10px] text-slate-750 font-bold truncate">00020126580014br.gov.bcb.pix0136kfekgwyqozhicpfuunpo.universo</p>
-                </div>
-                <button 
-                  onClick={() => handleCopyPix('00020126580014br.gov.bcb.pix0136kfekgwyqozhicpfuunpo.universo')}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg shrink-0 transition-colors"
+              <div className="flex shrink-0 items-center gap-2">
+                <a
+                  href={asaasReceiptPreview.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-white/15"
                 >
-                  <Copy size={16} />
+                  <ExternalLink size={14} />
+                  Abrir fora
+                </a>
+                <button
+                  type="button"
+                  onClick={closeAsaasReceiptPreview}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/15"
+                  title="Fechar comprovante"
+                >
+                  <X size={16} />
                 </button>
               </div>
-
-              {pixCopied && (
-                <p className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Chave Pix Copiada!</p>
-              )}
-
-              <button 
-                onClick={() => {
-                  setNotice('Pagamento enviado para conferência. A baixa oficial acontece após confirmação do Asaas.');
-                  setShowPixModal(null);
-                }}
-                className="w-full py-3 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
-              >
-                Confirmar Pagamento
-              </button>
+            </div>
+            <div className="min-h-0 flex-1 bg-slate-900">
+              <iframe
+                src={asaasReceiptPreview.url}
+                title="Prévia do comprovante oficial Asaas"
+                className="h-full w-full border-0 bg-white"
+              />
             </div>
           </div>
-        </div>
-      )}
-
-      {/* BOLETO Modal Overlay */}
-      {showBoletoModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
-          onClick={() => setShowBoletoModal(null)}
-        >
-          <div
-            className="bg-white rounded-[2.5rem] p-8 max-w-xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <button 
-              onClick={() => setShowBoletoModal(null)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-slate-50 text-slate-650 rounded-xl flex items-center justify-center">
-                <FileText size={20} />
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-[#001a33] uppercase tracking-tight">Boleto Bancário</h4>
-                <p className="text-[10px] text-slate-450 uppercase font-black tracking-widest">{showBoletoModal.descricao}</p>
-              </div>
-            </div>
-
-            {/* Fake Bank Slip styling */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden text-[10px] text-slate-600 bg-white font-mono shadow-sm">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-800 text-xs border-r border-slate-300 pr-2">341-7</span>
-                  <span className="font-black text-[11px]">BANCO UNIVERSO S.A.</span>
-                </div>
-                <span className="font-bold text-[9px] text-slate-500">34191.79001 01043.513184 91020.150008 7 98120000025000</span>
-              </div>
-
-              <div className="grid grid-cols-4 border-b border-slate-200">
-                <div className="col-span-3 border-r border-slate-250 p-3">
-                  <p className="text-[8px] font-sans font-bold text-slate-400 uppercase">Local de Pagamento</p>
-                  <p className="font-bold text-slate-850 font-sans mt-0.5">QUALQUER BANCO OU CORRESPONDENTE BANCÁRIO ATÉ O VENCIMENTO</p>
-                </div>
-                <div className="p-3 bg-slate-50/50">
-                  <p className="text-[8px] font-sans font-bold text-slate-400 uppercase">Vencimento</p>
-                  <p className="font-bold text-slate-850 text-xs mt-0.5">{formatDate(showBoletoModal.data_vencimento)}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 border-b border-slate-200">
-                <div className="col-span-3 border-r border-slate-250 p-3">
-                  <p className="text-[8px] font-sans font-bold text-slate-400 uppercase">Cedente / Beneficiário</p>
-                  <p className="font-bold text-slate-850 font-sans mt-0.5">UNIVERSO CURSOS E CONSULTORIA LTDA - CNPJ: 26.111.450/0001-33</p>
-                </div>
-                <div className="p-3 bg-slate-50/50">
-                  <p className="text-[8px] font-sans font-bold text-slate-400 uppercase">Valor da Cobrança</p>
-                  <p className="font-bold text-slate-850 text-xs mt-0.5">{formatCurrency(showBoletoModal.valor)}</p>
-                </div>
-              </div>
-
-              <div className="p-3 border-b border-slate-200">
-                <p className="text-[8px] font-sans font-bold text-slate-400 uppercase">Instruções de Responsabilidade do Beneficiário</p>
-                <p className="font-medium font-sans leading-relaxed text-[9px] mt-1">
-                  * APÓS O VENCIMENTO COBRAR MULTA DE 2.0% E JUROS DE 1% AO MÊS.<br />
-                  * NÃO RECEBER APÓS 30 DIAS DO VENCIMENTO.<br />
-                  * QUALQUER DÚVIDA ENTRAR EM CONTATO COM O POLO DE MATRÍCULA.
-                </p>
-              </div>
-
-              <div className="p-4 flex flex-col items-center gap-2 bg-slate-50">
-                {/* Fake Barcode representation */}
-                <div className="h-10 bg-slate-900 w-full flex items-center justify-between opacity-80 rounded-sm">
-                  {Array.from({ length: 60 }).map((_, i) => (
-                    <div key={i} className="h-full bg-black" style={{ width: `${i % 3 === 0 ? '1px' : i % 5 === 0 ? '3px' : '2px'}` }} />
-                  ))}
-                </div>
-                <p className="text-[8px] tracking-[0.2em] font-sans font-bold text-slate-400 uppercase">Código de barras para leitura</p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowBoletoModal(null)}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors"
-              >
-                Fechar
-              </button>
-              <button 
-                onClick={() => {
-                  setNotice('Quando o Asaas retornar o PDF do boleto, ele ficará disponível neste botão.');
-                  setShowBoletoModal(null);
-                }}
-                className="px-5 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors shadow-md"
-              >
-                Baixar PDF
-              </button>
-            </div>
-          </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Recibo Modal Overlay */}
-      {selectedReceipt && (
+      {selectedReceipt && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex items-center justify-center p-4 overflow-y-auto min-h-screen"
+          className="fixed left-0 top-0 right-0 bottom-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex h-dvh w-screen items-center justify-center p-4 overflow-y-auto"
           onClick={closeReceipt}
         >
           <div
@@ -932,67 +827,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               <X size={16} />
             </button>
 
-            <div className="flex flex-col gap-2 mb-6">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Universo Cursos e Consultoria</p>
-              <h4 className="text-xl font-black text-[#001a33]">Recibo de pagamento</h4>
-              <p className="text-[10px] text-slate-500 font-medium">
-                Recibo institucional para pagamentos recebidos manualmente.
-              </p>
-            </div>
-
             <div
               ref={receiptRef}
-              className="rounded-2xl border border-slate-200 bg-white p-6 print-area"
+              className="print-area"
             >
-              <div className="flex flex-col gap-4 border-b-2 border-[#001a33] pb-5 md:flex-row md:justify-between">
-                <div>
-                  <h1 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Universo Cursos e Consultoria</h1>
-                  <p className="mt-1 text-[10px] font-semibold text-slate-500">Documento financeiro emitido pelo Portal do Aluno</p>
-                </div>
-                <div className="text-right">
-                  <span className="inline-block rounded-lg bg-[#001a33] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
-                    Recibo de Pagamento
-                  </span>
-                  <p className="mt-1 text-sm font-black text-[#001a33]">{receiptPayload?.receiptNumber}</p>
-                </div>
-              </div>
-
-              <div className="my-6 rounded-2xl border-2 border-[#001a33] bg-slate-50 p-6 text-center">
-                <p className="text-4xl font-black text-[#001a33]">{receiptPayload?.paidValue}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">Valor recebido</p>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-4">
-                <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">Descrição</p>
-                <p className="text-sm font-semibold leading-relaxed text-slate-800">{receiptPayload?.description}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  {receiptPayload?.courseName} • Turma: {receiptPayload?.turmaNome}
-                </p>
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {[
-                  { label: 'Aluno / Pagador', value: receiptPayload?.payerName },
-                  { label: 'CPF/CNPJ', value: receiptPayload?.payerDocument || 'Não informado' },
-                  { label: 'Data de vencimento', value: receiptPayload?.dueDate || '—' },
-                  { label: 'Data de pagamento', value: receiptPayload?.paidAt },
-                  { label: 'Forma de pagamento', value: receiptPayload?.paymentMethod },
-                  { label: 'Status', value: receiptPayload?.status },
-                ].map((field) => (
-                  <div key={field.label}>
-                    <p className="mb-1 text-[9px] font-black uppercase tracking-wider text-slate-400">{field.label}</p>
-                    <p className="text-sm font-semibold text-slate-700">{field.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex items-end justify-between border-t border-dashed border-slate-300 pt-5">
-                <p className="text-[10px] font-semibold text-slate-400">Gerado em {receiptPayload?.generatedAt}</p>
-                <div className="text-center">
-                  <div className="mx-auto mb-2 w-40 border-t border-slate-800" />
-                  <p className="text-xs font-semibold text-slate-600">Universo Cursos e Consultoria</p>
-                </div>
-              </div>
+              <ReciboDespesaPreview data={receiptPayload || undefined} />
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
@@ -1016,7 +855,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
     </div>

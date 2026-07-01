@@ -2,34 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import AccessGroupCard from './components/AccessGroupCard';
 import UsersList from './components/UsersList';
-import { polosService } from '../polos/polos.service';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { RefreshCw } from 'lucide-react';
+import { usuariosKeys } from './usuarios.keys';
+import { useUsuariosCountsQuery, useUsuariosPolosQuery } from './hooks/useUsuariosConfigQueries';
 
 const UsuariosConfig: React.FC = () => {
   const [selectedContext, setSelectedContext] = useState<{id: string, title: string} | null>(null);
   const queryClient = useQueryClient();
 
-  // 1. Carregar polos do Supabase
-  const { data: polos = [], isLoading: isLoadingPolos } = useQuery<any[]>({
-    queryKey: ['usuarios_polos'],
-    queryFn: polosService.getAll,
-  });
+  const { data: polos = [], isLoading: isLoadingPolos } = useUsuariosPolosQuery();
+  const { data: userCounts = {}, isLoading: isLoadingUsers } = useUsuariosCountsQuery();
 
-  // 2. Carregar todos os usuários para derivar a contagem de cada contexto
-  const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery<any[]>({
-    queryKey: ['usuarios_counts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('usuarios_sistema')
-        .select('context');
-      if (error) throw new Error(error.message);
-      return data || [];
-    }
-  });
-
-  // 3. Realtime para atualizar contagens e listas de usuários se houver mudanças no banco
   useEffect(() => {
     const channel = supabase
       .channel('usuarios_config_realtime')
@@ -37,9 +22,9 @@ const UsuariosConfig: React.FC = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'usuarios_sistema' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['usuarios_counts'] });
+          queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
           if (selectedContext) {
-            queryClient.invalidateQueries({ queryKey: ['users_by_context', selectedContext.id] });
+            queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(selectedContext.id) });
           }
         }
       )
@@ -49,12 +34,6 @@ const UsuariosConfig: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [queryClient, selectedContext]);
-
-  // Derivar contagens
-  const userCounts = allUsers.reduce((acc: Record<string, number>, user: any) => {
-    acc[user.context] = (acc[user.context] || 0) + 1;
-    return acc;
-  }, {});
 
   if (selectedContext) {
     return (

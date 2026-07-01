@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoForm.tsx
 // Formulário completo de Aluno em 5 etapas (Wizard) para cursos técnicos
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
   CheckCircle2, BookOpen, ChevronRight, ChevronLeft, GraduationCap,
@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
+import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
   onSave?: (data: any) => void;
+  defaultPoloId?: string | null;
 }
 
 const STEPS = [
@@ -27,11 +29,18 @@ const ESTADOS_CIVIS = ['SOLTEIRO(A)', 'CASADO(A)', 'DIVORCIADO(A)', 'VIÚVO(A)',
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 const ESCOLARIDADES = ['ENSINO MÉDIO COMPLETO','ENSINO MÉDIO INCOMPLETO','CURSANDO ENSINO MÉDIO','ENSINO SUPERIOR COMPLETO','ENSINO SUPERIOR INCOMPLETO','PÓS-GRADUAÇÃO'];
 const PCD_TIPOS = ['FÍSICA','AUDITIVA','VISUAL','INTELECTUAL','MÚLTIPLA','TRANSTORNO DO ESPECTRO AUTISTA (TEA)'];
+const MATRIZ_POLO_ID = '44444444-4444-4444-4444-444444444444';
 
-const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave }) => {
+const formatPoloOption = (polo: any) => {
+  const cidadeUf = [polo.cidade, polo.estado || polo.uf].filter(Boolean).join('/');
+  return cidadeUf ? `${polo.nome} - ${cidadeUf}` : polo.nome;
+};
+
+const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave, defaultPoloId }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showMatriculaModal, setShowMatriculaModal] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [polos, setPolos] = useState<any[]>([]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,7 +58,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
 
   const [formData, setFormData] = useState({
     // Step 1 — Dados Pessoais
-    polo: 'matriz',
+    poloId: defaultPoloId || MATRIZ_POLO_ID,
     status: 'ATIVO',
     foto: '',
     nomeCompleto: '',
@@ -101,6 +110,29 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
     observacao: '',
   });
 
+  useEffect(() => {
+    let mounted = true;
+    parceirosService.getPolos()
+      .then((data) => {
+        if (!mounted) return;
+        setPolos(data);
+        setFormData(prev => {
+          if (defaultPoloId && data.some((polo) => polo.id === defaultPoloId)) {
+            return { ...prev, poloId: defaultPoloId };
+          }
+          const hasSelectedPolo = data.some((polo) => polo.id === prev.poloId);
+          if (hasSelectedPolo) return prev;
+          return { ...prev, poloId: defaultPoloId || data[0]?.id || MATRIZ_POLO_ID };
+        });
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar polos do aluno:', error);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [defaultPoloId]);
+
   // Máscaras
   const maskCPF = formatCpf;
   const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
@@ -114,7 +146,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
       finalValue = (e.target as HTMLInputElement).checked;
     } else {
       if (type === 'text' || type === 'textarea' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-        if (name !== 'email' && name !== 'responsavelEmail') {
+        if (name !== 'email' && name !== 'responsavelEmail' && name !== 'poloId') {
           finalValue = value.toUpperCase();
         }
       }
@@ -306,9 +338,13 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className={labelCls}>Polo/Unidade <span className="text-red-500">*</span></label>
-                <select name="polo" value={formData.polo} onChange={handleChange} className={inputCls}>
-                  <option value="matriz">Matriz — Aracaju</option>
-                  <option value="estancia">Polo Estância</option>
+                <select name="poloId" value={formData.poloId} onChange={handleChange} className={inputCls}>
+                  {polos.length === 0 && <option value={formData.poloId}>Carregando polos...</option>}
+                  {polos.map((polo) => (
+                    <option key={polo.id} value={polo.id}>
+                      {formatPoloOption(polo)}
+                    </option>
+                  ))}
                 </select>
               </div>
 

@@ -13,6 +13,7 @@ interface ParceiroFormHostProps {
   onSaveProfessor: (data: any) => void;
   onSavePF: (data: any) => void;
   onSavePJ: (data: any) => void;
+  defaultPoloId?: string | null;
 }
 
 const formConfig = {
@@ -41,6 +42,7 @@ const ParceiroFormHost: React.FC<ParceiroFormHostProps> = ({
   onSaveProfessor,
   onSavePF,
   onSavePJ,
+  defaultPoloId,
 }) => {
   if (!showForm || showForm === 'selection') return null;
 
@@ -60,6 +62,7 @@ const ParceiroFormHost: React.FC<ParceiroFormHostProps> = ({
         <FormComponent
           onCancel={onCancel}
           onSave={saveByType[showForm]}
+          defaultPoloId={showForm === 'aluno' ? defaultPoloId : undefined}
         />
       </div>
     </div>

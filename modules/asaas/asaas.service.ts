@@ -67,7 +67,12 @@ export const asaasIntegrationService = {
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     },
   ) {
-    return invokeAdmin<{ success: boolean; asaasCanceled?: boolean; asaasPaymentId?: string }>('manual-settlement', { receivableId, ...params });
+    return invokeAdmin<{
+      success: boolean;
+      asaasCanceled?: boolean;
+      asaasPaymentLinkCanceled?: boolean;
+      asaasPaymentId?: string;
+    }>('manual-settlement', { receivableId, ...params });
   },
 
   async reverseInPersonSettlement(

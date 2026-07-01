@@ -60,7 +60,8 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
               <div>
                 <h4 className="font-bold text-[#001a33] text-sm">{turma.nome}</h4>
                 <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">
-                  Código: {turma.codigo} • Turno: {turma.turno}
+                  Código: {turma.codigo} • Turno: {turma.turno || 'N/D'}
+                  {turma.poloNome ? ` • ${turma.poloNome}` : ''}
                 </p>
               </div>
               {selectedTurmaId === turma.id && (

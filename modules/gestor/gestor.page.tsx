@@ -29,7 +29,8 @@ import {
   Award,
   FileSignature,
   Building,
-  MessageSquare
+  MessageSquare,
+  Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -64,6 +65,7 @@ import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
 
 import { loginService } from '../login/login.service';
 import ConfirmModal from '../shared/components/ConfirmModal';
+import { canAccessGestorModule, normalizeGestorPermissions } from './access-control';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -239,11 +241,47 @@ const GestorPage: React.FC = () => {
   }, [navigate]);
 
   const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
+  const gestorPermissions = useMemo(
+    () => profile?.gestorPermissions || normalizeGestorPermissions(null),
+    [profile],
+  );
   const visiblePolos = useMemo(
     () => gestorScope.isGlobal
       ? activePolos
       : activePolos.filter(polo => gestorScope.allowedPoloIds?.includes(polo.id)),
     [activePolos, gestorScope.allowedPoloIds, gestorScope.isGlobal],
+  );
+  const currentPolo =
+    visiblePolos.find(polo => polo.id === currentPoloId) || visiblePolos[0];
+  const isMatrizSelected = currentPolo?.is_matriz === true;
+  const scopedPoloId = gestorScope.isGlobal
+    ? currentPoloId
+    : currentPoloId || gestorScope.activePoloId;
+  const canOpenModule = useCallback((moduleId: string) => {
+    const rootModule = moduleId.startsWith('cadastros-') ? 'cadastros' : moduleId;
+    if (!canAccessGestorModule(gestorPermissions, rootModule)) return false;
+    if (rootModule === 'configuracoes' && !isMatrizSelected) return false;
+    if (!isMatrizSelected && moduleId.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(moduleId)) {
+      return false;
+    }
+    return true;
+  }, [gestorPermissions, isMatrizSelected]);
+  const firstAllowedModule = useMemo(
+    () => [
+      'inicio',
+      'parceiros',
+      'cadastros',
+      'gestao',
+      'secretaria',
+      'caixa',
+      'financeiro',
+      'biblioteca',
+      'calendario',
+      'comunicacao',
+      'relatorios',
+      'configuracoes',
+    ].find(canOpenModule) || 'inicio',
+    [canOpenModule],
   );
 
   useEffect(() => {
@@ -258,6 +296,13 @@ const GestorPage: React.FC = () => {
       }
     }
   }, [visiblePolos, currentPoloId]);
+
+  useEffect(() => {
+    if (isAuthLoading || !profile) return;
+    if (!canOpenModule(activeModule)) {
+      setActiveModule(firstAllowedModule);
+    }
+  }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
 
   const executeLogout = async () => {
     await loginService.logout();
@@ -293,11 +338,13 @@ const GestorPage: React.FC = () => {
       return;
     }
     const filtered = MOCK_SEARCH_DATA.filter(item => 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+      canOpenModule(item.module) && (
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     );
     setSearchResults(filtered);
-  }, [searchQuery]);
+  }, [canOpenModule, searchQuery]);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -358,14 +405,11 @@ const GestorPage: React.FC = () => {
     isMenuPinned(menuId) || expandedMenus.has(menuId) || hoveredMenus.has(menuId);
 
   const handleSearchResultClick = (module: string) => {
+    if (!canOpenModule(module)) return;
     setActiveModule(module);
     setSearchQuery('');
     setIsSearchFocused(false);
   };
-
-  const currentPolo =
-    visiblePolos.find(polo => polo.id === currentPoloId) || visiblePolos[0];
-  const isMatrizSelected = currentPolo?.is_matriz === true;
 
   const cadastroSubItems = [
     { id: 'cadastros-checklist', label: 'Check List Estágio', icon: <ClipboardCheck size={16} /> },
@@ -400,11 +444,28 @@ const GestorPage: React.FC = () => {
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
   ];
 
-  const visibleMenuItems = isMatrizSelected
+  const visibleMenuItems = (isMatrizSelected
     ? menuItems
-    : menuItems.filter(item => item.id !== 'configuracoes');
+    : menuItems.filter(item => item.id !== 'configuracoes'))
+    .filter(item => canOpenModule(item.id));
+
+  const renderAccessDenied = () => (
+    <div className="animate-fadeIn rounded-[2rem] border border-rose-100 bg-white p-10 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+        <Lock size={26} />
+      </div>
+      <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Acesso negado</h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
+        Seu usuário não possui permissão para acessar este módulo.
+      </p>
+    </div>
+  );
 
   const renderContent = () => {
+    if (!canOpenModule(activeModule)) {
+      return renderAccessDenied();
+    }
+
     if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
       return <CadastrosPage onNavigate={setActiveModule} readOnly />;
     }
@@ -412,7 +473,7 @@ const GestorPage: React.FC = () => {
     switch (activeModule) {
       case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
-      case 'parceiros': return <ParceirosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
+      case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
       case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} />;
       case 'cadastros-checklist': return <ChecklistEstagioPage />;
       case 'cadastros-ead': return <CursosEadPage readOnly={!isMatrizSelected} />;
@@ -431,11 +492,11 @@ const GestorPage: React.FC = () => {
         />
       );
       case 'secretaria': return <SecretariaPage />;
-      case 'caixa': return <CaixaPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} isGlobal={gestorScope.isGlobal} />;
-      case 'financeiro': return <FinanceiroPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} />;
+      case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={gestorScope.isGlobal} />;
+      case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={gestorPermissions.financeiroTabs} />;
       case 'biblioteca': return <BibliotecaPage />;
       case 'comunicacao': return <ComunicacaoPage gestorProfile={profile} />;
-      case 'relatorios': return <RelatoriosPage poloId={gestorScope.isGlobal ? currentPoloId : gestorScope.activePoloId} />;
+      case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
       case 'configuracoes':
         if (!isMatrizSelected) {
           return (

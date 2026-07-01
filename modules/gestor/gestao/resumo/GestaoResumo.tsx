@@ -1,202 +1,196 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowRight,
   BookOpen,
   Briefcase,
+  CalendarClock,
   GraduationCap,
+  Loader2,
   MonitorPlay,
-  PieChart,
-  TrendingUp,
-  Users
+  Users,
 } from 'lucide-react';
-import { gestaoService } from '../gestao.service';
-
-type TipoModalidade = 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
+import { type GestaoResumoModalidade, gestaoService } from '../gestao.service';
 
 interface GestaoResumoProps {
   poloId?: string;
 }
 
-interface ModalidadeConfig {
-  key: TipoModalidade;
-  label: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number; }>; 
-  tone: string;
-  text: string;
-  chip: string;
+type ModalidadeKey = GestaoResumoModalidade['modalidade'];
+
+interface ModalidadeVisual {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number }>;
+  border: string;
+  iconClass: string;
+  valueClass: string;
+  markerClass: string;
 }
 
-const typeConfig: ModalidadeConfig[] = [
-  {
-    key: 'TECNICO',
-    label: 'Técnico',
+const modalidadeVisual: Record<ModalidadeKey, ModalidadeVisual> = {
+  TECNICO: {
     icon: Briefcase,
-    tone: 'from-blue-500 to-indigo-500',
-    text: 'text-blue-700',
-    chip: 'border-blue-100 bg-blue-50 text-blue-700'
+    border: 'border-blue-100',
+    iconClass: 'bg-blue-50 text-blue-700',
+    valueClass: 'text-blue-700',
+    markerClass: 'bg-blue-600',
   },
-  {
-    key: 'LIVRE',
-    label: 'Livre',
+  LIVRE: {
     icon: GraduationCap,
-    tone: 'from-violet-500 to-fuchsia-500',
-    text: 'text-violet-700',
-    chip: 'border-violet-100 bg-violet-50 text-violet-700'
+    border: 'border-violet-100',
+    iconClass: 'bg-violet-50 text-violet-700',
+    valueClass: 'text-violet-700',
+    markerClass: 'bg-violet-600',
   },
-  {
-    key: 'ESPECIALIZACAO',
-    label: 'Especialização',
+  ESPECIALIZACAO: {
     icon: BookOpen,
-    tone: 'from-emerald-500 to-teal-500',
-    text: 'text-emerald-700',
-    chip: 'border-emerald-100 bg-emerald-50 text-emerald-700'
+    border: 'border-emerald-100',
+    iconClass: 'bg-emerald-50 text-emerald-700',
+    valueClass: 'text-emerald-700',
+    markerClass: 'bg-emerald-600',
   },
-  {
-    key: 'EAD',
-    label: 'EAD',
+  EAD: {
     icon: MonitorPlay,
-    tone: 'from-orange-500 to-rose-500',
-    text: 'text-orange-700',
-    chip: 'border-orange-100 bg-orange-50 text-orange-700'
-  }
-];
+    border: 'border-orange-100',
+    iconClass: 'bg-orange-50 text-orange-700',
+    valueClass: 'text-orange-700',
+    markerClass: 'bg-orange-600',
+  },
+};
 
 const fmtNumber = (value: number) => value.toLocaleString('pt-BR');
 
-const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['gestao-resumo-kpis', poloId || 'matriz-global'],
-    queryFn: () => gestaoService.getGestaoResumoKpis(poloId),
-  });
+const defaultCards: GestaoResumoModalidade[] = [
+  { modalidade: 'TECNICO', label: 'Técnico', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
+  { modalidade: 'LIVRE', label: 'Livre', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
+  { modalidade: 'ESPECIALIZACAO', label: 'Especialização', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
+  { modalidade: 'EAD', label: 'EAD', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: 0 },
+];
+
+const buildCards = (data: any, showEad: boolean): GestaoResumoModalidade[] => {
+  const rpcCards = Array.isArray(data?.cards) ? data.cards : [];
+  const sourceCards = rpcCards.length > 0 ? rpcCards : defaultCards;
+
+  return sourceCards
+    .filter((card) => showEad || card.modalidade !== 'EAD')
+    .map((card) => {
+      const fallback = defaultCards.find((item) => item.modalidade === card.modalidade)!;
+      const turmasFromLegacy = data?.turmasPorTipo?.[card.modalidade];
+      const alunosFromLegacy = data?.alunosPorTipo?.[card.modalidade];
+
+      return {
+        ...fallback,
+        ...card,
+        turmasAtivas: Number(card.turmasAtivas ?? turmasFromLegacy ?? fallback.turmasAtivas),
+        alunos: Number(card.alunos ?? alunosFromLegacy ?? fallback.alunos),
+        inscricoesMesAtual: card.modalidade === 'EAD'
+          ? Number(card.inscricoesMesAtual ?? data?.totalInscricoesEadMesAtual ?? fallback.inscricoesMesAtual ?? 0)
+          : null,
+      };
+    });
+};
+
+const MetricBlock: React.FC<{
+  label: string;
+  value: number;
+  valueClass?: string;
+  icon?: React.ReactNode;
+}> = ({ label, value, valueClass = 'text-[#001a33]', icon }) => (
+  <div className="min-w-0">
+    <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+      {icon}
+      <span className="truncate">{label}</span>
+    </div>
+    <p className={`text-3xl font-black leading-none ${valueClass}`}>{fmtNumber(value)}</p>
+  </div>
+);
+
+const ModalidadeCard: React.FC<{ card: GestaoResumoModalidade }> = ({ card }) => {
+  const visual = modalidadeVisual[card.modalidade];
+  const Icon = visual.icon;
+  const isEad = card.modalidade === 'EAD';
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <header className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-[#001a33] via-[#012b57] to-[#014c86] p-6 text-white shadow-sm">
-        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-white/5" />
-        <div className="absolute -left-10 bottom-[-2.2rem] h-36 w-36 rounded-full bg-white/10" />
-        <div className="relative">
-          <p className="mb-2 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-100/90">
-            <TrendingUp size={14} /> Resumo de gestão
-          </p>
-          <h2 className="text-3xl font-black uppercase tracking-tight">Visão geral por modalidade</h2>
-          <p className="mt-2 max-w-2xl text-sm text-blue-100/90">
-            Visão rápida, intuitiva e atualizada para decidir onde ajustar oferta e captação.
-          </p>
+    <article className={`relative overflow-hidden rounded-2xl border ${visual.border} bg-white p-5 shadow-sm`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${visual.markerClass}`} />
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Modalidade</p>
+          <h3 className="mt-1 truncate text-lg font-black uppercase tracking-tight text-[#001a33]">
+            {card.label}
+          </h3>
         </div>
-      </header>
-
-      {isLoading ? (
-        <div className="rounded-[1.8rem] border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">
-          Carregando resumo da gestão...
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${visual.iconClass}`}>
+          <Icon size={21} />
         </div>
-      ) : isError ? (
-        <div className="rounded-[1.8rem] border border-rose-200 bg-rose-50 p-6 text-sm font-bold text-rose-700">
-          Não foi possível carregar os indicadores de resumo.
+      </div>
+
+      <div className={`mt-6 grid gap-5 ${isEad ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        <MetricBlock
+          label="Turmas ativas"
+          value={card.turmasAtivas}
+          valueClass={visual.valueClass}
+          icon={<Briefcase size={12} />}
+        />
+        <MetricBlock
+          label="Alunos"
+          value={card.alunos}
+          icon={<Users size={12} />}
+        />
+        {isEad && (
+          <MetricBlock
+            label="Inscrições mês atual"
+            value={card.inscricoesMesAtual ?? 0}
+            valueClass="text-orange-700"
+            icon={<CalendarClock size={12} />}
+          />
+        )}
+      </div>
+    </article>
+  );
+};
+
+const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
+  const queryKey = ['gestao-resumo-kpis', poloId || 'matriz-global'];
+  const { data, isLoading, isError } = useQuery({
+    queryKey,
+    queryFn: () => gestaoService.getGestaoResumoKpis(poloId),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-sm font-bold text-slate-500">
+        <Loader2 className="mr-3 animate-spin text-[#001a33]" size={22} />
+        Carregando resumo da gestão...
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm font-bold text-rose-700">
+        Não foi possível carregar os indicadores de resumo.
+      </div>
+    );
+  }
+
+  const cards = buildCards(data, !poloId);
+
+  return (
+    <div className="animate-fadeIn space-y-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Resumo operacional</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#001a33]">Modalidades em andamento</h2>
         </div>
-      ) : (
-        data && (
-          <>
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-[1.8rem] border border-slate-100 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total de turmas</span>
-                  <span className="rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 p-2.5 text-white shadow-md">
-                    <PieChart size={18} />
-                  </span>
-                </div>
-                <p className="mt-4 text-4xl font-black text-[#001a33]">{fmtNumber(data.totalTurmas)}</p>
-                <p className="mt-2 text-xs text-slate-500">Consolidação de todas as modalidades.</p>
-              </div>
+        <p className="text-xs font-bold text-slate-400">Atualização em tempo real</p>
+      </div>
 
-              <div className="rounded-[1.8rem] border border-slate-100 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total de alunos</span>
-                  <span className="rounded-2xl bg-gradient-to-br from-indigo-600 to-fuchsia-500 p-2.5 text-white shadow-md">
-                    <Users size={18} />
-                  </span>
-                </div>
-                <p className="mt-4 text-4xl font-black text-[#001a33]">{fmtNumber(data.totalAlunos)}</p>
-                <p className="mt-2 text-xs text-slate-500">Matrículas totais em todas as turmas.</p>
-              </div>
-            </section>
-
-            <section className="rounded-[1.8rem] border border-slate-200 bg-white p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Distribuição por modalidade</p>
-                  <h3 className="mt-1 text-lg font-black text-[#001a33]">Turmas e alunos em comparação</h3>
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-xs font-black uppercase tracking-[0.1em] text-slate-500 hover:bg-slate-50"
-                >
-                  Detalhar <ArrowRight size={14} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {typeConfig.map((tipo) => {
-                  const Icon = tipo.icon;
-                  const turmas = data.turmasPorTipo[tipo.key] ?? 0;
-                  const alunos = data.alunosPorTipo[tipo.key] ?? 0;
-                  const percentTurmas = data.percentTurmasPorTipo[tipo.key] ?? 0;
-                  const percentAlunos = data.percentAlunosPorTipo[tipo.key] ?? 0;
-
-                  return (
-                    <div key={tipo.key} className="rounded-[1.3rem] border border-slate-100 bg-slate-50 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${tipo.chip}`}>
-                          <Icon size={13} />
-                          {tipo.label}
-                        </span>
-                        <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Alunos: {fmtNumber(alunos)}</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2 xl:items-center">
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Turmas</p>
-                          <p className={`text-2xl font-black ${tipo.text}`}>
-                            {fmtNumber(turmas)}
-                          </p>
-                          <p className="text-xs text-slate-500">{percentTurmas}% do total de turmas</p>
-                        </div>
-                        <div>
-                          <div className="mb-2 flex justify-between text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                            <span>Participação de alunos</span>
-                            <span>{percentAlunos}%</span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                            <div
-                              className={`h-full rounded-full bg-gradient-to-r ${tipo.tone}`}
-                              style={{ width: `${percentAlunos}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-[1.4rem] border border-emerald-100 bg-emerald-50 p-4 text-emerald-800">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Ponto de atenção</p>
-                <p className="mt-2 text-sm">Filtre por polo para identificar rapidamente onde há queda de matrículas e concentrar suporte.</p>
-              </div>
-              <div className="rounded-[1.4rem] border border-blue-100 bg-blue-50 p-4 text-blue-800">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Ação recomendada</p>
-                <p className="mt-2 text-sm">Compare modalidades com baixo volume de alunos para ajustar campanha de captação e cronograma de turmas.</p>
-              </div>
-              <div className="rounded-[1.4rem] border border-violet-100 bg-violet-50 p-4 text-violet-800">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">Apoio visual</p>
-                <p className="mt-2 text-sm">Use a barra de distribuição para identificar qual modalidade está mais concentrada no cenário atual.</p>
-              </div>
-            </section>
-          </>
-        )
-      )}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {cards.map((card) => (
+          <ModalidadeCard key={card.modalidade} card={card} />
+        ))}
+      </section>
     </div>
   );
 };

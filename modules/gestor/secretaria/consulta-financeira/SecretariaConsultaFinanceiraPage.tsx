@@ -70,11 +70,13 @@ const statusBadgeClass = (status: string) => {
 };
 
 const isPaid = (item: SecretariaFinanceiraRecebivel) => item.status === 'PAGO';
+const isCarnetBillable = (item: SecretariaFinanceiraRecebivel) =>
+  ['PENDENTE', 'VENCIDO'].includes(String(item.status || '').toUpperCase());
 
 const filterByStatus = (items: SecretariaFinanceiraRecebivel[], status: StatusFilter) => {
   if (status === 'TODOS') return items;
   if (status === 'PAGO') return items.filter(isPaid);
-  return items.filter((item) => !isPaid(item));
+  return items.filter(isCarnetBillable);
 };
 
 const tabs: Array<{ id: SearchMode; label: string; icon: React.ElementType; description: string }> = [
@@ -170,6 +172,8 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   };
 
   const toggleItem = (id: string) => {
+    const item = rawRecebiveis.find((recebivel) => recebivel.id === id);
+    if (!item || !isCarnetBillable(item)) return;
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -181,7 +185,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const toggleVisible = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      const visibleIds = pagedRecebiveis.map((item) => item.id);
+      const visibleIds = pagedRecebiveis.filter(isCarnetBillable).map((item) => item.id);
       const allSelected = visibleIds.length > 0 && visibleIds.every((id) => next.has(id));
       visibleIds.forEach((id) => {
         if (allSelected) next.delete(id);
@@ -194,7 +198,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const toggleAllFiltered = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      const filteredIds = filteredRecebiveis.map((item) => item.id);
+      const filteredIds = filteredRecebiveis.filter(isCarnetBillable).map((item) => item.id);
       const allSelected = filteredIds.length > 0 && filteredIds.every((id) => next.has(id));
       filteredIds.forEach((id) => {
         if (allSelected) next.delete(id);
@@ -218,9 +222,9 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
       toast.info('Selecione parcelas', 'Marque pelo menos uma parcela para montar o carnê.');
       return;
     }
-    const paidItems = selectedItems.filter(isPaid);
-    if (paidItems.length) {
-      toast.info('Remova parcelas pagas', 'O carnê oficial do Asaas deve ser emitido apenas para parcelas em aberto.');
+    const invalidItems = selectedItems.filter((item) => !isCarnetBillable(item));
+    if (invalidItems.length) {
+      toast.info('Remova parcelas não cobráveis', 'O carnê oficial do Asaas deve conter apenas parcelas pendentes ou vencidas.');
       return;
     }
     try {
@@ -476,8 +480,9 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={selectedIds.has(item.id)}
+                          disabled={!isCarnetBillable(item)}
                           onChange={() => toggleItem(item.id)}
-                          className="h-4 w-4 accent-cyan-700"
+                          className="h-4 w-4 accent-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
                         />
                       </div>
                       <div>
@@ -506,7 +511,12 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                           <p className="mt-1 max-w-[140px] truncate font-mono text-[10px] text-slate-400">ID: {item.asaasPaymentId}</p>
                         )}
                         <div className="mt-2 flex gap-1.5">
-                          <button onClick={() => copyChargeLink(item)} className="rounded-lg border border-emerald-200 p-1.5 text-emerald-700" title="Copiar link">
+                          <button
+                            onClick={() => copyChargeLink(item)}
+                            disabled={!item.asaasInvoiceUrl}
+                            className="rounded-lg border border-emerald-200 p-1.5 text-emerald-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+                            title={item.asaasInvoiceUrl ? 'Copiar link' : 'Link Asaas indisponível'}
+                          >
                             <Copy size={13} />
                           </button>
                           {item.asaasInvoiceUrl && (

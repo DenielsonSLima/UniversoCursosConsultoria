@@ -3,18 +3,27 @@ import React, { useState, useEffect } from 'react';
 import { 
   Save, X, User, Shield, Lock, Mail, Phone, Building2, Check, AlertTriangle, 
   LayoutDashboard, Handshake, UserPlus, Briefcase, FileText, ShoppingCart, 
-  TrendingUp, BookOpen, BarChart, Settings
+  TrendingUp, TrendingDown, BookOpen, BarChart, Settings, CalendarDays, MessageSquare,
+  ArrowRightLeft, Layers
 } from 'lucide-react';
-import { polosService } from '../../polos/polos.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
+import {
+  DEFAULT_FINANCEIRO_TABS,
+  FINANCEIRO_TAB_IDS,
+  GESTOR_MODULE_IDS,
+  GestorModuleId,
+} from '../../../access-control';
+import { useUsuariosPolosQuery } from '../hooks/useUsuariosConfigQueries';
+import { NovoUsuarioFormData } from '../usuarios.types';
 
 interface UserFormAddProps {
-  onSave: (data: any) => void;
+  contextId: string;
+  onSave: (data: NovoUsuarioFormData) => void;
   onCancel: () => void;
 }
 
 const MODULES = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+  { id: 'inicio', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={18} /> },
   { id: 'cadastros', label: 'Cadastros', icon: <UserPlus size={18} /> },
   { id: 'gestao', label: 'Gestão', icon: <Briefcase size={18} /> },
@@ -22,14 +31,25 @@ const MODULES = [
   { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={18} /> },
   { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={18} /> },
   { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={18} /> },
+  { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={18} /> },
+  { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={18} /> },
   { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={18} /> },
   { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-];
+] satisfies { id: GestorModuleId; label: string; icon: React.ReactNode }[];
 
-const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
-  const [companies, setCompanies] = useState<any[]>([]);
+const FINANCEIRO_TABS = [
+  { id: 'resumo', label: 'Resumo', icon: <Layers size={16} /> },
+  { id: 'receber', label: 'Contas a Receber', icon: <TrendingUp size={16} /> },
+  { id: 'despesas', label: 'Despesas', icon: <TrendingDown size={16} /> },
+  { id: 'transferencias', label: 'Transferências', icon: <ArrowRightLeft size={16} /> },
+  { id: 'outros-debitos', label: 'Outros Débitos', icon: <TrendingDown size={16} /> },
+  { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
+] satisfies { id: typeof FINANCEIRO_TAB_IDS[number]; label: string; icon: React.ReactNode }[];
+
+const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }) => {
+  const { data: companies = [] } = useUsuariosPolosQuery();
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<NovoUsuarioFormData>({
     nome: '',
     sobrenome: '',
     cpf: '',
@@ -38,20 +58,25 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
     email: '',
     senha: '',
     confirmarSenha: '',
-    polosAcesso: [] as string[],
-    permissoes: [] as string[]
+    todosPolos: contextId === 'global',
+    polosAcesso: contextId === 'global' ? [] : [contextId],
+    permissoes: ['inicio'],
+    financeiroAbas: []
   });
 
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  const loadCompanies = async () => {
-    const data = await polosService.getAll();
-    setCompanies(data);
-  };
+    if (contextId !== 'global') {
+      setFormData(prev => ({
+        ...prev,
+        todosPolos: false,
+        polosAcesso: prev.polosAcesso.includes(contextId)
+          ? prev.polosAcesso
+          : [contextId, ...prev.polosAcesso],
+      }));
+    }
+  }, [contextId]);
 
   // Formatadores
   const formatCPF = (value: string) => {
@@ -92,6 +117,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
   };
 
   const togglePolo = (id: string) => {
+    if (formData.todosPolos) return;
     setFormData(prev => {
       const current = prev.polosAcesso;
       if (current.includes(id)) return { ...prev, polosAcesso: current.filter(p => p !== id) };
@@ -102,8 +128,40 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
   const togglePermission = (id: string) => {
     setFormData(prev => {
       const current = prev.permissoes;
-      if (current.includes(id)) return { ...prev, permissoes: current.filter(p => p !== id) };
-      return { ...prev, permissoes: [...current, id] };
+      if (current.includes(id)) {
+        return {
+          ...prev,
+          permissoes: current.filter(p => p !== id),
+          financeiroAbas: id === 'financeiro' ? [] : prev.financeiroAbas,
+        };
+      }
+
+      return {
+        ...prev,
+        permissoes: [...current, id],
+        financeiroAbas: id === 'financeiro' && prev.financeiroAbas.length === 0
+          ? DEFAULT_FINANCEIRO_TABS
+          : prev.financeiroAbas,
+      };
+    });
+  };
+
+  const toggleTodosPolos = () => {
+    setFormData(prev => ({
+      ...prev,
+      todosPolos: !prev.todosPolos,
+      polosAcesso: !prev.todosPolos ? [] : contextId === 'global' ? [] : [contextId],
+    }));
+  };
+
+  const toggleFinanceiroTab = (id: string) => {
+    setFormData(prev => {
+      const current = prev.financeiroAbas;
+      if (current.includes(id)) {
+        return { ...prev, financeiroAbas: current.filter(tab => tab !== id) };
+      }
+
+      return { ...prev, financeiroAbas: [...current, id] };
     });
   };
 
@@ -127,6 +185,18 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
     }
     if (formData.senha !== formData.confirmarSenha) {
       alert("As senhas não coincidem!");
+      return;
+    }
+    if (!formData.todosPolos && formData.polosAcesso.length === 0) {
+      alert('Selecione ao menos um polo para este usuário.');
+      return;
+    }
+    if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
+      alert('Selecione ao menos um módulo para este usuário.');
+      return;
+    }
+    if (formData.permissoes.includes('financeiro') && formData.financeiroAbas.length === 0) {
+      alert('Selecione ao menos uma aba do módulo financeiro.');
       return;
     }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
@@ -281,13 +351,37 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
             <Building2 size={20} />
             <h4 className="text-sm font-black uppercase tracking-wider">Unidades Permitidas</h4>
           </div>
+
+          <button
+            type="button"
+            onClick={toggleTodosPolos}
+            className={`mb-4 flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all ${
+              formData.todosPolos
+                ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'
+            }`}
+          >
+            <span>
+              <span className="block text-xs font-black uppercase tracking-widest">Todos os polos</span>
+              <span className="mt-1 block text-[11px] font-semibold text-slate-500">Acesso liberado para todas as unidades ativas.</span>
+            </span>
+            {formData.todosPolos && (
+              <span className="rounded-full bg-blue-500 p-1 text-white">
+                <Check size={12} />
+              </span>
+            )}
+          </button>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {companies.map(company => (
               <div 
                 key={company.id}
                 onClick={() => togglePolo(company.id)}
-                className={`cursor-pointer rounded-xl border p-4 flex items-center justify-between transition-all duration-200 ${
+                className={`rounded-xl border p-4 flex items-center justify-between transition-all duration-200 ${
+                  formData.todosPolos
+                    ? 'cursor-not-allowed bg-slate-50 border-slate-100 opacity-60'
+                    : 'cursor-pointer'
+                } ${
                   formData.polosAcesso.includes(company.id)
                     ? 'bg-blue-50 border-blue-500 shadow-sm'
                     : 'bg-white border-slate-200 hover:border-blue-200'
@@ -351,6 +445,42 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ onSave, onCancel }) => {
               </div>
             ))}
           </div>
+
+          {formData.permissoes.includes('financeiro') && (
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+              <div className="mb-4 flex items-center gap-2 text-emerald-700">
+                <TrendingUp size={18} />
+                <h5 className="text-xs font-black uppercase tracking-widest">Abas do Financeiro</h5>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {FINANCEIRO_TABS.map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => toggleFinanceiroTab(tab.id)}
+                    className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                      formData.financeiroAbas.includes(tab.id)
+                        ? 'border-emerald-500 bg-white text-emerald-800 shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={formData.financeiroAbas.includes(tab.id) ? 'text-emerald-600' : 'text-slate-300'}>
+                        {tab.icon}
+                      </span>
+                      <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
+                    </span>
+                    {formData.financeiroAbas.includes(tab.id) && (
+                      <span className="rounded-full bg-emerald-500 p-1 text-white">
+                        <Check size={11} />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
       </form>

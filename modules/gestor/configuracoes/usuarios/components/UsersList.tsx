@@ -1,10 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Search, Shield, Mail, RefreshCw } from 'lucide-react';
-import { usuariosService, UsuarioSistema } from '../usuarios.service';
 import UserFormAdd from './UserFormAdd';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
+import { buildGestorPermissionsPayload, normalizeFinanceiroTabs, normalizeGestorModules } from '../../../access-control';
+import { usuariosKeys } from '../usuarios.keys';
+import { useUsuariosByContextQuery } from '../hooks/useUsuariosConfigQueries';
+import { useCreateUsuarioMutation } from '../hooks/useUsuariosMutations';
+import { NovoUsuarioFormData, UsuarioSistemaInput } from '../usuarios.types';
 
 interface UsersListProps {
   contextId: string; // 'global' ou ID da empresa
@@ -17,17 +21,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingUser, setIsAddingUser] = useState(false);
 
-  // 1. Buscar os usuários deste contexto
-  const { data: users = [], isLoading, isError, error } = useQuery<UsuarioSistema[]>({
-    queryKey: ['users_by_context', contextId],
-    queryFn: () => {
-      if (contextId === 'global') {
-        return usuariosService.getGlobalUsers();
-      } else {
-        return usuariosService.getUsersByContext(contextId);
-      }
-    },
-  });
+  const { data: users = [], isLoading, isError, error } = useUsuariosByContextQuery(contextId);
 
   // 2. Escuta Realtime focada neste contexto de usuários
   useEffect(() => {
@@ -37,8 +31,8 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
         'postgres_changes',
         { event: '*', schema: 'public', table: 'usuarios_sistema', filter: `context=eq.${contextId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['users_by_context', contextId] });
-          queryClient.invalidateQueries({ queryKey: ['usuarios_counts'] });
+          queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
+          queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
         }
       )
       .subscribe();
@@ -48,29 +42,38 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     };
   }, [contextId, queryClient]);
 
-  // 3. Mutation para criar usuário
-  const createUserMutation = useMutation({
-    mutationFn: (newUser: Omit<UsuarioSistema, 'id'>) => usuariosService.createUser(newUser),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users_by_context', contextId] });
-      queryClient.invalidateQueries({ queryKey: ['usuarios_counts'] });
+  const createUserMutation = useCreateUsuarioMutation(contextId, () => {
       setIsAddingUser(false);
       alert('Usuário cadastrado com sucesso!');
-    },
-    onError: (err: any) => alert(`Erro ao cadastrar usuário: ${err.message}`),
   });
 
-  const handleSaveUser = async (newUser: any) => {
-    const isGestor = newUser.permissoes.includes('configuracoes') || newUser.permissoes.includes('financeiro');
+  const handleSaveUser = async (newUser: NovoUsuarioFormData) => {
+    const modules = normalizeGestorModules(newUser.permissoes);
+    const financeiroTabs = normalizeFinanceiroTabs(newUser.financeiroAbas);
+    const isFinanceiro = modules.includes('financeiro') || modules.includes('caixa');
+    const isGestor = modules.includes('configuracoes') || modules.includes('relatorios');
+    const perfil = isGestor ? 'Gestor' : isFinanceiro ? 'Financeiro' : 'Operacional';
+    const permissions = buildGestorPermissionsPayload({
+      modules,
+      financeiroTabs,
+      allPolos: newUser.todosPolos,
+    });
     
-    createUserMutation.mutate({
+    const payload: UsuarioSistemaInput = {
       nome: `${newUser.nome} ${newUser.sobrenome}`.trim(),
       email: newUser.email,
+      senha: newUser.senha,
       cpf: newUser.cpf,
       telefone: newUser.telefone,
-      perfil: isGestor ? 'Gestor' : 'Operacional',
+      perfil,
       status: 'Ativo',
-      context: contextId
+      context: contextId,
+      polo_ids: newUser.todosPolos ? [] : newUser.polosAcesso,
+      permissoes: permissions,
+    };
+
+    createUserMutation.mutate(payload, {
+      onError: (err: any) => alert(`Erro ao cadastrar usuário: ${err.message}`),
     });
   };
 
@@ -82,6 +85,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   if (isAddingUser) {
     return (
       <UserFormAdd 
+        contextId={contextId}
         onSave={handleSaveUser} 
         onCancel={() => setIsAddingUser(false)} 
       />
@@ -200,6 +204,21 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
                       Inativo
                     </div>
                   )}
+              </div>
+
+              <div className="mt-4 grid w-full grid-cols-2 gap-2 border-t border-slate-50 pt-4">
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Polos</p>
+                  <p className="mt-1 text-[11px] font-black text-[#001a33]">
+                    {user.permissoes?.allPolos ? 'Todos' : `${user.polo_ids?.length || 0}`}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Modulos</p>
+                  <p className="mt-1 text-[11px] font-black text-[#001a33]">
+                    {user.permissoes?.modules.length || 0}
+                  </p>
+                </div>
               </div>
             </div>
           ))}

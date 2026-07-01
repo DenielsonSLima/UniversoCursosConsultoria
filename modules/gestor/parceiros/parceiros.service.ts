@@ -4,6 +4,43 @@ import { supabase } from '../../../lib/supabase';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
 import { portalActivationService } from './portal-activation.service';
 
+const MATRIZ_POLO_ID = '44444444-4444-4444-4444-444444444444';
+const ESTANCIA_LEGACY_POLO_ID = '55555555-5555-5555-5555-555555555555';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
+  Array.from(new Set(values.filter(Boolean) as T[]));
+
+const resolvePoloId = (data: any): string | null => {
+  const directPoloId = data?.poloId || data?.polo_id;
+  if (directPoloId && UUID_RE.test(String(directPoloId))) return String(directPoloId).toLowerCase();
+  if (data?.polo === 'matriz') return MATRIZ_POLO_ID;
+  if (data?.polo === 'estancia') return ESTANCIA_LEGACY_POLO_ID;
+  return null;
+};
+
+const formatPoloNome = (polo: any, fallbackPoloId?: string | null) => {
+  if (polo?.nome) {
+    const cidadeUf = [polo.cidade, polo.estado || polo.uf].filter(Boolean).join('/');
+    return cidadeUf ? `${polo.nome} - ${cidadeUf}` : polo.nome;
+  }
+  if (fallbackPoloId === MATRIZ_POLO_ID) return 'Matriz';
+  if (fallbackPoloId === ESTANCIA_LEGACY_POLO_ID) return 'Polo Estância';
+  return 'Geral (Todos os Polos)';
+};
+
+const mapAlunoLookup = (row: any) => ({
+  id: row.id,
+  nome: row.nome,
+  cpf: row.cpf_masked || null,
+  email: null,
+  status: row.status,
+  poloId: row.polo_id,
+  poloIds: row.polo_ids || [],
+  tipo: 'Aluno',
+  existingAluno: true,
+  jaVinculadoPolo: Boolean(row.ja_vinculado_polo),
+});
 
 function validateAlunoProfessorIdentity(data: any) {
   const tipo = data?.tipo;
@@ -51,6 +88,7 @@ function dateBrToDb(dateStr: string | null | undefined): string | null {
 // Helper to map DB snake_case to Frontend camelCase
 function toCamel(s: any) {
   if (!s) return null;
+  const poloNome = formatPoloNome(s.polos, s.polo_id);
   return {
     id: s.id,
     tipo: s.tipo,
@@ -69,12 +107,10 @@ function toCamel(s: any) {
     cidade: s.cidade,
     uf: s.uf,
     poloId: s.polo_id,
-    polo: s.polo_id === '44444444-4444-4444-4444-444444444444' 
+    polo: s.polo_id === MATRIZ_POLO_ID
       ? 'matriz' 
-      : (s.polo_id === '55555555-5555-5555-5555-555555555555' ? 'estancia' : 'geral'),
-    poloNome: s.polos?.nome || (s.polo_id === '44444444-4444-4444-4444-444444444444' 
-      ? 'Matriz - Aracaju' 
-      : (s.polo_id === '55555555-5555-5555-5555-555555555555' ? 'Polo Estância' : 'Geral (Todos os Polos)')),
+      : (s.polo_id === ESTANCIA_LEGACY_POLO_ID ? 'estancia' : 'geral'),
+    poloNome,
     status: s.status,
     observacao: s.observacao,
     foto: s.foto_url,
@@ -136,6 +172,11 @@ function toCamel(s: any) {
 // Helper to map Frontend camelCase to DB snake_case
 function toSnake(c: any) {
   if (!c) return null;
+  const poloId = resolvePoloId(c);
+  const poloIds = uniqueTruthy<string>([
+    ...((Array.isArray(c.poloIds) ? c.poloIds : c.polo_ids) || []),
+    poloId,
+  ]);
   return {
     tipo: c.tipo,
     nome: c.nomeCompleto || c.nome,
@@ -149,11 +190,7 @@ function toSnake(c: any) {
     bairro: c.bairro || null,
     cidade: c.cidade || null,
     uf: c.uf || null,
-    polo_id: c.polo === 'matriz' || c.poloId === '44444444-4444-4444-4444-444444444444' 
-      ? '44444444-4444-4444-4444-444444444444' 
-      : (c.polo === 'estancia' || c.poloId === '55555555-5555-5555-5555-555555555555' 
-        ? '55555555-5555-5555-5555-555555555555' 
-        : null),
+    polo_id: poloId,
     status: c.status || 'ATIVO',
     observacao: c.observacao || null,
     foto_url: c.foto || null,
@@ -203,16 +240,17 @@ function toSnake(c: any) {
     aceitou_termos_uso_em: c.aceitouTermosUsoEm || c.aceitou_termos_uso_em || null,
     termos_uso_versao: c.termosUsoVersao || c.termos_uso_versao || null,
     troca_senha_obrigatoria: c.trocaSenhaObrigatoria ?? c.troca_senha_obrigatoria ?? false,
-    polo_ids: c.poloIds || [],
+    polo_ids: poloIds,
   };
 }
 
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
-    let query = supabase.from('parceiros').select('*, polos(nome)');
+    let query = supabase.from('parceiros').select('*, polos(nome,cidade,estado)');
+    let filterTipo: string | null = null;
     
     if (tipo && tipo !== 'todos') {
-      let filterTipo = tipo;
+      filterTipo = tipo;
       if (tipo === 'professores') filterTipo = 'Professor';
       if (tipo === 'alunos') filterTipo = 'Aluno';
       if (tipo === 'pj') filterTipo = 'PJ';
@@ -221,9 +259,14 @@ export const parceirosService = {
     }
 
     if (filters?.poloId && filters.poloId !== 'todos') {
-      query = filters.includeGlobal
-        ? query.or(`polo_id.eq.${filters.poloId},polo_id.is.null,polo_ids.cs.{${filters.poloId}}`)
-        : query.or(`polo_id.eq.${filters.poloId},polo_ids.cs.{${filters.poloId}}`);
+      const scopedFilter = `polo_id.eq.${filters.poloId},polo_ids.cs.{${filters.poloId}}`;
+      if (filters.includeGlobal && filterTipo !== 'Aluno') {
+        query = filterTipo
+          ? query.or(`${scopedFilter},polo_id.is.null`)
+          : query.or(`${scopedFilter},and(polo_id.is.null,tipo.neq.Aluno)`);
+      } else {
+        query = query.or(scopedFilter);
+      }
     }
     
     const { data, error } = await query.order('nome', { ascending: true });
@@ -302,6 +345,11 @@ export const parceirosService = {
 
   async create(data: any) {
     validateAlunoProfessorIdentity(data);
+    if (data?.tipo === 'Aluno') {
+      const existingAluno = await this.findAlunoParaVinculo(data.cpf || data.cpf_cnpj || data.email);
+      if (existingAluno) return existingAluno;
+    }
+
     const dbData = toSnake(data);
     const { data: inserted, error } = await supabase
       .from('parceiros')
@@ -310,6 +358,10 @@ export const parceirosService = {
       .single();
       
     if (error) {
+      if (data?.tipo === 'Aluno') {
+        const existingAluno = await this.findAlunoParaVinculo(data.cpf || data.cpf_cnpj || data.email);
+        if (existingAluno) return existingAluno;
+      }
       console.error('Erro ao criar parceiro:', error);
       throw error;
     }
@@ -501,10 +553,17 @@ export const parceirosService = {
     return data;
   },
 
-  async getTurmasDisponiveis() {
-    const { data, error } = await supabase
+  async getTurmasDisponiveis(poloId?: string) {
+    let query = supabase
       .from('turmas')
-      .select('*, cursos(*)');
+      .select('*, cursos(*), polos(nome,cidade,estado)')
+      .eq('status', 'EM_ANDAMENTO');
+
+    if (poloId && poloId !== 'todos') {
+      query = query.eq('polo_id', poloId);
+    }
+
+    const { data, error } = await query.order('nome', { ascending: true });
       
     if (error) {
       console.error('Erro ao buscar turmas disponíveis:', error);
@@ -516,7 +575,9 @@ export const parceirosService = {
       codigo: t.codigo,
       nome: t.nome,
       cursoNome: t.cursos?.nome,
-      modalidade: t.status,
+      modalidade: t.cursos?.modalidade,
+      poloId: t.polo_id,
+      poloNome: formatPoloNome(t.polos, t.polo_id),
       turno: t.turno,
       vagasTotais: t.vagas_totais
     }));
@@ -526,12 +587,30 @@ export const parceirosService = {
     const { data, error } = await supabase
       .from('polos')
       .select('*')
+      .in('status', ['ativo', 'ATIVO'])
       .order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar polos:', error);
       throw error;
     }
     return data || [];
+  },
+
+  async findAlunoParaVinculo(identifier?: string | null) {
+    const value = String(identifier || '').trim();
+    if (!value) return null;
+
+    const { data, error } = await supabase.rpc('buscar_aluno_global_para_vinculo', {
+      p_identifier: value,
+    });
+
+    if (error) {
+      console.error('Erro ao localizar aluno para vínculo:', error);
+      return null;
+    }
+
+    const first = Array.isArray(data) ? data[0] : null;
+    return first ? mapAlunoLookup(first) : null;
   },
 
   async getKpis() {

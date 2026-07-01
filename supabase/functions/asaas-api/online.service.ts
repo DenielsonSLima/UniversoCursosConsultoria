@@ -87,7 +87,11 @@ export const createAsaasOnlineService = (
     };
   };
 
-  const reconcileOnlinePayment = async (runtime: AsaasRuntime, body: any) => {
+  const reconcileOnlinePayment = async (
+    runtime: AsaasRuntime,
+    body: any,
+    options: { poloId?: string | null } = {},
+  ) => {
     const courseId = String(body.courseId || "");
     const paymentId = body.paymentId ? String(body.paymentId) : "";
     const forcedAlunoId = body.alunoId ? String(body.alunoId) : "";
@@ -174,6 +178,9 @@ export const createAsaasOnlineService = (
         .eq("status", "EM_ANDAMENTO");
       if (requireOnlinePermission) {
         turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
+      }
+      if (options.poloId) {
+        turmasQuery = turmasQuery.eq("polo_id", options.poloId);
       }
       const { data: turmas, error: turmaError } = await turmasQuery.order("data_inicio", { ascending: true });
       if (turmaError) throw turmaError;

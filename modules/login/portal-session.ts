@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { onlyDigits } from '../shared/utils/identityValidation';
+import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
 
 export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
 
@@ -11,6 +12,7 @@ export interface PortalAuthProfile {
   activePoloId?: string | null;
   poloIds?: string[];
   context?: string | null;
+  gestorPermissions?: GestorPermissions;
   status?: string | null;
   acceptedTermsAt?: string | null;
   acceptedTermsVersion?: string | null;
@@ -103,6 +105,7 @@ export const getPortalSessionFromStorage = (): PortalAuthProfile | null => {
     tipo,
     activePoloId: sessionStorage.getItem('active_polo_id') || null,
     poloIds: [],
+    gestorPermissions: normalizeGestorPermissions(null),
     status: 'ATIVO',
     context: null,
   };
@@ -146,12 +149,17 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
   }
 
   const context = (profile.context || '').trim();
-  const isGlobal = !context || context === 'global' || context === MATRIZ_POLO_ID;
-  const activePoloId = isGlobal ? (profile.activePoloId || null) : context;
+  const permissions = profile.gestorPermissions || normalizeGestorPermissions(null);
+  const explicitPoloIds = normalizeStringArray(profile.poloIds);
+  const contextPoloIds = context && context !== 'global' ? [context] : [];
+  const allowedPoloIds = explicitPoloIds.length > 0 ? explicitPoloIds : contextPoloIds;
+  const legacyGlobal = !context || context === 'global' || context === MATRIZ_POLO_ID;
+  const isGlobal = permissions.allPolos || (legacyGlobal && allowedPoloIds.length === 0);
+  const activePoloId = isGlobal ? (profile.activePoloId || null) : allowedPoloIds[0] || null;
 
   return {
     isGlobal,
-    allowedPoloIds: isGlobal ? null : [context].filter(Boolean),
+    allowedPoloIds: isGlobal ? null : allowedPoloIds,
     activePoloId,
   };
 };
@@ -202,6 +210,8 @@ const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string):
 
 const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
   if (!gestorRows || !isActiveStatus(gestorRows.status)) return null;
+  const permissions = normalizeGestorPermissions(gestorRows.permissoes);
+  const explicitPoloIds = normalizeStringArray(gestorRows.polo_ids);
 
   return {
     id: gestorRows.id,
@@ -209,6 +219,9 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     email: gestorRows.email,
     tipo: 'Gestor',
     context: gestorRows.context || null,
+    activePoloId: explicitPoloIds[0] || null,
+    poloIds: explicitPoloIds,
+    gestorPermissions: permissions,
     status: gestorRows.status || null,
   };
 };
@@ -242,7 +255,7 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   const { data: gestorRows, error: gestorError } = await supabase
     .from('usuarios_sistema')
-    .select('id, nome, email, status, context')
+    .select('id, nome, email, status, context, polo_ids, permissoes')
     .ilike('email', email)
     .limit(1)
     .maybeSingle();
