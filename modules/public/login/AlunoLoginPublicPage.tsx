@@ -10,6 +10,8 @@ import {
   GraduationCap,
   Home,
   Loader2,
+  Eye,
+  EyeOff,
   Lock,
   IdCard,
   Phone,
@@ -66,13 +68,16 @@ const AlunoLoginPublicPage: React.FC = () => {
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [password, setPassword] = useState('');
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const passwordChecks = useMemo(() => {
@@ -521,13 +526,21 @@ const AlunoLoginPublicPage: React.FC = () => {
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
-                      type="password"
+                      type={showLoginPassword ? 'text' : 'password'}
                       required
                       value={loginPassword}
                       onChange={(event) => setLoginPassword(event.target.value)}
                       placeholder="Sua senha"
-                      className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword((prev) => !prev)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600"
+                      aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </label>
 
@@ -591,7 +604,25 @@ const AlunoLoginPublicPage: React.FC = () => {
                 </label>
                 <label className="block">
                   <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</span>
-                  <input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres e 1 maiúscula" className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type={showSignupPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="Mínimo 6 caracteres e 1 maiúscula"
+                      className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword((prev) => !prev)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600"
+                      aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold">
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-1 ${
@@ -628,7 +659,26 @@ const AlunoLoginPublicPage: React.FC = () => {
                 </label>
                 <label className="block">
                   <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmar senha</span>
-                  <input type="password" required minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Repita sua senha" className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type={showSignupConfirmPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="Repita sua senha"
+                      className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupConfirmPassword((prev) => !prev)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600"
+                      aria-label={showSignupConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showSignupConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </label>
                 <label className="col-span-2 flex items-start gap-3">
                   <input

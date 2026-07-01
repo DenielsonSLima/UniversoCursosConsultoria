@@ -29,6 +29,7 @@ import {
   getIrpfCalendarYearOptions,
   isIrpfYearReleased,
 } from '../../../../../../lib/irpfYearUtils';
+import { sanitizedHtml } from '../../../../../../lib/htmlSanitizer';
 
 interface ParceiroAlunoSecretariaProps {
   alunoId: string;
@@ -741,7 +742,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
                 {/* 3. Corpo do Texto */}
                 <div className="relative z-20 mb-20 text-justify leading-loose text-lg text-black animate-fadeIn" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-                  <div dangerouslySetInnerHTML={{ __html: replaceVariables(templateData?.textContent || '') }} />
+                  <div dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(templateData?.textContent || ''))} />
                 </div>
 
                 {/* 4. Campos Absolutos */}
@@ -787,7 +788,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                     {field.type === 'text' && (
                       <span
                         className="whitespace-pre-line"
-                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                        dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(field.value))}
                       />
                     )}
                   </div>
@@ -907,7 +908,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
                 {/* 3. Corpo do Texto */}
                 <div className="relative z-20 mb-20 text-justify leading-loose text-base text-black animate-fadeIn" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-                  <div dangerouslySetInnerHTML={{ __html: replaceVariables(irpfTemplateData?.textContent || '') }} />
+                  <div dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(irpfTemplateData?.textContent || ''))} />
                 </div>
 
                 {/* 4. Campos Absolutos */}
@@ -953,7 +954,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                     {field.type === 'text' && (
                       <span
                         className="whitespace-pre-line"
-                        dangerouslySetInnerHTML={{ __html: replaceVariables(field.value) }}
+                        dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(field.value))}
                       />
                     )}
                   </div>

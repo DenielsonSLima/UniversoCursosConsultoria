@@ -12,6 +12,14 @@ export const createAsaasWebhookHandlers = (
   admin: any,
   callAsaas: CallAsaas,
 ) => {
+  const isUnsafeCallbackHost = (hostname: string) => {
+    const host = hostname.toLowerCase();
+    if (host === "localhost" || host === "0.0.0.0" || host === "::1" || host.endsWith(".local")) return true;
+    if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) return true;
+    const private172 = host.match(/^172\.(\d+)\./);
+    return Boolean(private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31);
+  };
+
   const callbackSuccessUrl = () => {
     const candidates = [
       Deno.env.get("PUBLIC_SITE_URL"),
@@ -23,7 +31,7 @@ export const createAsaasWebhookHandlers = (
     for (const candidate of candidates) {
       try {
         const url = new URL(String(candidate || ""));
-        if (url.protocol === "http:" || url.protocol === "https:") {
+        if (url.protocol === "https:" && !isUnsafeCallbackHost(url.hostname)) {
           return `${url.origin.replace(/\/+$/, "")}/aluno?asaas=success`;
         }
       } catch {
@@ -99,6 +107,7 @@ export const createAsaasWebhookHandlers = (
 
   const activateOnlineEnrollmentForReceivable = async (receivable: any, payment: any, localStatus: string | null) => {
     if (localStatus !== "PAGO" || !receivable?.matricula_id) return;
+    if (String(receivable?.tipo_lancamento || "").toUpperCase() !== "MATRICULA") return;
 
     const { data: matricula, error: matriculaError } = await admin
       .from("matriculas")
@@ -131,6 +140,53 @@ export const createAsaasWebhookHandlers = (
       payment,
       isConfirmed: true,
     });
+  };
+
+  const cancelPendingOnlineEnrollmentForReceivable = async (receivable: any, eventType: string, localStatus: string | null) => {
+    if (!["VENCIDO", "CANCELADO"].includes(String(localStatus || "").toUpperCase())) return;
+    if (!receivable?.matricula_id) return;
+    if (String(receivable?.tipo_lancamento || "").toUpperCase() !== "MATRICULA") return;
+
+    const { data: matricula, error: matriculaError } = await admin
+      .from("matriculas")
+      .select("id, status, turmas(cursos(id, modalidade))")
+      .eq("id", receivable.matricula_id)
+      .maybeSingle();
+    if (matriculaError) throw matriculaError;
+    const course = matricula?.turmas?.cursos;
+    if (!course || !ONLINE_MODALIDADES.includes(course.modalidade)) return;
+
+    const { data: paidReceivable, error: paidError } = await admin
+      .from("contas_receber")
+      .select("id")
+      .eq("matricula_id", receivable.matricula_id)
+      .eq("status", "PAGO")
+      .limit(1)
+      .maybeSingle();
+    if (paidError) throw paidError;
+    if (paidReceivable?.id) return;
+
+    const reason = eventType === "PAYMENT_DELETED"
+      ? "Checkout cancelado: cobrança removida no Asaas."
+      : "Checkout cancelado: cobrança vencida no Asaas.";
+
+    const { error: enrollmentError } = await admin
+      .from("matriculas")
+      .update({ status: "CANCELADO" })
+      .eq("id", receivable.matricula_id)
+      .in("status", ["PENDENTE", "AGUARDANDO_PAGAMENTO", "AGUARDANDO_CONFIRMACAO"]);
+    if (enrollmentError) throw enrollmentError;
+
+    const { error: inscriptionError } = await admin
+      .from("inscricoes_online")
+      .update({
+        status: "CANCELADO",
+        erro: reason,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("matricula_id", receivable.matricula_id)
+      .eq("status", PENDENTE_INSCRICAO_STATUS);
+    if (inscriptionError) throw inscriptionError;
   };
 
   const upsertReceivableFromPaymentLink = async (
@@ -279,6 +335,12 @@ export const createAsaasWebhookHandlers = (
       return;
     }
 
+    if (String(item.asaas_status || "").toUpperCase() === "CREATING") {
+      const recovered = await recoverReceivablePayment(item);
+      if (recovered) return;
+    }
+
+    const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: lockedReceivable, error: lockError } = await admin
       .from("contas_receber")
       .update({
@@ -289,7 +351,7 @@ export const createAsaasWebhookHandlers = (
       .eq("id", item.id)
       .is("asaas_payment_id", null)
       .in("status", ["PENDENTE", "VENCIDO"])
-      .or("asaas_status.is.null,asaas_status.neq.CREATING")
+      .or(`asaas_status.is.null,asaas_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
       .select()
       .maybeSingle();
     if (lockError) throw lockError;
@@ -307,6 +369,9 @@ export const createAsaasWebhookHandlers = (
       return;
     }
     item = lockedReceivable;
+
+    const recovered = await recoverReceivablePayment(item);
+    if (recovered) return;
 
     const { data: partner, error } = await admin.from("parceiros").select("*").eq("id", item.cliente_id).single();
     if (error) throw error;
@@ -483,6 +548,7 @@ export const createAsaasWebhookHandlers = (
     if (error) throw error;
 
     await activateOnlineEnrollmentForReceivable(receivable, payment, localStatus);
+    await cancelPendingOnlineEnrollmentForReceivable(receivable, eventType, localStatus);
 
     if (receivable.matricula_id && localStatus === "PAGO") {
       await syncOpenInstallments(receivable.matricula_id);

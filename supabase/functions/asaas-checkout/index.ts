@@ -37,19 +37,26 @@ const isActiveStatus = (status: unknown) =>
   ["ativo", "active"].includes(normalize(status));
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const resolvePublicBaseUrl = (req: Request) => {
+const isUnsafeCallbackHost = (hostname: string) => {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host === "0.0.0.0" || host === "::1" || host.endsWith(".local")) return true;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) return true;
+  const private172 = host.match(/^172\.(\d+)\./);
+  return Boolean(private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31);
+};
+
+const resolvePublicBaseUrl = () => {
   const candidates = [
     Deno.env.get("PUBLIC_SITE_URL"),
     Deno.env.get("SITE_URL"),
     Deno.env.get("APP_URL"),
     Deno.env.get("VITE_PUBLIC_SITE_URL"),
-    req.headers.get("origin"),
     "https://universocc.com.br",
   ];
   for (const candidate of candidates) {
     try {
       const url = new URL(String(candidate || ""));
-      if (url.protocol === "http:" || url.protocol === "https:") {
+      if (url.protocol === "https:" && !isUnsafeCallbackHost(url.hostname)) {
         return url.origin.replace(/\/+$/, "");
       }
     } catch {
@@ -187,6 +194,9 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  let checkoutMatriculaId: string | null = null;
+  let checkoutReceivableId: string | null = null;
+  let paymentCreated = false;
 
   try {
     const { courseId, alunoId: requestedAlunoId, turmaId } = await req.json();
@@ -359,6 +369,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
       matricula = data;
     }
+    checkoutMatriculaId = matricula.id;
 
     const { data: config, error: configError } = await admin
       .from("asaas_config")
@@ -393,7 +404,9 @@ Deno.serve(async (req: Request) => {
         const message = payload?.errors?.map((item: any) => item.description).join(" ")
           || payload?.message
           || `Erro ${response.status} na API do Asaas.`;
-        throw new Error(message);
+        const error = new Error(message) as Error & { status?: number };
+        error.status = response.status;
+        throw error;
       }
       return payload;
     };
@@ -433,29 +446,15 @@ Deno.serve(async (req: Request) => {
       };
     };
 
-    const ensureCustomer = async () => {
-      if (aluno.asaas_customer_id) {
-        await callAsaas(`/customers/${aluno.asaas_customer_id}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            name: aluno.nome,
-            cpfCnpj,
-            email: aluno.email || undefined,
-            mobilePhone: aluno.telefone || undefined,
-            postalCode: onlyDigits(aluno.cep) || undefined,
-            address: aluno.endereco || undefined,
-            addressNumber: aluno.numero || undefined,
-            complement: aluno.complemento || undefined,
-            province: aluno.bairro || undefined,
-            externalReference: aluno.id,
-            notificationDisabled: !notificationsEnabled,
-          }),
-        }).catch((updateError) => {
-          console.warn("Não foi possível atualizar cliente Asaas já vinculado, será feita busca por CPF.", updateError);
-        });
-        return aluno.asaas_customer_id as string;
-      }
+    const persistCustomerId = async (customerId: string) => {
+      await admin.from("parceiros")
+        .update({ asaas_customer_id: customerId, updated_at: new Date().toISOString() })
+        .eq("id", aluno.id);
+      aluno.asaas_customer_id = customerId;
+      return customerId;
+    };
 
+    const findOrCreateCustomerByCpf = async () => {
       const found = await callAsaas(`/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}&limit=1`);
       let customer = found?.data?.[0];
       if (!customer) {
@@ -485,10 +484,120 @@ Deno.serve(async (req: Request) => {
         console.warn("Não foi possível atualizar preferência de notificações do cliente no Asaas:", updateError);
       });
 
-      await admin.from("parceiros")
-        .update({ asaas_customer_id: customer.id, updated_at: new Date().toISOString() })
-        .eq("id", aluno.id);
-      return customer.id as string;
+      return persistCustomerId(customer.id);
+    };
+
+    const ensureCustomer = async () => {
+      if (aluno.asaas_customer_id) {
+        try {
+          const updatedCustomer = await callAsaas(`/customers/${aluno.asaas_customer_id}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              name: aluno.nome,
+              cpfCnpj,
+              email: aluno.email || undefined,
+              mobilePhone: aluno.telefone || undefined,
+              postalCode: onlyDigits(aluno.cep) || undefined,
+              address: aluno.endereco || undefined,
+              addressNumber: aluno.numero || undefined,
+              complement: aluno.complemento || undefined,
+              province: aluno.bairro || undefined,
+              externalReference: aluno.id,
+              notificationDisabled: !notificationsEnabled,
+            }),
+          });
+          if (updatedCustomer?.cpfCnpj && onlyDigits(updatedCustomer.cpfCnpj) !== cpfCnpj) {
+            console.warn("Cliente Asaas vinculado possui CPF/CNPJ diferente; será feita busca pelo CPF do aluno.");
+            return findOrCreateCustomerByCpf();
+          }
+          return aluno.asaas_customer_id as string;
+        } catch (updateError) {
+          console.warn("Não foi possível atualizar cliente Asaas já vinculado; será feita busca por CPF.", updateError);
+          return findOrCreateCustomerByCpf();
+        }
+      }
+
+      return findOrCreateCustomerByCpf();
+    };
+
+    let existingReceivable: any = null;
+
+    const clearLocalAsaasPayment = async (receivableId: string, reason: string) => {
+      const { data, error } = await admin
+        .from("contas_receber")
+        .update({
+          asaas_payment_id: null,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: null,
+          asaas_invoice_url: null,
+          asaas_bank_slip_url: null,
+          asaas_installment_id: null,
+          asaas_transaction_receipt_url: null,
+          asaas_status: null,
+          asaas_synced_at: null,
+          asaas_last_error: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .neq("status", "PAGO")
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    };
+
+    const getReusableExistingPaymentUrl = async (currentReceivable: any) => {
+      if (!currentReceivable?.asaas_payment_id) return null;
+      const localAsaasStatus = String(currentReceivable.asaas_status || "").toUpperCase();
+      if (["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(localAsaasStatus)) {
+        existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas local estava cancelada/deletada; será gerado novo checkout.");
+        return null;
+      }
+
+      try {
+        const remotePayment = await callAsaas(`/payments/${currentReceivable.asaas_payment_id}`);
+        const remoteStatus = String(remotePayment?.status || "").toUpperCase();
+        if (["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(remoteStatus)) {
+          existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas remota estava cancelada/deletada; será gerado novo checkout.");
+          return null;
+        }
+
+        const paid = isPaidPayment(remotePayment);
+        const { data: refreshedReceivable, error: refreshError } = await admin
+          .from("contas_receber")
+          .update({
+            asaas_payment_id: remotePayment.id || currentReceivable.asaas_payment_id,
+            nosso_numero_asaas: remotePayment.id || currentReceivable.nosso_numero_asaas,
+            asaas_invoice_url: remotePayment.invoiceUrl || currentReceivable.asaas_invoice_url || null,
+            asaas_bank_slip_url: remotePayment.bankSlipUrl || currentReceivable.asaas_bank_slip_url || null,
+            asaas_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
+            asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
+            asaas_status: remotePayment.status || currentReceivable.asaas_status || null,
+            status: paid ? "PAGO" : currentReceivable.status,
+            valor_pago: paid ? Number(remotePayment.value || currentReceivable.valor) : currentReceivable.valor_pago,
+            data_pagamento: paid ? paymentDate(remotePayment) : currentReceivable.data_pagamento,
+            forma_pagamento: paid ? mapBillingType(remotePayment.billingType) : currentReceivable.forma_pagamento,
+            origem_pagamento: paid ? "ASAAS" : currentReceivable.origem_pagamento,
+            asaas_synced_at: new Date().toISOString(),
+            asaas_last_error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentReceivable.id)
+          .select()
+          .single();
+        if (refreshError) throw refreshError;
+        existingReceivable = refreshedReceivable;
+        if (paid) {
+          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        }
+        return refreshedReceivable.asaas_invoice_url || refreshedReceivable.asaas_bank_slip_url || null;
+      } catch (paymentLookupError) {
+        if ((paymentLookupError as Error & { status?: number })?.status === 404) {
+          existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas não localizada; será gerado novo checkout.");
+          return null;
+        }
+        throw paymentLookupError;
+      }
     };
 
     const { data: existingReceivables, error: existingReceivableError } = await admin
@@ -500,15 +609,16 @@ Deno.serve(async (req: Request) => {
       .order("created_at", { ascending: false })
       .limit(1);
     if (existingReceivableError) throw existingReceivableError;
-    const existingReceivable = existingReceivables?.[0] || null;
+    existingReceivable = existingReceivables?.[0] || null;
 
     if (existingReceivable?.status === "PAGO") {
       await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
       return json({ url: existingReceivable.asaas_invoice_url || existingReceivable.asaas_bank_slip_url, alreadyPaid: true });
     }
 
-    if (existingReceivable?.asaas_invoice_url && existingReceivable?.asaas_payment_id) {
-      return json({ url: existingReceivable.asaas_invoice_url });
+    if (existingReceivable?.asaas_payment_id) {
+      const reusableUrl = await getReusableExistingPaymentUrl(existingReceivable);
+      if (reusableUrl) return json({ url: reusableUrl });
     }
 
     if (existingReceivable?.asaas_payment_link_id && !existingReceivable?.asaas_payment_id) {
@@ -604,14 +714,20 @@ Deno.serve(async (req: Request) => {
       updated_at: new Date().toISOString(),
     };
 
+    const existingIsCreatingWithoutPayment = existingReceivable
+      && !existingReceivable.asaas_payment_id
+      && String(existingReceivable.asaas_status || "").toUpperCase() === "CREATING";
+
     let receivable = existingReceivable
-      ? (await admin
-        .from("contas_receber")
-        .update(receivablePayload)
-        .eq("id", existingReceivable.id)
-        .neq("status", "PAGO")
-        .select()
-        .maybeSingle()).data || existingReceivable
+      ? existingIsCreatingWithoutPayment
+        ? existingReceivable
+        : (await admin
+          .from("contas_receber")
+          .update(receivablePayload)
+          .eq("id", existingReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle()).data || existingReceivable
       : null;
 
     if (!receivable) {
@@ -637,6 +753,7 @@ Deno.serve(async (req: Request) => {
         receivable = insertedReceivable;
       }
     }
+    checkoutReceivableId = receivable?.id || null;
 
     if (!receivable) throw new Error("Não foi possível registrar a cobrança interna.");
     if (receivable.status === "PAGO") {
@@ -645,8 +762,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const customerId = await ensureCustomer();
-    const publicBaseUrl = resolvePublicBaseUrl(req);
+    const publicBaseUrl = resolvePublicBaseUrl();
     const successUrl = publicBaseUrl ? `${publicBaseUrl}/aluno?asaas=success` : null;
+    const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: lockedReceivable, error: lockReceivableError } = await admin
       .from("contas_receber")
       .update({
@@ -656,7 +774,7 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", receivable.id)
       .is("asaas_payment_id", null)
-      .or("asaas_status.is.null,asaas_status.neq.CREATING")
+      .or(`asaas_status.is.null,asaas_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
       .select()
       .maybeSingle();
     if (lockReceivableError) throw lockReceivableError;
@@ -681,10 +799,16 @@ Deno.serve(async (req: Request) => {
 
     let payment: any;
     try {
+      const recovered = await recoverPaymentByReceivableId(receivable.id);
+      if (recovered?.receivable?.asaas_invoice_url || recovered?.payment?.invoiceUrl) {
+        return json({ url: recovered.receivable.asaas_invoice_url || recovered.payment.invoiceUrl });
+      }
+
       payment = await callAsaas("/payments", {
         method: "POST",
         body: JSON.stringify(buildOnlinePaymentPayload(customerId, receivable.id, charge, successUrl)),
       });
+      paymentCreated = true;
     } catch (paymentError) {
       await admin
         .from("contas_receber")
@@ -759,6 +883,45 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const errorMessage = normalizeErrorMessage(error);
     console.error("Erro ao gerar checkout público:", error);
+    if (!paymentCreated && checkoutReceivableId) {
+      try {
+        await admin
+          .from("contas_receber")
+          .delete()
+          .eq("id", checkoutReceivableId)
+          .is("asaas_payment_id", null)
+          .is("asaas_invoice_url", null)
+          .is("asaas_payment_link_id", null)
+          .neq("status", "PAGO");
+      } catch (cleanupError) {
+        console.warn("Não foi possível limpar cobrança local falha:", cleanupError);
+      }
+    }
+    if (!paymentCreated && checkoutMatriculaId) {
+      try {
+        await admin
+          .from("matriculas")
+          .update({ status: "CANCELADO" })
+          .eq("id", checkoutMatriculaId)
+          .in("status", ["PENDENTE", "AGUARDANDO_PAGAMENTO", "AGUARDANDO_CONFIRMACAO"]);
+      } catch (cleanupError) {
+        console.warn("Não foi possível cancelar matrícula local falha:", cleanupError);
+      }
+      try {
+        await admin
+          .from("inscricoes_online")
+          .update({
+            status: "CANCELADO",
+            erro: "Checkout cancelado automaticamente por falha antes da criação da cobrança Asaas.",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("matricula_id", checkoutMatriculaId)
+          .eq("status", PENDENTE_INSCRICAO_STATUS)
+          .is("asaas_payment_id", null);
+      } catch (cleanupError) {
+        console.warn("Não foi possível cancelar inscrição online local falha:", cleanupError);
+      }
+    }
     return json({ error: errorMessage }, 400);
   }
 });

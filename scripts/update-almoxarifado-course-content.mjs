@@ -199,7 +199,6 @@ function readEnv() {
   return {
     baseUrl: env.REACT_APP_SUPABASE_URL || env.VITE_SUPABASE_URL,
     apiKey:
-      env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY ||
       env.SUPABASE_SERVICE_ROLE_KEY ||
       env.REACT_APP_SUPABASE_ANON_KEY ||
       env.VITE_SUPABASE_ANON_KEY,

@@ -88,7 +88,7 @@ export const asaasIntegrationService = {
     });
   },
 
-  async createCourseLink(courseId: string, recreate = false) {
+  async createCourseLink(courseId: string, recreate = false): Promise<{ url: string }> {
     void courseId;
     void recreate;
     throw new Error('Links genéricos de curso foram desativados. Use o checkout online do aluno para gerar uma cobrança no nome dele.');

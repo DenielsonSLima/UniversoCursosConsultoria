@@ -127,6 +127,15 @@ const normalizeStatus = (status?: string | null) => String(status || '').toUpper
 
 const todayDate = () => new Date().toISOString().slice(0, 10);
 
+const escapeCheckoutHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char] || char));
+
 const formatDate = (value: string | null | undefined) => {
   if (!value) return '';
   return new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
@@ -638,10 +647,20 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       invalidateStudentCourseAccess();
     },
     onError: (error: any, variables) => {
+      const message = error?.message || 'Não foi possível iniciar o pagamento deste curso.';
       if (variables?.checkoutWindow && !variables.checkoutWindow.closed) {
-        variables.checkoutWindow.close();
+        variables.checkoutWindow.document.title = 'Pagamento não iniciado';
+        variables.checkoutWindow.document.body.innerHTML = `
+          <main style="font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 48px 24px; color: #0f172a;">
+            <p style="margin: 0 0 12px; color: #dc2626; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;">Pagamento não iniciado</p>
+            <h1 style="margin: 0 0 12px; font-size: 28px; line-height: 1.15;">Não foi possível preparar a cobrança.</h1>
+            <p style="margin: 0 0 24px; color: #475569; font-size: 15px; line-height: 1.6;">${escapeCheckoutHtml(message)}</p>
+            <button onclick="window.close()" style="border: 0; border-radius: 12px; background: #2563eb; color: white; padding: 12px 18px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; cursor: pointer;">Fechar</button>
+          </main>
+        `;
+        variables.checkoutWindow.focus();
       }
-      setCheckoutError(error?.message || 'Não foi possível iniciar o pagamento deste curso.');
+      setCheckoutError(message);
       invalidateStudentCourseAccess();
     }
   });

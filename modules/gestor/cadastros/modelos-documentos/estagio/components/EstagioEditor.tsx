@@ -10,6 +10,7 @@ import { estagioService } from '../estagio.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
+import { sanitizedHtml, sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
 
 interface EstagioEditorProps {
   polo: any;
@@ -105,14 +106,14 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
     setLoading(true);
     // 1. Carrega Template Específico do Polo
     const template = await estagioService.getTemplate(polo.id);
-    setTextContent(template.textContent);
+    setTextContent(sanitizeHtml(template.textContent));
     setValidityDays(template.validityDays || 90);
     
     const fieldsWithTypes = (template.absoluteFields || []).map((f: any) => ({
         ...f,
         type: f.type || 'text'
     }));
-    setAbsoluteFields(fieldsWithTypes);
+    setAbsoluteFields(sanitizeTemplateFields(fieldsWithTypes));
 
     // 2. Carrega Marca D'água
     const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
@@ -144,7 +145,7 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
   };
 
   const handleTextInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setTextContent(e.currentTarget.innerHTML);
+    setTextContent(sanitizeHtml(e.currentTarget.innerHTML));
   };
 
   // --- Upload de Assinatura ---
@@ -257,8 +258,8 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
     setSaving(true);
     try {
       await estagioService.saveTemplate(polo.id, {
-          textContent,
-          absoluteFields,
+          textContent: sanitizeHtml(textContent),
+          absoluteFields: sanitizeTemplateFields(absoluteFields),
           validityDays
       });
       showToast(`Modelo de Estágio para ${polo.nomeFantasia} salvo com sucesso!`, 'success');
@@ -681,7 +682,7 @@ const EstagioEditor: React.FC<EstagioEditorProps> = ({ polo, onBack }) => {
                         ref={editorRef}
                         contentEditable
                         onInput={handleTextInput}
-                        dangerouslySetInnerHTML={{ __html: textContent }}
+                        dangerouslySetInnerHTML={sanitizedHtml(textContent)}
                         className="min-h-[200px] outline-none text-justify leading-loose text-lg p-4 border border-transparent hover:border-teal-100 rounded-lg transition-colors cursor-text text-black"
                         style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
                     >

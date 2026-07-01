@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Award, X } from 'lucide-react';
 import { getDocumentValidationUrl, getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
 import { assinaturasService, AssinaturasData } from '../../../../configuracoes/assinaturas/assinaturas.service';
+import { sanitizedHtml } from '../../../../../../lib/htmlSanitizer';
 
 interface DiplomaPreviewProps {
   formData: any;
@@ -980,7 +981,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
         
         return (
           <div style={textStyle}>
-            <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '', signatureTemplateVars) }} />
+            <div dangerouslySetInnerHTML={sanitizedHtml(parseText(block.content || '', signatureTemplateVars))} />
           </div>
         );
       }
@@ -1021,13 +1022,13 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
                 <p
                   className="font-black uppercase text-slate-800 leading-tight"
                   style={{ fontSize: `${signatureNameFontSize}px` }}
-                  dangerouslySetInnerHTML={{ __html: signerNameHtml }}
+                  dangerouslySetInnerHTML={sanitizedHtml(signerNameHtml)}
                 />
               )}
               <p
                 className="font-black uppercase tracking-widest text-slate-800 leading-tight"
                 style={{ fontSize: `${signatureLabelFontSize}px` }}
-                dangerouslySetInnerHTML={{ __html: signerTitleHtml }}
+                dangerouslySetInnerHTML={sanitizedHtml(signerTitleHtml)}
               />
             </div>
           </div>
@@ -1147,7 +1148,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
               </table>
             ) : (
               <div className="leading-relaxed whitespace-pre-wrap" style={tableTextStyle}>
-                <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '') }} />
+                <div dangerouslySetInnerHTML={sanitizedHtml(parseText(block.content || ''))} />
               </div>
             )}
           </div>
@@ -1201,7 +1202,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
                 textAlign: block.textAlign || 'left',
                 width: `${block.width || 560}px`,
               }}
-              dangerouslySetInnerHTML={{ __html: parseText(block.content || '{{url_validacao}}', { ...signatureTemplateVars, url_validacao: validationUrl }) }}
+              dangerouslySetInnerHTML={sanitizedHtml(parseText(block.content || '{{url_validacao}}', { ...signatureTemplateVars, url_validacao: validationUrl }))}
             />
           </div>
         );

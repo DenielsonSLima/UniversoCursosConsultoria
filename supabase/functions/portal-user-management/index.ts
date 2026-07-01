@@ -47,6 +47,122 @@ const normalizeEmail = (value?: string | null) =>
 const normalizeRedirectInput = (value?: string | null) =>
   String(value || '').trim();
 
+const SUPABASE_PUBLIC_KEY_ENV_NAMES = [
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'VITE_SUPABASE_ANON_KEY',
+];
+
+const EXPLICIT_REDIRECT_ORIGIN_ENV_NAMES = [
+  'PORTAL_ALLOWED_REDIRECT_ORIGINS',
+  'ALLOWED_REDIRECT_ORIGINS',
+];
+
+const PUBLIC_SITE_URL_ENV_NAMES = [
+  'PUBLIC_SITE_URL',
+  'SITE_URL',
+  'APP_URL',
+  'VITE_PUBLIC_SITE_URL',
+];
+
+const DEFAULT_ALLOWED_REDIRECT_ORIGINS = [
+  'https://universocc.com.br',
+];
+
+const normalizeEnvValue = (value?: string | null) =>
+  String(value || '').trim();
+
+const resolveSupabasePublicApiKey = (serviceRoleKey?: string | null) => {
+  const serviceKey = normalizeEnvValue(serviceRoleKey);
+  const apiKey = SUPABASE_PUBLIC_KEY_ENV_NAMES
+    .map((name) => normalizeEnvValue(Deno.env.get(name)))
+    .find((value) => value.length > 0) || null;
+
+  if (!apiKey) {
+    return {
+      apiKey: null,
+      message: 'Configuração de e-mail ausente no servidor (SUPABASE_ANON_KEY ou SUPABASE_PUBLISHABLE_KEY).',
+    };
+  }
+
+  if (serviceKey && apiKey === serviceKey) {
+    return {
+      apiKey: null,
+      message: 'Configuração insegura: a chave pública do Supabase não pode ser a service role key.',
+    };
+  }
+
+  return { apiKey, message: null };
+};
+
+const parseOrigin = (value?: string | null) => {
+  try {
+    const url = new URL(normalizeEnvValue(value));
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+};
+
+const parseOriginList = (value?: string | null) =>
+  normalizeEnvValue(value)
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+const getAllowedRedirectOrigins = () => {
+  const origins = new Set<string>();
+
+  for (const value of DEFAULT_ALLOWED_REDIRECT_ORIGINS) {
+    const origin = parseOrigin(value);
+    if (origin) origins.add(origin);
+  }
+
+  for (const envName of EXPLICIT_REDIRECT_ORIGIN_ENV_NAMES) {
+    for (const value of parseOriginList(Deno.env.get(envName))) {
+      const origin = parseOrigin(value);
+      if (origin) origins.add(origin);
+    }
+  }
+
+  for (const envName of PUBLIC_SITE_URL_ENV_NAMES) {
+    const origin = parseOrigin(Deno.env.get(envName));
+    if (origin) origins.add(origin);
+  }
+
+  return Array.from(origins);
+};
+
+const resolveRedirectTarget = (value?: string | null) => {
+  const allowedOrigins = getAllowedRedirectOrigins();
+  if (allowedOrigins.length === 0) {
+    return {
+      redirectTo: null,
+      status: 500,
+      error: 'Configuração de redirecionamento ausente. Defina PORTAL_ALLOWED_REDIRECT_ORIGINS ou PUBLIC_SITE_URL.',
+    };
+  }
+
+  try {
+    const fallbackOrigin = allowedOrigins[0];
+    const rawRedirect = normalizeRedirectInput(value) || '/login';
+    const parsed = new URL(rawRedirect, fallbackOrigin);
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { redirectTo: null, status: 400, error: 'redirectTo inválido.' };
+    }
+
+    if (!allowedOrigins.includes(parsed.origin)) {
+      return { redirectTo: null, status: 400, error: 'Origem de redirectTo não permitida.' };
+    }
+
+    return { redirectTo: parsed.toString(), status: 200, error: null };
+  } catch {
+    return { redirectTo: null, status: 400, error: 'redirectTo inválido.' };
+  }
+};
+
 const normalizeStringArray = (value: unknown) => {
   if (!Array.isArray(value)) return [];
   return value
@@ -92,7 +208,7 @@ const sendRecoveryEmail = async (
   if (!apiKey) {
     return {
       sent: false,
-      message: 'Configuração de e-mail ausente no servidor (SUPABASE_ANON_KEY).',
+      message: 'Configuração de e-mail ausente no servidor (SUPABASE_ANON_KEY ou SUPABASE_PUBLISHABLE_KEY).',
     };
   }
 
@@ -239,14 +355,12 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const anonymousKey = Deno.env.get('SUPABASE_ANON_KEY')
-    || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')
-    || Deno.env.get('VITE_SUPABASE_ANON_KEY')
-    || serviceRoleKey;
 
   if (!supabaseUrl || !serviceRoleKey) {
     return json({ success: false, error: 'Configuração do Supabase ausente.' }, 500);
   }
+
+  const publicApiKey = resolveSupabasePublicApiKey(serviceRoleKey);
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -475,19 +589,14 @@ Deno.serve(async (req: Request) => {
     return json({ success: false, error: 'E-mail do aluno não informado.' }, 400);
   }
 
-  const defaultOrigin = new URL(req.url).origin;
-  const redirectTo = normalizeRedirectInput(payload.redirectTo) || `${defaultOrigin}/login`;
-
-  const ensureLinkRedirect = (url: string, fallbackPath: string) => {
-    try {
-      const parsed = new URL(url, defaultOrigin);
-      return parsed.toString();
-    } catch {
-      return `${defaultOrigin}${fallbackPath}`;
-    }
-  };
-
-  const finalRedirect = ensureLinkRedirect(redirectTo, '/login');
+  const redirectResolution = resolveRedirectTarget(payload.redirectTo);
+  if (!redirectResolution.redirectTo) {
+    return json({
+      success: false,
+      error: redirectResolution.error || 'redirectTo inválido.',
+    }, redirectResolution.status);
+  }
+  const finalRedirect = redirectResolution.redirectTo;
   const markStudentNeedsAccess = async () => {
     const now = new Date().toISOString();
     const { error } = await admin
@@ -525,7 +634,9 @@ Deno.serve(async (req: Request) => {
       }, 500);
     }
 
-    const emailDelivery = await sendRecoveryEmail(supabaseUrl, anonymousKey, email, finalRedirect);
+    const emailDelivery = publicApiKey.apiKey
+      ? await sendRecoveryEmail(supabaseUrl, publicApiKey.apiKey, email, finalRedirect)
+      : { sent: false, message: publicApiKey.message };
 
     if (emailDelivery.sent) {
       return json({

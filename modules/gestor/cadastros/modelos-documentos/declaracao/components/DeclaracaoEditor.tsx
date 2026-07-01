@@ -11,6 +11,7 @@ import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-d
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import { academicosService } from '../../../../configuracoes/academicos/academicos.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
+import { sanitizedHtml, sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
 
 interface DeclaracaoEditorProps {
   polo: any;
@@ -155,7 +156,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     setLoading(true);
     // 1. Carrega Template Específico do Polo
     const template = await service.getTemplate(polo.id);
-    setTextContent(template.textContent);
+    setTextContent(sanitizeHtml(template.textContent));
     setValidityDays(template.validityDays || defaultValidityDays);
     setPageCount(Math.max(1, Number(template.pageCount || 1)));
     
@@ -236,7 +237,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
       const fieldsToAdd = defaultFields.filter(df => !loadedFields.some((lf: any) => lf.id === df.id));
       loadedFields = [...loadedFields, ...fieldsToAdd];
     }
-    setAbsoluteFields(loadedFields);
+    setAbsoluteFields(sanitizeTemplateFields(loadedFields));
 
     // 2. Carrega Marca D'água
     const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
@@ -272,13 +273,14 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   };
 
   const handleTextInput = (e: React.FormEvent<HTMLDivElement>, pageIndex = 0) => {
+    const nextHtml = sanitizeHtml(e.currentTarget.innerHTML);
     if (pageCount <= 1) {
-      setTextContent(e.currentTarget.innerHTML);
+      setTextContent(nextHtml);
       return;
     }
 
     const pages = splitDocumentPages(textContent, pageCount);
-    pages[pageIndex] = e.currentTarget.innerHTML;
+    pages[pageIndex] = nextHtml;
     setTextContent(pages.join(PAGE_BREAK_HTML));
   };
 
@@ -392,8 +394,8 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     setSaving(true);
     try {
       const saved = await service.saveTemplate(polo.id, {
-          textContent,
-          absoluteFields,
+          textContent: sanitizeHtml(textContent),
+          absoluteFields: sanitizeTemplateFields(absoluteFields),
           validityDays,
           pageCount,
           v: 2
@@ -485,7 +487,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
         {field.type === 'text' && (
           <div className="flex items-center w-full">
             <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1 shrink-0" />
-            <span dangerouslySetInnerHTML={{ __html: field.value }} className="w-full break-words" />
+            <span dangerouslySetInnerHTML={sanitizedHtml(field.value)} className="w-full break-words" />
           </div>
         )}
 
@@ -1004,7 +1006,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
                       ref={pageIndex === 0 ? editorRef : undefined}
                       contentEditable
                       onInput={(e) => handleTextInput(e, pageIndex)}
-                      dangerouslySetInnerHTML={{ __html: textPages[pageIndex] || '' }}
+                      dangerouslySetInnerHTML={sanitizedHtml(textPages[pageIndex] || '')}
                       className="min-h-[160px] outline-none text-justify leading-loose text-lg p-4 border border-transparent hover:border-blue-100 rounded-lg transition-colors cursor-text text-black"
                       style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
                     />

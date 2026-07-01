@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2, Printer } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import { boletimService } from '../../cadastros/modelos-documentos/boletim/boletim.service';
 import { atestadoConclusaoService } from '../../cadastros/modelos-documentos/atestado-conclusao/atestado-conclusao.service';
@@ -252,7 +253,7 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({ matriculaId, type 
           <h2 className="my-8 text-center text-2xl font-bold uppercase text-[#001a33] underline underline-offset-8">
             {type === 'boletim_tecnico' ? 'Boletim Escolar — Cursos Técnicos' : 'Atestado de Conclusão'}
           </h2>
-          <div className="text-justify text-base leading-loose text-black relative z-10" dangerouslySetInnerHTML={{ __html: parsedText }} />
+          <div className="text-justify text-base leading-loose text-black relative z-10" dangerouslySetInnerHTML={sanitizedHtml(parsedText)} />
         </div>
       </div>
     </div>

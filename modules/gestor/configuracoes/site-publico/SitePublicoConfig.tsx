@@ -138,8 +138,16 @@ const SitePublicoConfig: React.FC = () => {
     updateConfig({ modalidades: next, cursoIds: [], turmaIds: [] });
   };
 
-  const selectedOptions = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    Array.from(event.target.selectedOptions).map((option) => option.value);
+  const selectedOptions = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const values: string[] = [];
+    const { selectedOptions: options } = event.currentTarget;
+
+    for (let index = 0; index < options.length; index += 1) {
+      values.push(options[index].value);
+    }
+
+    return values;
+  };
 
   const formatPolo = (turma: SiteTickerTurmaOption) => {
     const polo = Array.isArray(turma.polos) ? turma.polos[0] : turma.polos;

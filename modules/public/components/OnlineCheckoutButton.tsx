@@ -5,6 +5,7 @@ import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '.
 
 interface OnlineCheckoutButtonProps {
   courseId: string;
+  turmaId?: string | null;
   disabled?: boolean;
   disabledReason?: string | null;
   availabilityLoading?: boolean;
@@ -12,6 +13,7 @@ interface OnlineCheckoutButtonProps {
 
 const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
   courseId,
+  turmaId = null,
   disabled = false,
   disabledReason = null,
   availabilityLoading = false,
@@ -41,7 +43,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
       }
 
       savePortalSession(profile);
-      const { url } = await asaasIntegrationService.getPublicCheckout(courseId, profile.id);
+      const { url } = await asaasIntegrationService.getPublicCheckout(courseId, profile.id, turmaId);
       setToast({
         title: 'Pagamento preparado',
         message: 'Você será redirecionado para concluir a matrícula com segurança.',

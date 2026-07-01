@@ -22,7 +22,6 @@ function readEnv() {
   return {
     url: env.REACT_APP_SUPABASE_URL || env.VITE_SUPABASE_URL,
     key:
-      env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY ||
       env.SUPABASE_SERVICE_ROLE_KEY ||
       env.REACT_APP_SUPABASE_ANON_KEY ||
       env.VITE_SUPABASE_ANON_KEY,

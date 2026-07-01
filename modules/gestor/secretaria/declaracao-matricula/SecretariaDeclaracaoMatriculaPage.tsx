@@ -13,6 +13,7 @@ import { parceirosService } from '../../parceiros/parceiros.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 
 interface Aluno {
@@ -495,7 +496,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
           </div>
 
           {/* 3. Corpo do Texto */}
-          <div className="relative z-20 mb-20 text-justify leading-loose text-lg text-black" dangerouslySetInnerHTML={{ __html: parsedText }} />
+          <div className="relative z-20 mb-20 text-justify leading-loose text-lg text-black" dangerouslySetInnerHTML={sanitizedHtml(parsedText)} />
 
           {/* 4. Campos Absolutos */}
           {templateConfig.absoluteFields?.map((field: any) => {
@@ -541,7 +542,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
                 )}
 
                 {field.type === 'text' && (
-                  <span dangerouslySetInnerHTML={{ __html: parsedVal }} className="w-full break-words" />
+                  <span dangerouslySetInnerHTML={sanitizedHtml(parsedVal)} className="w-full break-words" />
                 )}
               </div>
             );

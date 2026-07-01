@@ -2,8 +2,14 @@ global.WebSocket = class {};
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://kfekgwyqozhicpfuunpo.supabase.co';
-const supabaseAnonKey = 'sb_publishable_EHuK9E4fljLZSess2H9voQ_0nxt-x3a';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Configure VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY para executar este script.');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function check() {

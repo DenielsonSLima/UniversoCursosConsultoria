@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const supabaseUrl = env.VITE_SUPABASE_URL || env.REACT_APP_SUPABASE_URL || '';
+    const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.REACT_APP_SUPABASE_ANON_KEY || '';
+
     return {
       server: {
         port: 3000,
@@ -17,8 +20,10 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(env.REACT_APP_SUPABASE_URL || env.VITE_SUPABASE_URL || 'https://kfekgwyqozhicpfuunpo.supabase.co'),
-        'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(env.REACT_APP_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_EHuK9E4fljLZSess2H9voQ_0nxt-x3a'),
+        'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(supabaseUrl),
+        'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
+        'import.meta.env.REACT_APP_SUPABASE_URL': JSON.stringify(supabaseUrl),
+        'import.meta.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
         // Modo da aplicação: 'development' (local) ou 'production' (Vercel)
         'import.meta.env.VITE_APP_MODE': JSON.stringify(env.VITE_APP_MODE || 'production'),
       },

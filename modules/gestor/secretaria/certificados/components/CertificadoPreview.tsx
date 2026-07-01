@@ -4,6 +4,7 @@ import { getBlocks, getTemplateBackgroundUrl } from '../../../cadastros/modelos-
 import { CertificadoAcademico } from '../certificados.types';
 import { assinaturasService, AssinaturasData } from '../../../configuracoes/assinaturas/assinaturas.service';
 import { getDocumentValidationQrUrl, getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
+import { sanitizedHtml } from '../../../../../lib/htmlSanitizer';
 
 interface CertificadoPreviewProps {
   certificado: CertificadoAcademico;
@@ -222,7 +223,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               textTransform: ['titulo', 'subtitulo', 'cidadeData'].includes(block.id) ? 'uppercase' : 'none',
               letterSpacing: block.id === 'subtitulo' ? '0.3em' : 0,
             }}
-            dangerouslySetInnerHTML={{ __html: replaceVars(block.content || '', certificado, templateVars) }}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(block.content || '', certificado, templateVars))}
           />
         );
       case 'signature': {
@@ -257,13 +258,13 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
                 <p
                   className="font-black uppercase leading-tight text-slate-800"
                   style={{ fontSize: `${signatureNameFontSize}px` }}
-                  dangerouslySetInnerHTML={{ __html: signerNameHtml }}
+                  dangerouslySetInnerHTML={sanitizedHtml(signerNameHtml)}
                 />
               )}
               <p
                 className="font-black uppercase tracking-widest leading-tight text-slate-800"
                 style={{ fontSize: `${signatureLabelFontSize}px` }}
-                dangerouslySetInnerHTML={{ __html: signerTitleHtml }}
+                dangerouslySetInnerHTML={sanitizedHtml(signerTitleHtml)}
               />
             </div>
           </div>
@@ -366,7 +367,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               <div
                 className="whitespace-pre-wrap leading-relaxed"
                 style={tableTextStyle}
-                dangerouslySetInnerHTML={{ __html: replaceVars(block.content || '', certificado, templateVars) }}
+                dangerouslySetInnerHTML={sanitizedHtml(replaceVars(block.content || '', certificado, templateVars))}
               />
             )}
           </div>
@@ -403,7 +404,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
                 textAlign: block.textAlign || 'left',
                 width: `${block.width || 560}px`,
               }}
-              dangerouslySetInnerHTML={{ __html: replaceVars(block.content || '{{url_validacao}}', certificado, { url_validacao: validationUrl }) }}
+              dangerouslySetInnerHTML={sanitizedHtml(replaceVars(block.content || '{{url_validacao}}', certificado, { url_validacao: validationUrl }))}
             />
           </div>
         );
@@ -498,7 +499,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
           <h2 className="my-5 font-serif text-4xl font-black uppercase text-[#001a33]">Certificado</h2>
           <div
             className="max-w-3xl font-serif text-lg leading-loose text-slate-800"
-            dangerouslySetInnerHTML={{ __html: replaceVars(frontText, certificado) }}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(frontText, certificado))}
           />
             <p className="mt-8 text-sm font-bold text-slate-600">
             {certificado.polo?.cidade || 'Não informado'}/{certificado.polo?.estado || 'Não informado'}, {new Date(`${certificado.data_conclusao}T12:00:00`).toLocaleDateString('pt-BR')}

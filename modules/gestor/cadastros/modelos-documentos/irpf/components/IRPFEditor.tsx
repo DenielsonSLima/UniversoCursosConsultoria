@@ -8,6 +8,7 @@ import { irpfService } from '../irpf.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import DocumentHeader from '../../../../components/DocumentHeader';
+import { sanitizedHtml, sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
 
 interface IRPFEditorProps {
   polo: any;
@@ -106,7 +107,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
   const loadData = async () => {
     setLoading(true);
     const template = await irpfService.getTemplate(polo.id);
-    setTextContent(template.textContent);
+    setTextContent(sanitizeHtml(template.textContent));
     setLiberacaoDate(template.liberacaoDate || '03-01');
     
     let loadedFields = (template.absoluteFields || []).map((f: any) => ({
@@ -168,7 +169,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
       const fieldsToAdd = defaultFields.filter(df => !loadedFields.some((lf: any) => lf.id === df.id));
       loadedFields = [...loadedFields, ...fieldsToAdd];
     }
-    setAbsoluteFields(loadedFields);
+    setAbsoluteFields(sanitizeTemplateFields(loadedFields));
 
     const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
     const wm = watermarks.find(w => w.id === polo.id) || 
@@ -197,7 +198,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
   };
 
   const handleTextInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setTextContent(e.currentTarget.innerHTML);
+    setTextContent(sanitizeHtml(e.currentTarget.innerHTML));
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,8 +308,8 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
     setSaving(true);
     try {
       await irpfService.saveTemplate(polo.id, {
-          textContent,
-          absoluteFields,
+          textContent: sanitizeHtml(textContent),
+          absoluteFields: sanitizeTemplateFields(absoluteFields),
           liberacaoDate,
           v: 2
       });
@@ -812,7 +813,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
                         ref={editorRef}
                         contentEditable
                         onInput={handleTextInput}
-                        dangerouslySetInnerHTML={{ __html: textContent }}
+                        dangerouslySetInnerHTML={sanitizedHtml(textContent)}
                         className="min-h-[200px] outline-none text-justify leading-loose text-base p-4 border border-transparent hover:border-emerald-100 rounded-lg transition-colors cursor-text text-black"
                         style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
                     >
@@ -872,7 +873,7 @@ const IRPFEditor: React.FC<IRPFEditorProps> = ({ polo, onBack, scopeLabel }) => 
                             {field.type === 'text' && (
                                 <>
                                     <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1" />
-                                    <span dangerouslySetInnerHTML={{ __html: field.value }} />
+                                    <span dangerouslySetInnerHTML={sanitizedHtml(field.value)} />
                                 </>
                             )}
 

@@ -5,6 +5,7 @@ import { empresasService } from '../../../../../configuracoes/empresas/empresas.
 import { polosService } from '../../../../../configuracoes/polos/polos.service';
 import DocumentHeader from '../../../../../components/DocumentHeader';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
+import { sanitizedHtml } from '../../../../../../../lib/htmlSanitizer';
 import { supabase } from '../../../../../../../lib/supabase';
 import { fichaCadastralService } from '../../../../../cadastros/modelos-documentos/ficha-cadastral/ficha-cadastral.service';
 
@@ -273,7 +274,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
 
                     <div
                       className="ficha-template-content relative z-10 text-slate-800"
-                      dangerouslySetInnerHTML={{ __html: templatePages[pageIndex] || '' }}
+                      dangerouslySetInnerHTML={sanitizedHtml(templatePages[pageIndex] || '')}
                     />
 
                     {fieldsForPage(pageIndex).map((field: any) => (
@@ -300,7 +301,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
                       />
                     )}
                     {field.type !== 'image' && field.type !== 'qrcode' && (
-                      <span dangerouslySetInnerHTML={{ __html: field.value }} />
+                      <span dangerouslySetInnerHTML={sanitizedHtml(field.value)} />
                     )}
                   </div>
                     ))}

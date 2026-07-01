@@ -28,6 +28,7 @@ import { supabase } from '../../../../lib/supabase';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import CertificadoPreview from '../certificados/components/CertificadoPreview';
 import { CertificadoAcademico, CertificadoModalidade } from '../certificados/certificados.types';
@@ -1016,7 +1017,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                     {templateConfig ? (
                       <div 
                         className="relative z-20 mb-20 text-justify leading-loose text-lg text-black" 
-                        dangerouslySetInnerHTML={{ __html: parseTemplate(templateConfig.textContent || templateConfig.textoFrente, selectedEmission) }} 
+                        dangerouslySetInnerHTML={sanitizedHtml(parseTemplate(templateConfig.textContent || templateConfig.textoFrente, selectedEmission))}
                       />
                     ) : (
                       <div className="relative z-20 mb-20 text-justify leading-relaxed text-sm text-black">
@@ -1071,7 +1072,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                           )}
 
                           {field.type === 'text' && (
-                            <span dangerouslySetInnerHTML={{ __html: parsedVal }} className="w-full break-words" />
+                            <span dangerouslySetInnerHTML={sanitizedHtml(parsedVal)} className="w-full break-words" />
                           )}
                         </div>
                       );

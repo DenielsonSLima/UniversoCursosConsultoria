@@ -22,7 +22,7 @@ import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
 import { useCourseEnrollmentAvailability } from '../hooks/useCourseEnrollmentAvailability';
 import { cadastrosService } from '../../gestor/cadastros/cadastros.service';
 import { Curso, Modulo } from '../../gestor/cadastros/cadastros.types';
-import { fetchOpenTurmasForCourse, fetchPublicCourseById, getPublicTurmaPoloOptions } from '../courseAvailability';
+import { fetchOpenTurmasForCourse, fetchPublicCourseById, formatPublicTurmaPolo, getPublicTurmaPoloOptions } from '../courseAvailability';
 
 const CursoLivreDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +68,7 @@ const CursoLivreDetailPage: React.FC = () => {
   });
 
   const poloOptions = getPublicTurmaPoloOptions(turmasAbertas);
+  const checkoutTurma = turmasAbertas.find((turma) => formatPublicTurmaPolo(turma) === polo) || turmasAbertas[0] || null;
 
   // Estado dos Módulos Expandidos (Accordion)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -487,6 +488,7 @@ const CursoLivreDetailPage: React.FC = () => {
                 {curso.valor && curso.valor > 0 && (
                   <OnlineCheckoutButton
                     courseId={curso.id}
+                    turmaId={checkoutTurma?.id || null}
                     disabled={checkoutDisabled}
                     disabledReason={checkoutDisabledReason}
                     availabilityLoading={availabilityLoading}
