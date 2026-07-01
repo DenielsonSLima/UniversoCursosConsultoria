@@ -307,7 +307,7 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, error: 'Selecione ao menos uma aba financeira.' }, 400);
     }
 
-    let authUser: any = null;
+    let authUser: any;
     try {
       authUser = await findAuthUserByEmail(admin, email);
     } catch (error) {

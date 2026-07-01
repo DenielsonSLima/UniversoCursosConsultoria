@@ -25,9 +25,9 @@ const DEFAULT_ASSINATURAS: AssinaturasData = {
   coordenacao: '',
   financeiro: '',
   diretoriaGeralNome: '',
-  diretoriaGeralCargo: '',
+  diretoriaGeralCargo: 'Diretora Geral',
   secretariaNome: '',
-  secretariaCargo: '',
+  secretariaCargo: 'Secretária Escolar',
   coordenacaoNome: '',
   coordenacaoCargo: '',
   financeiroNome: '',
@@ -38,6 +38,16 @@ const DEFAULT_ASSINATURAS: AssinaturasData = {
 let _memCache: AssinaturasData | null = null;
 let _memCacheTs = 0;
 const CACHE_TTL_MS = 60_000; // 1 minuto
+
+const normalizeSignatureMetadata = (data: AssinaturasData): AssinaturasData => ({
+  ...data,
+  diretoriaGeralCargo: data.diretoriaGeralCargo === 'Diretor(a) Geral'
+    ? 'Diretora Geral'
+    : data.diretoriaGeralCargo || DEFAULT_ASSINATURAS.diretoriaGeralCargo,
+  secretariaCargo: data.secretariaCargo === 'Secretária Acadêmica'
+    ? 'Secretária Escolar'
+    : data.secretariaCargo || DEFAULT_ASSINATURAS.secretariaCargo,
+});
 
 export const assinaturasService = {
   /**
@@ -61,7 +71,7 @@ export const assinaturasService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        _memCache = { ...DEFAULT_ASSINATURAS, ...data.conteudo } as AssinaturasData;
+        _memCache = normalizeSignatureMetadata({ ...DEFAULT_ASSINATURAS, ...data.conteudo } as AssinaturasData);
         _memCacheTs = now;
         return _memCache;
       }
@@ -92,7 +102,7 @@ export const assinaturasService = {
       if (error) throw error;
 
       // Atualiza cache em memória após salvar com sucesso
-      _memCache = data;
+      _memCache = normalizeSignatureMetadata(data);
       _memCacheTs = Date.now();
       return true;
     } catch (e) {

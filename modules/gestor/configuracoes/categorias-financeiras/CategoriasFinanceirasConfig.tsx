@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Building, ShoppingBag, TrendingDown, Plus, Edit2, Trash2,
-  RefreshCw, X, Check, Loader2, Wallet2,
+  Building, ShoppingBag, TrendingDown, Plus, Edit2,
+  RefreshCw, X, Check, Loader2, Wallet2, Power, PowerOff,
 } from 'lucide-react';
 import {
   categoriasFinanceirasService,
@@ -12,6 +12,12 @@ import {
   CategoriaFinanceiraTipo,
 } from './categorias-financeiras.service';
 import { supabase } from '../../../../lib/supabase';
+
+const toUpper = (value: string) => value.toLocaleUpperCase('pt-BR');
+const invalidateCategorias = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ['categorias-financeiras'] });
+  queryClient.invalidateQueries({ queryKey: ['despesas', 'categorias-financeiras'] });
+};
 
 // ============================================================
 // Mini Form Inline
@@ -31,13 +37,18 @@ const InlineForm: React.FC<InlineFormProps> = ({ tipo, editingItem, onSaved, onC
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const payload = { nome: nome.trim(), tipo, descricao: descricao.trim() || undefined, status };
+      const payload = {
+        nome: toUpper(nome.trim()),
+        tipo,
+        descricao: descricao.trim() ? toUpper(descricao.trim()) : undefined,
+        status,
+      };
       return editingItem?.id
         ? categoriasFinanceirasService.update(editingItem.id, payload)
         : categoriasFinanceirasService.create(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categorias-financeiras'] });
+      invalidateCategorias(queryClient);
       onSaved();
     },
   });
@@ -45,24 +56,24 @@ const InlineForm: React.FC<InlineFormProps> = ({ tipo, editingItem, onSaved, onC
   return (
     <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3 animate-fadeIn">
       <div>
-        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">Nome *</label>
+        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">NOME *</label>
         <input
           type="text"
           value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Nome da categoria..."
+          onChange={(e) => setNome(toUpper(e.target.value))}
+          placeholder="NOME DA CATEGORIA..."
           autoFocus
-          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-slate-300"
+          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold uppercase outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-slate-300"
         />
       </div>
       <div>
-        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">Descrição</label>
+        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">DESCRIÇÃO</label>
         <input
           type="text"
           value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Descrição breve (opcional)..."
-          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-slate-300"
+          onChange={(e) => setDescricao(toUpper(e.target.value))}
+          placeholder="DESCRIÇÃO BREVE (OPCIONAL)..."
+          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold uppercase outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-slate-300"
         />
       </div>
       <div className="flex gap-2">
@@ -71,8 +82,8 @@ const InlineForm: React.FC<InlineFormProps> = ({ tipo, editingItem, onSaved, onC
           onChange={(e) => setStatus(e.target.value as 'ativo' | 'inativo')}
           className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-rose-500 appearance-none transition-all"
         >
-          <option value="ativo">Ativo</option>
-          <option value="inativo">Inativo</option>
+          <option value="ativo">ATIVO</option>
+          <option value="inativo">INATIVO</option>
         </select>
         <div className="flex gap-2 ml-auto">
           <button onClick={onCancel} className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-white transition-colors">
@@ -84,12 +95,12 @@ const InlineForm: React.FC<InlineFormProps> = ({ tipo, editingItem, onSaved, onC
             className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold uppercase transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-            Salvar
+            SALVAR
           </button>
         </div>
       </div>
       {saveMutation.isError && (
-        <p className="text-xs text-red-500">Erro ao salvar. Tente novamente.</p>
+        <p className="text-xs font-bold uppercase text-red-500">ERRO AO SALVAR. TENTE NOVAMENTE.</p>
       )}
     </div>
   );
@@ -104,32 +115,28 @@ interface ColunaCategoriasProps {
   icon: React.ReactNode;
   accentColor: string;
   items: CategoriaFinanceira[];
-  onDelete: (id: string) => void;
+  onToggleStatus: (item: CategoriaFinanceira) => void;
+  isToggling: boolean;
 }
 
 const ColunaCategorias: React.FC<ColunaCategoriasProps> = ({
-  tipo, label, icon, accentColor, items, onDelete
+  tipo, label, icon, accentColor, items, onToggleStatus, isToggling
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<CategoriaFinanceira | null>(null);
-
-  const handleDelete = (id: string) => {
-    if (confirm('Excluir esta categoria? Os lançamentos vinculados não serão excluídos.')) {
-      onDelete(id);
-    }
-  };
+  const activeCount = items.filter((item) => item.status === 'ativo').length;
 
   return (
     <div className="flex-1 min-w-[260px]">
       <div className={`flex items-center gap-2 mb-4 pb-3 border-b-2 ${accentColor}`}>
         {icon}
         <h3 className="font-black text-sm text-[#001a33] uppercase tracking-tight">{label}</h3>
-        <span className="ml-auto text-[10px] text-slate-400 font-bold">{items.length} itens</span>
+        <span className="ml-auto text-[10px] text-slate-400 font-bold uppercase">{activeCount} ATIVAS / {items.length} TOTAL</span>
       </div>
 
       <div className="space-y-2 mb-4">
         {items.length === 0 && !showForm && (
-          <p className="text-xs text-slate-400 text-center py-4 italic">Nenhuma categoria cadastrada</p>
+          <p className="py-4 text-center text-xs font-bold uppercase text-slate-400">NENHUMA CATEGORIA CADASTRADA</p>
         )}
         {items.map((item) => (
           <div key={item.id}>
@@ -141,22 +148,33 @@ const ColunaCategorias: React.FC<ColunaCategoriasProps> = ({
                 onCancel={() => setEditingItem(null)}
               />
             ) : (
-              <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-slate-100 shadow-sm group hover:shadow-md transition-all">
+              <div className={`flex items-center gap-3 px-4 py-3 bg-white rounded-xl border shadow-sm group hover:shadow-md transition-all ${
+                item.status === 'ativo' ? 'border-slate-100' : 'border-slate-200 opacity-70'
+              }`}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate">{item.nome}</p>
+                  <p className="text-sm font-bold text-slate-800 truncate uppercase">{item.nome}</p>
                   {item.descricao && (
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{item.descricao}</p>
+                    <p className="text-[10px] text-slate-400 truncate mt-0.5 uppercase">{item.descricao}</p>
                   )}
                 </div>
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${item.status === 'ativo' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                   {item.status}
                 </span>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setEditingItem(item)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                  <button onClick={() => setEditingItem(item)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="EDITAR">
                     <Edit2 size={13} />
                   </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
-                    <Trash2 size={13} />
+                  <button
+                    onClick={() => onToggleStatus(item)}
+                    disabled={isToggling}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      item.status === 'ativo'
+                        ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                        : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
+                    } disabled:opacity-50`}
+                    title={item.status === 'ativo' ? 'INATIVAR' : 'ATIVAR'}
+                  >
+                    {item.status === 'ativo' ? <PowerOff size={13} /> : <Power size={13} />}
                   </button>
                 </div>
               </div>
@@ -178,7 +196,7 @@ const ColunaCategorias: React.FC<ColunaCategoriasProps> = ({
         className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-slate-200 hover:border-rose-400 text-slate-400 hover:text-rose-600 rounded-xl text-xs font-bold uppercase tracking-wide transition-all"
       >
         <Plus size={13} />
-        Nova Categoria
+        NOVA CATEGORIA
       </button>
     </div>
   );
@@ -206,10 +224,13 @@ const CategoriasFinanceirasConfig: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => categoriasFinanceirasService.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias-financeiras'] }),
-    onError: () => alert('Erro ao excluir categoria.'),
+  const toggleStatusMutation = useMutation({
+    mutationFn: (item: CategoriaFinanceira) =>
+      categoriasFinanceirasService.update(item.id, {
+        status: item.status === 'ativo' ? 'inativo' : 'ativo',
+      }),
+    onSuccess: () => invalidateCategorias(queryClient),
+    onError: () => alert('ERRO AO ALTERAR STATUS DA CATEGORIA.'),
   });
 
   const fixas = allCategorias.filter((c) => c.tipo === 'DESPESA_FIXA');
@@ -233,10 +254,10 @@ const CategoriasFinanceirasConfig: React.FC = () => {
         </div>
         <div>
           <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">
-            Categorias Financeiras
+            CATEGORIA FINANCEIRO
           </h2>
-          <p className="text-slate-500 font-medium text-sm mt-0.5">
-            Gerencie as categorias de despesas fixas, variáveis e outros débitos.
+          <p className="text-slate-500 font-bold uppercase text-sm mt-0.5">
+            ADICIONE, EDITE, ATIVE E INATIVE AS CATEGORIAS DO FINANCEIRO.
           </p>
         </div>
       </div>
@@ -245,19 +266,21 @@ const CategoriasFinanceirasConfig: React.FC = () => {
       <div className="flex flex-wrap gap-6 mb-8">
         <ColunaCategorias
           tipo="DESPESA_FIXA"
-          label="Despesas Fixas"
+          label="DESPESAS FIXAS"
           icon={<Building size={16} className="text-rose-600" />}
           accentColor="border-rose-500"
           items={fixas}
-          onDelete={(id) => deleteMutation.mutate(id)}
+          onToggleStatus={(item) => toggleStatusMutation.mutate(item)}
+          isToggling={toggleStatusMutation.isPending}
         />
         <ColunaCategorias
           tipo="DESPESA_VARIAVEL"
-          label="Despesas Variáveis"
+          label="DESPESAS VARIÁVEIS"
           icon={<ShoppingBag size={16} className="text-orange-500" />}
           accentColor="border-orange-500"
           items={variaveis}
-          onDelete={(id) => deleteMutation.mutate(id)}
+          onToggleStatus={(item) => toggleStatusMutation.mutate(item)}
+          isToggling={toggleStatusMutation.isPending}
         />
       </div>
 
@@ -265,11 +288,12 @@ const CategoriasFinanceirasConfig: React.FC = () => {
       <div className="border-t border-slate-100 pt-6">
         <ColunaCategorias
           tipo="OUTRO_DEBITO"
-          label="Outros Débitos"
+          label="OUTROS DÉBITOS"
           icon={<TrendingDown size={16} className="text-indigo-500" />}
           accentColor="border-indigo-500"
           items={outros}
-          onDelete={(id) => deleteMutation.mutate(id)}
+          onToggleStatus={(item) => toggleStatusMutation.mutate(item)}
+          isToggling={toggleStatusMutation.isPending}
         />
       </div>
     </div>

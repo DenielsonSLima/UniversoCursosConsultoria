@@ -1,7 +1,8 @@
 // File: modules/gestor/financeiro/despesas/components/DespesaForm.tsx
 // Formulário principal de lançamento de despesas (fixas, variáveis, outros débitos)
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Loader2, Calendar, Tag, FileText, DollarSign,
   Layers, CheckCircle2, Plus, Clock,
@@ -22,10 +23,41 @@ const formatCurrencyInput = (value: string) => {
   return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const formatCurrencyTyping = (value: string, previousValue: string) => {
+  const cleaned = value.replace(/[^\d,.]/g, '');
+  if (!cleaned) return '';
+
+  const previousInteger = previousValue.split(',')[0].replace(/\D/g, '');
+
+  if (previousValue.endsWith(',00')) {
+    const appended = value.startsWith(previousValue)
+      ? value.slice(previousValue.length).replace(/\D/g, '')
+      : '';
+
+    if (appended) return formatCurrencyInput(`${previousInteger}${appended}`);
+    if (value === previousValue.slice(0, -1)) return formatCurrencyInput(previousInteger.slice(0, -1));
+  }
+
+  return formatCurrencyInput(cleaned);
+};
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 type LancamentoMode = 'pendente' | 'parcelado' | 'baixa';
 type IntervaloUnit = 'dias' | 'semanas' | 'meses';
+type TurmaModalidade = 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO';
+
+const turmaModalidadeOptions: { value: TurmaModalidade; label: string }[] = [
+  { value: 'EAD', label: 'EAD' },
+  { value: 'TECNICO', label: 'Técnico' },
+  { value: 'LIVRE', label: 'Livres' },
+  { value: 'ESPECIALIZACAO', label: 'Especialização' },
+];
+
+const getTurmaModalidade = (turma: any) => {
+  const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+  return String(curso?.modalidade || turma?.modalidade || '').toUpperCase();
+};
 
 interface DespesaFormProps {
   tipo: DespesaTipo;
@@ -54,9 +86,11 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
   const [mode, setMode] = useState<LancamentoMode>('pendente');
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
+  const [dataLancamento, setDataLancamento] = useState(today());
   const [dataVencimento, setDataVencimento] = useState(today());
   const [categoriaId, setCategoriaId] = useState('');
   const [fornecedorId, setFornecedorId] = useState('');
+  const [turmaModalidade, setTurmaModalidade] = useState<TurmaModalidade | ''>('');
   const [turmaId, setTurmaId] = useState('');
   const [observacao, setObservacao] = useState('');
   const [totalParcelas, setTotalParcelas] = useState(2);
@@ -69,6 +103,10 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 
   const categoriasQuery = useCategoriasFinanceirasQuery(tipo);
   const categorias = categoriasQuery.data || [];
+  const filteredTurmas = useMemo(() => {
+    if (!turmaModalidade) return [];
+    return turmas.filter((turma: any) => getTurmaModalidade(turma) === turmaModalidade);
+  }, [turmaModalidade, turmas]);
 
   const intervaloEmDias = useMemo(() => {
     if (intervaloUnit === 'dias') return intervaloDias;
@@ -83,6 +121,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
         tipo,
         descricao: descricao.trim(),
         valor: parseCurrencyInput(valor),
+        dataLancamento,
         dataVencimento,
         categoriaFinanceiraId: categoriaId || undefined,
         fornecedorId: fornecedorId || undefined,
@@ -118,9 +157,14 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 
   const activeContas = contas.filter((c) => c.ativo !== false && (!poloId || c.poloId === poloId));
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  useEffect(() => {
+    if (!turmaId) return;
+    if (!filteredTurmas.some((turma: any) => turma.id === turmaId)) setTurmaId('');
+  }, [filteredTurmas, turmaId]);
+
+  const modal = (
+    <div className="fixed left-0 top-0 z-[200] flex h-screen h-[100dvh] w-screen items-center justify-center overflow-hidden bg-black/40 p-4 backdrop-blur-sm animate-fadeIn overscroll-contain">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-8 pb-4 sticky top-0 bg-white z-10 border-b border-slate-100">
           <div>
@@ -139,9 +183,9 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-8 py-6 space-y-5">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 px-8 py-6 md:grid-cols-2">
           {/* Modo de Lançamento */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
               Modo de Lançamento
             </label>
@@ -168,7 +212,20 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
             </div>
           </div>
 
-          {/* Data de Vencimento */}
+          {/* Datas */}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+              <Calendar size={11} className="inline mr-1" />
+              Data de Lançamento *
+            </label>
+            <input
+              type="date"
+              value={dataLancamento}
+              onChange={(e) => setDataLancamento(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm font-semibold transition-all"
+            />
+          </div>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
               <Calendar size={11} className="inline mr-1" />
@@ -250,10 +307,10 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">R$</span>
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode="decimal"
                 placeholder="0,00"
                 value={valor}
-                onChange={(e) => setValor(e.target.value)}
+                onChange={(e) => setValor(formatCurrencyTyping(e.target.value, valor))}
                 onBlur={(e) => setValor(formatCurrencyInput(e.target.value))}
                 required
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm font-semibold placeholder:text-slate-300 transition-all"
@@ -279,24 +336,47 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
           </div>
 
           {/* Turma (Vínculo para Relatório de Lucro) */}
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-              Vincular a uma Turma
-            </label>
-            <select
-              value={turmaId}
-              onChange={(e) => setTurmaId(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm font-semibold transition-all appearance-none"
-            >
-              <option value="">Nenhuma turma (opcional)...</option>
-              {turmas.map((t: any) => (
-                <option key={t.id} value={t.id}>{t.nome} ({t.codigo})</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 gap-3 md:col-span-2 md:grid-cols-2">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                Tipo da Turma
+              </label>
+              <select
+                value={turmaModalidade}
+                onChange={(e) => {
+                  setTurmaModalidade(e.target.value as TurmaModalidade | '');
+                  setTurmaId('');
+                }}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm font-semibold transition-all appearance-none"
+              >
+                <option value="">Selecionar tipo (opcional)...</option>
+                {turmaModalidadeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                Vincular a uma Turma
+              </label>
+              <select
+                value={turmaId}
+                onChange={(e) => setTurmaId(e.target.value)}
+                disabled={!turmaModalidade}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm font-semibold transition-all appearance-none disabled:cursor-not-allowed disabled:text-slate-300 disabled:bg-slate-100"
+              >
+                <option value="">
+                  {turmaModalidade ? 'Nenhuma turma (opcional)...' : 'Selecione o tipo primeiro...'}
+                </option>
+                {filteredTurmas.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.nome} ({t.codigo})</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Observação */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
               Observação
             </label>
@@ -311,7 +391,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 
           {/* === Modo: Parcelado === */}
           {mode === 'parcelado' && (
-            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3">
+            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3 md:col-span-2">
               <p className="text-xs font-black uppercase tracking-wider text-indigo-700 flex items-center gap-2">
                 <Layers size={13} /> Configuração de Parcelas
               </p>
@@ -363,7 +443,7 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 
           {/* === Modo: Baixa Automática === */}
           {mode === 'baixa' && (
-            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 space-y-3">
+            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 space-y-3 md:col-span-2">
               <p className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
                 <CheckCircle2 size={13} /> Dar Baixa Imediata
               </p>
@@ -411,13 +491,13 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
 
           {/* Error */}
           {createMutation.isError && (
-            <div className="p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-xs font-medium">
+            <div className="p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-xs font-medium md:col-span-2">
               {(createMutation.error as any)?.message || 'Erro ao criar lançamento'}
             </div>
           )}
 
           {/* Ações */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 md:col-span-2">
             <button
               type="button"
               onClick={onClose}
@@ -446,6 +526,9 @@ const DespesaForm: React.FC<DespesaFormProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return modal;
+  return createPortal(modal, document.body);
 };
 
 export default DespesaForm;

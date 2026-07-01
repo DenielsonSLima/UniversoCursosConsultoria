@@ -139,7 +139,7 @@ const SitePublicoConfig: React.FC = () => {
   };
 
   const selectedOptions = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    Array.from<HTMLOptionElement>(event.target.selectedOptions).map((option) => option.value);
+    Array.from(event.target.selectedOptions).map((option) => option.value);
 
   const formatPolo = (turma: SiteTickerTurmaOption) => {
     const polo = Array.isArray(turma.polos) ? turma.polos[0] : turma.polos;

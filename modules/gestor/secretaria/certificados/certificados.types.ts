@@ -22,8 +22,8 @@ export interface CertificadoAcademico {
   ensino_medio_ano_conclusao: string | null;
   codigo_validacao: string | null;
   emitido_em: string | null;
-  aluno: { nome: string; cpf_cnpj: string };
+  aluno: { nome: string; cpf_cnpj: string; rg?: string | null; data_nascimento?: string | null; naturalidade?: string | null };
   turma: { nome: string; codigo: string };
-  curso: { nome: string; carga_horaria: number; ead_config?: any };
+  curso: { nome: string; carga_horaria: number; area?: string | null; ead_config?: any };
   polo: { nome: string; cidade: string; estado: string } | null;
 }

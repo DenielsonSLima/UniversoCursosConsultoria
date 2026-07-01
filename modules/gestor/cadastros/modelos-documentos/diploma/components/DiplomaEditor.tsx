@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Save, LayoutTemplate, Copy, Check, ZoomOut, ZoomIn, 
-  Upload, Loader2, Plus, Trash2, Eye, Layout, Sliders, Type, Image as ImageIcon
+  Upload, Loader2, Plus, Trash2, Eye, Layout, Sliders, Type, Image as ImageIcon, FileSignature
 } from 'lucide-react';
 import { supabase } from '../../../../../../lib/supabase';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
@@ -27,7 +27,7 @@ const normalizeSignatureBlock = (block: any) => {
     ? 'none'
     : block.signatureSource;
   const legacyTitle = String(block.title || '').toLowerCase();
-  const title = block.id === 'assinatura1'
+  const title = block.id === 'assinatura1' && !block.title
     ? 'Diretor Geral'
     : block.id === 'assinatura2' && (!block.title || legacyTitle.includes('secretaria') || legacyTitle.includes('coordena'))
       ? 'Aluno(a)'
@@ -63,6 +63,30 @@ const buildBackgroundPatch = (page: 'frente' | 'verso', url: string, updatedAt =
     bg_verso_url: url,
     bgVersoUpdatedAt: updatedAt,
   };
+};
+
+const ensureUploadSession = async () => {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    throw new Error('Sua sessão expirou. Entre novamente no portal antes de enviar imagens.');
+  }
+};
+
+const getUploadExtension = (file: File) => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (file.type === 'image/jpeg') return 'jpg';
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+  return extension || 'png';
+};
+
+const validateTemplateImage = (file: File) => {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Selecione um arquivo de imagem.');
+  }
+  if (file.size > 12 * 1024 * 1024) {
+    throw new Error('A imagem deve possuir no máximo 12 MB.');
+  }
 };
 
 const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel }) => {
@@ -131,6 +155,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
   const signatureSourceOptions = [
     { value: 'none', label: 'Nenhuma Assinatura' },
     { value: 'diretoriaGeral', label: 'Diretoria Geral (Configurações)' },
+    { value: 'secretaria', label: 'Secretaria Escolar (Configurações)' },
     { value: 'manual', label: 'Upload Manual / URL Personalizada' },
   ];
 
@@ -162,15 +187,19 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'png';
+      validateTemplateImage(file);
+      await ensureUploadSession();
+      const fileExt = getUploadExtension(file);
       const safeModelId = String(formData.id || 'certificado').replace(/[^a-z0-9_-]/gi, '_');
-      const filePath = `templates/certificados/${safeModelId}_${fieldName}_${Date.now()}.${fileExt}`;
+      const uniqueId = crypto.randomUUID?.() || `${Date.now()}`;
+      const filePath = `templates/certificados/${safeModelId}_${fieldName}_${uniqueId}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
         .upload(filePath, file, {
           cacheControl: '31536000',
-          upsert: true
+          contentType: file.type || undefined,
+          upsert: false
         });
 
       if (error) throw error;
@@ -196,13 +225,17 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
   };
 
   const uploadTemplateImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop() || 'png';
-    const filePath = `templates/certificados/assets_${Date.now()}.${fileExt}`;
+    validateTemplateImage(file);
+    await ensureUploadSession();
+    const fileExt = getUploadExtension(file);
+    const uniqueId = crypto.randomUUID?.() || `${Date.now()}`;
+    const filePath = `templates/certificados/assets_${uniqueId}.${fileExt}`;
     const { data, error } = await supabase.storage
       .from('documentos')
       .upload(filePath, file, {
         cacheControl: '31536000',
-        upsert: true,
+        contentType: file.type || undefined,
+        upsert: false,
       });
 
     if (error) throw error;
@@ -339,6 +372,24 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
       textAlign: 'center',
       color: formData.corTexto || '#1e293b',
       content: 'Novo texto',
+      visible: true,
+    };
+    setFormData({ ...formData, blocks: [...formData.blocks, newBlock] });
+    setSelectedBlockId(newBlock.id);
+  };
+
+  const handleAddConfiguredSignature = (source: 'diretoriaGeral' | 'secretaria', label: string) => {
+    const newBlock = {
+      id: `assinatura-${source}-${Date.now()}`,
+      type: 'signatureImage',
+      label,
+      page: activePage,
+      x: activePage === 'verso' ? (source === 'secretaria' ? 25 : 64.5) : 40,
+      y: activePage === 'verso' ? 84.4 : 72,
+      width: 210,
+      signatureSource: source,
+      signatureImageUrl: '',
+      signatureBlend: true,
       visible: true,
     };
     setFormData({ ...formData, blocks: [...formData.blocks, newBlock] });
@@ -644,6 +695,18 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                       <input type="file" accept="image/*" onChange={handleUploadBlockImage} className="hidden" disabled={isUploading} />
                       {isUploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />} Imagem
                     </label>
+                    <button
+                      onClick={() => handleAddConfiguredSignature('diretoriaGeral', 'Assinatura Diretoria Geral')}
+                      className="flex items-center gap-1 bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg border border-slate-200 transition-colors shadow-sm"
+                    >
+                      <FileSignature size={12} /> Ass. Diretoria
+                    </button>
+                    <button
+                      onClick={() => handleAddConfiguredSignature('secretaria', 'Assinatura Secretaria Escolar')}
+                      className="flex items-center gap-1 bg-white hover:bg-purple-50 text-slate-700 hover:text-purple-700 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg border border-slate-200 transition-colors shadow-sm"
+                    >
+                      <FileSignature size={12} /> Ass. Secretaria
+                    </button>
                   </div>
                 </div>
 
@@ -810,7 +873,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
                       )}
 
                       {/* Editor de Larguras (Selo, QR, Assinatura) */}
-                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature' || selectedBlock.type === 'signatureImage' || selectedBlock.type === 'image' || selectedBlock.type === 'text' || selectedBlock.type === 'table' || selectedBlock.type === 'validationLink') && (
+                      {(selectedBlock.type === 'logo' || selectedBlock.type === 'qrcode' || selectedBlock.type === 'signature' || selectedBlock.type === 'signatureImage' || selectedBlock.type === 'image' || selectedBlock.type === 'text' || selectedBlock.type === 'table' || selectedBlock.type === 'validationLink' || selectedBlock.type === 'line') && (
                         <div>
                           <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                             <span>Largura</span>
@@ -1053,7 +1116,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
         </div>
 
         {/* Live Preview Area (Right) */}
-        <div className="flex-1 bg-slate-200 rounded-2xl overflow-hidden flex flex-col relative border border-slate-300 min-h-[400px]">
+        <div className="flex-1 bg-slate-200 rounded-2xl overflow-hidden flex flex-col relative border border-slate-300 min-h-[520px] xl:h-[calc(100vh-17rem)]">
           <div className="bg-slate-800 text-white p-3 flex justify-between items-center text-xs font-bold uppercase shadow-md z-10 shrink-0">
             <div className="flex items-center gap-1.5">
               <span className="tracking-widest">Visualização / Tela de Trabalho</span>
@@ -1104,7 +1167,7 @@ const DiplomaEditor: React.FC<DiplomaEditorProps> = ({ modelo, onSave, onCancel 
           
           <div 
             onClick={() => setSelectedBlockId(null)}
-            className="flex-1 overflow-auto custom-scrollbar p-8 bg-slate-300 flex flex-col items-center gap-8 min-h-0 cursor-default"
+            className="flex-1 overflow-auto overscroll-contain custom-scrollbar p-8 pb-24 bg-slate-300 flex flex-col items-center gap-8 min-h-0 cursor-default"
           >
              {(previewMode === 'frente' || previewMode === 'ambos') && (
                <DiplomaPreview 

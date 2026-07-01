@@ -13,6 +13,17 @@ export interface CategoriaFinanceira {
   createdAt?: string;
 }
 
+const toUpper = (value?: string | null) => (value || '').trim().toLocaleUpperCase('pt-BR');
+
+const mapCategoria = (row: any): CategoriaFinanceira => ({
+  id: row.id,
+  nome: toUpper(row.nome),
+  tipo: row.tipo,
+  descricao: row.descricao ? toUpper(row.descricao) : undefined,
+  status: row.status,
+  createdAt: row.created_at,
+});
+
 export const categoriasFinanceirasService = {
   async getAll(): Promise<CategoriaFinanceira[]> {
     const { data, error } = await supabase
@@ -22,35 +33,39 @@ export const categoriasFinanceirasService = {
       .order('nome', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      nome: row.nome,
-      tipo: row.tipo,
-      descricao: row.descricao ?? undefined,
-      status: row.status,
-      createdAt: row.created_at,
-    }));
+    return (data || []).map(mapCategoria);
   },
 
   async create(input: Omit<CategoriaFinanceira, 'id' | 'createdAt'>): Promise<CategoriaFinanceira> {
     const { data, error } = await supabase
       .from('categorias_financeiras')
-      .insert(input)
+      .insert({
+        ...input,
+        nome: toUpper(input.nome),
+        descricao: input.descricao ? toUpper(input.descricao) : null,
+      })
       .select()
       .single();
     if (error) throw error;
-    return { id: data.id, nome: data.nome, tipo: data.tipo, descricao: data.descricao, status: data.status };
+    return mapCategoria(data);
   },
 
   async update(id: string, input: Partial<Omit<CategoriaFinanceira, 'id' | 'createdAt'>>): Promise<CategoriaFinanceira> {
+    const payload = {
+      ...input,
+      ...(input.nome !== undefined ? { nome: toUpper(input.nome) } : {}),
+      ...(input.descricao !== undefined ? { descricao: input.descricao ? toUpper(input.descricao) : null } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from('categorias_financeiras')
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
-    return { id: data.id, nome: data.nome, tipo: data.tipo, descricao: data.descricao, status: data.status };
+    return mapCategoria(data);
   },
 
   async delete(id: string): Promise<void> {

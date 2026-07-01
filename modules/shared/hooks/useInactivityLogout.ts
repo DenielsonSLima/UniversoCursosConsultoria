@@ -18,7 +18,7 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   'scroll',
   'focus',
 ];
-const DOCUMENT_ACTIVITY_EVENTS: Array<keyof DocumentEventMap> = ['visibilitychange'];
+const DOCUMENT_ACTIVITY_EVENTS = ['visibilitychange'] as const;
 
 export const useInactivityLogout = ({
   isEnabled = true,

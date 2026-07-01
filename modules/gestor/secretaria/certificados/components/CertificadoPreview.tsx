@@ -41,16 +41,51 @@ const parseProgrammaticRows = (content: string) => {
     .filter(Boolean) as Array<{ nome: string; carga: string; status: string }>;
 };
 
+const getTechnicalCourseTitle = (courseName?: string | null) => {
+  const normalized = String(courseName || '').trim();
+  if (!normalized) return 'TÉCNICO EM __________________';
+  const title = /^t[eé]cnico\s+em\s+/i.test(normalized)
+    ? normalized
+    : `Técnico em ${normalized}`;
+  return title.toLocaleUpperCase('pt-BR');
+};
+
+const inferTechnologicalAxis = (certificado: CertificadoAcademico) => {
+  const configured = certificado.curso?.ead_config?.eixo_tecnologico || certificado.curso?.ead_config?.eixoTecnologico;
+  if (configured) return String(configured).toLocaleLowerCase('pt-BR');
+
+  const courseContext = `${certificado.curso?.nome || ''} ${certificado.curso?.area || ''}`;
+  if (/enfermagem|radiologia|sa[uú]de|odont|farm[aá]cia/i.test(courseContext)) {
+    return 'ambiente e saúde';
+  }
+
+  return '________________';
+};
+
 const replaceVars = (text: string, certificado: CertificadoAcademico, extraVars: Record<string, string> = {}) => {
   const formatCertDate = (date?: string | null) =>
     date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
+  const formatCertDateLong = (date?: string | null) =>
+    date
+      ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '';
   const dataInicio = formatCertDate(certificado.data_inscricao);
   const dataFim = formatCertDate(certificado.data_conclusao);
+  const dataFimExtenso = formatCertDateLong(certificado.data_conclusao);
   const vars: Record<string, string> = {
     nome_aluno: certificado.aluno?.nome || '',
     cpf: certificado.aluno?.cpf_cnpj || '',
     curso_nome: certificado.curso?.nome || '',
+    curso_titulo: getTechnicalCourseTitle(certificado.curso?.nome),
     carga_horaria: String(certificado.curso?.carga_horaria || ''),
+    rg: certificado.aluno?.rg || '________________',
+    naturalidade: certificado.aluno?.naturalidade || '________________',
+    data_nascimento: formatCertDate(certificado.aluno?.data_nascimento) || '________________',
+    eixo_tecnologico: inferTechnologicalAxis(certificado),
     cidade: certificado.polo?.cidade || 'Não informado',
     uf: certificado.polo?.estado || 'Não informado',
     cidade_uf: `${certificado.polo?.cidade || 'Não informado'}/${certificado.polo?.estado || 'Não informado'}`,
@@ -58,6 +93,7 @@ const replaceVars = (text: string, certificado: CertificadoAcademico, extraVars:
     data_fim: dataFim,
     periodo: dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
     data_conclusao: dataFim,
+    data_conclusao_extenso: dataFimExtenso || dataFim,
     grade_curricular: 'Grade curricular conforme histórico acadêmico do aluno.',
     livro_registro: `Certificado Expedido N° ${certificado.certificado_numero || '____'} · Página ${certificado.pagina_livro || '____'} · Livro ${certificado.livro_registro || '____'}`,
     certificado_numero: certificado.certificado_numero || '____',
@@ -84,13 +120,27 @@ const replaceVars = (text: string, certificado: CertificadoAcademico, extraVars:
 const replaceVarsPlain = (text: string, certificado: CertificadoAcademico, extraVars: Record<string, string> = {}) => {
   const formatCertDate = (date?: string | null) =>
     date ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR') : '';
+  const formatCertDateLong = (date?: string | null) =>
+    date
+      ? new Date(date.includes('T') ? date : `${date}T12:00:00`).toLocaleDateString('pt-BR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '';
   const dataInicio = formatCertDate(certificado.data_inscricao);
   const dataFim = formatCertDate(certificado.data_conclusao);
+  const dataFimExtenso = formatCertDateLong(certificado.data_conclusao);
   const vars: Record<string, string> = {
     nome_aluno: certificado.aluno?.nome || '',
     cpf: certificado.aluno?.cpf_cnpj || '',
     curso_nome: certificado.curso?.nome || '',
+    curso_titulo: getTechnicalCourseTitle(certificado.curso?.nome),
     carga_horaria: String(certificado.curso?.carga_horaria || ''),
+    rg: certificado.aluno?.rg || '________________',
+    naturalidade: certificado.aluno?.naturalidade || '________________',
+    data_nascimento: formatCertDate(certificado.aluno?.data_nascimento) || '________________',
+    eixo_tecnologico: inferTechnologicalAxis(certificado),
     cidade: certificado.polo?.cidade || 'Não informado',
     uf: certificado.polo?.estado || 'Não informado',
     cidade_uf: `${certificado.polo?.cidade || 'Não informado'}/${certificado.polo?.estado || 'Não informado'}`,
@@ -98,6 +148,7 @@ const replaceVarsPlain = (text: string, certificado: CertificadoAcademico, extra
     data_fim: dataFim,
     periodo: dataInicio && dataFim ? `${dataInicio} até ${dataFim}` : dataFim,
     data_conclusao: dataFim,
+    data_conclusao_extenso: dataFimExtenso || dataFim,
     grade_curricular: 'Grade curricular conforme histórico acadêmico do aluno.',
     certificado_numero: certificado.certificado_numero || '____',
     codigo_certificado: certificado.codigo_validacao || certificado.certificado_numero || '____',
@@ -122,6 +173,10 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
   const [assinaturas, setAssinaturas] = useState<AssinaturasData>(() => assinaturasService.getSignaturesSync());
   const templateVars = {
     grade_curricular: gradeCurricular || 'Grade curricular conforme histórico acadêmico do aluno.',
+    diretoria_geral_nome: assinaturas.diretoriaGeralNome || '________________',
+    diretoria_geral_cargo: assinaturas.diretoriaGeralCargo || 'Diretora Geral',
+    secretaria_nome: assinaturas.secretariaNome || '________________',
+    secretaria_cargo: assinaturas.secretariaCargo || 'Secretária Escolar',
   };
 
   useEffect(() => {
@@ -163,7 +218,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               fontFamily: block.fontFamily || 'serif',
               fontWeight: block.fontWeight || '400',
               textAlign: block.textAlign || 'center',
-              lineHeight: block.id === 'texto' ? 1.8 : 1.2,
+              lineHeight: block.lineHeight ?? (block.id === 'texto' ? 1.8 : 1.2),
               textTransform: ['titulo', 'subtitulo', 'cidadeData'].includes(block.id) ? 'uppercase' : 'none',
               letterSpacing: block.id === 'subtitulo' ? '0.3em' : 0,
             }}
@@ -174,8 +229,11 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
         const signatureUrl = getSignatureUrl(block);
         const signatureBlend = block.signatureBlend !== false ? 'multiply' : 'normal';
         const signatureLabelFontSize = Number(block.signatureLabelFontSize || 10);
+        const signatureNameFontSize = Number(block.signatureNameFontSize || signatureLabelFontSize + 1);
         const signatureImageOffsetY = Number(block.signatureImageOffsetY || 0);
         const hasSeparateSignatureImage = currentPageBlocks.some((item: any) => item.type === 'signatureImage' && item.signatureBlockId === block.id);
+        const signerNameHtml = block.signerNameContent ? replaceVars(block.signerNameContent, certificado, templateVars) : '';
+        const signerTitleHtml = replaceVars(block.title || 'Assinatura', certificado, templateVars);
         return (
           <div style={{ width: block.width || 256 }} className="text-center flex flex-col items-center justify-end">
             {!hasSeparateSignatureImage && (
@@ -195,12 +253,18 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               </div>
             )}
             <div className="w-full border-t border-slate-400 pt-[1px]">
+              {signerNameHtml && (
+                <p
+                  className="font-black uppercase leading-tight text-slate-800"
+                  style={{ fontSize: `${signatureNameFontSize}px` }}
+                  dangerouslySetInnerHTML={{ __html: signerNameHtml }}
+                />
+              )}
               <p
-                className="font-black uppercase tracking-widest text-slate-800"
+                className="font-black uppercase tracking-widest leading-tight text-slate-800"
                 style={{ fontSize: `${signatureLabelFontSize}px` }}
-              >
-                {block.title || 'Assinatura'}
-              </p>
+                dangerouslySetInnerHTML={{ __html: signerTitleHtml }}
+              />
             </div>
           </div>
         );
@@ -221,6 +285,15 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
           />
         ) : null;
       }
+      case 'line':
+        return (
+          <div
+            style={{
+              width: block.width || 260,
+              borderTop: `${block.borderWidth || 1}px solid ${block.color || modelo?.corTexto || '#1e293b'}`,
+            }}
+          />
+        );
       case 'qrcode': {
         const size = block.width || 170;
         if (block.id === 'qrcode') {
@@ -395,7 +468,11 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
     );
   };
 
-  if (modelo?.blocks?.length) {
+  const shouldRenderVisualTemplate = Boolean(
+    modelo?.blocks?.length || modelo?.usePhotoshopLayout || modelo?.ocultarDesignPadrao
+  );
+
+  if (shouldRenderVisualTemplate) {
     return (
       <div className="space-y-6">
         {renderVisualPage('frente')}
@@ -472,7 +549,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
                 />
                   <p className="font-black uppercase">Código de autenticidade</p>
                   <p className="font-mono text-blue-700">{certificado.codigo_validacao || 'Gerado após a emissão'}</p>
-                  <p className="mt-2 text-[11px] text-slate-500 break-words">www.universocc.com.br/validador</p>
+                  <p className="mt-2 break-words text-[11px] font-black text-red-600">www.universocc.com.br/validador</p>
                   <p className="mt-2 text-[10px] text-slate-500">Aviso de autenticidade: consulte este certificado pelo QR Code ou pelo código de autenticidade.</p>
                 </div>
               </div>

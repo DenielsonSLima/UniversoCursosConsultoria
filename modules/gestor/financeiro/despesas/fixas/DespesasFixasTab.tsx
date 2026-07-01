@@ -21,9 +21,25 @@ import {
   printReciboDespesa,
   despesaToReciboData,
 } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import FinancialReportExportButton, {
+  FinancialReportColumn,
+  FinancialReportFilter,
+  FinancialReportRow,
+  FinancialReportStatusBadge,
+  FinancialReportSummaryCard,
+} from '../../components/FinancialReportPreview';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+const formatDate = (value?: string) =>
+  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : 'Sem limite';
+
+const statusScopeLabels: Record<DespesaStatusScope, string> = {
+  mes_atual: 'Mês atual',
+  em_aberto: 'Em aberto',
+  todos: 'Todos',
+};
 
 // Modal de Baixa
 const BaixaModal: React.FC<{
@@ -144,6 +160,68 @@ const DespesasFixasTab: React.FC = () => {
     pendente: summaryQuery.data?.pendingValue || 0,
     vencidos: summaryQuery.data?.vencidosCount || 0,
   }), [summaryQuery.data]);
+
+  const selectedCategoriaLabel = useMemo(
+    () => categoriaId ? categorias.find((categoria) => categoria.id === categoriaId)?.nome || 'Categoria selecionada' : 'Todas as categorias',
+    [categoriaId, categorias],
+  );
+  const selectedTurmaLabel = useMemo(
+    () => turmaId ? turmas.find((turma: any) => turma.id === turmaId)?.nome || 'Turma selecionada' : 'Todas as turmas',
+    [turmaId, turmas],
+  );
+  const selectedPoloLabel = useMemo(
+    () => polos.find((polo: any) => polo.id === poloId)?.nome || 'Polo atual',
+    [poloId, polos],
+  );
+
+  const reportColumns = useMemo<FinancialReportColumn[]>(() => [
+    { label: 'Vencimento' },
+    { label: 'Descrição' },
+    { label: 'Categoria' },
+    { label: 'Fornecedor' },
+    { label: 'Valor', align: 'right' },
+    { label: 'Parcela', align: 'center' },
+    { label: 'Status', align: 'center' },
+  ], []);
+
+  const reportRows = useMemo<FinancialReportRow[]>(() => filtered.map((item) => ({
+    id: item.id,
+    cells: [
+      <span className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</span>,
+      <div>
+        <p className="font-black text-[#001a33]">{item.descricao}</p>
+        {item.turmaNome && <p className="mt-0.5 font-bold text-indigo-600">Turma: {item.turmaNome}</p>}
+        {item.observacao && <p className="mt-0.5 text-slate-500">{item.observacao}</p>}
+        {item.dataPagamento && <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento)}</p>}
+      </div>,
+      item.categoriaNome || 'Sem categoria',
+      item.fornecedorNome || 'Não informado',
+      <div>
+        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        {item.valorPago !== undefined && item.valorPago !== item.valor && (
+          <p className="text-[9px] font-bold text-emerald-700">Pago: {formatCurrency(item.valorPago)}</p>
+        )}
+      </div>,
+      item.totalParcelas > 1 ? `${item.parcelaNumero}/${item.totalParcelas}` : 'Única',
+      <FinancialReportStatusBadge status={item.status} />,
+    ],
+  })), [filtered]);
+
+  const reportFilters = useMemo<FinancialReportFilter[]>(() => [
+    { label: 'Escopo', value: statusScopeLabels[statusScope] },
+    { label: 'Busca', value: search.trim() || 'Todos os lançamentos' },
+    { label: 'Período', value: `${formatDate(dataInicio)} até ${formatDate(dataFim)}` },
+    { label: 'Categoria', value: selectedCategoriaLabel },
+    { label: 'Turma', value: selectedTurmaLabel },
+    { label: 'Polo', value: selectedPoloLabel },
+  ], [dataFim, dataInicio, search, selectedCategoriaLabel, selectedPoloLabel, selectedTurmaLabel, statusScope]);
+
+  const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
+    { label: 'Total previsto', value: formatCurrency(totals.total), tone: 'slate' },
+    { label: 'Pago', value: formatCurrency(totals.pago), tone: 'emerald' },
+    { label: 'A pagar', value: formatCurrency(totals.pendente), tone: 'amber' },
+    { label: 'Vencidos', value: totals.vencidos, tone: 'rose' },
+  ], [totals]);
 
   const baixaMutation = useMutation({
     mutationFn: (params: { contaBancariaId: string; valorPago: number; dataPagamento: string; formaPagamento: string }) =>
@@ -292,33 +370,50 @@ const DespesasFixasTab: React.FC = () => {
           ))}
         </select>
 
-        {/* Toggles */}
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <FinancialReportExportButton
+            title="Extrato de Despesas Fixas"
+            subtitle="Despesas recorrentes e contas a pagar conforme os filtros selecionados."
+            rightTitle="Extrato de Despesas"
+            rightType="Despesas fixas"
+            fileName={`extrato-despesas-fixas-${new Date().toISOString().slice(0, 10)}`}
+            columns={reportColumns}
+            rows={reportRows}
+            filters={reportFilters}
+            summaryCards={reportSummaryCards}
+            poloId={poloId}
+            tone="rose"
+            disabled={lancamentosQuery.isLoading}
+          />
+
+          {/* Toggles */}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+            <button
+              onClick={() => setViewMode('tabela')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'tabela' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Tabela"
+            >
+              <LayoutList size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Cards"
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+
           <button
-            onClick={() => setViewMode('tabela')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'tabela' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Tabela"
+            onClick={() => setAgrupar((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold uppercase border transition-all ${
+              agrupar ? 'bg-[#001a33] text-white border-[#001a33]' : 'text-slate-500 border-slate-200 hover:border-slate-400'
+            }`}
           >
-            <LayoutList size={15} />
-          </button>
-          <button
-            onClick={() => setViewMode('cards')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-rose-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Cards"
-          >
-            <LayoutGrid size={15} />
+            <Layers size={13} />
+            Agrupar
           </button>
         </div>
-
-        <button
-          onClick={() => setAgrupar((v) => !v)}
-          className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold uppercase border transition-all ${
-            agrupar ? 'bg-[#001a33] text-white border-[#001a33]' : 'text-slate-500 border-slate-200 hover:border-slate-400'
-          }`}
-        >
-          <Layers size={13} />
-          Agrupar
-        </button>
       </div>
 
       {/* Lista */}

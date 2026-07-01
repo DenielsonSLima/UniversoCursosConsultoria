@@ -6,6 +6,8 @@ import { X, Loader2, Check } from 'lucide-react';
 import { DespesaTipo } from '../despesas.queryKeys';
 import { useCreateCategoriaFinanceiraMutation } from '../hooks/useCategoriasFinanceirasQuery';
 
+const toUpper = (value: string) => value.toLocaleUpperCase('pt-BR');
+
 interface CategoriaFinanceiraInlineModalProps {
   tipo: DespesaTipo;
   onCriada: (id: string, nome: string) => void;
@@ -28,7 +30,7 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
   const handleSave = async () => {
     if (!nome.trim()) return;
     try {
-      const cat = await createMutation.mutateAsync({ nome: nome.trim(), tipo });
+      const cat = await createMutation.mutateAsync({ nome: toUpper(nome.trim()), tipo });
       onCriada(cat.id, cat.nome);
     } catch {
       // erro tratado pela mutation
@@ -36,16 +38,16 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
   };
 
   const tipoLabel: Record<DespesaTipo, string> = {
-    DESPESA_FIXA: 'Fixa',
-    DESPESA_VARIAVEL: 'Variável',
-    OUTRO_DEBITO: 'Outro Débito',
+    DESPESA_FIXA: 'FIXA',
+    DESPESA_VARIAVEL: 'VARIÁVEL',
+    OUTRO_DEBITO: 'OUTRO DÉBITO',
   };
 
   return (
     <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 animate-fadeIn">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-black uppercase tracking-wider text-rose-600">
-          Nova categoria {tipoLabel[tipo]}
+          NOVA CATEGORIA {tipoLabel[tipo]}
         </span>
         <button
           onClick={onClose}
@@ -59,14 +61,14 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
         <input
           ref={inputRef}
           type="text"
-          placeholder="Nome da categoria..."
+          placeholder="NOME DA CATEGORIA..."
           value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          onChange={(e) => setNome(toUpper(e.target.value))}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave();
             if (e.key === 'Escape') onClose();
           }}
-          className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+          className="flex-1 px-3 py-2 text-sm uppercase bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none transition-all"
         />
         <button
           onClick={handleSave}
@@ -78,13 +80,13 @@ const CategoriaFinanceiraInlineModal: React.FC<CategoriaFinanceiraInlineModalPro
           ) : (
             <Check size={14} />
           )}
-          Salvar
+          SALVAR
         </button>
       </div>
 
       {createMutation.isError && (
         <p className="mt-2 text-xs text-red-500 font-medium">
-          Erro ao criar categoria. Tente novamente.
+          ERRO AO CRIAR CATEGORIA. TENTE NOVAMENTE.
         </p>
       )}
     </div>

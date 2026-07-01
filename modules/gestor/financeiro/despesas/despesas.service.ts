@@ -47,6 +47,7 @@ export interface CreateDespesaInput {
   tipo: DespesaTipo;
   descricao: string;
   valor: number;
+  dataLancamento?: string;
   dataVencimento: string;
   categoriaFinanceiraId?: string;
   fornecedorId?: string;
@@ -96,6 +97,17 @@ const mapLancamento = (row: any): DespesaLancamento => ({
   observacao: row.observacao ?? undefined,
   turmaId: row.turma_id ?? undefined,
   turmaNome: row.turmas?.nome ?? undefined,
+  createdAt: row.created_at,
+});
+
+const toUpper = (value?: string | null) => (value || '').trim().toLocaleUpperCase('pt-BR');
+
+const mapCategoriaFinanceira = (row: any): CategoriaFinanceira => ({
+  id: row.id,
+  nome: toUpper(row.nome),
+  tipo: row.tipo,
+  descricao: row.descricao ? toUpper(row.descricao) : undefined,
+  status: row.status,
   createdAt: row.created_at,
 });
 
@@ -187,12 +199,13 @@ export const despesasService = {
       data_vencimento: i === 0
         ? input.dataVencimento
         : addDays(input.dataVencimento, intervaloDias * i),
+      created_at: input.dataLancamento ? `${input.dataLancamento}T12:00:00` : undefined,
       status: input.markAsPaid ? 'PAGO' : 'PENDENTE',
       categoria_financeira_id: input.categoriaFinanceiraId || null,
       fornecedor_id: input.fornecedorId || null,
       forma_pagamento: input.markAsPaid ? (input.formaPagamento || null) : null,
       conta_bancaria_id: input.markAsPaid ? (input.contaBancariaId || null) : null,
-      data_pagamento: input.markAsPaid ? input.dataVencimento : null,
+      data_pagamento: input.markAsPaid ? (input.dataLancamento || input.dataVencimento) : null,
       valor_pago: input.markAsPaid ? input.valor : null,
       parcela_numero: i + 1,
       total_parcelas: totalParcelas,
@@ -295,23 +308,16 @@ export const despesasService = {
       console.error('Erro ao buscar categorias financeiras:', error);
       throw error;
     }
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      nome: row.nome,
-      tipo: row.tipo,
-      descricao: row.descricao ?? undefined,
-      status: row.status,
-      createdAt: row.created_at,
-    }));
+    return (data || []).map(mapCategoriaFinanceira);
   },
 
   async createCategoriaFinanceira(input: CreateCategoriaFinanceiraInput): Promise<CategoriaFinanceira> {
     const { data, error } = await supabase
       .from('categorias_financeiras')
       .insert({
-        nome: input.nome,
+        nome: toUpper(input.nome),
         tipo: input.tipo,
-        descricao: input.descricao || null,
+        descricao: input.descricao ? toUpper(input.descricao) : null,
         status: input.status || 'ativo',
       })
       .select()
@@ -321,26 +327,23 @@ export const despesasService = {
       console.error('Erro ao criar categoria financeira:', error);
       throw error;
     }
-    return {
-      id: data.id,
-      nome: data.nome,
-      tipo: data.tipo,
-      descricao: data.descricao ?? undefined,
-      status: data.status,
-      createdAt: data.created_at,
-    };
+    return mapCategoriaFinanceira(data);
   },
 
   async updateCategoriaFinanceira(
     id: string,
     input: Partial<CreateCategoriaFinanceiraInput>
   ): Promise<CategoriaFinanceira> {
+    const payload = {
+      ...input,
+      ...(input.nome !== undefined ? { nome: toUpper(input.nome) } : {}),
+      ...(input.descricao !== undefined ? { descricao: input.descricao ? toUpper(input.descricao) : null } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from('categorias_financeiras')
-      .update({
-        ...input,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
@@ -349,14 +352,7 @@ export const despesasService = {
       console.error('Erro ao atualizar categoria financeira:', error);
       throw error;
     }
-    return {
-      id: data.id,
-      nome: data.nome,
-      tipo: data.tipo,
-      descricao: data.descricao ?? undefined,
-      status: data.status,
-      createdAt: data.created_at,
-    };
+    return mapCategoriaFinanceira(data);
   },
 
   async deleteCategoriaFinanceira(id: string): Promise<void> {
@@ -382,14 +378,7 @@ export const despesasService = {
       console.error('Erro ao buscar todas as categorias financeiras:', error);
       throw error;
     }
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      nome: row.nome,
-      tipo: row.tipo,
-      descricao: row.descricao ?? undefined,
-      status: row.status,
-      createdAt: row.created_at,
-    }));
+    return (data || []).map(mapCategoriaFinanceira);
   },
 
   async getDespesasSummary(filters: DespesasFilters = {}): Promise<DespesasSummary> {

@@ -47,7 +47,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
     switch (fileTypeTag) {
       case 'IMG':
         return (
-          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
+          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
             <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
               <Camera size={28} />
             </div>
@@ -70,7 +70,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
       case 'PDF':
         if (isMockUrl) {
           return (
-            <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
+            <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
               <div className="w-16 h-16 bg-red-100 text-red-650 rounded-full flex items-center justify-center text-red-600">
                 <FileText size={32} />
               </div>
@@ -96,13 +96,13 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
           <iframe
             src={normalizedUrl}
             title={document.title}
-            className="w-full h-[60vh] rounded-2xl border border-slate-250 shadow-inner"
+            className="h-full min-h-[50vh] w-full border-0 bg-white"
           />
         );
       case 'DOC':
       case 'XLS':
         return (
-          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl h-[60vh] space-y-4">
+          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-4 bg-slate-50 p-8">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
               document.fileType === 'DOC' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'
             }`}>
@@ -142,7 +142,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
         );
       default:
         return (
-          <div className="flex flex-col items-center justify-center p-8 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl h-[60vh] space-y-3">
+          <div className="flex h-full min-h-[50vh] flex-col items-center justify-center space-y-3 bg-amber-50 p-8 text-amber-800">
             <AlertCircle size={36} className="text-amber-500" />
             <h4 className="font-black uppercase text-sm">Visualização não suportada</h4>
             <p className="text-xs text-center max-w-sm">
@@ -154,42 +154,42 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[250] flex h-screen h-[100dvh] w-screen items-stretch justify-stretch overflow-hidden">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-[#001a33]/65 backdrop-blur-sm transition-opacity" 
+        className="absolute inset-0 bg-[#001a33]/65 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       ></div>
       
       {/* Container */}
-      <div className="relative bg-white rounded-[2rem] w-full max-w-4xl p-6 md:p-8 shadow-2xl animate-fadeIn border border-slate-100 max-h-[90vh] flex flex-col justify-between overflow-hidden">
+      <div className="relative flex h-full w-full animate-fadeIn flex-col justify-between overflow-hidden bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100 shrink-0">
-          <div>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 md:px-6">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full border border-blue-100">
                 Visualização Rápida
               </span>
               <span className="text-[10px] text-slate-400 font-bold uppercase">{document.size}</span>
             </div>
-            <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">{document.title}</h3>
+            <h3 className="truncate text-base font-black uppercase tracking-tight text-[#001a33] md:text-lg">{document.title}</h3>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors"
+            className="shrink-0 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-red-500"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Body (Scrollable preview space) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar my-2">
+        <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
           {renderPreviewContent()}
         </div>
 
         {/* Footer actions */}
-        <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center shrink-0">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6">
           <p className="text-[9px] text-slate-450 uppercase font-black tracking-widest">
             Autor: <span className="text-blue-600">{document.authorName}</span> • Criado em: {new Date(document.createdAt).toLocaleDateString('pt-BR')}
           </p>
@@ -202,7 +202,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ isOpen, onClose, 
                 alert('O download não está disponível para este documento.');
               }
             }}
-            className="flex items-center gap-2 bg-[#001a33] hover:bg-blue-900 text-white px-5 py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider transition-colors shadow-lg shadow-blue-900/10"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-900/10 transition-colors hover:bg-blue-900"
             onKeyDown={(e) => isMockUrl ? e.preventDefault() : undefined}
           >
             <Download size={14} /> Baixar Arquivo

@@ -26,6 +26,13 @@ import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
 import { printReciboDespesa } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import FinancialReportExportButton, {
+  FinancialReportColumn,
+  FinancialReportFilter,
+  FinancialReportRow,
+  FinancialReportStatusBadge,
+  FinancialReportSummaryCard,
+} from '../../components/FinancialReportPreview';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -33,6 +40,20 @@ type ViewMode = 'table' | 'cards';
 type GroupMode = 'none' | 'student' | 'class' | 'polo';
 type StatusScope = 'pending' | 'received' | 'canceled' | 'all';
 type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
+
+const statusScopeLabels: Record<StatusScope, string> = {
+  pending: 'Pendentes',
+  received: 'Recebidos',
+  canceled: 'Cancelados',
+  all: 'Todos',
+};
+
+const groupModeLabels: Record<GroupMode, string> = {
+  none: 'Sem agrupamento',
+  student: 'Por aluno',
+  class: 'Por turma',
+  polo: 'Por polo',
+};
 
 interface ModalidadeReceberTabProps {
   modality: CourseModality;
@@ -419,6 +440,92 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     };
   };
 
+  const reportPoloId = useMemo(() => {
+    const uniquePoloIds = Array.from(new Set(filtered.map((item) => item.poloId).filter(Boolean)));
+    if (uniquePoloIds.length === 1) return uniquePoloIds[0];
+    if (typeof window === 'undefined') return uniquePoloIds[0];
+    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || uniquePoloIds[0];
+  }, [filtered]);
+
+  const reportColumns = useMemo<FinancialReportColumn[]>(() => [
+    { label: 'Aluno' },
+    { label: 'Cobrança' },
+    { label: 'Turma / unidade' },
+    { label: 'Vencimento' },
+    { label: 'Situação', align: 'center' },
+    { label: 'Valor', align: 'right' },
+  ], []);
+
+  const reportRows = useMemo<FinancialReportRow[]>(() => filtered.map((item) => ({
+    id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
+    cells: [
+      <div>
+        <p className="font-black text-[#001a33]">{item.clienteNome || 'Aluno não informado'}</p>
+        <p className="mt-0.5 text-slate-500">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
+        <p className="mt-0.5 font-bold text-slate-500">Matrícula: {formatEnrollment(item)}</p>
+      </div>,
+      <div>
+        <p className="font-bold text-slate-700">{item.descricao}</p>
+        <p className="mt-0.5 font-black uppercase tracking-wider text-slate-400">
+          {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
+        </p>
+        {item.asaasInvoiceUrl && item.status !== 'PAGO' && (
+          <p className="mt-0.5 font-bold text-blue-600">Cobrança Asaas vinculada</p>
+        )}
+      </div>,
+      <div>
+        <p className="font-bold text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
+        <p className="mt-0.5 font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
+        <p className="mt-0.5 text-slate-400">{item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}</p>
+      </div>,
+      <div>
+        <p className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</p>
+        {item.status === 'PAGO' && (
+          <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento || '')}</p>
+        )}
+        <p className="mt-0.5 text-slate-500">{paymentMethodLabel(item)}</p>
+      </div>,
+      <FinancialReportStatusBadge status={item.status} />,
+      <div>
+        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        {item.valorPago !== undefined && (
+          <p className="text-[9px] font-bold text-emerald-700">Recebido: {formatCurrency(item.valorPago)}</p>
+        )}
+      </div>,
+    ],
+  })), [filtered]);
+
+  const reportTotals = useMemo(() => {
+    const total = filtered.reduce((sum, item) => sum + item.valor, 0);
+    const recebido = filtered
+      .filter((item) => item.status === 'PAGO')
+      .reduce((sum, item) => sum + (item.valorPago ?? item.valor), 0);
+    const aReceber = filtered
+      .filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status))
+      .reduce((sum, item) => sum + item.valor, 0);
+    const vencidos = filtered.filter((item) => item.status === 'VENCIDO').length;
+    return { total, recebido, aReceber, vencidos };
+  }, [filtered]);
+
+  const reportFilters = useMemo<FinancialReportFilter[]>(() => {
+    const filterDate = (value?: string) => value ? formatDate(value) : 'Sem limite';
+    return [
+      { label: 'Modalidade', value: title },
+      { label: 'Situação', value: statusScopeLabels[statusScope] },
+      { label: 'Busca', value: search.trim() || 'Todos os alunos' },
+      { label: 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
+      { label: 'Agrupamento', value: groupModeLabels[groupMode] },
+      { label: 'Registros', value: `${filtered.length} cobrança(s)` },
+    ];
+  }, [dueEnd, dueStart, filtered.length, groupMode, search, statusScope, title]);
+
+  const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
+    { label: 'Total previsto', value: formatCurrency(reportTotals.total), tone: 'slate' },
+    { label: 'Recebido', value: formatCurrency(reportTotals.recebido), tone: 'emerald' },
+    { label: 'A receber', value: formatCurrency(reportTotals.aReceber), tone: 'amber' },
+    { label: 'Vencidos', value: reportTotals.vencidos, tone: 'rose' },
+  ], [reportTotals]);
+
   const StatusBadge = ({ item }: { item: ContasReceber }) => (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
       item.status === 'PAGO'
@@ -764,22 +871,39 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           </button>
         )}
 
-        {/* Toggles */}
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl ml-auto">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Tabela"
-          >
-            <Table2 size={15} />
-          </button>
-          <button
-            onClick={() => setViewMode('cards')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Cards"
-          >
-            <LayoutGrid size={15} />
-          </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <FinancialReportExportButton
+            title={`Extrato de Cobranças - ${title}`}
+            subtitle="Cobranças, parcelas e recebimentos conforme os filtros selecionados."
+            rightTitle="Extrato de Cobranças"
+            rightType={title}
+            fileName={`extrato-cobrancas-${modality.toLowerCase()}-${new Date().toISOString().slice(0, 10)}`}
+            columns={reportColumns}
+            rows={reportRows}
+            filters={reportFilters}
+            summaryCards={reportSummaryCards}
+            poloId={reportPoloId}
+            tone="emerald"
+            disabled={isLoading}
+          />
+
+          {/* Toggles */}
+          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Tabela"
+            >
+              <Table2 size={15} />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Cards"
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
         </div>
       </div>
 

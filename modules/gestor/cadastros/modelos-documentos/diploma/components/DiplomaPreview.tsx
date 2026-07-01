@@ -37,19 +37,51 @@ export const posicoesPadrao: Record<string, { x: number; y: number }> = {
   validadeNacional: { x: 6.0, y: 64.0 },
   registro: { x: 65.0, y: 10.0 },
   carimbo: { x: 65.0, y: 70.0 },
-  versoQrcode: { x: 65.0, y: 44.0 }
+  versoQrcode: { x: 65.0, y: 44.0 },
+  versoObservacaoTitulo: { x: 18.0, y: 14.0 },
+  versoOrgaoTitulo: { x: 49.8, y: 14.0 },
+  versoAlunoNome: { x: 17.0, y: 49.2 },
+  versoEnsinoMedioTitulo: { x: 17.0, y: 53.2 },
+  versoEnsinoMedioEstabelecimento: { x: 18.0, y: 58.5 },
+  versoEnsinoMedioLocalidade: { x: 18.0, y: 63.4 },
+  versoEnsinoMedioAno: { x: 18.0, y: 68.0 },
+  versoRegistroTexto: { x: 18.0, y: 76.4 },
+  versoSistecTexto: { x: 57.0, y: 76.4 },
+  versoDataTexto: { x: 40.0, y: 83.2 },
+  versoSecretariaAssinaturaImagem: { x: 25.0, y: 84.4 },
+  versoDiretoraAssinaturaImagem: { x: 64.5, y: 84.4 },
+  versoSecretariaLinha: { x: 22.5, y: 89.2 },
+  versoDiretoraLinha: { x: 62.0, y: 89.2 },
+  versoSecretariaEscolar: { x: 22.5, y: 90.4 },
+  versoDiretoraGeral: { x: 62.0, y: 90.4 },
+  versoValidadorSite: { x: 73.0, y: 36.8 }
 };
 
 export const EAD_FRONT_TEXT =
   'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), na modalidade EAD, realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação profissional (LDB nº 9.394/1996, Decreto nº 5.154/2004 e Portaria MEC nº 1.015/2018).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
 
+export const PRESENTIAL_FRONT_TEXT =
+  'Certificamos que o(a) aluno(a) <strong>{{nome_aluno}}</strong>, inscrito(a) no CPF {{cpf}}, concluiu com êxito o curso presencial de <strong>{{curso_nome}}</strong>, com carga horária de {{carga_horaria}} hora(s), realizado através da Universo Cursos e Consultoria, cumprindo todas as atividades previstas, de acordo com a legislação aplicável à formação e qualificação profissional (LDB nº 9.394/1996 e Decreto nº 5.154/2004).<br /><br />No período de {{data_inicio}} até {{data_fim}}.<br />Código do certificado: {{codigo_certificado}}';
+
+export const TECHNICAL_FRONT_TEXT =
+  'A Diretora da Universo Cursos e Consultoria, de acordo com o disposto no artigo 24, inciso VII da Lei Nº 9.394/1996, confere o título de <strong>{{curso_titulo}}</strong> a <strong>{{nome_aluno}}</strong>, nacionalidade Brasileira, natural de {{naturalidade}}, nascido(a) em {{data_nascimento}} e cédula de identidade n° {{rg}}, por ter sido aprovado(a) nos componentes curriculares que compõem a Organização Curricular do Curso <strong>{{curso_titulo}}</strong>, concluído em {{data_conclusao}} o curso no eixo tecnológico {{eixo_tecnologico}}, a fim de que possa gozar de todos os direitos e prerrogativas concedidas a este título pelas Leis do País.<br /><br />Código de verificação do certificado: <strong>{{codigo_certificado}}</strong>.';
+
+export const TECHNICAL_BACK_TEXT =
+  'OBSERVAÇÃO:\n\nÓRGÃO DE FISCALIZAÇÃO PROFISSIONAL:\n\n{{nome_aluno}}\nENSINO MÉDIO\nESTABELECIMENTO: {{ensino_medio_estabelecimento}}\nLOCALIDADE DA UNIDADE FEDERAÇÃO: {{ensino_medio_localidade_uf}}\nANO DE CONCLUSÃO: {{ensino_medio_ano_conclusao}}\n\nCertificado Expedido N° {{certificado_numero}} lavrado à Página {{pagina_livro}} do Livro {{livro}}.\nValidação do SISTEC: {{validacao_sistec}}\n{{cidade_uf}}, {{data_conclusao_extenso}}.\n\n{{secretaria_nome}}\n{{secretaria_cargo}}\n\n{{diretoria_geral_nome}}\n{{diretoria_geral_cargo}}\n\nValidador: <strong style="color:#dc2626">www.universocc.com.br/validador</strong>\nCódigo de verificação: {{codigo_certificado}}';
+
 export const EAD_VALIDITY_TEXT =
   'VÁLIDO EM TODO O TERRITÓRIO NACIONAL COMO COMPROVANTE DE CAPACITAÇÃO E QUALIFICAÇÃO PROFISSIONAL.';
+
+export const PRESENTIAL_VALIDITY_TEXT =
+  'CERTIFICADO VÁLIDO COMO COMPROVANTE DE CONCLUSÃO DE CURSO PRESENCIAL DE CAPACITAÇÃO E QUALIFICAÇÃO PROFISSIONAL.';
 
 export const EAD_BACK_TITLE_TEXT = 'CONTEÚDO PROGRAMÁTICO';
 
 export const EAD_BACK_LEGAL_TEXT =
   'CURSOS LIVRES SÃO LEGAIS COM BASE NO DECRETO PRESIDENCIAL N° 5.154.';
+
+export const PRESENTIAL_BACK_LEGAL_TEXT =
+  'CURSO PRESENCIAL DE FORMAÇÃO E QUALIFICAÇÃO PROFISSIONAL, COM BASE NA LDB Nº 9.394/1996 E NO DECRETO Nº 5.154/2004.';
 
 export const EAD_BACK_TEXT =
   '{{grade_curricular}}';
@@ -67,7 +99,7 @@ const normalizeSignatureBlock = (block: any) => {
     ? 'none'
     : block.signatureSource;
   const legacyTitle = String(block.title || '').toLowerCase();
-  const title = block.id === 'assinatura1'
+  const title = block.id === 'assinatura1' && !block.title
     ? 'Diretor Geral'
     : block.id === 'assinatura2' && (!block.title || legacyTitle.includes('secretaria') || legacyTitle.includes('coordena'))
     ? 'Aluno(a)'
@@ -91,8 +123,39 @@ const isTechnicalCertificate = (formData: any) =>
 const isEadCertificate = (formData: any) =>
   formData?.tipoCurso === 'Educação a Distância (EAD)' || formData?.id === 'certificado_ead';
 
+const isPresentialProfessionalCertificate = (formData: any) =>
+  ['certificado_livre', 'certificado_especializacao'].includes(formData?.id);
+
+const usesProgrammaticBackLayout = (formData: any) =>
+  isEadCertificate(formData) || isPresentialProfessionalCertificate(formData);
+
+const hasEadTerms = (value: string) =>
+  /modalidade\s+EAD|educa[cç][aã]o\s+a\s+dist[aâ]ncia|Portaria\s+MEC\s+n[º°]?\s*1\.015\/2018|EAD\s+INSTITUCIONAL/i.test(String(value || ''));
+
+const hasLegacyTechnicalText = (value: string) =>
+  /Certificamos\s+para\s+os\s+devidos\s+fins|forma[cç][aã]o\s+de\s+T[eé]cnico\s+em|possuindo\s+as\s+compet[eê]ncias\s+profissionais\s+requeridas/i.test(String(value || ''));
+
+const needsTechnicalFrontText = (value: string) => {
+  const content = String(value || '');
+  return hasLegacyTechnicalText(content)
+    || !/artigo\s+24/i.test(content)
+    || !/{{codigo_certificado}}/.test(content);
+};
+
+const getTechnicalCourseTitle = (courseName: string) => {
+  const normalized = String(courseName || '').trim();
+  if (!normalized) return 'TÉCNICO EM __________________';
+  const title = /^t[eé]cnico\s+em\s+/i.test(normalized)
+    ? normalized
+    : `Técnico em ${normalized}`;
+  return title.toLocaleUpperCase('pt-BR');
+};
+
 const validationSiteContent =
   '<strong style="color:#dc2626">www.universocc.com.br/validador</strong><br /><strong>AVISO DE AUTENTICIDADE:</strong> consulte a autenticidade deste certificado pelo QR Code ou pelo código de autenticidade.';
+
+const technicalValidationSiteContent =
+  '<strong>Validador do certificado</strong><br /><strong style="color:#dc2626">www.universocc.com.br/validador</strong><br />Código: {{codigo_certificado}}';
 
 export const getTemplateBackgroundUrl = (template: any, page: 'frente' | 'verso') => {
   if (!template) return '';
@@ -113,6 +176,7 @@ const stripEadBackDecorations = (content: string) => {
   const cleaned = String(content || '')
     .replace(/^\s*Conte[uú]do Program[aá]tico:\s*/i, '')
     .replace(/CURSOS LIVRES S[ÃA]O LEGAIS COM BASE NO DECRETO PRESIDENCIAL N[°º]\s*5\.154\.?/gi, '')
+    .replace(/CURSO PRESENCIAL DE FORMAÇÃO E QUALIFICAÇÃO PROFISSIONAL, COM BASE NA LDB N[º°]\s*9\.394\/1996 E NO DECRETO N[º°]\s*5\.154\/2004\.?/gi, '')
     .trim();
 
   return cleaned || EAD_BACK_TEXT;
@@ -151,6 +215,8 @@ const parseProgrammaticRows = (content: string) => {
 const normalizeLegacyBlock = (block: any, formData: any) => {
   const technical = isTechnicalCertificate(formData);
   const ead = isEadCertificate(formData);
+  const presentialProfessional = isPresentialProfessionalCertificate(formData);
+  const programmaticBackLayout = usesProgrammaticBackLayout(formData);
   let normalized = normalizeSignatureBlock(block);
 
   if (normalized.id === 'cidadeData' && /aracaju\/se/i.test(String(normalized.content || ''))) {
@@ -164,15 +230,69 @@ const normalizeLegacyBlock = (block: any, formData: any) => {
     }
   }
 
-  if (normalized.id === 'texto' && ead) {
-    const content = stripEadValidityText(String(normalized.content || ''));
+  if (normalized.id === 'texto' && technical && needsTechnicalFrontText(normalized.content)) {
     normalized = {
       ...normalized,
-      content: /LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT,
+      content: TECHNICAL_FRONT_TEXT,
     };
   }
 
-  if (normalized.id === 'historico' && ead) {
+  if (normalized.id === 'qrcode' && technical) {
+    normalized = { ...normalized, visible: false };
+  }
+
+  if (normalized.id === 'assinatura1' && technical) {
+    normalized = {
+      ...normalized,
+      signerNameContent: '{{diretoria_geral_nome}}',
+      title: '{{diretoria_geral_cargo}}',
+      signatureSource: normalized.signatureSource || 'diretoriaGeral',
+    };
+  }
+
+  if (normalized.id === 'assinatura2' && technical) {
+    normalized = {
+      ...normalized,
+      signerNameContent: '{{nome_aluno}}',
+      title: 'Titular do Diploma',
+    };
+  }
+
+  if (normalized.id === 'versoSecretariaEscolar' && technical) {
+    normalized = { ...normalized, content: '{{secretaria_nome}}<br />{{secretaria_cargo}}' };
+  }
+
+  if (normalized.id === 'versoDiretoraGeral' && technical) {
+    normalized = { ...normalized, content: '{{diretoria_geral_nome}}<br />{{diretoria_geral_cargo}}' };
+  }
+
+  if (technical && ['historico', 'registro', 'carimbo'].includes(normalized.id)) {
+    normalized = { ...normalized, visible: false };
+  }
+
+  if (normalized.id === 'versoQrcode' && technical) {
+    const isOldDefaultPosition = Number(normalized.x) === posicoesPadrao.versoQrcode.x
+      && Number(normalized.y) === posicoesPadrao.versoQrcode.y;
+    normalized = {
+      ...normalized,
+      x: isOldDefaultPosition ? 83.5 : normalized.x ?? 83.5,
+      y: isOldDefaultPosition ? 18.0 : normalized.y ?? 18.0,
+      width: normalized.width || 96,
+      visible: formData.hasValidationQrCode !== false,
+    };
+  }
+
+  if (normalized.id === 'texto' && (ead || presentialProfessional)) {
+    const content = stripEadValidityText(String(normalized.content || ''));
+    normalized = {
+      ...normalized,
+      content: presentialProfessional
+        ? (hasEadTerms(content) || !/LDB n[º°]\s*9\.394\/1996/i.test(content) ? PRESENTIAL_FRONT_TEXT : content)
+        : (/LDB n[º°]\s*9\.394\/1996/i.test(content) ? content : EAD_FRONT_TEXT),
+    };
+  }
+
+  if (normalized.id === 'historico' && programmaticBackLayout) {
     normalized = {
       ...normalized,
       content: stripEadBackDecorations(String(normalized.content || '')),
@@ -181,19 +301,20 @@ const normalizeLegacyBlock = (block: any, formData: any) => {
     };
   }
 
-  if (normalized.id === 'validadeNacional' && ead) {
+  if (normalized.id === 'validadeNacional' && programmaticBackLayout) {
     const wasOnFront = normalized.page !== 'verso';
     const savedContent = String(normalized.content || '').trim();
-    const validityContent = /V[aá]lido em todo o territ[oó]rio nacional como comprovante de capacita[cç][aã]o e qualifica[cç][aã]o profissional\.?/i.test(savedContent)
-      ? EAD_VALIDITY_TEXT
-      : savedContent || EAD_VALIDITY_TEXT;
+    const hasLegacyEadValidity = /V[aá]lido em todo o territ[oó]rio nacional como comprovante de capacita[cç][aã]o e qualifica[cç][aã]o profissional\.?/i.test(savedContent);
+    const validityContent = hasLegacyEadValidity
+      ? (presentialProfessional ? PRESENTIAL_VALIDITY_TEXT : EAD_VALIDITY_TEXT)
+      : savedContent || (presentialProfessional ? PRESENTIAL_VALIDITY_TEXT : EAD_VALIDITY_TEXT);
     normalized = {
       ...normalized,
       label: 'Validade Nacional',
       page: 'verso',
       x: wasOnFront ? posicoesPadrao.validadeNacional.x : normalized.x ?? posicoesPadrao.validadeNacional.x,
       y: wasOnFront ? posicoesPadrao.validadeNacional.y : normalized.y ?? posicoesPadrao.validadeNacional.y,
-      content: validityContent,
+      content: presentialProfessional && hasEadTerms(validityContent) ? PRESENTIAL_VALIDITY_TEXT : validityContent,
       visible: formData.hasVerso !== false,
     };
   }
@@ -217,11 +338,17 @@ const normalizeLegacyBlock = (block: any, formData: any) => {
   }
 
   if (normalized.id === 'validacaoSite') {
+    const isOldDefaultPosition = technical
+      && Number(normalized.x) === posicoesPadrao.validacaoSite.x
+      && Number(normalized.y) === posicoesPadrao.validacaoSite.y;
     normalized = {
       ...normalized,
-      x: normalized.x ?? posicoesPadrao.validacaoSite.x,
-      y: Number(normalized.y) > 95 ? posicoesPadrao.validacaoSite.y : normalized.y ?? posicoesPadrao.validacaoSite.y,
-      content: validationSiteContent,
+      x: isOldDefaultPosition ? posicoesPadrao.versoValidadorSite.x : normalized.x ?? posicoesPadrao.validacaoSite.x,
+      y: isOldDefaultPosition ? posicoesPadrao.versoValidadorSite.y : Number(normalized.y) > 95 ? posicoesPadrao.validacaoSite.y : normalized.y ?? posicoesPadrao.validacaoSite.y,
+      width: technical ? 250 : normalized.width,
+      fontSize: technical ? 7 : normalized.fontSize,
+      textAlign: technical ? 'center' : normalized.textAlign,
+      content: technical ? technicalValidationSiteContent : validationSiteContent,
       visible: formData.hasVerso !== false,
     };
   }
@@ -234,8 +361,96 @@ export const getBlocks = (formData: any) => {
   const pos = formData.posicoes || posicoesPadrao;
   const technical = isTechnicalCertificate(formData);
   const ead = isEadCertificate(formData);
+  const presentialProfessional = isPresentialProfessionalCertificate(formData);
+  const programmaticBackLayout = usesProgrammaticBackLayout(formData);
   const sourceBlocks = Array.isArray(formData.blocks) ? formData.blocks : [];
   const existingSignature = (id: string) => sourceBlocks.find((block: any) => block.id === id && block.type === 'signature') || {};
+  const technicalBackTextBlock = (
+    id: string,
+    label: string,
+    content: string,
+    options: Record<string, any> = {}
+  ) => ({
+    id,
+    type: 'text',
+    label,
+    page: 'verso',
+    x: pos[id]?.x ?? posicoesPadrao[id]?.x ?? 0,
+    y: pos[id]?.y ?? posicoesPadrao[id]?.y ?? 0,
+    width: options.width ?? 320,
+    color: options.color ?? formData.corTexto ?? '#111827',
+    fontSize: options.fontSize ?? 13,
+    fontFamily: options.fontFamily ?? 'Arial, sans-serif',
+    fontWeight: options.fontWeight ?? '900',
+    textAlign: options.textAlign ?? 'left',
+    lineHeight: options.lineHeight ?? 1.18,
+    content,
+    visible: technical && formData.hasVerso !== false,
+  });
+  const technicalBackBlocks = [
+    technicalBackTextBlock('versoObservacaoTitulo', 'Observação', 'OBSERVAÇÃO:', { width: 300, fontSize: 14 }),
+    technicalBackTextBlock('versoOrgaoTitulo', 'Órgão de Fiscalização', 'ÓRGÃO DE FISCALIZAÇÃO PROFISSIONAL:', { width: 500, fontSize: 14 }),
+    technicalBackTextBlock('versoAlunoNome', 'Nome do Aluno', '{{nome_aluno}}', { width: 760, color: '#dc2626', fontSize: 14, textAlign: 'center' }),
+    technicalBackTextBlock('versoEnsinoMedioTitulo', 'Ensino Médio', 'ENSINO MÉDIO', { width: 760, fontSize: 14, textAlign: 'center' }),
+    technicalBackTextBlock('versoEnsinoMedioEstabelecimento', 'Ensino Médio - Estabelecimento', 'ESTABELECIMENTO: {{ensino_medio_estabelecimento}}', { width: 820, fontSize: 13 }),
+    technicalBackTextBlock('versoEnsinoMedioLocalidade', 'Ensino Médio - Localidade', 'LOCALIDADE DA UNIDADE FEDERAÇÃO: {{ensino_medio_localidade_uf}}', { width: 820, fontSize: 13 }),
+    technicalBackTextBlock('versoEnsinoMedioAno', 'Ensino Médio - Ano', 'ANO DE CONCLUSÃO: {{ensino_medio_ano_conclusao}}', { width: 820, fontSize: 13 }),
+    technicalBackTextBlock('versoRegistroTexto', 'Registro do Certificado', 'Certificado Expedido N° {{certificado_numero}} lavrado à Página {{pagina_livro}} do Livro {{livro}}.', { width: 470, fontSize: 12, fontWeight: '700' }),
+    technicalBackTextBlock('versoSistecTexto', 'Validação do SISTEC', 'Validação do SISTEC: {{validacao_sistec}}', { width: 360, fontSize: 12, fontWeight: '700' }),
+    technicalBackTextBlock('versoDataTexto', 'Data de Expedição', '{{cidade_uf}}, {{data_conclusao_extenso}}.', { width: 350, fontSize: 12, textAlign: 'center' }),
+    {
+      id: 'versoSecretariaAssinaturaImagem',
+      type: 'signatureImage',
+      label: 'Assinatura Secretaria Escolar',
+      page: 'verso',
+      x: pos.versoSecretariaAssinaturaImagem?.x ?? posicoesPadrao.versoSecretariaAssinaturaImagem.x,
+      y: pos.versoSecretariaAssinaturaImagem?.y ?? posicoesPadrao.versoSecretariaAssinaturaImagem.y,
+      width: 210,
+      signatureSource: 'secretaria',
+      signatureImageUrl: '',
+      signatureBlend: true,
+      visible: technical && formData.hasVerso !== false,
+    },
+    {
+      id: 'versoDiretoraAssinaturaImagem',
+      type: 'signatureImage',
+      label: 'Assinatura Diretoria Geral',
+      page: 'verso',
+      x: pos.versoDiretoraAssinaturaImagem?.x ?? posicoesPadrao.versoDiretoraAssinaturaImagem.x,
+      y: pos.versoDiretoraAssinaturaImagem?.y ?? posicoesPadrao.versoDiretoraAssinaturaImagem.y,
+      width: 210,
+      signatureSource: 'diretoriaGeral',
+      signatureImageUrl: '',
+      signatureBlend: true,
+      visible: technical && formData.hasVerso !== false,
+    },
+    {
+      id: 'versoSecretariaLinha',
+      type: 'line',
+      label: 'Linha Assinatura Secretaria',
+      page: 'verso',
+      x: pos.versoSecretariaLinha?.x ?? posicoesPadrao.versoSecretariaLinha.x,
+      y: pos.versoSecretariaLinha?.y ?? posicoesPadrao.versoSecretariaLinha.y,
+      width: 310,
+      color: formData.corTexto || '#111827',
+      borderWidth: 1,
+      visible: technical && formData.hasVerso !== false,
+    },
+    {
+      id: 'versoDiretoraLinha',
+      type: 'line',
+      label: 'Linha Assinatura Diretoria',
+      page: 'verso',
+      x: pos.versoDiretoraLinha?.x ?? posicoesPadrao.versoDiretoraLinha.x,
+      y: pos.versoDiretoraLinha?.y ?? posicoesPadrao.versoDiretoraLinha.y,
+      width: 310,
+      color: formData.corTexto || '#111827',
+      borderWidth: 1,
+      visible: technical && formData.hasVerso !== false,
+    },
+    technicalBackTextBlock('versoSecretariaEscolar', 'Secretária Escolar', '{{secretaria_nome}}<br />{{secretaria_cargo}}', { width: 310, fontSize: 12, textAlign: 'center', lineHeight: 1.08 }),
+    technicalBackTextBlock('versoDiretoraGeral', 'Diretora Geral', '{{diretoria_geral_nome}}<br />{{diretoria_geral_cargo}}', { width: 310, fontSize: 12, textAlign: 'center', lineHeight: 1.08 }),
+  ];
   const defaultBlocks = [
     {
       id: 'selo',
@@ -292,7 +507,7 @@ export const getBlocks = (formData: any) => {
       fontFamily: 'serif',
       fontWeight: '400',
       textAlign: 'center',
-      content: formData.textoFrente || (ead ? EAD_FRONT_TEXT : 'Certificamos que {{nome_aluno}} concluiu o curso de {{curso_nome}} com carga horária de {{carga_horaria}} horas.'),
+      content: formData.textoFrente || (technical ? TECHNICAL_FRONT_TEXT : ead ? EAD_FRONT_TEXT : presentialProfessional ? PRESENTIAL_FRONT_TEXT : 'Certificamos que {{nome_aluno}} concluiu o curso de {{curso_nome}} com carga horária de {{carga_horaria}} horas.'),
       visible: formData.exibirTexto !== false
     },
     {
@@ -324,8 +539,8 @@ export const getBlocks = (formData: any) => {
       fontFamily: 'serif',
       fontWeight: '400',
       textAlign: 'center',
-      content: EAD_VALIDITY_TEXT,
-      visible: ead && formData.hasVerso !== false
+      content: presentialProfessional ? PRESENTIAL_VALIDITY_TEXT : EAD_VALIDITY_TEXT,
+      visible: programmaticBackLayout && formData.hasVerso !== false
     },
     {
       id: 'assinatura1',
@@ -335,12 +550,14 @@ export const getBlocks = (formData: any) => {
       x: pos.assinatura1?.x ?? posicoesPadrao.assinatura1.x,
       y: pos.assinatura1?.y ?? posicoesPadrao.assinatura1.y,
       width: formData.assinaturaWidth || 256,
-      title: 'Diretor Geral',
+      signerNameContent: technical ? '{{diretoria_geral_nome}}' : undefined,
+      title: technical ? '{{diretoria_geral_cargo}}' : 'Diretor Geral',
       signatureSource: 'diretoriaGeral',
       signatureImageUrl: '',
       signatureBlend: true,
       signatureImageOffsetY: 0,
-      signatureLabelFontSize: 10,
+      signatureNameFontSize: technical ? 11 : undefined,
+      signatureLabelFontSize: technical ? 9 : 10,
       visible: formData.exibirAssinatura1 !== false
     },
     {
@@ -365,7 +582,10 @@ export const getBlocks = (formData: any) => {
       x: pos.assinatura2?.x ?? posicoesPadrao.assinatura2.x,
       y: pos.assinatura2?.y ?? posicoesPadrao.assinatura2.y,
       width: formData.assinaturaWidth || 256,
-      title: 'Aluno(a)',
+      signerNameContent: technical ? '{{nome_aluno}}' : undefined,
+      title: technical ? 'Titular do Diploma' : 'Aluno(a)',
+      signatureNameFontSize: technical ? 11 : undefined,
+      signatureLabelFontSize: technical ? 9 : undefined,
       visible: formData.exibirAssinatura2 !== false
     },
     {
@@ -390,7 +610,7 @@ export const getBlocks = (formData: any) => {
       x: pos.qrcode?.x ?? posicoesPadrao.qrcode.x,
       y: pos.qrcode?.y ?? posicoesPadrao.qrcode.y,
       width: formData.qrcodeWidth || 170,
-      visible: formData.hasValidationQrCode !== false
+      visible: !technical && formData.hasValidationQrCode !== false
     },
     {
       id: 'validacaoSite',
@@ -407,6 +627,7 @@ export const getBlocks = (formData: any) => {
       content: validationSiteContent,
       visible: formData.hasVerso !== false
     },
+    ...technicalBackBlocks,
     {
       id: 'conteudoProgramaticoTitulo',
       type: 'text',
@@ -421,7 +642,7 @@ export const getBlocks = (formData: any) => {
       fontWeight: '900',
       textAlign: 'left',
       content: EAD_BACK_TITLE_TEXT,
-      visible: ead && formData.hasVerso !== false
+      visible: programmaticBackLayout && formData.hasVerso !== false
     },
     {
       id: 'historico',
@@ -435,8 +656,8 @@ export const getBlocks = (formData: any) => {
       color: formData.corTexto || '#1e293b',
       fontFamily: 'monospace',
       textAlign: 'left',
-      tableTitleVisible: !ead,
-      content: formData.textoVerso || (formData.tipoCurso === 'Cursos Técnicos' ? 'Grade Curricular do Curso:\n\n{{grade_curricular}}' : ead ? EAD_BACK_TEXT : 'Conteúdo Programático:\n\n{{grade_curricular}}'),
+      tableTitleVisible: !programmaticBackLayout,
+      content: formData.textoVerso || (formData.tipoCurso === 'Cursos Técnicos' ? 'Grade Curricular do Curso:\n\n{{grade_curricular}}' : programmaticBackLayout ? EAD_BACK_TEXT : 'Conteúdo Programático:\n\n{{grade_curricular}}'),
       visible: formData.hasVerso !== false
     },
     {
@@ -452,8 +673,8 @@ export const getBlocks = (formData: any) => {
       fontFamily: 'sans-serif',
       fontWeight: '900',
       textAlign: 'left',
-      content: EAD_BACK_LEGAL_TEXT,
-      visible: ead && formData.hasVerso !== false
+      content: presentialProfessional ? PRESENTIAL_BACK_LEGAL_TEXT : EAD_BACK_LEGAL_TEXT,
+      visible: programmaticBackLayout && formData.hasVerso !== false
     },
     {
       id: 'registro',
@@ -522,11 +743,13 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
         : formData.tipoCurso === 'Educação a Distância (EAD)'
         ? 'Curso EAD'
         : 'Curso de Formação',
+    curso_titulo: getTechnicalCourseTitle(formData.tipoCurso === 'Cursos Técnicos' ? 'Técnico em Enfermagem' : 'Curso de Formação'),
     carga_horaria: '1200',
     data_inicio: '04/12/2025',
     data_fim: '30/12/2025',
     periodo: '04/12/2025 até 30/12/2025',
     data_conclusao: '20 de Maio de 2026',
+    data_conclusao_extenso: '20 de Maio de 2026',
     grade_curricular: `Anatomia Humana - 80h - Nota: 9.0\nFisiologia - 80h - Nota: 8.5\nPrimeiros Socorros - 40h - Nota: 10.0\nFarmacologia Aplicada - 60h - Nota: 9.5\nÉtica e Deontologia - 40h - Nota: 9.0\nEstágio Supervisionado I - 200h - Aprovado`,
     livro_registro: 'Livro: 12, Folha: 45, Registro: 1024',
     ensino_medio_estabelecimento: 'COLÉGIO ESTADUAL EXEMPLO',
@@ -537,9 +760,25 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
     pagina_livro: '45',
     livro: '12',
     validacao_sistec: 'SE123456789',
-    codigo_validacao: 'CERT-EAD-2B4F-D710-0F26'
+    codigo_validacao: 'CERT-EAD-2B4F-D710-0F26',
+    naturalidade: 'Japoatã/SE',
+    data_nascimento: '10/02/2002',
+    rg: '3.456.789 SSP/SE',
+    eixo_tecnologico: 'ambiente e saúde',
+    diretoria_geral_nome: 'NOME DA DIRETORA',
+    diretoria_geral_cargo: 'Diretora Geral',
+    secretaria_nome: 'NOME DA SECRETÁRIA',
+    secretaria_cargo: 'Secretária Escolar'
   };
   const previewData = { ...defaultPreviewData, ...previewValues };
+
+  const [assinaturas, setAssinaturas] = useState<AssinaturasData>(() => assinaturasService.getSignaturesSync());
+  const signatureTemplateVars = {
+    diretoria_geral_nome: assinaturas.diretoriaGeralNome || previewData.diretoria_geral_nome,
+    diretoria_geral_cargo: assinaturas.diretoriaGeralCargo || previewData.diretoria_geral_cargo,
+    secretaria_nome: assinaturas.secretariaNome || previewData.secretaria_nome,
+    secretaria_cargo: assinaturas.secretariaCargo || previewData.secretaria_cargo,
+  };
 
   // Helper para substituir variáveis simples por negrito no preview
   const parseText = (text: string, extraVars: Record<string, string> = {}) => {
@@ -574,8 +813,6 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
 
   const validationUrl = getDocumentValidationUrl(previewData.codigo_validacao);
 
-  const [assinaturas, setAssinaturas] = useState<AssinaturasData>(() => assinaturasService.getSignaturesSync());
-
   useEffect(() => {
     void assinaturasService.getSignatures().then((data) => {
       setAssinaturas(data);
@@ -594,11 +831,19 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
     return assinaturas[block.signatureSource as keyof AssinaturasData] || '';
   };
 
+  const zoomScale = zoomLevel / 100;
+  const scaledPageFrameStyle: React.CSSProperties = {
+    width: `${297 * zoomScale}mm`,
+    height: `${210 * zoomScale}mm`,
+    position: 'relative',
+  };
+
   const containerStyle: React.CSSProperties = {
-    transform: `scale(${zoomLevel / 100})`, 
-    marginBottom: zoomLevel < 100 ? `-${210 * (1 - zoomLevel / 100)}mm` : '0',
+    transform: `scale(${zoomScale})`,
+    transformOrigin: 'top left',
     backgroundColor: 'white',
-    position: 'relative'
+    position: 'absolute',
+    inset: 0,
   };
 
   const backgroundUrl = getTemplateBackgroundUrl(formData, page);
@@ -729,13 +974,13 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
           textAlign: block.textAlign || (block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' || block.id === 'texto' ? 'center' : 'left'),
           fontWeight: block.fontWeight || (block.id === 'titulo' ? '900' : block.id === 'subtitulo' || block.id === 'cidadeData' ? 'bold' : 'normal'),
           textTransform: block.id === 'titulo' || block.id === 'subtitulo' || block.id === 'cidadeData' ? 'uppercase' : 'none',
-          lineHeight: block.id === 'texto' ? '1.8' : 'normal',
+          lineHeight: block.lineHeight ?? (block.id === 'texto' ? '1.8' : 'normal'),
           letterSpacing: block.id === 'subtitulo' ? '0.3em' : 'normal'
         };
         
         return (
           <div style={textStyle}>
-            <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '') }} />
+            <div dangerouslySetInnerHTML={{ __html: parseText(block.content || '', signatureTemplateVars) }} />
           </div>
         );
       }
@@ -743,10 +988,13 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
       case 'signature': {
         const signatureW = `${block.width || 256}px`;
         const signatureLabelFontSize = Number(block.signatureLabelFontSize || 10);
+        const signatureNameFontSize = Number(block.signatureNameFontSize || signatureLabelFontSize + 1);
         const signatureUrl = getSignatureUrl(block);
         const signatureBlend = block.signatureBlend !== false ? 'multiply' : 'normal';
         const signatureImageOffsetY = Number(block.signatureImageOffsetY || 0);
         const hasSeparateSignatureImage = visibleBlocks.some((item: any) => item.type === 'signatureImage' && item.signatureBlockId === block.id);
+        const signerNameHtml = block.signerNameContent ? parseText(block.signerNameContent, signatureTemplateVars) : '';
+        const signerTitleHtml = parseText(block.title || 'Visto', signatureTemplateVars);
         return (
           <div style={{ width: signatureW }} className="text-center flex flex-col items-center justify-end">
             {!hasSeparateSignatureImage && (
@@ -769,12 +1017,18 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
               className="w-full border-t border-slate-400 pt-[1px]"
               style={{ borderColor: block.color || corTexto }}
             >
+              {signerNameHtml && (
+                <p
+                  className="font-black uppercase text-slate-800 leading-tight"
+                  style={{ fontSize: `${signatureNameFontSize}px` }}
+                  dangerouslySetInnerHTML={{ __html: signerNameHtml }}
+                />
+              )}
               <p
-                className="font-black uppercase tracking-widest text-slate-800"
+                className="font-black uppercase tracking-widest text-slate-800 leading-tight"
                 style={{ fontSize: `${signatureLabelFontSize}px` }}
-              >
-                {block.title || 'Visto'}
-              </p>
+                dangerouslySetInnerHTML={{ __html: signerTitleHtml }}
+              />
             </div>
           </div>
         );
@@ -808,6 +1062,16 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
           />
         );
       }
+
+      case 'line':
+        return (
+          <div
+            style={{
+              width: `${block.width || 260}px`,
+              borderTop: `${block.borderWidth || 1}px solid ${block.color || corTexto}`,
+            }}
+          />
+        );
 
       case 'qrcode': {
         const qrW = `${block.width || 120}px`;
@@ -937,7 +1201,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
                 textAlign: block.textAlign || 'left',
                 width: `${block.width || 560}px`,
               }}
-              dangerouslySetInnerHTML={{ __html: parseText(block.content || '{{url_validacao}}', { url_validacao: validationUrl }) }}
+              dangerouslySetInnerHTML={{ __html: parseText(block.content || '{{url_validacao}}', { ...signatureTemplateVars, url_validacao: validationUrl }) }}
             />
           </div>
         );
@@ -948,10 +1212,14 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
   };
 
   return (
-    <div 
-      className="bg-white w-[297mm] h-[210mm] shadow-2xl relative rounded-[2mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
-      style={containerStyle}
+    <div
+      className="relative shrink-0 transition-[width,height] duration-200"
+      style={scaledPageFrameStyle}
     >
+      <div
+        className="bg-white w-[297mm] h-[210mm] shadow-2xl relative rounded-[2mm] overflow-hidden select-none"
+        style={containerStyle}
+      >
       {/* Marca d'água paisagem da empresa no verso, apenas quando não houver fundo próprio */}
       {shouldRenderLandscapeWatermark && (
         <div className="absolute inset-0 z-0 flex h-full w-full items-center justify-center overflow-hidden pointer-events-none">
@@ -1013,6 +1281,7 @@ const DiplomaPreview: React.FC<DiplomaPreviewProps> = ({
           </div>
         );
       })}
+      </div>
     </div>
   );
 };

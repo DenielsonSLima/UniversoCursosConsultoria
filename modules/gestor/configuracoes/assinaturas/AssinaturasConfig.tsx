@@ -89,8 +89,8 @@ const AssinaturasConfig: React.FC = () => {
   const handleSave = async () => {
     const signaturesToSave = {
       ...signatures,
-      diretoriaGeralCargo: 'Diretor(a) Geral',
-      secretariaCargo: 'Secretária Acadêmica',
+      diretoriaGeralCargo: 'Diretora Geral',
+      secretariaCargo: 'Secretária Escolar',
       coordenacaoCargo: 'Coordenador(a) Pedagógico(a)',
       financeiroCargo: 'Setor Financeiro',
     };

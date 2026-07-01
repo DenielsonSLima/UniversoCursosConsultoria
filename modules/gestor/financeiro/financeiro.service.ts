@@ -793,7 +793,7 @@ export const financeiroService = {
   async getTurmas(): Promise<any[]> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('id, nome, codigo, polo_id')
+      .select('id, nome, codigo, polo_id, cursos(modalidade)')
       .order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar turmas no financeiro:', error);

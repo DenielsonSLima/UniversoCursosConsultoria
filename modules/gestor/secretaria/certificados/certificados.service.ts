@@ -18,9 +18,9 @@ export const certificadosService = {
       .from('certificados_academicos')
       .select(`
         *,
-        aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj),
+        aluno:parceiros!certificados_academicos_aluno_id_fkey(nome, cpf_cnpj, rg, data_nascimento, naturalidade),
         turma:turmas!certificados_academicos_turma_id_fkey(nome, codigo),
-        curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, ead_config),
+        curso:cursos!certificados_academicos_curso_id_fkey(nome, carga_horaria, area, ead_config),
         polo:polos!certificados_academicos_polo_id_fkey(nome, cidade, estado)
       `)
       .eq('modalidade', filters.modalidade)
