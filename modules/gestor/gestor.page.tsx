@@ -486,6 +486,7 @@ const GestorPage: React.FC = () => {
       case 'gestao': return (
         <GestaoPage
           poloId={isMatrizSelected ? undefined : currentPoloId || undefined}
+          activePoloId={currentPoloId || undefined}
           isMatriz={isMatrizSelected}
           poloNome={currentPolo?.nome}
           onRequestScrollTop={scrollContentToTop}

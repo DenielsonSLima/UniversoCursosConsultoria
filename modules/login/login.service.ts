@@ -111,6 +111,20 @@ export const loginService = {
 
   async updatePassword(newPassword: string) {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    return error ? error.message : null;
+    if (error) return error.message;
+
+    const { error: auditError } = await supabase.rpc('registrar_sistema_evento_manual', {
+      p_modulo: 'Sistema',
+      p_entidade: 'auth.users',
+      p_acao: 'Alterou senha',
+      p_descricao: 'Usuário alterou a senha de acesso',
+      p_detalhes: { origem: 'updatePassword' },
+    });
+
+    if (auditError) {
+      console.warn('Não foi possível registrar auditoria de alteração de senha:', auditError);
+    }
+
+    return null;
   }
 };

@@ -38,6 +38,7 @@ import AcademicosConfig from './academicos/AcademicosConfig';
 import AssinaturasConfig from './assinaturas/AssinaturasConfig';
 import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
 import SitePublicoConfig from './site-publico/SitePublicoConfig';
+import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -48,7 +49,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
     { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
-    { id: 'categorias-financeiras', title: 'CATEGORIA FINANCEIRO', desc: 'ADICIONAR, ATIVAR E INATIVAR', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
+    { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
@@ -76,6 +77,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'assinaturas': return <AssinaturasConfig />;
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
+      case 'logs': return <LogsEventosConfig />;
       case 'regras-cobranca': return <RegrasCobrancaConfig />;
       case 'taxas-pagamento': return <TaxasPagamentoConfig />;
       case 'mensageria': return <MensageriaConfig />;

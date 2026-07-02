@@ -134,10 +134,12 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
 
   if (!isOpen) return null;
 
+  const selectedPolo = polos.find(p => p.id === formData.poloId);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
-    const polo = polos.find(p => p.id === formData.poloId);
+    const polo = selectedPolo;
 
     if (!curso || !polo) {
       alert('Selecione curso e polo');
@@ -179,7 +181,7 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={selectedPoloId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
             <div className="space-y-2">
               <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
                 <Icon size={14} className={config.theme.accentText} /> {config.cursoLabel}
@@ -197,23 +199,36 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-                <MapPin size={14} className={config.theme.accentText} /> Polo
-              </label>
-              <select
-                className={selectClass}
-                value={formData.poloId}
-                onChange={(e) => updateForm({ poloId: e.target.value })}
-                disabled={Boolean(selectedPoloId)}
-                required
-              >
-                <option value="">Selecione...</option>
-                {polos.filter(p => !selectedPoloId || p.id === selectedPoloId).map(p => (
-                  <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
-                ))}
-              </select>
-            </div>
+            {selectedPoloId ? (
+              <div className={`rounded-xl border ${config.theme.accentSoftBorder} ${config.theme.accentSoftBg} px-4 py-3`}>
+                <div className="flex items-start gap-3">
+                  <MapPin size={16} className={`mt-0.5 shrink-0 ${config.theme.accentText}`} />
+                  <div className="min-w-0">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${config.theme.accentMutedText}`}>Polo atual</p>
+                    <p className="truncate text-sm font-black uppercase text-[#001a33]">
+                      {selectedPolo ? `${selectedPolo.nomeFantasia || selectedPolo.nome} (${selectedPolo.cidade})` : 'Carregando polo...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
+                  <MapPin size={14} className={config.theme.accentText} /> Polo
+                </label>
+                <select
+                  className={selectClass}
+                  value={formData.poloId}
+                  onChange={(e) => updateForm({ poloId: e.target.value })}
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {polos.map(p => (
+                    <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -100,11 +100,13 @@ export const asaasIntegrationService = {
     turmaId?: string | null,
     eadPayment?: { method?: string; installments?: number },
   ) {
-    const { data, error } = await supabase.functions.invoke('asaas-checkout', {
+    const isInlineEadPayment = ['PIX', 'BOLETO'].includes(String(eadPayment?.method || '').toUpperCase());
+    const { data, error } = await supabase.functions.invoke(isInlineEadPayment ? 'asaas-ead-checkout' : 'asaas-checkout', {
       body: {
         courseId,
         alunoId,
         turmaId,
+        method: eadPayment?.method,
         eadPaymentMethod: eadPayment?.method,
         eadInstallments: eadPayment?.installments,
       },
@@ -119,7 +121,23 @@ export const asaasIntegrationService = {
       url: string;
       alreadyPaid?: boolean;
       alreadyPending?: boolean;
+      awaitingWebhook?: boolean;
       matriculaId?: string;
+      receivableId?: string;
+      payment?: {
+        id?: string | null;
+        method?: string | null;
+        status?: string | null;
+        value?: number | null;
+        dueDate?: string | null;
+        invoiceUrl?: string | null;
+        bankSlipUrl?: string | null;
+        pixQrCode?: {
+          encodedImage?: string | null;
+          payload?: string | null;
+          expirationDate?: string | null;
+        } | null;
+      };
     };
   },
 };

@@ -13,9 +13,10 @@ import ConfirmModal from '../../components/ConfirmModal';
 interface GestaoEspecializacaoProps {
   onToggleDetails?: React.Dispatch<boolean>;
   poloId?: string;
+  creationPoloId?: string;
 }
 
-const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId }) => {
+const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
@@ -137,7 +138,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         onClose={() => setIsModalOpen(false)}
         onSave={handleCreate}
         cursosDisponiveis={cursosDisponiveis}
-        selectedPoloId={poloId}
+        selectedPoloId={creationPoloId || poloId}
       />
 
       <ConfirmModal

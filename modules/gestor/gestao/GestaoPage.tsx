@@ -12,12 +12,13 @@ import GestaoEad from './ead/GestaoEad';
 
 interface GestaoPageProps {
   poloId?: string;
+  activePoloId?: string;
   poloNome?: string;
   isMatriz: boolean;
   onRequestScrollTop?: () => void;
 }
 
-const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, isMatriz, onRequestScrollTop }) => {
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop }) => {
   const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
   const queryClient = useQueryClient();
@@ -87,9 +88,9 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, isMatriz, onRequestScro
       {/* Conteúdo Dinâmico */}
       <div className="min-h-[500px]">
         {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
-        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} />}
-        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} />}
-        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} />}
+        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
+        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
+        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
         {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} />}
       </div>
     </div>

@@ -79,10 +79,12 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
   if (!isOpen) return null;
 
+  const selectedPolo = polos.find(p => p.id === formData.poloId);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
-    const polo = polos.find(p => p.id === formData.poloId);
+    const polo = selectedPolo;
 
     if (!curso || !polo) { alert('Selecione curso e polo'); return; }
 
@@ -119,7 +121,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={selectedPoloId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
              {/* Curso */}
              <div className="space-y-2">
                 <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
@@ -139,23 +141,36 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
              </div>
 
              {/* Polo */}
-             <div className="space-y-2">
-                <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-                    <MapPin size={14} className="text-emerald-600" /> Polo / Unidade
-                </label>
-                <select 
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-emerald-500"
-                    value={formData.poloId}
-                    onChange={(e) => setFormData({...formData, poloId: e.target.value})}
-                    disabled={Boolean(selectedPoloId)}
-                    required
-                >
-                    <option value="">Selecione...</option>
-                    {polos.filter(p => !selectedPoloId || p.id === selectedPoloId).map(p => (
-                        <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
-                    ))}
-                </select>
-             </div>
+             {selectedPoloId ? (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700/70">Polo atual</p>
+                      <p className="truncate text-sm font-black uppercase text-[#001a33]">
+                        {selectedPolo ? `${selectedPolo.nomeFantasia || selectedPolo.nome} (${selectedPolo.cidade})` : 'Carregando polo...'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+             ) : (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
+                      <MapPin size={14} className="text-emerald-600" /> Polo / Unidade
+                  </label>
+                  <select
+                      className="w-full p-3 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none focus:border-emerald-500"
+                      value={formData.poloId}
+                      onChange={(e) => setFormData({...formData, poloId: e.target.value})}
+                      required
+                  >
+                      <option value="">Selecione...</option>
+                      {polos.map(p => (
+                          <option key={p.id} value={p.id}>{p.nomeFantasia} ({p.cidade})</option>
+                      ))}
+                  </select>
+               </div>
+             )}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">

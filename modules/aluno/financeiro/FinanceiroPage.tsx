@@ -14,7 +14,6 @@ interface FinanceiroPageProps {
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
-  const [asaasReceiptPreview, setAsaasReceiptPreview] = useState<{ url: string; title: string } | null>(null);
   const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
   const [notice, setNotice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -158,22 +157,21 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const hasOpenModal = Boolean(selectedReceipt || asaasReceiptPreview);
+    const hasOpenModal = Boolean(selectedReceipt);
     if (!hasOpenModal) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (selectedReceipt) closeReceipt();
-        if (asaasReceiptPreview) closeAsaasReceiptPreview();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedReceipt, asaasReceiptPreview]);
+  }, [selectedReceipt]);
 
   useEffect(() => {
-    const hasOpenOverlay = Boolean(selectedReceipt || asaasReceiptPreview);
+    const hasOpenOverlay = Boolean(selectedReceipt);
     if (!hasOpenOverlay) return;
 
     const bodyOverflow = document.body.style.overflow;
@@ -185,7 +183,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       document.body.style.overflow = bodyOverflow;
       document.documentElement.style.overflow = rootOverflow;
     };
-  }, [selectedReceipt, asaasReceiptPreview]);
+  }, [selectedReceipt]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInstallments.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -262,10 +260,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     if (isPaidThroughAsaas(inst)) {
       const receiptUrl = inst.asaas_transaction_receipt_url;
       if (receiptUrl) {
-        setAsaasReceiptPreview({
-          url: receiptUrl,
-          title: inst.descricao || 'Comprovante',
-        });
+        const opened = window.open(receiptUrl, '_blank');
+        if (!opened) {
+          setNotice('O Asaas não permite abrir o comprovante dentro da plataforma. Libere pop-ups ou clique no link para abrir o comprovante oficial.');
+          setTimeout(() => setNotice(''), 6500);
+        } else {
+          opened.opener = null;
+        }
         return;
       }
       setNotice('O comprovante ainda não foi retornado. Aguarde a atualização do pagamento ou fale com a secretaria.');
@@ -278,10 +279,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const closeReceipt = () => {
     setSelectedReceipt(null);
-  };
-
-  const closeAsaasReceiptPreview = () => {
-    setAsaasReceiptPreview(null);
   };
 
   const downloadReceiptPdf = async () => {
@@ -760,54 +757,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
       </div>
-
-      {/* Comprovante Fullscreen Preview */}
-      {asaasReceiptPreview && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed left-0 top-0 right-0 bottom-0 z-[10000] h-dvh w-screen overflow-hidden bg-slate-950 pointer-events-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Prévia do comprovante"
-        >
-          <div className="flex h-full w-full flex-col">
-            <div className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Comprovante</p>
-                <h4 className="truncate text-sm font-black uppercase tracking-tight text-white sm:text-base">
-                  {asaasReceiptPreview.title}
-                </h4>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <a
-                  href={asaasReceiptPreview.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition-colors hover:bg-white/15"
-                >
-                  <ExternalLink size={14} />
-                  Abrir fora
-                </a>
-                <button
-                  type="button"
-                  onClick={closeAsaasReceiptPreview}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition-colors hover:bg-white/15"
-                  title="Fechar comprovante"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 bg-slate-900">
-              <iframe
-                src={asaasReceiptPreview.url}
-                title="Prévia do comprovante"
-                className="h-full w-full border-0 bg-white"
-              />
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
 
       {/* Recibo Modal Overlay */}
       {selectedReceipt && typeof document !== 'undefined' && createPortal(

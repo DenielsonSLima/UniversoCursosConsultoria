@@ -254,10 +254,10 @@ const CategoriasFinanceirasConfig: React.FC = () => {
         </div>
         <div>
           <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">
-            CATEGORIA FINANCEIRO
+            Categorias Financeiras
           </h2>
-          <p className="text-slate-500 font-bold uppercase text-sm mt-0.5">
-            ADICIONE, EDITE, ATIVE E INATIVE AS CATEGORIAS DO FINANCEIRO.
+          <p className="text-slate-500 font-bold text-sm mt-0.5">
+            Adicione, edite, ative e inative as categorias do financeiro.
           </p>
         </div>
       </div>

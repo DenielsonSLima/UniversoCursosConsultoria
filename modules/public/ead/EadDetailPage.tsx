@@ -499,7 +499,7 @@ const EadDetailPage: React.FC = () => {
                 )}
 
                 {curso.valor && curso.valor > 0 ? (
-                  <OnlineCheckoutButton courseId={curso.id} />
+                  <OnlineCheckoutButton courseId={curso.id} eadInline />
                 ) : (
                   <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800">
                     O valor deste curso ainda não foi configurado para compra online.
