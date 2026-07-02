@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpRight, Copy, FileText, QrCode, X } from 'lucide-react';
 
 export interface EadPaymentPanelData {
@@ -76,11 +77,13 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
     onCopied?.();
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal((
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[99999] flex min-h-[100svh] w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto"
+      className="fixed inset-0 z-[99999] flex h-screen min-h-screen w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto"
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
@@ -209,7 +212,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
         </div>
       </div>
     </div>
-  );
+  ), document.body);
 };
 
 export default EadPaymentModal;

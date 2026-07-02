@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
@@ -2087,8 +2088,10 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
           : 1;
         const installmentValue = selectedInstallments > 1 ? options.amount / selectedInstallments : options.amount;
 
-        return (
-          <div className="fixed inset-0 z-[99999] flex min-h-[100svh] w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto">
+        if (typeof document === 'undefined') return null;
+
+        return createPortal((
+          <div className="fixed inset-0 z-[99999] flex h-screen min-h-screen w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto">
             <div className="relative z-[100000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                 <div>
@@ -2188,7 +2191,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
               </div>
             </div>
           </div>
-        );
+        ), document.body);
       })()}
 
       {isLoading ? (
