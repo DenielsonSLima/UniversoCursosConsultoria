@@ -65,7 +65,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
           const boletoUrl = result.payment.bankSlipUrl || result.payment.invoiceUrl || result.url;
           if (boletoUrl) {
             setLoading(false);
-            window.location.assign(boletoUrl);
+            window.open(boletoUrl, '_blank', 'noopener,noreferrer');
             return;
           }
         }

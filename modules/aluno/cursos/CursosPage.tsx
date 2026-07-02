@@ -685,8 +685,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         if (paymentMethod === 'BOLETO') {
           const boletoUrl = payment.bankSlipUrl || payment.invoiceUrl || url;
           if (boletoUrl) {
-            if (sameTab) window.location.assign(boletoUrl);
-            else window.open(boletoUrl, '_blank', 'noopener,noreferrer');
+            window.open(boletoUrl, '_blank', 'noopener,noreferrer');
             return;
           }
         }
