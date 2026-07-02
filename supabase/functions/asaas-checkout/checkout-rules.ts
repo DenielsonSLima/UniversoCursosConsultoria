@@ -18,9 +18,14 @@ export {
   resolveBillingType,
 };
 
-export const resolveOnlineCharge = (course: any, turma: any, dueDate: string) => {
+export const resolveOnlineCharge = (
+  course: any,
+  turma: any,
+  dueDate: string,
+  options: { eadPayment?: { method?: unknown; installments?: unknown } } = {},
+) => {
   const modalidade = String(course?.modalidade || "").toUpperCase();
-  if (modalidade === "EAD") return resolveEadCheckoutCharge(course, turma, dueDate);
+  if (modalidade === "EAD") return resolveEadCheckoutCharge(course, turma, dueDate, options.eadPayment);
   if (modalidade === "LIVRE") return resolveLivreCheckoutCharge(course, turma, dueDate);
   if (modalidade === "ESPECIALIZACAO") return resolveEspecializacaoCheckoutCharge(course, turma, dueDate);
   if (modalidade === "TECNICO") return resolveTecnicoInitialEnrollmentCharge(course, turma, dueDate);

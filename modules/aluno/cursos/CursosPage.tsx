@@ -3,6 +3,12 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
+import {
+  defaultEadCheckoutMethod,
+  formatEadCheckoutMoney,
+  resolveEadCheckoutOptions,
+} from './eadCheckoutOptions';
+import type { EadCheckoutPaymentMethod } from './eadCheckoutOptions';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { diplomaService } from '../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
@@ -505,6 +511,9 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const [showCompletedLessons, setShowCompletedLessons] = useState(false);
   const [activityCompletionPrompt, setActivityCompletionPrompt] = useState<{ activityId: string; title: string } | null>(null);
   const [checkoutReview, setCheckoutReview] = useState<{ course: any; turma: any } | null>(null);
+  const [eadCheckoutReview, setEadCheckoutReview] = useState<{ course: any } | null>(null);
+  const [eadPaymentMethod, setEadPaymentMethod] = useState<EadCheckoutPaymentMethod>('PIX');
+  const [eadInstallments, setEadInstallments] = useState(1);
   const [acceptedOnlineTerms, setAcceptedOnlineTerms] = useState(false);
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
@@ -628,9 +637,21 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async ({ course, turmaId, checkoutWindow, sameTab }: { course: any; turmaId?: string | null; checkoutWindow: Window | null; sameTab?: boolean }) => {
+    mutationFn: async ({
+      course,
+      turmaId,
+      checkoutWindow,
+      sameTab,
+      eadPayment,
+    }: {
+      course: any;
+      turmaId?: string | null;
+      checkoutWindow: Window | null;
+      sameTab?: boolean;
+      eadPayment?: { method: EadCheckoutPaymentMethod; installments: number };
+    }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId);
+      const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId, eadPayment);
       return {
         url: result.url,
         checkoutWindow,
@@ -683,7 +704,11 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     }
   });
 
-  const startCheckout = (course: any, turma?: any | null) => {
+  const startCheckout = (
+    course: any,
+    turma?: any | null,
+    eadPayment?: { method: EadCheckoutPaymentMethod; installments: number },
+  ) => {
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
     const checkoutWindow = isEadCheckout ? null : window.open('', '_blank');
     if (checkoutWindow) {
@@ -695,7 +720,17 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       turmaId: turma?.id || null,
       checkoutWindow,
       sameTab: isEadCheckout,
+      eadPayment,
     });
+  };
+
+  const openEadCheckoutReview = (course: any) => {
+    const options = resolveEadCheckoutOptions(course);
+    const initialMethod = defaultEadCheckoutMethod(options);
+    setCheckoutError('');
+    setEadPaymentMethod(initialMethod);
+    setEadInstallments(initialMethod === 'CREDIT_CARD' ? options.parcelasPadrao : 1);
+    setEadCheckoutReview({ course });
   };
 
   useEffect(() => {
@@ -1998,6 +2033,120 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         </div>
       )}
 
+      {eadCheckoutReview && (() => {
+        const options = resolveEadCheckoutOptions(eadCheckoutReview.course);
+        const selectedMethod = options.options.some(option => option.method === eadPaymentMethod)
+          ? eadPaymentMethod
+          : defaultEadCheckoutMethod(options);
+        const selectedInstallments = selectedMethod === 'CREDIT_CARD'
+          ? Math.max(1, Math.min(options.maxParcelas, eadInstallments || 1))
+          : 1;
+        const installmentValue = selectedInstallments > 1 ? options.amount / selectedInstallments : options.amount;
+
+        return (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
+            <div className="w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
+                  <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">{eadCheckoutReview.course.nome}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEadCheckoutReview(null)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4 px-6 py-5">
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Valor do curso</p>
+                  <p className="mt-1 text-2xl font-black text-[#001a33]">{formatEadCheckoutMoney(options.amount)}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {options.options.map(option => {
+                    const active = selectedMethod === option.method;
+                    const Icon = option.method === 'CREDIT_CARD' ? CreditCard : option.method === 'BOLETO' ? FileText : Zap;
+                    return (
+                      <button
+                        key={option.method}
+                        type="button"
+                        onClick={() => {
+                          setEadPaymentMethod(option.method);
+                          setEadInstallments(option.method === 'CREDIT_CARD' ? Math.max(1, Math.min(options.maxParcelas, options.parcelasPadrao)) : 1);
+                        }}
+                        className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                          active
+                            ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedMethod === 'CREDIT_CARD' && options.allowInstallments && (
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/45 p-4">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-blue-700">
+                      Parcelas no cartão
+                    </label>
+                    <select
+                      value={selectedInstallments}
+                      onChange={(event) => setEadInstallments(Number(event.target.value) || 1)}
+                      className="mt-2 w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-[#001a33] outline-none focus:border-blue-400"
+                    >
+                      {Array.from({ length: options.maxParcelas }, (_, index) => index + 1).map(installments => (
+                        <option key={installments} value={installments}>
+                          {installments}x de {formatEadCheckoutMoney(options.amount / installments)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
+                  {selectedMethod === 'CREDIT_CARD'
+                    ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)}.`
+                    : `${selectedMethod === 'PIX' ? 'Pix' : 'Boleto'} selecionado: cobrança única de ${formatEadCheckoutMoney(options.amount)}.`}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEadCheckoutReview(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  disabled={checkoutMutation.isPending || options.options.length === 0}
+                  onClick={() => {
+                    const review = eadCheckoutReview;
+                    setEadCheckoutReview(null);
+                    startCheckout(review.course, null, {
+                      method: selectedMethod,
+                      installments: selectedInstallments,
+                    });
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
+                >
+                  {checkoutMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                  Continuar para pagamento
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -2142,7 +2291,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                             </button>
                           ) : (
                             <button
-                              onClick={() => startCheckout(course)}
+                              onClick={() => openEadCheckoutReview(course)}
                               disabled={isCheckoutLoading}
                               className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 rounded-xl py-3 transition-all"
                             >

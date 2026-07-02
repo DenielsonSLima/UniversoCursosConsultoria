@@ -94,9 +94,20 @@ export const asaasIntegrationService = {
     throw new Error('Links genéricos de curso foram desativados. Use o checkout online do aluno para gerar uma cobrança no nome dele.');
   },
 
-  async getPublicCheckout(courseId: string, alunoId: string, turmaId?: string | null) {
+  async getPublicCheckout(
+    courseId: string,
+    alunoId: string,
+    turmaId?: string | null,
+    eadPayment?: { method?: string; installments?: number },
+  ) {
     const { data, error } = await supabase.functions.invoke('asaas-checkout', {
-      body: { courseId, alunoId, turmaId },
+      body: {
+        courseId,
+        alunoId,
+        turmaId,
+        eadPaymentMethod: eadPayment?.method,
+        eadInstallments: eadPayment?.installments,
+      },
     });
     if (error) {
       const context = (error as any).context;

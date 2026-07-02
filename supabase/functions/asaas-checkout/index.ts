@@ -198,7 +198,10 @@ Deno.serve(async (req: Request) => {
   let paymentCreated = false;
 
   try {
-    const { courseId, alunoId: requestedAlunoId, turmaId } = await req.json();
+    const requestBody = await req.json();
+    const { courseId, alunoId: requestedAlunoId, turmaId } = requestBody;
+    const eadPaymentMethod = requestBody?.eadPaymentMethod ?? requestBody?.paymentMethod ?? requestBody?.billingType;
+    const eadInstallments = requestBody?.eadInstallments ?? requestBody?.installments;
     if (!courseId) throw new Error("Curso não informado.");
 
     const authorization = req.headers.get("Authorization") || "";
@@ -244,6 +247,8 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
     if (!ONLINE_MODALIDADES.includes(course.modalidade)) throw new Error("Modalidade sem checkout online.");
+    const isEadCheckout = String(course.modalidade || "").toUpperCase() === "EAD";
+    const hasExplicitEadPaymentSelection = isEadCheckout && Boolean(String(eadPaymentMethod || "").trim());
     let alunoQuery = admin
       .from("parceiros")
       .select("*")
@@ -280,7 +285,9 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Atualize o cadastro do aluno antes de comprar pelo Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
     }
 
-    const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id);
+    const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id, {
+      ignorePending: hasExplicitEadPaymentSelection,
+    });
     if (existingCourseCheckout?.state === "paid") {
       const existingStatus = normalize(existingCourseCheckout.matricula?.status);
       if (!["ativo", "concluido", "trancado"].includes(existingStatus)) {
@@ -511,6 +518,12 @@ Deno.serve(async (req: Request) => {
       return findOrCreateCustomerByCpf();
     };
 
+    const dataVencimento = dueDateInDays(7);
+    const charge = resolveOnlineCharge(course, turma, dataVencimento, {
+      eadPayment: isEadCheckout
+        ? { method: eadPaymentMethod, installments: eadInstallments }
+        : undefined,
+    });
     let existingReceivable: any = null;
 
     const clearLocalAsaasPayment = async (receivableId: string, reason: string) => {
@@ -537,7 +550,49 @@ Deno.serve(async (req: Request) => {
       return data;
     };
 
-    const getReusableExistingPaymentUrl = async (currentReceivable: any) => {
+    const moneyValue = (value: unknown) =>
+      Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+    const remotePaymentMatchesCharge = (payment: any, expectedCharge: any) => {
+      if (!expectedCharge) return true;
+      const expectedBillingType = String(expectedCharge.billingType || "").toUpperCase();
+      const remoteBillingType = String(payment?.billingType || "").toUpperCase();
+      if (!expectedBillingType || remoteBillingType !== expectedBillingType) return false;
+
+      const expectedInstallments = Number(expectedCharge.installmentCount || 1);
+      const expectedHasInstallments = expectedBillingType === "CREDIT_CARD" && expectedInstallments > 1;
+      const remoteHasInstallments = Boolean(payment?.installment || payment?.installmentId);
+      if (expectedHasInstallments !== remoteHasInstallments) return false;
+
+      const expectedPaymentValue = expectedHasInstallments
+        ? moneyValue(Number(expectedCharge.value || 0) / expectedInstallments)
+        : moneyValue(expectedCharge.value);
+      return Math.abs(moneyValue(payment?.value) - expectedPaymentValue) <= 0.01;
+    };
+
+    const cancelRemoteAndClearLocalPayment = async (currentReceivable: any, reason: string) => {
+      if (currentReceivable?.asaas_payment_id) {
+        const response = await fetch(`${baseUrl}/payments/${currentReceivable.asaas_payment_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Aluno",
+            access_token: apiKey,
+          },
+        });
+        const payload = response.status === 204 ? null : await response.json().catch(() => null);
+        if (!response.ok && response.status !== 404) {
+          const message = payload?.errors?.map((item: any) => item.description).join(" ")
+            || payload?.message
+            || `Erro ${response.status} ao cancelar cobrança anterior no Asaas.`;
+          throw new Error(message);
+        }
+      }
+
+      return clearLocalAsaasPayment(currentReceivable.id, reason);
+    };
+
+    const getReusableExistingPaymentUrl = async (currentReceivable: any, expectedCharge?: any) => {
       if (!currentReceivable?.asaas_payment_id) return null;
       const localAsaasStatus = String(currentReceivable.asaas_status || "").toUpperCase();
       if (["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(localAsaasStatus)) {
@@ -554,6 +609,13 @@ Deno.serve(async (req: Request) => {
         }
 
         const paid = isPaidPayment(remotePayment);
+        if (!paid && expectedCharge && !remotePaymentMatchesCharge(remotePayment, expectedCharge)) {
+          existingReceivable = await cancelRemoteAndClearLocalPayment(
+            currentReceivable,
+            "Cobrança Asaas anterior não corresponde à opção de pagamento EAD escolhida; será gerado novo checkout.",
+          );
+          return null;
+        }
         const { data: refreshedReceivable, error: refreshError } = await admin
           .from("contas_receber")
           .update({
@@ -608,7 +670,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (existingReceivable?.asaas_payment_id) {
-      const reusableUrl = await getReusableExistingPaymentUrl(existingReceivable);
+      const reusableUrl = await getReusableExistingPaymentUrl(existingReceivable, hasExplicitEadPaymentSelection ? charge : undefined);
       if (reusableUrl) return json({ url: reusableUrl });
     }
 
@@ -687,8 +749,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const dataVencimento = dueDateInDays(7);
-    const charge = resolveOnlineCharge(course, turma, dataVencimento);
     const receivablePayload = {
       polo_id: turma.polo_id,
       descricao: charge.description,

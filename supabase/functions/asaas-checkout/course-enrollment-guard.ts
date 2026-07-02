@@ -15,6 +15,10 @@ export interface ExistingCourseCheckout {
   url: string | null;
 }
 
+export interface FindExistingCourseCheckoutOptions {
+  ignorePending?: boolean;
+}
+
 const normalizeStatus = (status: unknown) => String(status || "").trim().toUpperCase();
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
@@ -52,6 +56,7 @@ export const findExistingCourseCheckout = async (
   admin: any,
   alunoId: string,
   courseId: string,
+  options: FindExistingCourseCheckoutOptions = {},
 ): Promise<ExistingCourseCheckout | null> => {
   const { data: matriculas, error: matriculasError } = await admin
     .from("matriculas")
@@ -80,9 +85,12 @@ export const findExistingCourseCheckout = async (
         asaas_status,
         asaas_payment_id,
         asaas_payment_link_id,
+        asaas_installment_id,
         asaas_invoice_url,
         asaas_bank_slip_url,
         asaas_transaction_receipt_url,
+        valor,
+        forma_pagamento,
         data_vencimento,
         data_pagamento,
         updated_at,
@@ -98,6 +106,8 @@ export const findExistingCourseCheckout = async (
       receivablesByMatricula.set(receivable.matricula_id, current);
     }
   }
+
+  if (options.ignorePending) return null;
 
   for (const matricula of matriculas) {
     const matriculaStatus = normalizeStatus(matricula.status);
