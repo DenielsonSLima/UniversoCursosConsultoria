@@ -2044,8 +2044,8 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         const installmentValue = selectedInstallments > 1 ? options.amount / selectedInstallments : options.amount;
 
         return (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
-            <div className="w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
+          <div className="fixed inset-0 z-[999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/65 px-4 py-6">
+            <div className="relative z-[1000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
