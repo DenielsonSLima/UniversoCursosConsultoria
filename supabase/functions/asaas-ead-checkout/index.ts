@@ -178,12 +178,12 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const courseId = String(body.courseId || "");
-    const alunoId = String(body.alunoId || "");
+    const requestedAlunoId = body.alunoId ? String(body.alunoId) : "";
     const turmaId = body.turmaId ? String(body.turmaId) : null;
     method = normalizeMethod(body.method || body.eadPaymentMethod || body.billingType);
 
     if (!UUID_RE.test(courseId)) throw new Error("Curso EAD inválido.");
-    if (!UUID_RE.test(alunoId)) throw new Error("Aluno inválido para pagamento EAD.");
+    if (requestedAlunoId && !UUID_RE.test(requestedAlunoId)) throw new Error("Aluno inválido para pagamento EAD.");
     if (turmaId && !UUID_RE.test(turmaId)) throw new Error("Turma EAD inválida.");
 
     const authorization = req.headers.get("Authorization") || "";
@@ -208,8 +208,8 @@ Deno.serve(async (req: Request) => {
       .from("parceiros")
       .select("*")
       .eq("tipo", "Aluno");
-    alunoQuery = isGestorAtivo
-      ? alunoQuery.eq("id", alunoId)
+    alunoQuery = isGestorAtivo && requestedAlunoId
+      ? alunoQuery.eq("id", requestedAlunoId)
       : alunoQuery.ilike("email", authEmail);
 
     const { data: alunoRow, error: alunoError } = await alunoQuery
@@ -221,7 +221,7 @@ Deno.serve(async (req: Request) => {
     if (!aluno || String(aluno.tipo || "").toUpperCase() !== "ALUNO") {
       throw new Error("Cadastro de aluno não localizado para pagamento EAD.");
     }
-    if (!isGestorAtivo && alunoId && alunoId !== aluno.id) {
+    if (!isGestorAtivo && requestedAlunoId && requestedAlunoId !== aluno.id) {
       throw new Error("Você só pode gerar cobrança EAD para o seu próprio cadastro.");
     }
 
@@ -379,21 +379,27 @@ Deno.serve(async (req: Request) => {
     };
 
     const getPixQrCode = async (paymentId: string) => {
-      const qrCode = await callAsaas(`/payments/${paymentId}/pixQrCode`);
-      return {
-        encodedImage: qrCode?.encodedImage || null,
-        payload: qrCode?.payload || null,
-        expirationDate: qrCode?.expirationDate || null,
-      };
+      try {
+        const qrCode = await callAsaas(`/payments/${paymentId}/pixQrCode`);
+        return {
+          encodedImage: qrCode?.encodedImage || null,
+          payload: qrCode?.payload || null,
+          expirationDate: qrCode?.expirationDate || null,
+        };
+      } catch (qrError) {
+        console.warn("Nao foi possivel recuperar QR Code Pix EAD:", qrError);
+        return null;
+      }
     };
 
     const buildPaymentResponse = async (payment: any, currentReceivable: any, flags: Record<string, unknown> = {}) => {
       const billingType = String(payment?.billingType || method || "").toUpperCase();
       const bankSlipUrl = payment?.bankSlipUrl || currentReceivable?.asaas_bank_slip_url || null;
       const invoiceUrl = payment?.invoiceUrl || currentReceivable?.asaas_invoice_url || bankSlipUrl || null;
+      const primaryUrl = billingType === "BOLETO" ? (bankSlipUrl || invoiceUrl) : invoiceUrl;
       const pixQrCode = billingType === "PIX" && payment?.id ? await getPixQrCode(payment.id) : null;
       return {
-        url: invoiceUrl,
+        url: primaryUrl,
         matriculaId: matricula.id,
         receivableId: currentReceivable.id,
         ...flags,
@@ -442,9 +448,32 @@ Deno.serve(async (req: Request) => {
     }
 
     if (receivable?.asaas_payment_id) {
-      const remotePayment = await callAsaas(`/payments/${receivable.asaas_payment_id}`);
+      let remotePayment: any = null;
+      try {
+        remotePayment = await callAsaas(`/payments/${receivable.asaas_payment_id}`);
+      } catch (remoteError) {
+        const remoteStatusCode = (remoteError as Error & { status?: number })?.status;
+        const remoteMessage = normalizeErrorMessage(remoteError);
+        if (remoteStatusCode !== 404 && !/not found|nao encontrada|não encontrada|inexistente/i.test(remoteMessage)) {
+          throw remoteError;
+        }
+        await admin.from("contas_receber").update({
+          asaas_payment_id: null,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: null,
+          asaas_invoice_url: null,
+          asaas_bank_slip_url: null,
+          asaas_installment_id: null,
+          asaas_transaction_receipt_url: null,
+          asaas_status: null,
+          asaas_last_error: "Cobrança EAD anterior não localizada no Asaas; será gerada uma nova.",
+          updated_at: new Date().toISOString(),
+        }).eq("id", receivable.id);
+        receivable.asaas_payment_id = null;
+      }
+
       const remoteStatus = String(remotePayment?.status || "").toUpperCase();
-      if (isPaidAsaasStatus(remoteStatus)) {
+      if (remotePayment && isPaidAsaasStatus(remoteStatus)) {
         await admin.from("contas_receber").update({
           asaas_status: remotePayment.status || receivable.asaas_status,
           asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
@@ -457,7 +486,7 @@ Deno.serve(async (req: Request) => {
         }), 200, corsHeaders);
       }
 
-      if (isCanceledAsaasStatus(remoteStatus)) {
+      if (remotePayment && isCanceledAsaasStatus(remoteStatus)) {
         await admin.from("contas_receber").update({
           asaas_payment_id: null,
           asaas_payment_link_id: null,
@@ -471,7 +500,7 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq("id", receivable.id);
         receivable.asaas_payment_id = null;
-      } else if (String(remotePayment?.billingType || "").toUpperCase() === method) {
+      } else if (remotePayment && String(remotePayment?.billingType || "").toUpperCase() === method) {
         await admin.from("contas_receber").update({
           asaas_invoice_url: remotePayment.invoiceUrl || receivable.asaas_invoice_url || null,
           asaas_bank_slip_url: remotePayment.bankSlipUrl || receivable.asaas_bank_slip_url || null,
@@ -480,7 +509,7 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq("id", receivable.id);
         return json(await buildPaymentResponse(remotePayment, receivable, { alreadyPending: true }), 200, corsHeaders);
-      } else {
+      } else if (remotePayment) {
         await fetch(`${baseUrl}/payments/${receivable.asaas_payment_id}`, {
           method: "DELETE",
           headers: {
