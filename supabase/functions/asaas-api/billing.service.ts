@@ -1,5 +1,10 @@
 import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
-import { isValidCpf } from "./shared.ts";
+import { canCreateDetachedPaymentLink } from "../asaas/avulsa/payment-link.ts";
+import {
+  assertRequiredCustomerBillingData,
+  isValidCpf,
+  resolveBillingContacts,
+} from "../asaas/core/customer.ts";
 
 export const createAsaasBillingService = (
   admin: any,
@@ -10,24 +15,28 @@ export const createAsaasBillingService = (
     parceiro: any,
   ) => {
     const notificationsEnabled = anyNotificationChannelEnabled(runtime.config);
-    if (parceiro.asaas_customer_id) {
-      await callAsaas(runtime, `/customers/${parceiro.asaas_customer_id}`, {
-        method: "PUT",
-        body: JSON.stringify({ notificationDisabled: !notificationsEnabled }),
-      }).catch((error) => {
-        console.warn("Não foi possível atualizar preferência de notificações do cliente no Asaas:", error);
-      });
-      return parceiro.asaas_customer_id as string;
-    }
-
-    const cpfCnpj = String(
-      parceiro.responsavel_financeiro && parceiro.responsavel_cpf
-        ? parceiro.responsavel_cpf
-        : parceiro.cpf_cnpj || "",
-    ).replace(/\D/g, "");
+    const { cpfCnpj, email, phone } = resolveBillingContacts(parceiro);
+    assertRequiredCustomerBillingData(parceiro, cpfCnpj, email, phone);
     if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para gerar cobrança no Asaas.");
     if (!isValidCpf(cpfCnpj)) {
       throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de enviar ao Asaas.");
+    }
+
+    if (parceiro.asaas_customer_id) {
+      await callAsaas(runtime, `/customers/${parceiro.asaas_customer_id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: parceiro.nome,
+          cpfCnpj,
+          email,
+          mobilePhone: phone,
+          externalReference: parceiro.id,
+          notificationDisabled: !notificationsEnabled,
+        }),
+      }).catch((error) => {
+        console.warn("Não foi possível atualizar dados do cliente no Asaas:", error);
+      });
+      return parceiro.asaas_customer_id as string;
     }
 
     const found = await callAsaas(runtime, `/customers?cpfCnpj=${cpfCnpj}&limit=1`);
@@ -38,12 +47,8 @@ export const createAsaasBillingService = (
         body: JSON.stringify({
           name: parceiro.nome,
           cpfCnpj,
-          email: parceiro.responsavel_financeiro
-            ? parceiro.responsavel_email || parceiro.email
-            : parceiro.email,
-          mobilePhone: parceiro.responsavel_financeiro
-            ? parceiro.responsavel_telefone || parceiro.telefone
-            : parceiro.telefone,
+          email,
+          mobilePhone: phone,
           postalCode: String(parceiro.cep || "").replace(/\D/g, "") || undefined,
           address: parceiro.endereco || undefined,
           addressNumber: parceiro.numero || undefined,
@@ -584,10 +589,10 @@ export const createAsaasBillingService = (
     }
 
     if (!receivable.cliente_id) {
-      if (String(receivable.categoria || "").toUpperCase() === "OUTROS_CREDITOS" || !receivable.matricula_id) {
+      if (canCreateDetachedPaymentLink(receivable)) {
         return createDetachedPaymentLink(runtime, receivable);
       }
-      throw new Error("A cobrança não possui aluno vinculado.");
+      throw new Error("A cobrança precisa ter aluno/parceiro vinculado para gerar pagamento no Asaas.");
     }
 
     const { data: lockedReceivable, error: lockError } = await admin

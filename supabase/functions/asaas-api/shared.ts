@@ -4,33 +4,14 @@ export const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-export type Environment = "sandbox" | "production";
-
-export const normalizeEnvironment = (value: unknown): Environment =>
-  value === "production" ? "production" : "sandbox";
-
-export const apiSecretName = (environment: Environment) =>
-  environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key";
-
-export const webhookSecretName = (environment: Environment) =>
-  environment === "production" ? "asaas_production_webhook_token" : "asaas_sandbox_webhook_token";
-
-export const baseUrlFor = (environment: Environment) =>
-  environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
-
-export const isValidCpf = (value: string) => {
-  const cpf = value.replace(/\D/g, "");
-  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-
-  const calcDigit = (slice: string, factor: number) => {
-    const sum = slice.split("").reduce((total, digit) => total + Number(digit) * factor--, 0);
-    const rest = (sum * 10) % 11;
-    return rest === 10 ? 0 : rest;
-  };
-
-  return calcDigit(cpf.slice(0, 9), 10) === Number(cpf[9])
-    && calcDigit(cpf.slice(0, 10), 11) === Number(cpf[10]);
-};
+export type { Environment } from "../asaas/core/runtime.ts";
+export {
+  apiSecretName,
+  baseUrlFor,
+  normalizeEnvironment,
+  webhookSecretName,
+} from "../asaas/core/runtime.ts";
+export { isValidCpf } from "../asaas/core/customer.ts";
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

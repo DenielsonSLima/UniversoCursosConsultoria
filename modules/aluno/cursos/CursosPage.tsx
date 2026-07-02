@@ -631,12 +631,23 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     mutationFn: async ({ course, turmaId, checkoutWindow }: { course: any; turmaId?: string | null; checkoutWindow: Window | null }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
       const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId);
-      return { url: result.url, checkoutWindow };
+      return {
+        url: result.url,
+        checkoutWindow,
+        alreadyPaid: result.alreadyPaid === true,
+        alreadyPending: result.alreadyPending === true,
+      };
     },
     onMutate: () => {
       setCheckoutError('');
     },
-    onSuccess: ({ url, checkoutWindow }) => {
+    onSuccess: ({ url, checkoutWindow, alreadyPaid, alreadyPending }) => {
+      if (alreadyPaid) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setCheckoutError('');
+        invalidateStudentCourseAccess();
+        return;
+      }
       if (checkoutWindow && !checkoutWindow.closed) {
         checkoutWindow.opener = null;
         checkoutWindow.location.href = url;
@@ -644,6 +655,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       } else {
         window.open(url, '_blank', 'noopener,noreferrer') || window.location.assign(url);
       }
+      if (alreadyPending) setCheckoutError('Você já tinha uma cobrança em aberto para este curso. Reabrimos o link existente.');
       invalidateStudentCourseAccess();
     },
     onError: (error: any, variables) => {

@@ -104,6 +104,11 @@ export const asaasIntegrationService = {
       throw new Error(body?.error || error.message);
     }
     if (data?.error) throw new Error(data.error);
-    return data as { url: string };
+    return data as {
+      url: string;
+      alreadyPaid?: boolean;
+      alreadyPending?: boolean;
+      matriculaId?: string;
+    };
   },
 };

@@ -40,7 +40,28 @@ export const isValidStudentCpf = (value?: string | null) => {
 };
 
 export const turmaAlunosService = {
-  async getAvailableStudents(enrolledIds: Set<string>): Promise<AvailableStudent[]> {
+  async getAvailableStudents(turmaId: string, enrolledIds: Set<string>): Promise<AvailableStudent[]> {
+    const excludedIds = new Set(enrolledIds);
+    const { data: turma, error: turmaError } = await supabase
+      .from('turmas')
+      .select('curso_id')
+      .eq('id', turmaId)
+      .maybeSingle();
+
+    if (turmaError) throw turmaError;
+    if (turma?.curso_id) {
+      const { data: courseEnrollments, error: courseEnrollmentsError } = await supabase
+        .from('matriculas')
+        .select('aluno_id, turmas!inner(curso_id)')
+        .eq('turmas.curso_id', turma.curso_id)
+        .in('status', ['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO', 'ATIVO', 'TRANCADO', 'CONCLUIDO']);
+
+      if (courseEnrollmentsError) throw courseEnrollmentsError;
+      for (const enrollment of courseEnrollments || []) {
+        if (enrollment.aluno_id) excludedIds.add(enrollment.aluno_id);
+      }
+    }
+
     const { data, error } = await supabase
       .from('parceiros')
       .select('id, nome, cpf_cnpj')
@@ -49,7 +70,7 @@ export const turmaAlunosService = {
       .order('nome');
 
     if (error) throw error;
-    return ((data || []) as AvailableStudent[]).filter((student) => !enrolledIds.has(student.id));
+    return ((data || []) as AvailableStudent[]).filter((student) => !excludedIds.has(student.id));
   },
 
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {

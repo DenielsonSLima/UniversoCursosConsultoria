@@ -3,6 +3,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { baseUrlFor, createCallAsaas } from "./asaas-http.ts";
 import { createAsaasWebhookHandlers } from "./handlers.service.ts";
 import {
+  markWebhookEventFailed,
+  markWebhookEventProcessed,
+  registerWebhookEvent,
+} from "../asaas/webhook/idempotency.ts";
+import {
   isPaymentConfirmedEvent,
   json,
   localStatusForPaymentEvent,
@@ -45,36 +50,13 @@ Deno.serve(async (req: Request) => {
     const callAsaas = createCallAsaas({ apiKey, environment, baseUrl: baseUrlFor(environment) });
     const handlers = createAsaasWebhookHandlers(admin, callAsaas);
 
-    const { error: insertError } = await admin.from("asaas_webhook_events").insert({
-      event_id: eventId,
-      event_type: eventType,
-      payment_id: payment.id || null,
+    const webhookEvent = await registerWebhookEvent(admin, {
+      eventId,
+      eventType,
+      paymentId: payment.id || null,
       payload,
     });
-    if (insertError?.code === "23505") {
-      const { data: existingEvent, error: existingError } = await admin
-        .from("asaas_webhook_events")
-        .select("processed")
-        .eq("event_id", eventId)
-        .maybeSingle();
-      if (existingError) throw existingError;
-      if (existingEvent?.processed === true) {
-        return json({ received: true, duplicate: true });
-      }
-      const { error: retryUpdateError } = await admin
-        .from("asaas_webhook_events")
-        .update({
-          event_type: eventType,
-          payment_id: payment.id || null,
-          payload,
-          processed: false,
-          processing_error: null,
-          received_at: new Date().toISOString(),
-        })
-        .eq("event_id", eventId);
-      if (retryUpdateError) throw retryUpdateError;
-    }
-    if (insertError && insertError.code !== "23505") throw insertError;
+    if (webhookEvent.duplicateProcessed) return json({ received: true, duplicate: true });
 
     if (
       payment?.id
@@ -94,20 +76,12 @@ Deno.serve(async (req: Request) => {
     await handlers.handleReceivablePayment(payment, eventType, localStatus);
     await handlers.handlePaymentLinkPayment(payment, eventType, localStatus, isPaymentConfirmed);
 
-    await admin.from("asaas_webhook_events").update({
-      processed: true,
-      processing_error: null,
-      processed_at: new Date().toISOString(),
-    }).eq("event_id", eventId);
+    await markWebhookEventProcessed(admin, eventId);
     return json({ received: true });
   } catch (error) {
     console.error(error);
     if (eventId) {
-      await admin.from("asaas_webhook_events").update({
-        processed: false,
-        processing_error: error instanceof Error ? error.message : String(error),
-        processed_at: new Date().toISOString(),
-      }).eq("event_id", eventId);
+      await markWebhookEventFailed(admin, eventId, error);
     }
     return json({ error: error instanceof Error ? error.message : "Erro interno." }, 500);
   }

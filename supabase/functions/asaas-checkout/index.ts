@@ -5,6 +5,9 @@ import {
   mapBillingType,
   resolveOnlineCharge,
 } from "./checkout-rules.ts";
+import { isValidCpf, missingStudentBillingFields, onlyDigits } from "../asaas/core/customer.ts";
+import { paymentDate } from "../asaas/core/status.ts";
+import { findExistingCourseCheckout } from "./course-enrollment-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +34,6 @@ const json = (body: unknown, status = 200) =>
 const dueDateInDays = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-const onlyDigits = (value?: string | null) => String(value || "").replace(/\D/g, "");
 const normalize = (value: unknown) => String(value || "").trim().toLowerCase();
 const isActiveStatus = (status: unknown) =>
   ["ativo", "active"].includes(normalize(status));
@@ -66,16 +68,12 @@ const resolvePublicBaseUrl = () => {
   return null;
 };
 
-const isValidCpf = (value: string) => {
-  const cpf = onlyDigits(value);
-  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-  const calcDigit = (slice: string, factor: number) => {
-    const sum = slice.split("").reduce((total, digit) => total + Number(digit) * factor--, 0);
-    const rest = (sum * 10) % 11;
-    return rest === 10 ? 0 : rest;
-  };
-  return calcDigit(cpf.slice(0, 9), 10) === Number(cpf[9])
-    && calcDigit(cpf.slice(0, 10), 11) === Number(cpf[10]);
+const alunoPortalUrl = (courseId?: string | null) => {
+  const publicBaseUrl = resolvePublicBaseUrl() || "https://universocc.com.br";
+  const url = new URL("/aluno", publicBaseUrl);
+  if (courseId) url.searchParams.set("courseId", courseId);
+  url.searchParams.set("asaas", "already-paid");
+  return url.toString();
 };
 
 const normalizeErrorMessage = (error: unknown) => {
@@ -108,9 +106,6 @@ const toDateString = (value: unknown) => {
 };
 
 const currentIsoDate = () => new Date().toISOString().slice(0, 10);
-
-const paymentDate = (payment: any) =>
-  String(payment.paymentDate || payment.clientPaymentDate || payment.confirmedDate || new Date().toISOString()).slice(0, 10);
 
 const isPaidPayment = (payment: any) =>
   ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
@@ -277,6 +272,36 @@ Deno.serve(async (req: Request) => {
     if (cpfCnpj.length === 11 && !isValidCpf(cpfCnpj)) {
       throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
     }
+    const missingBillingFields = missingStudentBillingFields(aluno);
+    if (missingBillingFields.length > 0) {
+      throw new Error(`Atualize o cadastro do aluno antes de comprar pelo Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
+    }
+
+    const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id);
+    if (existingCourseCheckout?.state === "paid") {
+      const existingStatus = normalize(existingCourseCheckout.matricula?.status);
+      if (!["ativo", "concluido", "trancado"].includes(existingStatus)) {
+        await admin
+          .from("matriculas")
+          .update({ status: "ATIVO" })
+          .eq("id", existingCourseCheckout.matricula.id);
+      }
+      return json({
+        url: existingCourseCheckout.url || alunoPortalUrl(course.id),
+        alreadyPaid: true,
+        matriculaId: existingCourseCheckout.matricula.id,
+      });
+    }
+    if (existingCourseCheckout?.state === "pending") {
+      if (existingCourseCheckout.url) {
+        return json({
+          url: existingCourseCheckout.url,
+          alreadyPending: true,
+          matriculaId: existingCourseCheckout.matricula.id,
+        });
+      }
+      throw new Error("Este aluno já possui uma matrícula aguardando pagamento para este curso. Atualize a tela ou procure a secretaria antes de gerar uma nova cobrança.");
+    }
 
     const requireOnlinePermission = course.modalidade !== "EAD";
     let turmasQuery = admin
@@ -325,50 +350,13 @@ Deno.serve(async (req: Request) => {
       ? false
       : turma.gerar_cobrancas_futuras === true;
 
-    let matricula: any = null;
-    const { data: existingMatriculas, error: existingMatriculaError } = await admin
-      .from("matriculas")
-      .select("*")
-      .eq("aluno_id", aluno.id)
-      .eq("turma_id", turma.id)
-      .order("data_matricula", { ascending: false })
-      .limit(1);
-    if (existingMatriculaError) throw existingMatriculaError;
-    const existingMatricula = existingMatriculas?.[0] || null;
-
-    if (existingMatricula) {
-      const shouldReopen = ["CANCELADO", "DESISTENTE", "TRANCADO", "VENCIDO"].includes(String(existingMatricula.status));
-      const { data, error } = await admin
-        .from("matriculas")
-        .update({
-          status: shouldReopen ? "PENDENTE" : existingMatricula.status,
-          financeiro_herdado: false,
-          gerar_cobranca_inicial: true,
-          gerar_cobranca_futura: gerarCobrancaFutura,
-          sincronizar_asaas: true,
-        })
-        .eq("id", existingMatricula.id)
-        .select()
-        .single();
-      if (error) throw error;
-      matricula = data;
-    } else {
-      const { data, error } = await admin
-        .from("matriculas")
-        .insert({
-          aluno_id: aluno.id,
-          turma_id: turma.id,
-          status: "PENDENTE",
-          financeiro_herdado: false,
-          gerar_cobranca_inicial: true,
-          gerar_cobranca_futura: gerarCobrancaFutura,
-          sincronizar_asaas: true,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      matricula = data;
-    }
+    const { data: matricula, error: matriculaError } = await admin.rpc("asaas_checkout_upsert_matricula", {
+      p_aluno_id: aluno.id,
+      p_turma_id: turma.id,
+      p_gerar_cobranca_futura: gerarCobrancaFutura,
+    });
+    if (matriculaError) throw matriculaError;
+    if (!matricula?.id) throw new Error("Não foi possível registrar a matrícula para o checkout.");
     checkoutMatriculaId = matricula.id;
 
     const { data: config, error: configError } = await admin

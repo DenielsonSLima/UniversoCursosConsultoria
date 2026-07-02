@@ -23,7 +23,7 @@ export const useAvailableStudents = (
 
   const query = useQuery({
     queryKey: academicLifecycleKeys.alunosDisponiveis(turmaId),
-    queryFn: () => turmaAlunosService.getAvailableStudents(enrolledIds),
+    queryFn: () => turmaAlunosService.getAvailableStudents(turmaId, enrolledIds),
     enabled,
   });
 
