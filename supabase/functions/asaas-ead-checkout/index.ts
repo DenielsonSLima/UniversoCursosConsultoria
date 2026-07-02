@@ -70,6 +70,11 @@ const baseUrlFor = (environment: Environment) =>
 const buildDescription = (courseName: string) =>
   `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
 
+const EAD_PAYMENT_RECIPIENT = {
+  name: "Universo Cursos e Consultoria",
+  document: "13.278.137/0001-54",
+};
+
 const isPaidAsaasStatus = (status: unknown) =>
   ["RECEIVED", "CONFIRMED"].includes(String(status || "").toUpperCase());
 
@@ -380,6 +385,8 @@ Deno.serve(async (req: Request) => {
           method: billingType,
           status: payment?.status || currentReceivable?.asaas_status || null,
           value: Number(payment?.value || currentReceivable?.valor || value),
+          courseName: course.nome,
+          recipient: EAD_PAYMENT_RECIPIENT,
           dueDate: toDateString(payment?.dueDate || currentReceivable?.data_vencimento),
           invoiceUrl,
           bankSlipUrl,

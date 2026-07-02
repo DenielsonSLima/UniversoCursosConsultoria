@@ -129,9 +129,15 @@ export const asaasIntegrationService = {
         method?: string | null;
         status?: string | null;
         value?: number | null;
+        displayValue?: string | null;
         dueDate?: string | null;
         invoiceUrl?: string | null;
         bankSlipUrl?: string | null;
+        courseName?: string | null;
+        recipient?: {
+          name?: string | null;
+          document?: string | null;
+        } | null;
         pixQrCode?: {
           encodedImage?: string | null;
           payload?: string | null;

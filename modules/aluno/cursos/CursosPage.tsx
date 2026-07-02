@@ -9,6 +9,7 @@ import {
   resolveEadCheckoutOptions,
 } from './eadCheckoutOptions';
 import type { EadCheckoutPaymentMethod } from './eadCheckoutOptions';
+import EadPaymentModal from '../../ead/components/EadPaymentModal';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { diplomaService } from '../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
@@ -22,7 +23,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
-  Copy,
   CreditCard,
   Download,
   FileText,
@@ -33,7 +33,6 @@ import {
   MonitorPlay,
   Play,
   Printer,
-  QrCode,
   Search,
   ShieldCheck,
   X,
@@ -521,6 +520,15 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!eadCheckoutReview) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [eadCheckoutReview]);
+
   const invalidateStudentCourseAccess = React.useCallback(() => {
     if (!alunoId) return;
     queryClient.invalidateQueries({ queryKey: ['aluno-cursos-disponiveis', alunoId] });
@@ -670,8 +678,17 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       setCheckoutError('');
     },
     onSuccess: ({ url, payment, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
-      if (payment && ['PIX', 'BOLETO'].includes(String(payment.method || '').toUpperCase())) {
+      const paymentMethod = String(payment?.method || '').toUpperCase();
+      if (payment && ['PIX', 'BOLETO'].includes(paymentMethod)) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        if (paymentMethod === 'BOLETO') {
+          const boletoUrl = payment.bankSlipUrl || payment.invoiceUrl || url;
+          if (boletoUrl) {
+            if (sameTab) window.location.assign(boletoUrl);
+            else window.open(boletoUrl, '_blank', 'noopener,noreferrer');
+            return;
+          }
+        }
         setEadPaymentPanel({ url, payment, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
         setCheckoutError(
           awaitingWebhook
@@ -2053,108 +2070,11 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       )}
 
       {eadPaymentPanel && (
-        <div className="fixed inset-0 z-[999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/65 px-4 py-6">
-          <div className="relative z-[1000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
-                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
-                  {String(eadPaymentPanel.payment?.method || '').toUpperCase() === 'PIX' ? 'Pague com Pix' : 'Boleto gerado'}
-                </h3>
-                <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                  O curso só será liberado depois que o webhook confirmado do Asaas atualizar a matrícula.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEadPaymentPanel(null)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-6 py-5">
-              {String(eadPaymentPanel.payment?.method || '').toUpperCase() === 'PIX' && (
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5 text-center">
-                  {eadPaymentPanel.payment?.pixQrCode?.encodedImage ? (
-                    <img
-                      src={`data:image/png;base64,${eadPaymentPanel.payment.pixQrCode.encodedImage}`}
-                      alt="QR Code Pix"
-                      className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
-                    />
-                  ) : (
-                    <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                      <QrCode size={80} />
-                    </div>
-                  )}
-                  <p className="mt-4 text-xs font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
-                  <div className="mt-2 rounded-2xl border border-emerald-100 bg-white p-3 text-left">
-                    <p className="line-clamp-3 break-all text-xs font-bold leading-relaxed text-slate-600">
-                      {eadPaymentPanel.payment?.pixQrCode?.payload || 'Código Pix indisponível. Abra a fatura oficial abaixo.'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const payload = eadPaymentPanel.payment?.pixQrCode?.payload;
-                      if (!payload) return;
-                      await navigator.clipboard.writeText(payload);
-                      setCheckoutError('Código Pix copia e cola copiado.');
-                    }}
-                    className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
-                  >
-                    <Copy size={14} />
-                    Copiar Pix
-                  </button>
-                </div>
-              )}
-
-              {String(eadPaymentPanel.payment?.method || '').toUpperCase() === 'BOLETO' && (
-                <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
-                      <FileText size={26} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black uppercase tracking-tight text-[#001a33]">Boleto oficial Asaas</p>
-                      <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                        Boleto emitido dentro da plataforma. Abra o documento oficial para pagar ou baixar.
-                      </p>
-                    </div>
-                  </div>
-                  {eadPaymentPanel.payment?.bankSlipUrl && (
-                    <a
-                      href={eadPaymentPanel.payment.bankSlipUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
-                    >
-                      <ArrowUpRight size={14} />
-                      Abrir boleto
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {eadPaymentPanel.url && (
-                <a
-                  href={eadPaymentPanel.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-slate-300 hover:text-slate-800"
-                >
-                  <ArrowUpRight size={14} />
-                  Abrir fatura oficial
-                </a>
-              )}
-
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
-                A tela pode ser fechada sem cancelar a cobrança. Quando o Asaas confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
-              </div>
-            </div>
-          </div>
-        </div>
+        <EadPaymentModal
+          panel={eadPaymentPanel}
+          onClose={() => setEadPaymentPanel(null)}
+          onCopied={() => setCheckoutError('Código Pix copia e cola copiado.')}
+        />
       )}
 
       {eadCheckoutReview && (() => {
@@ -2168,8 +2088,8 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         const installmentValue = selectedInstallments > 1 ? options.amount / selectedInstallments : options.amount;
 
         return (
-          <div className="fixed inset-0 z-[999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/65 px-4 py-6">
-            <div className="relative z-[1000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
+          <div className="fixed inset-0 z-[99999] flex min-h-[100svh] w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto">
+            <div className="relative z-[100000] w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
               <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>

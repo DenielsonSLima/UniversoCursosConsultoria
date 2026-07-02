@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Copy, CreditCard, ExternalLink, FileText, Loader2, QrCode, X, Zap } from 'lucide-react';
+import { CheckCircle2, CreditCard, FileText, Loader2, X, Zap } from 'lucide-react';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
+import EadPaymentModal from '../../ead/components/EadPaymentModal';
 import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '../../login/portal-session';
 
 interface OnlineCheckoutButtonProps {
@@ -59,6 +60,15 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
         tone: 'success',
       });
       if (eadInline && result.payment) {
+        const paymentMethod = String(result.payment.method || '').toUpperCase();
+        if (paymentMethod === 'BOLETO') {
+          const boletoUrl = result.payment.bankSlipUrl || result.payment.invoiceUrl || result.url;
+          if (boletoUrl) {
+            setLoading(false);
+            window.location.assign(boletoUrl);
+            return;
+          }
+        }
         setPaymentPanel(result);
         setLoading(false);
         return;
@@ -107,96 +117,11 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
       )}
 
       {paymentPanel && (
-        <div className="fixed inset-0 z-[80] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/70 px-4 py-6">
-          <div className="w-full max-w-xl rounded-[2rem] border border-white/20 bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-600">Pagamento EAD</p>
-                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
-                  {paymentPanel.payment?.method === 'PIX' ? 'Pague com Pix' : 'Boleto gerado'}
-                </h3>
-                <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                  A liberação do curso acontece somente após confirmação pelo webhook do Asaas.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPaymentPanel(null)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-6 py-5">
-              {paymentPanel.payment?.method === 'PIX' && (
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5 text-center">
-                  {paymentPanel.payment?.pixQrCode?.encodedImage ? (
-                    <img
-                      src={`data:image/png;base64,${paymentPanel.payment.pixQrCode.encodedImage}`}
-                      alt="QR Code Pix"
-                      className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
-                    />
-                  ) : (
-                    <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                      <QrCode size={80} />
-                    </div>
-                  )}
-                  <p className="mt-4 text-xs font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
-                  <div className="mt-2 rounded-2xl border border-emerald-100 bg-white p-3 text-left">
-                    <p className="line-clamp-3 break-all text-xs font-bold leading-relaxed text-slate-600">
-                      {paymentPanel.payment?.pixQrCode?.payload || 'Código Pix indisponível. Abra a fatura oficial abaixo.'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const payload = paymentPanel.payment?.pixQrCode?.payload;
-                      if (!payload) return;
-                      await navigator.clipboard.writeText(payload);
-                      setToast({ title: 'Pix copiado', message: 'Código Pix copia e cola copiado.', tone: 'success' });
-                    }}
-                    className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
-                  >
-                    <Copy size={14} />
-                    Copiar Pix
-                  </button>
-                </div>
-              )}
-
-              {paymentPanel.payment?.method === 'BOLETO' && (
-                <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
-                      <FileText size={26} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black uppercase tracking-tight text-[#001a33]">Boleto oficial Asaas</p>
-                      <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                        Abra ou baixe o boleto oficial gerado pelo Asaas. A matrícula continua aguardando confirmação.
-                      </p>
-                    </div>
-                  </div>
-                  {paymentPanel.payment?.bankSlipUrl && (
-                    <a
-                      href={paymentPanel.payment.bankSlipUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
-                    >
-                      <ExternalLink size={14} />
-                      Abrir boleto
-                    </a>
-                  )}
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
-                Se o pagamento já foi feito, aguarde alguns instantes. O acesso ao curso é liberado automaticamente quando o Asaas confirmar o pagamento.
-              </div>
-            </div>
-          </div>
-        </div>
+        <EadPaymentModal
+          panel={paymentPanel}
+          onClose={() => setPaymentPanel(null)}
+          onCopied={() => setToast({ title: 'Pix copiado', message: 'Código Pix copia e cola copiado.', tone: 'success' })}
+        />
       )}
 
       {eadInline && (
