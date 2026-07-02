@@ -61,6 +61,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
   const dueDate = formatDateDisplay(payment.dueDate);
   const pixExpiration = formatDateDisplay(payment.pixQrCode?.expirationDate);
   const officialUrl = payment.invoiceUrl || panel.url || payment.bankSlipUrl || null;
+  const expirationLabel = pixExpiration || dueDate || 'Informado pelo Asaas';
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -83,12 +84,12 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[99999] flex h-screen min-h-screen w-screen items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-4 py-6 backdrop-blur-sm pointer-events-auto"
+      className="fixed inset-0 z-[99999] flex h-[100dvh] min-h-[100dvh] w-screen items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/75 px-3 py-3 backdrop-blur-sm pointer-events-auto sm:px-4 sm:py-4"
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="relative z-[100000] w-full max-w-2xl rounded-[2rem] border border-white/20 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+      <div className="relative z-[100000] w-full max-w-4xl overflow-hidden rounded-[1.75rem] border border-white/20 bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
             <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
@@ -107,63 +108,87 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
           </button>
         </div>
 
-        <div className="space-y-4 px-6 py-5">
-          <div className="grid gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-600 sm:grid-cols-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
-              <p className="mt-1 text-sm font-black text-[#001a33]">{recipientName}</p>
-              <p className="mt-1 text-xs text-slate-500">{recipientDocument}</p>
+        <div className="max-h-[calc(100dvh-7.5rem)] space-y-3 overflow-y-auto px-5 py-4">
+          {isPix && (
+            <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 lg:grid-cols-[280px_1fr]">
+              <div className="text-center">
+                {payment.pixQrCode?.encodedImage ? (
+                  <img
+                    src={`data:image/png;base64,${payment.pixQrCode.encodedImage}`}
+                    alt="QR Code Pix"
+                    className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
+                  />
+                ) : (
+                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                    <QrCode size={76} />
+                  </div>
+                )}
+                <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
+                <div className="mt-2 rounded-2xl border border-emerald-100 bg-white p-3 text-left">
+                  <p className="line-clamp-3 break-all text-[11px] font-bold leading-relaxed text-slate-600">
+                    {payment.pixQrCode?.payload || 'Codigo Pix indisponivel. Abra a fatura oficial abaixo.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyPix}
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
+                >
+                  <Copy size={14} />
+                  Copiar Pix
+                </button>
+              </div>
+
+              <div className="rounded-[1.4rem] border border-white/70 bg-white/80 p-4 shadow-sm">
+                <div className="rounded-2xl bg-[#001a33] p-4 text-white">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-200">Valor do Pix</p>
+                  <p className="mt-1 text-3xl font-black tracking-tight">{displayValue}</p>
+                  <p className="mt-1 text-xs font-bold text-slate-200">Expira em: {expirationLabel}</p>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-xs font-bold text-slate-600 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">{recipientName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">CNPJ</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">{recipientDocument}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">{payment.courseName || 'Curso EAD'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Modalidade</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">EAD</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Liberacao</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">Apos confirmacao do Asaas</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</p>
-              <p className="mt-1 text-2xl font-black text-[#001a33]">{displayValue}</p>
-              {(dueDate || pixExpiration) && (
-                <p className="mt-1 text-xs text-slate-500">
-                  {isPix ? 'Expira em' : 'Vencimento'}: {pixExpiration || dueDate}
-                </p>
-              )}
-            </div>
-            {payment.courseName && (
+          )}
+
+          {!isPix && (
+            <div className="grid gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-600 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
+                <p className="mt-1 text-sm font-black text-[#001a33]">{recipientName}</p>
+                <p className="mt-1 text-xs text-slate-500">{recipientDocument}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</p>
+                <p className="mt-1 text-2xl font-black text-[#001a33]">{displayValue}</p>
+                {dueDate && <p className="mt-1 text-xs text-slate-500">Vencimento: {dueDate}</p>}
+              </div>
               <div className="sm:col-span-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
-                <p className="mt-1 text-sm font-black text-[#001a33]">{payment.courseName}</p>
+                <p className="mt-1 text-sm font-black text-[#001a33]">{payment.courseName || 'Curso EAD'}</p>
+                <p className="mt-1 text-xs text-slate-500">Modalidade: EAD</p>
               </div>
-            )}
-            {payment.id && (
-              <div className="sm:col-span-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID da cobrança Asaas</p>
-                <p className="mt-1 break-all text-xs font-bold text-slate-500">{payment.id}</p>
-              </div>
-            )}
-          </div>
-
-          {isPix && (
-            <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5 text-center">
-              {payment.pixQrCode?.encodedImage ? (
-                <img
-                  src={`data:image/png;base64,${payment.pixQrCode.encodedImage}`}
-                  alt="QR Code Pix"
-                  className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
-                />
-              ) : (
-                <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                  <QrCode size={76} />
-                </div>
-              )}
-              <p className="mt-4 text-xs font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
-              <div className="mt-2 rounded-2xl border border-emerald-100 bg-white p-3 text-left">
-                <p className="line-clamp-3 break-all text-xs font-bold leading-relaxed text-slate-600">
-                  {payment.pixQrCode?.payload || 'Código Pix indisponível. Abra a fatura oficial abaixo.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={copyPix}
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
-              >
-                <Copy size={14} />
-                Copiar Pix
-              </button>
             </div>
           )}
 
@@ -206,7 +231,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
             </a>
           )}
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold leading-relaxed text-slate-600">
             A tela pode ser fechada sem cancelar a cobrança. Quando o Asaas confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
           </div>
         </div>
