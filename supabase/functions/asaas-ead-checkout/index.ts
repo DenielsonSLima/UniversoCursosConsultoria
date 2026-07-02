@@ -194,17 +194,34 @@ Deno.serve(async (req: Request) => {
     const authEmail = String(authData?.user?.email || "").trim().toLowerCase();
     if (authError || !authEmail) throw new Error("Sessão inválida para pagamento EAD.");
 
-    const { data: alunoRow, error: alunoError } = await admin
+    const { data: usuarioSistema, error: usuarioError } = await admin
+      .from("usuarios_sistema")
+      .select("id, perfil, status")
+      .ilike("email", authEmail)
+      .maybeSingle();
+    if (usuarioError) throw usuarioError;
+    const isGestorAtivo = Boolean(usuarioSistema)
+      && String(usuarioSistema?.status || "").toUpperCase() !== "INATIVO"
+      && String(usuarioSistema?.status || "").toUpperCase() !== "BLOQUEADO";
+
+    let alunoQuery = admin
       .from("parceiros")
       .select("*")
-      .eq("id", alunoId)
+      .eq("tipo", "Aluno");
+    alunoQuery = isGestorAtivo
+      ? alunoQuery.eq("id", alunoId)
+      : alunoQuery.ilike("email", authEmail);
+
+    const { data: alunoRow, error: alunoError } = await alunoQuery
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (alunoError) throw alunoError;
     aluno = alunoRow;
     if (!aluno || String(aluno.tipo || "").toUpperCase() !== "ALUNO") {
       throw new Error("Cadastro de aluno não localizado para pagamento EAD.");
     }
-    if (String(aluno.email || "").trim().toLowerCase() !== authEmail) {
+    if (!isGestorAtivo && alunoId && alunoId !== aluno.id) {
       throw new Error("Você só pode gerar cobrança EAD para o seu próprio cadastro.");
     }
 
