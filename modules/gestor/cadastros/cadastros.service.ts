@@ -21,7 +21,8 @@ export const DEFAULT_CURSO_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   cartao: {
     aceitar: true,
     maxParcelas: 2,
-    aplicarDescontoPontualidade: false
+    aplicarDescontoPontualidade: false,
+    repassarCustoParcelamento: false
   },
   asaas: {
     gerarParcelamentoMensalidades: true,
@@ -41,7 +42,8 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   cartao: {
     aceitar: true,
     maxParcelas: 2,
-    aplicarDescontoPontualidade: false
+    aplicarDescontoPontualidade: false,
+    repassarCustoParcelamento: false
   },
   asaas: {
     gerarParcelamentoMensalidades: false,

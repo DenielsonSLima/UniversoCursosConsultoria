@@ -155,6 +155,7 @@ export const createAsaasWebhookHandlers = (
     if (matriculaError) throw matriculaError;
     const course = matricula?.turmas?.cursos;
     if (!course || !ONLINE_MODALIDADES.includes(course.modalidade)) return;
+    const isEadCourse = String(course.modalidade || "").toUpperCase() === "EAD";
 
     const { data: paidReceivable, error: paidError } = await admin
       .from("contas_receber")
@@ -187,6 +188,19 @@ export const createAsaasWebhookHandlers = (
       .eq("matricula_id", receivable.matricula_id)
       .eq("status", PENDENTE_INSCRICAO_STATUS);
     if (inscriptionError) throw inscriptionError;
+
+    if (isEadCourse) {
+      const { error: receivableError } = await admin
+        .from("contas_receber")
+        .update({
+          status: "CANCELADO",
+          asaas_last_error: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivable.id)
+        .neq("status", "PAGO");
+      if (receivableError) throw receivableError;
+    }
   };
 
   const upsertReceivableFromPaymentLink = async (

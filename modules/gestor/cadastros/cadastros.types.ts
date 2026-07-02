@@ -44,6 +44,7 @@ export interface CursoFinanceiroConfig {
     aceitar: boolean;
     maxParcelas: number;
     aplicarDescontoPontualidade: boolean;
+    repassarCustoParcelamento?: boolean;
   };
   asaas: {
     gerarParcelamentoMensalidades: boolean;

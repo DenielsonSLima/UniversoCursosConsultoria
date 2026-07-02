@@ -628,12 +628,13 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   });
 
   const checkoutMutation = useMutation({
-    mutationFn: async ({ course, turmaId, checkoutWindow }: { course: any; turmaId?: string | null; checkoutWindow: Window | null }) => {
+    mutationFn: async ({ course, turmaId, checkoutWindow, sameTab }: { course: any; turmaId?: string | null; checkoutWindow: Window | null; sameTab?: boolean }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
       const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId);
       return {
         url: result.url,
         checkoutWindow,
+        sameTab: sameTab === true,
         alreadyPaid: result.alreadyPaid === true,
         alreadyPending: result.alreadyPending === true,
       };
@@ -641,11 +642,16 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     onMutate: () => {
       setCheckoutError('');
     },
-    onSuccess: ({ url, checkoutWindow, alreadyPaid, alreadyPending }) => {
+    onSuccess: ({ url, checkoutWindow, sameTab, alreadyPaid, alreadyPending }) => {
       if (alreadyPaid) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
         setCheckoutError('');
         invalidateStudentCourseAccess();
+        return;
+      }
+      if (sameTab) {
+        invalidateStudentCourseAccess();
+        window.location.assign(url);
         return;
       }
       if (checkoutWindow && !checkoutWindow.closed) {
@@ -678,12 +684,18 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   });
 
   const startCheckout = (course: any, turma?: any | null) => {
-    const checkoutWindow = window.open('', '_blank');
+    const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
+    const checkoutWindow = isEadCheckout ? null : window.open('', '_blank');
     if (checkoutWindow) {
       checkoutWindow.document.title = 'Preparando pagamento';
       checkoutWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 24px;">Preparando pagamento...</p>';
     }
-    checkoutMutation.mutate({ course, turmaId: turma?.id || null, checkoutWindow });
+    checkoutMutation.mutate({
+      course,
+      turmaId: turma?.id || null,
+      checkoutWindow,
+      sameTab: isEadCheckout,
+    });
   };
 
   useEffect(() => {

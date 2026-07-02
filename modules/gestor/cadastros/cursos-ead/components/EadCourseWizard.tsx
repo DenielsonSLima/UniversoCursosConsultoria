@@ -26,6 +26,11 @@ import {
   parseBRLPrice,
   removeOldStorageImage
 } from './eadCourseWizard.helpers';
+import {
+  buildEadFinancialSimulation,
+  clampEadInstallments,
+  formatEadMoney,
+} from './eadFinancialConfig';
 
 const formatDuration = (minutes: number) => {
   if (!minutes) return '0min';
@@ -56,6 +61,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   const [financeiroParcelasPadrao, setFinanceiroParcelasPadrao] = useState('1');
   const [financeiroMaxParcelas, setFinanceiroMaxParcelas] = useState('2');
   const [financeiroTaxaPagaPor, setFinanceiroTaxaPagaPor] = useState<'aluno' | 'instituicao'>('aluno');
+  const [financeiroRepassarCustoParcelamento, setFinanceiroRepassarCustoParcelamento] = useState(false);
   const [descricao, setDescricao] = useState('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [versao, setVersao] = useState('1.0');
@@ -151,6 +157,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       setFinanceiroParcelasPadrao(financeiroConfig.parcelasPadrao.toString());
       setFinanceiroMaxParcelas(financeiroConfig.cartao.maxParcelas.toString());
       setFinanceiroTaxaPagaPor(financeiroConfig.taxaPagaPor);
+      setFinanceiroRepassarCustoParcelamento(financeiroConfig.cartao.repassarCustoParcelamento === true);
 
       const config: EadConfig = curso.ead_config || {
         cronograma: [],
@@ -237,6 +244,15 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     width: `${297 * (certificatePreviewZoom / 100)}mm`,
     height: `${210 * (certificatePreviewZoom / 100)}mm`,
   };
+  const financeiroPreviewValue = parseBRLPrice(valorText) || 0;
+  const financeiroPreviewInstallments = financeiroCartao && financeiroParcelado
+    ? Math.max(
+        clampEadInstallments(parseInt(financeiroParcelasPadrao) || 1),
+        clampEadInstallments(parseInt(financeiroMaxParcelas) || 1)
+      )
+    : 1;
+  const financeiroSimulation = buildEadFinancialSimulation(financeiroPreviewValue, financeiroPreviewInstallments);
+  const financeiroMultipleMethods = [financeiroPix, financeiroBoleto, financeiroCartao].filter(Boolean).length > 1;
 
   // --- MÉTODOS DE CONTROLE ---
 
@@ -508,9 +524,9 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       return;
     }
 
-    const parcelasPadraoParsed = Math.max(1, parseInt(financeiroParcelasPadrao) || 1);
+    const parcelasPadraoParsed = clampEadInstallments(parseInt(financeiroParcelasPadrao) || 1);
     const maxParcelasParsed = financeiroParcelado
-      ? Math.max(parcelasPadraoParsed, parseInt(financeiroMaxParcelas) || parcelasPadraoParsed)
+      ? Math.max(parcelasPadraoParsed, clampEadInstallments(parseInt(financeiroMaxParcelas) || parcelasPadraoParsed))
       : 1;
 
     if (provas.length === 0) {
@@ -571,7 +587,8 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       cartao: {
         aceitar: financeiroCartao && financeiroParcelado,
         maxParcelas: financeiroCartao ? maxParcelasParsed : 1,
-        aplicarDescontoPontualidade: false
+        aplicarDescontoPontualidade: false,
+        repassarCustoParcelamento: financeiroCartao && financeiroParcelado && financeiroRepassarCustoParcelamento
       },
       asaas: {
         gerarParcelamentoMensalidades: false,
@@ -1038,6 +1055,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                   <input
                     type="number"
                     min={1}
+                    max={21}
                     disabled={!financeiroCartao}
                     className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 disabled:opacity-50"
                     value={financeiroParcelasPadrao}
@@ -1050,11 +1068,115 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                   <input
                     type="number"
                     min={1}
+                    max={21}
                     disabled={!financeiroCartao || !financeiroParcelado}
                     className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 disabled:opacity-50"
                     value={financeiroMaxParcelas}
                     onChange={e => setFinanceiroMaxParcelas(e.target.value)}
                   />
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Repasse do custo de parcelamento</p>
+                    <h5 className="mt-1 text-sm font-black text-[#001a33]">Cobrar do aluno o custo estimado do cartão parcelado</h5>
+                    <p className="mt-1 max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
+                      Quando ativo e o EAD estiver apenas com cartão, o checkout usa um valor ajustado para a instituição receber próximo ao valor base após a taxa padrão de cartão.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!financeiroCartao || !financeiroParcelado}
+                    onClick={() => setFinanceiroRepassarCustoParcelamento(prev => !prev)}
+                    className={`w-full rounded-2xl border px-5 py-4 text-left transition-all disabled:opacity-50 lg:w-52 ${
+                      financeiroRepassarCustoParcelamento && financeiroCartao && financeiroParcelado
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 bg-slate-50 text-slate-500'
+                    }`}
+                  >
+                    <span className="block text-[10px] font-black uppercase tracking-widest">Status</span>
+                    <span className="mt-2 block text-sm font-black">
+                      {financeiroRepassarCustoParcelamento && financeiroCartao && financeiroParcelado ? 'Sim, repassar' : 'Não repassar'}
+                    </span>
+                  </button>
+                </div>
+
+                {financeiroRepassarCustoParcelamento && financeiroMultipleMethods && (
+                  <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-700" />
+                    <p className="text-xs font-semibold leading-relaxed text-amber-800">
+                      Com Pix ou boleto junto do cartão, o Asaas usa valor único na fatura. Para não cobrar taxa de cartão de quem pagar por Pix/boleto, o repasse automático só entra quando este EAD estiver somente com cartão.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Simulador Asaas EAD</p>
+                    <h5 className="text-sm font-black text-[#001a33]">Cartão em até {financeiroSimulation.installmentCount}x</h5>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Taxas padrão públicas do Asaas
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sem repasse</p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="block font-bold text-slate-400">Aluno paga</span>
+                        <strong className="mt-1 block text-base text-[#001a33]">{formatEadMoney(financeiroSimulation.withoutPass.customerPays)}</strong>
+                      </div>
+                      <div>
+                        <span className="block font-bold text-slate-400">Recebe líquido</span>
+                        <strong className="mt-1 block text-base text-emerald-700">{formatEadMoney(financeiroSimulation.withoutPass.institutionReceives)}</strong>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-500">
+                      Taxa estimada: {formatEadMoney(financeiroSimulation.withoutPass.fee)}. Antecipando tudo, estimativa líquida: {formatEadMoney(financeiroSimulation.withoutPass.anticipatedEstimate)}.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Com repasse</p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="block font-bold text-slate-400">Aluno paga</span>
+                        <strong className="mt-1 block text-base text-[#001a33]">{formatEadMoney(financeiroSimulation.withPass.customerPays)}</strong>
+                      </div>
+                      <div>
+                        <span className="block font-bold text-slate-400">Recebe líquido</span>
+                        <strong className="mt-1 block text-base text-emerald-700">{formatEadMoney(financeiroSimulation.withPass.institutionReceives)}</strong>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-500">
+                      Taxa estimada: {formatEadMoney(financeiroSimulation.withPass.fee)}. Antecipando tudo, estimativa líquida: {formatEadMoney(financeiroSimulation.withPass.anticipatedEstimate)}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 text-xs md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <span className="block font-black uppercase tracking-widest text-slate-400">Pix/Boleto</span>
+                    <strong className="mt-1 block text-sm text-[#001a33]">{formatEadMoney(financeiroSimulation.pixOrBoletoNet)}</strong>
+                    <span className="mt-1 block font-semibold text-slate-500">Taxa fixa estimada de {formatEadMoney(financeiroSimulation.pixOrBoletoFixedFee)}.</span>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <span className="block font-black uppercase tracking-widest text-slate-400">Recebimento normal</span>
+                    <strong className="mt-1 block text-sm text-[#001a33]">A cada 32 dias</strong>
+                    <span className="mt-1 block font-semibold text-slate-500">No cartão parcelado, cada parcela entra mensalmente.</span>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <span className="block font-black uppercase tracking-widest text-slate-400">Antecipação</span>
+                    <strong className="mt-1 block text-sm text-[#001a33]">Sujeita à análise</strong>
+                    <span className="mt-1 block font-semibold text-slate-500">A taxa real depende da sua conta Asaas.</span>
+                  </div>
                 </div>
               </div>
 

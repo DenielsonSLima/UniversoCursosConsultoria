@@ -16,6 +16,7 @@ export interface ExistingCourseCheckout {
 }
 
 const normalizeStatus = (status: unknown) => String(status || "").trim().toUpperCase();
+const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 const getPaymentUrl = (receivable: any) =>
   receivable?.asaas_invoice_url || receivable?.asaas_bank_slip_url || null;
@@ -33,6 +34,17 @@ const isReusablePendingReceivable = (receivable: any) => {
   return OPEN_RECEIVABLE_STATUSES.has(status) && Boolean(getPaymentUrl(receivable));
 };
 
+const isReceivablePastDue = (receivable: any) => {
+  const dueDate = String(receivable?.data_vencimento || "").slice(0, 10);
+  return Boolean(dueDate) && dueDate < todayIsoDate();
+};
+
+const getMatriculaTurma = (matricula: any) =>
+  Array.isArray(matricula?.turmas) ? matricula.turmas[0] : matricula?.turmas;
+
+const isEadMatricula = (matricula: any) =>
+  normalizeStatus(getMatriculaTurma(matricula)?.cursos?.modalidade) === "EAD";
+
 const chooseReceivable = (receivables: any[], matcher: (receivable: any) => boolean) =>
   receivables.find(matcher) || null;
 
@@ -48,7 +60,7 @@ export const findExistingCourseCheckout = async (
       status,
       turma_id,
       data_matricula,
-      turmas!inner(id, curso_id, nome, polo_id, status)
+      turmas!inner(id, curso_id, nome, polo_id, status, cursos(id, modalidade))
     `)
     .eq("aluno_id", alunoId)
     .eq("turmas.curso_id", courseId)
@@ -71,6 +83,7 @@ export const findExistingCourseCheckout = async (
         asaas_invoice_url,
         asaas_bank_slip_url,
         asaas_transaction_receipt_url,
+        data_vencimento,
         data_pagamento,
         updated_at,
         created_at
@@ -107,13 +120,18 @@ export const findExistingCourseCheckout = async (
     const matriculaStatus = normalizeStatus(matricula.status);
     if (CLOSED_STATUSES.has(matriculaStatus)) continue;
     const receivables = receivablesByMatricula.get(matricula.id) || [];
-    const pendingReceivable = chooseReceivable(receivables, isReusablePendingReceivable);
-    if (PENDING_STATUSES.has(matriculaStatus) || pendingReceivable) {
+    const isEad = isEadMatricula(matricula);
+    const pendingReceivable = chooseReceivable(receivables, (receivable) =>
+      isReusablePendingReceivable(receivable) && (!isEad || !isReceivablePastDue(receivable))
+    );
+    const hasFreshPendingMatricula = PENDING_STATUSES.has(matriculaStatus)
+      && (!isEad || receivables.length === 0 || receivables.some((receivable) => !isReceivablePastDue(receivable)));
+    if (hasFreshPendingMatricula || pendingReceivable) {
       const receivable = pendingReceivable || receivables[0] || null;
       return {
         state: "pending",
         matricula,
-        turma: Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas,
+        turma: getMatriculaTurma(matricula),
         receivable,
         url: getPaymentUrl(receivable),
       };

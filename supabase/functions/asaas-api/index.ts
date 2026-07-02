@@ -11,6 +11,9 @@ import {
   apiSecretName,
   baseUrlFor,
   corsHeaders,
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
   json,
   normalizeEnvironment,
   webhookSecretName,
@@ -49,7 +52,17 @@ const FINANCE_WRITE_ACTIONS = new Set([
 ]);
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeadersForRequest = buildCorsHeaders(req);
+  if (isRateLimitExceeded(`asaas-api:${getClientIp(req)}`, 180, 60000)) {
+    return new Response(JSON.stringify({
+      error: "Muitas requisições em curto período. Aguarde alguns instantes.",
+    }), {
+      status: 429,
+      headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
+    });
+  }
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

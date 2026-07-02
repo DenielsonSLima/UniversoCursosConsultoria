@@ -1,11 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
+  json as sendJson,
+} from "../asaas-api/shared.ts";
 
 type Environment = "sandbox" | "production";
 
@@ -16,14 +16,19 @@ const isActiveStatus = (status: unknown) =>
 const canCancelReceivable = (perfil: unknown) =>
   ["gestor", "financeiro"].includes(normalize(perfil));
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+const json = (body: unknown, status = 200, req?: Request) =>
+  sendJson(body, status, req);
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeadersForRequest = buildCorsHeaders(req);
+
+  if (isRateLimitExceeded(`asaas-cancel:${getClientIp(req)}`, 30, 60000)) {
+    return json({
+      error: "Muitas tentativas em curto intervalo. Tente novamente em alguns segundos.",
+    }, 429, req);
+  }
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
   if (req.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

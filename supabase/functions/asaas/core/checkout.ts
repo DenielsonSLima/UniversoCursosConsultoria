@@ -1,4 +1,11 @@
 import { formatCurrency, formatDate, roundMoney, toNumber } from "./money.ts";
+import { resolveCourseConfiguredPayment } from "./payment-methods.ts";
+
+export {
+  normalizeCourseFinanceiroConfig,
+  resolveBillingType,
+  resolveCourseConfiguredPayment,
+} from "./payment-methods.ts";
 
 export interface CheckoutCharge {
   billingType: string;
@@ -13,54 +20,14 @@ export interface CheckoutCharge {
     parcelasPadrao: number;
     maxParcelasCartao: number;
   };
+  installmentCount?: number | null;
+  totalValue?: number | null;
+  returnCallbackEnabled: boolean;
+  daysAfterDueDateToRegistrationCancellation?: number | null;
 }
 
 export const buildCoursePaymentDescription = (courseName: string) =>
   `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
-
-export const normalizeCourseFinanceiroConfig = (config: any = {}) => {
-  const metodos = config?.metodosRecebimento || {};
-  const cartao = config?.cartao || {};
-  const parcelasPadrao = Math.max(1, toNumber(config?.parcelasPadrao, 1));
-  const maxParcelas = cartao?.aceitar
-    ? Math.max(parcelasPadrao, toNumber(cartao?.maxParcelas, parcelasPadrao))
-    : 1;
-
-  return {
-    metodosRecebimento: {
-      pix: metodos.pix !== false,
-      boleto: metodos.boleto !== false,
-      cartao: metodos.cartao !== false,
-    },
-    parcelasPadrao,
-    cartao: {
-      aceitar: cartao.aceitar !== false,
-      maxParcelas,
-    },
-  };
-};
-
-export const resolveBillingType = (metodos: { pix: boolean; boleto: boolean; cartao: boolean }) => {
-  const metodosAtivos = [
-    metodos.pix ? "PIX" : null,
-    metodos.boleto ? "BOLETO" : null,
-    metodos.cartao ? "CREDIT_CARD" : null,
-  ].filter(Boolean);
-
-  if (metodosAtivos.length === 0) {
-    throw new Error("Nenhuma forma de recebimento configurada para este curso.");
-  }
-
-  return metodosAtivos.length === 1 ? String(metodosAtivos[0]) : "UNDEFINED";
-};
-
-export const resolveCourseConfiguredPayment = (course: any) => {
-  const financeiroConfig = normalizeCourseFinanceiroConfig(course?.financeiro_config || {});
-  return {
-    financeiroConfig,
-    billingType: resolveBillingType(financeiroConfig.metodosRecebimento),
-  };
-};
 
 export const buildCheckoutCharge = (input: {
   course: any;
@@ -69,6 +36,9 @@ export const buildCheckoutCharge = (input: {
   value: number;
   turma?: any;
   applyTurmaAdjustments: boolean;
+  returnCallbackEnabled?: boolean;
+  daysAfterDueDateToRegistrationCancellation?: number | null;
+  installmentCount?: number | null;
 }): CheckoutCharge => {
   const value = roundMoney(input.value);
   if (!value || value <= 0) {
@@ -85,6 +55,8 @@ export const buildCheckoutCharge = (input: {
   const discountApplies = discountEnabled && discountValue > 0 && discountValue < value;
   const fineApplies = penaltyEnabled && fineValue > 0;
   const interestApplies = penaltyEnabled && interestPercent > 0;
+  const requestedInstallments = Math.floor(toNumber(input.installmentCount, 1));
+  const installmentCount = requestedInstallments > 1 ? requestedInstallments : null;
 
   const instructionLines = [
     buildCoursePaymentDescription(input.course.nome),
@@ -109,6 +81,10 @@ export const buildCheckoutCharge = (input: {
       parcelasPadrao: financeiroConfig.parcelasPadrao,
       maxParcelasCartao: financeiroConfig.cartao.maxParcelas,
     },
+    installmentCount,
+    totalValue: installmentCount ? value : null,
+    returnCallbackEnabled: input.returnCallbackEnabled !== false,
+    daysAfterDueDateToRegistrationCancellation: input.daysAfterDueDateToRegistrationCancellation ?? null,
   };
 };
 
@@ -121,17 +97,27 @@ export const buildOnlinePaymentPayload = (
   const payload: Record<string, unknown> = {
     customer: customerId,
     billingType: charge.billingType,
-    value: charge.value,
     dueDate: charge.dueDate,
     description: charge.asaasDescription,
     externalReference: receivableId,
     postalService: false,
   };
 
+  if (charge.installmentCount && charge.totalValue) {
+    payload.installmentCount = charge.installmentCount;
+    payload.totalValue = charge.totalValue;
+  } else {
+    payload.value = charge.value;
+  }
+
   if (charge.discount) payload.discount = charge.discount;
   if (charge.interest) payload.interest = charge.interest;
   if (charge.fine) payload.fine = charge.fine;
-  if (charge.interest || charge.fine) payload.daysAfterDueDateToRegistrationCancellation = 30;
+  if (typeof charge.daysAfterDueDateToRegistrationCancellation === "number") {
+    payload.daysAfterDueDateToRegistrationCancellation = charge.daysAfterDueDateToRegistrationCancellation;
+  } else if (charge.interest || charge.fine) {
+    payload.daysAfterDueDateToRegistrationCancellation = 30;
+  }
   if (successUrl) payload.callback = { successUrl };
 
   return payload;

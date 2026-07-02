@@ -251,7 +251,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   };
 
   const getPaidReceiptLabel = (inst: any) =>
-    isPaidThroughAsaas(inst) ? 'Comprovante Asaas' : 'Recibo Universo';
+    isPaidThroughAsaas(inst) ? 'Comprovante' : 'Recibo Universo';
 
   const openReceipt = (inst: any) => {
     if (String(inst.status || '').toUpperCase() !== 'PAGO') {
@@ -260,14 +260,15 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     }
 
     if (isPaidThroughAsaas(inst)) {
-      if (inst.asaas_transaction_receipt_url) {
+      const receiptUrl = inst.asaas_transaction_receipt_url;
+      if (receiptUrl) {
         setAsaasReceiptPreview({
-          url: inst.asaas_transaction_receipt_url,
-          title: inst.descricao || 'Comprovante Asaas',
+          url: receiptUrl,
+          title: inst.descricao || 'Comprovante',
         });
         return;
       }
-      setNotice('O comprovante oficial do Asaas ainda não foi retornado. Aguarde a atualização do pagamento ou fale com a secretaria.');
+      setNotice('O comprovante ainda não foi retornado. Aguarde a atualização do pagamento ou fale com a secretaria.');
       setTimeout(() => setNotice(''), 4500);
       return;
     }
@@ -760,18 +761,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         </div>
       </div>
 
-      {/* Comprovante Asaas Fullscreen Preview */}
+      {/* Comprovante Fullscreen Preview */}
       {asaasReceiptPreview && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed left-0 top-0 right-0 bottom-0 z-[10000] h-dvh w-screen overflow-hidden bg-slate-950 pointer-events-auto"
           role="dialog"
           aria-modal="true"
-          aria-label="Prévia do comprovante Asaas"
+          aria-label="Prévia do comprovante"
         >
           <div className="flex h-full w-full flex-col">
             <div className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-950 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Comprovante oficial Asaas</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">Comprovante</p>
                 <h4 className="truncate text-sm font-black uppercase tracking-tight text-white sm:text-base">
                   {asaasReceiptPreview.title}
                 </h4>
@@ -799,7 +800,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             <div className="min-h-0 flex-1 bg-slate-900">
               <iframe
                 src={asaasReceiptPreview.url}
-                title="Prévia do comprovante oficial Asaas"
+                title="Prévia do comprovante"
                 className="h-full w-full border-0 bg-white"
               />
             </div>

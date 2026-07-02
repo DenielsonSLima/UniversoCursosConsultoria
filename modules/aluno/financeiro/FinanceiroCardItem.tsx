@@ -80,7 +80,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
           className="inline-flex w-full items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
         >
           <ReceiptText size={13} />
-          {isPaidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
+          {isPaidThroughAsaas ? 'Comprovante' : 'Recibo Universo'}
         </button>
       );
     }

@@ -3,19 +3,14 @@ import { supabase } from '../../lib/supabase';
 import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
 import { formatCpf, isCpfLike, normalizeEmail, onlyDigits } from '../shared/utils/identityValidation';
+import { clearPortalSession } from './portal-session';
 
-const getFriendlyAuthError = (message: string) => {
-  if (message === 'Invalid login credentials') {
-    return 'CPF/e-mail ou senha inválidos. Confira se este usuário existe e se a senha foi cadastrada corretamente.';
-  }
+const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 
-  if (message.toLowerCase().includes('email not confirmed')) {
-    return 'Este e-mail ainda não foi confirmado no Supabase Auth.';
-  }
-
-  return message;
+const sanitizeAuthError = (message: string) => {
+  if (!message) return AUTH_GENERIC_ERROR;
+  return AUTH_GENERIC_ERROR;
 };
-
 
 const resolveLoginEmail = async (identifier: string) => {
   const value = identifier.trim();
@@ -28,7 +23,7 @@ const resolveLoginEmail = async (identifier: string) => {
   if (error) throw new Error(error.message);
   if (data) return normalizeEmail(String(data));
 
-  throw new Error('CPF não encontrado. Entre com o e-mail de login ou solicite atualização do cadastro na secretaria/gestão.');
+  throw new Error(AUTH_GENERIC_ERROR);
 };
 
 const getFriendlyOAuthError = (message: string) => {
@@ -68,7 +63,7 @@ export const loginService = {
       return {
         user: null,
         session: null,
-        error: getFriendlyAuthError(error.message),
+        error: sanitizeAuthError(error.message),
       };
     }
 
@@ -80,7 +75,9 @@ export const loginService = {
   },
 
   async logout() {
-    const { error } = await supabase.auth.signOut();
+    clearPortalSession();
+
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) throw error;
   },
 

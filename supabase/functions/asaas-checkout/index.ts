@@ -8,12 +8,12 @@ import {
 import { isValidCpf, missingStudentBillingFields, onlyDigits } from "../asaas/core/customer.ts";
 import { paymentDate } from "../asaas/core/status.ts";
 import { findExistingCourseCheckout } from "./course-enrollment-guard.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import {
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
+  json as sendJson,
+} from "../asaas-api/shared.ts";
 
 const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
@@ -24,12 +24,6 @@ const BLOCKING_ENROLLMENT_STATUSES = new Set([
   "AGUARDANDO_PAGAMENTO",
   "AGUARDANDO_CONFIRMACAO",
 ]);
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
 
 const dueDateInDays = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -182,7 +176,17 @@ const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission =
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const corsHeadersForRequest = buildCorsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    sendJson(body, status, req);
+
+  if (isRateLimitExceeded(`asaas-checkout:${getClientIp(req)}`, 30, 60000)) {
+    return json({
+      error: "Muitas tentativas de checkout em curto intervalo. Tente novamente em alguns segundos.",
+    }, 429);
+  }
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
   if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -240,7 +244,6 @@ Deno.serve(async (req: Request) => {
     if (error) throw error;
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
     if (!ONLINE_MODALIDADES.includes(course.modalidade)) throw new Error("Modalidade sem checkout online.");
-
     let alunoQuery = admin
       .from("parceiros")
       .select("*")

@@ -1,11 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json as sendJson } from '../asaas-api/shared.ts';
 
 type IncomingPayload = {
   action?: string;
@@ -31,15 +26,6 @@ type FunctionResponse = {
 };
 
 const TERMS_VERSION = Deno.env.get('TERMS_VERSION') || '2026-06-25';
-
-const json = (payload: FunctionResponse, status = 200) =>
-  new Response(JSON.stringify(payload), {
-    status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  });
 
 const normalizeEmail = (value?: string | null) =>
   String(value || '').trim().toLowerCase();
@@ -345,8 +331,19 @@ const findAuthUserByEmail = async (admin: any, email: string) => {
 };
 
 Deno.serve(async (req: Request) => {
+  const corsHeadersForRequest = buildCorsHeaders(req);
+  const json = (payload: FunctionResponse, status = 200) =>
+    sendJson(payload, status, req);
+
+  if (isRateLimitExceeded(`portal-user-management:${getClientIp(req)}`, 40, 60000)) {
+    return json({
+      success: false,
+      error: 'Muitas tentativas. Tente novamente em alguns instantes.',
+    }, 429);
+  }
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeadersForRequest });
   }
 
   if (req.method !== 'POST') {

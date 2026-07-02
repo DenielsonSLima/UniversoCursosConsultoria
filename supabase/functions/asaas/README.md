@@ -10,8 +10,8 @@ The public endpoints remain stable:
 
 ## Modules
 
-- `core`: runtime, HTTP, customer validation, payment status, money and checkout payload helpers.
-- `ead`: EAD checkout rules. The charge value comes from the course registration.
+- `core`: runtime, HTTP, customer validation, payment status, money, payment method normalization and checkout payload helpers.
+- `ead`: EAD checkout rules. The charge value comes from the course registration, with separate files for payment methods, installments and installment-fee pass-through.
 - `livres`: Curso livre checkout rules. The charge value and financial adjustments come from the class.
 - `especializacao`: Especializacao checkout rules, separated from livres for future custom rules.
 - `tecnico`: Technical course checkout and cycle helpers.
