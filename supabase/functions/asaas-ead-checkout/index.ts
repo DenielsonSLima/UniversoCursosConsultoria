@@ -79,7 +79,7 @@ const isPaidAsaasStatus = (status: unknown) =>
   ["RECEIVED", "CONFIRMED"].includes(String(status || "").toUpperCase());
 
 const isCanceledAsaasStatus = (status: unknown) =>
-  ["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(String(status || "").toUpperCase());
+  ["DELETED", "REFUNDED", "CANCELLED", "CANCELED", "OVERDUE", "EXPIRED"].includes(String(status || "").toUpperCase());
 
 const getAvailableTurma = (turmas: any[]) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -496,7 +496,7 @@ Deno.serve(async (req: Request) => {
           asaas_installment_id: null,
           asaas_transaction_receipt_url: null,
           asaas_status: null,
-          asaas_last_error: "Cobrança EAD anterior cancelada no Asaas; será gerada uma nova.",
+          asaas_last_error: "Cobrança EAD anterior cancelada, removida ou vencida no Asaas; será gerada uma nova.",
           updated_at: new Date().toISOString(),
         }).eq("id", receivable.id);
         receivable.asaas_payment_id = null;

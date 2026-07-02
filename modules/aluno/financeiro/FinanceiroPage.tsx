@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
-import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download } from 'lucide-react';
+import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import { asaasIntegrationService } from '../../asaas/asaas.service';
+import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
 
 interface FinanceiroPageProps {
   alunoId: string;
@@ -14,6 +16,10 @@ interface FinanceiroPageProps {
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [selectedEadPayment, setSelectedEadPayment] = useState<any | null>(null);
+  const [eadPaymentMethod, setEadPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
+  const [isStartingEadPayment, setIsStartingEadPayment] = useState(false);
+  const [eadPaymentPanel, setEadPaymentPanel] = useState<EadPaymentPanelData | null>(null);
   const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
   const [notice, setNotice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,8 +41,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         .select(`
           *,
           turmas!left(
+            id,
+            curso_id,
             nome,
             cursos!left(
+              id,
               modalidade,
               nome
             )
@@ -72,6 +81,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return curso?.nome || 'Sem curso vinculado';
   };
 
+  const getInstallmentCourseId = (inst: any) => {
+    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
+    return inst.curso_id || turma?.curso_id || curso?.id || null;
+  };
+
   const getRelatedPartner = (inst: any) =>
     Array.isArray(inst.parceiros) ? inst.parceiros[0] : inst.parceiros;
 
@@ -102,6 +117,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return {
       ...inst,
       modalidade: modality,
+      cursoId: getInstallmentCourseId(inst),
       cursoNome: getInstallmentCourseName(inst),
       turmaNome: (Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas)?.nome || 'N/A',
       isOverdue
@@ -157,21 +173,22 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const hasOpenModal = Boolean(selectedReceipt);
+    const hasOpenModal = Boolean(selectedReceipt || selectedEadPayment);
     if (!hasOpenModal) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (selectedReceipt) closeReceipt();
+        if (selectedEadPayment) closeEadPaymentChoice();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedReceipt]);
+  }, [selectedReceipt, selectedEadPayment]);
 
   useEffect(() => {
-    const hasOpenOverlay = Boolean(selectedReceipt);
+    const hasOpenOverlay = Boolean(selectedReceipt || selectedEadPayment);
     if (!hasOpenOverlay) return;
 
     const bodyOverflow = document.body.style.overflow;
@@ -183,7 +200,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       document.body.style.overflow = bodyOverflow;
       document.documentElement.style.overflow = rootOverflow;
     };
-  }, [selectedReceipt]);
+  }, [selectedReceipt, selectedEadPayment]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInstallments.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -236,6 +253,68 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const formatPaymentMethod = (method?: string | null) => {
     const normalized = String(method || '').trim();
     return normalized || 'Forma não informada';
+  };
+
+  const normalizeEadPaymentMethod = (method?: string | null): 'PIX' | 'BOLETO' | 'CREDIT_CARD' => {
+    const normalized = String(method || '').trim().toUpperCase();
+    if (normalized === 'BOLETO') return 'BOLETO';
+    if (normalized === 'CARTAO' || normalized === 'CARTÃO' || normalized === 'CREDIT_CARD') return 'CREDIT_CARD';
+    return 'PIX';
+  };
+
+  const openEadPaymentChoice = (inst: any) => {
+    const courseId = inst.cursoId || getInstallmentCourseId(inst);
+    if (!courseId) {
+      setNotice('Não foi possível localizar o curso desta cobrança EAD. Fale com a secretaria.');
+      setTimeout(() => setNotice(''), 4500);
+      return;
+    }
+    setSelectedEadPayment(inst);
+    setEadPaymentMethod(normalizeEadPaymentMethod(inst.forma_pagamento));
+  };
+
+  const closeEadPaymentChoice = () => {
+    if (isStartingEadPayment) return;
+    setSelectedEadPayment(null);
+  };
+
+  const startEadPayment = async () => {
+    if (!selectedEadPayment) return;
+    const courseId = selectedEadPayment.cursoId || getInstallmentCourseId(selectedEadPayment);
+    const turmaId = selectedEadPayment.turma_id || null;
+    if (!courseId) {
+      setNotice('Não foi possível localizar o curso desta cobrança EAD. Fale com a secretaria.');
+      setTimeout(() => setNotice(''), 4500);
+      return;
+    }
+
+    setIsStartingEadPayment(true);
+    try {
+      const result = await asaasIntegrationService.getPublicCheckout(
+        courseId,
+        alunoId,
+        turmaId || undefined,
+        { method: eadPaymentMethod } as any
+      );
+
+      if (eadPaymentMethod === 'CREDIT_CARD') {
+        const checkoutResult = result as any;
+        const checkoutUrl = checkoutResult?.url || checkoutResult?.paymentLinkUrl || checkoutResult?.invoiceUrl;
+        if (!checkoutUrl) throw new Error('O Asaas não retornou o link do checkout do cartão.');
+        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        setSelectedEadPayment(null);
+        return;
+      }
+
+      setSelectedEadPayment(null);
+      setEadPaymentPanel(result as EadPaymentPanelData);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível preparar o pagamento EAD.';
+      setNotice(message);
+      setTimeout(() => setNotice(''), 5500);
+    } finally {
+      setIsStartingEadPayment(false);
+    }
   };
 
   const isPaidThroughAsaas = (inst: any) => {
@@ -424,6 +503,27 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const renderActions = (inst: any) => {
     if (['PENDENTE', 'VENCIDO'].includes(inst.status)) {
+      if (inst.modalidade === 'EAD') {
+        return (
+          <div className="flex justify-start gap-2">
+            <button
+              onClick={() => openEadPaymentChoice(inst)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+            >
+              <CreditCard size={12} /> Pagar agora
+            </button>
+            {inst.asaas_invoice_url && (
+              <button
+                onClick={() => copyPaymentLink(inst.asaas_invoice_url)}
+                className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-colors"
+              >
+                Copiar link
+              </button>
+            )}
+          </div>
+        );
+      }
+
       if (inst.asaas_invoice_url) {
         return (
           <div className="flex justify-start gap-2">
@@ -726,6 +826,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                         getInstallmentStatusBadge={getInstallmentStatusBadge}
                         onCopyLink={copyPaymentLink}
                         onOpenReceipt={openReceipt}
+                        onPayNow={openEadPaymentChoice}
                       />
                     ))}
                   </div>
@@ -757,6 +858,119 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
       </div>
+
+      {selectedEadPayment && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed left-0 top-0 right-0 bottom-0 z-[9999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm pointer-events-auto"
+          onClick={closeEadPaymentChoice}
+        >
+          <div
+            className="w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white/20 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Pagamento EAD</p>
+                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
+                  Escolha como pagar
+                </h3>
+                <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
+                  O curso será liberado somente após confirmação do Asaas via webhook.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEadPaymentChoice}
+                disabled={isStartingEadPayment}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
+                <p className="mt-1 text-sm font-black text-[#001a33]">{selectedEadPayment.cursoNome || selectedEadPayment.descricao}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</p>
+                    <p className="mt-1 text-lg font-black text-[#001a33]">{formatCurrency(Number(selectedEadPayment.valor || 0))}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencimento</p>
+                    <p className="mt-1 text-lg font-black text-[#001a33]">{formatDate(selectedEadPayment.data_vencimento)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {[
+                  { method: 'PIX' as const, label: 'Pix', icon: Zap },
+                  { method: 'BOLETO' as const, label: 'Boleto', icon: FileText },
+                  { method: 'CREDIT_CARD' as const, label: 'Cartão', icon: CreditCard }
+                ].map((option) => {
+                  const Icon = option.icon;
+                  const active = eadPaymentMethod === option.method;
+                  return (
+                    <button
+                      key={option.method}
+                      type="button"
+                      onClick={() => setEadPaymentMethod(option.method)}
+                      disabled={isStartingEadPayment}
+                      className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-60 ${
+                        active
+                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50'
+                      }`}
+                    >
+                      <Icon size={15} />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs font-bold leading-relaxed text-blue-700">
+                Pix e boleto usam a cobrança oficial do Asaas. Cartão abre o checkout seguro em nova aba.
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeEadPaymentChoice}
+                  disabled={isStartingEadPayment}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={startEadPayment}
+                  disabled={isStartingEadPayment}
+                  className="rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {isStartingEadPayment ? 'Preparando...' : 'Continuar pagamento'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {eadPaymentPanel && (
+        <EadPaymentModal
+          panel={eadPaymentPanel}
+          onClose={() => setEadPaymentPanel(null)}
+          onCopied={() => {
+            setNotice('Código Pix copiado.');
+            setTimeout(() => setNotice(''), 2500);
+          }}
+        />
+      )}
 
       {/* Recibo Modal Overlay */}
       {selectedReceipt && typeof document !== 'undefined' && createPortal(

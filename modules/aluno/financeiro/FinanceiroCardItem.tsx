@@ -10,6 +10,7 @@ interface FinanceiroCardItemProps {
   getInstallmentStatusBadge: (status: string) => React.ReactNode;
   onCopyLink: (url: string) => void;
   onOpenReceipt: (installment: any) => void;
+  onPayNow?: (installment: any) => void;
 }
 
 const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
@@ -21,6 +22,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
   getInstallmentStatusBadge,
   onCopyLink,
   onOpenReceipt,
+  onPayNow,
 }) => {
   const paymentLabel = [
     installment.turmaNome,
@@ -42,6 +44,29 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
 
   const renderActions = () => {
     if (['PENDENTE', 'VENCIDO'].includes(installment.status)) {
+      if (installment.modalidade === 'EAD' && onPayNow) {
+        return (
+          <div className="space-y-2">
+            <button
+              onClick={() => onPayNow(installment)}
+              className="inline-flex w-full items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
+            >
+              <ExternalLink size={13} />
+              Pagar agora
+            </button>
+            {installment.asaas_invoice_url && (
+              <button
+                onClick={() => onCopyLink(installment.asaas_invoice_url)}
+                className="inline-flex w-full items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-xl px-3 py-2 transition-colors"
+              >
+                <Copy size={13} />
+                Copiar link
+              </button>
+            )}
+          </div>
+        );
+      }
+
       if (installment.asaas_invoice_url) {
         return (
           <div className="space-y-2">
