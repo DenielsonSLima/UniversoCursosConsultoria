@@ -74,7 +74,11 @@ const SeoManager: React.FC = () => {
           : pathname;
 
     const metadata = ROUTE_METADATA[basePath] || ROUTE_METADATA['/'];
-    const canonicalUrl = `${SITE_URL}${pathname === '/' ? '/' : pathname}`;
+    let cleanPath = pathname;
+    if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+      cleanPath = cleanPath.slice(0, -1);
+    }
+    const canonicalUrl = `${SITE_URL}${cleanPath}`;
 
     document.title = metadata.title;
     setMetaContent('meta[name="description"]', metadata.description);

@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-07-03 — Otimização de URLs Canônicas para SEO (Google Search Console)
+
+**O que foi feito:**
+- Atualizado o gerador de links canônicos em `SeoManager.tsx` para remover automaticamente a barra final (trailing slash) dos caminhos (ex: `/contato/` se torna `/contato`), exceto na raiz `/`.
+- Esta alteração garante alinhamento absoluto com as URLs listadas em `public/sitemap.xml`.
+
+**Por quê:**
+- Resolver avisos do Google Search Console sobre "Páginas com redirecionamento" ou "Página alternativa com tag canônica adequada" geradas por divergências de barras finais e garantir a correta indexação das páginas principais.
+
+**Arquivos afetados:**
+- `modules/public/components/SeoManager.tsx`
+
+---
+
 ## 2026-06-27 — Ledger MCP de Migrations Financeiro/Biblioteca
 
 **O que foi feito:**

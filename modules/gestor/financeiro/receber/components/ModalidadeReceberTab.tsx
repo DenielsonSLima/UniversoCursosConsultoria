@@ -318,6 +318,25 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     return item.asaasPaymentId ? 'Link Asaas' : 'Não definido';
   };
 
+  const normalizeAsaasFee = (item: ContasReceber) => {
+    if (item.taxa !== undefined) return item.taxa;
+    const hasAsaasCharge = Boolean(
+      item.asaasPaymentId
+      || item.asaasPaymentLinkId
+      || String(item.origemPagamento || '').toUpperCase().startsWith('ASAAS')
+    );
+    if (!hasAsaasCharge) return 0;
+    if (item.formaPagamento === 'PIX' || item.formaPagamento === 'BOLETO') return 1.99;
+    if (item.formaPagamento === 'CARTAO') return Number((0.49 + item.valor * 0.0299).toFixed(2));
+    return 0;
+  };
+
+  const normalizeAsaasNet = (item: ContasReceber) => {
+    if (item.valorLiquido !== undefined) return item.valorLiquido;
+    const gross = item.valor || 0;
+    return Math.max(0, Number((gross - normalizeAsaasFee(item)).toFixed(2)));
+  };
+
   const copyInvoiceUrl = async (item: ContasReceber) => {
     if (!item.asaasInvoiceUrl) return;
     await navigator.clipboard.writeText(item.asaasInvoiceUrl);
@@ -488,8 +507,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       <FinancialReportStatusBadge status={item.status} />,
       <div>
         <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        <p className="mt-1 text-[9px] font-bold text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
+        <p className="text-[9px] font-bold text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
         {item.valorPago !== undefined && (
-          <p className="text-[9px] font-bold text-emerald-700">Recebido: {formatCurrency(item.valorPago)}</p>
+          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">Rec.: {formatCurrency(item.valorPago)}</p>
         )}
       </div>,
     ],
@@ -710,6 +731,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       </td>
       <td className="px-5 py-5">
         <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+        <p className="mt-1 whitespace-nowrap text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
+        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
         {item.valorPago !== undefined && (
           <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
             Rec.: {formatCurrency(item.valorPago)}
@@ -741,6 +764,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         <div>
           <p className="text-[9px] font-black uppercase text-slate-400">Valor</p>
           <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
+          <p className="mt-1 text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
+          <p className="text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
         </div>
       </div>
       <div className="mt-4 border-t border-slate-100 pt-3">

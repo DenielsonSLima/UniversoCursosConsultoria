@@ -30,6 +30,7 @@ export interface CursoFinanceiroConfig {
   descontoPontualidade: number;
   parcelasPadrao: number;
   taxaPagaPor: 'aluno' | 'instituicao';
+  considerarTaxaNoCheckout?: boolean;
   metodosRecebimento: {
     pix: boolean;
     boleto: boolean;

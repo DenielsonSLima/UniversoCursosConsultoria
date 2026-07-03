@@ -8,6 +8,7 @@ export const DEFAULT_CURSO_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   descontoPontualidade: 19,
   parcelasPadrao: 1,
   taxaPagaPor: 'aluno',
+  considerarTaxaNoCheckout: false,
   metodosRecebimento: {
     pix: true,
     boleto: true,
@@ -34,6 +35,7 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   ...DEFAULT_CURSO_FINANCEIRO_CONFIG,
   parcelasPadrao: 1,
   descontoPontualidade: 0,
+  considerarTaxaNoCheckout: false,
   descontoMetodo: {
     pix: false,
     boleto: false,
@@ -61,6 +63,7 @@ export const normalizeCursoFinanceiroConfig = (
   return {
   ...baseConfig,
   ...(config || {}),
+  considerarTaxaNoCheckout: (config || {}).considerarTaxaNoCheckout ?? baseConfig.considerarTaxaNoCheckout,
   metodosRecebimento: {
     ...baseConfig.metodosRecebimento,
     ...(config?.metodosRecebimento || {})

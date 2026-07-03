@@ -1,9 +1,19 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Megaphone } from 'lucide-react';
 import { siteTickerService } from '../siteTicker.service';
 
-const PublicTickerBar: React.FC = () => {
+const publicTickerQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 60_000,
+    },
+  },
+});
+
+const PublicTickerBarContent: React.FC = () => {
   const { data } = useQuery({
     queryKey: ['site-public-ticker'],
     queryFn: () => siteTickerService.getTickerData(),
@@ -54,5 +64,11 @@ const PublicTickerBar: React.FC = () => {
     </div>
   );
 };
+
+const PublicTickerBar: React.FC = () => (
+  <QueryClientProvider client={publicTickerQueryClient}>
+    <PublicTickerBarContent />
+  </QueryClientProvider>
+);
 
 export default PublicTickerBar;

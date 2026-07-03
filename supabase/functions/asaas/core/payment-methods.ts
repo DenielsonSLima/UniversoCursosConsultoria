@@ -5,6 +5,7 @@ export type AsaasBillingType = "PIX" | "BOLETO" | "CREDIT_CARD" | "UNDEFINED";
 export interface CourseFinanceiroConfig {
   parcelasPadrao: number;
   taxaPagaPor: "aluno" | "instituicao";
+  considerarTaxaNoCheckout?: boolean;
   metodosRecebimento: {
     pix: boolean;
     boleto: boolean;
@@ -29,6 +30,7 @@ export const normalizeCourseFinanceiroConfig = (config: any = {}): CourseFinance
   return {
     parcelasPadrao,
     taxaPagaPor: config?.taxaPagaPor === "instituicao" ? "instituicao" : "aluno",
+    considerarTaxaNoCheckout: config?.considerarTaxaNoCheckout === true,
     metodosRecebimento: {
       pix: metodos.pix !== false,
       boleto: metodos.boleto !== false,

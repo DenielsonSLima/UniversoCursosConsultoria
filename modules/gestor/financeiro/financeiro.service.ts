@@ -51,6 +51,8 @@ export interface ContasReceber {
   asaasTransactionReceiptUrl?: string;
   asaasStatus?: string;
   asaasLastError?: string;
+  taxa?: number;
+  valorLiquido?: number;
   createdAt?: string;
   tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA';
   parcelaNumero?: number;
@@ -301,6 +303,8 @@ export const financeiroService = {
       tipoLancamento: cr.tipo_lancamento,
       parcelaNumero: cr.parcela_numero,
       origemCronogramaId: cr.origem_cronograma_id,
+      taxa: cr.asaas_fee_value !== undefined && cr.asaas_fee_value !== null ? Number(cr.asaas_fee_value) : undefined,
+      valorLiquido: cr.asaas_net_value !== undefined && cr.asaas_net_value !== null ? Number(cr.asaas_net_value) : undefined,
     }));
   },
 
@@ -359,6 +363,8 @@ export const financeiroService = {
       asaasTransactionReceiptUrl: cr.asaas_transaction_receipt_url,
       asaasStatus: cr.asaas_status,
       asaasLastError: cr.asaas_last_error,
+      taxa: cr.asaas_fee_value !== undefined && cr.asaas_fee_value !== null ? Number(cr.asaas_fee_value) : undefined,
+      valorLiquido: cr.asaas_net_value !== undefined && cr.asaas_net_value !== null ? Number(cr.asaas_net_value) : undefined,
       tipoLancamento: cr.tipo_lancamento,
       parcelaNumero: cr.parcela_numero,
       origemCronogramaId: cr.origem_cronograma_id,

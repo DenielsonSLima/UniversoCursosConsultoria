@@ -524,6 +524,16 @@ Deno.serve(async (req: Request) => {
         ? { method: eadPaymentMethod, installments: eadInstallments }
         : undefined,
     });
+    const receivableFeeFields = String(course?.modalidade || "").toUpperCase() === "EAD" ? {
+      asaas_fee_value:
+        typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
+          ? (charge as any).feeValue
+          : null,
+      asaas_net_value:
+        typeof (charge as any).netValue === "number" && Number.isFinite((charge as any).netValue)
+          ? (charge as any).netValue
+          : null,
+    } : {};
     let existingReceivable: any = null;
 
     const clearLocalAsaasPayment = async (receivableId: string, reason: string) => {
@@ -626,6 +636,7 @@ Deno.serve(async (req: Request) => {
             asaas_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
             asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
             asaas_status: remotePayment.status || currentReceivable.asaas_status || null,
+            ...(isEadCheckout ? receivableFeeFields : {}),
             status: paid ? "PAGO" : currentReceivable.status,
             valor_pago: paid ? Number(remotePayment.value || currentReceivable.valor) : currentReceivable.valor_pago,
             data_pagamento: paid ? paymentDate(remotePayment) : currentReceivable.data_pagamento,
@@ -688,6 +699,7 @@ Deno.serve(async (req: Request) => {
           asaas_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
           asaas_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
           asaas_status: matchedPayment.status || null,
+          ...(isEadCheckout ? receivableFeeFields : {}),
           status: paid ? "PAGO" : existingReceivable.status,
           valor_pago: paid ? Number(matchedPayment.value || existingReceivable.valor) : existingReceivable.valor_pago,
           data_pagamento: paid ? paymentDate(matchedPayment) : existingReceivable.data_pagamento,
@@ -763,6 +775,7 @@ Deno.serve(async (req: Request) => {
       origem_cronograma_id: "matricula",
       origem_pagamento: "ASAAS_ONLINE",
       updated_at: new Date().toISOString(),
+      ...(isEadCheckout ? receivableFeeFields : {}),
     };
 
     const existingIsCreatingWithoutPayment = existingReceivable
@@ -883,6 +896,7 @@ Deno.serve(async (req: Request) => {
         asaas_installment_id: payment.installment || payment.installmentId || null,
         asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
         asaas_status: payment.status || null,
+        ...(isEadCheckout ? receivableFeeFields : {}),
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolveEadCheckoutCharge } from "../asaas/ead/checkout.ts";
 
 type BillingMethod = "PIX" | "BOLETO";
 type Environment = "sandbox" | "production";
@@ -80,6 +81,21 @@ const isPaidAsaasStatus = (status: unknown) =>
 
 const isCanceledAsaasStatus = (status: unknown) =>
   ["DELETED", "REFUNDED", "CANCELLED", "CANCELED", "OVERDUE", "EXPIRED"].includes(String(status || "").toUpperCase());
+
+const moneyValue = (value: unknown) =>
+  Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const paymentDateFor = (payment: any) =>
+  toDateString(payment?.clientPaymentDate)
+  || toDateString(payment?.paymentDate)
+  || toDateString(payment?.confirmedDate)
+  || toDateString(payment?.dateCreated)
+  || new Date().toISOString().slice(0, 10);
+
+const remotePaymentMatchesCharge = (payment: any, method: BillingMethod, expectedValue: number) => {
+  const remoteBillingType = String(payment?.billingType || "").toUpperCase();
+  return remoteBillingType === method && Math.abs(moneyValue(payment?.value) - moneyValue(expectedValue)) <= 0.01;
+};
 
 const getAvailableTurma = (turmas: any[]) => {
   const today = new Date().toISOString().slice(0, 10);
@@ -240,8 +256,8 @@ Deno.serve(async (req: Request) => {
     }
     assertAllowedPaymentMethod(course, method);
 
-    const value = Math.round((Number(course.valor || 0) + Number.EPSILON) * 100) / 100;
-    if (!value || value <= 0) throw new Error("Valor do curso EAD ainda nao configurado.");
+    const baseCourseValue = Math.round((Number(course.valor || 0) + Number.EPSILON) * 100) / 100;
+    if (!baseCourseValue || baseCourseValue <= 0) throw new Error("Valor do curso EAD ainda nao configurado.");
 
     const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
     if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para pagar pelo Asaas.");
@@ -393,6 +409,7 @@ Deno.serve(async (req: Request) => {
     };
 
     const buildPaymentResponse = async (payment: any, currentReceivable: any, flags: Record<string, unknown> = {}) => {
+      const chargedValue = Number(payment?.value || currentReceivable?.valor || chargeValue);
       const billingType = String(payment?.billingType || method || "").toUpperCase();
       const bankSlipUrl = payment?.bankSlipUrl || currentReceivable?.asaas_bank_slip_url || null;
       const invoiceUrl = payment?.invoiceUrl || currentReceivable?.asaas_invoice_url || bankSlipUrl || null;
@@ -407,7 +424,7 @@ Deno.serve(async (req: Request) => {
           id: payment?.id || currentReceivable?.asaas_payment_id || null,
           method: billingType,
           status: payment?.status || currentReceivable?.asaas_status || null,
-          value: Number(payment?.value || currentReceivable?.valor || value),
+          value: chargedValue,
           courseName: course.nome,
           recipient: EAD_PAYMENT_RECIPIENT,
           dueDate: toDateString(payment?.dueDate || currentReceivable?.data_vencimento),
@@ -430,6 +447,21 @@ Deno.serve(async (req: Request) => {
     });
 
     const dataVencimento = dueDateInDays(7);
+    const charge = resolveEadCheckoutCharge(course, turma, dataVencimento, {
+      method,
+      installments: 1,
+    });
+    const chargeValue = Number(charge.value || 0);
+    const eadCheckoutFeeFields = {
+      asaas_fee_value:
+        typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
+          ? (charge as any).feeValue
+          : null,
+      asaas_net_value:
+        typeof (charge as any).netValue === "number" && Number.isFinite((charge as any).netValue)
+          ? (charge as any).netValue
+          : null,
+    };
     const { data: existingReceivables, error: existingReceivableError } = await admin
       .from("contas_receber")
       .select("*")
@@ -474,12 +506,23 @@ Deno.serve(async (req: Request) => {
 
       const remoteStatus = String(remotePayment?.status || "").toUpperCase();
       if (remotePayment && isPaidAsaasStatus(remoteStatus)) {
-        await admin.from("contas_receber").update({
+        const { data: paidReceivable, error: paidReceivableError } = await admin.from("contas_receber").update({
+          status: "PAGO",
+          valor_pago: Number(remotePayment.value || receivable.valor || chargeValue),
+          data_pagamento: paymentDateFor(remotePayment),
+          forma_pagamento: method,
+          origem_pagamento: "ASAAS",
           asaas_status: remotePayment.status || receivable.asaas_status,
           asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
+          ...eadCheckoutFeeFields,
           asaas_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq("id", receivable.id);
+        }).eq("id", receivable.id)
+          .select()
+          .single();
+        if (paidReceivableError) throw paidReceivableError;
+        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        receivable = paidReceivable || receivable;
         return json(await buildPaymentResponse(remotePayment, receivable, {
           alreadyPaid: true,
           awaitingWebhook: true,
@@ -500,14 +543,19 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq("id", receivable.id);
         receivable.asaas_payment_id = null;
-      } else if (remotePayment && String(remotePayment?.billingType || "").toUpperCase() === method) {
-        await admin.from("contas_receber").update({
+      } else if (remotePayment && remotePaymentMatchesCharge(remotePayment, method, chargeValue)) {
+        const { data: pendingReceivable, error: pendingReceivableError } = await admin.from("contas_receber").update({
           asaas_invoice_url: remotePayment.invoiceUrl || receivable.asaas_invoice_url || null,
           asaas_bank_slip_url: remotePayment.bankSlipUrl || receivable.asaas_bank_slip_url || null,
           asaas_status: remotePayment.status || receivable.asaas_status || null,
+          ...eadCheckoutFeeFields,
           asaas_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq("id", receivable.id);
+        }).eq("id", receivable.id)
+          .select()
+          .single();
+        if (pendingReceivableError) throw pendingReceivableError;
+        receivable = pendingReceivable || receivable;
         return json(await buildPaymentResponse(remotePayment, receivable, { alreadyPending: true }), 200, corsHeaders);
       } else if (remotePayment) {
         await fetch(`${baseUrl}/payments/${receivable.asaas_payment_id}`, {
@@ -537,7 +585,7 @@ Deno.serve(async (req: Request) => {
     const receivablePayload = {
       polo_id: turma.polo_id,
       descricao: buildDescription(course.nome),
-      valor: value,
+      valor: chargeValue,
       data_vencimento: dataVencimento,
       status: "PENDENTE",
       cliente_id: aluno.id,
@@ -549,6 +597,7 @@ Deno.serve(async (req: Request) => {
       origem_cronograma_id: "matricula",
       origem_pagamento: "ASAAS_EAD",
       updated_at: new Date().toISOString(),
+      ...eadCheckoutFeeFields,
     };
 
     if (receivable?.id) {
@@ -599,7 +648,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           customer: customerId,
           billingType: method,
-          value,
+          value: chargeValue,
           dueDate: dataVencimento,
           description: buildDescription(course.nome),
           externalReference: receivable.id,
@@ -637,6 +686,7 @@ Deno.serve(async (req: Request) => {
         asaas_installment_id: payment.installment || payment.installmentId || null,
         asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
         asaas_status: payment.status || null,
+        ...eadCheckoutFeeFields,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),
@@ -659,7 +709,7 @@ Deno.serve(async (req: Request) => {
       cpf_cnpj: cpfCnpj || null,
       email: aluno.email || null,
       telefone: aluno.telefone || null,
-      valor: value,
+      valor: chargeValue,
       status: PENDENTE_INSCRICAO_STATUS,
       forma_pagamento: method,
       erro: null,

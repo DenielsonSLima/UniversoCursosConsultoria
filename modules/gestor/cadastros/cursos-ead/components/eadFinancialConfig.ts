@@ -15,12 +15,72 @@ export const resolveEadCardFeeRate = (installments: number) => {
 
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
+export type EadCheckoutBillingType = 'PIX' | 'BOLETO' | 'CREDIT_CARD';
+
+export const calculateEadCheckoutFeeBreakdown = (
+  baseValue: number,
+  billingType: EadCheckoutBillingType,
+  installmentCount: number,
+  shouldPassInstallmentCost = false,
+): {
+  grossValue: number;
+  feeValue: number;
+  netValue: number;
+} => {
+  const value = Math.max(0, roundMoney(baseValue || 0));
+
+  if (billingType === 'CREDIT_CARD') {
+    const clampedInstallments = clampEadInstallments(installmentCount);
+    const cardRate = resolveEadCardFeeRate(clampedInstallments);
+    const grossValue = shouldPassInstallmentCost
+      ? roundMoney((value + CARD_FIXED_FEE) / (1 - cardRate))
+      : value;
+    const feeValue = roundMoney(CARD_FIXED_FEE + grossValue * cardRate);
+    return {
+      grossValue,
+      feeValue,
+      netValue: roundMoney(Math.max(0, grossValue - feeValue)),
+    };
+  }
+
+  const grossValue = shouldPassInstallmentCost
+    ? roundMoney(value + PIX_OR_BOLETO_FIXED_FEE)
+    : value;
+  const feeValue = roundMoney(PIX_OR_BOLETO_FIXED_FEE);
+  return {
+    grossValue,
+    feeValue,
+    netValue: roundMoney(Math.max(0, grossValue - feeValue)),
+  };
+};
+
 export const formatEadMoney = (value: number) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export const buildEadFinancialSimulation = (courseValue: number, installments: number) => {
+export const buildEadFinancialSimulation = (
+  courseValue: number,
+  installments: number,
+  options: {
+    billingType?: EadCheckoutBillingType;
+    shouldPassInstallmentCost?: boolean;
+    includeFeeInCheckout?: boolean;
+  } = {},
+) => {
   const value = Math.max(0, roundMoney(courseValue || 0));
   const installmentCount = clampEadInstallments(installments);
+  const billingType = options.billingType || 'CREDIT_CARD';
+  const shouldPass = options.shouldPassInstallmentCost === true;
+  const includeFeeInCheckout = options.includeFeeInCheckout === true;
+
+  const selectedCheckout = calculateEadCheckoutFeeBreakdown(
+    value,
+    billingType,
+    billingType === 'CREDIT_CARD' ? installmentCount : 1,
+    billingType === 'CREDIT_CARD'
+      ? shouldPass || includeFeeInCheckout
+      : includeFeeInCheckout,
+  );
+
   if (value <= 0) {
     return {
       value: 0,
@@ -29,6 +89,12 @@ export const buildEadFinancialSimulation = (courseValue: number, installments: n
       cardFixedFee: CARD_FIXED_FEE,
       pixOrBoletoFixedFee: PIX_OR_BOLETO_FIXED_FEE,
       pixOrBoletoNet: 0,
+      checkout: {
+        billingType,
+        grossValue: 0,
+        feeValue: 0,
+        netValue: 0,
+      },
       withoutPass: {
         customerPays: 0,
         institutionReceives: 0,
@@ -62,6 +128,12 @@ export const buildEadFinancialSimulation = (courseValue: number, installments: n
     cardFixedFee: CARD_FIXED_FEE,
     pixOrBoletoFixedFee: PIX_OR_BOLETO_FIXED_FEE,
     pixOrBoletoNet: roundMoney(Math.max(0, value - PIX_OR_BOLETO_FIXED_FEE)),
+    checkout: {
+      billingType,
+      grossValue: selectedCheckout.grossValue,
+      feeValue: selectedCheckout.feeValue,
+      netValue: selectedCheckout.netValue,
+    },
     withoutPass: {
       customerPays: value,
       institutionReceives: cardNetWithoutPass,

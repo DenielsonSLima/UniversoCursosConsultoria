@@ -1,6 +1,6 @@
 import { buildCheckoutCharge } from "../core/checkout.ts";
 import { roundMoney, toNumber } from "../core/money.ts";
-import { calculateEadValueWithInstallmentCost, shouldPassEadInstallmentCost } from "./fees.ts";
+import { calculateEadCheckoutFeeBreakdown, shouldPassEadInstallmentCost } from "./fees.ts";
 import type { EadCheckoutPaymentRequest } from "./payment-request.ts";
 import { resolveEadPaymentSelection } from "./payment-request.ts";
 import { resolveEadConfiguredPayment } from "./payment-methods.ts";
@@ -15,19 +15,31 @@ export const resolveEadCheckoutCharge = (
   const baseValue = roundMoney(toNumber(course?.valor));
   const paymentSelection = resolveEadPaymentSelection(financeiroConfig, paymentRequest);
   const { billingType, installmentCount } = paymentSelection;
-  const value = shouldPassEadInstallmentCost({ financeiroConfig, billingType, installmentCount })
-    ? calculateEadValueWithInstallmentCost(baseValue, installmentCount)
-    : baseValue;
-
-  return buildCheckoutCharge({
-    course,
-    turma,
-    dueDate,
+  const includeFeeInCheckout = financeiroConfig.considerarTaxaNoCheckout === true;
+  const shouldApplyFeeInCheckout = billingType === "CREDIT_CARD"
+    ? (shouldPassEadInstallmentCost({ financeiroConfig, billingType, installmentCount }) || includeFeeInCheckout)
+    : includeFeeInCheckout;
+  const feeBreakdown = calculateEadCheckoutFeeBreakdown(
+    baseValue,
     billingType,
-    value,
-    applyTurmaAdjustments: false,
-    returnCallbackEnabled: true,
-    daysAfterDueDateToRegistrationCancellation: 0,
-    installmentCount: billingType === "CREDIT_CARD" ? installmentCount : 1,
-  });
+    installmentCount,
+    shouldApplyFeeInCheckout,
+  );
+  const value = feeBreakdown.grossValue;
+
+  return {
+    ...buildCheckoutCharge({
+      course,
+      turma,
+      dueDate,
+      billingType,
+      value,
+      applyTurmaAdjustments: false,
+      returnCallbackEnabled: true,
+      daysAfterDueDateToRegistrationCancellation: 0,
+      installmentCount: billingType === "CREDIT_CARD" ? installmentCount : 1,
+    }),
+    feeValue: feeBreakdown.feeValue,
+    netValue: feeBreakdown.netValue,
+  };
 };
