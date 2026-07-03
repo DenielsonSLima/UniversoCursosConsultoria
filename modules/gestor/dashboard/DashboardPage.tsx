@@ -69,7 +69,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
   });
 
   const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    return val.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const formatChartCurrency = (val: number) => {
+    if (!val) return 'R$ 0,00';
+    if (Math.abs(val) >= 1000000) return `${(val / 1000000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mi`;
+    if (Math.abs(val) >= 1000) return `${(val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mil`;
+    return formatCurrency(val);
   };
 
   const formatTimeAgo = (dateStr: string) => {
@@ -232,7 +244,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
               <h3 className="text-sm font-black text-[#001a33] uppercase tracking-wider">Desempenho de Caixa</h3>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Fluxo de Entradas vs Saídas Liquidadas</p>
             </div>
-            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <div className="flex flex-col items-end gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-blue-500 rounded" /> Recebido</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-rose-450 rounded" /> Pago</span>
             </div>
@@ -261,21 +273,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                     >
                       <div className="flex items-end gap-1 w-full justify-center h-full pb-1">
                         {/* Receitas */}
-                        <div 
-                          style={{ height: heightReceitas }} 
-                          className="w-4 bg-blue-500 hover:bg-blue-600 rounded-t transition-all relative group cursor-pointer"
-                        >
-                          <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-[#001a33] text-white text-[9px] py-1 px-1.5 rounded font-black whitespace-nowrap transition-opacity shadow-md z-30">
-                            Rec: {formatCurrency(point.receitas)}
+                        <div className="flex h-full flex-col items-center justify-end gap-1">
+                          {point.receitas > 0 && (
+                            <span className="rounded-lg bg-blue-50 px-1.5 py-1 text-[8px] font-black text-blue-700 shadow-sm">
+                              {formatChartCurrency(point.receitas)}
+                            </span>
+                          )}
+                          <div 
+                            style={{ height: heightReceitas }} 
+                            className="w-4 bg-blue-500 hover:bg-blue-600 rounded-t transition-all relative group cursor-pointer"
+                          >
+                            <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-[#001a33] text-white text-[9px] py-1 px-1.5 rounded font-black whitespace-nowrap transition-opacity shadow-md z-30">
+                              Rec: {formatCurrency(point.receitas)}
+                            </div>
                           </div>
                         </div>
                         {/* Despesas */}
-                        <div 
-                          style={{ height: heightDespesas }} 
-                          className="w-4 bg-rose-450 hover:bg-rose-500 rounded-t transition-all relative group cursor-pointer"
-                        >
-                          <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-[#001a33] text-white text-[9px] py-1 px-1.5 rounded font-black whitespace-nowrap transition-opacity shadow-md z-30">
-                            Desp: {formatCurrency(point.despesas)}
+                        <div className="flex h-full flex-col items-center justify-end gap-1">
+                          {point.despesas > 0 && (
+                            <span className="rounded-lg bg-rose-50 px-1.5 py-1 text-[8px] font-black text-rose-600 shadow-sm">
+                              {formatChartCurrency(point.despesas)}
+                            </span>
+                          )}
+                          <div 
+                            style={{ height: heightDespesas }} 
+                            className="w-4 bg-rose-450 hover:bg-rose-500 rounded-t transition-all relative group cursor-pointer"
+                          >
+                            <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-[#001a33] text-white text-[9px] py-1 px-1.5 rounded font-black whitespace-nowrap transition-opacity shadow-md z-30">
+                              Desp: {formatCurrency(point.despesas)}
+                            </div>
                           </div>
                         </div>
                       </div>
