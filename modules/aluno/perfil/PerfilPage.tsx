@@ -15,7 +15,11 @@ const tabs: Array<{ id: PerfilTabId; label: string; icon: React.ReactNode }> = [
   { id: 'senha', label: 'Alterar senha', icon: <KeyRound size={15} /> },
 ];
 
-const PerfilPage: React.FC<PerfilPageProps> = ({ alunoId }) => {
+const PerfilPage: React.FC<PerfilPageProps> = ({
+  alunoId,
+  technicalEnrollmentNotice = false,
+  onTechnicalEnrollmentNoticeResolved,
+}) => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<PerfilTabId>('perfil');
 
@@ -33,6 +37,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ alunoId }) => {
     mutationFn: (payload: PerfilUpdatePayload) => alunoPerfilService.updateProfile(alunoId, profile, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.profile(alunoId) });
+      onTechnicalEnrollmentNoticeResolved?.();
       alert('Cadastro atualizado com sucesso!');
     },
     onError: (error) => {
@@ -97,6 +102,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ alunoId }) => {
           profile={profile}
           saving={updateProfileMutation.isPending}
           uploadingPhoto={uploadPhotoMutation.isPending}
+          technicalEnrollmentNotice={technicalEnrollmentNotice}
           onSave={(payload) => updateProfileMutation.mutate(payload)}
           onPhotoUpload={(file) => uploadPhotoMutation.mutateAsync(file)}
         />

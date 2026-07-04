@@ -16,6 +16,11 @@ import { jsPDF } from 'jspdf';
 import { diplomaService } from '../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
 import { CertificadoAcademico } from '../../gestor/secretaria/certificados/certificados.types';
+import { alunoPerfilKeys, alunoPerfilService } from '../perfil/perfil.service';
+import {
+  TechnicalEnrollmentRequirement,
+  getTechnicalEnrollmentMissingFields,
+} from '../../shared/utils/technicalEnrollmentRequirements';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -36,6 +41,7 @@ import {
   Printer,
   Search,
   ShieldCheck,
+  User,
   X,
   Zap,
   ZoomIn,
@@ -46,6 +52,7 @@ interface CursosPageProps {
   alunoId?: string;
   initialCourseId?: string | null;
   onExitCourse?: () => void;
+  onRequireTechnicalProfile?: () => void;
 }
 
 interface EadProgress {
@@ -491,7 +498,12 @@ const getCourseImageSrc = (imageUrl?: string | null) => {
   return imageUrl;
 };
 
-const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExitCourse }) => {
+const CursosPage: React.FC<CursosPageProps> = ({
+  alunoId,
+  initialCourseId,
+  onExitCourse,
+  onRequireTechnicalProfile,
+}) => {
   const queryClient = useQueryClient();
   const hasAlunoContext = Boolean(alunoId);
   const [activeTab, setActiveTab] = useState<'ead' | 'live' | 'especializacao' | 'tecnico'>('ead');
@@ -513,6 +525,10 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const [showCompletedLessons, setShowCompletedLessons] = useState(false);
   const [activityCompletionPrompt, setActivityCompletionPrompt] = useState<{ activityId: string; title: string } | null>(null);
   const [checkoutReview, setCheckoutReview] = useState<{ course: any; turma: any } | null>(null);
+  const [technicalProfileGate, setTechnicalProfileGate] = useState<{
+    course: any;
+    missingFields: TechnicalEnrollmentRequirement[];
+  } | null>(null);
   const [eadCheckoutReview, setEadCheckoutReview] = useState<{ course: any } | null>(null);
   const [eadPaymentPanel, setEadPaymentPanel] = useState<any | null>(null);
   const [eadPaymentMethod, setEadPaymentMethod] = useState<EadCheckoutPaymentMethod>('PIX');
@@ -520,6 +536,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   const [acceptedOnlineTerms, setAcceptedOnlineTerms] = useState(false);
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
+  const initialCheckoutCourseRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (!eadCheckoutReview) return;
@@ -648,6 +665,17 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     }
   });
 
+  const { data: technicalEnrollmentProfile, isLoading: loadingTechnicalEnrollmentProfile } = useQuery<any>({
+    queryKey: alunoPerfilKeys.profile(alunoId || ''),
+    queryFn: () => alunoPerfilService.getProfile(alunoId || ''),
+    enabled: hasAlunoContext && !!alunoId,
+  });
+
+  const technicalEnrollmentMissingFields = useMemo(
+    () => getTechnicalEnrollmentMissingFields(technicalEnrollmentProfile),
+    [technicalEnrollmentProfile],
+  );
+
   const checkoutMutation = useMutation({
     mutationFn: async ({
       course,
@@ -746,6 +774,17 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
     eadPayment?: { method: EadCheckoutPaymentMethod; installments: number },
   ) => {
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
+    const isTechnicalCheckout = String(course?.modalidade || '').toUpperCase() === 'TECNICO';
+    if (isTechnicalCheckout) {
+      if (loadingTechnicalEnrollmentProfile) {
+        setCheckoutError('Estamos conferindo seu perfil antes da matrícula técnica. Tente novamente em alguns segundos.');
+        return;
+      }
+      if (technicalEnrollmentMissingFields.length > 0) {
+        setTechnicalProfileGate({ course, missingFields: technicalEnrollmentMissingFields });
+        return;
+      }
+    }
     const checkoutWindow = isEadCheckout ? null : window.open('', '_blank');
     if (checkoutWindow) {
       checkoutWindow.document.title = 'Preparando pagamento';
@@ -758,6 +797,22 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
       sameTab: isEadCheckout,
       eadPayment,
     });
+  };
+
+  const openOnlineClassCheckoutReview = (course: any, turma: any) => {
+    if (String(course?.modalidade || '').toUpperCase() === 'TECNICO') {
+      if (loadingTechnicalEnrollmentProfile) {
+        setCheckoutError('Estamos conferindo seu perfil antes da matrícula técnica. Tente novamente em alguns segundos.');
+        return;
+      }
+      if (technicalEnrollmentMissingFields.length > 0) {
+        setTechnicalProfileGate({ course, missingFields: technicalEnrollmentMissingFields });
+        return;
+      }
+    }
+
+    setAcceptedOnlineTerms(false);
+    setCheckoutReview({ course, turma });
   };
 
   const openEadCheckoutReview = (course: any) => {
@@ -979,12 +1034,32 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
   }, [accessibleEadCourses, courseProgressQueries]);
 
   useEffect(() => {
-    if (!initialCourseId || selectedCourse?.id === initialCourseId || courses.length === 0) return;
+    if (!initialCourseId || courses.length === 0) return;
     const course = courses.find(item => item.id === initialCourseId);
-    if (course && hasEadAccess(course)) {
-      setSelectedCourse(course);
+    if (!course) return;
+
+    const modality = String(course.modalidade || '').toUpperCase();
+    if (modality === 'EAD') {
+      setActiveTab('ead');
+      if (hasEadAccess(course)) {
+        if (selectedCourse?.id !== initialCourseId) setSelectedCourse(course);
+        return;
+      }
+      if (initialCheckoutCourseRef.current !== initialCourseId && eadCheckoutReview?.course?.id !== initialCourseId) {
+        const options = resolveEadCheckoutOptions(course);
+        const initialMethod = defaultEadCheckoutMethod(options);
+        setEadPaymentMethod(initialMethod);
+        setEadInstallments(initialMethod === 'CREDIT_CARD' ? options.parcelasPadrao : 1);
+        setEadCheckoutReview({ course });
+        initialCheckoutCourseRef.current = initialCourseId;
+      }
+      return;
     }
-  }, [courses, initialCourseId, selectedCourse?.id]);
+
+    if (modality === 'LIVRE') setActiveTab('live');
+    if (modality === 'ESPECIALIZACAO') setActiveTab('especializacao');
+    if (modality === 'TECNICO') setActiveTab('tecnico');
+  }, [courses, eadCheckoutReview?.course?.id, initialCourseId, selectedCourse?.id]);
 
   useEffect(() => {
     if (!selectedCourse?.id || courses.length === 0) return;
@@ -1988,6 +2063,64 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
         </div>
       )}
 
+      {technicalProfileGate && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
+          <div className="w-full max-w-xl rounded-[2rem] bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-600">Perfil necessário</p>
+                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
+                  Complete seu cadastro técnico
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTechnicalProfileGate(null)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800">
+                Antes de pagar a matrícula de <strong>{technicalProfileGate.course.nome}</strong>, precisamos completar sua identificação acadêmica. Isso evita cobrança em cadastro incompleto e agiliza a conferência da secretaria.
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                {technicalProfileGate.missingFields.map((field) => (
+                  <div key={field.key} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-[#001a33]">{field.label}</p>
+                    <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-500">{field.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setTechnicalProfileGate(null)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700"
+              >
+                Voltar aos cursos
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTechnicalProfileGate(null);
+                  onRequireTechnicalProfile?.();
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
+              >
+                <User size={14} />
+                Ir para Meu Perfil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {checkoutReview && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-4 py-6">
           <div className="w-full max-w-2xl rounded-[2rem] bg-white shadow-2xl">
@@ -2348,10 +2481,7 @@ const CursosPage: React.FC<CursosPageProps> = ({ alunoId, initialCourseId, onExi
                         ) : isOnlineClassModality ? (
                           onlineClassAvailable ? (
                             <button
-                              onClick={() => {
-                                setAcceptedOnlineTerms(false);
-                                setCheckoutReview({ course, turma: selectedTurma });
-                              }}
+                              onClick={() => openOnlineClassCheckoutReview(course, selectedTurma)}
                               disabled={isCheckoutLoading}
                               className="w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 rounded-xl py-3 transition-all"
                             >

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { User, Camera, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
+import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroAlunoDadosProps {
@@ -299,7 +300,15 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
           {isEditing ? (
             <>
               <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">RG</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Tipo de documento</label>
+                  <select name="tipoDocumento" value={formData.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO'} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none">
+                    {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+              </div>
+              <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase ml-1">Número do documento</label>
                   <input type="text" name="rg" value={formData.rg || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none" />
               </div>
               <div className="space-y-2">
@@ -325,7 +334,8 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
             </>
           ) : (
             <>
-              <DisplayField label="RG" value={formData.rg} />
+              <DisplayField label="Tipo de documento" value={formData.tipoDocumento} />
+              <DisplayField label="Número do documento" value={formData.rg} />
               <DisplayField label="Órgão Emissor / UF" value={formData.orgaoEmissor} />
               <DisplayField label="Título de Eleitor" value={formData.tituloEleitor} />
               <DisplayField label="Nacionalidade" value={formData.nacionalidade || 'Brasileira'} />

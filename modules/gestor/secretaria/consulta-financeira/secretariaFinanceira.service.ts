@@ -105,6 +105,12 @@ const mapRecebivel = (row: any): SecretariaFinanceiraRecebivel => {
   };
 };
 
+const isTecnicoCarnetCandidate = (item: SecretariaFinanceiraRecebivel) => {
+  const modality = normalizeStatus(item.modalidade);
+  const launchType = normalizeStatus(item.tipoLancamento);
+  return modality === 'TECNICO' && ['PARCELA', 'MENSALIDADE', 'REMATRICULA'].includes(launchType);
+};
+
 const RECEBIVEIS_SELECT = `
   id,
   polo_id,
@@ -176,7 +182,7 @@ export const secretariaFinanceiraService = {
       poloCnpj: turma.polos?.cnpj || '',
       poloCidade: turma.polos?.cidade || '',
       poloUf: turma.polos?.estado || turma.polos?.uf || '',
-    }));
+    })).filter((turma) => normalizeStatus(turma.modalidade) === 'TECNICO');
   },
 
   async getRecebiveisByAluno(alunoId: string, poloId: string): Promise<SecretariaFinanceiraRecebivel[]> {
@@ -188,7 +194,7 @@ export const secretariaFinanceiraService = {
       .order('data_vencimento', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(mapRecebivel);
+    return (data || []).map(mapRecebivel).filter(isTecnicoCarnetCandidate);
   },
 
   async getRecebiveisByTurma(turmaId: string): Promise<SecretariaFinanceiraRecebivel[]> {
@@ -199,7 +205,7 @@ export const secretariaFinanceiraService = {
       .order('data_vencimento', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(mapRecebivel);
+    return (data || []).map(mapRecebivel).filter(isTecnicoCarnetCandidate);
   },
 
   async searchRecebiveis(poloId: string, term: string): Promise<SecretariaFinanceiraRecebivel[]> {
@@ -212,7 +218,7 @@ export const secretariaFinanceiraService = {
       .limit(250);
 
     if (error) throw error;
-    const rows = (data || []).map(mapRecebivel);
+    const rows = (data || []).map(mapRecebivel).filter(isTecnicoCarnetCandidate);
     if (safeTerm.length < 2) return rows.slice(0, 60);
     const normalized = safeTerm.toLowerCase();
     return rows.filter((item) =>

@@ -11,6 +11,30 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
   Array.from(new Set(values.filter(Boolean) as T[]));
 
+const getFileExtension = (file: File, fallback: string) => {
+  const fromName = file.name.includes('.')
+    ? file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '')
+    : '';
+  if (fromName) return fromName;
+
+  const fromType = file.type.split('/')[1]?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (fromType === 'jpeg') return 'jpg';
+  return fromType || fallback;
+};
+
+const errorMessage = (error: any, fallback: string) => {
+  const message = String(
+    error?.message ||
+    error?.error_description ||
+    error?.details ||
+    error?.hint ||
+    error ||
+    ''
+  ).trim();
+
+  return message ? `${fallback}: ${message}` : fallback;
+};
+
 const resolvePoloId = (data: any): string | null => {
   const directPoloId = data?.poloId || data?.polo_id;
   if (directPoloId && UUID_RE.test(String(directPoloId))) return String(directPoloId).toLowerCase();
@@ -387,12 +411,17 @@ export const parceirosService = {
     return toCamel(updated);
   },
 
-  async uploadProfilePhoto(alunoId: string, currentProfile: any, file: File) {
+  async uploadProfilePhoto(alunoId: string, _currentProfile: any, file: File) {
+    if (!alunoId) {
+      throw new Error('Aluno não identificado para atualizar a foto.');
+    }
+
     if (!file.type.startsWith('image/')) {
       throw new Error('Envie uma imagem em JPG, PNG ou WEBP.');
     }
 
-    const filePath = `${alunoId}/perfil/foto_${Date.now()}.jpg`;
+    const fileExt = getFileExtension(file, 'jpg');
+    const filePath = `${alunoId}/perfil/foto_${Date.now()}.${fileExt}`;
     const { data, error: uploadError } = await supabase.storage
       .from('documentos')
       .upload(filePath, file, {
@@ -403,7 +432,11 @@ export const parceirosService = {
 
     if (uploadError) {
       console.error('Erro no upload da foto do aluno:', uploadError);
-      throw uploadError;
+      throw new Error(errorMessage(uploadError, 'Não foi possível enviar a foto para o storage'));
+    }
+
+    if (!data?.path) {
+      throw new Error('Foto enviada, mas o storage não retornou o caminho do arquivo.');
     }
 
     const { data: urlData } = supabase.storage
@@ -411,10 +444,23 @@ export const parceirosService = {
       .getPublicUrl(data.path);
 
     const publicUrl = urlData.publicUrl;
-    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
-    await this.update(alunoId, { ...editableProfile, foto: publicUrl });
+    const { data: updatedPhoto, error: photoUpdateError } = await supabase
+      .from('parceiros')
+      .update({ foto_url: publicUrl })
+      .eq('id', alunoId)
+      .select('foto_url')
+      .maybeSingle();
 
-    return publicUrl;
+    if (photoUpdateError) {
+      console.error('Erro ao atualizar foto do aluno:', photoUpdateError);
+      throw new Error(errorMessage(photoUpdateError, 'Foto enviada, mas não foi possível atualizar foto_url'));
+    }
+
+    if (!updatedPhoto) {
+      throw new Error('Foto enviada, mas nenhum cadastro de aluno foi atualizado. Verifique se o aluno existe e se o usuário tem permissão para alterar este cadastro.');
+    }
+
+    return updatedPhoto.foto_url || publicUrl;
   },
 
   async delete(id: string) {
@@ -462,20 +508,35 @@ export const parceirosService = {
   },
 
   async uploadDocumento(alunoId: string, docName: string, file: File) {
+    if (!alunoId) {
+      throw new Error('Aluno não identificado para vincular o documento.');
+    }
+    if (!docName) {
+      throw new Error('Documento não identificado para upload.');
+    }
+    if (!file) {
+      throw new Error('Selecione um arquivo para enviar.');
+    }
+
     const cleanDocName = docName.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileExt = file.name.split('.').pop();
+    const fileExt = getFileExtension(file, 'bin');
     const filePath = `${alunoId}/${cleanDocName}_${Date.now()}.${fileExt}`;
     
     const { data, error: uploadError } = await supabase.storage
       .from('documentos')
       .upload(filePath, file, {
         cacheControl: '3600',
+        contentType: file.type || 'application/octet-stream',
         upsert: true
       });
       
     if (uploadError) {
       console.error('Erro no upload do arquivo:', uploadError);
-      throw uploadError;
+      throw new Error(errorMessage(uploadError, 'Não foi possível enviar o arquivo para o storage'));
+    }
+
+    if (!data?.path) {
+      throw new Error('Arquivo enviado, mas o storage não retornou o caminho do arquivo.');
     }
     
     const { data: urlData } = supabase.storage
@@ -484,8 +545,7 @@ export const parceirosService = {
       
     const publicUrl = urlData.publicUrl;
     
-    // Atualiza o registro no banco
-    const { error: dbError } = await supabase
+    const { data: updatedDocument, error: dbError } = await supabase
       .from('documentos_aluno')
       .update({
         arquivo_url: publicUrl,
@@ -493,11 +553,17 @@ export const parceirosService = {
         updated_at: new Date().toISOString()
       })
       .eq('aluno_id', alunoId)
-      .eq('nome_documento', docName);
+      .eq('nome_documento', docName)
+      .select('id')
+      .maybeSingle();
       
     if (dbError) {
       console.error('Erro ao atualizar arquivo no banco:', dbError);
-      throw dbError;
+      throw new Error(errorMessage(dbError, 'Arquivo enviado, mas não foi possível vincular no banco'));
+    }
+
+    if (!updatedDocument) {
+      throw new Error(`Arquivo enviado, mas nenhum registro do checklist foi atualizado para "${docName}". Verifique se o checklist existe e se o usuário tem permissão para este aluno.`);
     }
     
     return publicUrl;

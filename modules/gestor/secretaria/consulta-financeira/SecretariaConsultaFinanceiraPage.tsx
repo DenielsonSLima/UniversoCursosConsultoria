@@ -70,13 +70,21 @@ const statusBadgeClass = (status: string) => {
 };
 
 const isPaid = (item: SecretariaFinanceiraRecebivel) => item.status === 'PAGO';
-const isCarnetBillable = (item: SecretariaFinanceiraRecebivel) =>
+const isPendingCarnetCharge = (item: SecretariaFinanceiraRecebivel) =>
   ['PENDENTE', 'VENCIDO'].includes(String(item.status || '').toUpperCase());
+const isTecnicoCarnetSelectable = (item: SecretariaFinanceiraRecebivel) => {
+  const modality = String(item.modalidade || '').toUpperCase();
+  const launchType = String(item.tipoLancamento || '').toUpperCase();
+  return isPendingCarnetCharge(item)
+    && modality === 'TECNICO'
+    && ['PARCELA', 'MENSALIDADE', 'REMATRICULA'].includes(launchType)
+    && Boolean(item.asaasBankSlipUrl || item.asaasInstallmentId);
+};
 
 const filterByStatus = (items: SecretariaFinanceiraRecebivel[], status: StatusFilter) => {
   if (status === 'TODOS') return items;
   if (status === 'PAGO') return items.filter(isPaid);
-  return items.filter(isCarnetBillable);
+  return items.filter(isPendingCarnetCharge);
 };
 
 const tabs: Array<{ id: SearchMode; label: string; icon: React.ElementType; description: string }> = [
@@ -173,7 +181,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
 
   const toggleItem = (id: string) => {
     const item = rawRecebiveis.find((recebivel) => recebivel.id === id);
-    if (!item || !isCarnetBillable(item)) return;
+    if (!item || !isTecnicoCarnetSelectable(item)) return;
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -185,7 +193,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const toggleVisible = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      const visibleIds = pagedRecebiveis.filter(isCarnetBillable).map((item) => item.id);
+      const visibleIds = pagedRecebiveis.filter(isTecnicoCarnetSelectable).map((item) => item.id);
       const allSelected = visibleIds.length > 0 && visibleIds.every((id) => next.has(id));
       visibleIds.forEach((id) => {
         if (allSelected) next.delete(id);
@@ -198,7 +206,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const toggleAllFiltered = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      const filteredIds = filteredRecebiveis.filter(isCarnetBillable).map((item) => item.id);
+      const filteredIds = filteredRecebiveis.filter(isTecnicoCarnetSelectable).map((item) => item.id);
       const allSelected = filteredIds.length > 0 && filteredIds.every((id) => next.has(id));
       filteredIds.forEach((id) => {
         if (allSelected) next.delete(id);
@@ -222,9 +230,9 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
       toast.info('Selecione parcelas', 'Marque pelo menos uma parcela para montar o carnê.');
       return;
     }
-    const invalidItems = selectedItems.filter((item) => !isCarnetBillable(item));
+    const invalidItems = selectedItems.filter((item) => !isTecnicoCarnetSelectable(item));
     if (invalidItems.length) {
-      toast.info('Remova parcelas não cobráveis', 'O carnê oficial do Asaas deve conter apenas parcelas pendentes ou vencidas.');
+      toast.info('Remova parcelas inválidas', 'O carnê técnico deve conter apenas parcelas técnicas pendentes/vencidas com boleto ou parcelamento Asaas.');
       return;
     }
     try {
@@ -309,7 +317,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
               <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-700">
                 <ActiveIcon size={16} /> {activeTab.label}
               </p>
-              <h4 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">Carnê de cobranças</h4>
+              <h4 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">Carnê técnico de cobranças</h4>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <select
@@ -326,7 +334,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
               </select>
               <button
                 onClick={previewCarnetPdf}
-                disabled={isGeneratingCarnet}
+                disabled={isGeneratingCarnet || !selectedItems.length}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-sm hover:bg-[#08294d]"
               >
                 {isGeneratingCarnet ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
@@ -480,9 +488,10 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={selectedIds.has(item.id)}
-                          disabled={!isCarnetBillable(item)}
+                          disabled={!isTecnicoCarnetSelectable(item)}
                           onChange={() => toggleItem(item.id)}
                           className="h-4 w-4 accent-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          title={isTecnicoCarnetSelectable(item) ? 'Selecionar parcela técnica' : 'Disponível apenas para parcelas técnicas com boleto ou parcelamento Asaas'}
                         />
                       </div>
                       <div>

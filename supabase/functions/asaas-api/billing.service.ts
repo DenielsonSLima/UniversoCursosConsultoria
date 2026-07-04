@@ -1,5 +1,7 @@
 import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
 import { canCreateDetachedPaymentLink } from "../asaas/avulsa/payment-link.ts";
+import { createTecnicoInstallmentService } from "../asaas/tecnico/installments.ts";
+import { isTecnicoCycleLaunch } from "../asaas/tecnico/cycle.ts";
 import {
   assertRequiredCustomerBillingData,
   isValidCpf,
@@ -410,6 +412,20 @@ export const createAsaasBillingService = (
     runtime: AsaasRuntime,
     matriculaId: string,
   ) => {
+    const tecnicoInstallments = createTecnicoInstallmentService(
+      admin,
+      (path, init) => callAsaas(runtime, path, init),
+      { notificationDisabled: !anyNotificationChannelEnabled(runtime.config) },
+    );
+    const tecnicoResult = await tecnicoInstallments.syncFutureInstallments(matriculaId);
+    const legacyReasons = new Set([
+      "Matrícula não pertence ao fluxo técnico Asaas.",
+      "Cronograma técnico possui valores ou dias de vencimento diferentes; use sincronização individual.",
+    ]);
+    if (!tecnicoResult.skipped || !legacyReasons.has(String(tecnicoResult.reason || ""))) {
+      return tecnicoResult;
+    }
+
     const { data, error } = await admin
       .from("contas_receber")
       .select("id")
@@ -419,7 +435,8 @@ export const createAsaasBillingService = (
       .neq("tipo_lancamento", "MATRICULA")
       .order("data_vencimento");
     if (error) throw error;
-    for (const item of data || []) await syncReceivable(runtime, item.id);
+    for (const item of data || []) await syncReceivable(runtime, item.id, true);
+    return { success: true, count: data?.length || 0, legacyIndividual: true };
   };
 
   const refreshReceivableStatus = async (
@@ -535,6 +552,7 @@ export const createAsaasBillingService = (
   const syncReceivable = async (
     runtime: AsaasRuntime,
     receivableId: string,
+    skipTecnicoCycle = false,
   ) => {
     const { data: initialReceivable, error: receivableError } = await admin
       .from("contas_receber")
@@ -593,6 +611,19 @@ export const createAsaasBillingService = (
         return createDetachedPaymentLink(runtime, receivable);
       }
       throw new Error("A cobrança precisa ter aluno/parceiro vinculado para gerar pagamento no Asaas.");
+    }
+
+    if (!skipTecnicoCycle && isTecnicoCycleLaunch(receivable)) {
+      await syncFutureInstallments(runtime, receivable.matricula_id);
+      const { data: refreshedReceivable, error: refreshedError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivable.id)
+        .single();
+      if (refreshedError) throw refreshedError;
+      if (refreshedReceivable.asaas_payment_id || refreshedReceivable.asaas_installment_id) {
+        return refreshedReceivable;
+      }
     }
 
     const { data: lockedReceivable, error: lockError } = await admin

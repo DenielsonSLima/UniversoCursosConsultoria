@@ -29,6 +29,17 @@ interface AlunoDocumentoData {
   matriculas: any[];
 }
 
+const getUploadErrorMessage = (error: any) => {
+  if (error?.message) return error.message;
+  if (typeof error === 'string') return error;
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Erro desconhecido.';
+  }
+};
+
 const ParceiroDocumentosPage: React.FC = () => {
   const [alunos, setAlunos] = useState<AlunoDocumentoData[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -80,8 +91,8 @@ const ParceiroDocumentosPage: React.FC = () => {
       setAlunos(prev => prev.map(aluno => 
         aluno.id === alunoId ? { ...aluno, documentos: updatedDocs } : aluno
       ));
-    } catch (err) {
-      alert('Falha no upload do documento. Tente novamente.');
+    } catch (err: any) {
+      alert(`Falha no upload do documento "${docName}": ${getUploadErrorMessage(err)}`);
       console.error(err);
     }
   };
@@ -348,12 +359,13 @@ const ParceiroDocumentosPage: React.FC = () => {
                               <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#001a33] bg-slate-100 hover:bg-[#001a33] hover:text-white px-4 py-2.5 rounded-xl transition-all cursor-pointer">
                                 <Upload size={12} />
                                 {doc.status === 'entregue' ? 'Reenviar' : 'Enviar'}
-                                <input 
+                                <input
                                   type="file"
                                   accept="application/pdf,image/*"
                                   className="hidden"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
+                                    e.target.value = '';
                                     if (file) handleFileUpload(aluno.id, doc.nome, file);
                                   }}
                                 />

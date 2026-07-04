@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, MonitorPlay, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaEadForm from '../components/forms/TurmaEadForm';
@@ -8,6 +9,7 @@ import TurmasFilters from '../components/TurmasFilters';
 import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 import { Turma } from '../gestao.types';
 import TurmaEadDetalhes from './detalhes/TurmaEadDetalhes';
+import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 
 interface GestaoEadProps {
   onToggleDetails?: (isOpen: boolean) => void;
@@ -17,6 +19,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
   const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]); // Mock temporário
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
+  const queryClient = useQueryClient();
 
   const list = useTurmasPaginadas('EAD');
 
@@ -26,6 +29,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
+    await invalidateSiteTickerQueries(queryClient);
     await list.reload();
   };
 

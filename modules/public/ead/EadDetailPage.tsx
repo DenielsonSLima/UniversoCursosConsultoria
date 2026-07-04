@@ -6,12 +6,14 @@ import {
   BookOpen, 
   Laptop, 
   CreditCard,
+  FileText,
   Loader2, 
   CheckCircle2,
   Sparkles,
   ListChecks,
   Lock,
-  UserPlus
+  UserPlus,
+  Zap
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import Header from '../components/Header';
@@ -20,6 +22,7 @@ import { Curso } from '../../gestor/cadastros/cadastros.types';
 import OnlineCheckoutButton from '../components/OnlineCheckoutButton';
 import { fetchPublicCourseById } from '../courseAvailability';
 import { buildEadCoursePath, EAD_SITE_URL } from './eadCourseLinks';
+import { resolveEadCheckoutOptions } from '../../aluno/cursos/eadCheckoutOptions';
 
 const setMetaContent = (selector: string, content: string) => {
   const element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -72,6 +75,40 @@ const EadDetailPage: React.FC = () => {
   });
 
   const eadConfigPagePath = curso ? buildEadCoursePath(curso.id, curso.nome) : null;
+  const paymentMethodCards = React.useMemo(() => {
+    if (!curso) return [];
+    const options = resolveEadCheckoutOptions(curso);
+    return options.options.map((option) => {
+      if (option.method === 'PIX') {
+        return {
+          method: option.method,
+          label: 'Pix',
+          detail: 'Liberação rápida',
+          icon: Zap,
+          cardClass: 'border-emerald-100 bg-emerald-50 text-emerald-800',
+          iconClass: 'bg-emerald-600 text-white',
+        };
+      }
+      if (option.method === 'BOLETO') {
+        return {
+          method: option.method,
+          label: 'Boleto',
+          detail: 'Pagamento bancário',
+          icon: FileText,
+          cardClass: 'border-sky-100 bg-sky-50 text-sky-800',
+          iconClass: 'bg-sky-600 text-white',
+        };
+      }
+      return {
+        method: option.method,
+        label: 'Cartão',
+        detail: options.maxParcelas > 1 ? `Até ${options.maxParcelas}x` : 'À vista',
+        icon: CreditCard,
+        cardClass: 'border-blue-100 bg-blue-50 text-blue-800',
+        iconClass: 'bg-blue-600 text-white',
+      };
+    });
+  }, [curso]);
 
   useEffect(() => {
     if (!curso || !eadConfigPagePath) return;
@@ -485,15 +522,37 @@ const EadDetailPage: React.FC = () => {
                 </div>
 
                 {curso.valor && curso.valor > 0 && (
-                  <div className="mb-6 p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-150 rounded-[1.5rem] flex items-center justify-between animate-fadeIn shadow-sm">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">Valor do Curso</span>
-                      <span className="text-[11px] text-slate-500 font-bold block">A partir de</span>
+                  <div className="mb-6 space-y-3">
+                    <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100/30 border border-emerald-150 rounded-[1.5rem] flex items-center justify-between animate-fadeIn shadow-sm">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">Valor do Curso</span>
+                        <span className="text-[11px] text-slate-500 font-bold block">A partir de</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-2xl font-black text-emerald-600 block">
+                          R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-black text-emerald-600 block">
-                        R$ {curso.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Formas aceitas</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2">
+                        {paymentMethodCards.map(({ method, label, detail, icon: Icon, cardClass, iconClass }) => (
+                          <div key={method} className={`flex min-h-[76px] items-center gap-3 rounded-2xl border px-3 py-3 ${cardClass}`}>
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
+                              <Icon size={16} />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-[11px] font-black uppercase tracking-wider">{label}</span>
+                              <span className="mt-0.5 block text-[10px] font-bold leading-tight opacity-75">{detail}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-bold leading-relaxed text-slate-500">
+                        <Lock size={13} className="mt-0.5 shrink-0 text-slate-400" />
+                        <span>A escolha e a geração do pagamento acontecem no portal do aluno.</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -509,7 +568,7 @@ const EadDetailPage: React.FC = () => {
                 <div className="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 p-5">
                   {[
                     { icon: UserPlus, text: 'Cadastro rápido com nome, CPF, WhatsApp, e-mail e senha.' },
-                    { icon: CreditCard, text: 'Pagamento online disponível para EAD, livres e especializações.' },
+                    { icon: CreditCard, text: 'Pagamento liberado no portal do aluno após entrar ou criar cadastro.' },
                     { icon: Lock, text: 'Cursos técnicos continuam com atendimento e ficha completa.' },
                   ].map(({ icon: Icon, text }) => (
                     <div key={text} className="flex items-start gap-3 text-xs font-bold leading-relaxed text-slate-600">

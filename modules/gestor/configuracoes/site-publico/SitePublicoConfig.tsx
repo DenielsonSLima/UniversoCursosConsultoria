@@ -4,10 +4,12 @@ import { Check, Loader2, Megaphone, Save } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import {
   DEFAULT_SITE_TICKER_CONFIG,
+  SITE_PUBLIC_TICKER_CONFIG_ID,
   SitePublicTickerConfig,
   SiteTickerModality,
   SiteTickerPhraseCategory,
 } from '../../../public/siteTicker.service';
+import { invalidateSiteTickerQueries, siteTickerKeys } from '../../../public/siteTicker.keys';
 import { sitePublicoConfigService } from './site-publico.service';
 
 type SiteTickerCursoOption = {
@@ -55,8 +57,9 @@ const SitePublicoConfig: React.FC = () => {
   const [config, setConfig] = React.useState<SitePublicTickerConfig>(DEFAULT_SITE_TICKER_CONFIG);
 
   const configQuery = useQuery({
-    queryKey: ['gestor-site-publico-ticker-config'],
+    queryKey: siteTickerKeys.gestor.config(),
     queryFn: () => sitePublicoConfigService.getConfig(),
+    refetchOnMount: 'always',
   });
 
   React.useEffect(() => {
@@ -64,7 +67,7 @@ const SitePublicoConfig: React.FC = () => {
   }, [configQuery.data]);
 
   const { data: cursos = [] } = useQuery<SiteTickerCursoOption[]>({
-    queryKey: ['gestor-site-publico-ticker-cursos', config.modalidades],
+    queryKey: siteTickerKeys.gestor.cursos(config.modalidades),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cursos')
@@ -76,10 +79,11 @@ const SitePublicoConfig: React.FC = () => {
       return (data || []) as SiteTickerCursoOption[];
     },
     enabled: config.modalidades.length > 0,
+    refetchOnMount: 'always',
   });
 
   const { data: turmas = [] } = useQuery<SiteTickerTurmaOption[]>({
-    queryKey: ['gestor-site-publico-ticker-turmas', config.modalidades, config.cursoIds],
+    queryKey: siteTickerKeys.gestor.turmas(config.modalidades, config.cursoIds),
     queryFn: async () => {
       let query = supabase
         .from('turmas')
@@ -96,10 +100,11 @@ const SitePublicoConfig: React.FC = () => {
       return (data || []) as SiteTickerTurmaOption[];
     },
     enabled: config.modalidades.some((item) => item !== 'EAD'),
+    refetchOnMount: 'always',
   });
 
   const { data: frases = [] } = useQuery<SiteTickerFraseOption[]>({
-    queryKey: ['gestor-site-publico-ticker-frases', config.automaticCategory],
+    queryKey: siteTickerKeys.gestor.frases(config.automaticCategory),
     queryFn: async () => {
       let query = supabase
         .from('site_publico_ticker_mensagens')
@@ -117,15 +122,37 @@ const SitePublicoConfig: React.FC = () => {
       return (data || []) as SiteTickerFraseOption[];
     },
     enabled: config.mode === 'automatic_phrases',
+    refetchOnMount: 'always',
   });
 
   const saveMutation = useMutation({
     mutationFn: () => sitePublicoConfigService.saveConfig(config),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gestor-site-publico-ticker-config'] });
-      queryClient.invalidateQueries({ queryKey: ['site-public-ticker'] });
+    onSuccess: async () => {
+      await invalidateSiteTickerQueries(queryClient);
     },
   });
+
+  const invalidateTickerData = React.useCallback(() => {
+    void invalidateSiteTickerQueries(queryClient);
+  }, [queryClient]);
+
+  React.useEffect(() => {
+    const channel = supabase
+      .channel('gestor-site-publico-ticker-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, invalidateTickerData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cursos' }, invalidateTickerData)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documentos_templates', filter: `id=eq.${SITE_PUBLIC_TICKER_CONFIG_ID}` },
+        invalidateTickerData
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_publico_ticker_mensagens' }, invalidateTickerData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [invalidateTickerData]);
 
   const updateConfig = (patch: Partial<SitePublicTickerConfig>) => {
     setConfig((current) => ({ ...current, ...patch }));

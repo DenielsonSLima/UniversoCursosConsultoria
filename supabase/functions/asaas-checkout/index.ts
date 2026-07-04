@@ -175,6 +175,49 @@ const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission =
   };
 };
 
+const normalizeDocumentType = (value: unknown) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+
+const isAcceptedTechnicalDocumentType = (value: unknown) => {
+  const normalized = normalizeDocumentType(value);
+  return [
+    "CARTEIRA NACIONAL DE IDENTIFICACAO",
+    "CIN",
+    "CNI",
+    "CNH",
+    "RG",
+    "RG ANTIGO",
+  ].some((allowed) => normalized === allowed || normalized.includes(allowed));
+};
+
+const missingTechnicalEnrollmentFields = (student: any) => {
+  const missing: string[] = [];
+  const hasText = (value: unknown) => String(value || "").trim().length > 0;
+  const hasThirdPartyResponsible = [
+    student?.responsavel_nome,
+    student?.responsavel_cpf,
+    student?.responsavel_telefone,
+    student?.responsavel_parentesco,
+  ].some(hasText);
+
+  if (!hasText(student?.nome_mae)) missing.push("nome da mãe");
+  if (!isAcceptedTechnicalDocumentType(student?.tipo_documento)) missing.push("tipo de documento (CIN, CNH ou RG)");
+  if (!hasText(student?.rg)) missing.push("número do documento");
+  if (student?.responsavel_financeiro !== true) missing.push("responsável financeiro");
+  if (hasThirdPartyResponsible && !hasText(student?.responsavel_nome)) missing.push("nome do responsável financeiro");
+  if (hasThirdPartyResponsible && (!hasText(student?.responsavel_cpf) || !isValidCpf(onlyDigits(student?.responsavel_cpf)))) {
+    missing.push("CPF válido do responsável financeiro");
+  }
+
+  return missing;
+};
+
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
   const json = (body: unknown, status = 200) =>
@@ -283,6 +326,12 @@ Deno.serve(async (req: Request) => {
     const missingBillingFields = missingStudentBillingFields(aluno);
     if (missingBillingFields.length > 0) {
       throw new Error(`Atualize o cadastro do aluno antes de comprar pelo Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
+    }
+    if (String(course.modalidade || "").toUpperCase() === "TECNICO") {
+      const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno);
+      if (missingTechnicalFields.length > 0) {
+        throw new Error(`Antes da matrícula técnica online, complete em Meu Perfil: ${missingTechnicalFields.join(", ")}.`);
+      }
     }
 
     const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id, {

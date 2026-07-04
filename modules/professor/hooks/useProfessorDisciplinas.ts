@@ -66,10 +66,12 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
     const rows = data || [];
     const turmaIds = Array.from(new Set(rows.map((row: any) => row.turma_id).filter(Boolean)));
     const disciplinaIds = Array.from(new Set(rows.map((row: any) => row.disciplina_id).filter(Boolean)));
+    const periodoIds = Array.from(new Set(rows.map((row: any) => row.periodo_letivo_id).filter(Boolean)));
     const assignmentPairs = new Set(rows.map((row: any) => `${row.turma_id}:${row.disciplina_id}`));
     const today = new Date().toISOString().slice(0, 10);
 
     let aulas: any[] = [];
+    const periodoStatusMap = new Map<string, string>();
     if (turmaIds.length > 0 && disciplinaIds.length > 0) {
       const { data: aulasData, error: aulasError } = await supabase
         .from('aulas_turma')
@@ -80,6 +82,19 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
 
       if (aulasError) throw aulasError;
       aulas = (aulasData || []).filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`));
+    }
+
+    if (periodoIds.length > 0) {
+      const { data: periodosData, error: periodosError } = await supabase
+        .from('periodos_letivos')
+        .select('id, status')
+        .in('id', periodoIds);
+
+      if (!periodosError) {
+        (periodosData || []).forEach((periodo: any) => {
+          periodoStatusMap.set(periodo.id, periodo.status || 'ABERTO');
+        });
+      }
     }
 
     return rows.map((row: any) => {
@@ -136,7 +151,7 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         horasRealizadas: horasLancadas,
         cargaHoraria,
         progressoPercent,
-        periodoStatus: row.periodo_status || 'ABERTO',
+        periodoStatus: periodoStatusMap.get(row.periodo_letivo_id) || row.periodo_status || 'ABERTO',
         concluida: Boolean(row.concluida),
       };
 

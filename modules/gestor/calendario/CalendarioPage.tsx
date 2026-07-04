@@ -53,7 +53,7 @@ const CalendarioPage: React.FC = () => {
 
       const { data: dbTurmas } = await supabase
         .from('turmas')
-        .select('id, nome, codigo')
+        .select('id, nome, codigo, turno')
         .order('nome', { ascending: true });
 
       setTeachers(dbTeachers || []);
@@ -69,7 +69,7 @@ const CalendarioPage: React.FC = () => {
           data_aula,
           turma_id,
           disciplina_id,
-          turmas ( nome ),
+          turmas ( nome, codigo, turno ),
           disciplinas ( nome )
         `)
         .not('data_aula', 'is', null);
@@ -97,17 +97,35 @@ const CalendarioPage: React.FC = () => {
           const config = configMap[key] || { nome: 'Não atribuído', id: null };
           const profName = config.nome;
           const profId = config.id;
-          const turmaNome = a.turmas?.nome || 'Turma';
-          const discNome = a.disciplinas?.nome || 'Disciplina';
+          const turma = Array.isArray(a.turmas) ? a.turmas[0] : a.turmas;
+          const disciplina = Array.isArray(a.disciplinas) ? a.disciplinas[0] : a.disciplinas;
+          const turmaNome = turma?.nome || 'Turma';
+          const turmaCodigo = turma?.codigo || null;
+          const turmaTurno = turma?.turno || null;
+          const discNome = disciplina?.nome || 'Disciplina';
+          const cargaHoraria = Number(a.carga_horaria || 0);
+          const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
 
           return {
             id: `class-${a.id}`,
             title: `${turmaNome} - ${discNome}`,
-            description: `Aula: ${a.titulo} (${a.carga_horaria}H) - Prof. ${profName}`,
+            description: [
+              `Aula: ${a.titulo || 'Aula cadastrada'}`,
+              `Professor: ${profName}`,
+              `Turma: ${turmaNome}${turmaCodigo ? ` (${turmaCodigo})` : ''}`,
+              `Carga horária: ${cargaLabel}`,
+              turmaTurno ? `Turno: ${turmaTurno}` : null,
+            ].filter(Boolean).join(' • '),
             date: a.data_aula, // YYYY-MM-DD
             typeId: 'ped', // Associa à categoria 'Pedagógico'
             professorId: profId,
-            turmaId: a.turma_id
+            professorName: profName,
+            turmaId: a.turma_id,
+            turmaName: turmaNome,
+            disciplinaId: a.disciplina_id,
+            disciplinaName: discNome,
+            cargaHoraria,
+            turno: turmaTurno,
           };
         });
       }
@@ -174,8 +192,8 @@ const CalendarioPage: React.FC = () => {
     const headers = ['Data', 'Evento', 'Categoria', 'Professor', 'Turma', 'Descricao'];
     const rows = filteredEvents.map(e => {
       const type = eventTypes.find(t => t.id === e.typeId)?.label || 'Outro';
-      const teacher = teachers.find(t => t.id === e.professorId)?.nome || 'Geral';
-      const classObj = turmas.find(t => t.id === e.turmaId)?.nome || 'Geral';
+      const teacher = e.professorName || teachers.find(t => t.id === e.professorId)?.nome || 'Geral';
+      const classObj = e.turmaName || turmas.find(t => t.id === e.turmaId)?.nome || 'Geral';
       return [
         e.date,
         e.title,

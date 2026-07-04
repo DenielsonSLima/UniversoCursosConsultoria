@@ -5,6 +5,7 @@ import { Turma } from '../../../gestao.types';
 import { gestaoService } from '../../../gestao.service';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
+import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
@@ -35,6 +36,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turma.id) }),
         queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] }),
+        invalidateSiteTickerQueries(queryClient),
       ]);
       toast.success('Turma atualizada', 'As informações foram salvas no Supabase.');
     },

@@ -2,6 +2,7 @@
 // File: modules/gestor/gestao/tecnicos/GestaoTecnicos.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Briefcase, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
@@ -11,6 +12,8 @@ import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
 import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 import ConfirmModal from '../../components/ConfirmModal';
+import ToastNotification, { useToast } from '../../components/ToastNotification';
+import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -24,18 +27,43 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toasts, removeToast, toast } = useToast();
+  const queryClient = useQueryClient();
 
   const list = useTurmasPaginadas('TECNICO', poloId);
 
   useEffect(() => {
+    let isMounted = true;
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
-    gestaoService.getCursosByModalidade('TECNICO').then(setCursosDisponiveis);
-  }, [poloId]);
+    gestaoService
+      .getCursosByModalidade('TECNICO')
+      .then((cursos) => {
+        if (isMounted) setCursosDisponiveis(cursos);
+      })
+      .catch((error: any) => {
+        console.error('Erro ao carregar cursos técnicos:', error);
+        if (isMounted) {
+          setCursosDisponiveis([]);
+          toast.error('Cursos não carregados', error?.message || 'Não foi possível carregar os cursos técnicos.');
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [poloId, toast]);
 
   const handleCreate = async (data: any) => {
-    await gestaoService.createTurma(data);
-    await list.reload();
+    const turma = await gestaoService.createTurma(data);
+    await invalidateSiteTickerQueries(queryClient);
+    try {
+      await list.reload();
+    } catch (error: any) {
+      console.error('Turma criada, mas a lista não recarregou:', error);
+      toast.error('Lista não atualizada', error?.message || 'A turma foi criada, mas a lista não recarregou automaticamente.');
+    }
+    toast.success('Turma criada', `${turma.codigo} foi aberta com sucesso.`);
   };
 
   const handleSelectTurma = (turma: Turma) => {
@@ -53,6 +81,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
     try {
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
+      await invalidateSiteTickerQueries(queryClient);
       await list.reload();
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');
@@ -163,6 +192,8 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         cancelText="Voltar"
         variant="danger"
       />
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

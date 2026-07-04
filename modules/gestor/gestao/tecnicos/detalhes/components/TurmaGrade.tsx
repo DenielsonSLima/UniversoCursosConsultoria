@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Layers, BookOpen, UserPlus, ChevronDown, ChevronRight, 
-  UserCheck, CheckCircle2, X, Plus, Trash2, CornerDownRight, Loader2
+  UserCheck, CheckCircle2, X, Trash2, CornerDownRight, Loader2, Save
 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
@@ -123,6 +123,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       setNewAulaTitulo(prev => ({ ...prev, [input.disciplinaId]: '' }));
       setNewAulaHoras(prev => ({ ...prev, [input.disciplinaId]: '' }));
       setNewAulaData(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      toast.success('Aula salva', 'O planejamento foi registrado e já aparece no diário e na agenda.');
     },
     (err) => {
       console.error('Erro ao adicionar aula:', err);
@@ -158,23 +159,25 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     setExpandedDisciplines(newSet);
   };
   
-  const handleAssignProfessor = async (disciplinaId: string, professorName: string) => {
+  const handleAssignProfessor = async (disciplinaId: string, professorId: string) => {
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
+    const professor = professores.find((item) => item.id === professorId) || null;
     await assignProfessorMutation.mutateAsync({
       disciplinaId,
-      professorName,
+      professor,
       currentConfig,
     });
   };
 
-  const handleAssignProfessorToAll = async (professorName: string) => {
+  const handleAssignProfessorToAll = async (professorId: string) => {
     if (!cursoBase) return;
     const disciplineIds = (cursoBase.modulos || []).flatMap(m => m.disciplinas.map(d => d.id));
     if (disciplineIds.length === 0) return;
+    const professor = professores.find((item) => item.id === professorId) || null;
 
     await assignProfessorToAllMutation.mutateAsync({
       disciplineIds,
-      professorName: professorName || null,
+      professor,
       configs: disciplinasConfig,
     });
   };
@@ -191,10 +194,16 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     const titulo = newAulaTitulo[disciplinaId]?.trim();
     const horasStr = newAulaHoras[disciplinaId]?.trim();
     const dataStr = newAulaData[disciplinaId]?.trim();
-    if (!titulo || !horasStr || !dataStr) return;
+    if (!titulo || !horasStr || !dataStr) {
+      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
+      return;
+    }
 
-    const horas = parseFloat(horasStr);
-    if (isNaN(horas) || horas <= 0) return;
+    const horas = Number(horasStr.replace(',', '.'));
+    if (!Number.isFinite(horas) || horas <= 0) {
+      toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
+      return;
+    }
 
     await addAulaMutation.mutateAsync({
       disciplinaId,
@@ -235,14 +244,14 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
           <div className="w-full md:w-64">
             <select
               value={
-                (Object.values(disciplinasConfig) as any[]).find((c) => c.professor)?.professor || ''
+                (Object.values(disciplinasConfig) as any[]).find((c) => c.professorId)?.professorId || ''
               }
               onChange={(e) => handleAssignProfessorToAll(e.target.value)}
               className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
             >
               <option value="">Selecione um professor...</option>
               {professores.map(p => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p.id} value={p.id}>{p.nome}</option>
               ))}
             </select>
           </div>
@@ -311,6 +320,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                       const horasStatus = String(discMetricas?.horas_status || 'PENDENTE');
                       const horasDiferenca = Number(discMetricas?.horas_diferenca || 0);
                       const isExpanded = expandedDisciplines.has(disc.id);
+                      const savingThisAula = addAulaMutation.isPending && addAulaMutation.variables?.disciplinaId === disc.id;
                       
                       let progressColor = 'bg-blue-500';
                       let progressTextClass = 'text-blue-600';
@@ -489,11 +499,14 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddAula(disc.id); }}
                                 />
                                 <button 
+                                  type="button"
                                   onClick={() => handleAddAula(disc.id)}
-                                  className={`p-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50`}
-                                  disabled={!newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
+                                  className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
+                                  disabled={savingThisAula || !newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
+                                  aria-label="Salvar aula"
                                 >
-                                  <Plus size={16} />
+                                  {savingThisAula ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                                  Salvar aula
                                 </button>
                               </div>
                             </div>
@@ -530,11 +543,11 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                   ) : (
                      professores.map(prof => (
                         <button
-                           key={prof}
-                           onClick={() => handleAssignProfessor(showDocenteModal.disciplinaId, prof)}
+                           key={prof.id}
+                           onClick={() => handleAssignProfessor(showDocenteModal.disciplinaId, prof.id)}
                            className="w-full text-left px-4 py-3 rounded-xl border border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 font-bold text-slate-700 transition-colors"
                         >
-                           {prof}
+                           {prof.nome}
                         </button>
                      ))
                   )}

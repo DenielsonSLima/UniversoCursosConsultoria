@@ -65,6 +65,8 @@ const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, teache
                     const type = getTypeInfo(event.typeId);
                     const teacherObj = teachers.find(t => t.id === event.professorId);
                     const turmaObj = turmas.find(t => t.id === event.turmaId);
+                    const teacherName = event.professorName || teacherObj?.nome;
+                    const turmaName = event.turmaName || turmaObj?.nome;
                     return (
                         <div key={event.id} className="flex gap-3 items-start p-3 rounded-xl bg-slate-50 hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-100 group">
                             <div className="flex flex-col items-center min-w-[36px]">
@@ -77,18 +79,33 @@ const CalendarSidebar: React.FC<CalendarSidebarProps> = ({ types, events, teache
                                 <p className="text-xs font-bold text-[#001a33] truncate" title={event.title}>
                                     {event.title}
                                 </p>
+                                {event.description && (
+                                    <p className="text-[9px] text-slate-400 mt-0.5 truncate font-medium" title={event.description}>
+                                        {event.description}
+                                    </p>
+                                )}
                                 <div className="flex flex-wrap gap-1 mt-1">
                                     <span className="text-[8px] font-black text-slate-500 bg-slate-100 px-1 py-0.5 rounded">
                                         {type.label}
                                     </span>
-                                    {teacherObj && (
-                                        <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Prof: ${teacherObj.nome}`}>
-                                            Prof: {teacherObj.nome}
+                                    {teacherName && (
+                                        <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Prof: ${teacherName}`}>
+                                            Prof: {teacherName}
                                         </span>
                                     )}
-                                    {turmaObj && (
-                                        <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Turma: ${turmaObj.nome}`}>
-                                            Turma: {turmaObj.nome}
+                                    {turmaName && (
+                                        <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded truncate max-w-[100px]" title={`Turma: ${turmaName}`}>
+                                            Turma: {turmaName}
+                                        </span>
+                                    )}
+                                    {event.cargaHoraria ? (
+                                        <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-1 py-0.5 rounded">
+                                            {event.cargaHoraria}H
+                                        </span>
+                                    ) : null}
+                                    {event.turno && (
+                                        <span className="text-[8px] font-black text-purple-600 bg-purple-50 px-1 py-0.5 rounded">
+                                            {event.turno}
                                         </span>
                                     )}
                                 </div>

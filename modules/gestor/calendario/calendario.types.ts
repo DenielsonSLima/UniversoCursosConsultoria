@@ -13,7 +13,13 @@ export interface CalendarEvent {
   date: string; // YYYY-MM-DD
   typeId: string; // Referência ao EventType
   professorId?: string | null;
+  professorName?: string | null;
   turmaId?: string | null;
+  turmaName?: string | null;
+  disciplinaId?: string | null;
+  disciplinaName?: string | null;
+  cargaHoraria?: number | null;
+  turno?: string | null;
 }
 
 // Dados iniciais padrão (Seed)

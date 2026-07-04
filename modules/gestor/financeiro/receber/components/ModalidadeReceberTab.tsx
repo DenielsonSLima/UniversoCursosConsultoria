@@ -1,4 +1,5 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -35,6 +36,30 @@ import FinancialReportExportButton, {
 } from '../../components/FinancialReportPreview';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const parseCurrencyInput = (value: string) => {
+  const cleaned = value.replace(/[^\d,.-]/g, '');
+  const normalized = cleaned.includes(',')
+    ? cleaned.replace(/\./g, '').replace(',', '.')
+    : /^\d+\.\d{1,2}$/.test(cleaned)
+      ? cleaned
+      : cleaned.replace(/\./g, '');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrencyInput = (value: number | string) => {
+  const parsed = typeof value === 'number' ? value : parseCurrencyInput(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '';
+  return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const normalizeCurrencyTyping = (value: string) => {
+  const cleaned = value.replace(/[^\d,.]/g, '');
+  if (!cleaned) return '';
+  if (cleaned.includes(',') || cleaned.includes('.')) return formatCurrencyInput(cleaned);
+  return Number(cleaned).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 type ViewMode = 'table' | 'cards';
 type GroupMode = 'none' | 'student' | 'class' | 'polo';
@@ -107,11 +132,18 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const receivables = receivablesQuery.data || [];
   const accounts = accountsQuery.data || [];
   const isLoading = receivablesQuery.isLoading;
+  const paidValueNumber = useMemo(() => parseCurrencyInput(paidValue), [paidValue]);
+  const activeSettlementAccounts = useMemo(() => (
+    accounts.filter((account) =>
+      account.ativo !== false
+      && (!selected?.poloId || !account.poloId || account.poloId === selected.poloId)
+    )
+  ), [accounts, selected?.poloId]);
 
   const paymentMutation = useMutation({
     mutationFn: () => financeiroService.markReceivablePaid(selected!.id!, {
       contaBancariaId: accountId,
-      valorPago: Number(paidValue),
+      valorPago: paidValueNumber,
       dataPagamento: paymentDate,
       formaPagamento: paymentMethod,
     }),
@@ -134,7 +166,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       ]);
       toast.success(
         'Recebimento confirmado',
-        result.asaasCanceled || shouldCancelAsaas
+        result.futureSyncWarning
+          ? `Baixa registrada. Atenção na sincronização futura: ${result.futureSyncWarning}`
+          : result.asaasCanceled || shouldCancelAsaas
           ? `Baixa manual registrada e cobrança ${result.asaasPaymentId || paidReceivable?.asaasPaymentId || ''} cancelada no Asaas.`
           : paidReceivable?.asaasPaymentId
             ? 'Baixa manual registrada. A cobrança Asaas já estava confirmada/recebida ou não exigia cancelamento.'
@@ -287,10 +321,13 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const openPayment = (item: ContasReceber) => {
     setSelected(item);
-    setPaidValue(String(item.valor));
+    setPaidValue(formatCurrencyInput(item.valor));
     setPaymentDate(today());
     setPaymentMethod('PIX');
-    setAccountId(accounts.find((account) => account.poloId === item.poloId)?.id || accounts[0]?.id || '');
+    const matchingAccount = accounts.find((account) =>
+      account.ativo !== false && account.poloId && account.poloId === item.poloId
+    ) || accounts.find((account) => account.ativo !== false && !account.poloId);
+    setAccountId(matchingAccount?.id || '');
   };
 
   const formatCurrency = (value: number) =>
@@ -1069,9 +1106,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         </div>
       )}
 
-      {selected && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl">
+      {selected && typeof document !== 'undefined' && createPortal((
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <button onClick={() => setSelected(null)} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
               <X size={18} />
             </button>
@@ -1094,7 +1131,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
                 Conta bancária
                 <select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700">
                   <option value="">Selecione...</option>
-                  {accounts.filter((account) => account.ativo !== false).map((account) => (
+                  {activeSettlementAccounts.map((account) => (
                     <option key={account.id} value={account.id}>{account.banco} · {account.conta}</option>
                   ))}
                 </select>
@@ -1114,17 +1151,36 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
               </label>
               <label className="text-[10px] font-black uppercase text-slate-500">
                 Valor recebido
-                <input type="number" min="0" step="0.01" value={paidValue} onChange={(event) => setPaidValue(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700" />
+                <div className="relative mt-2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">R$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={paidValue}
+                    onChange={(event) => setPaidValue(normalizeCurrencyTyping(event.target.value))}
+                    onBlur={(event) => setPaidValue(formatCurrencyInput(event.target.value))}
+                    placeholder="0,00"
+                    className="w-full rounded-xl border border-slate-200 p-3 pl-10 text-xs font-bold text-slate-700"
+                  />
+                </div>
               </label>
             </div>
 
+            {!activeSettlementAccounts.length && (
+              <p className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold text-amber-700">
+                Nenhuma conta bancária ativa foi encontrada para este polo. Cadastre uma conta do polo ou uma conta global antes da baixa.
+              </p>
+            )}
+
             {paymentMutation.isError && (
-              <p className="mt-4 text-xs font-bold text-rose-600">Não foi possível confirmar o recebimento.</p>
+              <p className="mt-4 text-xs font-bold text-rose-600">
+                {paymentMutation.error instanceof Error ? paymentMutation.error.message : 'Não foi possível confirmar o recebimento.'}
+              </p>
             )}
 
             <button
               onClick={() => paymentMutation.mutate()}
-              disabled={!accountId || !paymentDate || Number(paidValue) <= 0 || paymentMutation.isPending}
+              disabled={!accountId || !paymentDate || paidValueNumber <= 0 || paymentMutation.isPending}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-xs font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {paymentMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
@@ -1132,11 +1188,11 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             </button>
           </div>
         </div>
-      )}
+      ), document.body)}
 
-      {reversalItem && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl">
+      {reversalItem && typeof document !== 'undefined' && createPortal((
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <button onClick={() => setReversalItem(null)} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
               <X size={18} />
             </button>
@@ -1193,7 +1249,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             </button>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 };

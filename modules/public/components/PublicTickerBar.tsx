@@ -1,7 +1,9 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone } from 'lucide-react';
-import { siteTickerService } from '../siteTicker.service';
+import { supabase } from '../../../lib/supabase';
+import { SITE_PUBLIC_TICKER_CONFIG_ID, siteTickerService } from '../siteTicker.service';
+import { siteTickerKeys } from '../siteTicker.keys';
 
 const publicTickerQueryClient = new QueryClient({
   defaultOptions: {
@@ -14,11 +16,34 @@ const publicTickerQueryClient = new QueryClient({
 });
 
 const PublicTickerBarContent: React.FC = () => {
+  const queryClient = useQueryClient();
   const { data } = useQuery({
-    queryKey: ['site-public-ticker'],
+    queryKey: siteTickerKeys.public,
     queryFn: () => siteTickerService.getTickerData(),
     staleTime: 60_000,
   });
+
+  React.useEffect(() => {
+    const invalidateTicker = () => {
+      void queryClient.invalidateQueries({ queryKey: siteTickerKeys.public });
+    };
+
+    const channel = supabase
+      .channel('site-public-ticker-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, invalidateTicker)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cursos' }, invalidateTicker)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documentos_templates', filter: `id=eq.${SITE_PUBLIC_TICKER_CONFIG_ID}` },
+        invalidateTicker
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_publico_ticker_mensagens' }, invalidateTicker)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   if (!data?.items?.length) return null;
 

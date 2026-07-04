@@ -10,6 +10,17 @@ interface ParceiroAlunoDocumentosProps {
   alunoId: string;
 }
 
+const getUploadErrorMessage = (error: any) => {
+  if (error?.message) return error.message;
+  if (typeof error === 'string') return error;
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Erro desconhecido.';
+  }
+};
+
 const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ alunoId }) => {
   const queryClient = useQueryClient();
   const [uploadingName, setUploadingName] = useState<string | null>(null);
@@ -51,22 +62,22 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
   const uploadMutation = useMutation({
     mutationFn: ({ docName, file }: { docName: string; file: File }) =>
       parceirosService.uploadDocumento(alunoId, docName, file),
-    onSuccess: (url, variables) => {
+    onSuccess: (_url, variables) => {
       queryClient.invalidateQueries({ queryKey: ['documentos', alunoId] });
       alert(`Documento "${variables.docName}" enviado e vinculado com sucesso!`);
-    },
-    onError: (err: any) => {
-      alert('Erro ao enviar o documento. Verifique as configurações de storage.');
-      console.error(err);
     }
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docName: string) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     try {
       setUploadingName(docName);
       await uploadMutation.mutateAsync({ docName, file });
+    } catch (err: any) {
+      console.error('Erro ao enviar documento do aluno:', err);
+      alert(`Erro ao enviar o documento "${docName}": ${getUploadErrorMessage(err)}`);
     } finally {
       setUploadingName(null);
     }
@@ -131,6 +142,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
                   className="hidden"
                   accept=".jpg,.jpeg,.png,.pdf"
                   onChange={(e) => handleFileChange(e, doc.nome)}
+                  disabled={isUploading}
                 />
 
                 <div className="flex items-center gap-4 w-full sm:w-auto">

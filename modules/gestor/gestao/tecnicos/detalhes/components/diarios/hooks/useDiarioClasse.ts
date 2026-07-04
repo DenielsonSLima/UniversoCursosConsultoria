@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diarioClasseKeys } from '../diario-classe.keys';
-import { diarioClasseService, DiarioGradeFields } from '../diario-classe.service';
+import { diarioClasseService, DiarioAulaInput, DiarioGradeFields } from '../diario-classe.service';
 
 const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
   const queryClient = useQueryClient();
@@ -11,6 +11,11 @@ const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
     ]),
     results: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
+    aulasAndResults: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulas(turmaId, disciplinaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
+    ]),
     praticas: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
     observacoes: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.observacoes(turmaId, disciplinaId) }),
   };
@@ -31,6 +36,24 @@ export const useDiarioAulas = (turmaId: string, disciplinaId: string) => useQuer
   queryKey: diarioClasseKeys.aulas(turmaId, disciplinaId),
   queryFn: () => diarioClasseService.getAulas(turmaId, disciplinaId),
 });
+
+export const useAddDiarioAulaMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (input: DiarioAulaInput) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const invalidate = useInvalidateDiario(turmaId, disciplinaId);
+
+  return useMutation({
+    mutationFn: (input: DiarioAulaInput) => diarioClasseService.addAula(turmaId, disciplinaId, input),
+    onSuccess: async (_data, input) => {
+      await invalidate.aulasAndResults();
+      await onSuccess?.(input);
+    },
+    onError,
+  });
+};
 
 export const useDiarioAttendance = (turmaId: string, disciplinaId: string) => useQuery({
   queryKey: diarioClasseKeys.frequencia(turmaId, disciplinaId),

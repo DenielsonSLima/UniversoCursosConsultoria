@@ -1,11 +1,13 @@
 import React from 'react';
-import { Loader2, Search, X } from 'lucide-react';
+import { AlertCircle, Loader2, Search, X } from 'lucide-react';
+import { getTechnicalEnrollmentMissingFields } from '../../../../../../shared/utils/technicalEnrollmentRequirements';
 
 interface MatricularAlunoModalProps {
   searchTerm: string;
   loadingAvailable: boolean;
   enrollPending: boolean;
   students: any[];
+  requireTechnicalProfile?: boolean;
   onSearchChange: (value: string) => void;
   onConfirmStudent: (student: any) => void;
   onClose: () => void;
@@ -16,6 +18,7 @@ const MatricularAlunoModal: React.FC<MatricularAlunoModalProps> = ({
   loadingAvailable,
   enrollPending,
   students,
+  requireTechnicalProfile = false,
   onSearchChange,
   onConfirmStudent,
   onClose,
@@ -47,21 +50,38 @@ const MatricularAlunoModal: React.FC<MatricularAlunoModalProps> = ({
           <Loader2 className="animate-spin text-emerald-600 mx-auto my-12" />
         ) : students.length === 0 ? (
           <p className="text-center text-sm text-slate-400 py-12">Nenhum aluno disponível.</p>
-        ) : students.map((student: any) => (
-          <div key={student.id} className="p-4 rounded-2xl border border-slate-100 flex justify-between items-center gap-4">
-            <div>
-              <p className="font-bold text-[#001a33]">{student.nome}</p>
-              <p className="text-xs text-slate-500">{student.cpf_cnpj || 'CPF não informado'}</p>
+        ) : students.map((student: any) => {
+          const missingFields = requireTechnicalProfile ? getTechnicalEnrollmentMissingFields(student) : [];
+          const canEnroll = missingFields.length === 0;
+
+          return (
+            <div key={student.id} className={`p-4 rounded-2xl border flex justify-between items-center gap-4 ${
+              canEnroll ? 'border-slate-100' : 'border-amber-100 bg-amber-50/50'
+            }`}>
+              <div className="min-w-0">
+                <p className="font-bold text-[#001a33]">{student.nome}</p>
+                <p className="text-xs text-slate-500">{student.cpf_cnpj || 'CPF não informado'}</p>
+                {!canEnroll && (
+                  <p className="mt-2 flex items-start gap-1.5 text-[10px] font-bold leading-relaxed text-amber-700">
+                    <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                    Complete no cadastro: {missingFields.map((field) => field.label).join(', ')}.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => onConfirmStudent(student)}
+                disabled={enrollPending}
+                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black uppercase disabled:opacity-50 ${
+                  canEnroll
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-amber-200 bg-white text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                {canEnroll ? 'Matricular' : 'Ver pendências'}
+              </button>
             </div>
-            <button
-              onClick={() => onConfirmStudent(student)}
-              disabled={enrollPending}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase disabled:opacity-50"
-            >
-              Matricular
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   </div>

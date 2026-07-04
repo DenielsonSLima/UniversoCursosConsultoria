@@ -4,6 +4,15 @@ export interface AvailableStudent {
   id: string;
   nome: string;
   cpf_cnpj: string | null;
+  tipo_documento?: string | null;
+  rg?: string | null;
+  nome_mae?: string | null;
+  responsavel_nome?: string | null;
+  responsavel_cpf?: string | null;
+  responsavel_parentesco?: string | null;
+  responsavel_telefone?: string | null;
+  responsavel_email?: string | null;
+  responsavel_financeiro?: boolean | null;
 }
 
 export interface TurmaFinanceiroMatriculaConfig {
@@ -64,7 +73,7 @@ export const turmaAlunosService = {
 
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, cpf_cnpj')
+      .select('id, nome, cpf_cnpj, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro')
       .eq('tipo', 'Aluno')
       .eq('status', 'ATIVO')
       .order('nome');

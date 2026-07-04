@@ -41,6 +41,8 @@ const AlunoPage: React.FC = () => {
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [profileNotice, setProfileNotice] = useState<'technical-enrollment' | null>(null);
+  const [initialCourseId, setInitialCourseId] = useState<string | null>(null);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -55,6 +57,21 @@ const AlunoPage: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const requestedModule = params.get('module');
+    const requestedCourseId = params.get('courseId');
+    if (requestedModule && ['inicio', 'turmas', 'cursos', 'financeiro', 'biblioteca', 'comunicacao', 'secretaria', 'perfil'].includes(requestedModule)) {
+      setActiveModule(requestedModule);
+    }
+    if (requestedCourseId) {
+      setInitialCourseId(requestedCourseId);
+      setActiveModule('cursos');
+    }
+    if (params.get('technicalEnrollment') === '1') {
+      setProfileNotice('technical-enrollment');
+      setActiveModule('perfil');
+      navigate('/aluno', { replace: true });
+      return;
+    }
     if (params.get('asaas') === 'success') {
       setActiveModule('turmas');
       navigate('/aluno', { replace: true });
@@ -64,6 +81,7 @@ const AlunoPage: React.FC = () => {
   const alunoId = profile?.id || '';
   const alunoNome = profile?.nome || '';
   const alunoEmail = profile?.email || '';
+  const alunoInitials = (alunoNome.trim().slice(0, 2) || 'AL').toUpperCase();
 
   const { data: canViewCalendar = false } = useQuery({
     queryKey: ['aluno-calendario-elegibilidade', alunoId],
@@ -228,6 +246,11 @@ const AlunoPage: React.FC = () => {
     setIsLogoutConfirmOpen(true);
   };
 
+  const requireTechnicalProfileCompletion = () => {
+    setProfileNotice('technical-enrollment');
+    setActiveModule('perfil');
+  };
+
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
@@ -243,11 +266,17 @@ const AlunoPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'inicio':
-        return <InicioPage alunoId={alunoId} alunoNome={alunoNome} onNavigate={setActiveModule} />;
+        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
       case 'turmas':
         return <TurmasPage alunoId={alunoId} />;
       case 'cursos':
-        return <CursosPage alunoId={alunoId} />;
+        return (
+          <CursosPage
+            alunoId={alunoId}
+            initialCourseId={initialCourseId}
+            onRequireTechnicalProfile={requireTechnicalProfileCompletion}
+          />
+        );
       case 'calendario':
         return <CalendarioAlunoPage alunoId={alunoId} />;
       case 'financeiro':
@@ -259,9 +288,15 @@ const AlunoPage: React.FC = () => {
       case 'secretaria':
         return <SecretariaPage alunoId={alunoId} />;
       case 'perfil':
-        return <PerfilPage alunoId={alunoId} />;
+        return (
+          <PerfilPage
+            alunoId={alunoId}
+            technicalEnrollmentNotice={profileNotice === 'technical-enrollment'}
+            onTechnicalEnrollmentNoticeResolved={() => setProfileNotice(null)}
+          />
+        );
       default:
-        return <InicioPage alunoId={alunoId} alunoNome={alunoNome} onNavigate={setActiveModule} />;
+        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
     }
   };
 
@@ -277,17 +312,6 @@ const AlunoPage: React.FC = () => {
               alt="Universo Cursos e Consultoria" 
               className="h-11 w-full object-contain" 
             />
-          </div>
-        </div>
-
-        {/* User Card */}
-        <div className="p-4.5 border-b border-white/5 mx-3 mt-4 bg-white/5 rounded-2xl flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-bold text-white shadow-md">
-            {alunoNome.slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-black truncate">{alunoNome}</p>
-            <p className="text-[10px] text-slate-400 font-medium truncate">{alunoEmail}</p>
           </div>
         </div>
 
@@ -322,7 +346,16 @@ const AlunoPage: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="space-y-3 border-t border-white/10 p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 bg-blue-600 rounded-full flex items-center justify-center font-bold text-white shadow-md">
+              {alunoInitials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-black">{alunoNome}</p>
+              <p className="truncate text-[10px] font-medium text-slate-400" title={alunoEmail}>{alunoEmail}</p>
+            </div>
+          </div>
           <button 
             onClick={handleLogout} 
             className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider"
@@ -380,7 +413,16 @@ const AlunoPage: React.FC = () => {
                ))}
               </nav>
 
-             <div className="border-t border-white/10 pt-4">
+             <div className="space-y-3 border-t border-white/10 pt-4">
+               <div className="rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-3">
+                 <div className="w-10 h-10 shrink-0 bg-blue-600 rounded-full flex items-center justify-center font-bold text-white shadow-md">
+                   {alunoInitials}
+                 </div>
+                 <div className="min-w-0">
+                   <p className="truncate text-xs font-black">{alunoNome}</p>
+                   <p className="truncate text-[10px] font-medium text-slate-400" title={alunoEmail}>{alunoEmail}</p>
+                 </div>
+               </div>
                <button 
                  onClick={handleLogout} 
                  className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider"
@@ -411,7 +453,7 @@ const AlunoPage: React.FC = () => {
               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Aluno</p>
             </div>
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-slate-200 shadow-sm">
-              {alunoNome.slice(0, 2).toUpperCase()}
+              {alunoInitials}
             </div>
           </div>
         </header>

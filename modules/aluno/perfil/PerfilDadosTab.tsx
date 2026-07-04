@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  AlertCircle,
   Camera,
   GraduationCap,
   IdCard,
@@ -10,12 +11,17 @@ import {
   User,
 } from 'lucide-react';
 import ProfilePhotoAdjustModal from '../../shared/components/ProfilePhotoAdjustModal';
+import {
+  TECHNICAL_DOCUMENT_TYPE_OPTIONS,
+  getTechnicalEnrollmentMissingFields,
+} from '../../shared/utils/technicalEnrollmentRequirements';
 import { PerfilData, PerfilUpdatePayload } from './perfil.types';
 
 interface PerfilDadosTabProps {
   profile: PerfilData;
   saving: boolean;
   uploadingPhoto: boolean;
+  technicalEnrollmentNotice?: boolean;
   onSave: React.Dispatch<PerfilUpdatePayload>;
   onPhotoUpload: (file: File) => void | Promise<void>;
 }
@@ -33,6 +39,7 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
   profile,
   saving,
   uploadingPhoto,
+  technicalEnrollmentNotice = false,
   onSave,
   onPhotoUpload,
 }) => {
@@ -98,6 +105,10 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
     setResponsavelFinanceiro(Boolean(profile?.responsavelFinanceiro));
   }, [profile]);
 
+  useEffect(() => {
+    if (technicalEnrollmentNotice) setEditing(true);
+  }, [technicalEnrollmentNotice]);
+
   const supplementalFields: TextFieldConfig[] = [
     { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, placeholder: 'DD/MM/AAAA' },
     { label: 'Naturalidade', value: naturalidade, setter: setNaturalidade, placeholder: 'Cidade/UF' },
@@ -116,9 +127,44 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
     { label: 'E-mail responsável', value: responsavelEmail, setter: setResponsavelEmail, placeholder: 'responsavel@email.com' },
   ];
 
+  const getDraftProfile = (payload?: Partial<PerfilUpdatePayload>) => ({
+    ...(profile || {}),
+    telefone,
+    cep,
+    endereco,
+    numero,
+    bairro,
+    cidade,
+    uf,
+    dataNascimento,
+    sexo,
+    estadoCivil,
+    nacionalidade,
+    naturalidade,
+    tipoDocumento,
+    rg,
+    orgaoEmissor,
+    rgUfEmissao,
+    rgDataEmissao,
+    nomeMae,
+    nomePai,
+    escolaridadeAnterior,
+    instituicaoOrigem,
+    anoConclusaoEnsinoMedio,
+    responsavelNome,
+    responsavelCpf,
+    responsavelParentesco,
+    responsavelTelefone,
+    responsavelEmail,
+    responsavelFinanceiro,
+    ...payload,
+  });
+
+  const technicalMissingFields = getTechnicalEnrollmentMissingFields(getDraftProfile());
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onSave({
+    const payload = {
       telefone,
       cep,
       endereco,
@@ -147,7 +193,13 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
       responsavelTelefone,
       responsavelEmail,
       responsavelFinanceiro,
-    });
+    };
+    const missingFields = getTechnicalEnrollmentMissingFields(getDraftProfile(payload));
+    if (technicalEnrollmentNotice && missingFields.length > 0) {
+      alert(`Para continuar a inscrição técnica, complete: ${missingFields.map((item) => item.label).join(', ')}.`);
+      return;
+    }
+    onSave(payload);
     setEditing(false);
   };
 
@@ -223,6 +275,25 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
+          {technicalEnrollmentNotice && (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em]">Inscrição técnica pendente</p>
+                  <p className="mt-1 text-xs font-bold leading-relaxed">
+                    Para matricular-se em curso técnico com inscrição online, complete o documento de identificação, nome da mãe e responsável financeiro.
+                  </p>
+                  {technicalMissingFields.length > 0 && (
+                    <p className="mt-2 text-[11px] font-black">
+                      Faltando: {technicalMissingFields.map((field) => field.label).join(', ')}.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Nome Completo</label>
@@ -302,7 +373,7 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
               <IdCard size={14} className="text-blue-500" /> Dados complementares para cursos técnicos
             </h4>
             <p className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[10px] font-semibold leading-relaxed text-blue-800">
-              Estes campos são opcionais para cursos EAD, livres e especializações. Para curso técnico, completar estas informações agiliza a matrícula e emissão de documentos.
+              Para curso técnico com inscrição online, estes dados são obrigatórios antes do pagamento: CIN/CNH/RG, número do documento, nome da mãe e responsável financeiro.
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -348,11 +419,9 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de documento</label>
                 {editing ? (
                   <select value={tipoDocumento} onChange={(event) => setTipoDocumento(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white">
-                    <option value="CARTEIRA NACIONAL DE IDENTIFICAÇÃO">CARTEIRA NACIONAL DE IDENTIFICAÇÃO (CIN)</option>
-                    <option value="CNH">CNH</option>
-                    <option value="PASSAPORTE">PASSAPORTE</option>
-                    <option value="CARTEIRA PROFISSIONAL">CARTEIRA PROFISSIONAL</option>
-                    <option value="RG (ANTIGO)">RG (ANTIGO)</option>
+                    {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 ) : (
                   <p className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">{tipoDocumento || '—'}</p>
@@ -391,7 +460,9 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
 
               <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:col-span-2">
                 <input type="checkbox" disabled={!editing} checked={responsavelFinanceiro} onChange={(event) => setResponsavelFinanceiro(event.target.checked)} className="mt-0.5 h-4 w-4 accent-blue-600" />
-                <span className="text-xs font-bold text-slate-650">Este contato é o responsável financeiro.</span>
+                <span className="text-xs font-bold text-slate-650">
+                  Declaro o responsável financeiro da matrícula. Se nenhum terceiro for informado, o próprio aluno assume as cobranças.
+                </span>
               </label>
             </div>
           </div>

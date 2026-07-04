@@ -5,6 +5,7 @@ import {
   mapBillingType,
   paymentDate,
 } from "./shared.ts";
+import { createTecnicoInstallmentService } from "../asaas/tecnico/installments.ts";
 
 type CallAsaas = (path: string, init?: RequestInit) => Promise<any>;
 
@@ -463,6 +464,16 @@ export const createAsaasWebhookHandlers = (
   };
 
   const syncOpenInstallments = async (matriculaId: string) => {
+    const tecnicoInstallments = createTecnicoInstallmentService(admin, callAsaas, { notificationDisabled: true });
+    const tecnicoResult = await tecnicoInstallments.syncFutureInstallments(matriculaId);
+    const legacyReasons = new Set([
+      "Matrícula não pertence ao fluxo técnico Asaas.",
+      "Cronograma técnico possui valores ou dias de vencimento diferentes; use sincronização individual.",
+    ]);
+    if (!tecnicoResult.skipped || !legacyReasons.has(String(tecnicoResult.reason || ""))) {
+      return;
+    }
+
     const { data: installments, error: installmentsError } = await admin
       .from("contas_receber")
       .select("*")

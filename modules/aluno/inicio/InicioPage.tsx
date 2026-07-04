@@ -6,11 +6,10 @@ import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 
 interface InicioPageProps {
   alunoId: string;
-  alunoNome: string;
   onNavigate: (module: string) => void;
 }
 
-const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate }) => {
+const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
   // Query to count enrolled classes
   const { data: matriculasCount = 0 } = useQuery({
     queryKey: ['aluno-matriculas-count', alunoId],
@@ -207,23 +206,17 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, alunoNome, onNavigate 
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Welcome Banner (Premium Gradient) */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-700 to-[#001a33] text-white rounded-[2.5rem] p-8 md:p-10 shadow-lg">
-        {/* Decorative backdrop shapes */}
-        <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="absolute right-1/4 -bottom-12 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider text-blue-100 mb-4 border border-white/10">
-            <Award size={14} className="text-yellow-400" />
-            Portal Acadêmico
+      <div className="flex justify-end">
+        <div className="w-full max-w-[18rem] rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Award size={17} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Início</p>
+              <p className="truncate text-sm font-black text-[#001a33]">Acesso do aluno</p>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-            Olá, <span className="text-blue-200">{alunoNome}</span>!
-          </h1>
-          <p className="mt-2 text-blue-100/90 text-sm md:text-base font-medium max-w-md">
-            Olá! Acompanhe estudos, financeiro, biblioteca e suporte em um só lugar.
-          </p>
         </div>
       </div>
 

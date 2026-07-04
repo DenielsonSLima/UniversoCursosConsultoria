@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { CheckCircle2, CreditCard, FileText, Loader2, X, Zap } from 'lucide-react';
+import { CheckCircle2, CreditCard, Loader2, X } from 'lucide-react';
 import { asaasIntegrationService } from '../../asaas/asaas.service';
-import EadPaymentModal from '../../ead/components/EadPaymentModal';
 import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '../../login/portal-session';
 
 interface OnlineCheckoutButtonProps {
@@ -22,16 +21,36 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
   eadInline = false,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<'PIX' | 'BOLETO'>('PIX');
-  const [paymentPanel, setPaymentPanel] = useState<any | null>(null);
   const [toast, setToast] = useState<{ title: string; message: string; tone: 'success' | 'error' } | null>(null);
   const effectiveDisabled = loading || disabled || availabilityLoading;
+  const studentPortalCourseUrl = `/aluno?module=cursos&courseId=${encodeURIComponent(courseId)}`;
 
   const handleCheckout = async () => {
     if (effectiveDisabled) return;
     setLoading(true);
     try {
       setToast(null);
+
+      if (eadInline) {
+        const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] })
+          || await ensureLinkedAlunoProfile();
+
+        if (!profile || profile.tipo !== 'Aluno') {
+          setToast({
+            title: 'Login necessário',
+            message: 'Entre ou crie seu cadastro de aluno para escolher a forma de pagamento no portal.',
+            tone: 'error',
+          });
+          setLoading(false);
+          window.location.assign(`/login?mode=cadastro&redirect=${encodeURIComponent(studentPortalCourseUrl)}`);
+          return;
+        }
+
+        savePortalSession(profile);
+        window.location.assign(studentPortalCourseUrl);
+        return;
+      }
+
       const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] })
         || await ensureLinkedAlunoProfile();
 
@@ -52,27 +71,12 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
         courseId,
         profile.id,
         turmaId,
-        eadInline ? { method: selectedMethod, installments: 1 } : undefined,
       );
       setToast({
         title: 'Pagamento preparado',
-        message: eadInline ? 'A cobrança EAD foi gerada com segurança.' : 'Você será redirecionado para concluir a matrícula com segurança.',
+        message: 'Você será redirecionado para concluir a matrícula com segurança.',
         tone: 'success',
       });
-      if (eadInline && result.payment) {
-        const paymentMethod = String(result.payment.method || '').toUpperCase();
-        if (paymentMethod === 'BOLETO') {
-          const boletoUrl = result.payment.bankSlipUrl || result.payment.invoiceUrl || result.url;
-          if (boletoUrl) {
-            setLoading(false);
-            window.open(boletoUrl, '_blank', 'noopener,noreferrer');
-            return;
-          }
-        }
-        setPaymentPanel(result);
-        setLoading(false);
-        return;
-      }
       window.location.assign(result.url);
     } catch (error) {
       setToast({
@@ -116,38 +120,6 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
         </div>
       )}
 
-      {paymentPanel && (
-        <EadPaymentModal
-          panel={paymentPanel}
-          onClose={() => setPaymentPanel(null)}
-          onCopied={() => setToast({ title: 'Pix copiado', message: 'Código Pix copia e cola copiado.', tone: 'success' })}
-        />
-      )}
-
-      {eadInline && (
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          {[
-            { method: 'PIX' as const, label: 'Pix', icon: Zap },
-            { method: 'BOLETO' as const, label: 'Boleto', icon: FileText },
-          ].map(({ method, label, icon: Icon }) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => setSelectedMethod(method)}
-              disabled={effectiveDisabled}
-              className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
-                selectedMethod === method
-                  ? 'border-emerald-500 bg-emerald-600 text-white shadow-sm'
-                  : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
         <button
           type="button"
           onClick={handleCheckout}
@@ -158,7 +130,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
           {loading || availabilityLoading
             ? 'Verificando disponibilidade...'
             : eadInline
-              ? selectedMethod === 'PIX' ? 'Gerar QR Code Pix' : 'Gerar boleto'
+              ? 'Comprar curso'
               : 'Matricular e pagar online'}
       </button>
 

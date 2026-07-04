@@ -47,6 +47,7 @@ const GLOBAL_CONFIG_ACTIONS = new Set([
 const FINANCE_WRITE_ACTIONS = new Set([
   "reconcile-online-payment",
   "cancel-receivable",
+  "generate-official-carnet",
   "manual-settlement",
   "reverse-manual-settlement",
 ]);
@@ -611,7 +612,7 @@ Deno.serve(async (req: Request) => {
       if (!contaBancaria || contaBancaria.ativo !== true) {
         throw new Error("Conta bancária inativa ou não encontrada.");
       }
-      if (receivable.polo_id && contaBancaria.polo_id !== receivable.polo_id) {
+      if (receivable.polo_id && contaBancaria.polo_id && contaBancaria.polo_id !== receivable.polo_id) {
         throw new Error("Conta bancária pertence a outro polo.");
       }
 
@@ -708,6 +709,7 @@ Deno.serve(async (req: Request) => {
         throw new Error("Cobrança mudou de status antes da baixa. Atualize a tela e tente novamente.");
       }
 
+      let futureSyncWarning: string | null = null;
       if (receivable.matricula_id) {
         const { data: matricula, error: matriculaError } = await admin
           .from("matriculas")
@@ -719,8 +721,22 @@ Deno.serve(async (req: Request) => {
         const gerarFutura = matricula?.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
         const syncEnabled = matricula?.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
         if (gerarFutura && syncEnabled) {
-          settlementRuntime = settlementRuntime || await getRuntimeForMovement();
-          await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
+          try {
+            settlementRuntime = settlementRuntime || await getRuntimeForMovement();
+            const syncResult = await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
+            if (syncResult?.skipped && syncResult?.reason) {
+              futureSyncWarning = String(syncResult.reason);
+            }
+          } catch (syncError) {
+            futureSyncWarning = syncError instanceof Error ? syncError.message : String(syncError);
+            await admin.from("contas_receber").update({
+              asaas_last_error: futureSyncWarning,
+              updated_at: new Date().toISOString(),
+            })
+              .eq("matricula_id", receivable.matricula_id)
+              .in("status", ["PENDENTE", "VENCIDO"])
+              .neq("tipo_lancamento", "MATRICULA");
+          }
         }
       }
       return json({
@@ -728,6 +744,7 @@ Deno.serve(async (req: Request) => {
         asaasCanceled,
         asaasPaymentLinkCanceled,
         asaasPaymentId: receivable.asaas_payment_id || null,
+        futureSyncWarning,
       });
     }
 

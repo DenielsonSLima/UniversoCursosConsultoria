@@ -1,13 +1,14 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Printer, Calendar, BookOpen, Calculator, Loader2, AlertCircle, Download, CheckCircle2, LockKeyhole } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar, BookOpen, Calculator, Loader2, AlertCircle, Download, CheckCircle2, LockKeyhole, Save } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import DiarioPrintDocument from './DiarioPrintDocument';
 import {
   useDiarioAttendance,
+  useAddDiarioAulaMutation,
   useDiarioAulas,
   useDiarioGrades,
   useDiarioObservacoes,
@@ -40,6 +41,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   const isReadOnly =
     String(disciplina?.periodoStatus || '').toUpperCase() === 'FECHADO' ||
     String(turma?.status || '').toUpperCase() === 'FINALIZADA';
+  const isTurmaFinalizada = String(turma?.status || '').toUpperCase() === 'FINALIZADA';
+  const readOnlyLabel = isTurmaFinalizada ? 'Turma encerrada' : 'Período fechado';
+  const readOnlyMessage = isTurmaFinalizada
+    ? 'Esta turma foi encerrada pela gestão. O professor pode consultar o diário, mas não pode alterar frequência, notas, conteúdo ou aulas.'
+    : 'Este período foi fechado. Notas, frequência, conteúdo e observações ficam bloqueados até a coordenação reabrir o período com justificativa.';
 
   const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
   const { data: watermark } = useQuery({
@@ -127,6 +133,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   const [localGrades, setLocalGrades] = useState<Record<string, any>>({});
   const [localPraticas, setLocalPraticas] = useState<Record<string, string>>({});
   const [localObservacoes, setLocalObservacoes] = useState('');
+  const [novaAulaTitulo, setNovaAulaTitulo] = useState('');
+  const [novaAulaData, setNovaAulaData] = useState('');
+  const [novaAulaCarga, setNovaAulaCarga] = useState('');
 
   useEffect(() => {
     if (Object.keys(gradesMap).length > 0) {
@@ -148,6 +157,20 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
   }, [dbObservacoes]);
 
   const toggleAttendanceMutation = useToggleDiarioAttendanceMutation(turma.id, disciplina.id);
+  const addAulaMutation = useAddDiarioAulaMutation(
+    turma.id,
+    disciplina.id,
+    (input) => {
+      setNovaAulaTitulo('');
+      setNovaAulaData('');
+      setNovaAulaCarga('');
+      toast.success('Aula salva', `${input.titulo} foi registrada no diário e na agenda.`);
+    },
+    (error) => {
+      console.error('Erro ao salvar aula no diário:', error);
+      toast.error('Aula não salva', error?.message || 'Não foi possível registrar a aula.');
+    },
+  );
   const saveStudentGradesMutation = useSaveDiarioGradesMutation(turma.id, disciplina.id);
   const savePraticaMutation = useSaveDiarioPraticaMutation(turma.id, disciplina.id);
   const saveObservacoesMutation = useSaveDiarioObservacoesMutation(turma.id, disciplina.id);
@@ -158,6 +181,30 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     const current = attendanceMap[studentId]?.[classId] || null;
     const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
     toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });
+  };
+
+  const handleAddAula = () => {
+    if (isReadOnly) return;
+
+    const titulo = novaAulaTitulo.trim();
+    const dataAula = novaAulaData.trim();
+    const cargaHoraria = Number(novaAulaCarga.replace(',', '.'));
+
+    if (!titulo || !dataAula || !novaAulaCarga.trim()) {
+      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
+      return;
+    }
+
+    if (!Number.isFinite(cargaHoraria) || cargaHoraria <= 0) {
+      toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
+      return;
+    }
+
+    addAulaMutation.mutate({
+      titulo,
+      dataAula,
+      cargaHoraria,
+    });
   };
 
   const handleLocalGradeChange = (studentId: string, field: string, value: string) => {
@@ -325,7 +372,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
              }`}
            >
              {isReadOnly ? <LockKeyhole size={16} /> : <CheckCircle2 size={16} />}
-             {isReadOnly ? 'Período fechado' : 'Salvamento automático'}
+             {isReadOnly ? readOnlyLabel : 'Salvamento automático'}
            </button>
         </div>
       </div>
@@ -337,7 +384,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
             <div>
               <p className="font-black uppercase tracking-wider text-[11px]">Diário em modo leitura</p>
               <p className="mt-1 text-xs leading-relaxed text-amber-800">
-                Este período foi fechado. Notas, frequência, conteúdo e observações ficam bloqueados até a coordenação reabrir o período com justificativa.
+                {readOnlyMessage}
               </p>
             </div>
           </div>
@@ -367,6 +414,64 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
             </div>
          </div>
       </div>
+
+      {!isReadOnly && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm">
+          <div className="flex flex-col xl:flex-row xl:items-end gap-3">
+            <div className="flex-1 min-w-[220px]">
+              <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Descrição da aula</label>
+              <input
+                type="text"
+                value={novaAulaTitulo}
+                onChange={(event) => setNovaAulaTitulo(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') document.getElementById(`diario-aula-data-${disciplina.id}`)?.focus();
+                }}
+                placeholder="Conteúdo ministrado..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
+              />
+            </div>
+            <div className="w-full sm:w-44">
+              <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Data da aula</label>
+              <input
+                id={`diario-aula-data-${disciplina.id}`}
+                type="date"
+                value={novaAulaData}
+                onChange={(event) => setNovaAulaData(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') document.getElementById(`diario-aula-carga-${disciplina.id}`)?.focus();
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
+              />
+            </div>
+            <div className="w-full sm:w-36">
+              <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Carga horária</label>
+              <input
+                id={`diario-aula-carga-${disciplina.id}`}
+                type="number"
+                min="0"
+                step="0.5"
+                value={novaAulaCarga}
+                onChange={(event) => setNovaAulaCarga(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') handleAddAula();
+                }}
+                placeholder="Hrs"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-center text-xs font-black text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddAula}
+              disabled={addAulaMutation.isPending}
+              className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            >
+              {addAulaMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              Salvar aula
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-6 bg-slate-200/50 p-1.5 rounded-2xl border border-slate-100">

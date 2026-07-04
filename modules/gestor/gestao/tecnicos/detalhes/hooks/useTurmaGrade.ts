@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaGradeService } from '../turma-grade.service';
-import { TurmaAulaInput, TurmaDisciplinaConfig } from '../turma-grade.types';
+import { TurmaAulaInput, TurmaDisciplinaConfig, TurmaProfessorOption } from '../turma-grade.types';
 
 const useTurmaGradeInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
@@ -31,12 +31,12 @@ export const useAssignProfessorMutation = (
   return useMutation({
     mutationFn: (input: {
       disciplinaId: string;
-      professorName: string | null;
+      professor: TurmaProfessorOption | null;
       currentConfig: TurmaDisciplinaConfig;
     }) => turmaGradeService.assignProfessor(
       turmaId,
       input.disciplinaId,
-      input.professorName,
+      input.professor,
       input.currentConfig,
     ),
     onSuccess: async () => {
@@ -57,12 +57,12 @@ export const useAssignProfessorToAllMutation = (
   return useMutation({
     mutationFn: (input: {
       disciplineIds: string[];
-      professorName: string | null;
+      professor: TurmaProfessorOption | null;
       configs: Record<string, TurmaDisciplinaConfig>;
     }) => turmaGradeService.assignProfessorToDisciplines(
       turmaId,
       input.disciplineIds,
-      input.professorName,
+      input.professor,
       input.configs,
     ),
     onSuccess: async () => {

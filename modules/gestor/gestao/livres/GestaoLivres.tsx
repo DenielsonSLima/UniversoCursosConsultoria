@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Zap, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaLivreForm from '../components/forms/TurmaLivreForm';
@@ -9,6 +10,7 @@ import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
 import { useGestaoLivresTurmas } from './hooks/useGestaoLivresTurmas';
 import ConfirmModal from '../../components/ConfirmModal';
+import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 
 interface GestaoLivresProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -22,6 +24,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   const list = useGestaoLivresTurmas(poloId);
 
@@ -33,6 +36,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
+    await invalidateSiteTickerQueries(queryClient);
     await list.reload();
   };
 
@@ -51,6 +55,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
     try {
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
+      await invalidateSiteTickerQueries(queryClient);
       await list.reload();
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');

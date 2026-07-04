@@ -7,15 +7,36 @@ import { polosService } from '../../../configuracoes/polos/polos.service';
 interface TurmaTecnicoFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => Promise<void> | void;
   cursosDisponiveis: any[];
   selectedPoloId?: string;
 }
+
+const getFriendlySubmitError = (error: any) => {
+  const message = String(error?.message || '').trim();
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('row-level security')) {
+    return 'Seu usuário não tem permissão para criar turma neste polo. Verifique o polo ativo ou o escopo do gestor.';
+  }
+
+  if (lowerMessage.includes('duplicate key') || lowerMessage.includes('turmas_codigo_key')) {
+    return 'Já existe uma turma com este código. Altere curso, turno, polo ou data de início para gerar outro código.';
+  }
+
+  if (lowerMessage.includes('turmas_turno_check') || (lowerMessage.includes('check constraint') && lowerMessage.includes('turno'))) {
+    return 'O turno selecionado não está aceito no banco. A migration de turnos precisa estar aplicada.';
+  }
+
+  return message || 'Não foi possível criar a turma. Verifique os dados e tente novamente.';
+};
 
 const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({ 
   isOpen, onClose, onSave, cursosDisponiveis, selectedPoloId
 }) => {
   const [polos, setPolos] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [formData, setFormData] = useState({
     cursoId: '',
     poloId: '',
@@ -49,6 +70,13 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     }
   }, [selectedPoloId]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setSubmitError('');
+      setIsSaving(false);
+    }
+  }, [isOpen]);
+
   // Lógica de Automação
   useEffect(() => {
     if (formData.cursoId && formData.poloId && formData.dataInicio && formData.turno) {
@@ -81,14 +109,28 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
   const selectedPolo = polos.find(p => p.id === formData.poloId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
     const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
     const polo = selectedPolo;
 
-    if (!curso || !polo) { alert('Selecione curso e polo'); return; }
+    if (!curso || !polo) {
+      setSubmitError('Selecione curso e polo antes de confirmar a abertura.');
+      return;
+    }
 
-    onSave({
+    if (!formData.nomeAutomatico || !formData.codigoAutomatico) {
+      setSubmitError('Confira curso, polo, data de início e turno para gerar nome e código da turma.');
+      return;
+    }
+
+    setSubmitError('');
+    setIsSaving(true);
+
+    try {
+      await onSave({
         ...formData,
         nome: formData.nomeAutomatico,
         codigo: formData.codigoAutomatico,
@@ -100,8 +142,14 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
         poloNome: polo.cidade,
         modalidade: 'TECNICO',
         status: 'EM_ANDAMENTO'
-    });
-    onClose();
+      });
+      onClose();
+    } catch (error: any) {
+      console.error('Erro ao abrir turma técnica:', error);
+      setSubmitError(getFriendlySubmitError(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -374,13 +422,19 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
              </div>
           </div>
 
+          {submitError && (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-700" role="alert">
+              {submitError}
+            </div>
+          )}
+
           <div className="flex justify-end pt-4">
             <button 
                 type="submit"
-                disabled={!formData.nomeAutomatico}
+                disabled={isSaving || !formData.nomeAutomatico}
                 className="px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-emerald-800 transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <Save size={16} /> Confirmar Abertura
+                <Save size={16} /> {isSaving ? 'Salvando...' : 'Confirmar Abertura'}
             </button>
           </div>
 

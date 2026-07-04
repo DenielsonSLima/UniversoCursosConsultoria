@@ -87,6 +87,8 @@ const EventModal: React.FC<EventModalProps> = ({
             const typeInfo = getTypeInfo(event.typeId);
             const teacherObj = teachers.find(t => t.id === event.professorId);
             const turmaObj = turmas.find(t => t.id === event.turmaId);
+            const teacherName = event.professorName || teacherObj?.nome;
+            const turmaName = event.turmaName || turmaObj?.nome;
 
             return (
                 <div key={event.id} className="p-4 rounded-xl border border-slate-100 bg-white shadow-sm flex items-start gap-3 group hover:border-slate-300 transition-all">
@@ -96,20 +98,30 @@ const EventModal: React.FC<EventModalProps> = ({
                 />
                 <div className="flex-1">
                     <h4 className="text-sm font-bold text-[#001a33]">{event.title}</h4>
-                    <p className="text-xs text-slate-505 mt-1 text-slate-500">{event.description || 'Sem descrição'}</p>
+                    <p className="text-xs mt-1 text-slate-500">{event.description || 'Sem descrição'}</p>
                     
                     <div className="flex flex-wrap gap-1 mt-2">
                         <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-slate-550 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                             {typeInfo.label}
                         </span>
-                        {teacherObj && (
+                        {teacherName && (
                             <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                Prof: {teacherObj.nome}
+                                Prof: {teacherName}
                             </span>
                         )}
-                        {turmaObj && (
+                        {turmaName && (
                             <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                Turma: {turmaObj.nome}
+                                Turma: {turmaName}
+                            </span>
+                        )}
+                        {event.cargaHoraria ? (
+                            <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                                {event.cargaHoraria}H
+                            </span>
+                        ) : null}
+                        {event.turno && (
+                            <span className="inline-block text-[9px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                                {event.turno}
                             </span>
                         )}
                     </div>

@@ -14,6 +14,7 @@ export interface DiarioAula {
   titulo: string;
   cargaHoraria: number;
   dataLabel: string;
+  dataAula?: string | null;
 }
 
 export interface DiarioGradeFields {
@@ -24,6 +25,12 @@ export interface DiarioGradeFields {
   cq?: number | null;
   o?: number | null;
   rec?: number | null;
+}
+
+export interface DiarioAulaInput {
+  titulo: string;
+  cargaHoraria: number;
+  dataAula: string;
 }
 
 const sortAulas = (aulas: any[]) => [...aulas].sort((a, b) => {
@@ -39,19 +46,18 @@ export const diarioClasseService = {
   },
 
   async getStudents(turmaId: string): Promise<DiarioStudent[]> {
-    const { data, error } = await supabase
-      .from('matriculas')
-      .select('id, status, data_matricula, parceiros(*)')
-      .eq('turma_id', turmaId);
+    const { data, error } = await supabase.rpc('get_turma_alunos_academico', {
+      p_turma_id: turmaId,
+    });
 
     if (error) throw error;
 
     return (data || [])
-      .filter((matricula: any) => matricula.parceiros)
+      .filter((matricula: any) => matricula.aluno_id)
       .map((matricula: any) => ({
-        id: matricula.parceiros.id,
-        nome: matricula.parceiros.nome,
-        matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.parceiros.polo_id),
+        id: matricula.aluno_id,
+        nome: matricula.nome,
+        matricula: formatMatricula(matricula.matricula_id, matricula.data_matricula),
         status: matricula.status,
       }));
   },
@@ -69,12 +75,39 @@ export const diarioClasseService = {
       id: aula.id,
       titulo: aula.titulo,
       cargaHoraria: parseFloat(aula.carga_horaria),
+      dataAula: aula.data_aula,
       dataLabel: aula.data_aula
         ? new Date(`${aula.data_aula}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
         : aula.created_at
           ? new Date(aula.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
           : `Aula ${idx + 1}`,
     }));
+  },
+
+  async addAula(turmaId: string, disciplinaId: string, input: DiarioAulaInput): Promise<DiarioAula> {
+    const { data, error } = await supabase
+      .from('aulas_turma')
+      .insert({
+        turma_id: turmaId,
+        disciplina_id: disciplinaId,
+        titulo: input.titulo,
+        carga_horaria: input.cargaHoraria,
+        data_aula: input.dataAula,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      titulo: data.titulo,
+      cargaHoraria: parseFloat(data.carga_horaria),
+      dataAula: data.data_aula,
+      dataLabel: data.data_aula
+        ? new Date(`${data.data_aula}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        : 'Aula',
+    };
   },
 
   async getAttendance(turmaId: string, disciplinaId: string) {

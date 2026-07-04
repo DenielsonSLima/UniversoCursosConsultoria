@@ -72,6 +72,7 @@ export const asaasIntegrationService = {
       asaasCanceled?: boolean;
       asaasPaymentLinkCanceled?: boolean;
       asaasPaymentId?: string;
+      futureSyncWarning?: string | null;
     }>('manual-settlement', { receivableId, ...params });
   },
 

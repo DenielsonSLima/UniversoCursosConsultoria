@@ -295,12 +295,29 @@ const CalendarioReadOnly: React.FC<CalendarioReadOnlyProps> = ({ events, eventTy
                               {event.description}
                             </p>
                           )}
-                          <span
-                            className="inline-block text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded mt-1"
-                            style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
-                          >
-                            {typeName}
-                          </span>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <span
+                              className="inline-block text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
+                              style={{ backgroundColor: `${typeColor}20`, color: typeColor }}
+                            >
+                              {typeName}
+                            </span>
+                            {event.professorName && (
+                              <span className="max-w-[120px] truncate rounded bg-blue-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-blue-600" title={`Prof: ${event.professorName}`}>
+                                Prof: {event.professorName}
+                              </span>
+                            )}
+                            {event.turmaName && (
+                              <span className="max-w-[120px] truncate rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-600" title={`Turma: ${event.turmaName}`}>
+                                Turma: {event.turmaName}
+                              </span>
+                            )}
+                            {event.cargaHoraria ? (
+                              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-600">
+                                {event.cargaHoraria}H
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     );
@@ -374,7 +391,7 @@ const CalendarioReadOnly: React.FC<CalendarioReadOnlyProps> = ({ events, eventTy
                       {event.description && (
                         <p className="text-[10px] text-slate-500 mt-1 font-medium leading-relaxed">{event.description}</p>
                       )}
-                      <div className="flex items-center gap-1 mt-2">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
                         <Tag size={9} className="text-slate-400" />
                         <span
                           className="text-[9px] font-black uppercase tracking-widest"
@@ -382,6 +399,26 @@ const CalendarioReadOnly: React.FC<CalendarioReadOnlyProps> = ({ events, eventTy
                         >
                           {getTypeName(event.typeId)}
                         </span>
+                        {event.professorName && (
+                          <span className="rounded bg-blue-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-blue-600">
+                            Prof: {event.professorName}
+                          </span>
+                        )}
+                        {event.turmaName && (
+                          <span className="rounded bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-600">
+                            Turma: {event.turmaName}
+                          </span>
+                        )}
+                        {event.cargaHoraria ? (
+                          <span className="rounded bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-amber-600">
+                            {event.cargaHoraria}H
+                          </span>
+                        ) : null}
+                        {event.turno && (
+                          <span className="rounded bg-purple-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-purple-600">
+                            {event.turno}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

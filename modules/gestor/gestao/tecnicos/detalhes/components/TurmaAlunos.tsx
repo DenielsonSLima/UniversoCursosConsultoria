@@ -26,6 +26,7 @@ import {
   useTransferMutation,
   useTurmaAcademicInvalidation,
 } from '../hooks/useTurmaAlunosMutations';
+import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -70,6 +71,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const [returnDate, setReturnDate] = useState('');
   const [destinationClassId, setDestinationClassId] = useState('');
   const [destinationInstitution, setDestinationInstitution] = useState('');
+  const requireTechnicalProfile = String(turma.modalidade || '').toUpperCase() === 'TECNICO';
 
   const { data: students = [], isLoading } = useTurmaStudents(turma.id);
   const { filteredAvailableStudents, isLoading: loadingAvailable } = useAvailableStudents(
@@ -121,6 +123,17 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
 
   const confirmEnrollment = (student: any) => {
+    if (requireTechnicalProfile) {
+      const missingFields = getTechnicalEnrollmentMissingFields(student);
+      if (missingFields.length > 0) {
+        toast.error(
+          'Cadastro técnico incompleto',
+          `Antes da matrícula técnica, complete no cadastro do aluno: ${missingFields.map((field) => field.label).join(', ')}.`
+        );
+        return;
+      }
+    }
+
     const defaults = turmaFinanceiroConfig || {
       valorMatricula: turma.valorMatricula || 0,
       valorParcela: turma.valorParcela || 0,
@@ -291,6 +304,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           loadingAvailable={loadingAvailable}
           enrollPending={enrollMutation.isPending}
           students={filteredAvailableStudents}
+          requireTechnicalProfile={requireTechnicalProfile}
           onSearchChange={setSearchTerm}
           onConfirmStudent={confirmEnrollment}
           onClose={() => setShowMatricularModal(false)}

@@ -18,17 +18,24 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
       // 1. Buscar disciplinas atribuídas ao professor
       const { data: disciplinas, error: errDisc } = await supabase
         .from('turmas_disciplinas')
-        .select('turma_id, disciplina_id')
+        .select('turma_id, disciplina_id, professor_nome')
         .eq('professor_id', professorId);
 
       if (errDisc) throw errDisc;
 
       const turmaIds = [...new Set((disciplinas || []).map(d => d.turma_id).filter(Boolean))];
+      const disciplinaIds = [...new Set((disciplinas || []).map(d => d.disciplina_id).filter(Boolean))];
+      const assignmentPairs = new Set((disciplinas || []).map((d: any) => `${d.turma_id}:${d.disciplina_id}`));
 
       // 2. Buscar aulas agendadas dessas turmas
       let classEvents: CalendarEvent[] = [];
-      if (turmaIds.length > 0) {
-        const { data: aulas, error: errAulas } = await supabase
+      if (turmaIds.length > 0 && disciplinaIds.length > 0) {
+        const [
+          { data: aulas, error: errAulas },
+          { data: turmasData, error: errTurmas },
+          { data: disciplinasData, error: errDisciplinas },
+        ] = await Promise.all([
+          supabase
           .from('aulas_turma')
           .select(`
             id,
@@ -36,24 +43,61 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
             carga_horaria,
             data_aula,
             turma_id,
-            disciplina_id,
-            turmas ( nome ),
-            disciplinas ( nome )
+            disciplina_id
           `)
           .in('turma_id', turmaIds)
-          .not('data_aula', 'is', null);
+          .in('disciplina_id', disciplinaIds)
+          .not('data_aula', 'is', null),
+          supabase
+            .from('turmas')
+            .select('id, nome, codigo, turno')
+            .in('id', turmaIds),
+          supabase
+            .from('disciplinas')
+            .select('id, nome')
+            .in('id', disciplinaIds),
+        ]);
 
-        if (!errAulas && aulas) {
-          classEvents = aulas.map((a: any) => ({
-            id: `class-${a.id}`,
-            title: `${a.turmas?.nome || 'Turma'} — ${a.disciplinas?.nome || 'Disciplina'}`,
-            description: `Aula: ${a.titulo}${a.carga_horaria ? ` (${a.carga_horaria}H)` : ''}`,
-            date: a.data_aula,
-            typeId: 'ped',
-            professorId,
-            turmaId: a.turma_id,
-          }));
-        }
+        if (errAulas) throw errAulas;
+        if (errTurmas) throw errTurmas;
+        if (errDisciplinas) throw errDisciplinas;
+
+        const turmaById = new Map((turmasData || []).map((turma: any) => [turma.id, turma]));
+        const disciplinaNames = new Map((disciplinasData || []).map((disciplina: any) => [disciplina.id, disciplina.nome]));
+        const professorNames = new Map((disciplinas || []).map((disciplina: any) => [`${disciplina.turma_id}:${disciplina.disciplina_id}`, disciplina.professor_nome || 'Professor']));
+
+        classEvents = (aulas || [])
+          .filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`))
+          .map((a: any) => {
+            const turma = turmaById.get(a.turma_id) || {};
+            const turmaNome = turma.nome || 'Turma';
+            const disciplinaNome = disciplinaNames.get(a.disciplina_id) || 'Disciplina';
+            const professorName = professorNames.get(`${a.turma_id}:${a.disciplina_id}`) || 'Professor';
+            const cargaHoraria = Number(a.carga_horaria || 0);
+            const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
+
+            return {
+              id: `class-${a.id}`,
+              title: `${turmaNome} — ${disciplinaNome}`,
+              description: [
+                `Aula: ${a.titulo || 'Aula cadastrada'}`,
+                `Professor: ${professorName}`,
+                `Turma: ${turmaNome}${turma.codigo ? ` (${turma.codigo})` : ''}`,
+                `Carga horária: ${cargaLabel}`,
+                turma.turno ? `Turno: ${turma.turno}` : null,
+              ].filter(Boolean).join(' • '),
+              date: a.data_aula,
+              typeId: 'ped',
+              professorId,
+              professorName,
+              turmaId: a.turma_id,
+              turmaName: turmaNome,
+              disciplinaId: a.disciplina_id,
+              disciplinaName: disciplinaNome,
+              cargaHoraria,
+              turno: turma.turno || null,
+            };
+          });
       }
 
       // 3. Buscar eventos públicos (sem turmaId vinculado — feriados, recessos, institucionais)

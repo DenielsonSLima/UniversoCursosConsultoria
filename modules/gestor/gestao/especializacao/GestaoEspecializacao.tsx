@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Award, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaEspecializacaoForm from '../components/forms/TurmaEspecializacaoForm';
@@ -9,6 +10,7 @@ import { Turma } from '../gestao.types';
 import TurmasFilters from '../components/TurmasFilters';
 import { useGestaoEspecializacaoTurmas } from './hooks/useGestaoEspecializacaoTurmas';
 import ConfirmModal from '../../components/ConfirmModal';
+import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 
 interface GestaoEspecializacaoProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -22,6 +24,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   const list = useGestaoEspecializacaoTurmas(poloId);
 
@@ -33,6 +36,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
+    await invalidateSiteTickerQueries(queryClient);
     await list.reload();
   };
 
@@ -51,6 +55,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
     try {
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
+      await invalidateSiteTickerQueries(queryClient);
       await list.reload();
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');

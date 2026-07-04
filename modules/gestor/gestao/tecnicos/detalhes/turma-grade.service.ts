@@ -7,6 +7,7 @@ import {
   TurmaAulaPlanejada,
   TurmaDisciplinaConfig,
   TurmaGradeData,
+  TurmaProfessorOption,
 } from './turma-grade.types';
 
 const sortAulas = (aulas: any[]) => [...aulas].sort((a, b) => {
@@ -66,7 +67,7 @@ export const turmaGradeService = {
         .eq('turma_id', turmaId),
       supabase
         .from('parceiros')
-        .select('nome')
+        .select('id, nome')
         .eq('tipo', 'Professor')
         .eq('status', 'ATIVO')
         .order('nome', { ascending: true }),
@@ -86,6 +87,7 @@ export const turmaGradeService = {
     (configsData || []).forEach((config: any) => {
       dbConfigs[config.disciplina_id] = {
         professor: config.professor_nome,
+        professorId: config.professor_id,
         concluida: config.concluida,
       };
     });
@@ -97,7 +99,10 @@ export const turmaGradeService = {
         ...dbConfigs,
       },
       aulas: mapAulasByDisciplina(aulasData || []),
-      professores: (profsData || []).map((professor: any) => professor.nome),
+      professores: (profsData || []).map((professor: any) => ({
+        id: professor.id,
+        nome: professor.nome,
+      })),
       metricasGrade,
     };
   },
@@ -105,7 +110,7 @@ export const turmaGradeService = {
   async assignProfessor(
     turmaId: string,
     disciplinaId: string,
-    professorName: string | null,
+    professor: TurmaProfessorOption | null,
     currentConfig: TurmaDisciplinaConfig,
   ) {
     const { error } = await supabase
@@ -113,7 +118,8 @@ export const turmaGradeService = {
       .upsert({
         turma_id: turmaId,
         disciplina_id: disciplinaId,
-        professor_nome: professorName,
+        professor_nome: professor?.nome || null,
+        professor_id: professor?.id || null,
         concluida: currentConfig.concluida,
       }, { onConflict: 'turma_id,disciplina_id' });
 
@@ -123,7 +129,7 @@ export const turmaGradeService = {
   async assignProfessorToDisciplines(
     turmaId: string,
     disciplineIds: string[],
-    professorName: string | null,
+    professor: TurmaProfessorOption | null,
     configs: Record<string, TurmaDisciplinaConfig>,
   ) {
     if (disciplineIds.length === 0) return;
@@ -131,7 +137,8 @@ export const turmaGradeService = {
     const rows = disciplineIds.map((disciplinaId) => ({
       turma_id: turmaId,
       disciplina_id: disciplinaId,
-      professor_nome: professorName,
+      professor_nome: professor?.nome || null,
+      professor_id: professor?.id || null,
       concluida: configs[disciplinaId]?.concluida || false,
     }));
 
@@ -154,6 +161,7 @@ export const turmaGradeService = {
         turma_id: turmaId,
         disciplina_id: disciplinaId,
         professor_nome: currentConfig.professor,
+        professor_id: currentConfig.professorId || null,
         concluida: nextConcluida,
       }, { onConflict: 'turma_id,disciplina_id' });
 

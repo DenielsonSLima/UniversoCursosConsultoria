@@ -1,5 +1,7 @@
 export interface PerfilPageProps {
   alunoId: string;
+  technicalEnrollmentNotice?: boolean;
+  onTechnicalEnrollmentNoticeResolved?: () => void;
 }
 
 export type PerfilTabId = 'perfil' | 'documentos' | 'google' | 'senha';

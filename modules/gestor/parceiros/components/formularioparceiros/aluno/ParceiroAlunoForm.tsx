@@ -9,6 +9,11 @@ import {
 } from 'lucide-react';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
+import {
+  TECHNICAL_DOCUMENT_TYPE_OPTIONS,
+  getTechnicalEnrollmentMissingFields,
+  isAcceptedTechnicalDocumentType,
+} from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { parceirosService } from '../../../parceiros.service';
 
 interface ParceiroAlunoFormProps {
@@ -192,6 +197,10 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   const stepValid = () => {
     if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
+    if (currentStep === 2) return isAcceptedTechnicalDocumentType(formData.tipoDocumento) && formData.rg.trim() !== '';
+    if (currentStep === 3) return getTechnicalEnrollmentMissingFields(formData)
+      .filter((field) => ['nomeMae', 'responsavelFinanceiro', 'responsavelNome', 'responsavelCpf'].includes(field.key))
+      .length === 0;
     if (currentStep === 5) return isValidEmail(formData.email) && formData.contato1.length >= 14;
     return true;
   };
@@ -199,6 +208,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
   const handleNext = () => {
     if (!stepValid()) {
       if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
+      if (currentStep === 2) alert('Informe um documento de identificação aceito para curso técnico: CIN, CNH ou RG, com o número do documento.');
+      if (currentStep === 3) alert('Informe nome da mãe e declare o responsável financeiro antes de avançar.');
       if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
       return;
     }
@@ -226,6 +237,11 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
     }
     if (formData.contato1.length < 14) {
       alert('Telefone/WhatsApp do aluno é obrigatório.');
+      return;
+    }
+    const missingTechnicalFields = getTechnicalEnrollmentMissingFields(formData);
+    if (missingTechnicalFields.length > 0) {
+      alert(`Complete os dados obrigatórios para curso técnico: ${missingTechnicalFields.map((item) => item.label).join(', ')}.`);
       return;
     }
     if (formData.responsavelCpf && !isValidCpf(formData.responsavelCpf)) {
@@ -450,11 +466,9 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
               <div className="md:col-span-3">
                 <label className={labelCls}>Tipo de Documento de Identificação <span className="text-red-500">*</span></label>
                 <select name="tipoDocumento" value={formData.tipoDocumento} onChange={handleChange} className={inputCls}>
-                  <option value="CARTEIRA NACIONAL DE IDENTIFICAÇÃO">CARTEIRA NACIONAL DE IDENTIFICAÇÃO (CIN)</option>
-                  <option value="CNH">CNH — Carteira Nacional de Habilitação</option>
-                  <option value="PASSAPORTE">PASSAPORTE</option>
-                  <option value="CARTEIRA PROFISSIONAL">CARTEIRA PROFISSIONAL (CRM, CREA, OAB...)</option>
-                  <option value="RG (ANTIGO)">RG — Registro Geral (Antigo)</option>
+                  {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -505,7 +519,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
             <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
               <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-indigo-700 font-medium leading-relaxed">
-                A <strong>Carteira Nacional de Identificação (CIN)</strong> é o novo documento oficial de identidade no Brasil, em substituição ao antigo RG. Também são aceitos CNH e outros documentos com foto. Os originais serão solicitados no momento da matrícula.
+                Para curso técnico, a identificação acadêmica deve ser feita com <strong>CIN</strong>, <strong>CNH</strong> ou <strong>RG</strong>. Os originais serão solicitados no momento da conferência documental.
               </p>
             </div>
           </div>
@@ -623,8 +637,8 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
                   className="mt-0.5 h-4 w-4 accent-blue-600"
                 />
                 <span>
-                  <strong className="block text-xs uppercase tracking-wider text-blue-800">Este contato é o responsável financeiro</strong>
-                  <span className="mt-1 block text-xs text-blue-700">Pode ser informado mesmo quando o aluno é maior de idade e será usado em cobranças e na declaração de IRPF.</span>
+                  <strong className="block text-xs uppercase tracking-wider text-blue-800">Responsável financeiro obrigatório</strong>
+                  <span className="mt-1 block text-xs text-blue-700">Marque para declarar que este responsável ou o próprio aluno assumirá as cobranças da matrícula técnica.</span>
                 </span>
               </label>
               <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
