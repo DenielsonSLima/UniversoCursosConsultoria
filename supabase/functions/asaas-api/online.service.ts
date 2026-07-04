@@ -1,8 +1,6 @@
 import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
-import {
-  ONLINE_MODALIDADES,
-  buildCoursePaymentDescription,
-} from "./shared.ts";
+import { buildCoursePaymentDescription } from "./shared.ts";
+import { isEadCourseModality, isOnlineCourseModality } from "../asaas/core/modality.ts";
 
 export const createAsaasOnlineService = (
   admin: any,
@@ -104,8 +102,8 @@ export const createAsaasOnlineService = (
       .maybeSingle();
     if (courseError) throw courseError;
     if (!course && courseId) throw new Error("Curso não encontrado para reconciliação.");
-    if (course && !ONLINE_MODALIDADES.includes(course.modalidade)) {
-      throw new Error("A reconciliação online é permitida apenas para EAD, livres e especializações.");
+    if (course && !isOnlineCourseModality(course.modalidade)) {
+      throw new Error("A reconciliação online é permitida apenas para modalidades com checkout online (EAD, LIVRE, ESPECIALIZACAO e TECNICO).");
     }
 
     const paymentsResponse = paymentId
@@ -161,7 +159,7 @@ export const createAsaasOnlineService = (
       const targetCourse = course || (() => {
         throw new Error("Curso obrigatório para reconciliar pagamento sem link antigo.");
       })();
-      const requireOnlinePermission = targetCourse.modalidade !== "EAD";
+      const requireOnlinePermission = !isEadCourseModality(targetCourse.modalidade);
       let turmasQuery = admin.from("turmas")
         .select(`
           id,

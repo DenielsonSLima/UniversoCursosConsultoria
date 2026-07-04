@@ -10,7 +10,6 @@ import {
   UUID_RE,
   apiSecretName,
   baseUrlFor,
-  corsHeaders,
   buildCorsHeaders,
   getClientIp,
   isRateLimitExceeded,
@@ -54,6 +53,8 @@ const FINANCE_WRITE_ACTIONS = new Set([
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
+  const respondJson = (body: unknown, status = 200) => json(body, status, req);
+
   if (isRateLimitExceeded(`asaas-api:${getClientIp(req)}`, 180, 60000)) {
     return new Response(JSON.stringify({
       error: "Muitas requisições em curto período. Aguarde alguns instantes.",
@@ -64,7 +65,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
-  if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
+  if (req.method !== "POST") return respondJson({ error: "Método não permitido." }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -169,7 +170,7 @@ Deno.serve(async (req: Request) => {
       const environment = normalizeEnvironment(body.environment || config.environment);
       const apiKey = await getSecret(apiSecretName(environment));
       const webhookToken = await getWebhookToken(environment);
-      return json({
+      return respondJson({
         ...config,
         environment,
         configured: Boolean(apiKey),
@@ -241,7 +242,7 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       });
       if (configError) throw configError;
-      return json({ success: true });
+      return respondJson({ success: true });
     }
 
     if (action === "save-notification-preferences") {
@@ -262,7 +263,7 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       });
       if (configError) throw configError;
-      return json({ success: true });
+      return respondJson({ success: true });
     }
 
     if (action === "sync-enrollment") {
@@ -296,7 +297,7 @@ Deno.serve(async (req: Request) => {
       const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
 
       if (gerarInicial === false || syncEnabled === false) {
-        return json({
+        return respondJson({
           success: true,
           skipped: true,
           skippedReason: gerarInicial === false
@@ -316,7 +317,7 @@ Deno.serve(async (req: Request) => {
 
       const runtime = await getRuntime();
       const receivable = await syncReceivable(runtime, data.id);
-      return json({
+      return respondJson({
         success: true,
         receivable,
         skipped: receivable?.asaas_sync_skipped === true,
@@ -335,7 +336,7 @@ Deno.serve(async (req: Request) => {
         last_test_status: "OK",
         last_test_message: "Conexão validada com sucesso.",
       }).eq("id", runtime.config.id);
-      return json({ success: true });
+      return respondJson({ success: true });
     }
 
     if (action === "ensure-webhook") {
@@ -375,7 +376,7 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify(payload),
         });
 
-      return json({
+      return respondJson({
         success: true,
         webhook: {
           id: webhook.id,
@@ -392,7 +393,7 @@ Deno.serve(async (req: Request) => {
         throw new Error("Usuário financeiro sem polo definido não pode reconciliar pagamento online.");
       }
       const runtime = await getRuntimeForMovement();
-      return json(await online.reconcileOnlinePayment(runtime, body, {
+      return respondJson(await online.reconcileOnlinePayment(runtime, body, {
         poloId: gestor && !gestor.isGlobal ? gestor.poloId : null,
       }));
     }
@@ -412,7 +413,7 @@ Deno.serve(async (req: Request) => {
 
       const runtime = await getRuntimeForMovement();
       const receivable = await syncReceivable(runtime, receivableId);
-      return json({ success: true, receivable });
+      return respondJson({ success: true, receivable });
     }
 
     if (action === "cancel-receivable") {
@@ -515,7 +516,7 @@ Deno.serve(async (req: Request) => {
         throw new Error("Cobrança mudou de status antes do cancelamento. Atualize a tela e tente novamente.");
       }
 
-      return json({
+      return respondJson({
         success: true,
         receivable: canceled,
         asaasCanceled,
@@ -548,7 +549,7 @@ Deno.serve(async (req: Request) => {
         for (const row of selectedReceivables || []) requireGestorForPolo(gestor, row.polo_id);
       }
       const runtime = await getRuntimeForMovement();
-      return json(await carnet.generateOfficialCarnet(runtime, uniqueReceivableIds));
+      return respondJson(await carnet.generateOfficialCarnet(runtime, uniqueReceivableIds));
     }
 
     if (action === "refresh-receivable-status") {
@@ -565,7 +566,7 @@ Deno.serve(async (req: Request) => {
       if (error) throw error;
       if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
       const refreshed = await refreshReceivableStatus(runtime, receivable);
-      return json({ success: true, receivable: refreshed });
+      return respondJson({ success: true, receivable: refreshed });
     }
 
     if (action === "manual-settlement") {
@@ -739,7 +740,7 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
-      return json({
+      return respondJson({
         success: true,
         asaasCanceled,
         asaasPaymentLinkCanceled,
@@ -802,7 +803,7 @@ Deno.serve(async (req: Request) => {
         ? await syncReceivable(await getRuntimeForMovement(), reverted.id)
         : reverted;
 
-      return json({
+      return respondJson({
         success: true,
         receivable: finalReceivable,
         asaasRecreated: shouldRecreateAsaas,
@@ -810,12 +811,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "create-course-link") {
-      return json(await online.createCourseLink(null as any, body));
+      return respondJson(await online.createCourseLink(null as any, body));
     }
 
-    return json({ error: "Ação desconhecida." }, 400);
+    return respondJson({ error: "Ação desconhecida." }, 400);
   } catch (error) {
     console.error(error);
-    return json({ error: error instanceof Error ? error.message : "Erro interno." }, 400);
+    return respondJson({ error: error instanceof Error ? error.message : "Erro interno." }, 400);
   }
 });

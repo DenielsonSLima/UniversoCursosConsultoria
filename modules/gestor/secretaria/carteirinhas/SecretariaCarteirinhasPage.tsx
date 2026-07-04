@@ -1,7 +1,7 @@
 // File: modules/gestor/secretaria/carteirinhas/SecretariaCarteirinhasPage.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CreditCard, Users, Search, Printer, Image, ArrowLeft, CheckCircle, Loader2, Download, Trash2, X } from 'lucide-react';
+import { CreditCard, Users, Search, Printer, Image, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import CarteirinhaPreview from '../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
@@ -11,8 +11,10 @@ import { formatMatricula } from '../../../../lib/academicUtils';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { poloInstitutionalService } from '../../../shared/polo-institutional/polo-institutional.service';
+import { onlyDigits } from '../../../../lib/documentFormatters';
 import { Aluno } from './secretaria-carteirinhas.types';
 import { TEMPLATE_DEFAULT, getTechnicalActiveMatricula } from './secretaria-carteirinhas.helpers';
+import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
 const SecretariaCarteirinhasPage: React.FC = () => {
   const [mode, setMode] = useState<'individual' | 'lote' | 'custom'>('individual');
@@ -46,6 +48,16 @@ const SecretariaCarteirinhasPage: React.FC = () => {
   const [synced, setSynced] = useState(false);
   const printContentRef = useRef<HTMLDivElement>(null);
 
+  const matchesAlunoSearch = (aluno: Aluno, term: string) => {
+    const normalized = term.trim().toUpperCase();
+    const digits = onlyDigits(term);
+    return aluno.nome.toUpperCase().includes(normalized)
+      || Boolean(aluno.cpf && (aluno.cpf.includes(term) || (digits && onlyDigits(aluno.cpf).includes(digits))))
+      || Boolean(aluno.rg && aluno.rg.includes(term))
+      || Boolean(aluno.curso && aluno.curso.toUpperCase().includes(normalized))
+      || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
+  };
+
   // Carrega os alunos e turmas reais do banco de dados (Supabase)
   const loadAcademicoData = async () => {
     try {
@@ -72,7 +84,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
           const turmaIds = technicalActiveMatriculas
             .map((matricula) => matricula.turma_id)
             .filter(Boolean);
-          const poloId = technicalActiveMatricula?.turmas?.polo_id || technicalActiveMatricula?.polo_id;
+          const poloId = technicalActiveMatricula?.turmas?.polo_id || p.poloId;
           const institutionalData = await getInstitutionalData(poloId);
           
           return {
@@ -85,9 +97,11 @@ const SecretariaCarteirinhasPage: React.FC = () => {
             matricula: formatMatricula(
               technicalActiveMatricula.id,
               technicalActiveMatricula.data_matricula,
-              technicalActiveMatricula.polo_id
+              technicalActiveMatricula.turmas?.polo_id || p.poloId
             ),
             curso: technicalActiveMatricula.turmas?.cursos?.nome || 'Curso Geral',
+            turmaNome: technicalActiveMatricula.turmas?.nome || 'Turma não informada',
+            turmaCodigo: technicalActiveMatricula.turmas?.codigo || '',
             instituicao: 'Universo Cursos e Consultoria',
             validade: (() => {
               // Validade calculada com base nos meses do config — configs já carregados via Supabase no useEffect
@@ -966,37 +980,28 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                     {searchQuery.trim().length > 0 && (
                       <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
                         {alunos
-                          .filter(a => 
-                            a.nome.toUpperCase().includes(searchQuery.toUpperCase()) || 
-                            (a.cpf && a.cpf.includes(searchQuery)) || 
-                            (a.rg && a.rg.includes(searchQuery))
-                          )
+                          .filter((aluno) => matchesAlunoSearch(aluno, searchQuery))
                           .slice(0, 15)
                           .map((aluno) => (
-                            <button
-                              key={aluno.id}
-                              onClick={() => {
-                                setSelectedAluno(aluno);
-                                setSearchQuery('');
-                              }}
-                              className="w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0"
-                            >
-                              <div>
-                                <span className="block font-black text-slate-800 text-xs uppercase">{aluno.nome}</span>
-                                <span className="block text-[10px] text-slate-450 font-semibold uppercase mt-0.5">
-                                  CPF: {aluno.cpf} | RG: {aluno.rg} | Curso: {aluno.curso}
-                                </span>
-                              </div>
-                              <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded font-black uppercase tracking-wider">
-                                Selecionar
-                              </span>
-                            </button>
+                            <div key={aluno.id} className="border-b border-slate-100 p-2 last:border-0">
+                              <SecretariaAlunoSearchCard
+                                nome={aluno.nome}
+                                cpf={aluno.cpf}
+                                rg={aluno.rg}
+                                cursoNome={aluno.curso}
+                                turmaNome={aluno.turmaNome}
+                                turmaCodigo={aluno.turmaCodigo}
+                                matricula={aluno.matricula}
+                                fotoUrl={aluno.fotoUrl}
+                                tone="purple"
+                                onClick={() => {
+                                  setSelectedAluno(aluno);
+                                  setSearchQuery('');
+                                }}
+                              />
+                            </div>
                           ))}
-                        {alunos.filter(a => 
-                          a.nome.toUpperCase().includes(searchQuery.toUpperCase()) || 
-                          (a.cpf && a.cpf.includes(searchQuery)) || 
-                          (a.rg && a.rg.includes(searchQuery))
-                        ).length === 0 && (
+                        {alunos.filter((aluno) => matchesAlunoSearch(aluno, searchQuery)).length === 0 && (
                           <div className="p-4 text-center text-xs font-bold text-slate-400 uppercase">
                             Nenhum aluno encontrado
                           </div>
@@ -1007,41 +1012,31 @@ const SecretariaCarteirinhasPage: React.FC = () => {
 
                 {/* Exibição do Aluno Encontrado */}
                 {selectedAluno ? (
-                  <div className="border border-slate-150 rounded-3xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/40 animate-fadeIn">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-black text-xl overflow-hidden border border-purple-200">
-                        {selectedAluno.fotoUrl ? (
-                          <img src={selectedAluno.fotoUrl} alt="Foto do Aluno" className="w-full h-full object-cover" />
-                        ) : (
-                          selectedAluno.nome[0]
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-black text-slate-800 text-sm uppercase">{selectedAluno.nome}</h4>
-                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mt-1">
-                          Matrícula: {selectedAluno.matricula && selectedAluno.matricula !== 'PENDENTE' && selectedAluno.matricula !== 'CIE-PENDENTE' 
-                            ? selectedAluno.matricula 
-                            : `CIE-${startNum}`}
-                        </p>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">{selectedAluno.curso}</p>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-black ${selectedAluno.fotoUrl ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'} px-3 py-1 rounded-md uppercase tracking-wider flex items-center gap-1`}>
-                      {selectedAluno.fotoUrl ? (
-                        <>
-                          <CheckCircle size={12} /> Foto Cadastrada
-                        </>
-                      ) : (
-                        'Sem Foto Cadastrada'
-                      )}
-                    </span>
+                  <div className="mb-8 animate-fadeIn">
+                    <SecretariaAlunoSearchCard
+                      nome={selectedAluno.nome}
+                      cpf={selectedAluno.cpf}
+                      rg={selectedAluno.rg}
+                      cursoNome={selectedAluno.curso}
+                      turmaNome={selectedAluno.turmaNome}
+                      turmaCodigo={selectedAluno.turmaCodigo}
+                      matricula={selectedAluno.matricula && selectedAluno.matricula !== 'PENDENTE' && selectedAluno.matricula !== 'CIE-PENDENTE'
+                        ? selectedAluno.matricula
+                        : `CIE-${startNum}`}
+                      fotoUrl={selectedAluno.fotoUrl}
+                      tone="purple"
+                      selected
+                      statusLabel={selectedAluno.fotoUrl ? 'Foto cadastrada' : 'Sem foto'}
+                      statusTone={selectedAluno.fotoUrl ? 'success' : 'warning'}
+                      actionLabel="Trocar"
+                      onClick={() => setSelectedAluno(null)}
+                    />
                   </div>
                 ) : (
                   <div className="border border-slate-150 rounded-3xl p-6 mb-8 text-center text-slate-450 font-bold uppercase text-xs">
                     Busque um aluno acima para visualizar seus dados e emitir a carteirinha.
                   </div>
                 )}
-
                 {/* Seleção do Layout de Impressão */}
                 <div className="bg-slate-50 border border-slate-200 p-6 rounded-3xl mb-8">
                   <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Escolha o Layout de Impressão</h4>
@@ -1209,41 +1204,35 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                     {searchQueryCustom.trim().length > 0 && (
                       <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
                         {alunos
-                          .filter(a => 
-                            a.nome.toUpperCase().includes(searchQueryCustom.toUpperCase()) || 
-                            (a.cpf && a.cpf.includes(searchQueryCustom)) || 
-                            (a.rg && a.rg.includes(searchQueryCustom))
-                          )
+                          .filter((aluno) => matchesAlunoSearch(aluno, searchQueryCustom))
                           .slice(0, 15)
                           .map((aluno) => {
                             const isAdded = customSelectedAlunos.some(x => x.id === aluno.id);
                             return (
-                              <button
-                                key={aluno.id}
-                                disabled={isAdded}
-                                onClick={() => {
-                                  setCustomSelectedAlunos(prev => [...prev, aluno]);
-                                  setSearchQueryCustom('');
-                                }}
-                                className={`w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0 ${isAdded ? 'opacity-50 cursor-not-allowed bg-slate-50/30' : ''}`}
-                              >
-                                <div>
-                                  <span className="block font-black text-slate-800 text-xs uppercase">{aluno.nome}</span>
-                                  <span className="block text-[10px] text-slate-450 font-semibold uppercase mt-0.5">
-                                    CPF: {aluno.cpf} | RG: {aluno.rg} | Curso: {aluno.curso}
-                                  </span>
-                                </div>
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${isAdded ? 'bg-slate-150 text-slate-400' : 'bg-purple-50 text-purple-600'}`}>
-                                  {isAdded ? 'Adicionado' : 'Adicionar'}
-                                </span>
-                              </button>
+                              <div key={aluno.id} className="border-b border-slate-100 p-2 last:border-0">
+                                <SecretariaAlunoSearchCard
+                                  nome={aluno.nome}
+                                  cpf={aluno.cpf}
+                                  rg={aluno.rg}
+                                  cursoNome={aluno.curso}
+                                  turmaNome={aluno.turmaNome}
+                                  turmaCodigo={aluno.turmaCodigo}
+                                  matricula={aluno.matricula}
+                                  fotoUrl={aluno.fotoUrl}
+                                  tone="purple"
+                                  disabled={isAdded}
+                                  actionLabel={isAdded ? 'Adicionado' : 'Adicionar'}
+                                  statusLabel={isAdded ? 'Na lista' : undefined}
+                                  statusTone="neutral"
+                                  onClick={() => {
+                                    setCustomSelectedAlunos(prev => [...prev, aluno]);
+                                    setSearchQueryCustom('');
+                                  }}
+                                />
+                              </div>
                             );
                           })}
-                        {alunos.filter(a => 
-                          a.nome.toUpperCase().includes(searchQueryCustom.toUpperCase()) || 
-                          (a.cpf && a.cpf.includes(searchQueryCustom)) || 
-                          (a.rg && a.rg.includes(searchQueryCustom))
-                        ).length === 0 && (
+                        {alunos.filter((aluno) => matchesAlunoSearch(aluno, searchQueryCustom)).length === 0 && (
                           <div className="p-4 text-center text-xs font-bold text-slate-400 uppercase">
                             Nenhum aluno encontrado
                           </div>

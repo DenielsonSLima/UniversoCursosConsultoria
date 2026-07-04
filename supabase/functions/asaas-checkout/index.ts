@@ -7,6 +7,11 @@ import {
 } from "./checkout-rules.ts";
 import { isValidCpf, missingStudentBillingFields, onlyDigits } from "../asaas/core/customer.ts";
 import { paymentDate } from "../asaas/core/status.ts";
+import {
+  isEadCourseModality,
+  isTecnicoCourseModality,
+  isOnlineCourseModality,
+} from "../asaas/core/modality.ts";
 import { findExistingCourseCheckout } from "./course-enrollment-guard.ts";
 import {
   buildCorsHeaders,
@@ -15,7 +20,6 @@ import {
   json as sendJson,
 } from "../asaas-api/shared.ts";
 
-const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
   "ATIVO",
@@ -289,8 +293,8 @@ Deno.serve(async (req: Request) => {
       .single();
     if (error) throw error;
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
-    if (!ONLINE_MODALIDADES.includes(course.modalidade)) throw new Error("Modalidade sem checkout online.");
-    const isEadCheckout = String(course.modalidade || "").toUpperCase() === "EAD";
+    if (!isOnlineCourseModality(course.modalidade)) throw new Error("Modalidade sem checkout online.");
+    const isEadCheckout = isEadCourseModality(course.modalidade);
     const hasExplicitEadPaymentSelection = isEadCheckout && Boolean(String(eadPaymentMethod || "").trim());
     let alunoQuery = admin
       .from("parceiros")
@@ -327,7 +331,7 @@ Deno.serve(async (req: Request) => {
     if (missingBillingFields.length > 0) {
       throw new Error(`Atualize o cadastro do aluno antes de comprar pelo Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
     }
-    if (String(course.modalidade || "").toUpperCase() === "TECNICO") {
+    if (isTecnicoCourseModality(course.modalidade)) {
       const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno);
       if (missingTechnicalFields.length > 0) {
         throw new Error(`Antes da matrícula técnica online, complete em Meu Perfil: ${missingTechnicalFields.join(", ")}.`);
@@ -362,7 +366,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Este aluno já possui uma matrícula aguardando pagamento para este curso. Atualize a tela ou procure a secretaria antes de gerar uma nova cobrança.");
     }
 
-    const requireOnlinePermission = course.modalidade !== "EAD";
+    const requireOnlinePermission = !isEadCheckout;
     let turmasQuery = admin
       .from("turmas")
       .select(`
@@ -405,7 +409,7 @@ Deno.serve(async (req: Request) => {
     const availableSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
     if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
     const turma = availableSelection.turma;
-    const gerarCobrancaFutura = course.modalidade === "EAD"
+    const gerarCobrancaFutura = isEadCheckout
       ? false
       : turma.gerar_cobrancas_futuras === true;
 
@@ -573,7 +577,7 @@ Deno.serve(async (req: Request) => {
         ? { method: eadPaymentMethod, installments: eadInstallments }
         : undefined,
     });
-    const receivableFeeFields = String(course?.modalidade || "").toUpperCase() === "EAD" ? {
+    const receivableFeeFields = isEadCheckout ? {
       asaas_fee_value:
         typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
           ? (charge as any).feeValue

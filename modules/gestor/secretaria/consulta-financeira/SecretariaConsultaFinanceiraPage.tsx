@@ -19,6 +19,7 @@ import {
 import { asaasIntegrationService } from '../../../asaas/asaas.service';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import { secretariaDocumentosKeys } from '../shared/secretaria-documentos.keys';
+import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 import {
   SecretariaFinanceiraAluno,
   SecretariaFinanceiraRecebivel,
@@ -244,7 +245,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
       if (carnetPreview?.url) URL.revokeObjectURL(carnetPreview.url);
       const url = URL.createObjectURL(new Blob([bytes], { type: result.contentType || 'application/pdf' }));
       setCarnetPreview({ url, filename: result.filename, count: result.count });
-      toast.success('Carnê oficial pronto', 'O PDF oficial do Asaas foi carregado para conferência.');
+      toast.success('Carnê 3 por folha pronto', 'O PDF foi montado com boletos oficiais do Asaas para conferência.');
     } catch (error) {
       toast.error('Não foi possível gerar o carnê oficial', error instanceof Error ? error.message : 'Confira a integração Asaas e tente novamente.');
     } finally {
@@ -395,22 +396,25 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
           </div>
 
           {mode === 'aluno' && normalizedTerm.length >= 2 && !selectedAluno && (
-            <div className="mt-4 grid gap-2 md:grid-cols-2">
+            <div className="mt-4 space-y-2">
               {alunosQuery.isFetching ? (
                 <div className="col-span-full py-8 flex justify-center"><Loader2 className="animate-spin text-cyan-600" /></div>
               ) : (alunosQuery.data || []).length ? (
                 (alunosQuery.data || []).map((aluno) => (
-                  <button
+                  <SecretariaAlunoSearchCard
                     key={aluno.id}
+                    nome={aluno.nome}
+                    cpf={aluno.cpf}
+                    cursoNome={aluno.cursoNome}
+                    turmaNome={aluno.turmaNome}
+                    turmaCodigo={aluno.turmaCodigo}
+                    matricula={aluno.matricula}
+                    tone="cyan"
                     onClick={() => {
                       setSelectedAluno(aluno);
                       resetSelection();
                     }}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left hover:border-cyan-300"
-                  >
-                    <p className="font-black text-sm text-[#001a33]">{aluno.nome}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-500">CPF: {aluno.cpf || 'Não informado'}</p>
-                  </button>
+                  />
                 ))
               ) : (
                 <p className="col-span-full py-8 text-center text-sm text-slate-400">Nenhum aluno encontrado nesta unidade.</p>
@@ -419,20 +423,22 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
           )}
 
           {selectedAluno && (
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3">
-              <div>
-                <p className="text-sm font-black text-[#001a33]">{selectedAluno.nome}</p>
-                <p className="text-xs font-bold text-slate-500">CPF: {selectedAluno.cpf || 'Não informado'}</p>
-              </div>
-              <button
+            <div className="mt-4">
+              <SecretariaAlunoSearchCard
+                nome={selectedAluno.nome}
+                cpf={selectedAluno.cpf}
+                cursoNome={selectedAluno.cursoNome}
+                turmaNome={selectedAluno.turmaNome}
+                turmaCodigo={selectedAluno.turmaCodigo}
+                matricula={selectedAluno.matricula}
+                tone="cyan"
+                selected
+                actionLabel="Trocar aluno"
                 onClick={() => {
                   setSelectedAluno(null);
                   resetSelection();
                 }}
-                className="text-xs font-black uppercase text-cyan-700"
-              >
-                trocar aluno
-              </button>
+              />
             </div>
           )}
 
@@ -575,7 +581,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                   Carnê oficial Asaas · {carnetPreview.count} boleto(s)
                 </h4>
                 <p className="mt-1 text-xs font-bold text-slate-500">
-                  Este PDF usa os boletos oficiais retornados pelo Asaas para as cobranças selecionadas.
+                  Este PDF organiza 3 boletos por folha usando os boletos oficiais retornados pelo Asaas.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

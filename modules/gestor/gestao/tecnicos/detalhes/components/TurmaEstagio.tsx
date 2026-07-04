@@ -1,10 +1,11 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaEstagio.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import { 
   Activity, BookOpen, ClipboardCheck, 
-  FileText, Loader2, Save, Printer, ArrowLeft
+  FileText, Loader2, Save, Printer, ArrowLeft, ShieldAlert
 } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import {
@@ -38,6 +39,11 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
     : disciplinasEstagio;
   const alunos = estagioData?.alunos || [];
   const { data: avaliacoesExistentes = {} } = useTurmaEstagioAvaliacoes(turma.id, selectedDiscId);
+  const { data: vacinasResumo } = useQuery({
+    queryKey: ['turma-estagio-vacinas-resumo', turma.id, turma.cursoId],
+    queryFn: () => turmaEstagioService.getVacinasResumo(turma.id, turma.cursoId),
+    enabled: !!turma.id && !!turma.cursoId,
+  });
   
   // Aluno sendo avaliado atualmente
   const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
@@ -68,6 +74,15 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
   }, [disciplinasEstagioDisponiveis, selectedDiscId]);
 
   const startEvaluation = async (aluno: any) => {
+    const vacinaStatus = vacinasResumo?.porAluno?.[aluno.id];
+    if (vacinasResumo?.exige && vacinaStatus && !vacinaStatus.liberado) {
+      toast.error(
+        'Vacinas pendentes',
+        `${aluno.nome} ainda tem ${vacinaStatus.pendentes.length} dose(s) obrigatória(s) sem aprovação.`
+      );
+      return;
+    }
+
     setSelectedAluno(aluno);
     setLoadingConfig(true);
     try {
@@ -389,6 +404,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
                   <tr>
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider rounded-tl-[2rem]">Aluno</th>
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Status Ficha</th>
+                    <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Vacinas</th>
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Frequência</th>
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider">Nota Estágio</th>
                     <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-right rounded-tr-[2rem]">Ações</th>
@@ -399,6 +415,8 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
                     const av = avaliacoesExistentes[aluno.id];
                     const isEvaluated = !!av;
                     const notaFinal = Number(av?.nota_final || 0);
+                    const vacinaStatus = vacinasResumo?.porAluno?.[aluno.id];
+                    const vacinaLiberada = !vacinasResumo?.exige || !vacinaStatus || vacinaStatus.liberado;
                     
                     return (
                       <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors">
@@ -423,6 +441,21 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
                           </span>
                         </td>
                         <td className="px-6 py-5 text-xs font-bold text-slate-600">
+                          {vacinasResumo?.exige ? (
+                            vacinaStatus?.liberado ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                                <ClipboardCheck size={12} /> Em dia
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                                <ShieldAlert size={12} /> {vacinaStatus?.aprovadas || 0}/{vacinaStatus?.totalDoses || vacinasResumo.totalDoses}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Não exige</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-5 text-xs font-bold text-slate-600">
                           {isEvaluated ? `${av.frequencia_estagio}%` : '—'}
                         </td>
                         <td className="px-6 py-5">
@@ -437,13 +470,17 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({ turma, disciplinaIdRestrita
                         <td className="px-6 py-5 text-right">
                           <button
                             onClick={() => startEvaluation(aluno)}
+                            disabled={!vacinaLiberada}
                             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors ${
-                              isEvaluated 
+                              !vacinaLiberada
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : isEvaluated
                                 ? 'bg-slate-100 hover:bg-[#001a33] text-slate-600 hover:text-white' 
                                 : 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
                             }`}
+                            title={!vacinaLiberada ? 'Aprovação de vacinas pendente' : undefined}
                           >
-                            {isEvaluated ? 'Editar Ficha' : 'Avaliar Estágio'}
+                            {!vacinaLiberada ? 'Bloqueado' : isEvaluated ? 'Editar Ficha' : 'Avaliar Estágio'}
                           </button>
                         </td>
                       </tr>

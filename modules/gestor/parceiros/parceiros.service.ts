@@ -411,9 +411,9 @@ export const parceirosService = {
     return toCamel(updated);
   },
 
-  async uploadProfilePhoto(alunoId: string, _currentProfile: any, file: File) {
-    if (!alunoId) {
-      throw new Error('Aluno não identificado para atualizar a foto.');
+  async uploadProfilePhoto(profileId: string, _currentProfile: any, file: File) {
+    if (!profileId) {
+      throw new Error('Perfil não identificado para atualizar a foto.');
     }
 
     if (!file.type.startsWith('image/')) {
@@ -421,7 +421,7 @@ export const parceirosService = {
     }
 
     const fileExt = getFileExtension(file, 'jpg');
-    const filePath = `${alunoId}/perfil/foto_${Date.now()}.${fileExt}`;
+    const filePath = `${profileId}/perfil/foto_${Date.now()}.${fileExt}`;
     const { data, error: uploadError } = await supabase.storage
       .from('documentos')
       .upload(filePath, file, {
@@ -431,7 +431,7 @@ export const parceirosService = {
       });
 
     if (uploadError) {
-      console.error('Erro no upload da foto do aluno:', uploadError);
+      console.error('Erro no upload da foto do perfil:', uploadError);
       throw new Error(errorMessage(uploadError, 'Não foi possível enviar a foto para o storage'));
     }
 
@@ -447,17 +447,17 @@ export const parceirosService = {
     const { data: updatedPhoto, error: photoUpdateError } = await supabase
       .from('parceiros')
       .update({ foto_url: publicUrl })
-      .eq('id', alunoId)
+      .eq('id', profileId)
       .select('foto_url')
       .maybeSingle();
 
     if (photoUpdateError) {
-      console.error('Erro ao atualizar foto do aluno:', photoUpdateError);
+      console.error('Erro ao atualizar foto do perfil:', photoUpdateError);
       throw new Error(errorMessage(photoUpdateError, 'Foto enviada, mas não foi possível atualizar foto_url'));
     }
 
     if (!updatedPhoto) {
-      throw new Error('Foto enviada, mas nenhum cadastro de aluno foi atualizado. Verifique se o aluno existe e se o usuário tem permissão para alterar este cadastro.');
+      throw new Error('Foto enviada, mas nenhum cadastro foi atualizado. Verifique se o perfil existe e se o usuário tem permissão para alterar este cadastro.');
     }
 
     return updatedPhoto.foto_url || publicUrl;

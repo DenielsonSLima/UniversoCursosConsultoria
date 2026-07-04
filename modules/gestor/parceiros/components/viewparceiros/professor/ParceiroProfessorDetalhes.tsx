@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import ParceiroProfessorDados from './ParceiroProfessorDados';
 import { parceirosService } from '../../../parceiros.service';
+import ToastNotification, { useToast } from '../../shared/ToastNotification';
 
 interface ParceiroProfessorDetalhesProps {
   professorInicial: any;
@@ -14,6 +15,7 @@ interface ParceiroProfessorDetalhesProps {
 
 const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ professorInicial, onBack }) => {
   const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'dados' | 'turmas' | 'docs' | 'financeiro' | 'acesso'>('dados');
 
   // Carrega dados do professor usando React Query com initialData
@@ -29,16 +31,43 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
       queryClient.setQueryData(['parceiro', professorData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-      alert('Dados do professor atualizados com sucesso!');
+      toast.success('Professor atualizado', `${updated.nome || professorData.nome} teve os dados salvos com sucesso.`, {
+        avatarUrl: updated.foto || professorData.foto,
+        avatarName: updated.nome || professorData.nome,
+        contextLabel: 'Cadastro do professor',
+      });
     },
     onError: (err: any) => {
-      alert('Erro ao atualizar dados do professor.');
+      toast.error('Professor não atualizado', err?.message || 'Revise os dados e tente salvar novamente.', {
+        avatarUrl: professorData.foto,
+        avatarName: professorData.nome,
+        contextLabel: 'Cadastro do professor',
+      });
       console.error(err);
     }
   });
 
   const handleDataChange = async (newData: any) => {
     updateMutation.mutate(newData);
+  };
+
+  const handlePhotoUploaded = (fotoUrl: string, nextData: any) => {
+    const updatedProfessor = { ...professorData, ...nextData, foto: fotoUrl };
+    queryClient.setQueryData(['parceiro', professorData.id], updatedProfessor);
+    queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+    toast.success('Foto do professor atualizada', `${updatedProfessor.nome || 'Professor'} agora tem uma foto de perfil no cadastro.`, {
+      avatarUrl: fotoUrl,
+      avatarName: updatedProfessor.nome,
+      contextLabel: 'Perfil do professor',
+    });
+  };
+
+  const handlePhotoUploadError = (message: string) => {
+    toast.error('Foto não enviada', message, {
+      avatarUrl: professorData.foto,
+      avatarName: professorData.nome,
+      contextLabel: 'Perfil do professor',
+    });
   };
 
   const tabs = [
@@ -95,7 +124,12 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
       {/* Conteúdo */}
       <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] animate-fadeIn">
         {activeTab === 'dados' && (
-            <ParceiroProfessorDados data={professorData} onChange={handleDataChange} />
+            <ParceiroProfessorDados
+              data={professorData}
+              onChange={handleDataChange}
+              onPhotoUploaded={handlePhotoUploaded}
+              onPhotoUploadError={handlePhotoUploadError}
+            />
         )}
         {activeTab === 'turmas' && (
             <div className="text-slate-500 text-center py-20">Em desenvolvimento: Turmas do Professor</div>
@@ -114,6 +148,8 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
           />
         )}
       </div>
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
 
     </div>
   );

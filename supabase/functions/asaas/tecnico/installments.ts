@@ -175,9 +175,15 @@ export const createTecnicoInstallmentService = (
       return { success: true, skipped: true, reason: "Matrícula não pertence ao fluxo técnico Asaas." };
     }
 
-    const withInstallment = receivables.find((item) => item.asaas_installment_id);
-    if (withInstallment?.asaas_installment_id) {
-      return { success: true, skipped: true, installmentId: withInstallment.asaas_installment_id, reason: "Parcelamento técnico já sincronizado." };
+    const installmentIds = Array.from(new Set(
+      receivables.map((item) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
+    ));
+    if (installmentIds.length === 1 && receivables.every((item) => String(item.asaas_installment_id || "").trim() === installmentIds[0])) {
+      return { success: true, skipped: true, installmentId: installmentIds[0], reason: "Parcelamento técnico já sincronizado." };
+    }
+    if (installmentIds.length > 0) {
+      await markCycleError(receivables, "Parcelamento técnico parcial/inconsistente. Refaça a sincronização antes de gerar carnê.");
+      throw new Error("Parcelamento técnico parcial/inconsistente. Refaça a sincronização antes de gerar carnê.");
     }
 
     const individuallySynced = receivables.filter((item) => item.asaas_payment_id && !item.asaas_installment_id);

@@ -14,6 +14,7 @@ export const BASE_DOCUMENT_VARIABLES = [
 export const TRANSFERENCIA_VARIABLES = [
   ...BASE_DOCUMENT_VARIABLES,
   { code: '{{INSTITUICAO_DESTINO}}', label: 'Instituição de Destino' },
+  { code: '{{CARGA_HORARIA_TOTAL}}', label: 'Carga Horária Total' },
   { code: '{{TABELA_COMPONENTES_CURRICULARES}}', label: 'Tabela de Componentes' },
   { code: '{{CARGA_HORARIA_CUMPRIDA}}', label: 'Carga Horária Cumprida' }
 ];

@@ -106,7 +106,8 @@ const buildCursoCreatePayload = (curso: Omit<Curso, 'id'>) => {
     imagem_detalhe_1: curso.imagem_detalhe_1 || null,
     imagem_detalhe_2: curso.imagem_detalhe_2 || null,
     valor: curso.valor !== undefined ? curso.valor : null,
-    ead_config: curso.ead_config || {}
+    ead_config: curso.ead_config || {},
+    vacinas_config: curso.vacinas_config || undefined
   };
 
   if (curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' || curso.modalidade === 'ESPECIALIZACAO' || curso.financeiro_config) {
@@ -132,7 +133,8 @@ const buildCursoUpdatePayload = (curso: Curso) => {
     imagem_detalhe_1: curso.imagem_detalhe_1 !== undefined ? curso.imagem_detalhe_1 : null,
     imagem_detalhe_2: curso.imagem_detalhe_2 !== undefined ? curso.imagem_detalhe_2 : null,
     valor: curso.valor !== undefined ? curso.valor : null,
-    ead_config: curso.ead_config !== undefined ? curso.ead_config : null
+    ead_config: curso.ead_config !== undefined ? curso.ead_config : null,
+    vacinas_config: curso.vacinas_config !== undefined ? curso.vacinas_config : undefined
   };
 
   if (curso.financeiro_config !== undefined || curso.modalidade === 'TECNICO' || curso.modalidade === 'LIVRE' || curso.modalidade === 'ESPECIALIZACAO') {
@@ -296,7 +298,8 @@ export const cadastrosService = {
         area: curso.area,
         descricao: curso.descricao,
         versao: novaVersao,
-        financeiro_config: curso.financeiro_config || null
+        financeiro_config: curso.financeiro_config || null,
+        vacinas_config: curso.vacinas_config || null
       })
       .select()
       .single();

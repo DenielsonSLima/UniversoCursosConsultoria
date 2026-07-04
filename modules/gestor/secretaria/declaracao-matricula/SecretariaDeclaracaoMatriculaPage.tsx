@@ -13,8 +13,10 @@ import { parceirosService } from '../../parceiros/parceiros.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { onlyDigits } from '../../../../lib/documentFormatters';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
+import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
 interface Aluno {
   id: string;
@@ -26,6 +28,7 @@ interface Aluno {
   matricula: string;
   curso: string;
   turmaNome: string;
+  turmaCodigo?: string;
   instituicao: string;
   fotoUrl?: string | null;
   tipoDocumento?: string;
@@ -88,6 +91,16 @@ const SecretariaDeclaracaoMatriculaPage = ({
   const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
   const printContentRef = useRef<HTMLDivElement>(null);
 
+  const matchesAlunoSearch = (aluno: Aluno, term: string) => {
+    const normalized = term.trim().toUpperCase();
+    const digits = onlyDigits(term);
+    return aluno.nome.toUpperCase().includes(normalized)
+      || Boolean(aluno.cpf && (aluno.cpf.includes(term) || (digits && onlyDigits(aluno.cpf).includes(digits))))
+      || Boolean(aluno.rg && aluno.rg.includes(term))
+      || Boolean(aluno.curso && aluno.curso.toUpperCase().includes(normalized))
+      || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
+  };
+
   const loadAcademicoData = async (activePoloId: string) => {
     try {
       setLoading(true);
@@ -101,7 +114,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
         .from('parceiros')
         .select('*')
         .eq('tipo', 'Aluno')
-        .or(`polo_id.eq.${activePoloId},polo_id.is.null`)
+        .or(`polo_id.eq.${activePoloId},polo_ids.cs.{${activePoloId}},polo_id.is.null`)
         .order('nome', { ascending: true });
         
       if (errorAlunos) throw errorAlunos;
@@ -124,9 +137,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
             cpf: p.cpf_cnpj || '',
             rg: p.rg || '',
             nascimento: p.data_nascimento || '',
-            matricula: activeMat ? formatMatricula(activeMat.id, activeMat.data_matricula, activeMat.polo_id) : 'PENDENTE',
+            matricula: activeMat ? formatMatricula(activeMat.id, activeMat.data_matricula, activeMat.turmas?.polo_id || activePoloId) : 'PENDENTE',
             curso: activeMat?.turmas?.cursos?.nome || 'Curso Geral',
             turmaNome: activeMat?.turmas?.nome || '',
+            turmaCodigo: activeMat?.turmas?.codigo || '',
             instituicao: 'Universo Cursos e Consultoria',
             fotoUrl: p.foto_url || null,
             tipoDocumento: p.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
@@ -726,37 +740,28 @@ const SecretariaDeclaracaoMatriculaPage = ({
               {searchQuery.trim().length > 0 && (
                 <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
                   {alunos
-                    .filter(a =>
-                      a.nome.toUpperCase().includes(searchQuery.toUpperCase()) ||
-                      (a.cpf && a.cpf.includes(searchQuery)) ||
-                      (a.rg && a.rg.includes(searchQuery))
-                    )
+                    .filter((aluno) => matchesAlunoSearch(aluno, searchQuery))
                     .slice(0, 15)
                     .map((aluno) => (
-                      <button
-                        key={aluno.id}
-                        onClick={() => {
-                          setSelectedAluno(aluno);
-                          setSearchQuery('');
-                        }}
-                        className="w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0"
-                      >
-                        <div>
-                          <span className="block font-black text-slate-800 text-xs uppercase">{aluno.nome}</span>
-                          <span className="block text-[10px] text-slate-450 font-semibold uppercase mt-0.5">
-                            CPF: {aluno.cpf} | RG: {aluno.rg} | Curso: {aluno.curso}
-                          </span>
-                        </div>
-                        <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-black uppercase tracking-wider">
-                          Selecionar
-                        </span>
-                      </button>
+                      <div key={aluno.id} className="border-b border-slate-100 p-2 last:border-0">
+                        <SecretariaAlunoSearchCard
+                          nome={aluno.nome}
+                          cpf={aluno.cpf}
+                          rg={aluno.rg}
+                          cursoNome={aluno.curso}
+                          turmaNome={aluno.turmaNome}
+                          turmaCodigo={aluno.turmaCodigo}
+                          matricula={aluno.matricula}
+                          fotoUrl={aluno.fotoUrl}
+                          tone="blue"
+                          onClick={() => {
+                            setSelectedAluno(aluno);
+                            setSearchQuery('');
+                          }}
+                        />
+                      </div>
                     ))}
-                  {alunos.filter(a =>
-                    a.nome.toUpperCase().includes(searchQuery.toUpperCase()) ||
-                    (a.cpf && a.cpf.includes(searchQuery)) ||
-                    (a.rg && a.rg.includes(searchQuery))
-                  ).length === 0 && (
+                  {alunos.filter((aluno) => matchesAlunoSearch(aluno, searchQuery)).length === 0 && (
                     <div className="p-4 text-center text-xs font-bold text-slate-400 uppercase">
                       Nenhum aluno encontrado
                     </div>
@@ -766,26 +771,22 @@ const SecretariaDeclaracaoMatriculaPage = ({
             </div>
 
             {selectedAluno ? (
-              <div className="border border-slate-150 rounded-3xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/40 animate-fadeIn animate-duration-300">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg overflow-hidden border border-blue-200">
-                    {selectedAluno.fotoUrl ? (
-                      <img src={selectedAluno.fotoUrl} alt="Foto" className="w-full h-full object-cover" />
-                    ) : (
-                      selectedAluno.nome[0]
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-slate-800 text-sm uppercase">{selectedAluno.nome}</h4>
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mt-1">
-                      Matrícula: {selectedAluno.matricula}
-                    </p>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">{selectedAluno.curso} · {selectedAluno.turmaNome}</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-md uppercase tracking-wider flex items-center gap-1">
-                  Ativo
-                </span>
+              <div className="mb-8 animate-fadeIn animate-duration-300">
+                <SecretariaAlunoSearchCard
+                  nome={selectedAluno.nome}
+                  cpf={selectedAluno.cpf}
+                  rg={selectedAluno.rg}
+                  cursoNome={selectedAluno.curso}
+                  turmaNome={selectedAluno.turmaNome}
+                  turmaCodigo={selectedAluno.turmaCodigo}
+                  matricula={selectedAluno.matricula}
+                  fotoUrl={selectedAluno.fotoUrl}
+                  tone="blue"
+                  selected
+                  statusLabel="Ativo"
+                  actionLabel="Trocar"
+                  onClick={() => setSelectedAluno(null)}
+                />
               </div>
             ) : (
               <div className="border border-slate-150 rounded-3xl p-6 mb-8 text-center text-slate-450 font-bold uppercase text-xs">
@@ -884,41 +885,35 @@ const SecretariaDeclaracaoMatriculaPage = ({
               {searchQueryCustom.trim().length > 0 && (
                 <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
                   {alunos
-                    .filter(a =>
-                      a.nome.toUpperCase().includes(searchQueryCustom.toUpperCase()) ||
-                      (a.cpf && a.cpf.includes(searchQueryCustom)) ||
-                      (a.rg && a.rg.includes(searchQueryCustom))
-                    )
+                    .filter((aluno) => matchesAlunoSearch(aluno, searchQueryCustom))
                     .slice(0, 15)
                     .map((aluno) => {
                       const isAdded = customSelectedAlunos.some(x => x.id === aluno.id);
                       return (
-                        <button
-                          key={aluno.id}
-                          disabled={isAdded}
-                          onClick={() => {
-                            setCustomSelectedAlunos(prev => [...prev, aluno]);
-                            setSearchQueryCustom('');
-                          }}
-                          className={`w-full text-left px-6 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0 ${isAdded ? 'opacity-50 cursor-not-allowed bg-slate-50/30' : ''}`}
-                        >
-                          <div>
-                            <span className="block font-black text-slate-800 text-xs uppercase">{aluno.nome}</span>
-                            <span className="block text-[10px] text-slate-450 font-semibold uppercase mt-0.5">
-                              CPF: {aluno.cpf} | RG: {aluno.rg} | Curso: {aluno.curso}
-                            </span>
-                          </div>
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${isAdded ? 'bg-slate-150 text-slate-400' : 'bg-blue-50 text-blue-600'}`}>
-                            {isAdded ? 'Adicionado' : 'Adicionar'}
-                          </span>
-                        </button>
+                        <div key={aluno.id} className="border-b border-slate-100 p-2 last:border-0">
+                          <SecretariaAlunoSearchCard
+                            nome={aluno.nome}
+                            cpf={aluno.cpf}
+                            rg={aluno.rg}
+                            cursoNome={aluno.curso}
+                            turmaNome={aluno.turmaNome}
+                            turmaCodigo={aluno.turmaCodigo}
+                            matricula={aluno.matricula}
+                            fotoUrl={aluno.fotoUrl}
+                            tone="blue"
+                            disabled={isAdded}
+                            actionLabel={isAdded ? 'Adicionado' : 'Adicionar'}
+                            statusLabel={isAdded ? 'Na lista' : undefined}
+                            statusTone="neutral"
+                            onClick={() => {
+                              setCustomSelectedAlunos(prev => [...prev, aluno]);
+                              setSearchQueryCustom('');
+                            }}
+                          />
+                        </div>
                       );
                     })}
-                  {alunos.filter(a =>
-                    a.nome.toUpperCase().includes(searchQueryCustom.toUpperCase()) ||
-                    (a.cpf && a.cpf.includes(searchQueryCustom)) ||
-                    (a.rg && a.rg.includes(searchQueryCustom))
-                  ).length === 0 && (
+                  {alunos.filter((aluno) => matchesAlunoSearch(aluno, searchQueryCustom)).length === 0 && (
                     <div className="p-4 text-center text-xs font-bold text-slate-400 uppercase">
                       Nenhum aluno encontrado
                     </div>

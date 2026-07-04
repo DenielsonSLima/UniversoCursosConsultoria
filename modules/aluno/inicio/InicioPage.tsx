@@ -1,15 +1,56 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { BookOpen, GraduationCap, MessageSquare, Megaphone, Calendar, Award, MapPin, CreditCard, AlertTriangle, CheckCircle2, WalletCards } from 'lucide-react';
+import { BookOpen, GraduationCap, MessageSquare, Calendar, Clock, AlertTriangle, CheckCircle2, WalletCards, History, Pin, PlayCircle, Image as ImageIcon } from 'lucide-react';
 import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
+import {
+  getStudentCourseAccessKey,
+  getStudentPinnedCourseKeys,
+  getStudentRecentCourses,
+  recordStudentCourseAccess,
+  toggleStudentPinnedCourse,
+  type StudentCourseAccessItem,
+} from '../cursos/courseAccessHistory';
+
+type InicioUpcomingEvent = {
+  id: string;
+  date: string;
+  title: string;
+  subtitle: string;
+  detail: string;
+};
+
+const toLocalDateKey = (date: Date) => (
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+);
+
+const normalizeCourseModality = (value?: string | null) => String(value || 'OUTROS').toUpperCase();
+
+const getCourseModalityLabel = (value?: string | null) => {
+  const modality = normalizeCourseModality(value);
+  if (modality === 'TECNICO' || modality === 'TÉCNICO') return 'Técnico';
+  if (modality === 'ESPECIALIZACAO' || modality === 'ESPECIALIZAÇÃO') return 'Especialização';
+  if (modality === 'LIVRE') return 'Livre';
+  if (modality === 'EAD') return 'EAD';
+  return 'Curso';
+};
+
+const getCourseModalityClasses = (value?: string | null) => {
+  const modality = normalizeCourseModality(value);
+  if (modality === 'TECNICO' || modality === 'TÉCNICO') return 'border-violet-100 bg-violet-50 text-violet-700';
+  if (modality === 'EAD') return 'border-blue-100 bg-blue-50 text-blue-700';
+  if (modality === 'LIVRE') return 'border-emerald-100 bg-emerald-50 text-emerald-700';
+  if (modality === 'ESPECIALIZACAO' || modality === 'ESPECIALIZAÇÃO') return 'border-amber-100 bg-amber-50 text-amber-700';
+  return 'border-slate-100 bg-slate-50 text-slate-600';
+};
 
 interface InicioPageProps {
   alunoId: string;
   onNavigate: (module: string) => void;
+  onOpenCourse?: (courseId: string, turmaId: string | null, targetModule: 'turmas' | 'cursos') => void;
 }
 
-const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
+const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCourse }) => {
   // Query to count enrolled classes
   const { data: matriculasCount = 0 } = useQuery({
     queryKey: ['aluno-matriculas-count', alunoId],
@@ -42,6 +83,97 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
   const activeTurmaIds = matriculas.map((m) => m.turma_id).filter(Boolean);
   const activeCursoIds = Array.from(new Set(matriculas.map((m) => m.turmas?.cursos?.id).filter(Boolean)));
   const activePoloIds = Array.from(new Set(matriculas.map((m) => m.polo_id).filter(Boolean)));
+  const [recentCourseAccess, setRecentCourseAccess] = useState<StudentCourseAccessItem[]>([]);
+  const [pinnedCourseKeys, setPinnedCourseKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecentCourseAccess(getStudentRecentCourses(alunoId));
+    setPinnedCourseKeys(getStudentPinnedCourseKeys(alunoId));
+  }, [alunoId]);
+
+  const enrolledCourseItems = useMemo<StudentCourseAccessItem[]>(() => (
+    matriculas
+      .map((matricula) => {
+        const turma = Array.isArray(matricula?.turmas) ? matricula.turmas[0] : matricula?.turmas;
+        const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        if (!curso?.id) return null;
+
+        return {
+          cursoId: curso.id,
+          turmaId: turma?.id || matricula?.turma_id || null,
+          cursoNome: curso.nome || turma?.nome || 'Curso',
+          turmaNome: turma?.nome || null,
+          modalidade: curso.modalidade || null,
+          imagemUrl: curso.imagem_url || null,
+          accessedAt: matricula?.data_matricula || matricula?.created_at || '',
+        } as StudentCourseAccessItem;
+      })
+      .filter(Boolean) as StudentCourseAccessItem[]
+  ), [matriculas]);
+
+  const quickAccessCourses = useMemo(() => {
+    const byKey = new Map<string, StudentCourseAccessItem>();
+    enrolledCourseItems.forEach((item) => byKey.set(getStudentCourseAccessKey(item), item));
+    recentCourseAccess.forEach((item) => {
+      const key = getStudentCourseAccessKey(item);
+      const enrolledItem = byKey.get(key);
+      if (!enrolledItem) return;
+      byKey.set(key, { ...item, ...enrolledItem, accessedAt: item.accessedAt || enrolledItem.accessedAt });
+    });
+
+    const pinnedSet = new Set(pinnedCourseKeys);
+    const pinnedItems = pinnedCourseKeys
+      .map((key) => byKey.get(key))
+      .filter(Boolean) as StudentCourseAccessItem[];
+    const recentItems = recentCourseAccess
+      .map((item) => byKey.get(getStudentCourseAccessKey(item)))
+      .filter(Boolean)
+      .filter((item): item is StudentCourseAccessItem => Boolean(item))
+      .filter((item) => !pinnedSet.has(getStudentCourseAccessKey(item)));
+    const fallbackItems = enrolledCourseItems.filter((item) => {
+      const key = getStudentCourseAccessKey(item);
+      return !pinnedSet.has(key) && !recentItems.some((recent) => getStudentCourseAccessKey(recent) === key);
+    });
+
+    const usedKeys = new Set<string>();
+    return [...pinnedItems, ...recentItems, ...fallbackItems].filter((item) => {
+      const key = getStudentCourseAccessKey(item);
+      if (usedKeys.has(key)) return false;
+      usedKeys.add(key);
+      return true;
+    }).slice(0, 3);
+  }, [enrolledCourseItems, pinnedCourseKeys, recentCourseAccess]);
+
+  const refreshCourseAccessState = () => {
+    setRecentCourseAccess(getStudentRecentCourses(alunoId));
+    setPinnedCourseKeys(getStudentPinnedCourseKeys(alunoId));
+  };
+
+  const handleOpenQuickAccessCourse = (course: StudentCourseAccessItem) => {
+    recordStudentCourseAccess(alunoId, course);
+    refreshCourseAccessState();
+
+    if (normalizeCourseModality(course.modalidade) === 'EAD' && onOpenCourse) {
+      onOpenCourse(course.cursoId, course.turmaId || null, 'cursos');
+      return;
+    }
+
+    if (onOpenCourse) {
+      onOpenCourse(course.cursoId, course.turmaId || null, 'turmas');
+      return;
+    }
+
+    onNavigate('turmas');
+  };
+
+  const handleTogglePinnedCourse = (course: StudentCourseAccessItem) => {
+    const key = getStudentCourseAccessKey(course);
+    if (!recentCourseAccess.some((item) => getStudentCourseAccessKey(item) === key)) {
+      recordStudentCourseAccess(alunoId, course);
+    }
+    setPinnedCourseKeys(toggleStudentPinnedCourse(alunoId, key));
+    setRecentCourseAccess(getStudentRecentCourses(alunoId));
+  };
 
   const { data: activeTeachers = [] } = useQuery<any[]>({
     queryKey: ['aluno-inicio-professores', activeTurmaIds.join(',')],
@@ -159,42 +291,66 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
     }
   });
 
-  const { data: turmasAbertas = [], isLoading: loadingTurmasAbertas } = useQuery<any[]>({
-    queryKey: ['aluno-inicio-turmas-abertas-online'],
+  const { data: proximosEventos = [], isLoading: loadingProximosEventos } = useQuery<InicioUpcomingEvent[]>({
+    queryKey: ['aluno-inicio-proximos-eventos', alunoId, activeTurmaIds.join(',')],
+    enabled: !!alunoId && !loadingMatriculas,
     queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      if (activeTurmaIds.length === 0) return [];
+
+      const today = toLocalDateKey(new Date());
       const { data, error } = await supabase
-        .from('turmas')
-        .select(`
-          id,
-          nome,
-          data_inicio,
-          data_inicio_inscricao,
-          data_fim_inscricao,
-          cursos!inner(id, nome, modalidade, area, imagem_url, status, publicar_site),
-          polos(nome, cidade, estado)
-        `)
-        .eq('status', 'EM_ANDAMENTO')
-        .eq('permitir_inscricoes_online', true)
-        .in('cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
-        .eq('cursos.status', 'ativo')
-        .eq('cursos.publicar_site', true)
-        .or(`data_inicio_inscricao.is.null,data_inicio_inscricao.lte.${today}`)
-        .or(`data_fim_inscricao.is.null,data_fim_inscricao.gte.${today}`)
-        .order('data_inicio', { ascending: true })
-        .limit(8);
+        .from('aulas_turma')
+        .select('id, titulo, carga_horaria, data_aula, turma_id, disciplina_id')
+        .in('turma_id', activeTurmaIds)
+        .not('data_aula', 'is', null)
+        .gte('data_aula', today)
+        .order('data_aula', { ascending: true })
+        .limit(6);
 
       if (error) throw error;
-      return data || [];
+
+      const aulas = data || [];
+      const disciplinaIds = [...new Set(aulas.map((aula: any) => aula.disciplina_id).filter(Boolean))];
+      const [{ data: disciplinasData, error: disciplinasError }, { data: configsData, error: configsError }] = await Promise.all([
+        disciplinaIds.length > 0
+          ? supabase.from('disciplinas').select('id, nome').in('id', disciplinaIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        supabase
+          .from('turmas_disciplinas')
+          .select('turma_id, disciplina_id, professor_nome')
+          .in('turma_id', activeTurmaIds),
+      ]);
+
+      if (disciplinasError) throw disciplinasError;
+      if (configsError) throw configsError;
+
+      const disciplinaNames = new Map((disciplinasData || []).map((disciplina: any) => [disciplina.id, disciplina.nome]));
+      const turmaById = new Map(matriculas.map((matricula) => [matricula.turma_id, matricula.turmas || {}]));
+      const configMap = new Map(
+        (configsData || []).map((config: any) => [`${config.turma_id}-${config.disciplina_id}`, config])
+      );
+
+      return aulas.map((aula: any) => {
+        const turma = turmaById.get(aula.turma_id) || {};
+        const turmaNome = turma.nome || 'Turma';
+        const disciplinaNome = disciplinaNames.get(aula.disciplina_id) || 'Disciplina';
+        const config = configMap.get(`${aula.turma_id}-${aula.disciplina_id}`) || {};
+        const cargaHoraria = Number(aula.carga_horaria || 0);
+
+        return {
+          id: `aula-${aula.id}`,
+          date: aula.data_aula,
+          title: aula.titulo || disciplinaNome,
+          subtitle: `${disciplinaNome} - ${turmaNome}`,
+          detail: [
+            config.professor_nome ? `Prof. ${config.professor_nome}` : null,
+            cargaHoraria > 0 ? `${cargaHoraria}h` : null,
+            turma.turno ? `Turno ${turma.turno}` : null,
+          ].filter(Boolean).join(' • '),
+        };
+      });
     }
   });
-
-  const getPoloLabel = (turma: any) => {
-    const polo = Array.isArray(turma?.polos) ? turma.polos[0] : turma?.polos;
-    return [polo?.nome, polo?.cidade && polo?.estado ? `${polo.cidade}/${polo.estado}` : polo?.cidade || polo?.estado]
-      .filter(Boolean)
-      .join(' - ') || 'Polo a confirmar';
-  };
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   const formatDate = (dateStr?: string | null) => {
@@ -206,20 +362,6 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <div className="flex justify-end">
-        <div className="w-full max-w-[18rem] rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <Award size={17} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Início</p>
-              <p className="truncate text-sm font-black text-[#001a33]">Acesso do aluno</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {/* KPI 1 */}
@@ -327,124 +469,178 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate }) => {
         </button>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Matrículas online</p>
-            <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Turmas em aberto</h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigate('cursos')}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:border-blue-300"
-          >
-            <BookOpen size={14} />
-            Ver todos
-          </button>
-        </div>
-
-        {loadingTurmasAbertas ? (
-          <div className="rounded-[2rem] border border-slate-100 bg-white p-6 text-xs font-bold text-slate-400 shadow-sm">
-            Carregando turmas abertas...
-          </div>
-        ) : turmasAbertas.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {turmasAbertas.map((turma) => {
-              const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
-              return (
-                <button
-                  key={turma.id}
-                  type="button"
-                  onClick={() => onNavigate('cursos')}
-                  className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white text-left shadow-sm transition-all hover:-translate-y-1 hover:border-blue-300 hover:shadow-md"
-                >
-                  <div className="h-32 bg-slate-100">
-                    {curso?.imagem_url ? (
-                      <img src={curso.imagem_url} alt={curso.nome} className="h-full w-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-blue-300">
-                        <BookOpen size={34} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-3 p-4">
-                    <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-blue-700">
-                      {curso?.modalidade || 'Curso'}
-                    </span>
-                    <div>
-                      <h3 className="line-clamp-2 text-sm font-black leading-tight text-[#001a33]">{curso?.nome}</h3>
-                      <p className="mt-1 text-[10px] font-bold text-slate-400">{turma.nome || 'Turma aberta'}</p>
-                    </div>
-                    <p className="flex items-start gap-1.5 text-[11px] font-bold leading-relaxed text-slate-600">
-                      <MapPin size={13} className="mt-0.5 shrink-0 text-emerald-600" />
-                      {getPoloLabel(turma)}
-                    </p>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                      <CreditCard size={13} />
-                      Matricular e pagar
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-6 text-center shadow-sm">
-            <BookOpen size={24} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-xs font-black text-[#001a33]">Nenhuma turma aberta para matrícula online agora</p>
-            <p className="mt-1 text-[10px] font-bold text-slate-400">Quando a secretaria liberar novas turmas, elas aparecerão aqui por polo.</p>
-          </div>
-        )}
-      </section>
-
-      {/* Main Content Grid: Announcements & Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Announcements List */}
-        <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-              <Megaphone size={16} />
-            </div>
-            <h2 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Comunicados Importantes</h2>
-          </div>
-
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
-            <Megaphone size={24} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-sm font-black text-[#001a33]">Nenhum comunicado publicado</p>
-            <p className="mt-1 text-xs font-bold text-slate-400">
-              Quando a secretaria publicar avisos reais, eles aparecerão aqui.
-            </p>
-          </div>
-        </div>
-
-        {/* Dynamic Sidebar Info (Calendar & Fast Access) */}
-        <div className="space-y-6">
-          {/* Quick Schedule card */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                <Calendar size={16} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
+        <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <History size={18} />
               </div>
-              <h3 className="font-bold text-sm text-[#001a33] uppercase tracking-tight">Próximos Eventos</h3>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Cursos recentes</p>
+                <h2 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Últimos acessos</h2>
+              </div>
             </div>
-            
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
-              <Calendar size={22} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-xs font-black text-[#001a33]">Nenhum evento publicado</p>
-              <p className="mt-1 text-[10px] font-bold text-slate-400">Eventos reais serão exibidos quando cadastrados.</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => onNavigate('turmas')}
+              className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-blue-700 transition hover:border-blue-300"
+            >
+              Meus cursos
+            </button>
           </div>
 
-          {/* Quick Access Portal rules */}
-          <div className="bg-slate-900 text-white rounded-[2.5rem] p-6 shadow-md relative overflow-hidden">
-            <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-blue-600/30 rounded-full blur-xl"></div>
-            <h3 className="font-bold text-sm uppercase tracking-wider text-blue-300">Central de Atendimento</h3>
-            <p className="text-[11px] text-slate-350 font-medium mt-1">
+          {quickAccessCourses.length > 0 ? (
+            <div className="space-y-3">
+              {quickAccessCourses.map((course) => {
+                const courseKey = getStudentCourseAccessKey(course);
+                const isPinned = pinnedCourseKeys.includes(courseKey);
+
+                return (
+                  <article
+                    key={courseKey}
+                    className={`flex flex-col gap-4 rounded-2xl border p-3 transition hover:border-blue-200 hover:bg-blue-50/20 sm:flex-row sm:items-center ${
+                      isPinned ? 'border-blue-200 bg-blue-50/30' : 'border-slate-100 bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="h-20 w-full overflow-hidden rounded-2xl bg-white shadow-sm sm:w-24 sm:shrink-0">
+                      {course.imagemUrl ? (
+                        <img
+                          src={course.imagemUrl}
+                          alt={course.cursoNome}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-300">
+                          <ImageIcon size={24} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${getCourseModalityClasses(course.modalidade)}`}>
+                          {getCourseModalityLabel(course.modalidade)}
+                        </span>
+                        {isPinned && (
+                          <span className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-blue-700">
+                            Fixado
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="line-clamp-2 text-sm font-black leading-snug text-[#001a33]">{course.cursoNome}</h3>
+                      <p className="mt-1 line-clamp-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        {course.turmaNome || 'Acesso do curso'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:flex-col">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePinnedCourse(course)}
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                          isPinned
+                            ? 'border-blue-200 bg-white text-blue-700'
+                            : 'border-slate-100 bg-white text-slate-400 hover:border-blue-200 hover:text-blue-700'
+                        }`}
+                        title={isPinned ? 'Remover fixação' : 'Fixar curso'}
+                        aria-label={isPinned ? 'Remover fixação do curso' : 'Fixar curso'}
+                      >
+                        <Pin size={15} fill={isPinned ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenQuickAccessCourse(course)}
+                        className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 sm:w-24 sm:flex-none"
+                      >
+                        <PlayCircle size={14} />
+                        Abrir
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
+              <GraduationCap size={24} className="mx-auto mb-3 text-slate-300" />
+              <p className="text-sm font-black text-[#001a33]">Nenhum curso liberado</p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                Assim que houver matrícula ativa, o acesso rápido aparece aqui.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <div className="space-y-6">
+          <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-indigo-600">Agenda</p>
+                  <h3 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Próximos eventos</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate('calendario')}
+                className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-indigo-700 transition hover:border-indigo-300"
+              >
+                Ver agenda
+              </button>
+            </div>
+
+            {loadingProximosEventos ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 text-xs font-black uppercase tracking-widest text-slate-400">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                Carregando eventos...
+              </div>
+            ) : proximosEventos.length > 0 ? (
+              <div className="space-y-3">
+                {proximosEventos.slice(0, 4).map((event) => {
+                  const [, month, day] = event.date.split('-');
+                  return (
+                    <article key={event.id} className="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
+                      <div className="flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-white shadow-sm">
+                        <span className="text-base font-black text-[#001a33]">{day}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{month}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-black leading-snug text-[#001a33]">{event.title}</p>
+                        <p className="mt-1 line-clamp-1 text-[11px] font-bold text-slate-500">{event.subtitle}</p>
+                        {event.detail && (
+                          <p className="mt-1 line-clamp-1 text-[10px] font-bold text-indigo-600">{event.detail}</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-5 text-center">
+                <Clock size={22} className="mx-auto mb-3 text-slate-300" />
+                <p className="text-xs font-black text-[#001a33]">Nenhuma aula futura encontrada</p>
+                <p className="mt-1 text-[10px] font-bold text-slate-400">
+                  Assim que a turma tiver aulas agendadas, elas aparecerão aqui.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <div className="relative overflow-hidden rounded-[2rem] bg-slate-900 p-6 text-white shadow-md">
+            <div className="absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-blue-600/30 blur-xl"></div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-blue-300">Central de Atendimento</h3>
+            <p className="mt-1 text-[11px] font-medium text-slate-300">
               Tem alguma dúvida sobre notas, mensalidades ou documentação?
             </p>
-            <button 
+            <button
               onClick={() => onNavigate('comunicacao')}
-              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all w-full text-center"
+              className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2 text-center text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-blue-500"
             >
               Falar com Atendente
             </button>

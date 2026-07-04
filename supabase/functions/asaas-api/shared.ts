@@ -5,6 +5,7 @@ type CorsOptions = {
 const SECURITY_RESPONSE_HEADERS = {
   "X-Frame-Options": "DENY",
   "Content-Security-Policy": "frame-ancestors 'self'; form-action 'self';",
+  "Vary": "Origin",
 };
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -61,8 +62,23 @@ const getAllowedCorsOrigins = () => {
 const resolveAllowOrigin = (requestOrigin: string | null | undefined) => {
   const allowed = getAllowedCorsOrigins();
   const parsedOrigin = parseOrigin(requestOrigin);
+  if (parsedOrigin && isLocalDevelopmentOrigin(parsedOrigin)) return parsedOrigin;
   if (parsedOrigin && allowed.includes(parsedOrigin)) return parsedOrigin;
   return allowed[0] || "https://universocc.com.br";
+};
+
+const isLocalDevelopmentOrigin = (origin: string) => {
+  try {
+    const hostname = new URL(origin).hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0" || hostname === "::1") {
+      return true;
+    }
+    return /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
+      || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)
+      || /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+  } catch {
+    return false;
+  }
 };
 
 export const buildCorsHeaders = (request?: Request | null, options: CorsOptions = {}) => {
@@ -115,6 +131,7 @@ export const isRateLimitExceeded = (key: string, maxRequests: number, windowMs: 
 export const corsHeaders = buildCorsHeaders();
 
 export type { Environment } from "../asaas/core/runtime.ts";
+export { ONLINE_MODALIDADES } from "../asaas/core/modality.ts";
 export {
   apiSecretName,
   baseUrlFor,
@@ -134,7 +151,5 @@ export const json = (body: unknown, status = 200, request?: Request) =>
 
 export const buildCoursePaymentDescription = (courseName: string) =>
   `${courseName} - Inscricao Online - Universo Cursos e Consultoria`;
-
-export const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Layers, BookOpen, UserPlus, ChevronDown, ChevronRight, 
-  UserCheck, CheckCircle2, X, Trash2, CornerDownRight, Loader2, Save
+  UserCheck, CheckCircle2, X, Trash2, CornerDownRight, Loader2, Save, ClipboardCheck
 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import {
+  useAddTurmaAtividadeExtraClasseMutation,
   useAddTurmaAulaMutation,
   useAssignProfessorMutation,
   useAssignProfessorToAllMutation,
@@ -30,6 +31,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const cursoBase = gradeData?.cursoBase || null;
   const disciplinasConfig = gradeData?.disciplinasConfig || {};
   const aulas = gradeData?.aulas || {};
+  const atividadesExtraClasse = gradeData?.atividadesExtraClasse || {};
   const professores = gradeData?.professores || [];
   const metricasGrade = gradeData?.metricasGrade || [];
 
@@ -89,6 +91,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const [newAulaTitulo, setNewAulaTitulo] = useState<Record<string, string>>({});
   const [newAulaHoras, setNewAulaHoras] = useState<Record<string, string>>({});
   const [newAulaData, setNewAulaData] = useState<Record<string, string>>({});
+  const [newAulaExtraClasse, setNewAulaExtraClasse] = useState<Record<string, boolean>>({});
 
   // Modal states
   const [showDocenteModal, setShowDocenteModal] = useState<{ isOpen: boolean; disciplinaId: string }>({ isOpen: false, disciplinaId: '' });
@@ -98,7 +101,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     () => setShowDocenteModal({ isOpen: false, disciplinaId: '' }),
     (err) => {
       console.error('Erro ao atribuir docente:', err);
-      toast.error('Erro', 'Erro ao salvar docente no banco.');
+      toast.error('Docente não salvo', 'Não consegui atualizar o docente desta disciplina. Tente novamente.');
       setShowDocenteModal({ isOpen: false, disciplinaId: '' });
     },
   );
@@ -107,14 +110,14 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     () => toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.'),
     (err) => {
       console.error('Erro ao atribuir docente para a turma:', err);
-      toast.error('Erro', 'Erro ao salvar docente da turma.');
+      toast.error('Docente não salvo', 'Não consegui atualizar o docente da turma. Tente novamente.');
     },
   );
   const toggleConcluidaMutation = useToggleDisciplinaConcluidaMutation(
     turma.id,
     (err) => {
       console.error('Erro ao alternar status da disciplina:', err);
-      toast.error('Erro', 'Erro ao salvar status da disciplina no banco.');
+      toast.error('Status não salvo', 'Não consegui atualizar o status desta disciplina. Tente novamente.');
     },
   );
   const addAulaMutation = useAddTurmaAulaMutation(
@@ -127,7 +130,31 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     },
     (err) => {
       console.error('Erro ao adicionar aula:', err);
-      toast.error('Erro', 'Erro ao salvar aula no banco.');
+      const message = String(err?.message || '');
+      if (message.includes('Carga horaria excedida')) {
+        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), { contextLabel: 'Planejamento da grade' });
+        return;
+      }
+      toast.error('Aula não salva', 'Não consegui registrar esta aula no planejamento. Tente novamente.');
+    },
+  );
+  const addAtividadeExtraClasseMutation = useAddTurmaAtividadeExtraClasseMutation(
+    turma.id,
+    (input) => {
+      setNewAulaTitulo(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaHoras(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaData(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaExtraClasse(prev => ({ ...prev, [input.disciplinaId]: false }));
+      toast.success('Atividade criada', 'A atividade extra-classe foi liberada para os alunos na aba Atividades.');
+    },
+    (err) => {
+      console.error('Erro ao adicionar atividade extra-classe:', err);
+      const message = String(err?.message || '');
+      if (message.includes('Carga horaria excedida')) {
+        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), { contextLabel: 'Atividade extra-classe' });
+        return;
+      }
+      toast.error('Atividade não salva', 'Não consegui liberar esta atividade extra-classe. Tente novamente.');
     },
   );
   const removeAulaMutation = useRemoveTurmaAulaMutation(
@@ -135,7 +162,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     () => setAulaParaExcluir(null),
     (err) => {
       console.error('Erro ao remover aula:', err);
-      toast.error('Erro', 'Erro ao excluir aula do banco.');
+      toast.error('Aula não excluída', 'Não consegui remover esta aula do planejamento. Tente novamente.');
     },
   );
 
@@ -190,6 +217,24 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     });
   };
 
+  const formatHoras = (value: number) => {
+    if (!Number.isFinite(value)) return '0';
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+  };
+
+  const getDisciplinaCargaHoraria = (disciplinaId: string) => {
+    const disciplina = (cursoBase?.modulos || [])
+      .flatMap((modulo) => modulo.disciplinas)
+      .find((item) => item.id === disciplinaId);
+    return Number(disciplina?.cargaHoraria || 0);
+  };
+
+  const getHorasPlanejadas = (disciplinaId: string) => {
+    const horasAulas = (aulas[disciplinaId] || []).reduce((total, aula) => total + Number(aula.cargaHoraria || 0), 0);
+    const horasAtividades = (atividadesExtraClasse[disciplinaId] || []).reduce((total, atividade) => total + Number(atividade.cargaHoraria || 0), 0);
+    return horasAulas + horasAtividades;
+  };
+
   const handleAddAula = async (disciplinaId: string) => {
     const titulo = newAulaTitulo[disciplinaId]?.trim();
     const horasStr = newAulaHoras[disciplinaId]?.trim();
@@ -202,6 +247,34 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     const horas = Number(horasStr.replace(',', '.'));
     if (!Number.isFinite(horas) || horas <= 0) {
       toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
+      return;
+    }
+
+    const cargaOficial = getDisciplinaCargaHoraria(disciplinaId);
+    const horasPlanejadas = getHorasPlanejadas(disciplinaId);
+    const horasRestantes = Math.max(0, cargaOficial - horasPlanejadas);
+
+    if (cargaOficial > 0 && horas > horasRestantes) {
+      const excesso = horas - horasRestantes;
+      toast.info(
+        'Carga horária excedida',
+        horasRestantes > 0
+          ? `Restam ${formatHoras(horasRestantes)}h nesta disciplina. Esta inclusão excederia em ${formatHoras(excesso)}h a carga oficial de ${formatHoras(cargaOficial)}h.`
+          : `A disciplina já atingiu a carga oficial de ${formatHoras(cargaOficial)}h. Remova ou ajuste uma aula/atividade antes de lançar novas horas.`,
+        { contextLabel: newAulaExtraClasse[disciplinaId] ? 'Atividade extra-classe' : 'Planejamento da aula' },
+      );
+      return;
+    }
+
+    if (newAulaExtraClasse[disciplinaId]) {
+      await addAtividadeExtraClasseMutation.mutateAsync({
+        disciplinaId,
+        titulo,
+        horas,
+        prazoEntrega: dataStr,
+        texto: `Desenvolva uma resposta sobre o tema "${titulo}". Registre sua entrega no portal do aluno.`,
+        criadoPorTipo: 'GESTOR',
+      });
       return;
     }
 
@@ -226,7 +299,13 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     );
   }
 
-  if (!cursoBase) return <div className="p-8 text-center text-slate-500">Erro ao carregar estrutura curricular.</div>;
+  if (!cursoBase) {
+    return (
+      <div className="p-8 text-center text-slate-500">
+        Não consegui carregar a estrutura curricular desta turma. Atualize a página ou tente novamente.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -313,14 +392,22 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                       const discConfig = disciplinasConfig[disc.id] || { professor: null, concluida: false };
                       const isComplete = discConfig.concluida;
                       const discAulas = aulas[disc.id] || [];
+                      const discAtividades = atividadesExtraClasse[disc.id] || [];
                       const discMetricas = metricasGrade.find((item: any) => item.disciplina_id === disc.id);
-                      const sumHoras = Number(discMetricas?.horas_realizadas || 0);
-                      const aulasCount = Number(discMetricas?.aulas_count || 0);
-                      const progressoDisciplina = Number(discMetricas?.progresso_percent || 0);
-                      const horasStatus = String(discMetricas?.horas_status || 'PENDENTE');
-                      const horasDiferenca = Number(discMetricas?.horas_diferenca || 0);
+                      const sumHorasAulas = discAulas.reduce((total, aula) => total + Number(aula.cargaHoraria || 0), 0);
+                      const sumHorasAtividades = discAtividades.reduce((total, atividade) => total + Number(atividade.cargaHoraria || 0), 0);
+                      const sumHoras = sumHorasAulas + sumHorasAtividades;
+                      const aulasCount = Number(discMetricas?.aulas_count || discAulas.length);
+                      const progressoDisciplina = disc.cargaHoraria > 0
+                        ? Math.min(100, Math.round((sumHoras / disc.cargaHoraria) * 100))
+                        : 0;
+                      const horasStatus = sumHoras === disc.cargaHoraria ? 'EXATA' : sumHoras > disc.cargaHoraria ? 'EXCESSO' : 'PENDENTE';
+                      const horasDiferenca = Math.abs(disc.cargaHoraria - sumHoras);
                       const isExpanded = expandedDisciplines.has(disc.id);
                       const savingThisAula = addAulaMutation.isPending && addAulaMutation.variables?.disciplinaId === disc.id;
+                      const savingThisAtividade = addAtividadeExtraClasseMutation.isPending && addAtividadeExtraClasseMutation.variables?.disciplinaId === disc.id;
+                      const savingThisPlanejamento = savingThisAula || savingThisAtividade;
+                      const isExtraClasse = Boolean(newAulaExtraClasse[disc.id]);
                       
                       let progressColor = 'bg-blue-500';
                       let progressTextClass = 'text-blue-600';
@@ -354,7 +441,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                   {isExpanded ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
                                 </div>
                                 <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                  {disc.cargaHoraria} horas oficiais • {aulasCount} aulas ({sumHoras}h) planejadas
+                                  {disc.cargaHoraria} horas oficiais • {aulasCount} aulas ({formatHoras(sumHorasAulas)}h)
+                                  {discAtividades.length > 0 ? ` + ${discAtividades.length} extra-classe (${formatHoras(sumHorasAtividades)}h)` : ''}
                                 </p>
                               </div>
                             </div>
@@ -366,7 +454,7 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                 className="cursor-pointer flex flex-col items-end shrink-0"
                               >
                                 <span className={`text-[10px] font-black uppercase tracking-wider ${progressTextClass}`}>
-                                  {sumHoras}h de {disc.cargaHoraria}h
+                                  {formatHoras(sumHoras)}h de {formatHoras(disc.cargaHoraria)}h
                                 </span>
                                 <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
                                   <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${progressoDisciplina}%` }}></div>
@@ -422,11 +510,11 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                     </span>
                                   ) : horasStatus === 'EXCESSO' ? (
                                     <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider flex items-center gap-1">
-                                      Excesso de {horasDiferenca}h!
+                                      Excesso de {formatHoras(horasDiferenca)}h!
                                     </span>
                                   ) : (
                                     <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-amber-100 uppercase tracking-wider flex items-center gap-1">
-                                      Faltam {horasDiferenca}h para completar a grade
+                                      Faltam {formatHoras(horasDiferenca)}h para completar a grade
                                     </span>
                                   )}
                                 </div>
@@ -434,39 +522,73 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
 
                               {/* Lista de Aulas Operacionais */}
                               <div className="space-y-2 mb-4 pl-4">
-                                {discAulas.length === 0 ? (
-                                  <p className="text-xs text-slate-400 italic py-2">Nenhuma aula cadastrada nesta turma ainda.</p>
+                                {discAulas.length === 0 && discAtividades.length === 0 ? (
+                                  <p className="text-xs text-slate-400 italic py-2">Nenhuma aula ou atividade extra-classe cadastrada nesta turma ainda.</p>
                                 ) : (
-                                  discAulas.map((aula, idx) => (
-                                    <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-200 ${theme.hoverBorderDark} transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm`}>
-                                      <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                                        <CornerDownRight size={12} className="text-slate-400 shrink-0" />
-                                        <span className="font-semibold text-xs text-slate-500 shrink-0">
-                                          Aula {idx + 1} {aula.dataAula ? `(${new Date(aula.dataAula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
-                                        </span>
-                                        <span className="truncate text-slate-600">{aula.titulo}</span>
+                                  <>
+                                    {discAulas.map((aula, idx) => (
+                                      <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-200 ${theme.hoverBorderDark} transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm`}>
+                                        <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                                          <CornerDownRight size={12} className="text-slate-400 shrink-0" />
+                                          <span className="font-semibold text-xs text-slate-500 shrink-0">
+                                            Aula {idx + 1} {aula.dataAula ? `(${new Date(aula.dataAula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
+                                          </span>
+                                          <span className="truncate text-slate-600">{aula.titulo}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                          <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{formatHoras(aula.cargaHoraria)}h</span>
+                                          <button
+                                            onClick={() => setAulaParaExcluir({ disciplinaId: disc.id, aulaId: aula.id })}
+                                            className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
+                                            title="Excluir aula"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-3 shrink-0">
-                                        <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{aula.cargaHoraria}h</span>
-                                        <button 
-                                          onClick={() => setAulaParaExcluir({ disciplinaId: disc.id, aulaId: aula.id })}
-                                          className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
-                                          title="Excluir aula"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
+                                    ))}
+                                    {discAtividades.map((atividade, idx) => (
+                                      <div key={atividade.id} className="flex items-center justify-between group pl-4 border-l-2 border-emerald-300 transition-colors py-1.5 bg-emerald-50/60 pr-3 rounded-r-xl border-y border-r border-emerald-100 shadow-sm">
+                                        <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                                          <ClipboardCheck size={12} className="text-emerald-600 shrink-0" />
+                                          <span className="font-semibold text-xs text-emerald-700 shrink-0">
+                                            Extra {idx + 1} {atividade.prazoEntrega ? `(${new Date(atividade.prazoEntrega + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
+                                          </span>
+                                          <span className="truncate text-slate-600">{atividade.titulo}</span>
+                                        </div>
+                                        <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-100">{formatHoras(atividade.cargaHoraria)}h</span>
                                       </div>
-                                    </div>
-                                  ))
+                                    ))}
+                                  </>
                                 )}
                               </div>
 
                               {/* Form para Adicionar Aula */}
                               <div className="mt-3 pl-4 flex gap-2 items-center flex-wrap sm:flex-nowrap">
                                 <CornerDownRight size={14} className={`${theme.text} shrink-0`} />
+                                <label
+                                  className={`flex min-h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                                    isExtraClasse
+                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                      : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'
+                                  }`}
+                                  title="Marcar como atividade extra-classe para os alunos responderem no portal"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={isExtraClasse}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked;
+                                      setNewAulaExtraClasse(prev => ({ ...prev, [disc.id]: checked }));
+                                    }}
+                                  />
+                                  <ClipboardCheck size={14} />
+                                  Extra-classe
+                                </label>
                                 <input 
                                   type="text" 
-                                  placeholder="Título da aula / conteúdo..."
+                                  placeholder={isExtraClasse ? 'Tema da atividade extra-classe...' : 'Título da aula / conteúdo...'}
                                   className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
                                   value={newAulaTitulo[disc.id] || ''}
                                   onChange={(e) => {
@@ -502,11 +624,11 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
                                   type="button"
                                   onClick={() => handleAddAula(disc.id)}
                                   className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
-                                  disabled={savingThisAula || !newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
-                                  aria-label="Salvar aula"
+                                  disabled={savingThisPlanejamento || !newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
+                                  aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Salvar aula'}
                                 >
-                                  {savingThisAula ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                                  Salvar aula
+                                  {savingThisPlanejamento ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                                  {isExtraClasse ? 'Criar atividade' : 'Salvar aula'}
                                 </button>
                               </div>
                             </div>

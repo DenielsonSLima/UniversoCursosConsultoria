@@ -4,7 +4,7 @@ export interface PerfilPageProps {
   onTechnicalEnrollmentNoticeResolved?: () => void;
 }
 
-export type PerfilTabId = 'perfil' | 'documentos' | 'google' | 'senha';
+export type PerfilTabId = 'perfil' | 'documentos' | 'vacinas' | 'google' | 'senha';
 
 export type PerfilData = any;
 

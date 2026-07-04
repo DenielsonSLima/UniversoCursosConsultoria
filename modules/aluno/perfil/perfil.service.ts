@@ -4,6 +4,8 @@ import { PerfilData, PerfilUpdatePayload } from './perfil.types';
 export const alunoPerfilKeys = {
   profile: (alunoId: string) => ['aluno-perfil', alunoId] as const,
   documents: (alunoId: string) => ['aluno-documentos', alunoId] as const,
+  vacinaContexts: (alunoId: string) => ['aluno-perfil-vacina-contexts', alunoId] as const,
+  vacinas: (alunoId: string) => ['aluno-perfil-vacinas', alunoId] as const,
 };
 
 export const alunoPerfilService = {

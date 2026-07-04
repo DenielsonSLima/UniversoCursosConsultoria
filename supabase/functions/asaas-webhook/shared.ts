@@ -5,8 +5,8 @@ export const json = (body: unknown, status = 200) =>
   });
 
 export type { Environment } from "../asaas/core/runtime.ts";
+export { ONLINE_MODALIDADES } from "../asaas/core/modality.ts";
 
-export const ONLINE_MODALIDADES = ["EAD", "LIVRE", "ESPECIALIZACAO", "TECNICO"];
 export const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 
 export const buildCoursePaymentDescription = (courseName: string) =>

@@ -8,21 +8,38 @@ import {
   Calendar,
   CheckCircle,
   ChevronRight,
+  ClipboardCheck,
   Clock,
   FileCheck2,
   GraduationCap,
+  LayoutList,
   Image as ImageIcon,
+  NotebookText,
+  ScrollText,
   LockKeyhole,
   MonitorPlay,
+  Pin,
+  Shield,
   Search,
   ShieldAlert,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { getDocumentValidationUrl } from '../../shared/document-validation/document-validation.url';
 import CursosPage from '../cursos/CursosPage';
+import AlunoAtividadesExtraClasseTab from './components/AlunoAtividadesExtraClasseTab';
+import {
+  getStudentCourseAccessKey,
+  getStudentPinnedCourseKeys,
+  recordStudentCourseAccess,
+  toggleStudentPinnedCourse,
+  type StudentCourseAccessItem,
+} from '../cursos/courseAccessHistory';
 
 interface TurmasPageProps {
   alunoId: string;
+  initialCourseId?: string | null;
+  initialTurmaId?: string | null;
+  onInitialSelectionConsumed?: () => void;
 }
 
 const ACCESS_STATUS = new Set(['ATIVO', 'CONCLUIDO']);
@@ -88,6 +105,12 @@ const normalizeText = (value?: string | null) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
+const sanitizeCourseId = (value?: string | null) => {
+  const normalized = String(value || '').trim();
+  if (!normalized || normalized === 'null' || normalized === 'undefined') return null;
+  return normalized;
+};
+
 const getMatriculaModalidade = (matricula?: any) => {
   const modalidade = String(matricula?.turmas?.cursos?.modalidade || '').toUpperCase();
   if (modalidade === 'EAD') return 'EAD';
@@ -97,15 +120,39 @@ const getMatriculaModalidade = (matricula?: any) => {
   return 'OUTROS';
 };
 
-const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
+const getMatriculaCourseKey = (matricula?: any) => {
+  const turma = matricula?.turmas;
+  const curso = turma?.cursos;
+  if (!curso?.id) return '';
+
+  return getStudentCourseAccessKey({
+    cursoId: curso.id,
+    turmaId: turma?.id || matricula?.turma_id || null,
+  });
+};
+
+type TurmaDetailTab = 'resumo' | 'diario' | 'atividades' | 'notas' | 'estagio' | 'certificado';
+
+const TurmasPage: React.FC<TurmasPageProps> = ({
+  alunoId,
+  initialCourseId,
+  initialTurmaId,
+  onInitialSelectionConsumed,
+}) => {
   const queryClient = useQueryClient();
   const [selectedTurma, setSelectedTurma] = useState<any | null>(null);
-  const [detailTab, setDetailTab] = useState<'resumo' | 'certificado'>('resumo');
+  const [detailTab, setDetailTab] = useState<TurmaDetailTab>('resumo');
   const [studyCourseId, setStudyCourseId] = useState<string | null>(null);
+  const [hasConsumedInitialSelection, setHasConsumedInitialSelection] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalityFilter, setModalityFilter] = useState('todos');
+  const [pinnedCourseKeys, setPinnedCourseKeys] = useState<string[]>([]);
 
-  const { data: matriculas = [], isLoading, isError, error } = useQuery<any[]>({
+  useEffect(() => {
+    setPinnedCourseKeys(getStudentPinnedCourseKeys(alunoId));
+  }, [alunoId]);
+
+  const { data: matriculas = [], isLoading, isError } = useQuery<any[]>({
     queryKey: ['aluno-matriculas', alunoId],
     queryFn: async () => {
       const { data, error: fetchErr } = await supabase
@@ -144,9 +191,26 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
     });
   }, [matriculasLiberadas, modalityFilter, searchTerm]);
 
+  const pinnedMatriculas = useMemo(() => {
+    const byKey = new Map<string, any>();
+    filteredMatriculas.forEach((mat) => {
+      const key = getMatriculaCourseKey(mat);
+      if (key) byKey.set(key, mat);
+    });
+
+    return pinnedCourseKeys
+      .map((key) => byKey.get(key))
+      .filter(Boolean);
+  }, [filteredMatriculas, pinnedCourseKeys]);
+
+  const unpinnedMatriculas = useMemo(() => {
+    const pinnedSet = new Set(pinnedCourseKeys);
+    return filteredMatriculas.filter((mat) => !pinnedSet.has(getMatriculaCourseKey(mat)));
+  }, [filteredMatriculas, pinnedCourseKeys]);
+
   const groupedMatriculas = useMemo(() => {
     const groups = new Map<string, any[]>();
-    filteredMatriculas.forEach(mat => {
+    unpinnedMatriculas.forEach(mat => {
       const modality = getMatriculaModalidade(mat);
       groups.set(modality, [...(groups.get(modality) || []), mat]);
     });
@@ -154,7 +218,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
     return Array.from(groups.entries()).sort(
       ([a], [b]) => MODALITY_ORDER.indexOf(a) - MODALITY_ORDER.indexOf(b)
     );
-  }, [filteredMatriculas]);
+  }, [unpinnedMatriculas]);
 
   const eadMatriculasComAcesso = useMemo(
     () => matriculasLiberadas.filter(mat => isEadMatricula(mat) && mat.turmas?.cursos?.id),
@@ -185,6 +249,48 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
     return map;
   }, [eadMatriculasComAcesso, progressQueries]);
 
+  useEffect(() => {
+    if (hasConsumedInitialSelection) return;
+    if (!matriculas.length) return;
+    if (!initialCourseId && !initialTurmaId) return;
+
+    const targetCourseId = sanitizeCourseId(initialCourseId);
+    const targetTurmaId = sanitizeCourseId(initialTurmaId);
+
+    let targetMatricula = null;
+
+    if (targetTurmaId) {
+      targetMatricula = matriculas.find((mat) => {
+        const turma = mat.turmas;
+        const turmaId = turma?.id || mat.turma_id;
+        return sanitizeCourseId(turmaId) === targetTurmaId;
+      }) || null;
+    }
+
+    if (!targetMatricula && targetCourseId) {
+      const candidates = matriculas.filter((mat) => sanitizeCourseId(mat.turmas?.cursos?.id) === targetCourseId);
+      targetMatricula =
+        candidates.find((mat) => String(mat?.status || '').toUpperCase() === 'ATIVO')
+        || candidates[0]
+        || null;
+    }
+
+    if (targetMatricula) {
+      recordMatriculaCourseAccess(targetMatricula);
+      setSelectedTurma(targetMatricula);
+      setDetailTab('resumo');
+    }
+
+    setHasConsumedInitialSelection(true);
+    onInitialSelectionConsumed?.();
+  }, [
+    hasConsumedInitialSelection,
+    initialCourseId,
+    initialTurmaId,
+    matriculas,
+    onInitialSelectionConsumed,
+  ]);
+
   const selectedCurso = selectedTurma?.turmas?.cursos;
   const selectedIsEad = isEadMatricula(selectedTurma);
   const selectedProgress = selectedTurma ? progressByMatricula.get(selectedTurma.id) : null;
@@ -198,14 +304,13 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
 
   const { data: certificados = [], isLoading: loadingCertificados } = useQuery<any[]>({
     queryKey: ['aluno-certificados-curso', alunoId, selectedCurso?.id],
-    enabled: !!alunoId && selectedIsEad && !!selectedCurso?.id,
+    enabled: !!alunoId && !!selectedCurso?.id,
     queryFn: async () => {
       const { data, error: certErr } = await supabase
         .from('certificados_academicos')
         .select('id, status, modalidade, data_inscricao, data_conclusao, nota_final, codigo_validacao, certificado_numero, emitido_em, created_at')
         .eq('aluno_id', alunoId)
         .eq('curso_id', selectedCurso.id)
-        .eq('modalidade', 'EAD')
         .eq('status', 'FINALIZADO')
         .not('codigo_validacao', 'is', null)
         .order('data_conclusao', { ascending: false });
@@ -230,6 +335,133 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
       return data || [];
     }
   });
+
+  const selectedTurmaId = selectedTurma?.turmas?.id || null;
+
+  const { data: aulasPorTurma = [] } = useQuery<any[]>({
+    queryKey: ['aluno-turma-aulas', selectedTurmaId],
+    enabled: !!selectedTurmaId && !!selectedTurma && !selectedIsEad,
+    queryFn: async () => {
+      const { data, error: aulasErr } = await supabase
+        .from('aulas_turma')
+        .select('id, titulo, carga_horaria, data_aula, disciplina_id')
+        .eq('turma_id', selectedTurmaId)
+        .order('created_at', { ascending: true });
+
+      if (aulasErr) throw aulasErr;
+      return data || [];
+    }
+  });
+
+  const { data: frequencias = [] } = useQuery<any[]>({
+    queryKey: ['aluno-turma-frequencia', selectedTurmaId, alunoId],
+    enabled: !!selectedTurmaId && !!alunoId && !selectedIsEad,
+    queryFn: async () => {
+      const { data, error: freqErr } = await supabase
+        .from('diario_frequencia')
+        .select('disciplina_id, aula_id, status')
+        .eq('turma_id', selectedTurmaId)
+        .eq('aluno_id', alunoId);
+
+      if (freqErr) throw freqErr;
+      return data || [];
+    }
+  });
+
+  const { data: notasRaw = [] } = useQuery<any[]>({
+    queryKey: ['aluno-turma-notas', selectedTurmaId, alunoId],
+    enabled: !!selectedTurmaId && !!alunoId && !selectedIsEad,
+    queryFn: async () => {
+      const { data, error: notasErr } = await supabase
+        .from('diario_notas')
+        .select('*')
+        .eq('turma_id', selectedTurmaId)
+        .eq('aluno_id', alunoId);
+
+      if (notasErr) throw notasErr;
+      return data || [];
+    }
+  });
+
+  const { data: estagios = [] } = useQuery<any[]>({
+    queryKey: ['aluno-turma-estagios', selectedTurmaId, alunoId],
+    enabled: !!selectedTurmaId && !!alunoId && !selectedIsEad,
+    queryFn: async () => {
+      const { data, error: estagioErr } = await supabase
+        .from('matriculas_estagios')
+        .select('*, disciplinas(nome)')
+        .eq('turma_id', selectedTurmaId)
+        .eq('aluno_id', alunoId)
+        .order('created_at', { ascending: false });
+
+      if (estagioErr) throw estagioErr;
+      return data || [];
+    }
+  });
+
+  const disciplinasMap = useMemo(() => {
+    const map = new Map<string, { nome: string; cargaHoraria: number; professor: string }>();
+    disciplines.forEach((disciplina) => {
+      const disciplinaRecord = disciplina?.disciplinas;
+      const disciplinaId = disciplina?.disciplina_id || disciplina?.disciplinaId;
+      if (!disciplinaId) return;
+      map.set(disciplinaId, {
+        nome: disciplinaRecord?.nome || 'Disciplina',
+        cargaHoraria: Number(disciplinaRecord?.carga_horaria || 60),
+        professor: disciplina.professor_nome || 'A definir',
+      });
+    });
+    return map;
+  }, [disciplines]);
+
+  const aulasByDisciplina = useMemo(() => {
+    const map = new Map<string, any[]>();
+    aulasPorTurma.forEach((aula: any) => {
+      const disciplinaId = aula.disciplina_id;
+      if (!disciplinaId) return;
+      map.set(disciplinaId, [...(map.get(disciplinaId) || []), aula]);
+    });
+    return map;
+  }, [aulasPorTurma]);
+
+  const attendanceByDisciplina = useMemo(() => {
+    const map = new Map<string, { presentes: number; faltas: number; total: number }>();
+    disciplinasMap.forEach((_value, disciplinaId) => {
+      map.set(disciplinaId, { presentes: 0, faltas: 0, total: 0 });
+    });
+
+    frequencias.forEach((freq: any) => {
+      const disciplinaId = freq.disciplina_id;
+      if (!disciplinaId) return;
+      const current = map.get(disciplinaId) || { presentes: 0, faltas: 0, total: 0 };
+      const status = String(freq.status || '').toUpperCase();
+      current.total += 1;
+      if (status === 'P') current.presentes += 1;
+      else if (status === 'F') current.faltas += 1;
+      map.set(disciplinaId, current);
+    });
+
+    return map;
+  }, [disciplinasMap, frequencias]);
+
+  const notasByDisciplina = useMemo(() => {
+    const map = new Map<string, any>();
+    notasRaw.forEach((nota: any) => {
+      const disciplinaId = nota.disciplina_id;
+      if (!disciplinaId) return;
+      map.set(disciplinaId, nota);
+    });
+    return map;
+  }, [notasRaw]);
+
+  const attendanceByAula = useMemo(() => {
+    const map = new Map<string, string>();
+    frequencias.forEach((freq: any) => {
+      if (!freq?.aula_id) return;
+      map.set(String(freq.aula_id), String(freq.status || '').toUpperCase());
+    });
+    return map;
+  }, [frequencias]);
 
   useEffect(() => {
     const channel = supabase
@@ -285,9 +517,190 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
     }
   };
 
+  const getCourseAccessItem = (matricula: any): StudentCourseAccessItem | null => {
+    const turma = matricula?.turmas;
+    const curso = turma?.cursos;
+    if (!curso?.id) return null;
+
+    return {
+      cursoId: curso.id,
+      turmaId: turma?.id || matricula?.turma_id || null,
+      cursoNome: curso.nome || turma?.nome || 'Curso',
+      turmaNome: turma?.nome || null,
+      modalidade: curso.modalidade || getMatriculaModalidade(matricula),
+      imagemUrl: curso.imagem_url || null,
+    };
+  };
+
+  const recordMatriculaCourseAccess = (matricula: any) => {
+    const item = getCourseAccessItem(matricula);
+    if (item) recordStudentCourseAccess(alunoId, item);
+  };
+
+  const openEadCourse = (matricula: any) => {
+    const cursoId = matricula?.turmas?.cursos?.id;
+    if (!cursoId) return;
+    recordMatriculaCourseAccess(matricula);
+    setStudyCourseId(cursoId);
+  };
+
   const openTurma = (matricula: any) => {
+    recordMatriculaCourseAccess(matricula);
     setSelectedTurma(matricula);
     setDetailTab('resumo');
+  };
+
+  const formatNumeric = (value: unknown) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return '--';
+    return parsed.toFixed(2).replace('.00', '');
+  };
+
+  const calcAttendancePercent = (disciplinaId: string) => {
+    const resumo = attendanceByDisciplina.get(disciplinaId);
+    if (!resumo || resumo.total <= 0) return null;
+    return Math.round((resumo.presentes / resumo.total) * 100);
+  };
+
+  const getDisciplinasParaTabs = useMemo(() => {
+    return disciplines.map((disciplina: any) => {
+      const disciplinaId = disciplina?.disciplinas?.id || disciplina?.disciplina_id;
+      const disciplinaNome = disciplina?.disciplinas?.nome || 'Disciplina';
+      const cargaHoraria = Number(disciplina?.disciplinas?.carga_horaria || 0);
+      const professor = disciplina?.professor_nome || 'A definir';
+      const notas = disciplinaId ? notasByDisciplina.get(disciplinaId) : null;
+      const attendance = disciplinaId ? (attendanceByDisciplina.get(disciplinaId) || { presentes: 0, faltas: 0, total: 0 }) : { presentes: 0, faltas: 0, total: 0 };
+      const frequency = disciplinaId ? calcAttendancePercent(disciplinaId) : null;
+
+      return {
+        id: disciplinaId,
+        nome: disciplinaNome,
+        cargaHoraria,
+        professor,
+        notas,
+        attendance,
+        frequency,
+      };
+    }).filter((item: { id: string | null | undefined; }) => item.id);
+  }, [attendanceByDisciplina, disciplinasMap, notasByDisciplina, disciplines]);
+
+  const togglePinnedMatricula = (matricula: any) => {
+    const item = getCourseAccessItem(matricula);
+    if (!item) return;
+
+    recordStudentCourseAccess(alunoId, item);
+    setPinnedCourseKeys(toggleStudentPinnedCourse(alunoId, getStudentCourseAccessKey(item)));
+  };
+
+  const renderCourseCard = (mat: any) => {
+    const turma = mat.turmas;
+    const curso = turma?.cursos;
+    const isEad = isEadMatricula(mat);
+    const progress = isEad ? progressByMatricula.get(mat.id) : null;
+    const percent = isEad
+      ? getProgressPercent(progress)
+      : normalizePercent(mat.progresso || (String(mat.status || '').toUpperCase() === 'CONCLUIDO' ? 100 : 0));
+    const image = curso?.imagem_url;
+    const locked = isEad && !hasEadAccess(mat);
+    const courseKey = getMatriculaCourseKey(mat);
+    const isPinned = courseKey ? pinnedCourseKeys.includes(courseKey) : false;
+
+    return (
+      <article
+        key={mat.id}
+        className={`relative overflow-hidden rounded-[1.5rem] border bg-white shadow-sm transition-all duration-300 hover:border-blue-400 hover:shadow-md ${
+          isPinned ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-100'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => togglePinnedMatricula(mat)}
+          className={`absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-2xl border shadow-sm backdrop-blur transition ${
+            isPinned
+              ? 'border-blue-200 bg-blue-600 text-white hover:bg-blue-700'
+              : 'border-white/70 bg-white/90 text-slate-500 hover:border-blue-200 hover:text-blue-700'
+          }`}
+          title={isPinned ? 'Remover dos fixados' : 'Fixar no topo'}
+          aria-label={isPinned ? 'Remover curso dos fixados' : 'Fixar curso no topo'}
+        >
+          <Pin size={15} fill={isPinned ? 'currentColor' : 'none'} />
+        </button>
+
+        <div className="aspect-[16/9] bg-slate-100">
+          {image ? (
+            <img
+              src={image}
+              alt={curso?.nome || turma?.nome || 'Curso'}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-slate-300">
+              <ImageIcon size={34} />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 p-5">
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {getStatusBadge(mat.status)}
+              {isPinned && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                  <Pin size={10} fill="currentColor" /> Fixado
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider bg-slate-50 px-2 py-0.5 rounded">
+              {curso?.modalidade || 'Turma'}
+            </span>
+          </div>
+
+          <div className="min-h-[76px]">
+            <h3 className="line-clamp-2 text-base font-black leading-tight text-[#001a33]">
+              {curso?.nome || turma?.nome || 'Curso'}
+            </h3>
+            <p className="mt-1 line-clamp-2 text-[11px] font-bold uppercase tracking-wider text-slate-450">
+              {turma?.nome || 'Matricula vinculada'}
+            </p>
+          </div>
+
+          <div className="space-y-2 text-[11px] font-bold text-slate-500">
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-blue-500" />
+              <span>Inscricao: {formatDate(mat.data_matricula || mat.created_at)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-slate-400" />
+              <span>{isEad ? `${curso?.carga_horaria || 0}h` : `Turno: ${turma?.turno || 'Geral'}`}</span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span>Conclusao</span>
+              <span className="text-blue-600">{locked ? 'bloqueado' : `${percent}%`}</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${locked ? 'bg-slate-300' : 'bg-blue-600'}`}
+                style={{ width: locked ? '0%' : `${percent}%` }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => isEad && !locked && curso?.id ? openEadCourse(mat) : openTurma(mat)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-50 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all hover:bg-blue-600 hover:text-white"
+          >
+            <span>{locked ? 'Ver status' : isEad ? 'Acessar curso' : 'Abrir curso'}</span>
+            {isEad && !locked ? <MonitorPlay size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
+      </article>
+    );
   };
 
   if (isLoading) {
@@ -303,8 +716,8 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
       <div className="p-8 bg-red-50 text-red-700 rounded-3xl border border-red-150 flex items-center gap-3">
         <ShieldAlert size={24} />
         <div>
-          <p className="font-bold">Erro ao carregar cursos</p>
-          <p className="text-xs">{error instanceof Error ? error.message : 'Falha na conexão com o banco.'}</p>
+          <p className="font-bold">Não consegui carregar seus cursos</p>
+          <p className="text-xs">Atualize a página ou tente novamente em instantes.</p>
         </div>
       </div>
     );
@@ -380,104 +793,42 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
                 <p className="text-sm font-black text-[#001a33]">Nenhum curso encontrado</p>
                 <p className="mt-1 text-xs font-bold text-slate-400">Ajuste a busca ou selecione outro tipo de curso.</p>
               </div>
-            ) : groupedMatriculas.map(([modality, items]) => (
-              <section key={modality} className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[#001a33]">
-                    {MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}
-                  </h3>
-                  <span className="h-px flex-1 bg-slate-100" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{items.length}</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {items.map((mat) => {
-              const turma = mat.turmas;
-              const curso = turma?.cursos;
-              const isEad = isEadMatricula(mat);
-              const progress = isEad ? progressByMatricula.get(mat.id) : null;
-              const percent = isEad
-                ? getProgressPercent(progress)
-                : normalizePercent(mat.progresso || (String(mat.status || '').toUpperCase() === 'CONCLUIDO' ? 100 : 0));
-              const image = curso?.imagem_url;
-              const locked = isEad && !hasEadAccess(mat);
-
-              return (
-                <article
-                  key={mat.id}
-                  className="overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:border-blue-400 hover:shadow-md"
-                >
-                  <div className="aspect-[16/9] bg-slate-100">
-                    {image ? (
-                      <img
-                        src={image}
-                        alt={curso?.nome || turma?.nome || 'Curso'}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-300">
-                        <ImageIcon size={34} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-4 p-5">
-                    <div className="flex justify-between items-start gap-2">
-                      {getStatusBadge(mat.status)}
-                      <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider bg-slate-50 px-2 py-0.5 rounded">
-                        {curso?.modalidade || 'Turma'}
-                      </span>
-                    </div>
-
-                    <div className="min-h-[76px]">
-                      <h3 className="line-clamp-2 text-base font-black leading-tight text-[#001a33]">
-                        {curso?.nome || turma?.nome || 'Curso'}
+            ) : (
+              <>
+                {pinnedMatriculas.length > 0 && (
+                  <section className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700">
+                        <Pin size={14} fill="currentColor" />
+                        Cursos fixados
                       </h3>
-                      <p className="mt-1 line-clamp-2 text-[11px] font-bold uppercase tracking-wider text-slate-450">
-                        {turma?.nome || 'Matricula vinculada'}
-                      </p>
+                      <span className="h-px flex-1 bg-blue-100" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{pinnedMatriculas.length}</span>
                     </div>
 
-                    <div className="space-y-2 text-[11px] font-bold text-slate-500">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-blue-500" />
-                        <span>Inscricao: {formatDate(mat.data_matricula || mat.created_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} className="text-slate-400" />
-                        <span>{isEad ? `${curso?.carga_horaria || 0}h` : `Turno: ${turma?.turno || 'Geral'}`}</span>
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {pinnedMatriculas.map(renderCourseCard)}
+                    </div>
+                  </section>
+                )}
+
+                {groupedMatriculas.map(([modality, items]) => (
+                  <section key={modality} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-[#001a33]">
+                        {MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}
+                      </h3>
+                      <span className="h-px flex-1 bg-slate-100" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{items.length}</span>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <span>Conclusao</span>
-                        <span className="text-blue-600">{locked ? 'bloqueado' : `${percent}%`}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${locked ? 'bg-slate-300' : 'bg-blue-600'}`}
-                          style={{ width: locked ? '0%' : `${percent}%` }}
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                      {items.map(renderCourseCard)}
                     </div>
-
-                    <button
-                      onClick={() => isEad && !locked && curso?.id ? setStudyCourseId(curso.id) : openTurma(mat)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-50 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all hover:bg-blue-600 hover:text-white"
-                    >
-                      <span>{locked ? 'Ver status' : isEad ? 'Acessar curso' : 'Abrir curso'}</span>
-                      {isEad && !locked ? <MonitorPlay size={14} /> : <ChevronRight size={14} />}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-                </div>
-              </section>
-            ))}
+                  </section>
+                ))}
+              </>
+            )}
           </div>
         )
       ) : (
@@ -534,7 +885,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
 
               {selectedIsEad && selectedCurso?.id && hasEadAccess(selectedTurma) && (
                 <button
-                  onClick={() => setStudyCourseId(selectedCurso.id)}
+                  onClick={() => selectedTurma && openEadCourse(selectedTurma)}
                   className="inline-flex w-full sm:w-max items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
                 >
                   <MonitorPlay size={14} />
@@ -544,24 +895,38 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
             </div>
           </div>
 
-          {selectedIsEad && (
-            <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+          <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+            {(selectedIsEad
+              ? [
+                { id: 'resumo', label: 'Aulas', icon: <BookOpen size={14} /> },
+                { id: 'certificado', label: 'Certificado', icon: <Award size={14} /> },
+              ]
+              : [
+                { id: 'resumo', label: 'Resumo', icon: <LayoutList size={14} /> },
+                { id: 'diario', label: 'Diário', icon: <ScrollText size={14} /> },
+                { id: 'atividades', label: 'Atividades', icon: <ClipboardCheck size={14} /> },
+                { id: 'notas', label: 'Notas', icon: <NotebookText size={14} /> },
+                { id: 'estagio', label: 'Estágio', icon: <Shield size={14} /> },
+                ...(certificados.length > 0 ? [{ id: 'certificado', label: 'Certificado', icon: <Award size={14} /> }] : []),
+              ]
+            ).map((tab) => (
               <button
-                onClick={() => setDetailTab('resumo')}
-                className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${detailTab === 'resumo' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                key={tab.id}
+                type="button"
+                onClick={() => setDetailTab(tab.id as TurmaDetailTab)}
+                className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 ${
+                  detailTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                }`}
               >
-                Aulas
+                {tab.icon}
+                {tab.label}
               </button>
-              <button
-                onClick={() => setDetailTab('certificado')}
-                className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${detailTab === 'certificado' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-              >
-                Certificado
-              </button>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {selectedIsEad && detailTab === 'certificado' ? (
+          {detailTab === 'certificado' ? (
             <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-6">
               {loadingCertificados ? (
                 <div className="flex items-center justify-center py-8">
@@ -606,7 +971,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
                 </div>
               )}
             </div>
-          ) : selectedIsEad ? (
+          ) : selectedIsEad || detailTab === 'resumo' ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-5 bg-blue-50/40 border border-blue-50 rounded-2xl space-y-1">
@@ -646,7 +1011,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
                     return (
                       <button
                         key={conteudo.id || index}
-                        onClick={() => selectedCurso?.id && setStudyCourseId(selectedCurso.id)}
+                        onClick={() => selectedTurma && openEadCourse(selectedTurma)}
                         className="w-full p-4 bg-slate-50/50 hover:bg-blue-50/60 flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-left text-xs font-medium transition-colors"
                       >
                         <div className="space-y-0.5">
@@ -663,6 +1028,178 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ alunoId }) => {
                   })}
                 </div>
               </div>
+            </div>
+          ) : detailTab === 'atividades' && selectedTurmaId ? (
+            <AlunoAtividadesExtraClasseTab alunoId={alunoId} turmaId={selectedTurmaId} />
+          ) : detailTab === 'diario' ? (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2">
+                <ScrollText size={16} className="text-blue-500" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Presença por disciplina</h4>
+              </div>
+
+              {getDisciplinasParaTabs.length === 0 ? (
+                <div className="border border-slate-100 rounded-2xl bg-slate-50/50 p-5 text-xs font-bold text-slate-500">
+                  Nenhuma disciplina vinculada para mostrar diário.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {getDisciplinasParaTabs.map((disciplina: any) => {
+                    const aulasDaDisciplina = aulasByDisciplina.get(disciplina.id) || [];
+                    return (
+                      <div
+                        key={disciplina.id}
+                        className="rounded-2xl border border-slate-100 bg-white p-4"
+                      >
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <h5 className="font-bold text-sm text-[#001a33]">{disciplina.nome}</h5>
+                          <span className="text-[10px] bg-slate-50 text-slate-500 px-3 py-1 rounded-full uppercase tracking-widest border border-slate-100">
+                            {disciplina.frequency === null
+                              ? 'Frequência não lançada'
+                              : `${disciplina.frequency}%`}
+                          </span>
+                        </div>
+
+                        {aulasDaDisciplina.length === 0 ? (
+                          <p className="text-xs text-slate-500">Nenhuma aula registrada nesta disciplina.</p>
+                        ) : (
+                          <div className="border border-slate-100 rounded-xl divide-y divide-slate-100">
+                            {aulasDaDisciplina.map((aula: any) => {
+                              const attendance = attendanceByAula.get(String(aula.id));
+                              return (
+                                <div
+                                  key={aula.id}
+                                  className="p-3 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                                >
+                                  <p className="font-semibold text-[#001a33]">
+                                    {aula.titulo || 'Aula sem título'}
+                                  </p>
+                                  <div className="flex flex-wrap gap-2 text-slate-500">
+                                    <span>{aula.data_aula || 'sem data'}</span>
+                                    <span className="px-2 py-1 rounded-full bg-slate-50 uppercase text-[10px] font-black tracking-wider">
+                                      {attendance === 'P' ? 'presente' : attendance === 'F' ? 'falta' : 'sem chamada'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : detailTab === 'notas' ? (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2">
+                <NotebookText size={16} className="text-blue-500" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Notas por disciplina</h4>
+              </div>
+
+              {getDisciplinasParaTabs.length === 0 ? (
+                <div className="border border-slate-100 rounded-2xl bg-slate-50/50 p-5 text-xs font-bold text-slate-500">
+                  Nenhuma disciplina vinculada para exibir notas.
+                </div>
+              ) : (
+                <div className="border border-slate-100 rounded-2xl overflow-hidden divide-y divide-slate-100 bg-white">
+                  <div className="grid grid-cols-8 gap-2 px-3 py-2 text-[10px] uppercase tracking-widest font-black text-slate-400 bg-slate-50">
+                    <span className="col-span-2">Disciplina</span>
+                    <span>P</span><span>TI</span><span>TG</span><span>S</span><span>CQ</span><span>O</span><span>Final</span>
+                  </div>
+                  {getDisciplinasParaTabs.map((disciplina: any) => {
+                    const nota = disciplina.notas || {};
+                    const rec = Number(nota.nota_rec);
+                    const final = Number.isFinite(Number(nota.media_final))
+                      ? Number(nota.media_final)
+                      : Number.isFinite(Number(nota.nota_rec))
+                        ? (Number(nota.nota_rec) || 0)
+                        : null;
+
+                    return (
+                      <div key={`${disciplina.id}-notas`} className="grid grid-cols-8 gap-2 p-3 text-xs items-center">
+                        <p className="col-span-2 font-bold text-[#001a33]">{disciplina.nome}</p>
+                        <span className="text-center">{formatNumeric(nota.nota_p)}</span>
+                        <span className="text-center">{formatNumeric(nota.nota_ti)}</span>
+                        <span className="text-center">{formatNumeric(nota.nota_tg)}</span>
+                        <span className="text-center">{formatNumeric(nota.nota_s)}</span>
+                        <span className="text-center">{formatNumeric(nota.nota_cq)}</span>
+                        <span className="text-center">{formatNumeric(nota.nota_o)}</span>
+                        <span className="text-center font-black text-blue-600">{final === null ? '--' : final.toFixed(2)}</span>
+                        {Number.isFinite(rec) && (
+                          <span className="col-span-8 text-[10px] text-slate-500 mt-1">
+                            REC: {formatNumeric(nota.nota_rec)} | frequência de diário: {disciplina.frequency ?? '--'}%
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : detailTab === 'estagio' ? (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2">
+                <Shield size={16} className="text-blue-500" />
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Situação do estágio</h4>
+              </div>
+
+              {estagios.length === 0 ? (
+                <div className="border border-slate-100 rounded-2xl bg-slate-50/50 p-5 text-xs font-bold text-slate-500">
+                  Nenhuma informação de estágio disponível.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {estagios.map((avaliacao: any) => {
+                    const disciplinaNome = avaliacao?.disciplinas?.nome || 'Estágio';
+                    const freq = Number(avaliacao.frequencia_estagio);
+                    const mediaFinal = Number(avaliacao.nota_final);
+                    const aprovado = Number.isFinite(mediaFinal) && Number.isFinite(freq)
+                      ? mediaFinal >= 6 && freq >= 75
+                      : null;
+
+                    return (
+                      <div key={avaliacao.id || `${disciplinaNome}-${avaliacao.created_at}`} className="bg-white border border-slate-100 rounded-2xl p-4">
+                        <div className="flex justify-between gap-3 items-start">
+                          <div>
+                            <p className="text-sm font-black text-[#001a33]">{disciplinaNome}</p>
+                            <p className="text-xs text-slate-500 mt-1">Instrutor: {avaliacao.instrutor_nome || 'Não definido'}</p>
+                            <p className="text-[10px] text-slate-500 mt-1">
+                              Data: {avaliacao.data_avaliacao ? formatDate(avaliacao.data_avaliacao) : 'não informada'}
+                            </p>
+                          </div>
+
+                          <span className={`rounded-full text-[9px] font-black uppercase tracking-wider px-2.5 py-1 border ${
+                            aprovado ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-600 bg-rose-50 border-rose-100'
+                          }`}>
+                            {aprovado === null ? 'Pendente' : aprovado ? 'Aprovado' : 'Reprovado'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase">Frequência</p>
+                            <p className="font-black text-slate-700">{formatNumeric(avaliacao.frequencia_estagio)}%</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase">Comportamento</p>
+                            <p className="font-black text-slate-700">{formatNumeric(avaliacao.nota_comportamento)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase">Registros</p>
+                            <p className="font-black text-slate-700">{formatNumeric(avaliacao.nota_registros)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase">Técnica</p>
+                            <p className="font-black text-slate-700">{formatNumeric(avaliacao.nota_tecnicas)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4 pt-4">

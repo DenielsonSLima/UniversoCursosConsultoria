@@ -44,6 +44,17 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             id,
             curso_id,
             nome,
+            valor_parcela,
+            qtd_parcelas,
+            desconto_pontualidade,
+            juros_atraso,
+            multa_atraso,
+            aplicar_desconto_matricula,
+            aplicar_multa_juros_matricula,
+            aplicar_desconto_mensalidade,
+            aplicar_multa_juros_mensalidade,
+            aplicar_desconto_rematricula,
+            aplicar_multa_juros_rematricula,
             cursos!left(
               id,
               modalidade,
@@ -62,9 +73,20 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
+  const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
+
+  const toNumber = (value: any, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+  const getInstallmentTurma = (inst: any) =>
+    Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
 
   const getInstallmentModality = (inst: any) => {
-    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     const rawModality = String(curso?.modalidade || '').toUpperCase();
 
@@ -76,13 +98,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   };
 
   const getInstallmentCourseName = (inst: any) => {
-    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     return curso?.nome || 'Sem curso vinculado';
   };
 
   const getInstallmentCourseId = (inst: any) => {
-    const turma = Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
+    const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
     return inst.curso_id || turma?.curso_id || curso?.id || null;
   };
@@ -92,7 +114,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getInstallmentClassName = (modality: string) => {
     const palette = {
-      EAD: 'bg-blue-50 text-blue-700 border-blue-100',
+      EAD: 'bg-sky-50 text-sky-700 border-sky-100',
       TECNICO: 'bg-violet-50 text-violet-700 border-violet-100',
       LIVRE: 'bg-emerald-50 text-emerald-700 border-emerald-100',
       ESPECIALIZACAO: 'bg-amber-50 text-amber-700 border-amber-100',
@@ -102,24 +124,143 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return `${palette[modality as keyof typeof palette] || palette.OUTROS}`;
   };
 
+  const getModalityAccent = (modality: string) => {
+    const palette = {
+      EAD: {
+        line: 'border-l-sky-500',
+        group: 'bg-sky-50/80 text-sky-800 border-sky-100',
+        card: 'border-sky-100 bg-sky-50/25',
+        action: 'bg-sky-600 hover:bg-sky-700 text-white shadow-sky-600/20',
+        soft: 'bg-sky-50 text-sky-700 border-sky-100'
+      },
+      TECNICO: {
+        line: 'border-l-violet-500',
+        group: 'bg-violet-50/80 text-violet-800 border-violet-100',
+        card: 'border-violet-100 bg-violet-50/25',
+        action: 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-600/20',
+        soft: 'bg-violet-50 text-violet-700 border-violet-100'
+      },
+      LIVRE: {
+        line: 'border-l-emerald-500',
+        group: 'bg-emerald-50/80 text-emerald-800 border-emerald-100',
+        card: 'border-emerald-100 bg-emerald-50/25',
+        action: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20',
+        soft: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+      },
+      ESPECIALIZACAO: {
+        line: 'border-l-amber-500',
+        group: 'bg-amber-50/80 text-amber-800 border-amber-100',
+        card: 'border-amber-100 bg-amber-50/25',
+        action: 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20',
+        soft: 'bg-amber-50 text-amber-700 border-amber-100'
+      },
+      OUTROS: {
+        line: 'border-l-slate-400',
+        group: 'bg-slate-50 text-slate-700 border-slate-100',
+        card: 'border-slate-100 bg-slate-50/30',
+        action: 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20',
+        soft: 'bg-slate-50 text-slate-700 border-slate-100'
+      }
+    };
+
+    return palette[modality as keyof typeof palette] || palette.OUTROS;
+  };
+
   const parseDate = (value?: string | null) => {
     if (!value) return null;
     const parsed = new Date(`${value}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const getChargeKind = (inst: any, modality: string) => {
+    const raw = String(inst.tipo_lancamento || '').toUpperCase();
+    const description = String(inst.descricao || '').toLowerCase();
+
+    if (modality === 'EAD' && description.includes('inscricao')) return 'Inscrição EAD';
+    if (raw === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula')) return 'Matrícula';
+    if (raw === 'PARCELA' || description.includes('mensalidade')) return `Mensalidade${inst.parcela_numero ? ` ${inst.parcela_numero}` : ''}`;
+    if (raw === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula')) return 'Rematrícula';
+    return modality === 'EAD' ? 'Cobrança EAD' : 'Cobrança';
+  };
+
+  const getFinancePolicy = (inst: any, modality: string) => {
+    const turma = getInstallmentTurma(inst) || {};
+    const type = String(inst.tipo_lancamento || '').toUpperCase();
+    const description = String(inst.descricao || '').toLowerCase();
+    const discount = toNumber(turma.desconto_pontualidade, 0);
+    const interestPercent = toNumber(turma.juros_atraso, 0);
+    const lateFee = toNumber(turma.multa_atraso, 0);
+
+    const isMatricula = type === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula');
+    const isRematricula = type === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula');
+    const isParcela = type === 'PARCELA' || description.includes('mensalidade');
+
+    const canDiscount = modality !== 'EAD' && (
+      (isMatricula && turma.aplicar_desconto_matricula === true) ||
+      (isParcela && turma.aplicar_desconto_mensalidade !== false) ||
+      (isRematricula && turma.aplicar_desconto_rematricula !== false)
+    );
+
+    const canLateCharge = modality !== 'EAD' && (
+      (isMatricula && turma.aplicar_multa_juros_matricula !== false) ||
+      (isParcela && turma.aplicar_multa_juros_mensalidade !== false) ||
+      (isRematricula && turma.aplicar_multa_juros_rematricula !== false)
+    );
+
+    return {
+      discount: canDiscount ? discount : 0,
+      interestPercent: canLateCharge ? interestPercent : 0,
+      lateFee: canLateCharge ? lateFee : 0,
+      canDiscount,
+      canLateCharge
+    };
+  };
+
+  const buildFinancialSummary = (inst: any, modality: string, isOverdue: boolean) => {
+    const status = String(inst.status || '').toUpperCase();
+    const baseValue = toNumber(inst.valor, 0);
+    const paidValue = toNumber(inst.valor_pago, baseValue);
+    const policy = getFinancePolicy(inst, modality);
+    const punctualDiscount = status === 'PAGO' ? 0 : Math.min(baseValue, Math.max(0, policy.discount));
+    const totalUntilDue = roundMoney(Math.max(0, baseValue - punctualDiscount));
+    const interestValue = isOverdue ? roundMoney(baseValue * (policy.interestPercent / 100)) : 0;
+    const lateFeeValue = isOverdue ? Math.max(0, policy.lateFee) : 0;
+    const totalWithLate = roundMoney(baseValue + interestValue + lateFeeValue);
+
+    return {
+      baseValue,
+      paidValue,
+      punctualDiscount,
+      totalUntilDue,
+      interestPercent: policy.interestPercent,
+      interestValue,
+      lateFeeValue,
+      totalWithLate,
+      highlightValue: status === 'PAGO' ? paidValue : isOverdue ? totalWithLate : totalUntilDue,
+      highlightLabel: status === 'PAGO' ? 'Valor pago' : isOverdue ? 'Total em atraso' : 'Total até o vencimento',
+      hasDiscount: punctualDiscount > 0,
+      hasLateCharge: interestValue > 0 || lateFeeValue > 0,
+      canLateCharge: policy.canLateCharge
+    };
+  };
+
   const installmentRows = installments.map((inst) => {
     const modality = getInstallmentModality(inst);
+    const turma = getInstallmentTurma(inst);
     const dueDate = parseDate(inst.data_vencimento);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isOverdue = String(inst.status || '').toUpperCase() === 'VENCIDO' || (String(inst.status || '').toUpperCase() === 'PENDENTE' && Boolean(dueDate) && dueDate < today);
+    const financialSummary = buildFinancialSummary(inst, modality, isOverdue);
     return {
       ...inst,
       modalidade: modality,
       cursoId: getInstallmentCourseId(inst),
       cursoNome: getInstallmentCourseName(inst),
-      turmaNome: (Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas)?.nome || 'N/A',
+      turmaNome: turma?.nome || 'N/A',
+      chargeKind: getChargeKind(inst, modality),
+      financialSummary,
+      modalityAccent: getModalityAccent(modality),
       isOverdue
     };
   });
@@ -156,6 +297,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     TODOS: filteredBySearchDateModality.length
   };
 
+  const openSummaryByModality = modalityOrder.map((modality) => {
+    const items = installmentRows.filter((inst) => {
+      const status = String(inst.status || '').toUpperCase();
+      return inst.modalidade === modality && (status === 'PENDENTE' || status === 'VENCIDO' || inst.isOverdue);
+    });
+
+    return {
+      modality,
+      count: items.length,
+      total: items.reduce((sum, inst) => sum + Number(inst.financialSummary?.highlightValue || inst.valor || 0), 0),
+    };
+  }).filter((item) => item.count > 0);
+
   const filteredInstallments = filteredBySearchDateModality.filter((inst) => {
     const status = String(inst.status || '').toUpperCase();
     const matchesStatus = (() => {
@@ -166,6 +320,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     })();
 
     return matchesStatus;
+  }).sort((a, b) => {
+    const modalityDiff = modalityOrder.indexOf(a.modalidade) - modalityOrder.indexOf(b.modalidade);
+    if (modalityDiff !== 0) return modalityDiff;
+    return String(a.data_vencimento || '').localeCompare(String(b.data_vencimento || ''))
+      || String(a.descricao || '').localeCompare(String(b.descricao || ''), 'pt-BR');
   });
 
   useEffect(() => {
@@ -212,7 +371,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     acc[modality].push(inst);
     return acc;
   }, {});
-  const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
 
   const safeSetPage = (page: number) => {
     if (page < 1) return;
@@ -502,7 +660,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   };
 
   const renderActions = (inst: any) => {
-    if (['PENDENTE', 'VENCIDO'].includes(inst.status)) {
+    const status = String(inst.status || '').toUpperCase();
+
+    if (['PENDENTE', 'VENCIDO'].includes(status) || inst.isOverdue) {
       if (inst.modalidade === 'EAD') {
         return (
           <div className="flex justify-start gap-2">
@@ -552,7 +712,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       );
     }
 
-    if (String(inst.status || '').toUpperCase() === 'PAGO') {
+    if (status === 'PAGO') {
       return (
         <button
           onClick={() => openReceipt(inst)}
@@ -615,6 +775,30 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
       </div>
+
+      {openSummaryByModality.length > 0 && (
+        <div className="rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Em aberto por tipo</p>
+              <p className="text-xs font-bold text-slate-500">Separação rápida para não misturar EAD com cursos presenciais.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {openSummaryByModality.map((item) => (
+              <div key={item.modality} className={`rounded-2xl border px-4 py-3 ${getModalityAccent(item.modality).group}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-black uppercase tracking-widest">{getModalityLabel(item.modality)}</span>
+                  <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-black uppercase tracking-widest">
+                    {item.count} item{item.count === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <p className="mt-2 text-xl font-black">{formatCurrency(item.total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filter + List + Views */}
       <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm">
@@ -749,48 +933,133 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
         {viewMode === 'table' ? (
           <div className="overflow-x-auto mt-4">
-            <table className="w-full text-left text-xs font-medium text-slate-500">
+            <table className="w-full min-w-[980px] text-left text-xs font-medium text-slate-500">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-black uppercase tracking-wider">
                   <th className="py-4 px-4">Descrição</th>
                   <th className="py-4 px-4">Tipo</th>
                   <th className="py-4 px-4">Vencimento</th>
-                  <th className="py-4 px-4">Valor</th>
                   <th className="py-4 px-4">Status</th>
+                  <th className="py-4 px-4">Total</th>
                   <th className="py-4 px-4">Pagamento</th>
                   <th className="py-4 px-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {visibleInstallments.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-xs font-bold text-slate-400">
                       Nenhuma cobrança encontrada com os filtros atuais.
                     </td>
                   </tr>
-                ) : visibleInstallments.map((inst) => (
-                  <tr key={inst.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4.5 px-4 font-bold text-slate-800">{inst.descricao}</td>
-                    <td className="py-4.5 px-4">
-                      <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${getInstallmentClassName(inst.modalidade)}`}>
-                        {getModalityLabel(inst.modalidade)}
-                      </span>
-                    </td>
-                    <td className="py-4.5 px-4">{formatDate(inst.data_vencimento)}</td>
-                    <td className="py-4.5 px-4 font-bold text-[#001a33]">{formatCurrency(inst.valor)}</td>
-                    <td className="py-4.5 px-4">{getInstallmentStatusBadge(inst.status)}</td>
-                    <td className="py-4.5 px-4">
-                      {inst.status === 'PAGO' ? (
-                        <span className="text-[10px] font-bold text-slate-650 bg-slate-100 px-2 py-0.5 rounded">
-                          {formatDate(inst.data_pagamento)} via {formatPaymentMethod(inst.forma_pagamento)}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-bold">—</span>
-                      )}
-                    </td>
-                    <td className="py-4.5 px-4 text-right">{renderActions(inst)}</td>
-                  </tr>
-                ))}
+                ) : modalityOrder.map((modality) => {
+                  const installmentsByModality = groupedVisibleInstallments[modality] || [];
+                  if (installmentsByModality.length === 0) return null;
+
+                  return (
+                    <React.Fragment key={modality}>
+                      <tr>
+                        <td colSpan={7} className="px-4 pb-2 pt-5">
+                          <div className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${getModalityAccent(modality).group}`}>
+                            <span className="text-[10px] font-black uppercase tracking-[0.24em]">
+                              {getModalityLabel(modality)}
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                              {installmentsByModality.length} cobrança{installmentsByModality.length === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {installmentsByModality.map((inst) => {
+                        const summary = inst.financialSummary;
+                        const statusForBadge = inst.isOverdue ? 'VENCIDO' : inst.status;
+
+                        return (
+                          <React.Fragment key={inst.id}>
+                            <tr className={`border-l-4 border-b border-slate-100 ${inst.modalityAccent.line} transition-colors hover:bg-slate-50/70`}>
+                              <td className="py-4 px-4">
+                                <p className="font-black leading-snug text-slate-800">{inst.descricao}</p>
+                                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  {inst.cursoNome} • {inst.turmaNome}
+                                </p>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${getInstallmentClassName(inst.modalidade)}`}>
+                                  {getModalityLabel(inst.modalidade)}
+                                </span>
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                  {inst.chargeKind}
+                                </p>
+                              </td>
+                              <td className="py-4 px-4 font-bold text-slate-600">{formatDate(inst.data_vencimento)}</td>
+                              <td className="py-4 px-4">{getInstallmentStatusBadge(statusForBadge)}</td>
+                              <td className="py-4 px-4">
+                                <p className={`text-base font-black ${inst.isOverdue ? 'text-rose-600' : 'text-[#001a33]'}`}>
+                                  {formatCurrency(summary.highlightValue)}
+                                </p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                  {summary.highlightLabel}
+                                </p>
+                              </td>
+                              <td className="py-4 px-4">
+                                {String(inst.status || '').toUpperCase() === 'PAGO' ? (
+                                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+                                    {formatDate(inst.data_pagamento)} via {formatPaymentMethod(inst.forma_pagamento)}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-400">Aguardando pagamento</span>
+                                )}
+                              </td>
+                              <td className="py-4 px-4 text-right">{renderActions(inst)}</td>
+                            </tr>
+                            <tr className="border-b border-slate-100 bg-slate-50/45">
+                              <td colSpan={7} className="px-4 py-3">
+                                <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                                  <div className="rounded-2xl bg-white px-3 py-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Valor da parcela</p>
+                                    <p className="mt-1 text-sm font-black text-[#001a33]">{formatCurrency(summary.baseValue)}</p>
+                                  </div>
+                                  <div className="rounded-2xl bg-white px-3 py-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Desconto em dia</p>
+                                    <p className={`mt-1 text-sm font-black ${summary.hasDiscount ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                      {summary.hasDiscount ? `- ${formatCurrency(summary.punctualDiscount)}` : formatCurrency(0)}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">Total até vencimento</p>
+                                    <p className="mt-1 text-base font-black text-emerald-700">{formatCurrency(summary.totalUntilDue)}</p>
+                                  </div>
+                                  <div className="rounded-2xl bg-white px-3 py-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                      Juros {summary.interestPercent > 0 ? `(${summary.interestPercent}%)` : ''}
+                                    </p>
+                                    <p className={`mt-1 text-sm font-black ${summary.interestValue > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                                      {formatCurrency(summary.interestValue)}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-2xl bg-white px-3 py-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Multa</p>
+                                    <p className={`mt-1 text-sm font-black ${summary.lateFeeValue > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                                      {formatCurrency(summary.lateFeeValue)}
+                                    </p>
+                                  </div>
+                                  <div className={`rounded-2xl px-3 py-2 ${inst.isOverdue ? 'border border-rose-100 bg-rose-50' : 'bg-white'}`}>
+                                    <p className={`text-[9px] font-black uppercase tracking-widest ${inst.isOverdue ? 'text-rose-700' : 'text-slate-400'}`}>
+                                      Total em atraso
+                                    </p>
+                                    <p className={`mt-1 text-base font-black ${inst.isOverdue ? 'text-rose-700' : 'text-slate-400'}`}>
+                                      {inst.isOverdue ? formatCurrency(summary.totalWithLate) : '—'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -806,11 +1075,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
               return (
                 <div key={modality} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-black uppercase tracking-wider text-[#001a33]">
+                  <div className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${getModalityAccent(modality).group}`}>
+                    <h4 className="text-sm font-black uppercase tracking-wider">
                       {getModalityLabel(modality)}
                     </h4>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                    <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
                       {installmentsByModality.length} item{installmentsByModality.length > 1 ? 's' : ''}
                     </span>
                   </div>

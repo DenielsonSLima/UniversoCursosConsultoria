@@ -2,7 +2,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign } from 'lucide-react';
+import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
 import TurmaAlunos from './components/TurmaAlunos';
@@ -12,6 +12,8 @@ import TurmaConfiguracoes from './components/TurmaConfiguracoes';
 import TurmaEstagio from './components/TurmaEstagio';
 import TurmaAcademico from './components/TurmaAcademico';
 import TurmaFinanceiro from './components/TurmaFinanceiro';
+import TurmaVacinas from './components/TurmaVacinas';
+import AtividadesExtraClasse from './components/AtividadesExtraClasse';
 import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
 
 interface TurmaTecnicoDetalhesProps {
@@ -32,8 +34,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
     { id: 'resumo', label: 'Resumo', icon: <PieChart size={18} /> },
     { id: 'alunos', label: 'Alunos', icon: <Users size={18} /> },
     { id: 'grade', label: 'Grade & Profs', icon: <BookOpen size={18} /> },
+    { id: 'atividades', label: 'Atividades', icon: <ClipboardCheck size={18} /> },
     { id: 'diarios', label: 'Diários', icon: <Book size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
+    { id: 'vacinas', label: 'Vacinas', icon: <Syringe size={18} /> },
     { id: 'estagio', label: 'Estágio', icon: <Activity size={18} /> },
     { id: 'academico', label: 'Ciclo Acadêmico', icon: <GraduationCap size={18} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
@@ -44,8 +48,10 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
       case 'resumo': return <TurmaResumo turma={turma} />;
       case 'alunos': return <TurmaAlunos turma={turma} />;
       case 'grade': return <TurmaGrade turma={turma} />;
+      case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
       case 'diarios': return <TurmaDiarios turma={turma} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
+      case 'vacinas': return <TurmaVacinas turma={turma} />;
       case 'estagio': return <TurmaEstagio turma={turma} />;
       case 'academico': return <TurmaAcademico turma={turma} onTurmaFinalizada={onBack} />;
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;

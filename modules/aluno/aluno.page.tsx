@@ -43,6 +43,7 @@ const AlunoPage: React.FC = () => {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [profileNotice, setProfileNotice] = useState<'technical-enrollment' | null>(null);
   const [initialCourseId, setInitialCourseId] = useState<string | null>(null);
+  const [initialTurmaId, setInitialTurmaId] = useState<string | null>(null);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -264,11 +265,31 @@ const AlunoPage: React.FC = () => {
   ];
 
   const renderContent = () => {
-    switch (activeModule) {
+      switch (activeModule) {
       case 'inicio':
-        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
+        return (
+          <InicioPage
+            alunoId={alunoId}
+            onNavigate={setActiveModule}
+            onOpenCourse={(courseId, turmaId, targetModule) => {
+              setInitialCourseId(courseId);
+              setInitialTurmaId(turmaId || null);
+              setActiveModule(targetModule || 'cursos');
+            }}
+          />
+        );
       case 'turmas':
-        return <TurmasPage alunoId={alunoId} />;
+        return (
+          <TurmasPage
+            alunoId={alunoId}
+            initialCourseId={initialCourseId}
+            initialTurmaId={initialTurmaId}
+            onInitialSelectionConsumed={() => {
+              setInitialCourseId(null);
+              setInitialTurmaId(null);
+            }}
+          />
+        );
       case 'cursos':
         return (
           <CursosPage

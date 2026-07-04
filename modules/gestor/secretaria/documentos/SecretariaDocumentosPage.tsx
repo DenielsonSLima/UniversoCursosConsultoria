@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { FileText, ArrowRightLeft, Search, Printer, CheckCircle2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { formatMatricula } from '../../../../lib/academicUtils';
+import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
 interface SecretariaDocumentosPageProps {
   initialType: string;
@@ -33,7 +35,38 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
         console.error('Erro ao buscar alunos para documentos:', error);
         throw error;
       }
-      return data || [];
+      const alunoIds = (data || []).map((aluno: any) => aluno.id);
+      const { data: matriculas, error: matriculasError } = alunoIds.length
+        ? await supabase
+          .from('matriculas')
+          .select('id, aluno_id, status, data_matricula, turmas(id, nome, codigo, polo_id, cursos(nome, modalidade))')
+          .in('aluno_id', alunoIds)
+          .order('data_matricula', { ascending: false })
+        : { data: [], error: null };
+
+      if (matriculasError) {
+        console.error('Erro ao buscar matrículas dos alunos:', matriculasError);
+        throw matriculasError;
+      }
+
+      const summaries = new Map<string, any>();
+      [...(matriculas || [])]
+        .sort((a: any, b: any) => {
+          if (a.status === 'ATIVO' && b.status !== 'ATIVO') return -1;
+          if (b.status === 'ATIVO' && a.status !== 'ATIVO') return 1;
+          return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
+        })
+        .forEach((matricula: any) => {
+          if (summaries.has(matricula.aluno_id)) return;
+          summaries.set(matricula.aluno_id, {
+            matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
+            cursoNome: matricula.turmas?.cursos?.nome || '',
+            turmaNome: matricula.turmas?.nome || '',
+            turmaCodigo: matricula.turmas?.codigo || '',
+          });
+        });
+
+      return (data || []).map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
     },
     enabled: searchTerm.length >= 2,
     refetchOnWindowFocus: false,
@@ -121,17 +154,17 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
                         <div className="text-center py-4 text-slate-400 text-sm">Buscando...</div>
                     ) : searchResults.length > 0 ? (
                         searchResults.map((aluno: any) => (
-                            <div 
+                            <SecretariaAlunoSearchCard
                                 key={aluno.id}
+                                nome={aluno.nome}
+                                cpf={aluno.cpf_cnpj}
+                                cursoNome={aluno.cursoNome}
+                                turmaNome={aluno.turmaNome}
+                                turmaCodigo={aluno.turmaCodigo}
+                                matricula={aluno.matricula}
+                                tone="blue"
                                 onClick={() => handleSelectAluno(aluno)}
-                                className="p-3 bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-xl cursor-pointer transition-all flex justify-between items-center"
-                            >
-                                <div>
-                                    <p className="font-bold text-slate-800 text-sm">{aluno.nome}</p>
-                                    <p className="text-xs text-slate-500">CPF: {aluno.cpf_cnpj || 'Não informado'}</p>
-                                </div>
-                                <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold uppercase">Selecionar</span>
-                            </div>
+                            />
                         ))
                     ) : (
                         <div className="text-center py-4 text-slate-400 text-sm">Nenhum aluno encontrado.</div>

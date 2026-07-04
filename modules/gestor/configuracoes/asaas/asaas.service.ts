@@ -18,14 +18,19 @@ export interface AsaasConfigData {
   notificationSmsEnabled: boolean;
 }
 
+const extractFunctionErrorMessage = async (error: any) => {
+  const context = error?.context;
+  const canReadJson = context && typeof context.json === 'function';
+  const body = canReadJson ? await context.json().catch(() => null) : null;
+  return body?.error || body?.message || error?.message || 'Erro ao comunicar com o Asaas.';
+};
+
 const invoke = async <T>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
   const { data, error } = await supabase.functions.invoke('asaas-api', {
     body: { action, ...payload },
   });
   if (error) {
-    const context = (error as any).context;
-    const body = context ? await context.json().catch(() => null) : null;
-    throw new Error(body?.error || error.message);
+    throw new Error(await extractFunctionErrorMessage(error));
   }
   if (data?.error) throw new Error(data.error);
   return data as T;

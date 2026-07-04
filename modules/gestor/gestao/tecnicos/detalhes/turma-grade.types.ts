@@ -18,10 +18,20 @@ export interface TurmaAulaPlanejada {
   dataAula?: string;
 }
 
+export interface TurmaAtividadeExtraClasse {
+  id: string;
+  titulo: string;
+  tema?: string | null;
+  cargaHoraria: number;
+  prazoEntrega?: string | null;
+  status: string;
+}
+
 export interface TurmaGradeData {
   cursoBase: Curso | null;
   disciplinasConfig: Record<string, TurmaDisciplinaConfig>;
   aulas: Record<string, TurmaAulaPlanejada[]>;
+  atividadesExtraClasse: Record<string, TurmaAtividadeExtraClasse[]>;
   professores: TurmaProfessorOption[];
   metricasGrade: any[];
 }
@@ -31,4 +41,16 @@ export interface TurmaAulaInput {
   titulo: string;
   horas: number;
   dataAula: string;
+}
+
+export interface TurmaAtividadeExtraClasseInput {
+  disciplinaId: string;
+  titulo: string;
+  horas: number;
+  prazoEntrega?: string | null;
+  texto?: string | null;
+  videoUrl?: string | null;
+  perguntas?: { pergunta: string }[];
+  criadoPorTipo?: 'GESTOR' | 'PROFESSOR';
+  criadoPorId?: string | null;
 }

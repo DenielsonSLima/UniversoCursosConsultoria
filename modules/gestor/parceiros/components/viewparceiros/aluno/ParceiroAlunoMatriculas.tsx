@@ -18,7 +18,7 @@ import {
   AcademicMovementType,
   academicLifecycleService,
 } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
-import { turmaAsaasService } from '../../../../gestao/tecnicos/detalhes/turma-asaas.service';
+import { turmaAsaasService } from '../../../../gestao/tecnicos/detalhes/asaas';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 
 interface Props {

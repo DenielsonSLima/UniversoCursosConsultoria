@@ -1,11 +1,15 @@
 import {
-  ONLINE_MODALIDADES,
   PENDENTE_INSCRICAO_STATUS,
   buildCoursePaymentDescription,
   mapBillingType,
   paymentDate,
 } from "./shared.ts";
 import { createTecnicoInstallmentService } from "../asaas/tecnico/installments.ts";
+import {
+  isOnlineCourseModality,
+  isTecnicoCourseModality,
+  resolveMatriculaCourseModality,
+} from "../asaas/core/modality.ts";
 
 type CallAsaas = (path: string, init?: RequestInit) => Promise<any>;
 
@@ -117,7 +121,7 @@ export const createAsaasWebhookHandlers = (
       .maybeSingle();
     if (matriculaError) throw matriculaError;
     const course = matricula?.turmas?.cursos;
-    if (!course || !ONLINE_MODALIDADES.includes(course.modalidade)) return;
+    if (!course || !isOnlineCourseModality(course.modalidade)) return;
 
     const { data: aluno, error: alunoError } = await admin
       .from("parceiros")
@@ -155,7 +159,7 @@ export const createAsaasWebhookHandlers = (
       .maybeSingle();
     if (matriculaError) throw matriculaError;
     const course = matricula?.turmas?.cursos;
-    if (!course || !ONLINE_MODALIDADES.includes(course.modalidade)) return;
+    if (!course || !isOnlineCourseModality(course.modalidade)) return;
     const isEadCourse = String(course.modalidade || "").toUpperCase() === "EAD";
 
     const { data: paidReceivable, error: paidError } = await admin
@@ -464,6 +468,21 @@ export const createAsaasWebhookHandlers = (
   };
 
   const syncOpenInstallments = async (matriculaId: string) => {
+    const modalidade = await resolveMatriculaCourseModality(admin, matriculaId);
+    if (!isTecnicoCourseModality(modalidade)) {
+      const { data: installments, error: installmentsError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("matricula_id", matriculaId)
+        .in("status", ["PENDENTE", "VENCIDO"])
+        .is("asaas_payment_id", null)
+        .neq("tipo_lancamento", "MATRICULA")
+        .order("data_vencimento");
+      if (installmentsError) throw installmentsError;
+      for (const installment of installments || []) await syncReceivable(installment);
+      return;
+    }
+
     const tecnicoInstallments = createTecnicoInstallmentService(admin, callAsaas, { notificationDisabled: true });
     const tecnicoResult = await tecnicoInstallments.syncFutureInstallments(matriculaId);
     const legacyReasons = new Set([

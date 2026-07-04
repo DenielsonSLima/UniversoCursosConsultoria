@@ -37,28 +37,47 @@ import FinancialReportExportButton, {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const parseCurrencyInput = (value: string) => {
-  const cleaned = value.replace(/[^\d,.-]/g, '');
-  const normalized = cleaned.includes(',')
-    ? cleaned.replace(/\./g, '').replace(',', '.')
-    : /^\d+\.\d{1,2}$/.test(cleaned)
-      ? cleaned
-      : cleaned.replace(/\./g, '');
+const parseCurrencyInput = (value: string): number | null => {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const cleaned = raw.replace(/[^0-9.,-]/g, '');
+  if (!cleaned) return null;
+
+  const hasMinus = cleaned.startsWith('-');
+  const sanitized = hasMinus ? cleaned.slice(1) : cleaned;
+
+  const lastComma = sanitized.lastIndexOf(',');
+  const lastDot = sanitized.lastIndexOf('.');
+  const decimalSeparator = lastComma > lastDot ? ',' : '.';
+  const decimalIndex = sanitized.lastIndexOf(decimalSeparator);
+
+  if (decimalIndex <= 0) {
+    const integerPart = sanitized.replace(/[.,]/g, '');
+    const parsed = Number(integerPart);
+    if (!Number.isFinite(parsed)) return null;
+    return hasMinus ? -parsed : parsed;
+  }
+
+  const integerPart = sanitized.slice(0, decimalIndex).replace(/[.,]/g, '');
+  const decimalPart = sanitized.slice(decimalIndex + 1).replace(/\D/g, '').slice(0, 2);
+  const normalized = `${integerPart || '0'}.${decimalPart || '0'}`;
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed)) return null;
+
+  return hasMinus ? -parsed : parsed;
 };
 
 const formatCurrencyInput = (value: number | string) => {
   const parsed = typeof value === 'number' ? value : parseCurrencyInput(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return '';
-  return parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number(parsed).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const normalizeCurrencyTyping = (value: string) => {
-  const cleaned = value.replace(/[^\d,.]/g, '');
-  if (!cleaned) return '';
-  if (cleaned.includes(',') || cleaned.includes('.')) return formatCurrencyInput(cleaned);
-  return Number(cleaned).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const parsed = parseCurrencyInput(value);
+  if (!Number.isFinite(parsed || 0) || parsed === null || parsed < 0) return '';
+  return formatCurrencyInput(parsed);
 };
 
 type ViewMode = 'table' | 'cards';
@@ -318,6 +337,26 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   useEffect(() => {
     setExpandedGroups(new Set());
   }, [search, dueStart, dueEnd, statusScope, groupMode, modality]);
+
+  const closePaymentModal = () => setSelected(null);
+  const closeReversalModal = () => {
+    setReversalItem(null);
+    setReversalReason('');
+    setRecreateAsaas(true);
+  };
+
+  useEffect(() => {
+    if (!selected && !reversalItem) return;
+
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (selected) closePaymentModal();
+      if (reversalItem) closeReversalModal();
+    };
+
+    document.addEventListener('keydown', onDocumentKeyDown);
+    return () => document.removeEventListener('keydown', onDocumentKeyDown);
+  }, [selected, reversalItem]);
 
   const openPayment = (item: ContasReceber) => {
     setSelected(item);
@@ -1107,9 +1146,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       )}
 
       {selected && typeof document !== 'undefined' && createPortal((
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-            <button onClick={() => setSelected(null)} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closePaymentModal();
+          }}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button onClick={closePaymentModal} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
               <X size={18} />
             </button>
             <div className="mb-6 flex items-center gap-3">
@@ -1191,9 +1240,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       ), document.body)}
 
       {reversalItem && typeof document !== 'undefined' && createPortal((
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-            <button onClick={() => setReversalItem(null)} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeReversalModal();
+          }}
+        >
+          <div
+            className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button onClick={closeReversalModal} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
               <X size={18} />
             </button>
             <div className="mb-6 flex items-center gap-3">

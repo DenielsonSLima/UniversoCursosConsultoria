@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { formatMatricula } from '../../../../lib/academicUtils';
 import { supabase } from '../../../../lib/supabase';
 import {
   getDefaultIrpfCalendarYear,
@@ -24,6 +25,7 @@ import {
   SecretariaAlunoResumo,
   SecretariaDocumentoDefinition,
 } from './secretaria-documentos.types';
+import SecretariaAlunoSearchCard from './SecretariaAlunoSearchCard';
 import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPreview';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
@@ -452,17 +454,18 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                     <div className="py-8 flex justify-center text-slate-400"><Loader2 className="animate-spin" /></div>
                   ) : alunos.length ? (
                     alunos.map((aluno) => (
-                      <button
+                      <SecretariaAlunoSearchCard
                         key={aluno.id}
+                        nome={aluno.nome}
+                        cpf={aluno.cpf}
+                        cursoNome={aluno.cursoNome}
+                        turmaNome={aluno.turmaNome}
+                        turmaCodigo={aluno.turmaCodigo}
+                        matricula={aluno.matricula}
+                        fotoUrl={aluno.fotoUrl}
+                        tone="blue"
                         onClick={() => setSelectedAluno(aluno)}
-                        className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 text-left flex items-center justify-between transition-colors"
-                      >
-                        <div>
-                          <p className="font-black text-sm text-[#001a33]">{aluno.nome}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">CPF: {aluno.cpf || 'Não informado'}</p>
-                        </div>
-                        <ChevronRight size={17} className="text-slate-350" />
-                      </button>
+                      />
                     ))
                   ) : (
                     <p className="py-8 text-center text-sm text-slate-400">Nenhum aluno encontrado nesta unidade.</p>
@@ -472,10 +475,24 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
               {selectedAluno && (
                 <div className="mt-5">
-                  <div className={`p-4 rounded-2xl ${definition.softAccent} border border-slate-100`}>
-                    <p className="font-black text-[#001a33]">{selectedAluno.nome}</p>
-                    <p className="text-xs text-slate-500 mt-1">{selectedAluno.cpf || 'CPF não informado'}</p>
-                  </div>
+                  <SecretariaAlunoSearchCard
+                    nome={selectedAluno.nome}
+                    cpf={selectedAluno.cpf}
+                    cursoNome={selectedMatricula?.cursoNome || selectedAluno.cursoNome}
+                    turmaNome={selectedMatricula?.turmaNome || selectedAluno.turmaNome}
+                    turmaCodigo={selectedMatricula?.turmaCodigo || selectedAluno.turmaCodigo}
+                    matricula={selectedMatricula
+                      ? formatMatricula(selectedMatricula.id, selectedMatricula.dataMatricula, selectedMatricula.poloId)
+                      : selectedAluno.matricula}
+                    fotoUrl={selectedAluno.fotoUrl}
+                    tone="blue"
+                    selected
+                    actionLabel="Trocar"
+                    onClick={() => {
+                      setSelectedAluno(null);
+                      setSelectedMatriculaId('');
+                    }}
+                  />
 
                   <label className="block mt-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Matrícula / turma</label>
                   {isLoadingMatriculas ? (

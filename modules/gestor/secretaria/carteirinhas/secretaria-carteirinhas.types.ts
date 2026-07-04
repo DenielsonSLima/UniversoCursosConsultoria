@@ -7,6 +7,8 @@ export interface Aluno {
   nascimento: string;
   matricula: string;
   curso: string;
+  turmaNome?: string;
+  turmaCodigo?: string;
   instituicao: string;
   validade: string;
   fotoUrl?: string | null;

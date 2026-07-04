@@ -12,6 +12,52 @@ import {
 const normalizeSearchTerm = (term: string) =>
   term.trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ');
 
+const buildAlunoPoloScopeFilter = (poloId: string) =>
+  `polo_id.eq.${poloId},polo_ids.cs.{${poloId}},polo_id.is.null`;
+
+const normalizeStatus = (status?: string) => (status || '').toUpperCase();
+
+const enrollmentStatusRank = (status?: string) => {
+  const normalized = normalizeStatus(status);
+  if (normalized === 'ATIVO') return 0;
+  if (normalized === 'EM_ANDAMENTO') return 1;
+  if (normalized === 'CONCLUIDO') return 2;
+  return 3;
+};
+
+const getAlunoEnrollmentSummaries = async (poloId: string, alunoIds: string[]) => {
+  if (!alunoIds.length) return new Map<string, any>();
+
+  const { data, error } = await supabase
+    .from('matriculas')
+    .select('id, aluno_id, status, data_matricula, turmas!inner(id, nome, codigo, polo_id, cursos(nome, modalidade))')
+    .in('aluno_id', alunoIds)
+    .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' })
+    .order('data_matricula', { ascending: false });
+
+  if (error) throw error;
+
+  const ordered = [...(data || [])].sort((a: any, b: any) => {
+    const statusDiff = enrollmentStatusRank(a.status) - enrollmentStatusRank(b.status);
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
+  });
+
+  const summaries = new Map<string, any>();
+  ordered.forEach((matricula: any) => {
+    if (summaries.has(matricula.aluno_id)) return;
+    summaries.set(matricula.aluno_id, {
+      matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id || poloId),
+      cursoNome: matricula.turmas?.cursos?.nome || '',
+      turmaNome: matricula.turmas?.nome || '',
+      turmaCodigo: matricula.turmas?.codigo || '',
+      matriculaStatus: matricula.status || '',
+    });
+  });
+
+  return summaries;
+};
+
 export const getSecretariaContext = (): SecretariaContext => ({
   userId:
     window.sessionStorage.getItem('logged_user_id') ||
@@ -29,14 +75,15 @@ export const secretariaDocumentosService = {
 
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, cpf_cnpj, email, telefone, foto_url')
+      .select('id, nome, cpf_cnpj, email, telefone, foto_url, polo_id, polo_ids')
       .eq('tipo', 'Aluno')
-      .or(`polo_id.eq.${poloId},polo_id.is.null`)
+      .or(buildAlunoPoloScopeFilter(poloId))
       .or(`nome.ilike.%${safeTerm}%,cpf_cnpj.ilike.%${safeTerm}%`)
       .order('nome', { ascending: true })
       .limit(20);
 
     if (error) throw error;
+    const summaries = await getAlunoEnrollmentSummaries(poloId, (data || []).map((aluno: any) => aluno.id));
     return (data || []).map((aluno) => ({
       id: aluno.id,
       nome: aluno.nome,
@@ -44,6 +91,7 @@ export const secretariaDocumentosService = {
       email: aluno.email,
       telefone: aluno.telefone,
       fotoUrl: aluno.foto_url,
+      ...summaries.get(aluno.id),
     }));
   },
 

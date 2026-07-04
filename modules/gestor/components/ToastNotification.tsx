@@ -11,6 +11,9 @@ export interface Toast {
   type: ToastType;
   title: string;
   message?: string;
+  avatarUrl?: string | null;
+  avatarName?: string;
+  contextLabel?: string;
 }
 
 interface ToastNotificationProps {
@@ -29,6 +32,8 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ toasts, onRemove 
 };
 
 const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({ toast, onRemove }) => {
+  const [avatarFailed, setAvatarFailed] = React.useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => onRemove(toast.id), 4500);
     return () => clearTimeout(timer);
@@ -55,13 +60,47 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
     },
   }[toast.type];
 
+  const initials = (toast.avatarName || toast.title || 'UN')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+  const shouldShowAvatar = Boolean(toast.avatarUrl || toast.avatarName || toast.contextLabel);
+
   return (
     <div
       className={`pointer-events-auto flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl shadow-slate-900/15 ${config.bg} ${config.border} border border-slate-100 max-w-sm w-full animate-slideIn`}
       style={{ animation: 'slideInRight 0.3s ease-out' }}
     >
-      <div className="mt-0.5 flex-shrink-0">{config.icon}</div>
+      <div className="mt-0.5 flex-shrink-0">
+        {shouldShowAvatar ? (
+          <div className="relative h-11 w-11 overflow-hidden rounded-2xl border border-slate-100 bg-slate-100 shadow-sm">
+            {toast.avatarUrl && !avatarFailed ? (
+              <img
+                src={toast.avatarUrl}
+                alt={toast.avatarName || toast.title}
+                className="h-full w-full object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[#001a33] text-xs font-black text-white">
+                {initials || 'UN'}
+              </div>
+            )}
+            <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white p-0.5 shadow-sm">
+              {React.cloneElement(config.icon, { size: 14 })}
+            </span>
+          </div>
+        ) : (
+          config.icon
+        )}
+      </div>
       <div className="flex-1 min-w-0">
+        {toast.contextLabel && (
+          <p className="mb-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400">{toast.contextLabel}</p>
+        )}
         <p className={`font-black text-sm uppercase tracking-wide ${config.titleColor}`}>{toast.title}</p>
         {toast.message && <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">{toast.message}</p>}
       </div>
@@ -79,9 +118,9 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
 export function useToast() {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
-  const addToast = React.useCallback((type: ToastType, title: string, message?: string) => {
+  const addToast = React.useCallback((type: ToastType, title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
-    setToasts(prev => [...prev, { id, type, title, message }]);
+    setToasts(prev => [...prev, { id, type, title, message, ...options }]);
   }, []);
 
   const removeToast = React.useCallback((id: string) => {
@@ -89,9 +128,9 @@ export function useToast() {
   }, []);
 
   const toast = React.useMemo(() => ({
-    success: (title: string, message?: string) => addToast('success', title, message),
-    error: (title: string, message?: string) => addToast('error', title, message),
-    info: (title: string, message?: string) => addToast('info', title, message),
+    success: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('success', title, message, options),
+    error: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('error', title, message, options),
+    info: (title: string, message?: string, options?: Omit<Toast, 'id' | 'type' | 'title' | 'message'>) => addToast('info', title, message, options),
   }), [addToast]);
 
   return { toasts, removeToast, toast };

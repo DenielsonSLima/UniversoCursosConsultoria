@@ -1,4 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
+import { normalizeCursoVacinasConfig, getVacinaDoseKey } from '../../../../shared/vacinas/vacinas.config';
 import { cadastrosService } from '../../../cadastros/cadastros.service';
 import { checklistEstagioService } from '../../../cadastros/checklist-estagio/checklist-estagio.service';
 import { academicLifecycleService } from './academic-lifecycle.service';
@@ -99,6 +100,74 @@ export const turmaEstagioService = {
         statusMatricula: matricula.status,
       })),
     };
+  },
+
+  async getVacinasResumo(turmaId: string, cursoId: string) {
+    const { data: curso, error: cursoError } = await supabase
+      .from('cursos')
+      .select('id, nome, vacinas_config')
+      .eq('id', cursoId)
+      .single();
+
+    if (cursoError) throw cursoError;
+
+    const config = normalizeCursoVacinasConfig(curso?.vacinas_config, curso?.nome);
+    const requiredDoses = config.vacinas.flatMap((vacina) =>
+      vacina.obrigatoria
+        ? vacina.doses.map((dose) => ({
+            key: getVacinaDoseKey(cursoId, vacina.codigo, dose.numero),
+            vacinaNome: vacina.nome,
+            doseLabel: dose.label,
+            vacinaCodigo: vacina.codigo,
+            doseNumero: dose.numero,
+          }))
+        : []
+    );
+
+    if (!config.exigirCarteiraEstagio || requiredDoses.length === 0) {
+      return { exige: false, totalDoses: 0, porAluno: {} as Record<string, any> };
+    }
+
+    const { data: matriculas, error: matriculasError } = await supabase
+      .from('matriculas')
+      .select('id, aluno_id')
+      .eq('turma_id', turmaId);
+
+    if (matriculasError) throw matriculasError;
+
+    const alunoIds = (matriculas || []).map((matricula: any) => matricula.aluno_id).filter(Boolean);
+    if (alunoIds.length === 0) {
+      return { exige: true, totalDoses: requiredDoses.length, porAluno: {} as Record<string, any> };
+    }
+
+    const { data: registros, error: registrosError } = await supabase
+      .from('aluno_vacinas')
+      .select('aluno_id, curso_id, vacina_codigo, dose_numero, status')
+      .eq('curso_id', cursoId)
+      .in('aluno_id', alunoIds);
+
+    if (registrosError) throw registrosError;
+
+    const registrosMap = new Map<string, string>();
+    (registros || []).forEach((registro: any) => {
+      registrosMap.set(
+        `${registro.aluno_id}:${getVacinaDoseKey(registro.curso_id, registro.vacina_codigo, registro.dose_numero)}`,
+        registro.status
+      );
+    });
+
+    const porAluno: Record<string, any> = {};
+    alunoIds.forEach((alunoId: string) => {
+      const pendentes = requiredDoses.filter((dose) => registrosMap.get(`${alunoId}:${dose.key}`) !== 'aprovado');
+      porAluno[alunoId] = {
+        liberado: pendentes.length === 0,
+        totalDoses: requiredDoses.length,
+        aprovadas: requiredDoses.length - pendentes.length,
+        pendentes,
+      };
+    });
+
+    return { exige: true, totalDoses: requiredDoses.length, porAluno };
   },
 
   async getAvaliacoes(turmaId: string, disciplinaId: string) {

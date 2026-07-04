@@ -6,6 +6,8 @@ import { Search, User, DollarSign, FileText, GraduationCap, X } from 'lucide-rea
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { formatCpf } from '../../../../lib/documentFormatters';
+import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
 const SecretariaAlunosPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +30,38 @@ const SecretariaAlunosPage: React.FC = () => {
         console.error('Erro ao buscar alunos:', error);
         throw error;
       }
-      return data || [];
+      const alunoIds = (data || []).map((aluno: any) => aluno.id);
+      const { data: matriculasResumo, error: matriculasError } = alunoIds.length
+        ? await supabase
+          .from('matriculas')
+          .select('id, aluno_id, status, data_matricula, turmas(id, nome, codigo, polo_id, cursos(nome, modalidade))')
+          .in('aluno_id', alunoIds)
+          .order('data_matricula', { ascending: false })
+        : { data: [], error: null };
+
+      if (matriculasError) {
+        console.error('Erro ao buscar resumo acadêmico dos alunos:', matriculasError);
+        throw matriculasError;
+      }
+
+      const summaries = new Map<string, any>();
+      [...(matriculasResumo || [])]
+        .sort((a: any, b: any) => {
+          if (a.status === 'ATIVO' && b.status !== 'ATIVO') return -1;
+          if (b.status === 'ATIVO' && a.status !== 'ATIVO') return 1;
+          return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
+        })
+        .forEach((matricula: any) => {
+          if (summaries.has(matricula.aluno_id)) return;
+          summaries.set(matricula.aluno_id, {
+            matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
+            cursoNome: matricula.turmas?.cursos?.nome || '',
+            turmaNome: matricula.turmas?.nome || '',
+            turmaCodigo: matricula.turmas?.codigo || '',
+          });
+        });
+
+      return (data || []).map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
     },
     enabled: searchTerm.length >= 2,
     refetchOnWindowFocus: false,
@@ -104,7 +137,7 @@ const SecretariaAlunosPage: React.FC = () => {
 
   if (selectedAluno) {
     const cursoNome = matriculas[0]?.turmas?.cursos?.nome || 'Nenhum curso registrado';
-    const matriculaFormatada = matriculas[0]?.id ? formatMatricula(matriculas[0].id, matriculas[0].data_matricula, matriculas[0].polo_id) : 'Não gerada';
+    const matriculaFormatada = matriculas[0]?.id ? formatMatricula(matriculas[0].id, matriculas[0].data_matricula, matriculas[0].turmas?.polo_id) : 'Não gerada';
 
     return (
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden animate-fadeIn min-h-[600px]">
@@ -163,7 +196,7 @@ const SecretariaAlunosPage: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">CPF</p>
-                                <p className="text-slate-700 font-medium">{selectedAluno.cpf_cnpj || 'Não informado'}</p>
+                                <p className="text-slate-700 font-medium">{formatCpf(selectedAluno.cpf_cnpj) || 'Não informado'}</p>
                             </div>
                             <div>
                                 <p className="text-slate-400 text-xs uppercase font-bold">Identidade (CIN/CNH)</p>
@@ -316,24 +349,19 @@ const SecretariaAlunosPage: React.FC = () => {
                     </div>
                 ) : filteredAlunos.length > 0 ? (
                     filteredAlunos.map((aluno: any) => (
-                        <div 
+                        <SecretariaAlunoSearchCard
                             key={aluno.id}
+                            nome={aluno.nome}
+                            cpf={aluno.cpf_cnpj}
+                            cursoNome={aluno.cursoNome}
+                            turmaNome={aluno.turmaNome}
+                            turmaCodigo={aluno.turmaCodigo}
+                            matricula={aluno.matricula}
+                            statusLabel={aluno.status}
+                            statusTone={aluno.status === 'ATIVO' ? 'success' : 'warning'}
+                            tone="blue"
                             onClick={() => setSelectedAluno(aluno)}
-                            className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer flex items-center justify-between group"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                    {aluno.nome.charAt(0)}
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-[#001a33] text-sm group-hover:text-blue-700">{aluno.nome}</h4>
-                                    <p className="text-xs text-slate-500">CPF: {aluno.cpf_cnpj || 'Não informado'} • Contato: {aluno.telefone || 'Não informado'}</p>
-                                </div>
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase px-3 py-1 rounded-full ${aluno.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                                {aluno.status}
-                            </span>
-                        </div>
+                        />
                     ))
                 ) : (
                     <div className="text-center py-8 text-slate-400">

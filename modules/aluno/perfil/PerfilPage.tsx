@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileText, KeyRound, ShieldCheck, User } from 'lucide-react';
+import { FileText, KeyRound, ShieldCheck, Syringe, User } from 'lucide-react';
 import PerfilDadosTab from './PerfilDadosTab';
 import PerfilDocumentosTab from './PerfilDocumentosTab';
 import PerfilGoogleTab from './PerfilGoogleTab';
 import PerfilSenhaTab from './PerfilSenhaTab';
+import PerfilVacinasTab from './PerfilVacinasTab';
 import { alunoPerfilKeys, alunoPerfilService } from './perfil.service';
 import { PerfilPageProps, PerfilTabId, PerfilUpdatePayload } from './perfil.types';
+import { alunoVacinasService } from '../../shared/vacinas/vacinas.service';
+import { SaveAlunoVacinaInput } from '../../shared/vacinas/vacinas.types';
+import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 
 const tabs: Array<{ id: PerfilTabId; label: string; icon: React.ReactNode }> = [
   { id: 'perfil', label: 'Meu perfil', icon: <User size={15} /> },
   { id: 'documentos', label: 'Documentos', icon: <FileText size={15} /> },
+  { id: 'vacinas', label: 'Vacinas', icon: <Syringe size={15} /> },
   { id: 'google', label: 'Acesso e Google', icon: <ShieldCheck size={15} /> },
   { id: 'senha', label: 'Alterar senha', icon: <KeyRound size={15} /> },
 ];
@@ -21,6 +26,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   onTechnicalEnrollmentNoticeResolved,
 }) => {
   const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<PerfilTabId>('perfil');
 
   const { data: profile, isLoading: loadingProfile } = useQuery({
@@ -33,16 +39,34 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
     queryFn: () => alunoPerfilService.getDocuments(alunoId),
   });
 
+  const { data: vacinaContexts = [], isLoading: loadingVacinaContexts } = useQuery({
+    queryKey: alunoPerfilKeys.vacinaContexts(alunoId),
+    queryFn: () => alunoVacinasService.getCursoContexts(alunoId),
+  });
+
+  const { data: vacinas = [], isLoading: loadingVacinas } = useQuery({
+    queryKey: alunoPerfilKeys.vacinas(alunoId),
+    queryFn: () => alunoVacinasService.getAlunoVacinas(alunoId),
+  });
+
   const updateProfileMutation = useMutation({
     mutationFn: (payload: PerfilUpdatePayload) => alunoPerfilService.updateProfile(alunoId, profile, payload),
-    onSuccess: () => {
+    onSuccess: (updatedProfile) => {
       queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.profile(alunoId) });
       onTechnicalEnrollmentNoticeResolved?.();
-      alert('Cadastro atualizado com sucesso!');
+      toast.success('Aluno atualizado', 'Seu cadastro foi salvo com sucesso.', {
+        avatarUrl: updatedProfile?.foto || profile?.foto,
+        avatarName: updatedProfile?.nomeCompleto || updatedProfile?.nome || profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de aluno',
+      });
     },
     onError: (error) => {
       console.error(error);
-      alert('Erro ao atualizar cadastro.');
+      toast.error('Cadastro não atualizado', error instanceof Error ? error.message : 'Revise os dados e tente novamente.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de aluno',
+      });
     },
   });
 
@@ -51,27 +75,69 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
       alunoPerfilService.uploadDocument(alunoId, docName, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
-      alert('Documento enviado com sucesso! Aguarde a homologação da secretaria.');
+      toast.success('Documento enviado', 'A secretaria fará a homologação do arquivo.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Documentos do aluno',
+      });
     },
     onError: (error) => {
       console.error(error);
-      alert('Erro ao enviar documento. Certifique-se de que o arquivo seja PDF ou imagem.');
+      toast.error('Documento não enviado', 'Certifique-se de que o arquivo seja PDF ou imagem.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Documentos do aluno',
+      });
     },
   });
 
   const uploadPhotoMutation = useMutation({
     mutationFn: (file: File) => alunoPerfilService.uploadProfilePhoto(alunoId, profile, file),
-    onSuccess: () => {
+    onSuccess: (fotoUrl) => {
+      queryClient.setQueryData(alunoPerfilKeys.profile(alunoId), (current: any) => ({ ...(current || profile || {}), foto: fotoUrl }));
       queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.profile(alunoId) });
-      alert('Foto de perfil atualizada com sucesso!');
+      toast.success('Foto do aluno atualizada', 'Sua foto de perfil foi salva com sucesso.', {
+        avatarUrl: fotoUrl,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de aluno',
+      });
     },
     onError: (error: any) => {
       console.error(error);
-      alert(error?.message || 'Erro ao enviar foto de perfil.');
+      toast.error('Foto não enviada', error?.message || 'Erro ao enviar foto de perfil.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de aluno',
+      });
     },
   });
 
-  if (loadingProfile || loadingDocs) {
+  const saveVacinaMutation = useMutation({
+    mutationFn: (payload: SaveAlunoVacinaInput) => alunoVacinasService.saveAlunoVacina(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.vacinas(alunoId) });
+      alert('Vacina enviada para análise da secretaria.');
+    },
+    onError: (error) => {
+      console.error(error);
+      alert('Erro ao salvar vacina.');
+    },
+  });
+
+  const uploadVacinaMutation = useMutation({
+    mutationFn: ({ payload, file }: { payload: SaveAlunoVacinaInput; file: File }) =>
+      alunoVacinasService.uploadVacinaArquivo(payload, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.vacinas(alunoId) });
+      alert('Comprovante de vacina enviado para análise.');
+    },
+    onError: (error) => {
+      console.error(error);
+      alert('Erro ao enviar comprovante da vacina.');
+    },
+  });
+
+  if (loadingProfile || loadingDocs || loadingVacinaContexts || loadingVacinas) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
@@ -81,7 +147,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="inline-grid rounded-2xl border border-slate-200 bg-white p-1 shadow-sm sm:grid-cols-4">
+      <div className="inline-grid rounded-2xl border border-slate-200 bg-white p-1 shadow-sm sm:grid-cols-5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -116,9 +182,23 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
         />
       )}
 
+      {activeTab === 'vacinas' && (
+        <PerfilVacinasTab
+          alunoId={alunoId}
+          contexts={vacinaContexts}
+          registros={vacinas}
+          saving={saveVacinaMutation.isPending}
+          uploading={uploadVacinaMutation.isPending}
+          onSave={(payload) => saveVacinaMutation.mutate(payload)}
+          onUpload={(payload, file) => uploadVacinaMutation.mutate({ payload, file })}
+        />
+      )}
+
       {activeTab === 'google' && <PerfilGoogleTab />}
 
       {activeTab === 'senha' && <PerfilSenhaTab />}
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

@@ -7,12 +7,18 @@ export interface SecretariaFinanceiraAluno {
   cpf: string;
   email?: string;
   telefone?: string;
+  matricula?: string;
+  cursoNome?: string;
+  turmaNome?: string;
+  turmaCodigo?: string;
+  matriculaStatus?: string;
 }
 
 export interface SecretariaFinanceiraTurma {
   id: string;
   nome: string;
   codigo: string;
+  poloId?: string;
   cursoNome: string;
   modalidade: string;
   poloNome: string;
@@ -23,6 +29,7 @@ export interface SecretariaFinanceiraTurma {
 
 export interface SecretariaFinanceiraRecebivel {
   id: string;
+  poloId?: string;
   alunoId?: string;
   alunoNome: string;
   alunoCpf: string;
@@ -30,6 +37,7 @@ export interface SecretariaFinanceiraRecebivel {
   matriculaId?: string;
   matricula: string;
   turmaId?: string;
+  turmaPoloId?: string;
   turmaNome: string;
   turmaCodigo: string;
   cursoNome: string;
@@ -60,6 +68,49 @@ const normalizeSearchTerm = (term: string) =>
   term.trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ');
 
 const normalizeStatus = (status?: string) => (status || '').toUpperCase();
+const buildAlunoPoloScopeFilter = (poloId: string) =>
+  `polo_id.eq.${poloId},polo_ids.cs.{${poloId}},polo_id.is.null`;
+
+const enrollmentStatusRank = (status?: string) => {
+  const normalized = normalizeStatus(status);
+  if (normalized === 'ATIVO') return 0;
+  if (normalized === 'EM_ANDAMENTO') return 1;
+  if (normalized === 'CONCLUIDO') return 2;
+  return 3;
+};
+
+const getAlunoEnrollmentSummaries = async (poloId: string, alunoIds: string[]) => {
+  if (!alunoIds.length) return new Map<string, any>();
+
+  const { data, error } = await supabase
+    .from('matriculas')
+    .select('id, aluno_id, status, data_matricula, turmas!inner(id, nome, codigo, polo_id, cursos(nome, modalidade))')
+    .in('aluno_id', alunoIds)
+    .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' })
+    .order('data_matricula', { ascending: false });
+
+  if (error) throw error;
+
+  const ordered = [...(data || [])].sort((a: any, b: any) => {
+    const statusDiff = enrollmentStatusRank(a.status) - enrollmentStatusRank(b.status);
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
+  });
+
+  const summaries = new Map<string, any>();
+  ordered.forEach((matricula: any) => {
+    if (summaries.has(matricula.aluno_id)) return;
+    summaries.set(matricula.aluno_id, {
+      matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id || poloId),
+      cursoNome: matricula.turmas?.cursos?.nome || '',
+      turmaNome: matricula.turmas?.nome || '',
+      turmaCodigo: matricula.turmas?.codigo || '',
+      matriculaStatus: matricula.status || '',
+    });
+  });
+
+  return summaries;
+};
 
 const mapRecebivel = (row: any): SecretariaFinanceiraRecebivel => {
   const matricula = row.matriculas;
@@ -69,15 +120,17 @@ const mapRecebivel = (row: any): SecretariaFinanceiraRecebivel => {
 
   return {
     id: row.id,
+    poloId: row.polo_id || undefined,
     alunoId: row.cliente_id || undefined,
     alunoNome: aluno?.nome || 'Aluno não informado',
     alunoCpf: aluno?.cpf_cnpj || '',
     alunoEmail: aluno?.email || undefined,
     matriculaId: row.matricula_id || undefined,
     matricula: row.matricula_id
-      ? formatMatricula(row.matricula_id, matricula?.data_matricula, row.polo_id)
+      ? formatMatricula(row.matricula_id, matricula?.data_matricula, turma?.polo_id || row.polo_id)
       : 'Sem matrícula',
     turmaId: row.turma_id || undefined,
+    turmaPoloId: turma?.polo_id || undefined,
     turmaNome: turma?.nome || 'Sem turma vinculada',
     turmaCodigo: turma?.codigo || '',
     cursoNome: turma?.cursos?.nome || '',
@@ -111,6 +164,12 @@ const isTecnicoCarnetCandidate = (item: SecretariaFinanceiraRecebivel) => {
   return modality === 'TECNICO' && ['PARCELA', 'MENSALIDADE', 'REMATRICULA'].includes(launchType);
 };
 
+const isRecebivelInPolo = (item: SecretariaFinanceiraRecebivel, poloId: string) => {
+  if (!poloId) return true;
+  if (item.poloId === poloId || item.turmaPoloId === poloId) return true;
+  return !item.poloId && !item.turmaPoloId;
+};
+
 const RECEBIVEIS_SELECT = `
   id,
   polo_id,
@@ -136,7 +195,7 @@ const RECEBIVEIS_SELECT = `
   asaas_status,
   parceiros(nome, cpf_cnpj, email, telefone),
   matriculas(id, data_matricula, status),
-  turmas(id, nome, codigo, cursos(nome, modalidade), polos(nome, cnpj, cidade, estado)),
+  turmas(id, nome, codigo, polo_id, cursos(nome, modalidade), polos(nome, cnpj, cidade, estado)),
   polos(nome, cnpj, cidade, estado)
 `;
 
@@ -147,27 +206,29 @@ export const secretariaFinanceiraService = {
 
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, cpf_cnpj, email, telefone')
+      .select('id, nome, cpf_cnpj, email, telefone, polo_id, polo_ids')
       .eq('tipo', 'Aluno')
-      .or(`polo_id.eq.${poloId},polo_id.is.null`)
+      .or(buildAlunoPoloScopeFilter(poloId))
       .or(`nome.ilike.%${safeTerm}%,cpf_cnpj.ilike.%${safeTerm}%`)
       .order('nome', { ascending: true })
       .limit(20);
 
     if (error) throw error;
+    const summaries = await getAlunoEnrollmentSummaries(poloId, (data || []).map((aluno: any) => aluno.id));
     return (data || []).map((aluno: any) => ({
       id: aluno.id,
       nome: aluno.nome,
       cpf: aluno.cpf_cnpj || '',
       email: aluno.email || undefined,
       telefone: aluno.telefone || undefined,
+      ...summaries.get(aluno.id),
     }));
   },
 
   async getTurmas(poloId: string): Promise<SecretariaFinanceiraTurma[]> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('id, nome, codigo, status, cursos(nome, modalidade), polos(nome, cnpj, cidade, estado)')
+      .select('id, nome, codigo, status, polo_id, cursos(nome, modalidade), polos(nome, cnpj, cidade, estado)')
       .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .order('nome', { ascending: true });
 
@@ -176,6 +237,7 @@ export const secretariaFinanceiraService = {
       id: turma.id,
       nome: turma.nome,
       codigo: turma.codigo || '',
+      poloId: turma.polo_id || undefined,
       cursoNome: turma.cursos?.nome || '',
       modalidade: turma.cursos?.modalidade || '',
       poloNome: turma.polos?.nome || '',
@@ -190,11 +252,13 @@ export const secretariaFinanceiraService = {
       .from('contas_receber')
       .select(RECEBIVEIS_SELECT)
       .eq('cliente_id', alunoId)
-      .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .order('data_vencimento', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(mapRecebivel).filter(isTecnicoCarnetCandidate);
+    return (data || [])
+      .map(mapRecebivel)
+      .filter((item) => isRecebivelInPolo(item, poloId))
+      .filter(isTecnicoCarnetCandidate);
   },
 
   async getRecebiveisByTurma(turmaId: string): Promise<SecretariaFinanceiraRecebivel[]> {
@@ -213,12 +277,14 @@ export const secretariaFinanceiraService = {
     const { data, error } = await supabase
       .from('contas_receber')
       .select(RECEBIVEIS_SELECT)
-      .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .order('data_vencimento', { ascending: true })
-      .limit(250);
+      .limit(1000);
 
     if (error) throw error;
-    const rows = (data || []).map(mapRecebivel).filter(isTecnicoCarnetCandidate);
+    const rows = (data || [])
+      .map(mapRecebivel)
+      .filter((item) => isRecebivelInPolo(item, poloId))
+      .filter(isTecnicoCarnetCandidate);
     if (safeTerm.length < 2) return rows.slice(0, 60);
     const normalized = safeTerm.toLowerCase();
     return rows.filter((item) =>

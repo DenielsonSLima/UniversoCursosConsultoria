@@ -53,6 +53,20 @@ export interface CursoFinanceiroConfig {
   };
 }
 
+export interface CursoVacinasConfig {
+  exigirCarteiraEstagio: boolean;
+  observacao?: string;
+  vacinas: Array<{
+    codigo: string;
+    nome: string;
+    obrigatoria: boolean;
+    doses: Array<{
+      numero: number;
+      label: string;
+    }>;
+  }>;
+}
+
 export interface Curso {
   id: string;
   nome: string;
@@ -79,6 +93,7 @@ export interface Curso {
   modulos?: Modulo[];
   ead_config?: EadConfig;
   financeiro_config?: CursoFinanceiroConfig;
+  vacinas_config?: CursoVacinasConfig;
 }
 
 export interface EadCronogramaItem {

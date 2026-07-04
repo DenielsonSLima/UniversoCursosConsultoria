@@ -2,7 +2,12 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaGradeService } from '../turma-grade.service';
-import { TurmaAulaInput, TurmaDisciplinaConfig, TurmaProfessorOption } from '../turma-grade.types';
+import {
+  TurmaAtividadeExtraClasseInput,
+  TurmaAulaInput,
+  TurmaDisciplinaConfig,
+  TurmaProfessorOption,
+} from '../turma-grade.types';
 
 const useTurmaGradeInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
@@ -102,6 +107,23 @@ export const useAddTurmaAulaMutation = (
 
   return useMutation({
     mutationFn: (input: TurmaAulaInput) => turmaGradeService.addAula(turmaId, input),
+    onSuccess: async (_data, input) => {
+      await invalidate();
+      await onSuccess?.(input);
+    },
+    onError,
+  });
+};
+
+export const useAddTurmaAtividadeExtraClasseMutation = (
+  turmaId: string,
+  onSuccess?: (input: TurmaAtividadeExtraClasseInput) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const invalidate = useTurmaGradeInvalidation(turmaId);
+
+  return useMutation({
+    mutationFn: (input: TurmaAtividadeExtraClasseInput) => turmaGradeService.addAtividadeExtraClasse(turmaId, input),
     onSuccess: async (_data, input) => {
       await invalidate();
       await onSuccess?.(input);

@@ -2,16 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { Save, Edit2, Camera, Loader2, User } from 'lucide-react';
-import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
 
 interface ParceiroProfessorDadosProps {
   data: any;
   onChange: (data: any) => void;
+  onPhotoUploaded?: (fotoUrl: string, professor: any) => void;
+  onPhotoUploadError?: (message: string) => void;
 }
 
-const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, onChange }) => {
+const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, onChange, onPhotoUploaded, onPhotoUploadError }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(data);
   const [polosList, setPolosList] = useState<any[]>([]);
@@ -31,13 +32,16 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     setIsUploadingPhoto(true);
     try {
-      const url = await empresasService.uploadLogo(file);
-      setFormData((prev: any) => ({ ...prev, foto: url }));
+      const url = await parceirosService.uploadProfilePhoto(data.id, formData, file);
+      const nextData = { ...formData, foto: url };
+      setFormData(nextData);
+      onPhotoUploaded?.(url, nextData);
     } catch (err: any) {
-      alert('Erro ao enviar foto: ' + (err.message || err));
+      onPhotoUploadError?.(err?.message || 'Erro ao enviar foto.');
     } finally {
       setIsUploadingPhoto(false);
     }

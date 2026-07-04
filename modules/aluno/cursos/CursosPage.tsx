@@ -18,6 +18,11 @@ import CertificadoPreview from '../../gestor/secretaria/certificados/components/
 import { CertificadoAcademico } from '../../gestor/secretaria/certificados/certificados.types';
 import { alunoPerfilKeys, alunoPerfilService } from '../perfil/perfil.service';
 import {
+  getStudentCourseAccessKey,
+  recordStudentCourseAccess,
+  type StudentCourseAccessItem,
+} from './courseAccessHistory';
+import {
   TechnicalEnrollmentRequirement,
   getTechnicalEnrollmentMissingFields,
 } from '../../shared/utils/technicalEnrollmentRequirements';
@@ -537,6 +542,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const [selectedTurmaByCourse, setSelectedTurmaByCourse] = useState<Record<string, string>>({});
   const certificatePdfSourceRef = React.useRef<HTMLDivElement>(null);
   const initialCheckoutCourseRef = React.useRef<string | null>(null);
+  const lastRecordedSelectedCourseKeyRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (!eadCheckoutReview) return;
@@ -859,6 +865,24 @@ const CursosPage: React.FC<CursosPageProps> = ({
     setShowCompletedLessons(true);
     setActivityCompletionPrompt(null);
   }, [selectedCourse?.id]);
+
+  useEffect(() => {
+    if (!alunoId || !selectedCourse?.id) return;
+
+    const accessItem: StudentCourseAccessItem = {
+      cursoId: selectedCourse.id,
+      turmaId: selectedCourse.alunoMatricula?.turmaId || null,
+      cursoNome: selectedCourse.nome || 'Curso',
+      turmaNome: selectedCourse.alunoMatricula?.turmaNome || null,
+      modalidade: selectedCourse.modalidade || null,
+      imagemUrl: selectedCourse.imagem_url || null,
+    };
+    const accessKey = getStudentCourseAccessKey(accessItem);
+    if (lastRecordedSelectedCourseKeyRef.current === accessKey) return;
+
+    recordStudentCourseAccess(alunoId, accessItem);
+    lastRecordedSelectedCourseKeyRef.current = accessKey;
+  }, [alunoId, selectedCourse?.alunoMatricula?.turmaId, selectedCourse?.id]);
 
   useEffect(() => {
     if (!selectedCourse?.id) return;

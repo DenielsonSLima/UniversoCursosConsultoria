@@ -10,6 +10,8 @@ const ASAAS_FILE_HOSTS = new Set([
 
 const one = (value: any) => Array.isArray(value) ? value[0] : value;
 const normalize = (value: unknown) => String(value || "").toUpperCase();
+const A4_WIDTH = 595.28;
+const A4_HEIGHT = 841.89;
 
 const RECEIVABLE_SELECT = `
   id,
@@ -57,6 +59,7 @@ const fetchAsaasPdfUrl = async (runtime: AsaasRuntime, url: string) => {
     const response = await fetch(safeUrl, {
       redirect: "manual",
       headers: {
+        Accept: "application/pdf",
         "User-Agent": "Universo-Cursos-Tecnico",
         access_token: runtime.apiKey,
       },
@@ -66,7 +69,13 @@ const fetchAsaasPdfUrl = async (runtime: AsaasRuntime, url: string) => {
       throw new Error("O Asaas redirecionou o boleto oficial. Gere o carnê novamente para obter uma URL direta válida.");
     }
 
-    if (response.ok) return new Uint8Array(await response.arrayBuffer());
+    if (response.ok) {
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      if (contentType && !contentType.includes("pdf") && !contentType.includes("octet-stream")) {
+        throw new Error("O arquivo retornado pelo Asaas não parece ser um PDF oficial.");
+      }
+      return new Uint8Array(await response.arrayBuffer());
+    }
 
     if (response.status === 429 && attempt < 3) {
       await response.text().catch(() => "");
@@ -80,10 +89,11 @@ const fetchAsaasPdfUrl = async (runtime: AsaasRuntime, url: string) => {
   throw new Error("Não foi possível baixar o boleto oficial do Asaas.");
 };
 
-const fetchInstallmentPaymentBook = async (runtime: AsaasRuntime, installmentId: string) => {
-  const response = await fetch(`${runtime.baseUrl}/installments/${encodeURIComponent(installmentId)}/paymentBook`, {
+const fetchInstallmentPayments = async (runtime: AsaasRuntime, installmentId: string) => {
+  const response = await fetch(`${runtime.baseUrl}/payments?installment=${encodeURIComponent(installmentId)}&limit=100`, {
     method: "GET",
     headers: {
+      Accept: "application/json",
       "User-Agent": "Universo-Cursos-Tecnico",
       access_token: runtime.apiKey,
     },
@@ -93,11 +103,16 @@ const fetchInstallmentPaymentBook = async (runtime: AsaasRuntime, installmentId:
     const payload = await response.json().catch(() => null);
     const message = payload?.errors?.map((item: any) => item.description).join(" ")
       || payload?.message
-      || `Erro ${response.status} ao gerar carnê oficial do Asaas.`;
+      || `Erro ${response.status} ao listar parcelas do parcelamento Asaas.`;
     throw new Error(message);
   }
 
-  return new Uint8Array(await response.arrayBuffer());
+  const payload = await response.json().catch(() => null);
+  return (payload?.data || []).sort((a: any, b: any) => {
+    const numberDiff = Number(a.installmentNumber || 0) - Number(b.installmentNumber || 0);
+    if (numberDiff) return numberDiff;
+    return String(a.dueDate || "").localeCompare(String(b.dueDate || ""));
+  });
 };
 
 const bytesToBase64 = (bytes: Uint8Array) => {
@@ -127,12 +142,77 @@ const assertTecnicoCarnetReceivable = (item: any) => {
   }
 };
 
-const buildLegacyThreePerPageCarnet = async (runtime: AsaasRuntime, receivables: any[]) => {
+const boletoStripCropBox = (sourcePage: any) => {
+  const { width, height } = sourcePage.getSize();
+  if (width / height >= 1.45) return undefined;
+
+  return {
+    left: width * 0.035,
+    bottom: height * 0.045,
+    right: width * 0.965,
+    top: height * 0.36,
+  };
+};
+
+const drawSeparator = (page: any, y: number, margin: number) => {
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: A4_WIDTH - margin, y },
+    thickness: 0.5,
+    color: rgb(0.82, 0.86, 0.9),
+  });
+};
+
+const hydrateMissingBankSlipUrls = async (runtime: AsaasRuntime, receivables: any[], installmentIds: string[]) => {
+  if (installmentIds.length !== 1 || receivables.every((item) => item.asaas_bank_slip_url)) {
+    return receivables;
+  }
+
+  const payments = await fetchInstallmentPayments(runtime, installmentIds[0]);
+  const paymentsById = new Map(payments.map((payment: any) => [String(payment.id || ""), payment]));
+  const usedPaymentIds = new Set<string>();
+
+  return receivables.map((item, index) => {
+    let payment = item.asaas_payment_id ? paymentsById.get(String(item.asaas_payment_id)) : null;
+    if (!payment) {
+      payment = payments.find((candidate: any) => {
+        const candidateId = String(candidate.id || "");
+        return candidateId
+          && !usedPaymentIds.has(candidateId)
+          && Number(candidate.installmentNumber || 0) === Number(item.parcela_numero || 0);
+      });
+    }
+    if (!payment) {
+      payment = payments.find((candidate: any) => {
+        const candidateId = String(candidate.id || "");
+        return candidateId
+          && !usedPaymentIds.has(candidateId)
+          && String(candidate.dueDate || "") === String(item.data_vencimento || "");
+      });
+    }
+    if (!payment) {
+      payment = payments.find((candidate: any) => {
+        const candidateId = String(candidate.id || "");
+        return candidateId && !usedPaymentIds.has(candidateId);
+      }) || payments[index];
+    }
+
+    const paymentId = String(payment?.id || "");
+    if (paymentId) usedPaymentIds.add(paymentId);
+
+    return {
+      ...item,
+      asaas_payment_id: item.asaas_payment_id || payment?.id || null,
+      asaas_bank_slip_url: item.asaas_bank_slip_url || payment?.bankSlipUrl || null,
+      asaas_invoice_url: item.asaas_invoice_url || payment?.invoiceUrl || null,
+    };
+  });
+};
+
+const buildThreePerPageCarnet = async (runtime: AsaasRuntime, receivables: any[]) => {
   const output = await PDFDocument.create();
-  const pageWidth = 595.28;
-  const pageHeight = 841.89;
-  const margin = 22;
-  const slotHeight = (pageHeight - margin * 2) / 3;
+  const margin = 14;
+  const slotHeight = (A4_HEIGHT - margin * 2) / 3;
 
   for (let index = 0; index < receivables.length; index += 1) {
     const item = receivables[index];
@@ -142,25 +222,22 @@ const buildLegacyThreePerPageCarnet = async (runtime: AsaasRuntime, receivables:
 
     const sourceBytes = await fetchAsaasPdfUrl(runtime, item.asaas_bank_slip_url);
     const source = await PDFDocument.load(sourceBytes);
-    const [embedded] = await output.embedPages([source.getPage(0)]);
-    const page = index % 3 === 0 ? output.addPage([pageWidth, pageHeight]) : output.getPages().at(-1)!;
+    const sourcePage = source.getPage(0);
+    const cropBox = boletoStripCropBox(sourcePage);
+    const embedded = cropBox
+      ? await output.embedPage(sourcePage, cropBox)
+      : await output.embedPage(sourcePage);
+    const page = index % 3 === 0 ? output.addPage([A4_WIDTH, A4_HEIGHT]) : output.getPages().at(-1)!;
     const slotIndex = index % 3;
-    const yBase = pageHeight - margin - slotHeight * (slotIndex + 1);
-    const scale = Math.min((pageWidth - margin * 2) / embedded.width, (slotHeight - 14) / embedded.height);
+    const yBase = A4_HEIGHT - margin - slotHeight * (slotIndex + 1);
+    const scale = Math.min((A4_WIDTH - margin * 2) / embedded.width, (slotHeight - 8) / embedded.height);
     const width = embedded.width * scale;
     const height = embedded.height * scale;
-    const x = (pageWidth - width) / 2;
+    const x = (A4_WIDTH - width) / 2;
     const y = yBase + (slotHeight - height) / 2;
 
     page.drawPage(embedded, { x, y, width, height });
-    if (slotIndex < 2) {
-      page.drawLine({
-        start: { x: margin, y: yBase },
-        end: { x: pageWidth - margin, y: yBase },
-        thickness: 0.5,
-        color: rgb(0.82, 0.86, 0.9),
-      });
-    }
+    if (slotIndex < 2) drawSeparator(page, yBase, margin);
   }
 
   return output.save();
@@ -186,27 +263,17 @@ export const createTecnicoCarnetService = (admin: any) => {
     const installmentIds = Array.from(new Set(
       receivables.map((item) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
     ));
+    const printableReceivables = await hydrateMissingBankSlipUrls(runtime, receivables, installmentIds);
 
-    if (installmentIds.length === 1 && receivables.every((item) => String(item.asaas_installment_id || "") === installmentIds[0])) {
-      const bytes = await fetchInstallmentPaymentBook(runtime, installmentIds[0]);
-      return {
-        success: true,
-        filename: `carne-tecnico-${installmentIds[0]}.pdf`,
-        contentType: "application/pdf",
-        base64: bytesToBase64(bytes),
-        count: receivables.length,
-        source: "asaas-installment",
-      };
-    }
-
-    const bytes = await buildLegacyThreePerPageCarnet(runtime, receivables);
+    const bytes = await buildThreePerPageCarnet(runtime, printableReceivables);
     return {
       success: true,
-      filename: `carne-tecnico-${new Date().toISOString().slice(0, 10)}.pdf`,
+      filename: `carne-tecnico-3-por-folha-${new Date().toISOString().slice(0, 10)}.pdf`,
       contentType: "application/pdf",
       base64: bytesToBase64(bytes),
-      count: receivables.length,
-      source: "tecnico-legacy-boletos",
+      count: printableReceivables.length,
+      layout: "3-per-page",
+      source: installmentIds.length === 1 ? "asaas-installment-payments-3-per-page" : "asaas-bank-slips-3-per-page",
     };
   };
 

@@ -44,6 +44,11 @@ export interface SecretariaAlunoResumo {
   email: string | null;
   telefone: string | null;
   fotoUrl: string | null;
+  matricula?: string | null;
+  cursoNome?: string | null;
+  turmaNome?: string | null;
+  turmaCodigo?: string | null;
+  matriculaStatus?: string | null;
 }
 
 export interface SecretariaMatriculaResumo {

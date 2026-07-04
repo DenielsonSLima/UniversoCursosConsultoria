@@ -4,6 +4,7 @@ import { parceirosService } from '../../gestor/parceiros/parceiros.service';
 import { Award, KeyRound, Landmark, Link2, Mail, Phone, ShieldCheck, User, Wallet } from 'lucide-react';
 import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 import { loginService } from '../../login/login.service';
+import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 
 interface PerfilPageProps {
   professorId: string;
@@ -19,6 +20,7 @@ const maskDate = (value: string) => value
 
 const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
   const queryClient = useQueryClient();
+  const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<PerfilTab>('dados');
   const [editing, setEditing] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
@@ -72,14 +74,22 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
       const merged = { ...editableProfile, ...updatedFields };
       return parceirosService.update(professorId, merged);
     },
-    onSuccess: () => {
+    onSuccess: (updatedProfile) => {
       queryClient.invalidateQueries({ queryKey: ['professor-perfil', professorId] });
       setEditing(false);
-      alert('Cadastro e dados de pagamento atualizados com sucesso!');
+      toast.success('Professor atualizado', 'Cadastro e dados de pagamento foram salvos com sucesso.', {
+        avatarUrl: updatedProfile?.foto || profile?.foto,
+        avatarName: updatedProfile?.nomeCompleto || updatedProfile?.nome || profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de professor',
+      });
     },
     onError: (err) => {
       console.error(err);
-      alert('Erro ao atualizar cadastro.');
+      toast.error('Cadastro não atualizado', err instanceof Error ? err.message : 'Revise os dados e tente novamente.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Meu perfil de professor',
+      });
     },
   });
 
@@ -628,6 +638,8 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
           </div>
         )}
       </div>
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

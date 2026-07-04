@@ -16,6 +16,7 @@ export interface ProfessorDisciplinaAssignment {
   disciplinaNome: string;
   cargaHoraria: number;
   totalAulas: number;
+  totalAtividades: number;
   horasLancadas: number;
   progressoPercent: number;
   proximaAulaLabel: string;
@@ -71,17 +72,32 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
     const today = new Date().toISOString().slice(0, 10);
 
     let aulas: any[] = [];
+    let atividades: any[] = [];
     const periodoStatusMap = new Map<string, string>();
     if (turmaIds.length > 0 && disciplinaIds.length > 0) {
-      const { data: aulasData, error: aulasError } = await supabase
-        .from('aulas_turma')
-        .select('id, turma_id, disciplina_id, titulo, carga_horaria, data_aula, created_at')
-        .in('turma_id', turmaIds)
-        .in('disciplina_id', disciplinaIds)
-        .order('data_aula', { ascending: true });
+      const [
+        { data: aulasData, error: aulasError },
+        { data: atividadesData, error: atividadesError },
+      ] = await Promise.all([
+        supabase
+          .from('aulas_turma')
+          .select('id, turma_id, disciplina_id, titulo, carga_horaria, data_aula, created_at')
+          .in('turma_id', turmaIds)
+          .in('disciplina_id', disciplinaIds)
+          .order('data_aula', { ascending: true }),
+        supabase
+          .from('atividades_extra_classe')
+          .select('id, turma_id, disciplina_id, titulo, carga_horaria_compensacao, prazo_entrega, created_at')
+          .in('turma_id', turmaIds)
+          .in('disciplina_id', disciplinaIds)
+          .neq('status', 'ARQUIVADA')
+          .order('prazo_entrega', { ascending: true }),
+      ]);
 
       if (aulasError) throw aulasError;
+      if (atividadesError) throw atividadesError;
       aulas = (aulasData || []).filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`));
+      atividades = (atividadesData || []).filter((atividade: any) => assignmentPairs.has(`${atividade.turma_id}:${atividade.disciplina_id}`));
     }
 
     if (periodoIds.length > 0) {
@@ -104,12 +120,20 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
       const aulasDaDisciplina = aulas.filter(
         (aula) => aula.turma_id === row.turma_id && aula.disciplina_id === row.disciplina_id,
       );
+      const atividadesDaDisciplina = atividades.filter(
+        (atividade) => atividade.turma_id === row.turma_id && atividade.disciplina_id === row.disciplina_id,
+      );
       const proximaAula = aulasDaDisciplina.find((aula) => !aula.data_aula || aula.data_aula >= today);
       const cargaHoraria = toNumber(row.carga_horaria ?? disciplina.carga_horaria, 0);
-      const horasLancadas = aulasDaDisciplina.reduce(
+      const horasAulas = aulasDaDisciplina.reduce(
         (total, aula) => total + toNumber(aula.carga_horaria, 0),
         0,
       );
+      const horasAtividades = atividadesDaDisciplina.reduce(
+        (total, atividade) => total + toNumber(atividade.carga_horaria_compensacao, 0),
+        0,
+      );
+      const horasLancadas = horasAulas + horasAtividades;
       const progressoPercent = cargaHoraria > 0
         ? Math.min(100, Math.round((horasLancadas / cargaHoraria) * 100))
         : 0;
@@ -169,6 +193,7 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         disciplinaNome,
         cargaHoraria,
         totalAulas: aulasDaDisciplina.length,
+        totalAtividades: atividadesDaDisciplina.length,
         horasLancadas,
         progressoPercent,
         proximaAulaLabel: formatDate(proximaAula?.data_aula),
@@ -202,6 +227,11 @@ export const useProfessorDisciplinasRealtime = (professorId: string) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'aulas_turma' },
+        invalidate,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividades_extra_classe' },
         invalidate,
       )
       .on(

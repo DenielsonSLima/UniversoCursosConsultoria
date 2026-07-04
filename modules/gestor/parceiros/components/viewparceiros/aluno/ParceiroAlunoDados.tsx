@@ -10,9 +10,11 @@ import { parceirosService } from '../../../parceiros.service';
 interface ParceiroAlunoDadosProps {
   aluno: any;
   onChange: (data: any) => void;
+  onPhotoUploaded?: (fotoUrl: string, aluno: any) => void;
+  onPhotoUploadError?: (message: string) => void;
 }
 
-const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange }) => {
+const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange, onPhotoUploaded, onPhotoUploadError }) => {
   const [formData, setFormData] = useState(aluno);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -29,10 +31,12 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
     setIsUploadingPhoto(true);
     try {
       const url = await parceirosService.uploadProfilePhoto(aluno.id, formData, file);
-      setFormData((prev: any) => ({ ...prev, foto: url }));
+      const nextData = { ...formData, foto: url };
+      setFormData(nextData);
       setPendingPhotoFile(null);
+      onPhotoUploaded?.(url, nextData);
     } catch (err: any) {
-      alert('Erro ao enviar foto: ' + (err.message || err));
+      onPhotoUploadError?.(err?.message || 'Erro ao enviar foto.');
     } finally {
       setIsUploadingPhoto(false);
     }

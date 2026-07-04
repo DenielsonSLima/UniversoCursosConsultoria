@@ -2,7 +2,7 @@
 // File: modules/gestor/parceiros/components/detalhes/aluno/ParceiroAlunoDetalhes.tsx
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, User, BookOpen, ClipboardList, FileText, DollarSign, KeyRound, FileBadge, ScrollText } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, ClipboardList, FileText, DollarSign, KeyRound, FileBadge, ScrollText, Syringe } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ParceiroAlunoDados from './ParceiroAlunoDados';
 import ParceiroAlunoCursos from './ParceiroAlunoCursos';
@@ -12,9 +12,11 @@ import ParceiroAlunoFinanceiro from './ParceiroAlunoFinanceiro';
 import ParceiroAcesso from '../shared/ParceiroAcesso';
 import FichaAlunoModal from './ficha/FichaAlunoModal';
 import ParceiroAlunoSecretaria from './ParceiroAlunoSecretaria';
+import ParceiroAlunoVacinas from './ParceiroAlunoVacinas';
 import { parceirosService } from '../../../parceiros.service';
 import { formatMatricula } from '../../../../../../lib/academicUtils';
 import { supabase } from '../../../../../../lib/supabase';
+import ToastNotification, { useToast } from '../../shared/ToastNotification';
 
 interface ParceiroAlunoDetalhesProps {
   alunoInicial: any;
@@ -24,7 +26,8 @@ interface ParceiroAlunoDetalhesProps {
 
 const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInicial, onBack, onRequestScrollTop }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'matriculas' | 'docs' | 'financeiro' | 'secretaria' | 'acesso'>('dados');
+  const { toasts, removeToast, toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'dados' | 'cursos' | 'matriculas' | 'docs' | 'vacinas' | 'financeiro' | 'secretaria' | 'acesso'>('dados');
   const [isFichaOpen, setIsFichaOpen] = useState(false);
 
   useEffect(() => {
@@ -59,10 +62,18 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
       queryClient.setQueryData(['parceiro', alunoData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
       queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
-      alert('Dados do aluno atualizados com sucesso!');
+      toast.success('Aluno atualizado', `${updated.nome || alunoData.nome} teve os dados salvos com sucesso.`, {
+        avatarUrl: updated.foto || alunoData.foto,
+        avatarName: updated.nome || alunoData.nome,
+        contextLabel: 'Cadastro do aluno',
+      });
     },
     onError: (err: any) => {
-      alert('Erro ao atualizar dados do aluno.');
+      toast.error('Aluno não atualizado', err?.message || 'Revise os dados e tente salvar novamente.', {
+        avatarUrl: alunoData.foto,
+        avatarName: alunoData.nome,
+        contextLabel: 'Cadastro do aluno',
+      });
       console.error(err);
     }
   });
@@ -71,11 +82,31 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     updateMutation.mutate(newData);
   };
 
+  const handlePhotoUploaded = (fotoUrl: string, nextData: any) => {
+    const updatedAluno = { ...alunoData, ...nextData, foto: fotoUrl };
+    queryClient.setQueryData(['parceiro', alunoData.id], updatedAluno);
+    queryClient.invalidateQueries({ queryKey: ['parceiros'] });
+    toast.success('Foto do aluno atualizada', `${updatedAluno.nome || 'Aluno'} agora tem uma foto de perfil no cadastro.`, {
+      avatarUrl: fotoUrl,
+      avatarName: updatedAluno.nome,
+      contextLabel: 'Perfil do aluno',
+    });
+  };
+
+  const handlePhotoUploadError = (message: string) => {
+    toast.error('Foto não enviada', message, {
+      avatarUrl: alunoData.foto,
+      avatarName: alunoData.nome,
+      contextLabel: 'Perfil do aluno',
+    });
+  };
+
   const tabs = [
     { id: 'dados', label: 'Dados do Aluno', icon: <User size={18} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={18} /> },
     { id: 'matriculas', label: 'Matrículas', icon: <ClipboardList size={18} /> },
     { id: 'docs', label: 'Documentos Checklist', icon: <FileText size={18} /> },
+    { id: 'vacinas', label: 'Vacinas', icon: <Syringe size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
     { id: 'secretaria', label: 'Secretaria', icon: <ScrollText size={18} /> },
     { id: 'acesso', label: 'Acesso', icon: <KeyRound size={18} /> },
@@ -145,6 +176,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             <ParceiroAlunoDados 
                 aluno={alunoData} 
                 onChange={handleDataChange} 
+                onPhotoUploaded={handlePhotoUploaded}
+                onPhotoUploadError={handlePhotoUploadError}
             />
         )}
         {activeTab === 'cursos' && (
@@ -154,6 +187,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
             <ParceiroAlunoMatriculas alunoId={alunoData.id} />
         )}
         {activeTab === 'docs' && <ParceiroAlunoDocumentos alunoId={alunoData.id} />}
+        {activeTab === 'vacinas' && <ParceiroAlunoVacinas alunoId={alunoData.id} />}
         {activeTab === 'financeiro' && <ParceiroAlunoFinanceiro alunoId={alunoData.id} />}
         {activeTab === 'secretaria' && <ParceiroAlunoSecretaria alunoId={alunoData.id} />}
         {activeTab === 'acesso' && (
@@ -171,6 +205,8 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
           onClose={() => setIsFichaOpen(false)}
         />
       )}
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
 
     </div>
   );

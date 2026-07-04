@@ -3,6 +3,11 @@ import { canCreateDetachedPaymentLink } from "../asaas/avulsa/payment-link.ts";
 import { createTecnicoInstallmentService } from "../asaas/tecnico/installments.ts";
 import { isTecnicoCycleLaunch } from "../asaas/tecnico/cycle.ts";
 import {
+  isTecnicoCourseModality,
+  resolveMatriculaCourseModality,
+  resolveReceivableCourseModality,
+} from "../asaas/core/modality.ts";
+import {
   assertRequiredCustomerBillingData,
   isValidCpf,
   resolveBillingContacts,
@@ -374,7 +379,8 @@ export const createAsaasBillingService = (
           origem_financeira,
           financeiro_herdado,
           gerar_cobrancas_futuras,
-          sincronizar_asaas_futuro
+          sincronizar_asaas_futuro,
+          cursos(id, modalidade)
         )
       `)
       .eq("id", receivable.matricula_id)
@@ -408,10 +414,32 @@ export const createAsaasBillingService = (
     return { allowed: true, reason: null as string | null };
   };
 
+  const syncFutureInstallmentsIndividually = async (
+    runtime: AsaasRuntime,
+    matriculaId: string,
+  ) => {
+    const { data, error } = await admin
+      .from("contas_receber")
+      .select("id")
+      .eq("matricula_id", matriculaId)
+      .in("status", ["PENDENTE", "VENCIDO"])
+      .is("asaas_payment_id", null)
+      .neq("tipo_lancamento", "MATRICULA")
+      .order("data_vencimento");
+    if (error) throw error;
+    for (const item of data || []) await syncReceivable(runtime, item.id, true);
+    return { success: true, skipped: false, count: data?.length || 0, legacyIndividual: true };
+  };
+
   const syncFutureInstallments = async (
     runtime: AsaasRuntime,
     matriculaId: string,
   ) => {
+    const modalidade = await resolveMatriculaCourseModality(admin, matriculaId);
+    if (!isTecnicoCourseModality(modalidade)) {
+      return syncFutureInstallmentsIndividually(runtime, matriculaId);
+    }
+
     const tecnicoInstallments = createTecnicoInstallmentService(
       admin,
       (path, init) => callAsaas(runtime, path, init),
@@ -426,17 +454,7 @@ export const createAsaasBillingService = (
       return tecnicoResult;
     }
 
-    const { data, error } = await admin
-      .from("contas_receber")
-      .select("id")
-      .eq("matricula_id", matriculaId)
-      .in("status", ["PENDENTE", "VENCIDO"])
-      .is("asaas_payment_id", null)
-      .neq("tipo_lancamento", "MATRICULA")
-      .order("data_vencimento");
-    if (error) throw error;
-    for (const item of data || []) await syncReceivable(runtime, item.id, true);
-    return { success: true, count: data?.length || 0, legacyIndividual: true };
+    return syncFutureInstallmentsIndividually(runtime, matriculaId);
   };
 
   const refreshReceivableStatus = async (
@@ -614,7 +632,10 @@ export const createAsaasBillingService = (
     }
 
     if (!skipTecnicoCycle && isTecnicoCycleLaunch(receivable)) {
-      await syncFutureInstallments(runtime, receivable.matricula_id);
+      const modalidade = await resolveReceivableCourseModality(admin, receivable);
+      if (isTecnicoCourseModality(modalidade)) {
+        await syncFutureInstallments(runtime, receivable.matricula_id);
+      }
       const { data: refreshedReceivable, error: refreshedError } = await admin
         .from("contas_receber")
         .select("*")

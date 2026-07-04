@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Clock, Save,
   BookOpen, Layers, Plus, Trash2, Loader2, Calendar,
-  Banknote, CreditCard, Percent, Receipt, WalletCards
+  Banknote, CreditCard, Percent, Receipt, WalletCards, Syringe
 } from 'lucide-react';
 import { Curso, CursoFinanceiroConfig, Modulo, Disciplina } from '../cadastros.types';
 import { cadastrosService, normalizeCursoFinanceiroConfig } from '../cadastros.service';
 import { supabase } from '../../../../lib/supabase';
+import { REQUIRED_HEALTH_VACCINES, normalizeCursoVacinasConfig } from '../../../shared/vacinas/vacinas.config';
 
 interface CursoGradeCurricularDetailsProps {
   curso: Curso;
@@ -30,7 +31,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [isSaving, setIsSaving] = useState(false);
 
   // Abas e KPIs
-  const [activeTab, setActiveTab] = useState<'grade' | 'turmas' | 'financeiro' | 'publico'>('grade');
+  const [activeTab, setActiveTab] = useState<'grade' | 'turmas' | 'financeiro' | 'vacinas' | 'publico'>('grade');
   const [kpis, setKpis] = useState<{
     carga_horaria_total: number;
     carga_horaria_cadastrada: number;
@@ -56,6 +57,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
   const [valorBaseInput, setValorBaseInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade).valorBase));
   const [descontoInput, setDescontoInput] = useState(() => moneyInputValue(normalizeCursoFinanceiroConfig(curso.financeiro_config, curso.modalidade).descontoPontualidade));
   const [isSavingFinanceiro, setIsSavingFinanceiro] = useState(false);
+  const [vacinasConfig, setVacinasConfig] = useState(() => normalizeCursoVacinasConfig(curso.vacinas_config, curso.nome));
+  const [isSavingVacinas, setIsSavingVacinas] = useState(false);
 
   // Estados para inputs de novos itens
   const [newModuloName, setNewModuloName] = useState('');
@@ -85,7 +88,8 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     setFinanceiroConfig(nextFinanceiroConfig);
     setValorBaseInput(moneyInputValue(nextFinanceiroConfig.valorBase));
     setDescontoInput(moneyInputValue(nextFinanceiroConfig.descontoPontualidade));
-  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2, curso.valor, curso.financeiro_config]);
+    setVacinasConfig(normalizeCursoVacinasConfig(curso.vacinas_config, curso.nome));
+  }, [curso.id, curso.publicar_site, curso.imagem_url, curso.imagem_detalhe_1, curso.imagem_detalhe_2, curso.valor, curso.financeiro_config, curso.vacinas_config, curso.nome]);
 
   const loadGrade = async () => {
     setLoading(true);
@@ -499,6 +503,36 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     }
   };
 
+  const handleUseHealthVaccinePreset = () => {
+    setVacinasConfig(REQUIRED_HEALTH_VACCINES);
+  };
+
+  const handleToggleVacinaObrigatoria = (codigo: string) => {
+    setVacinasConfig((prev) => ({
+      ...prev,
+      vacinas: prev.vacinas.map((vacina) => (
+        vacina.codigo === codigo ? { ...vacina, obrigatoria: !vacina.obrigatoria } : vacina
+      )),
+    }));
+  };
+
+  const handleSaveVacinasCurso = async () => {
+    setIsSavingVacinas(true);
+    try {
+      await cadastrosService.updateCurso({
+        ...curso,
+        vacinas_config: vacinasConfig,
+      });
+      onUpdate();
+      alert('Configuração de vacinas salva com sucesso!');
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar configuração de vacinas.');
+    } finally {
+      setIsSavingVacinas(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full animate-fadeIn">
       {/* Header Fixo */}
@@ -527,6 +561,17 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
             className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-70"
           >
             <Save size={16} /> {isSaving ? 'Salvando...' : config.labelSave}
+          </button>
+        )}
+
+        {activeTab === 'vacinas' && (
+          <button
+            onClick={handleSaveVacinasCurso}
+            disabled={isSavingVacinas}
+            className="flex items-center gap-2 bg-[#001a33] text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 disabled:opacity-70"
+          >
+            {isSavingVacinas ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            {isSavingVacinas ? 'Salvando...' : 'Salvar vacinas'}
           </button>
         )}
       </div>
@@ -591,7 +636,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
       ) : null}
 
       {/* Tab Switcher */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-3xl border border-slate-200">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-8 bg-slate-100 p-1 rounded-2xl max-w-4xl border border-slate-200">
         <button
           onClick={() => setActiveTab('grade')}
           className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
@@ -621,6 +666,16 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
           }`}
         >
           Financeiro
+        </button>
+        <button
+          onClick={() => setActiveTab('vacinas')}
+          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+            activeTab === 'vacinas'
+              ? `bg-white text-${config.themeColor}-600 shadow-sm`
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Vacinas
         </button>
         <button
           onClick={() => setActiveTab('publico')}
@@ -891,6 +946,114 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
                 <p>Em estorno de baixa manual, o sistema deve reabrir a conta local e recriar/vincular a cobrança no Asaas quando a cobrança anterior tiver sido cancelada.</p>
               </div>
             </div>
+          </div>
+        </div>
+      ) : activeTab === 'vacinas' ? (
+        <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-8 pb-20 animate-fadeIn">
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+            <div className="flex items-start gap-4 border-b border-slate-100 pb-5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <Syringe size={22} />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600">
+                  Estágio técnico
+                </span>
+                <h4 className="mt-1 text-xl font-black text-[#001a33]">Carteirinha de vacinação</h4>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                  Defina se este curso exige vacinas aprovadas antes da liberação do estágio.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div>
+                <p className="text-sm font-black text-[#001a33]">Exigir carteirinha para estágio</p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                  Quando ativo, o aluno precisará enviar as doses e a secretaria deverá aprovar antes do estágio.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVacinasConfig((prev) => ({ ...prev, exigirCarteiraEstagio: !prev.exigirCarteiraEstagio }))}
+                className={`h-8 w-14 shrink-0 rounded-full p-1 transition-colors ${vacinasConfig.exigirCarteiraEstagio ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                title={vacinasConfig.exigirCarteiraEstagio ? 'Desativar exigência' : 'Ativar exigência'}
+              >
+                <span className={`block h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${vacinasConfig.exigirCarteiraEstagio ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            <label className="block space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Observação interna</span>
+              <textarea
+                value={vacinasConfig.observacao || ''}
+                onChange={(event) => setVacinasConfig((prev) => ({ ...prev, observacao: event.target.value }))}
+                rows={4}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white"
+                placeholder="Ex: obrigatório para estágio supervisionado em unidade de saúde."
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={handleUseHealthVaccinePreset}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 transition hover:border-emerald-300"
+            >
+              <Syringe size={14} />
+              Usar padrão Enfermagem/Radiologia
+            </button>
+          </div>
+
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-5">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                  Vacinas obrigatórias
+                </span>
+                <h4 className="mt-1 text-xl font-black text-[#001a33]">Doses exigidas</h4>
+              </div>
+              <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {vacinasConfig.vacinas.filter((vacina) => vacina.obrigatoria).length} ativa(s)
+              </span>
+            </div>
+
+            {vacinasConfig.vacinas.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                <p className="text-sm font-black text-[#001a33]">Nenhuma vacina configurada</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Use o padrão da área da saúde para iniciar rapidamente.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {vacinasConfig.vacinas.map((vacina) => (
+                  <div
+                    key={vacina.codigo}
+                    className={`rounded-2xl border p-5 transition-colors ${
+                      vacina.obrigatoria ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-base font-black text-[#001a33]">{vacina.nome}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-500">
+                          {vacina.doses.map((dose) => dose.label).join(' • ')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleVacinaObrigatoria(vacina.codigo)}
+                        className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest transition ${
+                          vacina.obrigatoria
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-slate-200 bg-white text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {vacina.obrigatoria ? 'Obrigatória' : 'Opcional'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : activeTab === 'publico' ? (

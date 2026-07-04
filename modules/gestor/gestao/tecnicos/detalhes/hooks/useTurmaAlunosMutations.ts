@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query';
 import { AcademicMovementType, academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
-import { turmaAsaasService } from '../turma-asaas.service';
+import { turmaAsaasService } from '../asaas';
 
 type MutationSuccess<TData, TVariables> = NonNullable<UseMutationOptions<TData, Error, TVariables>['onSuccess']>;
 type MutationError<TVariables> = NonNullable<UseMutationOptions<unknown, Error, TVariables>['onError']>;

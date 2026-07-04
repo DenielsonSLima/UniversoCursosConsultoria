@@ -91,6 +91,49 @@ interface EmissionLog {
   };
 }
 
+interface AcademicComponentRow {
+  moduleName: string;
+  moduleOrder: number;
+  discipline: string;
+  cargaHoraria: number;
+  nota: number | null;
+  frequencia: number | null;
+  situacao: string;
+}
+
+interface AcademicPreviewData {
+  componentesTable: string;
+  historicoTable: string;
+  cargaHorariaCumprida: number;
+  cargaHorariaTotal: number;
+  periodoCurso: string;
+  observacoesHistorico: string;
+  situacaoAcademica: string;
+}
+
+const parseDateOrDash = (value?: string | null): string => {
+  if (!value) return '—';
+  const valueParts = value.split('T')[0]?.split('-') || [];
+  return valueParts.length === 3 ? `${valueParts[2]}/${valueParts[1]}/${valueParts[0]}` : value;
+};
+
+const mapAcademicStatus = (status?: string | null): string => {
+  const normalized = String(status || '').trim().toUpperCase();
+  if (!normalized) return 'Não informada';
+  if (normalized.includes('CONCLU')) return 'Concluído(a)';
+  if (normalized.includes('TRANC')) return 'Trancado(a)';
+  if (normalized.includes('SUSP')) return 'Suspenso(a)';
+  if (normalized.includes('INATIV')) return 'Inativo(a)';
+  if (normalized.includes('ATIV')) return 'Ativo(a)';
+  if (normalized.includes('EXCL')) return 'Cancelado(a)';
+  return status || 'Em análise';
+};
+
+const toNumber = (value: any): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 // Available tabs mapping db value -> UI label
 const DOCUMENT_TABS = [
   { key: 'todos', label: 'Todos', icon: History, color: 'blue' },
@@ -147,6 +190,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
   const [certificatePreview, setCertificatePreview] = useState<CertificadoAcademico | null>(null);
   const [watermark, setWatermark] = useState<any>(null);
   const [poloInfo, setPoloInfo] = useState<any>(null);
+  const [academicPreviewData, setAcademicPreviewData] = useState<AcademicPreviewData | null>(null);
   const printContentRef = useRef<HTMLDivElement>(null);
 
   // Load classes (turmas) for active polo
@@ -294,6 +338,263 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     return (byEnrollment.data || null) as unknown as CertificadoAcademico | null;
   };
 
+  const buildAcademicTableByDocument = (rows: AcademicComponentRow[]) => {
+    if (!rows.length) {
+      return '<p style="margin:8px 0;font-size:10px;color:#64748b;">Não há componentes curriculares disponíveis no momento.</p>';
+    }
+
+    const renderFrequency = (value: number | null) =>
+      value === null ? '—' : `${value}%`;
+
+    const renderGrade = (value: number | null) =>
+      value === null ? '—' : value.toFixed(1);
+
+    const sortedRows = [...rows].sort((a, b) => {
+      if (a.moduleOrder !== b.moduleOrder) return a.moduleOrder - b.moduleOrder;
+      return (a.discipline || '').localeCompare(b.discipline || '');
+    });
+
+    const rowsByModule = new Map<string, AcademicComponentRow[]>();
+    sortedRows.forEach((row) => {
+      if (!rowsByModule.has(row.moduleName)) rowsByModule.set(row.moduleName, []);
+      rowsByModule.get(row.moduleName)!.push(row);
+    });
+
+    const moduleBlocks = Array.from(rowsByModule.entries())
+      .map(([moduleName, moduleRows]) => {
+        const rowLines = moduleRows.map((row) => `
+          <tr>
+            <td style="border:1px solid #cbd5e1;padding:4px 6px;">${row.discipline}</td>
+            <td style="border:1px solid #cbd5e1;padding:4px 6px;text-align:center">${row.cargaHoraria}h</td>
+            <td style="border:1px solid #cbd5e1;padding:4px 6px;text-align:center">${renderGrade(row.nota)}</td>
+            <td style="border:1px solid #cbd5e1;padding:4px 6px;text-align:center">${renderFrequency(row.frequencia)}</td>
+            <td style="border:1px solid #cbd5e1;padding:4px 6px;text-align:center">${row.situacao}</td>
+          </tr>`).join('');
+
+        return `
+          <tr>
+            <td colspan="5" style="background:#f1f5f9;border:1px solid #cbd5e1;padding:5px 8px;font-weight:700">
+              ${moduleName}
+            </td>
+          </tr>
+          ${rowLines}
+        `;
+      })
+      .join('');
+
+    return `
+      <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:6px">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="border:1px solid #cbd5e1;padding:5px 6px;text-align:left">Componente Curricular</th>
+            <th style="border:1px solid #cbd5e1;padding:5px 6px;text-align:center">CH</th>
+            <th style="border:1px solid #cbd5e1;padding:5px 6px;text-align:center">Nota</th>
+            <th style="border:1px solid #cbd5e1;padding:5px 6px;text-align:center">Frequência</th>
+            <th style="border:1px solid #cbd5e1;padding:5px 6px;text-align:center">Situação</th>
+          </tr>
+        </thead>
+        <tbody>${moduleBlocks}</tbody>
+      </table>
+    `;
+  };
+
+  const buildHistoricoTable = (rows: AcademicComponentRow[]) => {
+    if (!rows.length) {
+      return '<p style="margin:8px 0;font-size:10px;color:#64748b;">Não há histórico curricular disponível no momento.</p>';
+    }
+
+    const renderFrequency = (value: number | null) =>
+      value === null ? '—' : `${value}%`;
+
+    const renderGrade = (value: number | null) =>
+      value === null ? '—' : value.toFixed(1);
+
+    const sortedRows = [...rows].sort((a, b) => {
+      if (a.moduleOrder !== b.moduleOrder) return a.moduleOrder - b.moduleOrder;
+      return (a.discipline || '').localeCompare(b.discipline || '');
+    });
+
+    return `
+      <table style="width:100%;border-collapse:collapse;font-size:10px;margin-top:8px">
+        <thead>
+          <tr style="background:#f1f5f9">
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:left">Módulo</th>
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:left">Componente</th>
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:center">CH</th>
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:center">Nota</th>
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:center">Frequência</th>
+            <th style="border:1px solid #cbd5e1;padding:5px;text-align:center">Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedRows.map((row) => `
+            <tr>
+              <td style="border:1px solid #cbd5e1;padding:5px">${row.moduleName}</td>
+              <td style="border:1px solid #cbd5e1;padding:5px">${row.discipline}</td>
+              <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.cargaHoraria}h</td>
+              <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${renderGrade(row.nota)}</td>
+              <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${renderFrequency(row.frequencia)}</td>
+              <td style="border:1px solid #cbd5e1;padding:5px;text-align:center">${row.situacao}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
+  const loadAcademicData = async (emission: EmissionLog): Promise<AcademicPreviewData | null> => {
+    const alunoId = emission.aluno_id || emission.aluno?.id;
+    if (!alunoId || !emission.matricula_id) return null;
+
+    const { data: enrollment, error: enrollmentError } = await supabase
+      .from('matriculas')
+      .select(`
+        id,
+        status,
+        data_matricula,
+        turma_id,
+        turmas!inner(
+          nome,
+          data_inicio,
+          data_previsao_termino,
+          cursos!inner(nome, carga_horaria)
+        )
+      `)
+      .eq('id', emission.matricula_id)
+      .maybeSingle();
+
+    if (enrollmentError) throw enrollmentError;
+    if (!enrollment || !enrollment.turma_id) return null;
+
+    const [disciplinasData, notasData, aulasData, frequenciasData] = await Promise.all([
+      supabase
+        .from('turmas_disciplinas')
+        .select('disciplina_id, disciplinas!inner(id, nome, carga_horaria, created_at, modulos!inner(nome, created_at))')
+        .eq('turma_id', enrollment.turma_id),
+      supabase
+        .from('diario_notas')
+        .select('disciplina_id, nota_p, nota_ti, nota_tg, nota_s, nota_cq, nota_o, nota_rec')
+        .eq('turma_id', enrollment.turma_id)
+        .eq('aluno_id', alunoId),
+      supabase
+        .from('aulas_turma')
+        .select('disciplina_id')
+        .eq('turma_id', enrollment.turma_id),
+      supabase
+        .from('diario_frequencia')
+        .select('disciplina_id, status')
+        .eq('turma_id', enrollment.turma_id)
+        .eq('aluno_id', alunoId),
+    ]);
+
+    if (disciplinasData.error) throw disciplinasData.error;
+    if (notasData.error) throw notasData.error;
+    if (aulasData.error) throw aulasData.error;
+    if (frequenciasData.error) throw frequenciasData.error;
+
+    const disciplinaNotas = new Map<string, any>((notasData.data || []).map((item: any) => [item.disciplina_id, item]));
+    const aulasCount = new Map<string, number>();
+    (aulasData.data || []).forEach((item: any) => {
+      const disciplinaId = String(item.disciplina_id || '');
+      aulasCount.set(disciplinaId, (aulasCount.get(disciplinaId) || 0) + 1);
+    });
+
+    const frequenciasMap = new Map<string, number>();
+    const faltasMap = new Map<string, number>();
+    (frequenciasData.data || []).forEach((item: any) => {
+      const disciplinaId = String(item.disciplina_id || '');
+      frequenciasMap.set(disciplinaId, (frequenciasMap.get(disciplinaId) || 0) + 1);
+      if (String(item.status).toUpperCase() === 'F') {
+        faltasMap.set(disciplinaId, (faltasMap.get(disciplinaId) || 0) + 1);
+      }
+    });
+
+    const rows: AcademicComponentRow[] = (disciplinasData.data || []).map((disciplinaItem: any) => {
+      const disciplina = disciplinaItem.disciplinas || {};
+      const modulo = disciplina.modulos || {};
+      const moduleName = String(modulo.nome || 'Módulo');
+      const moduleOrder = modulo.created_at ? new Date(modulo.created_at).getTime() : 0;
+      const disciplinaId = String(disciplinaItem.disciplina_id || '');
+      const gradeItem = disciplinaNotas.get(disciplinaId);
+
+      const totalAulas = aulasCount.get(disciplinaId) || 0;
+      const frequencias = frequenciasMap.get(disciplinaId) || 0;
+      const faltas = faltasMap.get(disciplinaId) || 0;
+      const frequencia = totalAulas > 0 && frequencias === totalAulas
+        ? Math.round(((totalAulas - faltas) / totalAulas) * 100)
+        : null;
+
+      const partial = gradeItem
+        ? Math.min(
+            10,
+            (
+              (toNumber(gradeItem.nota_p) +
+              toNumber(gradeItem.nota_ti) +
+              toNumber(gradeItem.nota_tg) +
+              toNumber(gradeItem.nota_s)) /
+              4 +
+              toNumber(gradeItem.nota_cq) +
+              toNumber(gradeItem.nota_o)
+            )
+          )
+        : null;
+      const finalGrade = gradeItem && partial !== null
+        ? (gradeItem.nota_rec === null || gradeItem.nota_rec === undefined
+          ? partial
+          : Math.max(partial, toNumber(gradeItem.nota_rec)))
+        : null;
+
+      const gradeValue = finalGrade === null ? null : Number(finalGrade.toFixed(1));
+      const situacao = gradeValue === null
+        ? 'Sem lançamento'
+        : frequencia !== null && frequencia < 75
+          ? 'Reprovado por frequência'
+          : gradeValue >= 6
+            ? 'Aprovado'
+            : gradeItem && gradeItem.nota_rec == null
+              ? 'Recuperação'
+              : 'Reprovado';
+
+      return {
+        moduleName,
+        moduleOrder,
+        discipline: String(disciplina.nome || 'Componente'),
+        cargaHoraria: Math.round(toNumber(disciplina.carga_horaria)),
+        nota: gradeValue,
+        frequencia,
+        situacao,
+      };
+    });
+
+    const rowsSorted = rows.sort((a, b) => {
+      if (a.moduleOrder !== b.moduleOrder) return a.moduleOrder - b.moduleOrder;
+      return (a.discipline || '').localeCompare(b.discipline || '');
+    });
+
+    const totalCargaCurso = Number(enrollment.turmas?.cursos?.carga_horaria || 0);
+    const cargaHorariaTotal = totalCargaCurso || rowsSorted.reduce((sum, row) => sum + row.cargaHoraria, 0);
+    const cargaHorariaCumprida = rowsSorted.reduce((sum, row) => {
+      if (row.nota === null && row.frequencia === null) return sum;
+      return sum + row.cargaHoraria;
+    }, 0);
+
+    const inicio = parseDateOrDash(enrollment.data_matricula || enrollment.turmas?.data_inicio);
+    const fim = parseDateOrDash(enrollment.turmas?.data_previsao_termino);
+    const periodo = fim === '—' ? inicio : `${inicio} até ${fim}`;
+
+    return {
+      componentesTable: buildAcademicTableByDocument(rowsSorted),
+      historicoTable: buildHistoricoTable(rowsSorted),
+      cargaHorariaCumprida,
+      cargaHorariaTotal,
+      periodoCurso: periodo,
+      observacoesHistorico: rowsSorted.length
+        ? 'Histórico emitido conforme os registros de notas e frequência no momento da emissão.'
+        : 'Ainda não há histórico consolidado no sistema para esta matrícula.',
+      situacaoAcademica: mapAcademicStatus(enrollment.status),
+    };
+  };
+
   // Re-issue Second Copy (2ª Via) handler
   const handleOpenPreview = async (emission: EmissionLog) => {
     setSelectedEmission(emission);
@@ -301,6 +602,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     setIsLoadingPreview(true);
     setTemplateConfig(null);
     setCertificatePreview(null);
+    setAcademicPreviewData(null);
     
     try {
       const poloId = emission.polo_id || context.poloId;
@@ -309,6 +611,15 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
         marcaDaguaService.getCompaniesWithWatermark(),
         academicosService.getConfigs(),
       ]);
+      let academicData: AcademicPreviewData | null = null;
+      if (emission.documento === 'historico_escolar' || emission.documento === 'transferencia') {
+        try {
+          academicData = await loadAcademicData(emission);
+        } catch (error) {
+          console.error('Não foi possível montar o histórico acadêmico no preview.', error);
+        }
+      }
+      setAcademicPreviewData(academicData);
 
       let template: any = null;
       if (emission.documento === 'carteirinha') {
@@ -529,6 +840,13 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     };
 
     const dados = data.dados_emissao || {};
+    const academicData = data.documento === 'transferencia' || data.documento === 'historico_escolar'
+      ? academicPreviewData
+      : null;
+    const situacaoAcademica = (academicData?.situacaoAcademica
+      || mapAcademicStatus(dados.enrollmentStatus)
+      || mapAcademicStatus(data.matricula?.status)
+      || 'Não informada').toUpperCase();
 
     parsed = parsed.replace(/{{ALUNO_NOME}}/g, (dados.studentName || data.aluno?.nome || '').toUpperCase());
     parsed = parsed.replace(/{{ALUNO_CPF}}/g, dados.studentCpf || data.aluno?.cpf_cnpj || 'Não informado');
@@ -543,6 +861,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     parsed = parsed.replace(/{{CIDADE_POLO}}/g, poloInfo?.cidade || 'Aracaju');
     parsed = parsed.replace(/{{DATA_ATUAL}}/g, dataExtenso);
     parsed = parsed.replace(/{{HORA_ATUAL}}/g, horaAtual);
+    parsed = parsed.replace(/{{SITUACAO_ACADEMICA}}/g, situacaoAcademica);
     parsed = parsed.replace(/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${horaAtual}`);
     parsed = parsed.replace(/{{VALIDADE_DIAS}}/g, String(validityDays));
     parsed = parsed.replace(/{{VALIDADE_DATA}}/g, validadeFormatada);
@@ -558,6 +877,16 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     parsed = parsed.replace(/{{ensino_medio_estabelecimento}}/g, dados.highSchoolInstitution || 'Não informado');
     parsed = parsed.replace(/{{ensino_medio_localidade_uf}}/g, dados.highSchoolLocation || 'Não informado');
     parsed = parsed.replace(/{{ensino_medio_ano_conclusao}}/g, dados.highSchoolCompletionYear || 'Não informado');
+    parsed = parsed.replace(/{{TABELA_COMPONENTES_CURRICULARES}}/g, academicData?.componentesTable || '');
+    const cargaCumprida = academicData?.cargaHorariaCumprida;
+    const cargaTotal = academicData?.cargaHorariaTotal;
+
+    parsed = parsed.replace(/{{TABELA_HISTORICO_ESCOLAR}}/g, academicData?.historicoTable || '');
+    parsed = parsed.replace(/{{CARGA_HORARIA_CUMPRIDA}}/g, String(cargaCumprida == null ? toNumber(dados.courseHours) : cargaCumprida));
+    parsed = parsed.replace(/{{CARGA_HORARIA_TOTAL}}/g, String(cargaTotal == null ? toNumber(dados.courseHours) : cargaTotal));
+    parsed = parsed.replace(/{{PERIODO_CURSO}}/g, academicData?.periodoCurso || dados.coursePeriod || '—');
+    parsed = parsed.replace(/{{OBSERVACOES_HISTORICO}}/g, academicData?.observacoesHistorico || '—');
+    parsed = parsed.replace(/{{INSTITUICAO_DESTINO}}/g, dados.destinationInstitution || 'A instituição de destino');
 
     return parsed;
   };
@@ -865,7 +1194,13 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                   Imprimir (Registrar 2ª Via)
                 </button>
                 <button
-                  onClick={() => { setIsPreviewOpen(false); setSelectedEmission(null); setTemplateConfig(null); setCertificatePreview(null); }}
+                  onClick={() => {
+                    setIsPreviewOpen(false);
+                    setSelectedEmission(null);
+                    setTemplateConfig(null);
+                    setCertificatePreview(null);
+                    setAcademicPreviewData(null);
+                  }}
                   className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 rounded-xl transition-colors shadow-sm"
                 >
                   <X size={16} />

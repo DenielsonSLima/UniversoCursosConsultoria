@@ -20,6 +20,7 @@ import {
   useProfessorDisciplinasRealtime,
 } from '../hooks/useProfessorDisciplinas';
 import TurmaEstagio from '../../gestor/gestao/tecnicos/detalhes/components/TurmaEstagio';
+import AtividadesExtraClasse from '../../gestor/gestao/tecnicos/detalhes/components/AtividadesExtraClasse';
 
 interface TurmasPageProps {
   professorId: string;
@@ -27,7 +28,7 @@ interface TurmasPageProps {
 
 const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
   const [selectedAssignment, setSelectedAssignment] = useState<ProfessorDisciplinaAssignment | null>(null);
-  const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio'>('diario');
+  const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio' | 'atividades'>('diario');
   const { data: assignments = [], isLoading: loadingAssignments, isError } = useProfessorDisciplinas(professorId);
   useProfessorDisciplinasRealtime(professorId);
 
@@ -107,7 +108,10 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                     <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-xs font-medium text-slate-500">
                       <div className="flex items-center gap-2">
                         <NotebookTabs size={14} className="text-slate-400" />
-                        <span>{assignment.totalAulas} aulas</span>
+                        <span>
+                          {assignment.totalAulas} aulas
+                          {assignment.totalAtividades > 0 ? ` + ${assignment.totalAtividades} extra` : ''}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-slate-400" />
@@ -219,25 +223,36 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
               </div>
               <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-800">
                 <AlertTriangle size={16} className="mb-2" />
-                <p className="font-black uppercase tracking-wider">Estágio</p>
-                <p className="mt-1 text-[11px] font-medium">Fichas/checklists seguem como fluxo específico, porque envolvem avaliação prática.</p>
+                <p className="font-black uppercase tracking-wider">Extra-classe</p>
+                <p className="mt-1 text-[11px] font-medium">Publique atividades para complementar a carga horária da disciplina.</p>
               </div>
             </div>
           </div>
 
-          {selectedAssignment.isEstagio && (
-            <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setActiveDetailTab('diario')}
-                className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                  activeDetailTab === 'diario'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-50 text-slate-500 hover:bg-purple-50 hover:text-purple-700'
-                }`}
-              >
-                Diario, presenca e notas
-              </button>
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveDetailTab('diario')}
+              className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                activeDetailTab === 'diario'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-slate-50 text-slate-500 hover:bg-purple-50 hover:text-purple-700'
+              }`}
+            >
+              Diario, presenca e notas
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveDetailTab('atividades')}
+              className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                activeDetailTab === 'atividades'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+              }`}
+            >
+              Atividades extra-classe
+            </button>
+            {selectedAssignment.isEstagio && (
               <button
                 type="button"
                 onClick={() => setActiveDetailTab('estagio')}
@@ -249,10 +264,20 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
               >
                 Ficha de estagio
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {selectedAssignment.isEstagio && activeDetailTab === 'estagio' ? (
+          {activeDetailTab === 'atividades' ? (
+            <AtividadesExtraClasse
+              turmaId={selectedAssignment.turmaId}
+              cursoId={selectedAssignment.cursoId}
+              disciplinaIdRestrita={selectedAssignment.disciplinaId}
+              professorId={professorId}
+              modo="PROFESSOR"
+              readOnly={selectedAssignment.disciplinaForDiario?.periodoStatus === 'FECHADO'}
+              readOnlyMessage="Período fechado. As atividades ficam disponíveis apenas para consulta."
+            />
+          ) : selectedAssignment.isEstagio && activeDetailTab === 'estagio' ? (
             <TurmaEstagio
               turma={selectedAssignment.turmaForDiario}
               disciplinaIdRestrita={selectedAssignment.disciplinaId}
