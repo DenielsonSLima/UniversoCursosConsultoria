@@ -83,7 +83,7 @@ const getVimeoEmbedUrl = (value?: string) => {
     const parsed = new URL(videoUrl);
     if (!parsed.hostname.includes('vimeo.com')) return '';
     const videoId = parsed.pathname.split('/').filter(Boolean)[0];
-    return videoId ? `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0&badge=0&autopause=0` : '';
+    return videoId ? `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0&badge=0&autopause=0&player_id=0&app_id=58479` : '';
   } catch {
     return '';
   }
@@ -600,12 +600,17 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     setIsSaving(true);
 
     const normalizedVideoUrl = normalizeVimeoVideoUrl(videoPrincipalUrl);
-    const conteudosSemVideo = conteudos.map((item: any) => {
-      const { videoUrl: _videoUrl, ...conteudo } = item;
+    const conteudosSemVideo = conteudos.map((item: any, index) => {
+      const conteudo = { ...item };
+      delete conteudo.videoUrl;
       const tipo = conteudo.tipo === 'video' || conteudo.tipo === 'ambos'
         ? (conteudo.apostilaUrl ? 'material' : 'pagina')
         : conteudo.tipo;
-      return { ...conteudo, tipo };
+      return {
+        ...conteudo,
+        tipo,
+        ...(index === 0 && normalizedVideoUrl ? { videoUrl: normalizedVideoUrl } : {})
+      };
     });
 
     // Estrutura o objeto JSONB EAD Config
@@ -710,9 +715,10 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     { num: 1, name: 'Informações Básicas', icon: <MonitorPlay size={18} /> },
     { num: 2, name: 'Financeiro', icon: <CreditCard size={18} /> },
     { num: 3, name: 'Cronograma', icon: <Clock size={18} /> },
-    { num: 4, name: 'Vídeo e Aulas', icon: <BookOpen size={18} /> },
-    { num: 5, name: 'Provas & Atividades', icon: <HelpCircle size={18} /> },
-    { num: 6, name: 'Certificado EAD', icon: <Award size={18} /> }
+    { num: 4, name: 'Vídeo do Curso', icon: <Play size={18} /> },
+    { num: 5, name: 'Aulas e Conteúdo', icon: <BookOpen size={18} /> },
+    { num: 6, name: 'Provas & Atividades', icon: <HelpCircle size={18} /> },
+    { num: 7, name: 'Certificado EAD', icon: <Award size={18} /> }
   ];
 
   return (
@@ -1380,14 +1386,14 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
             </div>
           )}
 
-          {/* STEP 4: AULAS E CONTEÚDO */}
+          {/* STEP 4: VÍDEO DO CURSO */}
           {currentStep === 4 && (
             <div className="space-y-6 animate-fadeIn">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><BookOpen size={20} /></span>
+                <span className="p-2.5 bg-red-50 text-red-600 rounded-xl"><Play size={20} /></span>
                 <div>
-                  <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Vídeo principal, aulas e páginas</h4>
-                  <p className="text-slate-400 text-xs font-medium mt-0.5">Cole um único Vimeo para a aba Vídeo do aluno e cadastre as páginas do curso separadamente.</p>
+                  <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Vídeo principal do curso</h4>
+                  <p className="text-slate-400 text-xs font-medium mt-0.5">Cole o Vimeo que aparece na aba Vídeo do aluno, separado das aulas e atividades.</p>
                 </div>
               </div>
 
@@ -1456,6 +1462,19 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* STEP 5: AULAS E CONTEÚDO */}
+          {currentStep === 5 && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><BookOpen size={20} /></span>
+                <div>
+                  <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Aulas, páginas e materiais</h4>
+                  <p className="text-slate-400 text-xs font-medium mt-0.5">Cadastre as etapas que o aluno lê no portal; o vídeo do curso fica na etapa anterior.</p>
+                </div>
+              </div>
 
               {/* Form Cadastro */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
@@ -1463,7 +1482,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Editando aula cadastrada</p>
-                      <p className="text-xs font-semibold text-slate-600">Altere o texto, vídeo, objetivos ou duração e salve a etapa.</p>
+                      <p className="text-xs font-semibold text-slate-600">Altere o texto, objetivos, material ou duração e salve a etapa.</p>
                     </div>
                     <button
                       onClick={resetConteudoForm}
@@ -1619,8 +1638,8 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
             </div>
           )}
 
-          {/* STEP 5: PROVAS / ATIVIDADES */}
-          {currentStep === 5 && (
+          {/* STEP 6: PROVAS / ATIVIDADES */}
+          {currentStep === 6 && (
             <div className="space-y-6 animate-fadeIn">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><HelpCircle size={20} /></span>
@@ -1959,8 +1978,8 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
             </div>
           )}
 
-          {/* STEP 6: CERTIFICAÇÃO */}
-            {currentStep === 6 && (
+          {/* STEP 7: CERTIFICAÇÃO */}
+            {currentStep === 7 && (
             <div className="space-y-6 animate-fadeIn">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><Award size={20} /></span>
@@ -2116,9 +2135,9 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
             <ChevronLeft size={16} /> Voltar
           </button>
           
-          {currentStep < 6 ? (
+          {currentStep < 7 ? (
             <button
-              onClick={() => setCurrentStep(prev => Math.min(6, prev + 1))}
+              onClick={() => setCurrentStep(prev => Math.min(7, prev + 1))}
               className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase transition-colors shadow-md shadow-purple-600/15"
             >
               Avançar <ChevronRight size={16} />

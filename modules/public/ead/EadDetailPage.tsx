@@ -219,6 +219,10 @@ const EadDetailPage: React.FC = () => {
   const atividades = curso.ead_config?.atividades || [];
   const pagina = curso.ead_config?.pagina;
   const regras = curso.ead_config?.regras;
+  const hasMainVideo = Boolean(
+    String(curso.ead_config?.videoUrl || curso.ead_config?.videoPrincipalUrl || '').trim()
+    || conteudos.some((item: any) => String(item?.videoUrl || '').trim())
+  );
   const eadCarga = curso.carga_horaria || 80;
   const detailPath = eadConfigPagePath || `/ead/${curso.id}`;
 
@@ -425,7 +429,7 @@ const EadDetailPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex gap-2 shrink-0">
-                            {item.videoUrl && <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">Vídeo</span>}
+                            {idx === 0 && hasMainVideo && <span className="text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">Vídeo principal</span>}
                             {item.textoHtml && <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg">Página</span>}
                             <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg">{formatDuration(item.duracaoMinutos || 0)}</span>
                           </div>

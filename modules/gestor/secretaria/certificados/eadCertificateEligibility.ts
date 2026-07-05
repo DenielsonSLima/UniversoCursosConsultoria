@@ -41,7 +41,7 @@ export const hasValidEadCertificateCompletion = (
 
   const requiredActivities = asBoolean(regras.exigirAtividades, true) ? atividades.length : 0;
   const requiredVideos = asBoolean(regras.exigirVideosConcluidos, true)
-    ? conteudos.filter((item: any) => String(item?.videoUrl || '').trim()).length
+    ? (String(config.videoUrl || config.videoPrincipalUrl || '').trim() || conteudos.some((item: any) => String(item?.videoUrl || '').trim()) ? 1 : 0)
     : 0;
 
   return Boolean(progress.completedAt)

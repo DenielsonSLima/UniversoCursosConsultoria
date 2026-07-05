@@ -131,6 +131,24 @@ const emptyProgressState: EadProgressState = {
   }
 };
 
+const normalizeEadProgress = (value?: Partial<EadProgress> | null): EadProgress => ({
+  ...emptyProgressState.progress,
+  ...(value || {}),
+  completedContentIds: Array.isArray(value?.completedContentIds) ? value.completedContentIds : [],
+  completedActivityIds: Array.isArray(value?.completedActivityIds) ? value.completedActivityIds : [],
+  completedVideoIds: Array.isArray(value?.completedVideoIds) ? value.completedVideoIds : [],
+  activityAnswers: value?.activityAnswers && typeof value.activityAnswers === 'object' ? value.activityAnswers : {},
+  quizAnswers: value?.quizAnswers && typeof value.quizAnswers === 'object' ? value.quizAnswers : {},
+});
+
+const normalizeEadProgressState = (value?: Partial<EadProgressState> | null): EadProgressState => ({
+  progress: normalizeEadProgress(value?.progress),
+  summary: {
+    ...emptyProgressState.summary,
+    ...(value?.summary || {})
+  }
+});
+
 const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 const EAD_PENDING_STATUSES = new Set(['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO']);
 const RECEIVABLE_PENDING_STATUSES = new Set(['PENDENTE', 'VENCIDO']);
@@ -479,6 +497,8 @@ const getEmbedUrl = (url?: string) => {
       params.set('portrait', '0');
       params.set('dnt', '1');
       params.set('autopause', '0');
+      params.set('player_id', '0');
+      params.set('app_id', '58479');
       params.set('share', '0');
       params.set('watch_later', '0');
       params.set('like', '0');
@@ -1121,8 +1141,9 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const currentProva = provas[0];
   const selectedLesson = conteudos[selectedLessonIdx];
   const selectedLessonText = getLessonDisplayText(selectedCourse, selectedLesson, selectedLessonIdx);
-  const progress = progressState.progress || emptyProgressState.progress;
-  const summary = progressState.summary || emptyProgressState.summary;
+  const normalizedProgressState = normalizeEadProgressState(progressState);
+  const progress = normalizedProgressState.progress;
+  const summary = normalizedProgressState.summary;
   const mainVideoUrl = getMainCourseVideoUrl(eadConfig);
   const legacyMainVideoLesson = getLegacyMainVideoLesson(eadConfig);
   const mainVideoDone = progress.completedVideoIds.includes(MAIN_EAD_VIDEO_ID)
@@ -1635,8 +1656,9 @@ const CursosPage: React.FC<CursosPageProps> = ({
                           src={getEmbedUrl(mainVideoUrl)}
                           title={`Vídeo principal - ${selectedCourse.nome}`}
                           className="h-full w-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; web-share"
                           allowFullScreen
+                          referrerPolicy="strict-origin-when-cross-origin"
                         />
                       </div>
                     ) : (
