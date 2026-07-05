@@ -9,6 +9,7 @@ import {
   Landmark,
   RefreshCcw,
   ScrollText,
+  Vote,
 } from 'lucide-react';
 import { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
 
@@ -100,6 +101,17 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     technicalOnly: true,
     activeEnrollmentOnly: true,
     activeTurmaOnly: true,
+  },
+  crachaPeriodoEleitoral: {
+    id: 'cracha_periodo_eleitoral',
+    title: 'Crachá Período Eleitoral',
+    description: 'Identificação temporária liberada somente no período eleitoral configurado.',
+    singularLabel: 'Crachá Período Eleitoral',
+    actionLabel: 'Preparar crachá',
+    icon: Vote,
+    accent: 'text-cyan-700',
+    softAccent: 'bg-cyan-50',
+    activeEnrollmentOnly: true,
   },
   rematricula: {
     id: 'rematricula',

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import CarteirinhaPreview from '../../gestor/cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import CrachaPreview from '../../gestor/cadastros/modelos-documentos/cracha/components/CrachaPreview';
+import CrachaPeriodoEleitoralPreview from '../../gestor/cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { formatMatricula } from '../../../lib/academicUtils';
@@ -31,6 +32,11 @@ import { getDocumentValidationUrl } from '../../shared/document-validation/docum
 import { usePoloInstitutionalData } from '../../shared/polo-institutional/use-polo-institutional-data';
 import { carteirinhaService } from '../../gestor/cadastros/modelos-documentos/carteirinha/carteirinha.service';
 import { crachaService } from '../../gestor/cadastros/modelos-documentos/cracha/cracha.service';
+import {
+  crachaPeriodoEleitoralService,
+  formatCrachaEleitoralDate,
+  isCrachaEleitoralTemplateAvailable,
+} from '../../gestor/cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import {
   formatIrpfReleaseDate,
   getDefaultIrpfCalendarYear,
@@ -52,15 +58,17 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const [tipoNovaSolicitacao, setTipoNovaSolicitacao] = useState<AlunoSecretariaSolicitacaoTipo>('Histórico Escolar');
   
   // Documentos de Identificação
-  const [docTab, setDocTab] = useState<'carteirinha' | 'cracha'>('carteirinha');
+  const [docTab, setDocTab] = useState<'servicos' | 'carteirinha' | 'cracha' | 'cracha-eleitoral'>('servicos');
   const [carteirinhaFormData, setCarteirinhaFormData] = useState<any>(null);
   const [crachaFormData, setCrachaFormData] = useState<any>(null);
+  const [crachaEleitoralFormData, setCrachaEleitoralFormData] = useState<any>(null);
 
   // Modais
   const [isBoletimOpen, setIsBoletimOpen] = useState(false);
   const [isDeclaracaoOpen, setIsDeclaracaoOpen] = useState(false);
   const [isIRPFOpen, setIsIRPFOpen] = useState(false);
   const [selectedIrpfYear, setSelectedIrpfYear] = useState(() => getDefaultIrpfCalendarYear());
+  const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -80,10 +88,15 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
 
   const activeMatricula = eligibility.primaryEnrollment;
   const identityMatricula = eligibility.technicalIdentityEnrollment;
+  const electionBadgeMatricula = eligibility.electionBadgeEnrollment;
   const boletimMatricula = eligibility.bulletinEnrollment;
   const declaracaoMatricula = eligibility.declarationEnrollment;
   const irpfMatricula = eligibility.irpfEnrollment;
-  const isTechnicalIdentityAvailable = eligibility.canEmitStudentCard && eligibility.canEmitInternshipBadge;
+  const isElectionBadgeAvailable = eligibility.canEmitElectionBadge && isCrachaEleitoralTemplateAvailable(crachaEleitoralFormData, availabilityNow);
+  const hasAnyIdentityDocument =
+    eligibility.canEmitStudentCard ||
+    eligibility.canEmitInternshipBadge ||
+    isElectionBadgeAvailable;
   const activePoloId = activeMatricula?.turmas?.polo_id || activeMatricula?.polo_id;
   const declaracaoPoloId = declaracaoMatricula?.turmas?.polo_id || declaracaoMatricula?.polo_id || activePoloId;
   const irpfPoloId = irpfMatricula?.turmas?.polo_id || irpfMatricula?.polo_id || activePoloId;
@@ -171,6 +184,11 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       : null,
     isIRPFOpen && eligibility.canEmitIrpf && isSelectedIrpfYearReleased
   );
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setAvailabilityNow(new Date()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const defaultYear = getDefaultIrpfCalendarYear(irpfLiberacaoDate);
@@ -296,10 +314,14 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   };
 
   useEffect(() => {
-    if ((!eligibility.canEmitStudentCard && docTab === 'carteirinha') || (!eligibility.canEmitInternshipBadge && docTab === 'cracha')) {
-      setDocTab('servicos' as any);
+    if (
+      (!eligibility.canEmitStudentCard && docTab === 'carteirinha') ||
+      (!eligibility.canEmitInternshipBadge && docTab === 'cracha') ||
+      (!isElectionBadgeAvailable && docTab === 'cracha-eleitoral')
+    ) {
+      setDocTab('servicos');
     }
-  }, [eligibility.canEmitStudentCard, eligibility.canEmitInternshipBadge, docTab]);
+  }, [eligibility.canEmitStudentCard, eligibility.canEmitInternshipBadge, isElectionBadgeAvailable, docTab]);
 
   useEffect(() => {
     if (!eligibility.allowedRequests.includes(tipoNovaSolicitacao) && eligibility.allowedRequests[0]) {
@@ -464,6 +486,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       } else {
         setCrachaFormData({ corPrimaria: '#001a33', corSecundaria: '#3b82f6', textoFrente: 'ALUNO', textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal e obrigatório nas dependências da instituição.', cargoPadrao: 'ALUNO(A)', exibirRotulos: true });
       }
+
+      const savedCrachaEleitoral = await crachaPeriodoEleitoralService.getTemplate();
+      setCrachaEleitoralFormData(savedCrachaEleitoral);
     };
     loadData();
   }, []);
@@ -548,6 +573,18 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     poloTelefone: cardInstitutionalData?.telefone,
   };
 
+  const electionFormattedMat = electionBadgeMatricula
+    ? formatMatricula(electionBadgeMatricula.id, electionBadgeMatricula.data_matricula, electionBadgeMatricula.turmas?.polo_id || electionBadgeMatricula.polo_id)
+    : formattedMat;
+  const alunoCrachaEleitoralData = {
+    nome: aluno?.nome?.toUpperCase() || 'NOME DO ALUNO',
+    matricula: electionFormattedMat,
+    curso: electionBadgeMatricula?.turmas?.cursos?.nome || activeMatricula?.turmas?.cursos?.nome || 'CURSO GERAL',
+    polo: electionBadgeMatricula?.turmas?.polos?.nome || activeMatricula?.turmas?.polos?.nome || 'Polo Principal',
+    instituicaoEnsino: crachaEleitoralFormData?.instituicaoEnsinoPadrao || cardInstitutionalData?.poloNome || 'UNIVERSO CURSOS E CONSULTORIA',
+    instrutor: crachaEleitoralFormData?.instrutorPadrao,
+  };
+
   const handleOpenIRPF = () => {
     if (!eligibility.canEmitIrpf) {
       showToast(
@@ -594,41 +631,57 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
         <button
           onClick={() => setDocTab('servicos' as any)}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
-            (docTab as string) === 'servicos' || (docTab !== 'carteirinha' && docTab !== 'cracha')
+            docTab === 'servicos'
               ? 'bg-[#001a33] text-white shadow-md'
               : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
           }`}
         >
           <FileText size={13} /> Serviços
         </button>
-        {isTechnicalIdentityAvailable && (
+        {hasAnyIdentityDocument && (
           <>
-            <button
-              onClick={() => setDocTab('carteirinha')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
-                docTab === 'carteirinha'
-                  ? 'bg-[#001a33] text-white shadow-md'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-              }`}
-            >
-              <CreditCard size={13} /> Carteirinha Digital
-            </button>
-            <button
-              onClick={() => setDocTab('cracha')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
-                docTab === 'cracha'
-                  ? 'bg-[#001a33] text-white shadow-md'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-              }`}
-            >
-              <BadgeCheck size={13} /> Crachá de Identificação
-            </button>
+            {eligibility.canEmitStudentCard && (
+              <button
+                onClick={() => setDocTab('carteirinha')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
+                  docTab === 'carteirinha'
+                    ? 'bg-[#001a33] text-white shadow-md'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+              >
+                <CreditCard size={13} /> Carteirinha Digital
+              </button>
+            )}
+            {eligibility.canEmitInternshipBadge && (
+              <button
+                onClick={() => setDocTab('cracha')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
+                  docTab === 'cracha'
+                    ? 'bg-[#001a33] text-white shadow-md'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+              >
+                <BadgeCheck size={13} /> Crachá de Identificação
+              </button>
+            )}
+            {isElectionBadgeAvailable && (
+              <button
+                onClick={() => setDocTab('cracha-eleitoral')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap ${
+                  docTab === 'cracha-eleitoral'
+                    ? 'bg-[#001a33] text-white shadow-md'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+              >
+                <BadgeCheck size={13} /> Crachá Período Eleitoral
+              </button>
+            )}
           </>
         )}
       </div>
 
       {/* ══════════════ SERVIÇOS TAB ══════════════ */}
-      {(docTab as string) !== 'carteirinha' && (docTab as string) !== 'cracha' && (
+      {docTab === 'servicos' && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Left column: Quick docs + Requests table */}
@@ -804,7 +857,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       )}
 
       {/* ══════════════ CARTEIRINHA TAB ══════════════ */}
-      {docTab === 'carteirinha' && carteirinhaFormData && (
+      {docTab === 'carteirinha' && carteirinhaFormData && eligibility.canEmitStudentCard && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
             <div>
@@ -843,7 +896,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       )}
 
       {/* ══════════════ CRACHÁ TAB ══════════════ */}
-      {docTab === 'cracha' && crachaFormData && (
+      {docTab === 'cracha' && crachaFormData && eligibility.canEmitInternshipBadge && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
             <div>
@@ -876,6 +929,47 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
           <div className="px-6 pb-5 text-center">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
               Crachá de Identificação Digital · Universo Cursos e Consultoria
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ CRACHÁ PERÍODO ELEITORAL TAB ══════════════ */}
+      {docTab === 'cracha-eleitoral' && crachaEleitoralFormData && isElectionBadgeAvailable && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-black text-[#001a33] text-sm uppercase tracking-tight flex items-center gap-2">
+                <BadgeCheck size={15} className="text-cyan-600" /> Crachá Período Eleitoral
+              </h3>
+              <p className="text-slate-500 text-xs font-medium mt-0.5">
+                Disponível até {formatCrachaEleitoralDate(crachaEleitoralFormData.disponivelFim)}. Este modelo não possui QR Code.
+              </p>
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2 bg-[#001a33] hover:bg-blue-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all shadow-md"
+            >
+              <Download size={13} /> Baixar / Imprimir
+            </button>
+          </div>
+          <div id="print-area-cracha-eleitoral" className="p-8 flex flex-col items-center justify-center gap-8">
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">◆ Frente</span>
+              <div className="shadow-xl overflow-hidden ring-1 ring-slate-200">
+                <CrachaPeriodoEleitoralPreview formData={crachaEleitoralFormData} page="frente" zoomLevel={90} aluno={alunoCrachaEleitoralData} />
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">◆ Verso</span>
+              <div className="shadow-xl overflow-hidden ring-1 ring-slate-200">
+                <CrachaPeriodoEleitoralPreview formData={crachaEleitoralFormData} page="verso" zoomLevel={90} aluno={alunoCrachaEleitoralData} />
+              </div>
+            </div>
+          </div>
+          <div className="px-6 pb-5 text-center">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              Crachá Período Eleitoral · Universo Cursos e Consultoria
             </p>
           </div>
         </div>
@@ -1250,10 +1344,17 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
-          #print-area, #print-area *, #print-area-cracha, #print-area-cracha *, #print-area-declaracao, #print-area-declaracao *, #print-area-irpf, #print-area-irpf * { visibility: visible; }
+          #print-area, #print-area *, #print-area-cracha, #print-area-cracha *, #print-area-cracha-eleitoral, #print-area-cracha-eleitoral *, #print-area-declaracao, #print-area-declaracao *, #print-area-irpf, #print-area-irpf * { visibility: visible; }
           #print-area, #print-area-cracha {
             position: absolute; left: 0; top: 0; width: 100%;
             padding: 20mm !important; box-shadow: none !important; border: none !important;
+          }
+          #print-area-cracha-eleitoral {
+            position: absolute; left: 0; top: 0; width: 100%;
+            padding: 8mm !important; box-shadow: none !important; border: none !important;
+            background-color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           #print-area-declaracao, #print-area-irpf {
             position: absolute;

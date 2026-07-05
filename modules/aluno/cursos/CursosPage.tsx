@@ -340,6 +340,8 @@ const normalizeActivityMatchText = (value: unknown) =>
     .trim();
 
 const getActivityLessonIndex = (atividade: any, activityIndex: number, lessons: any[]) => {
+  if (!Array.isArray(lessons)) return -1;
+
   const linkedLessonId = getActivityLessonId(atividade);
   if (linkedLessonId) {
     const linkedIndex = lessons.findIndex((lesson: any) => lesson.id === linkedLessonId);
@@ -487,6 +489,24 @@ const getEmbedUrl = (url?: string) => {
   } catch {
     return sourceUrl;
   }
+};
+
+const MAIN_EAD_VIDEO_ID = 'video-principal';
+
+const getMainCourseVideoUrl = (eadConfig: any) => {
+  const directUrl = String(eadConfig?.videoUrl || eadConfig?.videoPrincipalUrl || '').trim();
+  if (directUrl) return directUrl;
+
+  const legacyLesson = Array.isArray(eadConfig?.conteudos)
+    ? eadConfig.conteudos.find((lesson: any) => String(lesson?.videoUrl || '').trim())
+    : null;
+
+  return String(legacyLesson?.videoUrl || '').trim();
+};
+
+const getLegacyMainVideoLesson = (eadConfig: any) => {
+  if (!Array.isArray(eadConfig?.conteudos)) return null;
+  return eadConfig.conteudos.find((lesson: any) => String(lesson?.videoUrl || '').trim()) || null;
 };
 
 const getCourseImageSrc = (imageUrl?: string | null) => {
@@ -1093,18 +1113,20 @@ const CursosPage: React.FC<CursosPageProps> = ({
     }
   }, [courses, selectedCourse]);
 
-  const conteudos = selectedCourse?.ead_config?.conteudos || [];
-  const atividades = selectedCourse?.ead_config?.atividades || [];
-  const regras = selectedCourse?.ead_config?.regras || {};
-  const provas = selectedCourse?.ead_config?.provas || [];
+  const eadConfig = selectedCourse?.ead_config || {};
+  const conteudos = Array.isArray(eadConfig.conteudos) ? eadConfig.conteudos : [];
+  const atividades = Array.isArray(eadConfig.atividades) ? eadConfig.atividades : [];
+  const regras = typeof eadConfig.regras === 'object' && eadConfig.regras !== null ? eadConfig.regras : {};
+  const provas = Array.isArray(eadConfig.provas) ? eadConfig.provas : [];
   const currentProva = provas[0];
   const selectedLesson = conteudos[selectedLessonIdx];
   const selectedLessonText = getLessonDisplayText(selectedCourse, selectedLesson, selectedLessonIdx);
   const progress = progressState.progress || emptyProgressState.progress;
   const summary = progressState.summary || emptyProgressState.summary;
-  const introVideoLessonIndex = conteudos.findIndex((lesson: any) => Boolean(lesson?.videoUrl));
-  const introVideoLesson = introVideoLessonIndex >= 0 ? conteudos[introVideoLessonIndex] : null;
-  const introVideoDone = introVideoLesson ? progress.completedVideoIds.includes(introVideoLesson.id) : false;
+  const mainVideoUrl = getMainCourseVideoUrl(eadConfig);
+  const legacyMainVideoLesson = getLegacyMainVideoLesson(eadConfig);
+  const mainVideoDone = progress.completedVideoIds.includes(MAIN_EAD_VIDEO_ID)
+    || (legacyMainVideoLesson?.id ? progress.completedVideoIds.includes(legacyMainVideoLesson.id) : false);
   const selectedLessonActivities = atividades
     .map((atividade: any, activityIndex: number) => ({
       atividade,
@@ -1607,11 +1629,11 @@ const CursosPage: React.FC<CursosPageProps> = ({
               <section className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm">
                 <div className="grid grid-cols-1 gap-0 xl:grid-cols-12">
                   <div className="bg-white xl:col-span-8">
-                    {introVideoLesson?.videoUrl ? (
+                    {mainVideoUrl ? (
                       <div className="aspect-video overflow-hidden bg-white">
                         <iframe
-                          src={getEmbedUrl(introVideoLesson.videoUrl)}
-                          title={introVideoLesson.titulo || selectedCourse.nome}
+                          src={getEmbedUrl(mainVideoUrl)}
+                          title={`Vídeo principal - ${selectedCourse.nome}`}
                           className="h-full w-full"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
@@ -1640,26 +1662,26 @@ const CursosPage: React.FC<CursosPageProps> = ({
                         Este vídeo apresenta o curso, organiza a visão geral do conteúdo e prepara você para avançar pelas aulas, atividades e prova final.
                       </p>
 
-                      {introVideoLesson && (
+                      {mainVideoUrl && (
                         <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Videoaula vinculada</p>
-                          <p className="mt-1 text-sm font-black text-[#001a33]">{introVideoLesson.titulo}</p>
+                          <p className="mt-1 text-sm font-black text-[#001a33]">Vídeo principal do curso</p>
                         </div>
                       )}
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      {introVideoLesson && (
+                      {mainVideoUrl && (
                         <button
-                          onClick={() => updateProgress('toggle_video', introVideoLesson.id)}
+                          onClick={() => updateProgress('toggle_video', MAIN_EAD_VIDEO_ID)}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[10px] font-black uppercase tracking-widest ${
-                            introVideoDone
+                            mainVideoDone
                               ? 'border border-emerald-150 bg-emerald-50 text-emerald-700'
                               : 'bg-blue-600 text-white hover:bg-blue-700'
                           }`}
                         >
-                          {introVideoDone ? <CheckCircle2 size={15} /> : <Play size={15} />}
-                          {introVideoDone ? 'Vídeo concluído' : 'Marcar vídeo como concluído'}
+                          {mainVideoDone ? <CheckCircle2 size={15} /> : <Play size={15} />}
+                          {mainVideoDone ? 'Vídeo concluído' : 'Marcar vídeo como concluído'}
                         </button>
                       )}
                       <button

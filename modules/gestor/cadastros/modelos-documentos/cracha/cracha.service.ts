@@ -165,6 +165,16 @@ const DEFAULT_TEMPLATE = {
   ]
 };
 
+const normalizeTemplate = (template: Record<string, any> | null) => {
+  if (!template) return null;
+
+  return {
+    ...template,
+    bgFrenteUrl: template.bgFrenteUrl || template.bgFrente || template.bg_frente_url || '',
+    bgVersoUrl: template.bgVersoUrl || template.bgVerso || template.bg_verso_url || '',
+  };
+};
+
 export const crachaService = {
   async getTemplate() {
     try {
@@ -175,7 +185,7 @@ export const crachaService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        return data.conteudo;
+        return normalizeTemplate(data.conteudo);
       }
     } catch (e) {
       console.error('[crachaService] Erro ao buscar template do Supabase:', e);

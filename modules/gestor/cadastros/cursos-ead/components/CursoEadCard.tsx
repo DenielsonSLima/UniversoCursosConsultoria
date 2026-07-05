@@ -24,7 +24,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
     certificacao: { emitirAutomatico: true, minimoAproveitamento: 70 }
   };
 
-  const videoCount = config.conteudos?.filter(c => c.videoUrl)?.length || 0;
+  const videoCount = config.videoUrl || config.conteudos?.some(c => c.videoUrl) ? 1 : 0;
   const questionsCount = config.provas?.reduce((acc, p) => acc + (p.questoes?.length || 0), 0) || 0;
 
   return (

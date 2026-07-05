@@ -45,6 +45,50 @@ const formatDuration = (minutes: number) => {
   return `${remainingMinutes}min`;
 };
 
+const normalizeVimeoVideoUrl = (value?: string) => {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) return '';
+
+  const iframeSrc = rawValue.match(/<iframe[^>]+src=["']([^"']+)["']/i)?.[1]?.replace(/&amp;/g, '&');
+  const sourceUrl = iframeSrc || rawValue;
+
+  try {
+    const parsed = new URL(sourceUrl);
+    if (!parsed.hostname.includes('vimeo.com')) return sourceUrl;
+
+    const pathParts = parsed.pathname.split('/').filter(Boolean);
+    const videoId = parsed.hostname.includes('player.vimeo.com') && pathParts[0] === 'video'
+      ? pathParts[1]
+      : pathParts[0];
+
+    return videoId ? `https://vimeo.com/${videoId}` : sourceUrl;
+  } catch {
+    return sourceUrl;
+  }
+};
+
+const getMainEadVideoUrl = (config?: EadConfig | null) => {
+  const directUrl = normalizeVimeoVideoUrl((config as any)?.videoUrl || (config as any)?.videoPrincipalUrl);
+  if (directUrl) return directUrl;
+
+  const legacyVideo = (config?.conteudos || []).find((item: any) => String(item?.videoUrl || '').trim());
+  return normalizeVimeoVideoUrl(legacyVideo?.videoUrl);
+};
+
+const getVimeoEmbedUrl = (value?: string) => {
+  const videoUrl = normalizeVimeoVideoUrl(value);
+  if (!videoUrl) return '';
+
+  try {
+    const parsed = new URL(videoUrl);
+    if (!parsed.hostname.includes('vimeo.com')) return '';
+    const videoId = parsed.pathname.split('/').filter(Boolean)[0];
+    return videoId ? `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0&badge=0&autopause=0` : '';
+  } catch {
+    return '';
+  }
+};
+
 const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +122,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   const [liberarSequencialmente, setLiberarSequencialmente] = useState(true);
   const [exigirAtividades, setExigirAtividades] = useState(true);
   const [exigirVideosConcluidos, setExigirVideosConcluidos] = useState(true);
+  const [videoPrincipalUrl, setVideoPrincipalUrl] = useState('');
 
   // --- ETAPA 2: CRONOGRAMA ---
   const [cronograma, setCronograma] = useState<EadCronogramaItem[]>([]);
@@ -88,7 +133,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   const [conteudos, setConteudos] = useState<EadConteudoItem[]>([]);
   const [newContTitle, setNewContTitle] = useState('');
   const [newContDesc, setNewContDesc] = useState('');
-  const [newContVideo, setNewContVideo] = useState('');
   const [newContApostila, setNewContApostila] = useState('');
   const [newContTexto, setNewContTexto] = useState('');
   const [newContDuracao, setNewContDuracao] = useState('15');
@@ -180,6 +224,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
       setLiberarSequencialmente(config.regras?.liberarSequencialmente ?? true);
       setExigirAtividades(config.regras?.exigirAtividades ?? true);
       setExigirVideosConcluidos(config.regras?.exigirVideosConcluidos ?? true);
+      setVideoPrincipalUrl(getMainEadVideoUrl(config));
       setCronograma(config.cronograma || []);
       setConteudos(config.conteudos || []);
       setAtividades(config.atividades || []);
@@ -363,7 +408,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
   const resetConteudoForm = () => {
     setNewContTitle('');
     setNewContDesc('');
-    setNewContVideo('');
     setNewContApostila('');
     setNewContTexto('');
     setNewContDuracao('15');
@@ -378,7 +422,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     const payload = {
       titulo: newContTitle.trim(),
       descricao: newContDesc.trim() || undefined,
-      videoUrl: newContVideo.trim() || undefined,
       apostilaUrl: newContApostila.trim() || undefined,
       textoHtml: newContTexto.trim() || undefined,
       duracaoMinutos: parseInt(newContDuracao) || 15,
@@ -411,12 +454,11 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     setEditingConteudoId(item.id);
     setNewContTitle(item.titulo || '');
     setNewContDesc(item.descricao || '');
-    setNewContVideo(item.videoUrl || '');
     setNewContApostila(item.apostilaUrl || '');
     setNewContTexto(item.textoHtml || '');
     setNewContDuracao((item.duracaoMinutos || parseInt(String((item as any).duracao || ''), 10) || 15).toString());
     setNewContObjetivos((item.objetivos || []).join('\n'));
-    setNewContTipo(item.tipo || 'pagina');
+    setNewContTipo(item.tipo === 'video' || item.tipo === 'ambos' ? (item.apostilaUrl ? 'material' : 'pagina') : item.tipo || 'pagina');
   };
 
   const handleRemoveConteudo = (id: string) => {
@@ -557,8 +599,18 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
 
     setIsSaving(true);
 
+    const normalizedVideoUrl = normalizeVimeoVideoUrl(videoPrincipalUrl);
+    const conteudosSemVideo = conteudos.map((item: any) => {
+      const { videoUrl: _videoUrl, ...conteudo } = item;
+      const tipo = conteudo.tipo === 'video' || conteudo.tipo === 'ambos'
+        ? (conteudo.apostilaUrl ? 'material' : 'pagina')
+        : conteudo.tipo;
+      return { ...conteudo, tipo };
+    });
+
     // Estrutura o objeto JSONB EAD Config
     const eadConfig: EadConfig = {
+      videoUrl: normalizedVideoUrl || undefined,
       pagina: {
         subtitulo: subtituloPagina.trim() || undefined,
         objetivos: objetivosPagina.split('\n').map(item => item.trim()).filter(Boolean),
@@ -574,7 +626,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
         intervaloReprovacaoHoras: parseInt(intervaloReprovacaoHoras) || DEFAULT_EAD_RETRY_HOURS
       },
       cronograma,
-      conteudos,
+      conteudos: conteudosSemVideo,
       atividades,
       provas,
       certificacao: {
@@ -658,7 +710,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     { num: 1, name: 'Informações Básicas', icon: <MonitorPlay size={18} /> },
     { num: 2, name: 'Financeiro', icon: <CreditCard size={18} /> },
     { num: 3, name: 'Cronograma', icon: <Clock size={18} /> },
-    { num: 4, name: 'Aulas e Conteúdo', icon: <BookOpen size={18} /> },
+    { num: 4, name: 'Vídeo e Aulas', icon: <BookOpen size={18} /> },
     { num: 5, name: 'Provas & Atividades', icon: <HelpCircle size={18} /> },
     { num: 6, name: 'Certificado EAD', icon: <Award size={18} /> }
   ];
@@ -1334,8 +1386,74 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl"><BookOpen size={20} /></span>
                 <div>
-                  <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Aulas, páginas e videoaulas</h4>
-                  <p className="text-slate-400 text-xs font-medium mt-0.5">Cadastre o conteúdo nativo que o aluno vai ler no portal, com vídeo opcional acima do texto quando houver.</p>
+                  <h4 className="font-black text-lg text-[#001a33] uppercase tracking-tight">Vídeo principal, aulas e páginas</h4>
+                  <p className="text-slate-400 text-xs font-medium mt-0.5">Cole um único Vimeo para a aba Vídeo do aluno e cadastre as páginas do curso separadamente.</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-red-100 bg-red-50/50 p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-red-600 shadow-sm">
+                        <Play size={17} />
+                      </span>
+                      <div>
+                        <h5 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Vídeo principal do curso</h5>
+                        <p className="mt-0.5 text-[10px] font-bold leading-relaxed text-slate-500">
+                          Use o link normal do Vimeo. Se colar o código incorporado, o sistema salva apenas o link padronizado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {normalizeVimeoVideoUrl(videoPrincipalUrl) && (
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-red-100 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-600">
+                      <CheckCircle2 size={13} />
+                      Vimeo configurado
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-1.5">
+                  <label className="block text-[9px] font-black uppercase tracking-widest text-red-700">URL do Vimeo</label>
+                  <input
+                    type="url"
+                    placeholder="https://vimeo.com/1207083868"
+                    className="w-full rounded-xl border border-red-100 bg-white px-4 py-3 text-xs font-semibold text-blue-650 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                    value={videoPrincipalUrl}
+                    onChange={e => setVideoPrincipalUrl(e.target.value)}
+                  />
+                  {normalizeVimeoVideoUrl(videoPrincipalUrl) && normalizeVimeoVideoUrl(videoPrincipalUrl) !== videoPrincipalUrl.trim() && (
+                    <p className="text-[10px] font-bold text-slate-500">
+                      Será salvo como: <span className="text-red-600">{normalizeVimeoVideoUrl(videoPrincipalUrl)}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-2xl border border-red-100 bg-white">
+                  {getVimeoEmbedUrl(videoPrincipalUrl) ? (
+                    <div className="aspect-video bg-black">
+                      <iframe
+                        src={getVimeoEmbedUrl(videoPrincipalUrl)}
+                        title="Prévia do vídeo principal do curso"
+                        className="h-full w-full"
+                        allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center bg-slate-50 text-center">
+                      <div className="max-w-xs px-6">
+                        <MonitorPlay className="mx-auto mb-3 text-slate-300" size={36} />
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-500">Prévia do Vimeo</p>
+                        <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
+                          Cole o link do Vimeo para conferir o player antes de salvar.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1374,9 +1492,7 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                       value={newContTipo}
                       onChange={e => setNewContTipo(e.target.value as any)}
                     >
-                      <option value="pagina">Aula do Sistema + Vídeo Opcional</option>
-                      <option value="ambos">Vídeo + Material de Apoio</option>
-                      <option value="video">Apenas Vídeo (YouTube/Vimeo)</option>
+                      <option value="pagina">Aula do Sistema</option>
                       <option value="material">Apenas Material de Apoio</option>
                     </select>
                   </div>
@@ -1428,19 +1544,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(newContTipo === 'video' || newContTipo === 'ambos' || newContTipo === 'pagina') && (
-                    <div className="space-y-1.5">
-                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">URL da Videoaula (YouTube ou Vimeo)</label>
-                      <input
-                        type="url"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-105 outline-none font-semibold text-xs text-blue-650"
-                        value={newContVideo}
-                        onChange={e => setNewContVideo(e.target.value)}
-                      />
-                    </div>
-                  )}
-
                   {(newContTipo === 'material' || newContTipo === 'ambos') && (
                     <div className="space-y-1.5">
                       <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">URL ou Link da Apostila (PDF)</label>
@@ -1487,7 +1590,6 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
                           {item.textoHtml && <p className="text-[10px] text-emerald-600 font-bold"><FileText size={10} className="inline mr-1" /> Página nativa configurada</p>}
                           
                           <div className="flex gap-4 pt-1 text-[9px] font-bold text-slate-400 uppercase tracking-wide">
-                            {item.videoUrl && <span className="flex items-center gap-1 text-red-500"><Play size={10} /> Videoaula Configurada</span>}
                             {item.apostilaUrl && <span className="flex items-center gap-1 text-blue-500"><FileUp size={10} /> PDF Configurado</span>}
                             <span className="flex items-center gap-1 text-amber-600"><Clock size={10} /> {formatDuration(item.duracaoMinutos || 0)}</span>
                           </div>

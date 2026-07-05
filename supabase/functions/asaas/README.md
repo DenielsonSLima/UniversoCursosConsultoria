@@ -11,11 +11,12 @@ The public endpoints remain stable:
 ## Modules
 
 - `core`: runtime, HTTP, customer validation, payment status, money, payment method normalization and checkout payload helpers.
+- `cursos`: shared online course checkout dispatch. It routes EAD, tecnico, livres and especializacao to their isolated Asaas modules.
 - `ead`: EAD checkout rules. The charge value comes from the course registration, with separate files for payment methods, installments and installment-fee pass-through.
 - `livres`: Curso livre checkout rules. The charge value and financial adjustments come from the class.
 - `especializacao`: Especializacao checkout rules, separated from livres for future custom rules.
 - `tecnico`: Technical course checkout and cycle helpers.
-- `avulsa`: Detached payment links for financial charges without enrollment/course.
+- `outros-creditos`: Detached payment links for financial charges without enrollment/course.
 - `webhook`: Shared webhook event and idempotency helpers.
 
 ## Boundaries

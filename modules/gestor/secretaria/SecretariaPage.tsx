@@ -59,6 +59,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     title: 'Crachá de Estágio',
     description: 'Identificação para atividades supervisionadas.',
   },
+  'cracha-periodo-eleitoral': {
+    title: 'Crachá Período Eleitoral',
+    description: 'Identificação temporária liberada por janela eleitoral.',
+  },
   'termo-estagio': {
     title: 'Termo de Estágio',
     description: 'Termo de compromisso e dados acadêmicos do estágio supervisionado.',
@@ -116,6 +120,8 @@ const SecretariaPage: React.FC = () => {
         return <SecretariaHistoricoEscolarPage />;
       case 'cracha-estagio':
         return <SecretariaCrachaEstagioPage />;
+      case 'cracha-periodo-eleitoral':
+        return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.crachaPeriodoEleitoral} />;
       case 'rematricula':
         return <SecretariaRematriculaPage />;
       case 'termo-estagio':

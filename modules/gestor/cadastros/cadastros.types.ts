@@ -166,6 +166,7 @@ export interface EadCertificacao {
 }
 
 export interface EadConfig {
+  videoUrl?: string;
   pagina?: EadPaginaCurso;
   regras?: EadRegrasAprendizagem;
   cronograma: EadCronogramaItem[];

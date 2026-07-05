@@ -13,7 +13,8 @@ import {
   Contact,
   ClipboardCheck,
   BadgeCheck,
-  FileSignature
+  FileSignature,
+  Vote
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -31,6 +32,7 @@ import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenc
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 import ReciboDespesaPage from './recibo/ReciboDespesaPage';
 import FichaCadastralPage from './ficha-cadastral/FichaCadastralPage';
+import CrachaPeriodoEleitoralPage from './cracha-periodo-eleitoral/CrachaPeriodoEleitoralPage';
 
 const ModelosDocumentosPage: React.FC = () => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
@@ -39,6 +41,7 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
     { id: 'ficha-cadastral', title: 'Ficha Cadastral do Aluno', desc: 'Ficha impressa do cadastro com dados, marca d’água e assinaturas.', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
+    { id: 'cracha-periodo-eleitoral', title: 'Crachá Período Eleitoral', desc: 'Modelo padrão sem QR Code, liberado por data inicial e final.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
     { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Comprovante de frequência acadêmica regular.', icon: <BadgeCheck size={24} />, color: 'bg-sky-600' },
     { id: 'transferencia', title: 'Modelo de Transferência', desc: 'Documentação para trâmite externo.', icon: <ArrowRightLeft size={24} />, color: 'bg-orange-500' },
@@ -57,6 +60,7 @@ const ModelosDocumentosPage: React.FC = () => {
       case 'carteirinha': return <CarteirinhaPage />;
       case 'ficha-cadastral': return <FichaCadastralPage />;
       case 'cracha': return <CrachaPage />;
+      case 'cracha-periodo-eleitoral': return <CrachaPeriodoEleitoralPage />;
       case 'declaracao': return <DeclaracaoPage />;
       case 'declaracao-frequencia': return <DeclaracaoFrequenciaPage />;
       case 'transferencia': return <TransferenciaPage />;

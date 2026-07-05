@@ -18,7 +18,7 @@ export const isOnlineCourseModality = (value: unknown) =>
 
 const extractCourseModality = (row: any) => {
   const turma = one(row?.turmas);
-  const curso = one(turma?.cursos);
+  const curso = one(turma?.cursos) || one(row?.cursos);
   return normalizeCourseModality(curso?.modalidade);
 };
 

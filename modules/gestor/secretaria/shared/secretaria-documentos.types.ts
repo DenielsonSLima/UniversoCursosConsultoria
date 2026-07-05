@@ -8,6 +8,7 @@ export type SecretariaDocumentoId =
   | 'declaracao_irpf'
   | 'historico_escolar'
   | 'cracha_estagio'
+  | 'cracha_periodo_eleitoral'
   | 'rematricula'
   | 'transferencia'
   | 'termo_estagio';

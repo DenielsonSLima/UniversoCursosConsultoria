@@ -5,7 +5,7 @@ import {
   getClientIp,
   isRateLimitExceeded,
   json as sendJson,
-} from "../asaas-api/shared.ts";
+} from "../_shared/http.ts";
 
 type Environment = "sandbox" | "production";
 

@@ -64,7 +64,7 @@ const statusClass = (status: string) => {
 };
 
 const origemLabel = (item: ContasReceber) => {
-  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId || item.asaasPaymentLinkId) return 'Asaas';
+  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId || item.asaasPaymentLinkId) return 'Link bancário';
   if (item.origemPagamento === 'PRESENCIAL') return 'Local/Caixa';
   return 'Conta local';
 };
@@ -134,7 +134,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       valor: parseCurrencyInput(value),
       dataVencimento: dueDate,
       clienteId: partnerId || undefined,
-      formaPagamento: mode === 'LOCAL_PAGO' ? paymentMethod : undefined,
+      formaPagamento: mode === 'LOCAL_PAGO' || mode === 'ASAAS' ? paymentMethod : undefined,
       contaBancariaId: mode === 'LOCAL_PAGO' ? accountId : undefined,
       markAsPaid: mode === 'LOCAL_PAGO',
       generateAsaas: mode === 'ASAAS',
@@ -150,7 +150,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.success(
         mode === 'ASAAS' ? 'Crédito e link criados' : 'Crédito registrado',
         mode === 'ASAAS' && created.asaasInvoiceUrl
-          ? 'A cobrança foi enviada ao Asaas e o link já está disponível.'
+          ? 'A cobrança foi enviada para a rota bancária configurada e o link já está disponível.'
           : 'O lançamento foi salvo em Outros Créditos.',
       );
     },
@@ -161,16 +161,16 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     mutationFn: (id: string) => asaasIntegrationService.syncReceivable(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot });
-      toast.success('Cobrança enviada', 'O link Asaas foi gerado ou atualizado.');
+      toast.success('Cobrança enviada', 'O link bancário foi gerado ou atualizado.');
     },
-    onError: (error: any) => toast.error('Erro no Asaas', error.message),
+    onError: (error: any) => toast.error('Erro no link bancário', error.message),
   });
 
   const refreshMutation = useMutation({
     mutationFn: (id: string) => asaasIntegrationService.refreshReceivableStatus(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot });
-      toast.success('Status atualizado', 'A cobrança foi consultada no Asaas.');
+      toast.success('Status atualizado', 'A cobrança bancária foi consultada.');
     },
     onError: (error: any) => toast.error('Erro ao atualizar', error.message),
   });
@@ -191,7 +191,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.success(
         'Recebimento confirmado',
         receiveItem?.asaasPaymentId || receiveItem?.asaasPaymentLinkId
-          ? 'A baixa manual foi registrada e a cobrança no Asaas foi cancelada.'
+          ? 'A baixa manual foi registrada e a cobrança bancária foi cancelada.'
           : 'O crédito foi baixado na conta/caixa selecionada.',
       );
       setReceiveItem(null);
@@ -313,6 +313,12 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   }, [accountId, activeAccounts, mode]);
 
   useEffect(() => {
+    if (mode === 'ASAAS' && paymentMethod === 'DINHEIRO') {
+      setPaymentMethod('PIX');
+    }
+  }, [mode, paymentMethod]);
+
+  useEffect(() => {
     if (receiveAccountId && !receiveAccounts.some((account) => account.id === receiveAccountId)) {
       setReceiveAccountId('');
     }
@@ -337,12 +343,16 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.warning('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
       return;
     }
+    if (mode === 'ASAAS' && paymentMethod === 'DINHEIRO') {
+      toast.warning('Forma inválida', 'Link bancário permite Pix, boleto ou cartão.');
+      return;
+    }
     createMutation.mutate();
   };
 
   const copyLink = async (item: ContasReceber) => {
     if (!item.asaasInvoiceUrl) {
-      toast.info('Sem link', 'Gere ou atualize a cobrança no Asaas primeiro.');
+      toast.info('Sem link', 'Gere ou atualize a cobrança bancária primeiro.');
       return;
     }
     await navigator.clipboard.writeText(item.asaasInvoiceUrl);
@@ -426,8 +436,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           {item.status}
         </span>
         <p className="mt-1 text-[10px] font-bold text-slate-500">Origem: {origemLabel(item)}</p>
-        <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId || item.asaasPaymentLinkId ? 'Link Asaas' : 'Não definida')}</p>
-        {item.asaasStatus && <p className="text-[10px] font-black uppercase text-blue-500">Asaas: {item.asaasStatus}</p>}
+        <p className="text-[10px] font-bold text-slate-500">Forma: {item.formaPagamento || (item.asaasPaymentId || item.asaasPaymentLinkId ? 'Link bancário' : 'Não definida')}</p>
+        {item.asaasStatus && <p className="text-[10px] font-black uppercase text-blue-500">Gateway: {item.asaasStatus}</p>}
       </td>
       <td className="px-5 py-4">
         <p className="text-lg font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
@@ -464,7 +474,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           <button
             onClick={() => copyLink(item)}
             className="rounded-xl border border-emerald-200 p-2 text-emerald-700 hover:bg-emerald-50"
-            title="Copiar link Asaas"
+            title="Copiar link bancário"
           >
             <Copy size={14} />
           </button>
@@ -495,7 +505,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           </p>
           <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Outros Créditos</h3>
           <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-            Registre juros recebidos, rendimentos, entradas de caixa e créditos avulsos, com opção local ou link Asaas.
+            Registre juros recebidos, rendimentos, entradas de caixa e créditos avulsos, com opção local ou link bancário.
           </p>
         </div>
         <button
@@ -730,8 +740,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               <div className="grid gap-3 md:grid-cols-3">
                 {[
                   { id: 'LOCAL_PAGO' as const, label: 'Receber agora', desc: 'Entrada local no caixa/conta', icon: Landmark },
-                  { id: 'LOCAL_RECEBER' as const, label: 'A receber local', desc: 'Cria conta pendente sem Asaas', icon: WalletCards },
-                  { id: 'ASAAS' as const, label: 'Link Asaas', desc: 'Exige parceiro cadastrado', icon: LinkIcon },
+                  { id: 'LOCAL_RECEBER' as const, label: 'A receber local', desc: 'Cria conta pendente sem gateway', icon: WalletCards },
+                  { id: 'ASAAS' as const, label: 'Link bancário', desc: 'Usa a rota da Integração Bancária', icon: LinkIcon },
                 ].map((option) => {
                   const Icon = option.icon;
                   const active = mode === option.id;
@@ -814,37 +824,41 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                     ))}
                   </select>
                 </label>
-                {mode === 'LOCAL_PAGO' && (
+                {(mode === 'LOCAL_PAGO' || mode === 'ASAAS') && (
                   <>
+                    {mode === 'LOCAL_PAGO' && (
+                      <label className="space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta / caixa de entrada</span>
+                        <select
+                          value={accountId}
+                          onChange={(event) => setAccountId(event.target.value)}
+                          className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
+                        >
+                          <option value="">Selecione a conta</option>
+                          {activeAccounts.map((account) => (
+                            <option key={account.id} value={account.id}>
+                              {account.banco} - {account.conta} - Saldo: {formatCurrency(account.saldoAtual || 0)}
+                            </option>
+                          ))}
+                        </select>
+                        {activeAccounts.length === 0 && (
+                          <p className="text-[10px] font-bold text-amber-600">Nenhuma conta ativa vinculada à unidade atual.</p>
+                        )}
+                      </label>
+                    )}
                     <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta / caixa de entrada</span>
-                      <select
-                        value={accountId}
-                        onChange={(event) => setAccountId(event.target.value)}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                      >
-                        <option value="">Selecione a conta</option>
-                        {activeAccounts.map((account) => (
-                          <option key={account.id} value={account.id}>
-                            {account.banco} - {account.conta} - Saldo: {formatCurrency(account.saldoAtual || 0)}
-                          </option>
-                        ))}
-                      </select>
-                      {activeAccounts.length === 0 && (
-                        <p className="text-[10px] font-bold text-amber-600">Nenhuma conta ativa vinculada à unidade atual.</p>
-                      )}
-                    </label>
-                    <label className="space-y-1">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Forma de recebimento</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {mode === 'ASAAS' ? 'Forma do link bancário' : 'Forma de recebimento'}
+                      </span>
                       <select
                         value={paymentMethod}
                         onChange={(event) => setPaymentMethod(event.target.value as any)}
                         className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
                       >
                         <option value="PIX">Pix</option>
-                        <option value="DINHEIRO">Dinheiro</option>
-                        <option value="CARTAO">Cartão</option>
                         <option value="BOLETO">Boleto</option>
+                        <option value="CARTAO">Cartão</option>
+                        {mode === 'LOCAL_PAGO' && <option value="DINHEIRO">Dinheiro</option>}
                       </select>
                     </label>
                   </>
@@ -853,7 +867,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
               {mode === 'ASAAS' && (
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-700">
-                  Para gerar link Asaas, o parceiro precisa estar cadastrado com CPF/CNPJ válido. O link ficará disponível na lista após salvar.
+                  O sistema vai consultar a aba Outros Créditos da Integração Bancária para decidir se o link usa Asaas, Mercado Pago ou Banese neste ambiente e nesta forma de pagamento.
                 </div>
               )}
 
@@ -895,7 +909,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
             {(receiveItem.asaasPaymentId || receiveItem.asaasPaymentLinkId) && (
               <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold text-amber-700">
-                Esta cobrança possui link Asaas. Ao confirmar uma baixa manual, o sistema registra o recebimento local e cancela a cobrança no Asaas para evitar cobrança duplicada.
+                Esta cobrança possui link bancário. Ao confirmar uma baixa manual, o sistema registra o recebimento local e cancela a cobrança no gateway para evitar cobrança duplicada.
               </div>
             )}
 

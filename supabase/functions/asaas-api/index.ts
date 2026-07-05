@@ -163,7 +163,7 @@ Deno.serve(async (req: Request) => {
       syncReceivable,
     } = billing;
     const online = createAsaasOnlineService(admin, mapBillingType);
-    const carnet = createAsaasCarnetService(admin, syncReceivable, refreshReceivableStatus);
+    const carnet = createAsaasCarnetService(admin, syncReceivable);
 
     if (action === "get-config") {
       const config = await getConfig();
@@ -527,10 +527,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "generate-official-carnet") {
-      const receivableIds = Array.isArray(body.receivableIds)
-        ? body.receivableIds.map((id) => String(id)).filter(Boolean)
+      const receivableIds: string[] = Array.isArray(body.receivableIds)
+        ? body.receivableIds.map((id: unknown) => String(id)).filter(Boolean)
         : [];
-      const uniqueReceivableIds = [...new Set(receivableIds)];
+      const uniqueReceivableIds: string[] = [...new Set(receivableIds)];
       if (!uniqueReceivableIds.length) {
         throw new Error("Selecione ao menos uma cobrança para gerar o carnê oficial.");
       }
@@ -725,8 +725,9 @@ Deno.serve(async (req: Request) => {
           try {
             settlementRuntime = settlementRuntime || await getRuntimeForMovement();
             const syncResult = await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
-            if (syncResult?.skipped && syncResult?.reason) {
-              futureSyncWarning = String(syncResult.reason);
+            const syncReason = "reason" in syncResult ? syncResult.reason : null;
+            if (syncResult?.skipped && syncReason) {
+              futureSyncWarning = String(syncReason);
             }
           } catch (syncError) {
             futureSyncWarning = syncError instanceof Error ? syncError.message : String(syncError);

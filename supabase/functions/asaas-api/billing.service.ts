@@ -1,5 +1,5 @@
 import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
-import { canCreateDetachedPaymentLink } from "../asaas/avulsa/payment-link.ts";
+import { canCreateDetachedPaymentLink } from "../asaas/outros-creditos/payment-link.ts";
 import { createTecnicoInstallmentService } from "../asaas/tecnico/installments.ts";
 import { isTecnicoCycleLaunch } from "../asaas/tecnico/cycle.ts";
 import {
@@ -12,11 +12,25 @@ import {
   isValidCpf,
   resolveBillingContacts,
 } from "../asaas/core/customer.ts";
+import {
+  createGatewayCharge,
+  gatewayPrimaryUrl,
+  gatewayReceivableUpdate,
+  persistGatewayTransaction as persistGenericGatewayTransaction,
+  type GatewayPaymentMethod,
+  type GatewayProviderCode,
+} from "../_shared/payment-gateway-runtime.ts";
 
 export const createAsaasBillingService = (
   admin: any,
   anyNotificationChannelEnabled: (config: any) => boolean,
 ) => {
+  const providerLabelFor = (providerCode: string) => {
+    if (providerCode === "mercado_pago") return "Mercado Pago";
+    if (providerCode === "banese_card") return "Banese Card";
+    return "Asaas";
+  };
+
   const ensureCustomer = async (
     runtime: AsaasRuntime,
     parceiro: any,
@@ -166,6 +180,70 @@ export const createAsaasBillingService = (
     return "UNDEFINED";
   };
 
+  const gatewayPaymentMethodOrNull = (value?: string | null) => {
+    const method = mapReceivableBillingType(value);
+    return method === "UNDEFINED" ? null : method;
+  };
+
+  const resolveRouteModalidade = async (receivable: any) => {
+    const category = String(receivable?.categoria || "").toUpperCase();
+    if (category === "OUTROS_CREDITOS") return "OUTROS_CREDITOS";
+    if (!receivable?.matricula_id && !receivable?.turma_id) return null;
+    const modalidade = await resolveReceivableCourseModality(admin, receivable).catch(() => null);
+    const normalized = String(modalidade || "").toUpperCase();
+    if (["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(normalized)) return normalized;
+    return null;
+  };
+
+  const resolveGatewayRouteForReceivable = async (runtime: AsaasRuntime, receivable: any) => {
+    const modalidade = await resolveRouteModalidade(receivable);
+    if (!modalidade) return null;
+
+    const paymentMethod = mapReceivableBillingType(receivable.forma_pagamento);
+    if (paymentMethod === "UNDEFINED") {
+      if (modalidade === "OUTROS_CREDITOS") {
+        throw new Error("Escolha Pix, boleto ou cartão antes de gerar link bancário em Outros Créditos.");
+      }
+      return null;
+    }
+
+    const { data, error } = await admin
+      .from("payment_gateway_routes")
+      .select("provider_code, enabled")
+      .eq("modalidade", modalidade)
+      .eq("payment_method", paymentMethod)
+      .eq("environment", runtime.environment)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Nao foi possivel consultar a rota bancaria da cobranca:", error);
+      throw new Error("Nao foi possivel validar a rota bancaria antes de gerar a cobranca.");
+    }
+
+    const providerCode = String(data?.provider_code || "asaas");
+    if (!data || data.enabled === false) {
+      throw new Error(
+        `Rota ${mapBillingType(paymentMethod) || paymentMethod} de ${modalidade} em ${runtime.environment === "production" ? "producao" : "sandbox"} nao esta ativa.`,
+      );
+    }
+    return {
+      modalidade,
+      paymentMethod: paymentMethod as GatewayPaymentMethod,
+      providerCode: providerCode as GatewayProviderCode,
+    };
+  };
+
+  const assertAsaasRouteForReceivable = async (runtime: AsaasRuntime, receivable: any) => {
+    const route = await resolveGatewayRouteForReceivable(runtime, receivable);
+    if (!route) return;
+    const { modalidade, paymentMethod, providerCode } = route;
+    if (providerCode !== "asaas") {
+      throw new Error(
+        `A rota ${mapBillingType(paymentMethod) || paymentMethod} de ${modalidade} em ${runtime.environment === "production" ? "producao" : "sandbox"} esta configurada para ${providerLabelFor(providerCode)}. Esta rotina de geração de link ainda executa apenas o adapter Asaas.`,
+      );
+    }
+  };
+
   const dueDateLimitDays = (dueDate?: string | null) => {
     if (!dueDate) return 30;
     const today = new Date();
@@ -273,6 +351,17 @@ export const createAsaasBillingService = (
           asaas_status: "PAYMENT_LINK_CREATED",
           asaas_synced_at: new Date().toISOString(),
           asaas_last_error: null,
+          gateway_provider: "asaas",
+          gateway_environment: runtime.environment,
+          gateway_payment_method: gatewayPaymentMethodOrNull(receivable.forma_pagamento),
+          gateway_payment_id: null,
+          gateway_payment_link_id: paymentLink.id,
+          gateway_invoice_url: paymentLink.url || null,
+          gateway_bank_slip_url: null,
+          gateway_installment_id: null,
+          gateway_status: "PAYMENT_LINK_CREATED",
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivable.id)
@@ -320,6 +409,17 @@ export const createAsaasBillingService = (
         asaas_status: "PAYMENT_LINK_CREATED",
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
+        gateway_provider: "asaas",
+        gateway_environment: runtime.environment,
+        gateway_payment_method: gatewayPaymentMethodOrNull(receivable.forma_pagamento),
+        gateway_payment_id: null,
+        gateway_payment_link_id: paymentLink.id,
+        gateway_invoice_url: paymentLink.url || receivable.asaas_invoice_url || null,
+        gateway_bank_slip_url: null,
+        gateway_installment_id: null,
+        gateway_status: "PAYMENT_LINK_CREATED",
+        gateway_synced_at: new Date().toISOString(),
+        gateway_last_error: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", receivable.id)
@@ -353,6 +453,18 @@ export const createAsaasBillingService = (
         asaas_status: payment.status,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
+        gateway_provider: "asaas",
+        gateway_environment: runtime.environment,
+        gateway_payment_method: gatewayPaymentMethodOrNull(payment.billingType),
+        gateway_payment_id: payment.id,
+        gateway_payment_link_id: payment.paymentLink || null,
+        gateway_installment_id: payment.installment || payment.installmentId || null,
+        gateway_invoice_url: payment.invoiceUrl || null,
+        gateway_bank_slip_url: payment.bankSlipUrl || null,
+        gateway_transaction_receipt_url: payment.transactionReceiptUrl || null,
+        gateway_status: payment.status,
+        gateway_synced_at: new Date().toISOString(),
+        gateway_last_error: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", receivable.id)
@@ -360,6 +472,135 @@ export const createAsaasBillingService = (
       .single();
     if (error) throw error;
     return refreshReceivableStatus(runtime, updated);
+  };
+
+  const syncGenericGatewayReceivable = async (
+    runtime: AsaasRuntime,
+    receivable: any,
+    route: { providerCode: GatewayProviderCode; paymentMethod: GatewayPaymentMethod },
+  ) => {
+    if (receivable.asaas_payment_id || receivable.asaas_payment_link_id) {
+      throw new Error(
+        `Esta cobrança já tem vínculo Asaas. Cancele a cobrança Asaas antes de trocar a rota para ${providerLabelFor(route.providerCode)}.`,
+      );
+    }
+
+    if (
+      receivable.gateway_provider === route.providerCode
+      && receivable.gateway_environment === runtime.environment
+      && receivable.gateway_payment_method === route.paymentMethod
+      && gatewayPrimaryUrl(receivable)
+    ) {
+      return receivable;
+    }
+
+    let parceiro: any = null;
+    if (receivable.cliente_id) {
+      const { data, error } = await admin
+        .from("parceiros")
+        .select("*")
+        .eq("id", receivable.cliente_id)
+        .maybeSingle();
+      if (error) throw error;
+      parceiro = data || null;
+    }
+
+    const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: lockedReceivable, error: lockError } = await admin
+      .from("contas_receber")
+      .update({
+        gateway_provider: route.providerCode,
+        gateway_environment: runtime.environment,
+        gateway_payment_method: route.paymentMethod,
+        gateway_status: "CREATING",
+        gateway_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receivable.id)
+      .is("gateway_payment_id", null)
+      .in("status", ["PENDENTE", "VENCIDO"])
+      .or(`gateway_status.is.null,gateway_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
+      .select()
+      .maybeSingle();
+    if (lockError) throw lockError;
+    if (!lockedReceivable) {
+      const { data: currentReceivable, error: currentError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivable.id)
+        .single();
+      if (currentError) throw currentError;
+      if (gatewayPrimaryUrl(currentReceivable)) return currentReceivable;
+      throw new Error("A cobrança já está sendo sincronizada com o gateway. Aguarde alguns instantes e atualize.");
+    }
+
+    let gatewayResult: any = null;
+    try {
+      gatewayResult = await createGatewayCharge({
+        admin,
+        supabaseUrl: Deno.env.get("SUPABASE_URL") || "",
+        providerCode: route.providerCode,
+        environment: runtime.environment,
+        paymentMethod: route.paymentMethod,
+        receivable: lockedReceivable,
+        payer: {
+          id: parceiro?.id || lockedReceivable.cliente_id || null,
+          name: parceiro?.nome || lockedReceivable.cliente_nome || "Cliente Geral",
+          nome: parceiro?.nome || lockedReceivable.cliente_nome || "Cliente Geral",
+          email: parceiro?.email || null,
+          document: parceiro?.cpf_cnpj || null,
+          cpfCnpj: parceiro?.cpf_cnpj || null,
+          phone: parceiro?.telefone || null,
+          endereco: parceiro?.endereco || null,
+          cep: parceiro?.cep || null,
+          bairro: parceiro?.bairro || null,
+          cidade: parceiro?.cidade || null,
+          uf: parceiro?.estado || null,
+        },
+        amount: Number(lockedReceivable.valor || 0),
+        description: String(lockedReceivable.descricao || "Cobrança Universo Cursos"),
+        dueDate: lockedReceivable.data_vencimento,
+        successUrl: callbackSuccessUrl(),
+        failureUrl: callbackSuccessUrl(),
+        pendingUrl: callbackSuccessUrl(),
+      });
+    } catch (error) {
+      await admin.from("contas_receber").update({
+        gateway_status: null,
+        gateway_last_error: error instanceof Error ? error.message : String(error),
+        updated_at: new Date().toISOString(),
+      }).eq("id", lockedReceivable.id);
+      throw error;
+    }
+
+    const { data: updated, error: updateError } = await admin
+      .from("contas_receber")
+      .update({
+        ...gatewayReceivableUpdate({
+          providerCode: route.providerCode,
+          environment: runtime.environment,
+          paymentMethod: route.paymentMethod,
+          result: gatewayResult,
+        }),
+        origem_pagamento: route.providerCode === "mercado_pago" ? "MERCADO_PAGO" : "BANESE",
+      })
+      .eq("id", lockedReceivable.id)
+      .in("status", ["PENDENTE", "VENCIDO"])
+      .select()
+      .maybeSingle();
+    if (updateError) throw updateError;
+    if (!updated) throw new Error("Cobrança mudou de status antes de gravar o gateway. Atualize a tela.");
+
+    await persistGenericGatewayTransaction(admin, {
+      receivable: updated,
+      providerCode: route.providerCode,
+      environment: runtime.environment,
+      paymentMethod: route.paymentMethod,
+      amount: Number(updated.valor || 0),
+      result: gatewayResult,
+    });
+
+    return updated;
   };
 
   const getReceivableSyncDecision = async (receivable: any) => {
@@ -438,6 +679,29 @@ export const createAsaasBillingService = (
     const modalidade = await resolveMatriculaCourseModality(admin, matriculaId);
     if (!isTecnicoCourseModality(modalidade)) {
       return syncFutureInstallmentsIndividually(runtime, matriculaId);
+    }
+
+    const { data: route, error: routeError } = await admin
+      .from("payment_gateway_routes")
+      .select("provider_code, enabled")
+      .eq("modalidade", "TECNICO")
+      .eq("payment_method", "BOLETO")
+      .eq("environment", runtime.environment)
+      .maybeSingle();
+    if (routeError) {
+      console.error("Nao foi possivel consultar rota bancaria das parcelas tecnicas:", routeError);
+      throw new Error("Nao foi possivel validar a rota bancaria antes de gerar parcelas tecnicas.");
+    }
+    const providerCode = String(route?.provider_code || "asaas");
+    if (!route || route.enabled === false) {
+      throw new Error(
+        `Rota Boleto de TECNICO em ${runtime.environment === "production" ? "producao" : "sandbox"} nao esta ativa.`,
+      );
+    }
+    if (providerCode !== "asaas") {
+      throw new Error(
+        `A rota Boleto de TECNICO em ${runtime.environment === "production" ? "producao" : "sandbox"} esta configurada para ${providerLabelFor(providerCode)}. A geracao automatica de parcelas tecnicas ainda executa apenas o adapter Asaas.`,
+      );
     }
 
     const tecnicoInstallments = createTecnicoInstallmentService(
@@ -533,6 +797,18 @@ export const createAsaasBillingService = (
       asaas_transaction_receipt_url: payment?.transactionReceiptUrl || receivable.asaas_transaction_receipt_url || null,
       asaas_synced_at: new Date().toISOString(),
       asaas_last_error: null,
+      gateway_provider: "asaas",
+      gateway_environment: runtime.environment,
+      gateway_payment_method: gatewayPaymentMethodOrNull(payment?.billingType) || receivable.gateway_payment_method || null,
+      gateway_payment_id: payment?.id || receivable.gateway_payment_id || receivable.asaas_payment_id || null,
+      gateway_payment_link_id: payment?.paymentLink || receivable.gateway_payment_link_id || receivable.asaas_payment_link_id || null,
+      gateway_installment_id: payment?.installment || payment?.installmentId || receivable.gateway_installment_id || receivable.asaas_installment_id || null,
+      gateway_invoice_url: payment?.invoiceUrl || receivable.gateway_invoice_url || receivable.asaas_invoice_url || null,
+      gateway_bank_slip_url: payment?.bankSlipUrl || receivable.gateway_bank_slip_url || receivable.asaas_bank_slip_url || null,
+      gateway_transaction_receipt_url: payment?.transactionReceiptUrl || receivable.gateway_transaction_receipt_url || receivable.asaas_transaction_receipt_url || null,
+      gateway_status: paymentStatus || receivable.gateway_status || receivable.asaas_status || null,
+      gateway_synced_at: new Date().toISOString(),
+      gateway_last_error: null,
       updated_at: new Date().toISOString(),
     };
 
@@ -624,6 +900,15 @@ export const createAsaasBillingService = (
       return { ...receivable, asaas_sync_skipped: true, asaas_skip_reason: syncDecision.reason };
     }
 
+    const gatewayRoute = await resolveGatewayRouteForReceivable(runtime, receivable);
+    if (gatewayRoute?.providerCode && gatewayRoute.providerCode !== "asaas") {
+      return syncGenericGatewayReceivable(runtime, receivable, {
+        providerCode: gatewayRoute.providerCode,
+        paymentMethod: gatewayRoute.paymentMethod,
+      });
+    }
+    await assertAsaasRouteForReceivable(runtime, receivable);
+
     if (!receivable.cliente_id) {
       if (canCreateDetachedPaymentLink(receivable)) {
         return createDetachedPaymentLink(runtime, receivable);
@@ -708,6 +993,19 @@ export const createAsaasBillingService = (
           asaas_status: payment.status,
           asaas_synced_at: new Date().toISOString(),
           asaas_last_error: null,
+          gateway_provider: "asaas",
+          gateway_environment: runtime.environment,
+          gateway_payment_method: gatewayPaymentMethodOrNull(payment.billingType) || gatewayPaymentMethodOrNull(receivable.forma_pagamento),
+          gateway_payment_id: payment.id,
+          gateway_customer_id: payment.customer || customerId || null,
+          gateway_payment_link_id: payment.paymentLink || null,
+          gateway_installment_id: payment.installment || payment.installmentId || null,
+          gateway_invoice_url: payment.invoiceUrl || null,
+          gateway_bank_slip_url: payment.bankSlipUrl || null,
+          gateway_transaction_receipt_url: payment.transactionReceiptUrl || null,
+          gateway_status: payment.status,
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
         })
         .eq("id", receivable.id)
         .is("asaas_payment_id", null)

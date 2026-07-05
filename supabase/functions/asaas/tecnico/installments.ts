@@ -176,9 +176,9 @@ export const createTecnicoInstallmentService = (
     }
 
     const installmentIds = Array.from(new Set(
-      receivables.map((item) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
+      receivables.map((item: any) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
     ));
-    if (installmentIds.length === 1 && receivables.every((item) => String(item.asaas_installment_id || "").trim() === installmentIds[0])) {
+    if (installmentIds.length === 1 && receivables.every((item: any) => String(item.asaas_installment_id || "").trim() === installmentIds[0])) {
       return { success: true, skipped: true, installmentId: installmentIds[0], reason: "Parcelamento técnico já sincronizado." };
     }
     if (installmentIds.length > 0) {
@@ -186,7 +186,7 @@ export const createTecnicoInstallmentService = (
       throw new Error("Parcelamento técnico parcial/inconsistente. Refaça a sincronização antes de gerar carnê.");
     }
 
-    const individuallySynced = receivables.filter((item) => item.asaas_payment_id && !item.asaas_installment_id);
+    const individuallySynced = receivables.filter((item: any) => item.asaas_payment_id && !item.asaas_installment_id);
     if (individuallySynced.length) {
       return {
         success: true,
@@ -207,7 +207,7 @@ export const createTecnicoInstallmentService = (
       asaas_status: "CREATING",
       asaas_last_error: null,
       updated_at: new Date().toISOString(),
-    }).in("id", receivables.map((item) => item.id));
+    }).in("id", receivables.map((item: any) => item.id));
 
     try {
       const customerId = await ensureCustomer(receivables[0].parceiros);

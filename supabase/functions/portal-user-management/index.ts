@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json as sendJson } from '../asaas-api/shared.ts';
+import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json as sendJson } from '../_shared/http.ts';
 
 type IncomingPayload = {
   action?: string;

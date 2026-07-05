@@ -26,7 +26,7 @@ import UsuariosConfig from './usuarios/UsuariosConfig';
 import MarcaDaguaConfig from './marca-dagua/MarcaDaguaConfig';
 import ContasBancariasConfig from './contas-bancarias/ContasBancariasConfig';
 import SaldoInicialConfig from './saldo-inicial/SaldoInicialConfig';
-import AsaasConfig from './asaas/AsaasConfig';
+import IntegracaoBancariaConfig from './integracao-bancaria/IntegracaoBancariaConfig';
 import ApiStatusConfig from './api-status/ApiStatusConfig';
 import CategoriasConfig from './categorias/CategoriasConfig';
 import RegrasCobrancaConfig from './regras-cobranca/RegrasCobrancaConfig';
@@ -60,7 +60,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'taxas-pagamento', title: 'Taxas e Formas Pgto', desc: 'Descontos de maquininhas', icon: <Calculator size={24} />, color: 'bg-fuchsia-500' },
     { id: 'mensageria', title: 'Mensageria', desc: 'WhatsApp e E-mail', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
-    { id: 'asaas', title: 'Integração Asaas', desc: 'Configuração de Pagamentos', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
+    { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
     { id: 'api', title: 'Status da API', desc: 'Monitoramento de serviços', icon: <Server size={24} />, color: 'bg-violet-500' },
   ];
 
@@ -82,7 +82,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'taxas-pagamento': return <TaxasPagamentoConfig />;
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
-      case 'asaas': return <AsaasConfig />;
+      case 'integracao-bancaria': return <IntegracaoBancariaConfig />;
       case 'api': return <ApiStatusConfig />;
       default: return null;
     }

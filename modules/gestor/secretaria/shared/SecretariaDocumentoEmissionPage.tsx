@@ -29,6 +29,12 @@ import SecretariaAlunoSearchCard from './SecretariaAlunoSearchCard';
 import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPreview';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
+import CrachaPeriodoEleitoralPreview from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
+import {
+  crachaPeriodoEleitoralService,
+  formatCrachaEleitoralDate,
+  isCrachaEleitoralTemplateAvailable,
+} from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 
 interface SecretariaDocumentoEmissionPageProps {
   definition: SecretariaDocumentoDefinition;
@@ -53,10 +59,13 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedReferenceYear, setSelectedReferenceYear] = useState(() => getDefaultIrpfCalendarYear());
   const [crachaPrintLayout, setCrachaPrintLayout] = useState<'dobra' | 'duplex'>('dobra');
   const [isCrachaPrinting, setIsCrachaPrinting] = useState(false);
+  const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const printContentRef = useRef<HTMLDivElement>(null);
 
   const isIrpfAnnual = definition.referenceMode === 'irpf_annual';
   const isCrachaEstagio = definition.id === 'cracha_estagio';
+  const isCrachaPeriodoEleitoral = definition.id === 'cracha_periodo_eleitoral';
+  const isCrachaDocument = isCrachaEstagio || isCrachaPeriodoEleitoral;
   const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
   const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
   const enrollmentStatuses = definition.enrollmentStatuses || [];
@@ -122,6 +131,23 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     staleTime: 60_000,
   });
 
+  const { data: crachaEleitoralTemplate } = useQuery({
+    queryKey: ['secretaria-cracha-periodo-eleitoral-template'],
+    queryFn: () => crachaPeriodoEleitoralService.getTemplate(),
+    enabled: isCrachaPeriodoEleitoral,
+    staleTime: 60_000,
+  });
+
+  const isCrachaEleitoralAvailable = isCrachaPeriodoEleitoral
+    ? isCrachaEleitoralTemplateAvailable(crachaEleitoralTemplate, availabilityNow)
+    : true;
+
+  useEffect(() => {
+    if (!isCrachaPeriodoEleitoral) return undefined;
+    const intervalId = window.setInterval(() => setAvailabilityNow(new Date()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [isCrachaPeriodoEleitoral]);
+
   useEffect(() => {
     if (matriculas.length && !selectedMatriculaId) setSelectedMatriculaId(matriculas[0].id);
   }, [matriculas, selectedMatriculaId]);
@@ -180,8 +206,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
   const canContinue =
     mode === 'individual'
-      ? !!selectedAluno && !!selectedMatriculaId && (!isIrpfAnnual || !!selectedIrpfYear?.released)
-      : !!selectedTurmaId;
+      ? !!selectedAluno && !!selectedMatriculaId && (!isIrpfAnnual || !!selectedIrpfYear?.released) && isCrachaEleitoralAvailable
+      : !!selectedTurmaId && isCrachaEleitoralAvailable;
 
   const resetFlow = (nextMode = mode) => {
     setMode(nextMode);
@@ -204,6 +230,12 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
   const renderCrachaEmptySlot = () => (
     <div className="w-[54mm] h-[85.6mm] border-2 border-dashed border-slate-150 rounded-[2.5mm] bg-slate-50/50 text-[8px] text-slate-300 font-black uppercase tracking-widest flex items-center justify-center print:hidden">
+      Espaço vazio
+    </div>
+  );
+
+  const renderCrachaEleitoralEmptySlot = () => (
+    <div className="w-[142mm] h-[86mm] border-2 border-dashed border-slate-150 bg-slate-50/50 text-[8px] text-slate-300 font-black uppercase tracking-widest flex items-center justify-center print:hidden">
       Espaço vazio
     </div>
   );
@@ -286,6 +318,50 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     });
   };
 
+  const buildCrachaEleitoralAluno = (aluno: any) => ({
+    nome: aluno.nome,
+    matricula: aluno.matricula,
+    curso: aluno.curso,
+    polo: aluno.polo,
+    instituicaoEnsino: crachaEleitoralTemplate?.instituicaoEnsinoPadrao,
+    instrutor: crachaEleitoralTemplate?.instrutorPadrao,
+  });
+
+  const renderCrachaEleitoralPages = () => {
+    const lotes = chunkArray(crachaPrintItems, 2);
+
+    return lotes.map((lote, loteIndex) => {
+      const slots = [...lote];
+      while (slots.length < 2) slots.push(null as any);
+
+      return (
+        <div key={`cracha-eleitoral-${loteIndex}`} className="print-page cracha-eleitoral-print-page w-[297mm] h-[210mm] bg-white text-black p-[6mm] mx-auto shadow-2xl mb-8 box-border border border-slate-200 overflow-hidden">
+          <div className="grid grid-rows-2 gap-y-[4mm]">
+            {slots.map((aluno, index) => (
+              <div key={`cracha-eleitoral-slot-${index}`} className="grid grid-cols-2 gap-x-[4mm] justify-items-center">
+                {aluno ? (
+                  <>
+                    <CrachaPeriodoEleitoralPreview formData={crachaEleitoralTemplate || {}} page="frente" zoomLevel={100} aluno={buildCrachaEleitoralAluno(aluno)} />
+                    <CrachaPeriodoEleitoralPreview formData={crachaEleitoralTemplate || {}} page="verso" zoomLevel={100} aluno={buildCrachaEleitoralAluno(aluno)} />
+                  </>
+                ) : (
+                  <>
+                    {renderCrachaEleitoralEmptySlot()}
+                    {renderCrachaEleitoralEmptySlot()}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="text-center text-[8px] text-slate-400 font-bold uppercase tracking-widest border-t border-slate-100 pt-2 flex justify-between print:hidden">
+            <span>Crachás Período Eleitoral #{loteIndex + 1} — frente e verso lado a lado</span>
+            <span>A4 paisagem</span>
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (isCrachaPrinting) {
     return (
       <div className="fixed inset-0 bg-slate-900 z-[9999] overflow-y-auto custom-scrollbar flex flex-col" id="cracha-print-layout">
@@ -298,9 +374,13 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
               <ArrowLeft size={16} /> Voltar
             </button>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">Impressão A4 do Crachá</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                Impressão A4 do {isCrachaPeriodoEleitoral ? 'Crachá Período Eleitoral' : 'Crachá'}
+              </h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                {crachaPrintLayout === 'dobra' ? '5 conjuntos frente + verso por folha' : '10 por página frente e verso'}
+                {isCrachaPeriodoEleitoral
+                  ? '2 alunos por folha, frente e verso lado a lado'
+                  : crachaPrintLayout === 'dobra' ? '5 conjuntos frente + verso por folha' : '10 por página frente e verso'}
               </p>
             </div>
           </div>
@@ -317,12 +397,16 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           <div className="bg-rose-950/70 border border-rose-800 p-4 rounded-2xl max-w-[297mm] w-full text-white mb-8 flex items-center gap-3 print:hidden">
             <Printer size={20} className="text-rose-300" />
             <p className="text-[10px] text-rose-100 leading-normal font-medium">
-              Use papel A4 em paisagem. Para o modo 10 por página, imprima frente e verso virando no lado curto.
+              {isCrachaPeriodoEleitoral
+                ? 'Use papel A4 em paisagem. O modelo eleitoral não possui QR Code e usa a data final configurada como validade padrão.'
+                : 'Use papel A4 em paisagem. Para o modo 10 por página, imprima frente e verso virando no lado curto.'}
             </p>
           </div>
 
           <div ref={printContentRef} className="print-content flex flex-col items-center">
-            {crachaPrintLayout === 'dobra' ? renderCrachaDobraPages() : renderCrachaDuplexPages()}
+            {isCrachaPeriodoEleitoral
+              ? renderCrachaEleitoralPages()
+              : crachaPrintLayout === 'dobra' ? renderCrachaDobraPages() : renderCrachaDuplexPages()}
           </div>
         </div>
 
@@ -378,6 +462,19 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             .cracha-print-page img {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+            }
+            .cracha-eleitoral-print-page {
+              width: 297mm !important;
+              height: 210mm !important;
+              page-break-after: always !important;
+              page-break-inside: avoid !important;
+              margin: 0 !important;
+              padding: 6mm !important;
+              box-shadow: none !important;
+              border: none !important;
+              background: white !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
             }
           }
           @page { size: A4 landscape; margin: 0; }
@@ -593,6 +690,14 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   </div>
                 )}
               </div>
+              {isCrachaPeriodoEleitoral && !isCrachaEleitoralAvailable && (
+                <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
+                  <p className="text-[10px] font-black uppercase tracking-widest">Crachá fora do período eleitoral</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed">
+                    Configure uma data inicial e final ativa em Cadastros, Modelos de Documentos, Crachá Período Eleitoral.
+                  </p>
+                </div>
+              )}
               {isCrachaEstagio && (
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
                   <button
@@ -656,13 +761,15 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   </div>
                 </div>
               )}
-              {isCrachaEstagio && !!crachaPrintItems.length && (
+              {isCrachaDocument && !!crachaPrintItems.length && (
                 <div className="mt-6 max-w-xl mx-auto p-4 bg-rose-50 border border-rose-100 rounded-2xl text-left">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-rose-700">Exportação do crachá</p>
                       <p className="mt-1 text-xs font-semibold text-slate-600">
-                        Layout selecionado: {crachaPrintLayout === 'dobra' ? '5 por folha, frente e verso juntos' : '10 por página, frente e verso'}.
+                        {isCrachaPeriodoEleitoral
+                          ? 'Modelo eleitoral: 2 alunos por folha, frente e verso lado a lado.'
+                          : `Layout selecionado: ${crachaPrintLayout === 'dobra' ? '5 por folha, frente e verso juntos' : '10 por página, frente e verso'}.`}
                       </p>
                     </div>
                     <button

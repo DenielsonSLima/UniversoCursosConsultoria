@@ -11,6 +11,7 @@ import {
   isEadCourseModality,
   isTecnicoCourseModality,
   isOnlineCourseModality,
+  normalizeCourseModality,
 } from "../asaas/core/modality.ts";
 import { findExistingCourseCheckout } from "./course-enrollment-guard.ts";
 import {
@@ -18,7 +19,14 @@ import {
   getClientIp,
   isRateLimitExceeded,
   json as sendJson,
-} from "../asaas-api/shared.ts";
+} from "../_shared/http.ts";
+import {
+  createGatewayCharge,
+  gatewayPrimaryUrl,
+  gatewayReceivableUpdate,
+  persistGatewayTransaction as persistGenericGatewayTransaction,
+  type GatewayProviderCode,
+} from "../_shared/payment-gateway-runtime.ts";
 
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
@@ -107,6 +115,56 @@ const currentIsoDate = () => new Date().toISOString().slice(0, 10);
 
 const isPaidPayment = (payment: any) =>
   ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
+
+const normalizeGatewayPaymentMethod = (value: unknown) => {
+  const method = String(value || "").trim().toUpperCase();
+  if (method === "PIX" || method === "BOLETO" || method === "CREDIT_CARD") return method;
+  if (method === "CARTAO" || method === "CARTÃO") return "CREDIT_CARD";
+  return "CREDIT_CARD";
+};
+
+const providerLabelFor = (providerCode: string) => {
+  if (providerCode === "mercado_pago") return "Mercado Pago";
+  if (providerCode === "banese_card") return "Banese Card";
+  return "Asaas";
+};
+
+const checkoutRouteModalidade = (value: unknown) => {
+  const modalidade = normalizeCourseModality(value);
+  return ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(modalidade) ? modalidade : null;
+};
+
+const resolvePaymentGatewayRoute = async (
+  admin: any,
+  modalidade: string,
+  paymentMethod: string,
+  environment: string,
+) => {
+  const { data, error } = await admin
+    .from("payment_gateway_routes")
+    .select("provider_code, credential_id, enabled")
+    .eq("modalidade", modalidade)
+    .eq("payment_method", paymentMethod)
+    .eq("environment", environment)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Nao foi possivel consultar a rota bancaria do checkout:", error);
+    throw new Error("Nao foi possivel validar a rota bancaria antes de gerar a cobranca.");
+  }
+
+  if (!data || data.enabled === false) {
+    throw new Error(
+      `Rota ${paymentMethod} de ${modalidade} em ${environment === "production" ? "producao" : "sandbox"} nao esta ativa.`,
+    );
+  }
+
+  return {
+    providerCode: String(data.provider_code || "asaas"),
+    credentialId: data.credential_id || null,
+    enabled: data.enabled !== false,
+  };
+};
 
 const formatDatePtBr = (value: unknown) => {
   const date = toDateString(value);
@@ -433,6 +491,258 @@ Deno.serve(async (req: Request) => {
       || config?.notification_email_enabled === true
       || config?.notification_sms_enabled === true;
 
+    const dataVencimento = dueDateInDays(7);
+    const charge = resolveOnlineCharge(course, turma, dataVencimento, {
+      eadPayment: isEadCheckout
+        ? { method: eadPaymentMethod, installments: eadInstallments }
+        : undefined,
+    });
+    const receivableFeeFields = isEadCheckout ? {
+      asaas_fee_value:
+        typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
+          ? (charge as any).feeValue
+          : null,
+      asaas_net_value:
+        typeof (charge as any).netValue === "number" && Number.isFinite((charge as any).netValue)
+          ? (charge as any).netValue
+          : null,
+    } : {};
+    const gatewayPaymentMethodForCharge = normalizeGatewayPaymentMethod(charge.billingType);
+    const routeModalidade = checkoutRouteModalidade(course.modalidade);
+    let gatewayRoute: { providerCode: string; credentialId: string | null; enabled: boolean } = {
+      providerCode: "asaas",
+      credentialId: null,
+      enabled: true,
+    };
+    if (routeModalidade) {
+      gatewayRoute = await resolvePaymentGatewayRoute(admin, routeModalidade, gatewayPaymentMethodForCharge, environment);
+    }
+
+    if (gatewayRoute.providerCode !== "asaas") {
+      const providerCode = gatewayRoute.providerCode as GatewayProviderCode;
+      const { data: existingReceivables, error: existingReceivableError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("matricula_id", matricula.id)
+        .eq("categoria", "MENSALIDADE")
+        .eq("tipo_lancamento", "MATRICULA")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (existingReceivableError) throw existingReceivableError;
+      let genericReceivable = existingReceivables?.[0] || null;
+
+      if (genericReceivable?.status === "PAGO") {
+        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        return json({ url: gatewayPrimaryUrl(genericReceivable), alreadyPaid: true });
+      }
+
+      if (
+        genericReceivable
+        && genericReceivable.gateway_provider === providerCode
+        && genericReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
+        && genericReceivable.gateway_environment === environment
+        && gatewayPrimaryUrl(genericReceivable)
+      ) {
+        return json({ url: gatewayPrimaryUrl(genericReceivable), alreadyPending: true });
+      }
+
+      if (
+        genericReceivable
+        && genericReceivable.gateway_provider === "asaas"
+        && (genericReceivable.asaas_payment_id || genericReceivable.asaas_payment_link_id)
+      ) {
+        throw new Error(
+          `Esta matrícula já tem uma cobrança Asaas pendente. Cancele a cobrança anterior antes de trocar a rota para ${providerLabelFor(providerCode)}.`,
+        );
+      }
+
+      const receivablePayload: any = {
+        polo_id: turma.polo_id,
+        descricao: charge.description,
+        valor: charge.value,
+        data_vencimento: dataVencimento,
+        status: "PENDENTE",
+        cliente_id: aluno.id,
+        matricula_id: matricula.id,
+        turma_id: turma.id,
+        categoria: "MENSALIDADE",
+        tipo_lancamento: "MATRICULA",
+        origem_cronograma_id: "matricula",
+        origem_pagamento: "GATEWAY_ONLINE",
+        gateway_provider: providerCode,
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_status: null,
+        gateway_last_error: null,
+        updated_at: new Date().toISOString(),
+        ...(isEadCheckout ? receivableFeeFields : {}),
+      };
+
+      if (genericReceivable?.id) {
+        const { data: updated, error: updateError } = await admin
+          .from("contas_receber")
+          .update(receivablePayload)
+          .eq("id", genericReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle();
+        if (updateError) throw updateError;
+        genericReceivable = updated || genericReceivable;
+      } else {
+        const { data: inserted, error: insertError } = await admin
+          .from("contas_receber")
+          .insert(receivablePayload)
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        genericReceivable = inserted;
+      }
+
+      checkoutReceivableId = genericReceivable?.id || null;
+      const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: lockedReceivable, error: lockError } = await admin
+        .from("contas_receber")
+        .update({
+          gateway_provider: providerCode,
+          gateway_environment: environment,
+          gateway_payment_method: gatewayPaymentMethodForCharge,
+          gateway_status: "CREATING",
+          gateway_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", genericReceivable.id)
+        .is("gateway_payment_id", null)
+        .or(`gateway_status.is.null,gateway_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
+        .select()
+        .maybeSingle();
+      if (lockError) throw lockError;
+      if (!lockedReceivable) {
+        const { data: currentReceivable } = await admin
+          .from("contas_receber")
+          .select("*")
+          .eq("id", genericReceivable.id)
+          .maybeSingle();
+        if (gatewayPrimaryUrl(currentReceivable)) return json({ url: gatewayPrimaryUrl(currentReceivable), alreadyPending: true });
+        throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
+      }
+
+      let gatewayResult: any;
+      try {
+        const publicBaseUrl = resolvePublicBaseUrl();
+        gatewayResult = await createGatewayCharge({
+          admin,
+          supabaseUrl,
+          providerCode,
+          environment,
+          paymentMethod: gatewayPaymentMethodForCharge,
+          receivable: lockedReceivable,
+          payer: {
+            id: aluno.id,
+            name: aluno.nome,
+            email: aluno.email,
+            document: cpfCnpj,
+            phone: aluno.telefone,
+            address: aluno.endereco,
+            postalCode: aluno.cep,
+            district: aluno.bairro,
+            city: aluno.cidade,
+            state: aluno.estado,
+          },
+          amount: Number(charge.value || 0),
+          description: charge.description,
+          dueDate: dataVencimento,
+          successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=success` : null,
+          failureUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=failure` : null,
+          pendingUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=pending` : null,
+        });
+        paymentCreated = true;
+      } catch (gatewayError) {
+        await admin.from("contas_receber").update({
+          gateway_status: null,
+          gateway_last_error: normalizeErrorMessage(gatewayError),
+          updated_at: new Date().toISOString(),
+        }).eq("id", lockedReceivable.id);
+        throw gatewayError;
+      }
+
+      const { data: updatedReceivable, error: updateGatewayError } = await admin
+        .from("contas_receber")
+        .update(gatewayReceivableUpdate({
+          providerCode,
+          environment,
+          paymentMethod: gatewayPaymentMethodForCharge,
+          result: gatewayResult,
+        }))
+        .eq("id", lockedReceivable.id)
+        .select()
+        .single();
+      if (updateGatewayError) throw updateGatewayError;
+
+      const inscricaoPayload = {
+        curso_id: course.id,
+        turma_id: turma.id,
+        aluno_id: aluno.id,
+        matricula_id: matricula.id,
+        asaas_payment_id: null,
+        asaas_customer_id: null,
+        asaas_payment_link_id: null,
+        gateway_provider: providerCode,
+        gateway_environment: environment,
+        gateway_payment_id: gatewayResult.remotePaymentId || gatewayResult.remotePaymentLinkId,
+        gateway_customer_id: gatewayResult.remoteCustomerId,
+        gateway_payment_link_id: gatewayResult.remotePaymentLinkId,
+        nome: aluno.nome,
+        cpf_cnpj: cpfCnpj || null,
+        email: aluno.email || null,
+        telefone: aluno.telefone || null,
+        valor: charge.value,
+        status: PENDENTE_INSCRICAO_STATUS,
+        forma_pagamento: mapBillingType(gatewayPaymentMethodForCharge),
+        erro: null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
+        .from("inscricoes_online")
+        .select("id")
+        .eq("matricula_id", matricula.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (pendingInscricaoError) throw pendingInscricaoError;
+      const inscriptionQuery = pendingInscricoes?.[0]
+        ? admin.from("inscricoes_online").update(inscricaoPayload).eq("id", pendingInscricoes[0].id)
+        : admin.from("inscricoes_online").insert(inscricaoPayload);
+      const { data: savedInscricao, error: inscriptionError } = await inscriptionQuery.select("id").maybeSingle();
+      if (inscriptionError) throw inscriptionError;
+
+      await persistGenericGatewayTransaction(admin, {
+        receivable: updatedReceivable,
+        inscricaoOnlineId: savedInscricao?.id || pendingInscricoes?.[0]?.id || null,
+        providerCode,
+        environment,
+        paymentMethod: gatewayPaymentMethodForCharge,
+        amount: Number(charge.value || 0),
+        result: gatewayResult,
+      });
+
+      return json({
+        url: gatewayPrimaryUrl(updatedReceivable),
+        matriculaId: matricula.id,
+        receivableId: updatedReceivable.id,
+        payment: {
+          id: gatewayResult.remotePaymentId || gatewayResult.remotePaymentLinkId,
+          provider: providerCode,
+          method: gatewayPaymentMethodForCharge,
+          status: gatewayResult.remoteStatus,
+          value: Number(charge.value || 0),
+          invoiceUrl: updatedReceivable.gateway_invoice_url,
+          bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
+          pixQrCode: gatewayResult.pixPayload || gatewayResult.pixEncodedImage
+            ? { payload: gatewayResult.pixPayload, encodedImage: gatewayResult.pixEncodedImage }
+            : null,
+        },
+      });
+    }
+
     const { data: apiKey, error: secretError } = await admin.rpc("asaas_get_secret", {
       p_secret_name: environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key",
     });
@@ -483,6 +793,19 @@ Deno.serve(async (req: Request) => {
           asaas_installment_id: recoveredPayment.installment || recoveredPayment.installmentId || null,
           asaas_transaction_receipt_url: recoveredPayment.transactionReceiptUrl || null,
           asaas_status: recoveredPayment.status || null,
+          gateway_provider: "asaas",
+          gateway_environment: environment,
+          gateway_payment_method: normalizeGatewayPaymentMethod(recoveredPayment.billingType),
+          gateway_payment_id: recoveredPayment.id,
+          gateway_customer_id: recoveredPayment.customer || null,
+          gateway_payment_link_id: null,
+          gateway_installment_id: recoveredPayment.installment || recoveredPayment.installmentId || null,
+          gateway_invoice_url: recoveredPayment.invoiceUrl || null,
+          gateway_bank_slip_url: recoveredPayment.bankSlipUrl || null,
+          gateway_transaction_receipt_url: recoveredPayment.transactionReceiptUrl || null,
+          gateway_status: recoveredPayment.status || null,
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
           asaas_synced_at: new Date().toISOString(),
           asaas_last_error: null,
           updated_at: new Date().toISOString(),
@@ -501,6 +824,17 @@ Deno.serve(async (req: Request) => {
       await admin.from("parceiros")
         .update({ asaas_customer_id: customerId, updated_at: new Date().toISOString() })
         .eq("id", aluno.id);
+      await admin.from("payment_gateway_customers").upsert({
+        parceiro_id: aluno.id,
+        provider_code: "asaas",
+        environment,
+        remote_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: "parceiro_id,provider_code,environment",
+      }).then(({ error }: any) => {
+        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway generico:", error);
+      });
       aluno.asaas_customer_id = customerId;
       return customerId;
     };
@@ -571,22 +905,44 @@ Deno.serve(async (req: Request) => {
       return findOrCreateCustomerByCpf();
     };
 
-    const dataVencimento = dueDateInDays(7);
-    const charge = resolveOnlineCharge(course, turma, dataVencimento, {
-      eadPayment: isEadCheckout
-        ? { method: eadPaymentMethod, installments: eadInstallments }
-        : undefined,
-    });
-    const receivableFeeFields = isEadCheckout ? {
-      asaas_fee_value:
-        typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
-          ? (charge as any).feeValue
-          : null,
-      asaas_net_value:
-        typeof (charge as any).netValue === "number" && Number.isFinite((charge as any).netValue)
-          ? (charge as any).netValue
-          : null,
-    } : {};
+    const persistGatewayTransaction = async (payment: any, currentReceivable: any) => {
+      if (!payment?.id || !currentReceivable?.id) return;
+      const payload = {
+        receivable_id: currentReceivable.id,
+        provider_code: "asaas",
+        environment,
+        payment_method: gatewayPaymentMethodForCharge,
+        remote_payment_id: payment.id,
+        remote_customer_id: payment.customer || currentReceivable.gateway_customer_id || null,
+        remote_payment_link_id: null,
+        remote_installment_id: payment.installment || payment.installmentId || null,
+        remote_status: payment.status || null,
+        amount: Number(payment.value || currentReceivable.valor || charge.value || 0),
+        fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+        net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+        invoice_url: payment.invoiceUrl || null,
+        bank_slip_url: payment.bankSlipUrl || null,
+        transaction_receipt_url: payment.transactionReceiptUrl || null,
+        raw_payload: payment,
+        synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { data: existing, error: existingError } = await admin
+        .from("payment_gateway_transactions")
+        .select("id")
+        .eq("provider_code", "asaas")
+        .eq("environment", environment)
+        .eq("remote_payment_id", payment.id)
+        .maybeSingle();
+      if (existingError) {
+        console.warn("Nao foi possivel consultar transacao gateway:", existingError);
+        return;
+      }
+      const result = existing?.id
+        ? await admin.from("payment_gateway_transactions").update(payload).eq("id", existing.id)
+        : await admin.from("payment_gateway_transactions").insert(payload);
+      if (result.error) console.warn("Nao foi possivel persistir transacao gateway:", result.error);
+    };
     let existingReceivable: any = null;
 
     const clearLocalAsaasPayment = async (receivableId: string, reason: string) => {
@@ -603,6 +959,15 @@ Deno.serve(async (req: Request) => {
           asaas_status: null,
           asaas_synced_at: null,
           asaas_last_error: reason,
+          gateway_payment_id: null,
+          gateway_payment_link_id: null,
+          gateway_installment_id: null,
+          gateway_invoice_url: null,
+          gateway_bank_slip_url: null,
+          gateway_transaction_receipt_url: null,
+          gateway_status: null,
+          gateway_synced_at: null,
+          gateway_last_error: reason,
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivableId)
@@ -689,6 +1054,21 @@ Deno.serve(async (req: Request) => {
             asaas_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
             asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
             asaas_status: remotePayment.status || currentReceivable.asaas_status || null,
+            gateway_provider: "asaas",
+            gateway_environment: environment,
+            gateway_payment_method: normalizeGatewayPaymentMethod(remotePayment.billingType),
+            gateway_payment_id: remotePayment.id || currentReceivable.asaas_payment_id,
+            gateway_customer_id: remotePayment.customer || currentReceivable.gateway_customer_id || null,
+            gateway_payment_link_id: currentReceivable.asaas_payment_link_id || null,
+            gateway_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
+            gateway_invoice_url: remotePayment.invoiceUrl || currentReceivable.asaas_invoice_url || null,
+            gateway_bank_slip_url: remotePayment.bankSlipUrl || currentReceivable.asaas_bank_slip_url || null,
+            gateway_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
+            gateway_status: remotePayment.status || currentReceivable.asaas_status || null,
+            gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+            gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+            gateway_synced_at: new Date().toISOString(),
+            gateway_last_error: null,
             ...(isEadCheckout ? receivableFeeFields : {}),
             status: paid ? "PAGO" : currentReceivable.status,
             valor_pago: paid ? Number(remotePayment.value || currentReceivable.valor) : currentReceivable.valor_pago,
@@ -752,6 +1132,21 @@ Deno.serve(async (req: Request) => {
           asaas_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
           asaas_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
           asaas_status: matchedPayment.status || null,
+          gateway_provider: "asaas",
+          gateway_environment: environment,
+          gateway_payment_method: normalizeGatewayPaymentMethod(matchedPayment.billingType),
+          gateway_payment_id: matchedPayment.id,
+          gateway_customer_id: matchedPayment.customer || existingReceivable.gateway_customer_id || null,
+          gateway_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          gateway_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
+          gateway_invoice_url: matchedPayment.invoiceUrl || existingReceivable.asaas_invoice_url || null,
+          gateway_bank_slip_url: matchedPayment.bankSlipUrl || null,
+          gateway_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
+          gateway_status: matchedPayment.status || null,
+          gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+          gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
           ...(isEadCheckout ? receivableFeeFields : {}),
           status: paid ? "PAGO" : existingReceivable.status,
           valor_pago: paid ? Number(matchedPayment.value || existingReceivable.valor) : existingReceivable.valor_pago,
@@ -814,7 +1209,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const receivablePayload = {
+    const receivablePayload: any = {
       polo_id: turma.polo_id,
       descricao: charge.description,
       valor: charge.value,
@@ -827,6 +1222,11 @@ Deno.serve(async (req: Request) => {
       tipo_lancamento: "MATRICULA",
       origem_cronograma_id: "matricula",
       origem_pagamento: "ASAAS_ONLINE",
+      gateway_provider: "asaas",
+      gateway_environment: environment,
+      gateway_payment_method: gatewayPaymentMethodForCharge,
+      gateway_status: null,
+      gateway_last_error: null,
       updated_at: new Date().toISOString(),
       ...(isEadCheckout ? receivableFeeFields : {}),
     };
@@ -887,6 +1287,11 @@ Deno.serve(async (req: Request) => {
       .update({
         asaas_status: "CREATING",
         asaas_last_error: null,
+        gateway_provider: "asaas",
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_status: "CREATING",
+        gateway_last_error: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", receivable.id)
@@ -932,6 +1337,8 @@ Deno.serve(async (req: Request) => {
         .update({
           asaas_status: null,
           asaas_last_error: normalizeErrorMessage(paymentError),
+          gateway_status: null,
+          gateway_last_error: normalizeErrorMessage(paymentError),
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivable.id);
@@ -949,6 +1356,21 @@ Deno.serve(async (req: Request) => {
         asaas_installment_id: payment.installment || payment.installmentId || null,
         asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
         asaas_status: payment.status || null,
+        gateway_provider: "asaas",
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_payment_id: payment.id,
+        gateway_customer_id: customerId,
+        gateway_payment_link_id: null,
+        gateway_installment_id: payment.installment || payment.installmentId || null,
+        gateway_invoice_url: payment.invoiceUrl || null,
+        gateway_bank_slip_url: payment.bankSlipUrl || null,
+        gateway_transaction_receipt_url: payment.transactionReceiptUrl || null,
+        gateway_status: payment.status || null,
+        gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+        gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+        gateway_synced_at: new Date().toISOString(),
+        gateway_last_error: null,
         ...(isEadCheckout ? receivableFeeFields : {}),
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
@@ -958,6 +1380,7 @@ Deno.serve(async (req: Request) => {
       .select()
       .single();
     if (updateReceivableError) throw updateReceivableError;
+    await persistGatewayTransaction(payment, updatedReceivable);
 
     const inscricaoPayload = {
       curso_id: course.id,
@@ -967,6 +1390,11 @@ Deno.serve(async (req: Request) => {
       asaas_payment_id: payment.id,
       asaas_customer_id: customerId,
       asaas_payment_link_id: null,
+      gateway_provider: "asaas",
+      gateway_environment: environment,
+      gateway_payment_id: payment.id,
+      gateway_customer_id: customerId,
+      gateway_payment_link_id: null,
       nome: aluno.nome,
       cpf_cnpj: cpfCnpj || null,
       email: aluno.email || null,

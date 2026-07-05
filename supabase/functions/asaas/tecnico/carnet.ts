@@ -172,8 +172,8 @@ const hydrateMissingBankSlipUrls = async (runtime: AsaasRuntime, receivables: an
   const paymentsById = new Map(payments.map((payment: any) => [String(payment.id || ""), payment]));
   const usedPaymentIds = new Set<string>();
 
-  return receivables.map((item, index) => {
-    let payment = item.asaas_payment_id ? paymentsById.get(String(item.asaas_payment_id)) : null;
+  return receivables.map((item: any, index: number) => {
+    let payment: any = item.asaas_payment_id ? paymentsById.get(String(item.asaas_payment_id)) : null;
     if (!payment) {
       payment = payments.find((candidate: any) => {
         const candidateId = String(candidate.id || "");
@@ -254,14 +254,14 @@ export const createTecnicoCarnetService = (admin: any) => {
       .in("id", ids)
       .order("data_vencimento", { ascending: true });
     if (error) throw error;
-    const receivables = data || [];
+    const receivables: any[] = data || [];
     if (receivables.length !== ids.length) {
       throw new Error("Uma ou mais parcelas selecionadas não foram encontradas.");
     }
 
     receivables.forEach(assertTecnicoCarnetReceivable);
     const installmentIds = Array.from(new Set(
-      receivables.map((item) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
+      receivables.map((item: any) => String(item.asaas_installment_id || "").trim()).filter(Boolean),
     ));
     const printableReceivables = await hydrateMissingBankSlipUrls(runtime, receivables, installmentIds);
 

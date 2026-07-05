@@ -1,6 +1,11 @@
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import type { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
+import {
+  crachaPeriodoEleitoralService,
+  isCrachaEleitoralTemplateAvailable,
+} from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import {
   SecretariaAlunoResumo,
   SecretariaContext,
@@ -212,25 +217,36 @@ export const secretariaDocumentosService = {
     if (matriculasError) throw matriculasError;
     if (!matriculas?.length) throw new Error('Nenhuma matrícula elegível para emissão.');
 
-    const records = await Promise.all(
-      matriculas.map((matricula: any) =>
-        documentValidationService.issue({
-          type: input.documento,
-          enrollmentId: matricula.id,
-          issuedBy: input.context.userId,
-          referencePeriod: input.referencePeriod,
-          sourceReference:
-            input.documento === 'transferencia'
-              ? `${matricula.id}_transferencia`
-              : input.documento === 'termo_estagio'
-              ? `${matricula.id}_contrato_principal`
-              : undefined,
-          registerReissue: true,
-        })
-      )
-    );
-    const issuedAt = records[0].issuedAt;
-    const expiresAt = records[0].expiresAt;
+    const shouldIssueValidation = input.documento !== 'cracha_periodo_eleitoral';
+    if (!shouldIssueValidation) {
+      const template = await crachaPeriodoEleitoralService.getTemplate();
+      if (!isCrachaEleitoralTemplateAvailable(template)) {
+        throw new Error('O crachá período eleitoral está fora da janela de disponibilidade configurada.');
+      }
+    }
+
+    const records = shouldIssueValidation
+      ? await Promise.all(
+          matriculas.map((matricula: any) => {
+            const validationType = input.documento as ValidatableDocumentType;
+            return documentValidationService.issue({
+              type: validationType,
+              enrollmentId: matricula.id,
+              issuedBy: input.context.userId,
+              referencePeriod: input.referencePeriod,
+              sourceReference:
+                input.documento === 'transferencia'
+                  ? `${matricula.id}_transferencia`
+                  : input.documento === 'termo_estagio'
+                  ? `${matricula.id}_contrato_principal`
+                  : undefined,
+              registerReissue: true,
+            });
+          })
+        )
+      : [];
+    const issuedAt = records[0]?.issuedAt || new Date().toISOString();
+    const expiresAt = records[0]?.expiresAt || null;
 
     return {
       documento: input.documento,

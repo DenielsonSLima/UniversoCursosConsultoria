@@ -7,9 +7,19 @@ const DEFAULT_TEMPLATE = {
   widthCm: 8.5,
   heightCm: 5.5,
   startNumber: 1000,
-  bgFrente: null,
-  bgVerso: null,
+  bgFrenteUrl: '',
+  bgVersoUrl: '',
   fields: []
+};
+
+const normalizeTemplate = (template: Record<string, any> | null) => {
+  if (!template) return null;
+
+  return {
+    ...template,
+    bgFrenteUrl: template.bgFrenteUrl || template.bgFrente || template.bg_frente_url || '',
+    bgVersoUrl: template.bgVersoUrl || template.bgVerso || template.bg_verso_url || '',
+  };
 };
 
 export const carteirinhaService = {
@@ -22,7 +32,7 @@ export const carteirinhaService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        return data.conteudo;
+        return normalizeTemplate(data.conteudo);
       }
     } catch (e) {
       console.error('[carteirinhaService] Erro ao buscar template do Supabase:', e);

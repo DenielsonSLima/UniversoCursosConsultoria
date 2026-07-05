@@ -68,6 +68,7 @@ export const buildAlunoSecretariaEligibility = (
 
   const canEmitStudentCard = Boolean(activeTechnical);
   const canEmitInternshipBadge = Boolean(activeTechnical);
+  const canEmitElectionBadge = Boolean(activeAny);
   const canEmitBulletin = Boolean(activeTechnical);
   const canEmitEnrollmentDeclaration = Boolean(declarationEnrollment);
   const canEmitIrpf = Boolean(historicalTechnical);
@@ -95,6 +96,7 @@ export const buildAlunoSecretariaEligibility = (
     hasHistoricalTechnicalEnrollment: Boolean(historicalTechnical),
     canEmitStudentCard,
     canEmitInternshipBadge,
+    canEmitElectionBadge,
     canEmitBulletin,
     canEmitEnrollmentDeclaration,
     canEmitIrpf,
@@ -103,6 +105,7 @@ export const buildAlunoSecretariaEligibility = (
     canRequestTransfer,
     primaryEnrollment,
     technicalIdentityEnrollment: activeTechnical,
+    electionBadgeEnrollment: activeAny,
     bulletinEnrollment: activeTechnical,
     declarationEnrollment,
     irpfEnrollment: historicalTechnical,

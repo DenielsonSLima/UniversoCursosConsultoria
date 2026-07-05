@@ -23,7 +23,7 @@ export const createAsaasCarnetService = (admin: any, _syncReceivable: unknown) =
       throw new Error("Uma ou mais cobranças selecionadas não foram encontradas.");
     }
 
-    const invalidItems = (data || []).filter((item) => {
+    const invalidItems = (data || []).filter((item: any) => {
       const turma = one(item?.turmas);
       const modalidade = String(turma?.cursos?.modalidade || "").toUpperCase();
       if (!isTecnicoCourseModality(modalidade)) {

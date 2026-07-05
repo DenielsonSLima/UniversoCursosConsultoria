@@ -32,6 +32,7 @@ export interface AlunoSecretariaEligibility {
   hasHistoricalTechnicalEnrollment: boolean;
   canEmitStudentCard: boolean;
   canEmitInternshipBadge: boolean;
+  canEmitElectionBadge: boolean;
   canEmitBulletin: boolean;
   canEmitEnrollmentDeclaration: boolean;
   canEmitIrpf: boolean;
@@ -40,6 +41,7 @@ export interface AlunoSecretariaEligibility {
   canRequestTransfer: boolean;
   primaryEnrollment: AlunoSecretariaMatricula | null;
   technicalIdentityEnrollment: AlunoSecretariaMatricula | null;
+  electionBadgeEnrollment: AlunoSecretariaMatricula | null;
   bulletinEnrollment: AlunoSecretariaMatricula | null;
   declarationEnrollment: AlunoSecretariaMatricula | null;
   irpfEnrollment: AlunoSecretariaMatricula | null;
