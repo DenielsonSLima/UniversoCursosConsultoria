@@ -144,6 +144,7 @@ const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
         excluded_payment_types: [
           { id: "credit_card" },
           { id: "debit_card" },
+          { id: "prepaid_card" },
           { id: "ticket" },
           { id: "atm" },
           { id: "account_money" },
@@ -158,6 +159,8 @@ const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
     return {
       payment_methods: {
         excluded_payment_types: [
+          { id: "debit_card" },
+          { id: "prepaid_card" },
           { id: "ticket" },
           { id: "bank_transfer" },
           { id: "atm" },
@@ -173,6 +176,7 @@ const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
         excluded_payment_types: [
           { id: "credit_card" },
           { id: "debit_card" },
+          { id: "prepaid_card" },
           { id: "bank_transfer" },
           { id: "account_money" },
           { id: "atm" },
