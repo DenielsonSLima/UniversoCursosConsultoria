@@ -8,6 +8,15 @@ import {
 import { processGatewayWebhook } from "./providers/index.ts";
 import type { GatewayEnvironment, GatewayProviderCode } from "./types.ts";
 
+class WebhookAuthError extends Error {
+  statusCode = 401;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "WebhookAuthError";
+  }
+}
+
 const normalizeEnvironment = (value: unknown): GatewayEnvironment =>
   value === "sandbox" ? "sandbox" : "production";
 
@@ -70,6 +79,101 @@ const resolveRemotePaymentId = (payload: any, req: Request) => {
   );
 };
 
+const parseMercadoPagoSignature = (header: string | null) => {
+  const parsed = { ts: "", v1: "" };
+  for (const part of String(header || "").split(",")) {
+    const separator = part.indexOf("=");
+    if (separator < 0) continue;
+    const key = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (key === "ts") parsed.ts = value;
+    if (key === "v1") parsed.v1 = value;
+  }
+  return parsed;
+};
+
+const toHex = (buffer: ArrayBuffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+const timingSafeEqual = (left: string, right: string) => {
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index++) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+};
+
+const hmacSha256Hex = async (secret: string, value: string) => {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return toHex(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
+};
+
+const getWebhookSecret = async (
+  admin: any,
+  providerCode: GatewayProviderCode,
+  environment: GatewayEnvironment,
+) => {
+  const { data, error } = await admin.rpc("payment_gateway_get_secret", {
+    p_secret_name: `payment_gateway_${providerCode}_${environment}_webhook_secret`,
+  });
+  if (error) throw error;
+  return String(data || "").trim();
+};
+
+const assertMercadoPagoSignature = async (
+  admin: any,
+  req: Request,
+  environment: GatewayEnvironment,
+) => {
+  const secret = await getWebhookSecret(admin, "mercado_pago", environment);
+  if (!secret) {
+    throw new WebhookAuthError(
+      "Webhook secret Mercado Pago nao configurado.",
+    );
+  }
+
+  const { ts, v1 } = parseMercadoPagoSignature(
+    req.headers.get("x-signature"),
+  );
+  if (!ts || !v1) {
+    throw new WebhookAuthError("Assinatura Mercado Pago ausente.");
+  }
+
+  const url = new URL(req.url);
+  const dataId = String(url.searchParams.get("data.id") || "").toLowerCase();
+  const requestId = String(req.headers.get("x-request-id") || "").trim();
+  const parts: string[] = [];
+  if (dataId) parts.push(`id:${dataId}`);
+  if (requestId) parts.push(`request-id:${requestId}`);
+  parts.push(`ts:${ts}`);
+
+  const computed = await hmacSha256Hex(secret, `${parts.join(";")};`);
+  if (!timingSafeEqual(computed, v1.toLowerCase())) {
+    throw new WebhookAuthError("Assinatura Mercado Pago invalida.");
+  }
+};
+
+const assertWebhookSignature = async (
+  admin: any,
+  req: Request,
+  providerCode: GatewayProviderCode,
+  environment: GatewayEnvironment,
+) => {
+  if (providerCode === "mercado_pago") {
+    await assertMercadoPagoSignature(admin, req, environment);
+  }
+};
+
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
 
@@ -98,6 +202,8 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const providerCode = providerFromPath(req);
     const environment = normalizeEnvironment(url.searchParams.get("environment"));
+    await assertWebhookSignature(admin, req, providerCode, environment);
+
     const payload = await req.json().catch(() => ({}));
     const eventId = resolveEventId(payload, req);
     const remotePaymentId = resolveRemotePaymentId(payload, req);
@@ -163,8 +269,9 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("Erro no webhook bancario:", error);
+    const status = error instanceof WebhookAuthError ? error.statusCode : 400;
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "internal_error" }), {
-      status: 400,
+      status,
       headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
     });
   }
