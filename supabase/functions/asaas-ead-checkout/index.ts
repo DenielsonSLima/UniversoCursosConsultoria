@@ -367,21 +367,27 @@ Deno.serve(async (req: Request) => {
       || config?.notification_sms_enabled === true;
 
     const gatewayRoute = await resolvePaymentGatewayRoute(admin, method, environment);
+    const usesAsaasRoute = gatewayRoute.providerCode === "asaas";
 
-    const { data: apiKey, error: secretError } = await admin.rpc("asaas_get_secret", {
+    let apiKey: string | null = null;
+    const { data: secretData, error: secretError } = await admin.rpc("asaas_get_secret", {
       p_secret_name: environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key",
     });
-    if (secretError) throw secretError;
-    if (!apiKey) throw new Error("Integração Asaas ainda não configurada.");
+    if (secretError && usesAsaasRoute) throw secretError;
+    if (secretError) console.warn("Nao foi possivel ler chave Asaas para limpeza opcional:", secretError);
+    apiKey = typeof secretData === "string" && secretData.trim() ? secretData.trim() : null;
+    if (usesAsaasRoute && !apiKey) throw new Error("Integração Asaas ainda não configurada.");
 
     const baseUrl = baseUrlFor(environment);
     const callAsaas = async (path: string, init: RequestInit = {}) => {
+      if (!apiKey) throw new Error("Integração Asaas ainda não configurada.");
+      const accessToken = apiKey;
       const response = await fetch(`${baseUrl}${path}`, {
         ...init,
         headers: {
           "Content-Type": "application/json",
           "User-Agent": "Universo-Cursos-EAD",
-          access_token: apiKey,
+          access_token: accessToken,
           ...(init.headers || {}),
         },
       });
@@ -630,9 +636,42 @@ Deno.serve(async (req: Request) => {
         && receivable.gateway_provider === "asaas"
         && (receivable.asaas_payment_id || receivable.asaas_payment_link_id)
       ) {
-        throw new Error(
-          `Esta matrícula EAD já tem uma cobrança Asaas pendente. Cancele a cobrança anterior antes de trocar a rota para ${providerLabelFor(providerCode)}.`,
-        );
+        if (receivable.asaas_payment_id && apiKey) {
+          await callAsaas(`/payments/${receivable.asaas_payment_id}`, { method: "DELETE" })
+            .catch((cancelError) => console.warn("Cobranca Asaas anterior nao foi cancelada ao trocar gateway:", cancelError));
+        }
+
+        const replacementMessage = `Cobrança Asaas anterior substituída por ${providerLabelFor(providerCode)}.`;
+        const { data: clearedReceivable, error: clearReceivableError } = await admin
+          .from("contas_receber")
+          .update({
+            asaas_payment_id: null,
+            asaas_payment_link_id: null,
+            nosso_numero_asaas: null,
+            asaas_invoice_url: null,
+            asaas_bank_slip_url: null,
+            asaas_installment_id: null,
+            asaas_transaction_receipt_url: null,
+            asaas_status: null,
+            asaas_last_error: replacementMessage,
+            gateway_payment_id: null,
+            gateway_payment_link_id: null,
+            gateway_installment_id: null,
+            gateway_invoice_url: null,
+            gateway_bank_slip_url: null,
+            gateway_pix_payload: null,
+            gateway_pix_encoded_image: null,
+            gateway_transaction_receipt_url: null,
+            gateway_status: null,
+            gateway_last_error: replacementMessage,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", receivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle();
+        if (clearReceivableError) throw clearReceivableError;
+        receivable = clearedReceivable || receivable;
       }
 
       const receivablePayload = {
@@ -962,14 +1001,7 @@ Deno.serve(async (req: Request) => {
         await persistGatewayTransaction(remotePayment, receivable);
         return json(await buildPaymentResponse(remotePayment, receivable, { alreadyPending: true }), 200, corsHeaders);
       } else if (remotePayment) {
-        await fetch(`${baseUrl}/payments/${receivable.asaas_payment_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-EAD",
-            access_token: apiKey,
-          },
-        }).catch(() => null);
+        await callAsaas(`/payments/${receivable.asaas_payment_id}`, { method: "DELETE" }).catch(() => null);
         await admin.from("contas_receber").update({
           asaas_payment_id: null,
           asaas_payment_link_id: null,
