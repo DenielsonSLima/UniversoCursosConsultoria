@@ -34,6 +34,7 @@ export type AdapterCreateChargeInput = {
   description: string;
   amount: number;
   dueDate?: string | null;
+  installments?: number | null;
 };
 
 export type AdapterCreateChargeResult = {
@@ -79,6 +80,12 @@ const firstString = (...values: unknown[]) => {
 };
 
 const onlyDigits = (value: unknown) => stringValue(value).replace(/\D/g, "");
+
+const normalizeInstallments = (value: unknown) => {
+  const parsed = Math.floor(Number(value || 1));
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.min(21, parsed));
+};
 
 const assertEnvironment = (environment: Environment) => {
   if (environment !== "sandbox" && environment !== "production") {
@@ -137,7 +144,7 @@ const payerIdentification = (payer: AdapterPayer) => {
   };
 };
 
-const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
+const paymentMethodOptions = (paymentMethod: PaymentMethod, installments?: number | null) => {
   if (paymentMethod === "PIX") {
     return {
       payment_methods: {
@@ -156,6 +163,7 @@ const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
   }
 
   if (paymentMethod === "CREDIT_CARD") {
+    const cardInstallments = normalizeInstallments(installments);
     return {
       payment_methods: {
         excluded_payment_types: [
@@ -166,6 +174,8 @@ const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
           { id: "atm" },
           { id: "account_money" },
         ],
+        installments: cardInstallments,
+        default_installments: cardInstallments,
       },
     };
   }
@@ -256,7 +266,7 @@ export const buildMercadoPagoPreferencePayload = (input: AdapterCreateChargeInpu
       receivable_id: externalReference || undefined,
       due_date: input.dueDate || undefined,
     },
-    ...paymentMethodOptions(input.paymentMethod),
+    ...paymentMethodOptions(input.paymentMethod, input.installments),
   };
 };
 

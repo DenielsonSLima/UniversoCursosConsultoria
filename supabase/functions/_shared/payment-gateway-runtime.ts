@@ -13,6 +13,7 @@ export type GatewayChargeInput = {
   amount: number;
   description: string;
   dueDate?: string | null;
+  installments?: number | null;
   successUrl?: string | null;
   failureUrl?: string | null;
   pendingUrl?: string | null;

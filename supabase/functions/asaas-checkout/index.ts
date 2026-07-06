@@ -723,6 +723,7 @@ Deno.serve(async (req: Request) => {
           amount: Number(charge.value || 0),
           description: charge.description,
           dueDate: dataVencimento,
+          installments: charge.installmentCount || 1,
           successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=success` : null,
           failureUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=failure` : null,
           pendingUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=pending` : null,
