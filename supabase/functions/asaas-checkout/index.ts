@@ -129,6 +129,42 @@ const providerLabelFor = (providerCode: string) => {
   return "Asaas";
 };
 
+const asaasApiSecretName = (environment: string) =>
+  environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key";
+
+const asaasBaseUrl = (environment: string) =>
+  environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+
+const tryCancelLegacyAsaasPayment = async (
+  admin: any,
+  environment: string,
+  paymentId?: string | null,
+) => {
+  if (!paymentId) return;
+  try {
+    const { data: apiKey, error } = await admin.rpc("asaas_get_secret", {
+      p_secret_name: asaasApiSecretName(environment),
+    });
+    if (error || !apiKey) {
+      console.warn("Nao foi possivel ler chave Asaas para cancelar cobranca substituida:", error);
+      return;
+    }
+    const response = await fetch(`${asaasBaseUrl(environment)}/payments/${paymentId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Universo-Cursos-Aluno",
+        access_token: apiKey,
+      },
+    });
+    if (!response.ok && response.status !== 404) {
+      console.warn("Nao foi possivel cancelar cobranca Asaas substituida:", response.status, await response.text());
+    }
+  } catch (error) {
+    console.warn("Falha ao cancelar cobranca Asaas substituida:", error);
+  }
+};
+
 const checkoutRouteModalidade = (value: unknown) => {
   const modalidade = normalizeCourseModality(value);
   return ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(modalidade) ? modalidade : null;
@@ -551,9 +587,45 @@ Deno.serve(async (req: Request) => {
         && genericReceivable.gateway_provider === "asaas"
         && (genericReceivable.asaas_payment_id || genericReceivable.asaas_payment_link_id)
       ) {
-        throw new Error(
-          `Esta matrícula já tem uma cobrança Asaas pendente. Cancele a cobrança anterior antes de trocar a rota para ${providerLabelFor(providerCode)}.`,
-        );
+        await tryCancelLegacyAsaasPayment(admin, environment, genericReceivable.asaas_payment_id);
+        const switchMessage = `Cobrança Asaas anterior substituída por ${providerLabelFor(providerCode)} conforme a rota da integração bancária.`;
+        const { data: clearedReceivable, error: clearReceivableError } = await admin
+          .from("contas_receber")
+          .update({
+            asaas_payment_id: null,
+            asaas_customer_id: null,
+            asaas_payment_link_id: null,
+            nosso_numero_asaas: null,
+            asaas_invoice_url: null,
+            asaas_bank_slip_url: null,
+            asaas_installment_id: null,
+            asaas_transaction_receipt_url: null,
+            asaas_status: null,
+            asaas_synced_at: null,
+            asaas_last_error: switchMessage,
+            gateway_provider: null,
+            gateway_environment: null,
+            gateway_payment_method: null,
+            gateway_payment_id: null,
+            gateway_customer_id: null,
+            gateway_payment_link_id: null,
+            gateway_installment_id: null,
+            gateway_invoice_url: null,
+            gateway_bank_slip_url: null,
+            gateway_pix_payload: null,
+            gateway_pix_encoded_image: null,
+            gateway_transaction_receipt_url: null,
+            gateway_status: null,
+            gateway_last_error: switchMessage,
+            gateway_synced_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", genericReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle();
+        if (clearReceivableError) throw clearReceivableError;
+        genericReceivable = clearedReceivable || genericReceivable;
       }
 
       const receivablePayload: any = {
