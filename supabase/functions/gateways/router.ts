@@ -8,6 +8,7 @@ export type GatewayChargeInput = {
   providerCode: GatewayProviderCode;
   environment: GatewayEnvironment;
   paymentMethod: GatewayPaymentMethod;
+  credentialId?: string | null;
   receivable: any;
   payer: Record<string, unknown>;
   amount: number;
@@ -36,20 +37,36 @@ const providerMetadata = async (
   admin: any,
   providerCode: GatewayProviderCode,
   environment: GatewayEnvironment,
+  credentialId?: string | null,
 ) => {
-  const { data, error } = await admin
+  let query = admin
     .from("payment_gateway_credentials")
     .select("metadata")
     .eq("provider_code", providerCode)
-    .eq("environment", environment)
-    .maybeSingle();
+    .eq("environment", environment);
+  if (credentialId) query = query.eq("id", credentialId);
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
-  return data?.metadata && typeof data.metadata === "object" ? data.metadata : {};
+  if (credentialId && !data) {
+    throw new Error(
+      "Credencial bancaria da rota nao pertence ao provedor/ambiente selecionado.",
+    );
+  }
+  return data?.metadata && typeof data.metadata === "object"
+    ? data.metadata
+    : {};
 };
 
-const withProviderMetadata = async (input: GatewayChargeInput): Promise<GatewayChargeInput> => {
+const withProviderMetadata = async (
+  input: GatewayChargeInput,
+): Promise<GatewayChargeInput> => {
   if (input.providerCode === "asaas") return input;
-  const metadata = await providerMetadata(input.admin, input.providerCode, input.environment);
+  const metadata = await providerMetadata(
+    input.admin,
+    input.providerCode,
+    input.environment,
+    input.credentialId,
+  );
   return {
     ...input,
     receivable: {
@@ -78,13 +95,17 @@ const normalizeAdapterResult = (
     remoteStatus: result?.status || "created",
     invoiceUrl: result?.link || null,
     bankSlipUrl: paymentMethod === "BOLETO" ? result?.link || null : null,
-    pixPayload: !isHostedCheckoutProvider && paymentMethod === "PIX" ? result?.link || null : null,
+    pixPayload: !isHostedCheckoutProvider && paymentMethod === "PIX"
+      ? result?.link || null
+      : null,
     pixEncodedImage: null,
     rawPayload: raw,
   };
 };
 
-export const createGatewayCharge = async (input: GatewayChargeInput): Promise<GatewayChargeResult> => {
+export const createGatewayCharge = async (
+  input: GatewayChargeInput,
+): Promise<GatewayChargeResult> => {
   const hydratedInput = await withProviderMetadata(input);
 
   if (hydratedInput.paymentMethod === "PIX") {
@@ -102,7 +123,11 @@ export const createGatewayCharge = async (input: GatewayChargeInput): Promise<Ga
   if (hydratedInput.paymentMethod === "CREDIT_CARD") {
     const { createCardGatewayCharge } = await import("./cartao/index.ts");
     const result = await createCardGatewayCharge(hydratedInput);
-    return normalizeAdapterResult(hydratedInput.providerCode, "CREDIT_CARD", result);
+    return normalizeAdapterResult(
+      hydratedInput.providerCode,
+      "CREDIT_CARD",
+      result,
+    );
   }
 
   throw new Error("Forma de pagamento do gateway bancario invalida.");
@@ -117,10 +142,12 @@ export const persistGatewayTransaction = async (
     environment: GatewayEnvironment;
     paymentMethod: GatewayPaymentMethod;
     amount: number;
+    installments?: number | null;
     result: GatewayChargeResult;
   },
 ) => {
-  const remotePaymentId = input.result.remotePaymentId || input.result.remotePaymentLinkId;
+  const remotePaymentId = input.result.remotePaymentId ||
+    input.result.remotePaymentLinkId;
   if (!remotePaymentId) return;
 
   const payload = {
@@ -129,6 +156,7 @@ export const persistGatewayTransaction = async (
     provider_code: input.providerCode,
     environment: input.environment,
     payment_method: input.paymentMethod,
+    installments: input.installments || 1,
     remote_payment_id: remotePaymentId,
     remote_customer_id: input.result.remoteCustomerId,
     remote_payment_link_id: input.result.remotePaymentLinkId,
@@ -156,14 +184,22 @@ export const persistGatewayTransaction = async (
     .eq("remote_payment_id", remotePaymentId)
     .maybeSingle();
   if (existingError) {
-    console.warn("Nao foi possivel consultar transacao gateway:", existingError);
+    console.warn(
+      "Nao foi possivel consultar transacao gateway:",
+      existingError,
+    );
     return;
   }
 
   const result = existing?.id
-    ? await admin.from("payment_gateway_transactions").update(payload).eq("id", existing.id)
+    ? await admin.from("payment_gateway_transactions").update(payload).eq(
+      "id",
+      existing.id,
+    )
     : await admin.from("payment_gateway_transactions").insert(payload);
-  if (result.error) console.warn("Nao foi possivel persistir transacao gateway:", result.error);
+  if (result.error) {
+    console.warn("Nao foi possivel persistir transacao gateway:", result.error);
+  }
 };
 
 export const gatewayReceivableUpdate = (
@@ -171,13 +207,16 @@ export const gatewayReceivableUpdate = (
     providerCode: GatewayProviderCode;
     environment: GatewayEnvironment;
     paymentMethod: GatewayPaymentMethod;
+    installments?: number | null;
     result: GatewayChargeResult;
   },
 ) => ({
   gateway_provider: input.providerCode,
   gateway_environment: input.environment,
   gateway_payment_method: input.paymentMethod,
-  gateway_payment_id: input.result.remotePaymentId || input.result.remotePaymentLinkId,
+  gateway_installments: input.installments || 1,
+  gateway_payment_id: input.result.remotePaymentId ||
+    input.result.remotePaymentLinkId,
   gateway_customer_id: input.result.remoteCustomerId,
   gateway_payment_link_id: input.result.remotePaymentLinkId,
   gateway_installment_id: null,
@@ -193,8 +232,13 @@ export const gatewayReceivableUpdate = (
 });
 
 export const gatewayPrimaryUrl = (receivable: any) =>
-  receivable?.gateway_invoice_url
-  || receivable?.gateway_bank_slip_url
-  || receivable?.asaas_invoice_url
-  || receivable?.asaas_bank_slip_url
-  || null;
+  receivable?.gateway_invoice_url ||
+  receivable?.gateway_bank_slip_url ||
+  receivable?.asaas_invoice_url ||
+  receivable?.asaas_bank_slip_url ||
+  null;
+
+export const gatewayOnlyPrimaryUrl = (receivable: any) =>
+  receivable?.gateway_invoice_url ||
+  receivable?.gateway_bank_slip_url ||
+  null;
