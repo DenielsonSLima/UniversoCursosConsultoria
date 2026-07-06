@@ -316,12 +316,12 @@ const missingTechnicalEnrollmentFields = (student: any) => {
   return missing;
 };
 
-Deno.serve(async (req: Request) => {
+export const handlePaymentCheckout = async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
   const json = (body: unknown, status = 200) =>
     sendJson(body, status, req);
 
-  if (isRateLimitExceeded(`asaas-checkout:${getClientIp(req)}`, 30, 60000)) {
+  if (isRateLimitExceeded(`payment-checkout:${getClientIp(req)}`, 30, 60000)) {
     return json({
       error: "Muitas tentativas de checkout em curto intervalo. Tente novamente em alguns segundos.",
     }, 429);
@@ -417,14 +417,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
-    if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para comprar pelo Asaas.");
-    if (cpfCnpj.length === 11 && !isValidCpf(cpfCnpj)) {
-      throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
-    }
-    const missingBillingFields = missingStudentBillingFields(aluno);
-    if (missingBillingFields.length > 0) {
-      throw new Error(`Atualize o cadastro do aluno antes de comprar pelo Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
-    }
+    const hasValidCpfCnpjForGateway = !cpfCnpj
+      ? false
+      : cpfCnpj.length === 11
+        ? isValidCpf(cpfCnpj)
+        : true;
+    const gatewayDocument = hasValidCpfCnpjForGateway ? cpfCnpj : "";
     if (isTecnicoCourseModality(course.modalidade)) {
       const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno);
       if (missingTechnicalFields.length > 0) {
@@ -552,6 +550,19 @@ Deno.serve(async (req: Request) => {
     };
     if (routeModalidade) {
       gatewayRoute = await resolvePaymentGatewayRoute(admin, routeModalidade, gatewayPaymentMethodForCharge, environment);
+    }
+
+    if (gatewayRoute.providerCode === "asaas") {
+      if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para gerar a cobrança no Asaas.");
+      if (cpfCnpj.length === 11 && !isValidCpf(cpfCnpj)) {
+        throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
+      }
+      const missingBillingFields = missingStudentBillingFields(aluno);
+      if (missingBillingFields.length > 0) {
+        throw new Error(`Atualize o cadastro do aluno antes de gerar a cobrança no Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
+      }
+    } else if (cpfCnpj && !hasValidCpfCnpjForGateway) {
+      console.warn("CPF/CNPJ do aluno invalido; checkout bancario seguira sem documento de identificacao do pagador.");
     }
 
     if (gatewayRoute.providerCode !== "asaas") {
@@ -712,7 +723,7 @@ Deno.serve(async (req: Request) => {
             id: aluno.id,
             name: aluno.nome,
             email: aluno.email,
-            document: cpfCnpj,
+            document: gatewayDocument,
             phone: aluno.telefone,
             address: aluno.endereco,
             postalCode: aluno.cep,
@@ -765,7 +776,7 @@ Deno.serve(async (req: Request) => {
         gateway_customer_id: gatewayResult.remoteCustomerId,
         gateway_payment_link_id: gatewayResult.remotePaymentLinkId,
         nome: aluno.nome,
-        cpf_cnpj: cpfCnpj || null,
+        cpf_cnpj: gatewayDocument || null,
         email: aluno.email || null,
         telefone: aluno.telefone || null,
         valor: charge.value,
@@ -1531,7 +1542,7 @@ Deno.serve(async (req: Request) => {
           .from("inscricoes_online")
           .update({
             status: "CANCELADO",
-            erro: "Checkout cancelado automaticamente por falha antes da criação da cobrança Asaas.",
+            erro: "Checkout cancelado automaticamente por falha antes da criação da cobrança bancária.",
             updated_at: new Date().toISOString(),
           })
           .eq("matricula_id", checkoutMatriculaId)
@@ -1543,4 +1554,8 @@ Deno.serve(async (req: Request) => {
     }
     return json({ error: errorMessage }, 400);
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handlePaymentCheckout);
+}

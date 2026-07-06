@@ -108,7 +108,7 @@ export const asaasIntegrationService = {
     turmaId?: string | null,
     eadPayment?: { method?: string; installments?: number },
   ) {
-    const { data, error } = await supabase.functions.invoke('asaas-checkout', {
+    const { data, error } = await supabase.functions.invoke('payment-checkout', {
       body: {
         courseId,
         alunoId,
