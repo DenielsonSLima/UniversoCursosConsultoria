@@ -16,10 +16,10 @@ import {
   createGatewayCharge,
   gatewayPrimaryUrl,
   gatewayReceivableUpdate,
-  persistGatewayTransaction as persistGenericGatewayTransaction,
+  persistGatewayTransaction as persistProviderGatewayTransaction,
   type GatewayPaymentMethod,
   type GatewayProviderCode,
-} from "../_shared/payment-gateway-runtime.ts";
+} from "../gateways/router.ts";
 
 export const createAsaasBillingService = (
   admin: any,
@@ -474,7 +474,7 @@ export const createAsaasBillingService = (
     return refreshReceivableStatus(runtime, updated);
   };
 
-  const syncGenericGatewayReceivable = async (
+  const syncGatewayReceivable = async (
     runtime: AsaasRuntime,
     receivable: any,
     route: { providerCode: GatewayProviderCode; paymentMethod: GatewayPaymentMethod },
@@ -591,7 +591,7 @@ export const createAsaasBillingService = (
     if (updateError) throw updateError;
     if (!updated) throw new Error("Cobrança mudou de status antes de gravar o gateway. Atualize a tela.");
 
-    await persistGenericGatewayTransaction(admin, {
+    await persistProviderGatewayTransaction(admin, {
       receivable: updated,
       providerCode: route.providerCode,
       environment: runtime.environment,
@@ -902,7 +902,7 @@ export const createAsaasBillingService = (
 
     const gatewayRoute = await resolveGatewayRouteForReceivable(runtime, receivable);
     if (gatewayRoute?.providerCode && gatewayRoute.providerCode !== "asaas") {
-      return syncGenericGatewayReceivable(runtime, receivable, {
+      return syncGatewayReceivable(runtime, receivable, {
         providerCode: gatewayRoute.providerCode,
         paymentMethod: gatewayRoute.paymentMethod,
       });

@@ -5,9 +5,9 @@ import {
   createGatewayCharge,
   gatewayPrimaryUrl,
   gatewayReceivableUpdate,
-  persistGatewayTransaction as persistGenericGatewayTransaction,
+  persistGatewayTransaction as persistProviderGatewayTransaction,
   type GatewayProviderCode,
-} from "../_shared/payment-gateway-runtime.ts";
+} from "../gateways/router.ts";
 
 type BillingMethod = "PIX" | "BOLETO";
 type Environment = "sandbox" | "production";
@@ -416,7 +416,7 @@ Deno.serve(async (req: Request) => {
       }, {
         onConflict: "parceiro_id,provider_code,environment",
       }).then(({ error }: any) => {
-        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway generico:", error);
+        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway bancario:", error);
       });
       aluno.asaas_customer_id = customerId;
       return customerId;
@@ -846,7 +846,7 @@ Deno.serve(async (req: Request) => {
       const { data: savedInscricao, error: inscricaoError } = await inscricaoQuery.select("id").maybeSingle();
       if (inscricaoError) throw inscricaoError;
 
-      await persistGenericGatewayTransaction(admin, {
+      await persistProviderGatewayTransaction(admin, {
         receivable,
         inscricaoOnlineId: savedInscricao?.id || existingInscricoes?.[0]?.id || null,
         providerCode,

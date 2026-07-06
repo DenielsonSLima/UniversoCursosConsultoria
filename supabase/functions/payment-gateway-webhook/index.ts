@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Erro no webhook bancario generico:", error);
+    console.error("Erro no webhook bancario:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "internal_error" }), {
       status: 400,
       headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },

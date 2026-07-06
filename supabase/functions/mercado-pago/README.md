@@ -18,4 +18,4 @@ business flow.
 
 Do not share provider-specific HTTP payloads with other providers. The central
 gateway route decides that Mercado Pago should be used; files in this folder
-translate the generic payment intent into Mercado Pago calls.
+translate the gateway payment intent into Mercado Pago calls.

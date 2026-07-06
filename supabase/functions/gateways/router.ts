@@ -86,17 +86,26 @@ const normalizeAdapterResult = (
 
 export const createGatewayCharge = async (input: GatewayChargeInput): Promise<GatewayChargeResult> => {
   const hydratedInput = await withProviderMetadata(input);
-  if (hydratedInput.providerCode === "mercado_pago") {
-    const { createMercadoPagoCharge } = await import("../mercado-pago/core/adapter.ts");
-    const result = await createMercadoPagoCharge(hydratedInput as any);
-    return normalizeAdapterResult("mercado_pago", input.paymentMethod, result);
+
+  if (hydratedInput.paymentMethod === "PIX") {
+    const { createPixGatewayCharge } = await import("./pix/index.ts");
+    const result = await createPixGatewayCharge(hydratedInput);
+    return normalizeAdapterResult(hydratedInput.providerCode, "PIX", result);
   }
-  if (hydratedInput.providerCode === "banese_card") {
-    const { createBaneseCharge } = await import("../banese/core/adapter.ts");
-    const result = await createBaneseCharge(hydratedInput as any);
-    return normalizeAdapterResult("banese_card", input.paymentMethod, result);
+
+  if (hydratedInput.paymentMethod === "BOLETO") {
+    const { createBoletoGatewayCharge } = await import("./boleto/index.ts");
+    const result = await createBoletoGatewayCharge(hydratedInput);
+    return normalizeAdapterResult(hydratedInput.providerCode, "BOLETO", result);
   }
-  throw new Error("Adapter genérico chamado para Asaas. Use o fluxo Asaas existente.");
+
+  if (hydratedInput.paymentMethod === "CREDIT_CARD") {
+    const { createCardGatewayCharge } = await import("./cartao/index.ts");
+    const result = await createCardGatewayCharge(hydratedInput);
+    return normalizeAdapterResult(hydratedInput.providerCode, "CREDIT_CARD", result);
+  }
+
+  throw new Error("Forma de pagamento do gateway bancario invalida.");
 };
 
 export const persistGatewayTransaction = async (

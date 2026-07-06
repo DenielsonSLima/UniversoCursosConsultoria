@@ -272,7 +272,7 @@ export const createAsaasOnlineService = (
   const createCourseLink = async (runtime: AsaasRuntime, body: any) => {
     void runtime;
     void body;
-    throw new Error("Links genéricos de curso foram desativados. Use o checkout online do aluno para gerar cobrança no nome do aluno.");
+    throw new Error("Links diretos de curso foram desativados. Use o checkout online do aluno para gerar cobrança no nome do aluno.");
   };
 
   return {

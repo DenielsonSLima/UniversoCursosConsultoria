@@ -24,9 +24,9 @@ import {
   createGatewayCharge,
   gatewayPrimaryUrl,
   gatewayReceivableUpdate,
-  persistGatewayTransaction as persistGenericGatewayTransaction,
+  persistGatewayTransaction as persistProviderGatewayTransaction,
   type GatewayProviderCode,
-} from "../_shared/payment-gateway-runtime.ts";
+} from "../gateways/router.ts";
 
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
@@ -565,29 +565,29 @@ Deno.serve(async (req: Request) => {
         .order("created_at", { ascending: false })
         .limit(1);
       if (existingReceivableError) throw existingReceivableError;
-      let genericReceivable = existingReceivables?.[0] || null;
+      let gatewayReceivable = existingReceivables?.[0] || null;
 
-      if (genericReceivable?.status === "PAGO") {
+      if (gatewayReceivable?.status === "PAGO") {
         await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
-        return json({ url: gatewayPrimaryUrl(genericReceivable), alreadyPaid: true });
+        return json({ url: gatewayPrimaryUrl(gatewayReceivable), alreadyPaid: true });
       }
 
       if (
-        genericReceivable
-        && genericReceivable.gateway_provider === providerCode
-        && genericReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
-        && genericReceivable.gateway_environment === environment
-        && gatewayPrimaryUrl(genericReceivable)
+        gatewayReceivable
+        && gatewayReceivable.gateway_provider === providerCode
+        && gatewayReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
+        && gatewayReceivable.gateway_environment === environment
+        && gatewayPrimaryUrl(gatewayReceivable)
       ) {
-        return json({ url: gatewayPrimaryUrl(genericReceivable), alreadyPending: true });
+        return json({ url: gatewayPrimaryUrl(gatewayReceivable), alreadyPending: true });
       }
 
       if (
-        genericReceivable
-        && genericReceivable.gateway_provider === "asaas"
-        && (genericReceivable.asaas_payment_id || genericReceivable.asaas_payment_link_id)
+        gatewayReceivable
+        && gatewayReceivable.gateway_provider === "asaas"
+        && (gatewayReceivable.asaas_payment_id || gatewayReceivable.asaas_payment_link_id)
       ) {
-        await tryCancelLegacyAsaasPayment(admin, environment, genericReceivable.asaas_payment_id);
+        await tryCancelLegacyAsaasPayment(admin, environment, gatewayReceivable.asaas_payment_id);
         const switchMessage = `Cobrança Asaas anterior substituída por ${providerLabelFor(providerCode)} conforme a rota da integração bancária.`;
         const { data: clearedReceivable, error: clearReceivableError } = await admin
           .from("contas_receber")
@@ -620,12 +620,12 @@ Deno.serve(async (req: Request) => {
             gateway_synced_at: null,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", genericReceivable.id)
+          .eq("id", gatewayReceivable.id)
           .neq("status", "PAGO")
           .select()
           .maybeSingle();
         if (clearReceivableError) throw clearReceivableError;
-        genericReceivable = clearedReceivable || genericReceivable;
+        gatewayReceivable = clearedReceivable || gatewayReceivable;
       }
 
       const receivablePayload: any = {
@@ -650,16 +650,16 @@ Deno.serve(async (req: Request) => {
         ...(isEadCheckout ? receivableFeeFields : {}),
       };
 
-      if (genericReceivable?.id) {
+      if (gatewayReceivable?.id) {
         const { data: updated, error: updateError } = await admin
           .from("contas_receber")
           .update(receivablePayload)
-          .eq("id", genericReceivable.id)
+          .eq("id", gatewayReceivable.id)
           .neq("status", "PAGO")
           .select()
           .maybeSingle();
         if (updateError) throw updateError;
-        genericReceivable = updated || genericReceivable;
+        gatewayReceivable = updated || gatewayReceivable;
       } else {
         const { data: inserted, error: insertError } = await admin
           .from("contas_receber")
@@ -667,10 +667,10 @@ Deno.serve(async (req: Request) => {
           .select()
           .single();
         if (insertError) throw insertError;
-        genericReceivable = inserted;
+        gatewayReceivable = inserted;
       }
 
-      checkoutReceivableId = genericReceivable?.id || null;
+      checkoutReceivableId = gatewayReceivable?.id || null;
       const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
       const { data: lockedReceivable, error: lockError } = await admin
         .from("contas_receber")
@@ -682,7 +682,7 @@ Deno.serve(async (req: Request) => {
           gateway_last_error: null,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", genericReceivable.id)
+        .eq("id", gatewayReceivable.id)
         .is("gateway_payment_id", null)
         .or(`gateway_status.is.null,gateway_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
         .select()
@@ -692,7 +692,7 @@ Deno.serve(async (req: Request) => {
         const { data: currentReceivable } = await admin
           .from("contas_receber")
           .select("*")
-          .eq("id", genericReceivable.id)
+          .eq("id", gatewayReceivable.id)
           .maybeSingle();
         if (gatewayPrimaryUrl(currentReceivable)) return json({ url: gatewayPrimaryUrl(currentReceivable), alreadyPending: true });
         throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
@@ -787,7 +787,7 @@ Deno.serve(async (req: Request) => {
       const { data: savedInscricao, error: inscriptionError } = await inscriptionQuery.select("id").maybeSingle();
       if (inscriptionError) throw inscriptionError;
 
-      await persistGenericGatewayTransaction(admin, {
+      await persistProviderGatewayTransaction(admin, {
         receivable: updatedReceivable,
         inscricaoOnlineId: savedInscricao?.id || pendingInscricoes?.[0]?.id || null,
         providerCode,
@@ -906,7 +906,7 @@ Deno.serve(async (req: Request) => {
       }, {
         onConflict: "parceiro_id,provider_code,environment",
       }).then(({ error }: any) => {
-        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway generico:", error);
+        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway bancario:", error);
       });
       aluno.asaas_customer_id = customerId;
       return customerId;

@@ -142,7 +142,7 @@ const getCredential = async (admin: any, providerCode: ProviderCode, environment
   return data;
 };
 
-const getGenericSecret = async (admin: any, providerCode: ProviderCode, environment: Environment, kind: string) => {
+const getGatewaySecret = async (admin: any, providerCode: ProviderCode, environment: Environment, kind: string) => {
   const { data, error } = await admin.rpc("payment_gateway_get_secret", {
     p_secret_name: secretName(providerCode, environment, kind),
   });
@@ -150,7 +150,7 @@ const getGenericSecret = async (admin: any, providerCode: ProviderCode, environm
   return data as string | null;
 };
 
-const setGenericSecret = async (admin: any, providerCode: ProviderCode, environment: Environment, kind: string, value: string) => {
+const setGatewaySecret = async (admin: any, providerCode: ProviderCode, environment: Environment, kind: string, value: string) => {
   const { error } = await admin.rpc("payment_gateway_set_secret", {
     p_secret_name: secretName(providerCode, environment, kind),
     p_secret_value: value,
@@ -341,19 +341,19 @@ const testProvider = async (
   providedSecrets: Record<string, string> = {},
 ) => {
   if (providerCode === "asaas") {
-    const apiKey = providedSecrets.api_key || await getGenericSecret(admin, providerCode, environment, "api_key") || await getAsaasLegacySecret(admin, environment, "api_key");
+    const apiKey = providedSecrets.api_key || await getGatewaySecret(admin, providerCode, environment, "api_key") || await getAsaasLegacySecret(admin, environment, "api_key");
     if (!apiKey) throw new Error("Informe a chave de API do Asaas.");
     return testAsaas(apiKey, environment);
   }
 
   if (providerCode === "mercado_pago") {
-    const accessToken = providedSecrets.access_token || await getGenericSecret(admin, providerCode, environment, "access_token");
+    const accessToken = providedSecrets.access_token || await getGatewaySecret(admin, providerCode, environment, "access_token");
     if (!accessToken) throw new Error("Informe o access token do Mercado Pago.");
     return testMercadoPago(accessToken);
   }
 
-  const clientId = providedSecrets.client_id || await getGenericSecret(admin, providerCode, environment, "client_id");
-  const clientSecret = providedSecrets.client_secret || await getGenericSecret(admin, providerCode, environment, "client_secret");
+  const clientId = providedSecrets.client_id || await getGatewaySecret(admin, providerCode, environment, "client_id");
+  const clientSecret = providedSecrets.client_secret || await getGatewaySecret(admin, providerCode, environment, "client_secret");
   if (!clientId || !clientSecret) throw new Error("Informe Client ID e Client Secret do Banese Card.");
   return {
     status: "PENDING_MANUAL",
@@ -473,7 +473,7 @@ Deno.serve(async (req: Request) => {
 
       for (const [kind, value] of Object.entries(secrets)) {
         if (!value) continue;
-        await setGenericSecret(admin, providerCode, environment, kind, value);
+        await setGatewaySecret(admin, providerCode, environment, kind, value);
         if (providerCode === "asaas" && kind === "api_key") {
           await setAsaasLegacySecret(admin, environment, "api_key", value);
         }
