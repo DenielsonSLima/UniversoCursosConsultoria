@@ -458,7 +458,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       if (eadPaymentMethod === 'CREDIT_CARD') {
         const checkoutResult = result as any;
         const checkoutUrl = checkoutResult?.url || checkoutResult?.paymentLinkUrl || checkoutResult?.invoiceUrl;
-        if (!checkoutUrl) throw new Error('O Asaas não retornou o link do checkout do cartão.');
+        if (!checkoutUrl) throw new Error('O gateway não retornou o link do checkout do cartão.');
+        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        setSelectedEadPayment(null);
+        return;
+      }
+
+      const checkoutResult = result as any;
+      const provider = String(checkoutResult?.payment?.provider || '').toLowerCase();
+      const checkoutUrl = checkoutResult?.url || checkoutResult?.payment?.invoiceUrl || checkoutResult?.paymentLinkUrl;
+      const isHostedMercadoPagoCheckout = provider === 'mercado_pago'
+        || String(checkoutUrl || '').includes('mercadopago.com');
+      if (isHostedMercadoPagoCheckout && checkoutUrl) {
         window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
         setSelectedEadPayment(null);
         return;

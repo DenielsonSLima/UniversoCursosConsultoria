@@ -1,6 +1,3 @@
-import { createBaneseCharge } from "../banese/core/adapter.ts";
-import { createMercadoPagoCharge } from "../mercado-pago/core/adapter.ts";
-
 export type GatewayEnvironment = "sandbox" | "production";
 export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
 export type GatewayProviderCode = "asaas" | "mercado_pago" | "banese_card";
@@ -71,6 +68,7 @@ const normalizeAdapterResult = (
   result: any,
 ): GatewayChargeResult => {
   const raw = result?.raw && typeof result.raw === "object" ? result.raw : {};
+  const isHostedCheckoutProvider = providerCode === "mercado_pago";
   return {
     providerCode,
     remotePaymentId: result?.id || null,
@@ -79,7 +77,7 @@ const normalizeAdapterResult = (
     remoteStatus: result?.status || "created",
     invoiceUrl: result?.link || null,
     bankSlipUrl: paymentMethod === "BOLETO" ? result?.link || null : null,
-    pixPayload: paymentMethod === "PIX" ? result?.link || null : null,
+    pixPayload: !isHostedCheckoutProvider && paymentMethod === "PIX" ? result?.link || null : null,
     pixEncodedImage: null,
     rawPayload: raw,
   };
@@ -88,10 +86,12 @@ const normalizeAdapterResult = (
 export const createGatewayCharge = async (input: GatewayChargeInput): Promise<GatewayChargeResult> => {
   const hydratedInput = await withProviderMetadata(input);
   if (hydratedInput.providerCode === "mercado_pago") {
+    const { createMercadoPagoCharge } = await import("../mercado-pago/core/adapter.ts");
     const result = await createMercadoPagoCharge(hydratedInput as any);
     return normalizeAdapterResult("mercado_pago", input.paymentMethod, result);
   }
   if (hydratedInput.providerCode === "banese_card") {
+    const { createBaneseCharge } = await import("../banese/core/adapter.ts");
     const result = await createBaneseCharge(hydratedInput as any);
     return normalizeAdapterResult("banese_card", input.paymentMethod, result);
   }

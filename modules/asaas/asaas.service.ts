@@ -132,6 +132,7 @@ export const asaasIntegrationService = {
       receivableId?: string;
       payment?: {
         id?: string | null;
+        provider?: string | null;
         method?: string | null;
         status?: string | null;
         value?: number | null;

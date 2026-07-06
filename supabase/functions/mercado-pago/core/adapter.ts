@@ -137,6 +137,53 @@ const payerIdentification = (payer: AdapterPayer) => {
   };
 };
 
+const paymentMethodOptions = (paymentMethod: PaymentMethod) => {
+  if (paymentMethod === "PIX") {
+    return {
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "credit_card" },
+          { id: "debit_card" },
+          { id: "ticket" },
+          { id: "atm" },
+          { id: "account_money" },
+        ],
+        installments: 1,
+        default_installments: 1,
+      },
+    };
+  }
+
+  if (paymentMethod === "CREDIT_CARD") {
+    return {
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "ticket" },
+          { id: "bank_transfer" },
+          { id: "atm" },
+          { id: "account_money" },
+        ],
+      },
+    };
+  }
+
+  if (paymentMethod === "BOLETO") {
+    return {
+      payment_methods: {
+        excluded_payment_types: [
+          { id: "credit_card" },
+          { id: "debit_card" },
+          { id: "bank_transfer" },
+          { id: "account_money" },
+          { id: "atm" },
+        ],
+      },
+    };
+  }
+
+  return {};
+};
+
 export const getMercadoPagoAccessToken = async (
   admin: SupabaseAdminRpcClient,
   environment: Environment,
@@ -205,6 +252,7 @@ export const buildMercadoPagoPreferencePayload = (input: AdapterCreateChargeInpu
       receivable_id: externalReference || undefined,
       due_date: input.dueDate || undefined,
     },
+    ...paymentMethodOptions(input.paymentMethod),
   };
 };
 

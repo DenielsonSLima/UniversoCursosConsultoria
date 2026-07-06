@@ -754,7 +754,9 @@ const CursosPage: React.FC<CursosPageProps> = ({
     },
     onSuccess: ({ url, payment, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
       const paymentMethod = String(payment?.method || '').toUpperCase();
-      if (payment && ['PIX', 'BOLETO'].includes(paymentMethod)) {
+      const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
+      const usesInlinePaymentPanel = paymentProvider === 'asaas';
+      if (payment && usesInlinePaymentPanel && ['PIX', 'BOLETO'].includes(paymentMethod)) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
         if (paymentMethod === 'BOLETO') {
           const boletoUrl = payment.bankSlipUrl || payment.invoiceUrl || url;

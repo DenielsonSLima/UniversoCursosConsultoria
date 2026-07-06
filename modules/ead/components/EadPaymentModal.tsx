@@ -10,6 +10,7 @@ export interface EadPaymentPanelData {
   awaitingWebhook?: boolean;
   payment?: {
     id?: string | null;
+    provider?: string | null;
     method?: string | null;
     status?: string | null;
     value?: number | string | null;
@@ -37,7 +38,7 @@ interface EadPaymentModalProps {
 }
 
 const formatCurrencyDisplay = (value: number | string | null | undefined) => {
-  if (value === null || value === undefined || value === '') return 'Valor informado pelo Asaas';
+  if (value === null || value === undefined || value === '') return 'Valor informado pelo gateway';
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return String(value);
   return parsed.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -53,15 +54,18 @@ const formatDateDisplay = (value?: string | null) => {
 const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCopied }) => {
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
+  const provider = String(payment.provider || 'asaas').toLowerCase();
+  const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese' : 'Asaas';
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
+  const showInlinePix = isPix && provider === 'asaas';
   const recipientName = payment.recipient?.name || 'Universo Cursos e Consultoria';
   const recipientDocument = payment.recipient?.document || '13.278.137/0001-54';
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
   const dueDate = formatDateDisplay(payment.dueDate);
   const pixExpiration = formatDateDisplay(payment.pixQrCode?.expirationDate);
   const officialUrl = payment.invoiceUrl || panel.url || payment.bankSlipUrl || null;
-  const expirationLabel = pixExpiration || dueDate || 'Informado pelo Asaas';
+  const expirationLabel = pixExpiration || dueDate || `Informado pelo ${providerName}`;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -93,10 +97,10 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-600">Pagamento EAD</p>
             <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
-              {isPix ? 'Pague com Pix' : isBoleto ? 'Boleto gerado' : 'Pagamento gerado'}
+              {showInlinePix ? 'Pague com Pix' : isBoleto ? 'Boleto gerado' : 'Pagamento gerado'}
             </h3>
             <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-              O curso só será liberado depois que o webhook confirmado do Asaas atualizar a matrícula.
+              O curso só será liberado depois que o webhook confirmado do {providerName} atualizar a matrícula.
             </p>
           </div>
           <button
@@ -109,7 +113,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
         </div>
 
         <div className="max-h-[calc(100dvh-7.5rem)] space-y-3 overflow-y-auto px-5 py-4">
-          {isPix && (
+          {showInlinePix && (
             <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 lg:grid-cols-[280px_1fr]">
               <div className="text-center">
                 {payment.pixQrCode?.encodedImage ? (
@@ -165,14 +169,14 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Liberacao</p>
-                    <p className="mt-1 text-sm font-black text-[#001a33]">Apos confirmacao do Asaas</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">Apos confirmacao do {providerName}</p>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {!isPix && (
+          {!showInlinePix && (
             <div className="grid gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-600 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
@@ -199,7 +203,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
                   <FileText size={26} />
                 </div>
                 <div>
-                  <p className="text-sm font-black uppercase tracking-tight text-[#001a33]">Boleto oficial Asaas</p>
+                  <p className="text-sm font-black uppercase tracking-tight text-[#001a33]">Boleto oficial {providerName}</p>
                   <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
                     Se o redirecionamento automatico nao abrir, use o acesso oficial abaixo.
                   </p>
@@ -232,7 +236,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
           )}
 
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-bold leading-relaxed text-slate-600">
-            A tela pode ser fechada sem cancelar a cobrança. Quando o Asaas confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
+            A tela pode ser fechada sem cancelar a cobrança. Quando o {providerName} confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
           </div>
         </div>
       </div>
