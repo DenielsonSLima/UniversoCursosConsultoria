@@ -9,5 +9,4 @@ This folder decides which Asaas modality module should calculate the charge:
 - `livres`
 - `especializacao`
 
-Endpoint wiring remains in `asaas-checkout`.
-
+Endpoint wiring for legacy non-EAD course checkout remains in the neutral `checkout-api`.

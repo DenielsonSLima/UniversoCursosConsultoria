@@ -7,7 +7,7 @@ import {
   json,
 } from "../_shared/http.ts";
 import { buildEadCheckoutContext } from "./ead-context.ts";
-import { proxyToAsaasCheckout } from "./providers/asaas.ts";
+import { runCourseCheckout } from "./providers/course.ts";
 import { handleGatewayCheckout } from "./providers/gateway.ts";
 import type { CheckoutRuntime, EadCheckoutContext } from "./types.ts";
 import { normalizeErrorMessage, providerLabelFor } from "./utils.ts";
@@ -101,14 +101,10 @@ Deno.serve(async (req: Request) => {
 
     const resolvedContext = await buildEadCheckoutContext(runtime);
     if (!resolvedContext) {
-      return proxyToAsaasCheckout(runtime);
+      return runCourseCheckout(runtime);
     }
 
     context = resolvedContext;
-
-    if (context.route.providerCode === "asaas") {
-      return proxyToAsaasCheckout(context);
-    }
 
     const result = await handleGatewayCheckout(context);
     createdRemotePayment = result.createdRemotePayment;

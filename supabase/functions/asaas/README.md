@@ -3,7 +3,8 @@
 This folder contains shared Asaas domain code used by the public Edge Functions.
 The public endpoints remain stable:
 
-- `asaas-checkout`
+- `payment-checkout`
+- `checkout-api`
 - `asaas-api`
 - `asaas-webhook`
 - `asaas-cancel-receivable`
@@ -23,5 +24,6 @@ The public endpoints remain stable:
 
 - Course checkout must not create detached payment links.
 - Detached payment links without a customer are allowed only for `OUTROS_CREDITOS` without `matricula_id`.
-- Payment creation, recovery by `externalReference`, and `CREATING` locks remain in the endpoint services until replay and concurrency tests cover them.
+- EAD checkout enters through `payment-checkout` and routes by `gateways/<metodo>/<provedor>`.
+- Non-EAD course checkout still uses the neutral `checkout-api` fallback until those modalities are migrated to the same gateway matrix.
 - Webhook remains a single endpoint and dispatches to handlers by payment context.

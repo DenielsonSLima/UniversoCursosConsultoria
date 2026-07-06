@@ -81,14 +81,15 @@ const upsertPendingInscricao = async (
   },
 ) => {
   const document = documentForGateway(context.aluno.cpf_cnpj);
+  const isAsaas = input.providerCode === "asaas";
   const payload = {
     curso_id: context.course.id,
     turma_id: context.turma.id,
     aluno_id: context.aluno.id,
     matricula_id: context.matricula.id,
-    asaas_payment_id: null,
-    asaas_customer_id: null,
-    asaas_payment_link_id: null,
+    asaas_payment_id: isAsaas ? input.remotePaymentId : null,
+    asaas_customer_id: isAsaas ? input.remoteCustomerId : null,
+    asaas_payment_link_id: isAsaas ? input.remotePaymentLinkId : null,
     gateway_provider: input.providerCode,
     gateway_environment: context.environment,
     gateway_payment_id: input.remotePaymentId,
@@ -127,9 +128,6 @@ const upsertPendingInscricao = async (
 
 export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   const providerCode = context.route.providerCode;
-  if (providerCode === "asaas") {
-    throw new Error("Fluxo gateway neutro chamado para rota Asaas.");
-  }
 
   const { data: existingReceivables, error: existingError } = await context
     .admin

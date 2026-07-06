@@ -1,7 +1,7 @@
-import type { CheckoutRuntime, EadCheckoutContext } from "../types.ts";
+import type { CheckoutRuntime } from "../types.ts";
 
-export const proxyToAsaasCheckout = async (context: CheckoutRuntime | EadCheckoutContext) => {
-  const response = await fetch(`${context.supabaseUrl.replace(/\/+$/, "")}/functions/v1/asaas-checkout`, {
+export const runCourseCheckout = async (context: CheckoutRuntime) => {
+  const response = await fetch(`${context.supabaseUrl.replace(/\/+$/, "")}/functions/v1/checkout-api`, {
     method: "POST",
     headers: {
       Authorization: context.req.headers.get("Authorization") || "",

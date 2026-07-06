@@ -78,7 +78,7 @@ const alunoPortalUrl = (courseId?: string | null) => {
   const publicBaseUrl = resolvePublicBaseUrl() || "https://universocc.com.br";
   const url = new URL("/aluno", publicBaseUrl);
   if (courseId) url.searchParams.set("courseId", courseId);
-  url.searchParams.set("asaas", "already-paid");
+  url.searchParams.set("checkout", "already-paid");
   return url.toString();
 };
 
@@ -321,7 +321,7 @@ export const handlePaymentCheckout = async (req: Request) => {
   const json = (body: unknown, status = 200) =>
     sendJson(body, status, req);
 
-  if (isRateLimitExceeded(`payment-checkout:${getClientIp(req)}`, 30, 60000)) {
+  if (isRateLimitExceeded(`checkout-api:${getClientIp(req)}`, 30, 60000)) {
     return json({
       error: "Muitas tentativas de checkout em curto intervalo. Tente novamente em alguns segundos.",
     }, 429);
@@ -1364,7 +1364,7 @@ export const handlePaymentCheckout = async (req: Request) => {
 
     const customerId = await ensureCustomer();
     const publicBaseUrl = resolvePublicBaseUrl();
-    const successUrl = publicBaseUrl ? `${publicBaseUrl}/aluno?asaas=success` : null;
+    const successUrl = publicBaseUrl ? `${publicBaseUrl}/aluno?checkout=success&gateway=asaas` : null;
     const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
     const { data: lockedReceivable, error: lockReceivableError } = await admin
       .from("contas_receber")

@@ -1,5 +1,10 @@
+import { createAsaasCharge } from "../../asaas/core/adapter.ts";
 import type { GatewayChargeInput } from "../router.ts";
 
-export const createAsaasBoletoCharge = (_input: GatewayChargeInput): never => {
-  throw new Error("Boleto Asaas usa o fluxo proprio do Asaas.");
-};
+export const createAsaasBoletoCharge = (input: GatewayChargeInput) =>
+  createAsaasCharge({
+    ...input,
+    providerCode: "asaas",
+    paymentMethod: "BOLETO",
+    installments: 1,
+  } as any);

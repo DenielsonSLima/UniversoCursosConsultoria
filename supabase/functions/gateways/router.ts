@@ -86,19 +86,25 @@ const normalizeAdapterResult = (
   result: any,
 ): GatewayChargeResult => {
   const raw = result?.raw && typeof result.raw === "object" ? result.raw : {};
-  const isHostedCheckoutProvider = providerCode === "mercado_pago";
+  const isHostedCheckoutProvider = providerCode === "mercado_pago" ||
+    providerCode === "asaas";
   return {
     providerCode,
     remotePaymentId: result?.id || null,
-    remotePaymentLinkId: result?.id || null,
-    remoteCustomerId: null,
+    remotePaymentLinkId: result?.paymentLinkId || result?.paymentLink ||
+      (providerCode === "mercado_pago" ? result?.id : null) || null,
+    remoteCustomerId: result?.customer || result?.customerId || null,
     remoteStatus: result?.status || "created",
-    invoiceUrl: result?.link || null,
-    bankSlipUrl: paymentMethod === "BOLETO" ? result?.link || null : null,
-    pixPayload: !isHostedCheckoutProvider && paymentMethod === "PIX"
-      ? result?.link || null
-      : null,
-    pixEncodedImage: null,
+    invoiceUrl: result?.invoiceUrl || result?.link || null,
+    bankSlipUrl: result?.bankSlipUrl ||
+      (paymentMethod === "BOLETO" ? result?.link || null : null),
+    pixPayload: result?.pixPayload ||
+      (!isHostedCheckoutProvider && paymentMethod === "PIX"
+        ? result?.link || null
+        : null),
+    pixEncodedImage: result?.pixEncodedImage ||
+      result?.pixEncodedImageBase64 ||
+      null,
     rawPayload: raw,
   };
 };
@@ -210,26 +216,49 @@ export const gatewayReceivableUpdate = (
     installments?: number | null;
     result: GatewayChargeResult;
   },
-) => ({
-  gateway_provider: input.providerCode,
-  gateway_environment: input.environment,
-  gateway_payment_method: input.paymentMethod,
-  gateway_installments: input.installments || 1,
-  gateway_payment_id: input.result.remotePaymentId ||
-    input.result.remotePaymentLinkId,
-  gateway_customer_id: input.result.remoteCustomerId,
-  gateway_payment_link_id: input.result.remotePaymentLinkId,
-  gateway_installment_id: null,
-  gateway_invoice_url: input.result.invoiceUrl,
-  gateway_bank_slip_url: input.result.bankSlipUrl,
-  gateway_pix_payload: input.result.pixPayload,
-  gateway_pix_encoded_image: input.result.pixEncodedImage,
-  gateway_transaction_receipt_url: null,
-  gateway_status: input.result.remoteStatus,
-  gateway_synced_at: new Date().toISOString(),
-  gateway_last_error: null,
-  updated_at: new Date().toISOString(),
-});
+) => {
+  const raw = input.result.rawPayload || {};
+  const remotePaymentId = input.result.remotePaymentId ||
+    input.result.remotePaymentLinkId;
+  const update: Record<string, unknown> = {
+    gateway_provider: input.providerCode,
+    gateway_environment: input.environment,
+    gateway_payment_method: input.paymentMethod,
+    gateway_installments: input.installments || 1,
+    gateway_payment_id: remotePaymentId,
+    gateway_customer_id: input.result.remoteCustomerId,
+    gateway_payment_link_id: input.result.remotePaymentLinkId,
+    gateway_installment_id: (raw as any)?.installment ||
+      (raw as any)?.installmentId || null,
+    gateway_invoice_url: input.result.invoiceUrl,
+    gateway_bank_slip_url: input.result.bankSlipUrl,
+    gateway_pix_payload: input.result.pixPayload,
+    gateway_pix_encoded_image: input.result.pixEncodedImage,
+    gateway_transaction_receipt_url:
+      (raw as any)?.transactionReceiptUrl || null,
+    gateway_status: input.result.remoteStatus,
+    gateway_synced_at: new Date().toISOString(),
+    gateway_last_error: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.providerCode === "asaas") {
+    update.asaas_payment_id = remotePaymentId;
+    update.asaas_customer_id = input.result.remoteCustomerId;
+    update.asaas_payment_link_id = input.result.remotePaymentLinkId;
+    update.nosso_numero_asaas = remotePaymentId;
+    update.asaas_invoice_url = input.result.invoiceUrl;
+    update.asaas_bank_slip_url = input.result.bankSlipUrl;
+    update.asaas_installment_id = update.gateway_installment_id;
+    update.asaas_transaction_receipt_url =
+      update.gateway_transaction_receipt_url;
+    update.asaas_status = input.result.remoteStatus;
+    update.asaas_synced_at = new Date().toISOString();
+    update.asaas_last_error = null;
+  }
+
+  return update;
+};
 
 export const gatewayPrimaryUrl = (receivable: any) =>
   receivable?.gateway_invoice_url ||
