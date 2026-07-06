@@ -108,8 +108,7 @@ export const asaasIntegrationService = {
     turmaId?: string | null,
     eadPayment?: { method?: string; installments?: number },
   ) {
-    const isInlineEadPayment = ['PIX', 'BOLETO'].includes(String(eadPayment?.method || '').toUpperCase());
-    const { data, error } = await supabase.functions.invoke(isInlineEadPayment ? 'asaas-ead-checkout' : 'asaas-checkout', {
+    const { data, error } = await supabase.functions.invoke('asaas-checkout', {
       body: {
         courseId,
         alunoId,
