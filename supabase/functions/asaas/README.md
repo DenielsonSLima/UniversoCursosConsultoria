@@ -3,11 +3,11 @@
 This folder contains shared Asaas domain code used by the public Edge Functions.
 The public endpoints remain stable:
 
-- `payment-checkout`
-- `checkout-api`
-- `asaas-api`
-- `asaas-webhook`
-- `asaas-cancel-receivable`
+- `payment-checkout` -> `../gateways/checkout/index.ts`
+- `checkout-api` -> `../gateways/checkout-api/index.ts`
+- `asaas-api` -> `api/index.ts`
+- `asaas-webhook` -> `webhook/index.ts`
+- `asaas-cancel-receivable` -> `cancel-receivable/index.ts`
 
 ## Modules
 
@@ -18,7 +18,9 @@ The public endpoints remain stable:
 - `especializacao`: Especializacao checkout rules, separated from livres for future custom rules.
 - `tecnico`: Technical course checkout and cycle helpers.
 - `outros-creditos`: Detached payment links for financial charges without enrollment/course.
-- `webhook`: Shared webhook event and idempotency helpers.
+- `api`: Authenticated Asaas management endpoint.
+- `webhook`: Public Asaas webhook endpoint and shared event/idempotency helpers.
+- `cancel-receivable`: Authenticated cancellation endpoint.
 
 ## Boundaries
 

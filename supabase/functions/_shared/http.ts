@@ -10,6 +10,9 @@ const SECURITY_RESPONSE_HEADERS = {
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://universocc.com.br",
+  "https://www.universocc.com.br",
+  "https://localhost",
+  "http://localhost",
 ];
 
 const ORIGIN_PARSE_TARGETS = [
@@ -36,6 +39,35 @@ const parseOrigin = (value?: string | null) => {
   }
 };
 
+const normalizeHeaderValue = (value: string) => value.trim().toLowerCase();
+
+const isRequestedHeader = (value: string) => {
+  const normalized = normalizeHeaderValue(value);
+  return normalized.length > 0 && normalized !== "origin";
+};
+
+const mergeRequestedHeaders = (request?: Request | null) => {
+  const requestedHeaders = new Set<string>([
+    "authorization",
+    "x-client-info",
+    "apikey",
+    "content-type",
+    "accept",
+    "x-requested-with",
+  ]);
+
+  const requestedHeaderList =
+    parseOriginList(request?.headers.get("access-control-request-headers"));
+  for (const header of requestedHeaderList) {
+    const normalized = normalizeHeaderValue(header);
+    if (isRequestedHeader(normalized)) {
+      requestedHeaders.add(normalized);
+    }
+  }
+
+  return Array.from(requestedHeaders).sort().join(", ");
+};
+
 const parseOriginList = (value?: string | null) =>
   normalizeOriginInput(value)
     .split(/[,\s]+/)
@@ -51,6 +83,16 @@ const isLocalDevelopmentOrigin = (origin: string) => {
     return /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)
       || /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)
       || /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+  } catch {
+    return false;
+  }
+};
+
+const isUniversityDomain = (origin: string) => {
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname === "universocc.com.br") return true;
+    return parsed.hostname.endsWith(".universocc.com.br");
   } catch {
     return false;
   }
@@ -76,7 +118,7 @@ const getAllowedCorsOrigins = () => {
 const resolveAllowOrigin = (requestOrigin: string | null | undefined) => {
   const allowed = getAllowedCorsOrigins();
   const parsedOrigin = parseOrigin(requestOrigin);
-  if (parsedOrigin && isLocalDevelopmentOrigin(parsedOrigin)) return parsedOrigin;
+  if (parsedOrigin && (isLocalDevelopmentOrigin(parsedOrigin) || isUniversityDomain(parsedOrigin))) return parsedOrigin;
   if (parsedOrigin && allowed.includes(parsedOrigin)) return parsedOrigin;
   return allowed[0] || "https://universocc.com.br";
 };
@@ -84,11 +126,13 @@ const resolveAllowOrigin = (requestOrigin: string | null | undefined) => {
 export const buildCorsHeaders = (request?: Request | null, options: CorsOptions = {}) => {
   const methods = options.methods || "POST, OPTIONS";
   const requestOrigin = request?.headers.get("origin");
+  const requestedHeaders = mergeRequestedHeaders(request);
   return {
     "Access-Control-Allow-Origin": resolveAllowOrigin(requestOrigin),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": requestedHeaders,
     "Access-Control-Allow-Methods": methods,
     "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true",
     ...SECURITY_RESPONSE_HEADERS,
   };
 };
@@ -140,4 +184,3 @@ export const isRateLimitExceeded = (key: string, maxRequests: number, windowMs: 
 };
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-

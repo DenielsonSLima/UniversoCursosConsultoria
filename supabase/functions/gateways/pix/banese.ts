@@ -3,8 +3,13 @@ import type { GatewayChargeInput } from "../router.ts";
 
 export const createBanesePixCharge = (input: GatewayChargeInput) =>
   createBaneseCharge({
-    ...input,
-    providerCode: "banese_card",
+    admin: input.admin,
+    supabaseUrl: input.supabaseUrl,
+    environment: input.environment,
     paymentMethod: "PIX",
-    installments: 1,
-  } as any);
+    receivable: input.receivable,
+    payer: input.payer,
+    description: input.description,
+    amount: input.amount,
+    dueDate: input.dueDate,
+  });

@@ -29,10 +29,9 @@ export const resolveEadCheckoutOptions = (course: any): EadCheckoutOptions => {
   const metodos = financeiroConfig.metodosRecebimento || {};
   const cartao = financeiroConfig.cartao || {};
   const cardEnabled = metodos.cartao !== false && cartao.aceitar !== false;
-  const defaultMaxParcelas = String(course?.modalidade || '').toUpperCase() === 'EAD' ? 2 : 1;
   const parcelasPadrao = Math.max(1, toNumber(financeiroConfig.parcelasPadrao, 1));
   const configuredMaxParcelas = cardEnabled
-    ? Math.max(parcelasPadrao, toNumber(cartao.maxParcelas, defaultMaxParcelas))
+    ? Math.max(parcelasPadrao, toNumber(cartao.maxParcelas, parcelasPadrao))
     : 1;
   const maxParcelas = clampInstallments(configuredMaxParcelas, 21);
   const options: EadCheckoutPaymentOption[] = [];

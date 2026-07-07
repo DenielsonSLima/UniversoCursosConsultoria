@@ -1,11 +1,12 @@
-# Integracao Bancaria Banese
+# Integracao Bancaria Banese Card
 
 Esta nota registra a leitura dos documentos locais em `Documentos/forum banese api`
-e dos PDFs oficiais do Banese usados como referencia para pre-configuracao.
+e dos PDFs oficiais do Banese usados como referencia para pre-configuracao do
+banco/provedor Banese Card.
 
 ## Autenticacao
 
-O Banese nao usa uma chave unica no formato do Asaas. A autenticacao principal
+O Banese Card nao usa uma chave unica no formato do Asaas. A autenticacao principal
 e OAuth 2 `client_credentials`, com `Client ID` e `Client Secret` fornecidos
 pelo banco apos habilitacao do convenio.
 
@@ -63,7 +64,7 @@ Endpoints relevantes:
 - Consultar guia: `GET /manutencao/guias/{CodigoDeBarra}`
 - Webhook Pix: `PUT /manutencao/webhook/{chave}`
 
-## O que pedir ao gerente Banese
+## O que pedir ao gerente Banese Card
 
 Para boleto:
 
@@ -89,7 +90,8 @@ Para Pix/SAB Guias:
 - Formato do certificado cliente, senha, cadeia/CA e prazo de renovacao, caso o certificado
   precise ser armazenado ou enviado pela Edge Function.
 
-Para cartao:
+Para cartao de credito:
 
-- Confirmar se existe API Banese/Banese Card para cobranca online por cartao.
-- Enquanto nao houver confirmacao, rota `CREDIT_CARD` deve permanecer em Asaas ou Mercado Pago.
+- A documentacao local fornecida cobre boleto e Pix/SAB Guias.
+- Como o Banese Card nao aceita cartao de credito neste fluxo, rota `CREDIT_CARD`
+  deve permanecer em Asaas ou Mercado Pago.

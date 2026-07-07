@@ -214,6 +214,8 @@ const paymentMethodOptions = (
   paymentMethod: PaymentMethod,
   installments?: number | null,
 ) => {
+  // Checkout Pro does not allow excluding account_money. Keep method filtering
+  // limited to payment types the Mercado Pago API accepts in preferences.
   if (paymentMethod === "PIX") {
     return {
       payment_methods: {
@@ -223,7 +225,6 @@ const paymentMethodOptions = (
           { id: "prepaid_card" },
           { id: "ticket" },
           { id: "atm" },
-          { id: "account_money" },
         ],
         installments: 1,
         default_installments: 1,
@@ -241,7 +242,6 @@ const paymentMethodOptions = (
           { id: "ticket" },
           { id: "bank_transfer" },
           { id: "atm" },
-          { id: "account_money" },
         ],
         installments: cardInstallments,
         default_installments: cardInstallments,
@@ -257,7 +257,6 @@ const paymentMethodOptions = (
           { id: "debit_card" },
           { id: "prepaid_card" },
           { id: "bank_transfer" },
-          { id: "account_money" },
           { id: "atm" },
         ],
       },

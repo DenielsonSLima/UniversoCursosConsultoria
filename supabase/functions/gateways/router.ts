@@ -91,7 +91,7 @@ const normalizeAdapterResult = (
   return {
     providerCode,
     remotePaymentId: result?.id || null,
-    remotePaymentLinkId: result?.paymentLinkId || result?.paymentLink ||
+    remotePaymentLinkId: result?.link || result?.paymentLinkId || result?.paymentLink ||
       (providerCode === "mercado_pago" ? result?.id : null) || null,
     remoteCustomerId: result?.customer || result?.customerId || null,
     remoteStatus: result?.status || "created",
@@ -113,6 +113,16 @@ export const createGatewayCharge = async (
   input: GatewayChargeInput,
 ): Promise<GatewayChargeResult> => {
   const hydratedInput = await withProviderMetadata(input);
+  if (hydratedInput.providerCode === "banese_card") {
+    if (hydratedInput.paymentMethod === "CREDIT_CARD") {
+      throw new Error(
+        "Banese Card nao aceita cartao de credito neste fluxo de checkout.",
+      );
+    }
+    throw new Error(
+      "Checkout Banese Card Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
+    );
+  }
 
   if (hydratedInput.paymentMethod === "PIX") {
     const { createPixGatewayCharge } = await import("./pix/index.ts");
@@ -260,14 +270,28 @@ export const gatewayReceivableUpdate = (
   return update;
 };
 
+const firstUrl = (...values: Array<unknown>) => {
+  for (const value of values) {
+    const candidate = String(value || "").trim();
+    if (/^https?:\/\//i.test(candidate)) return candidate;
+  }
+  return null;
+};
+
 export const gatewayPrimaryUrl = (receivable: any) =>
-  receivable?.gateway_invoice_url ||
-  receivable?.gateway_bank_slip_url ||
-  receivable?.asaas_invoice_url ||
-  receivable?.asaas_bank_slip_url ||
+  firstUrl(
+    receivable?.gateway_invoice_url,
+    receivable?.gateway_bank_slip_url,
+    receivable?.gateway_payment_link_id,
+    receivable?.asaas_invoice_url,
+    receivable?.asaas_bank_slip_url,
+    receivable?.asaas_payment_link_id,
+  ) ||
   null;
 
 export const gatewayOnlyPrimaryUrl = (receivable: any) =>
-  receivable?.gateway_invoice_url ||
-  receivable?.gateway_bank_slip_url ||
-  null;
+  firstUrl(
+    receivable?.gateway_invoice_url,
+    receivable?.gateway_bank_slip_url,
+    receivable?.gateway_payment_link_id,
+  );

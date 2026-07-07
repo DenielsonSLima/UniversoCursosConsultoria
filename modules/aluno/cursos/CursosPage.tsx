@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
-import { asaasIntegrationService } from '../../asaas/asaas.service';
+import { paymentCheckoutService } from '../../asaas/asaas.service';
 import {
   defaultEadCheckoutMethod,
   formatEadCheckoutMoney,
@@ -737,7 +737,10 @@ const CursosPage: React.FC<CursosPageProps> = ({
       eadPayment?: { method: EadCheckoutPaymentMethod; installments: number };
     }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await asaasIntegrationService.getPublicCheckout(course.id, alunoId, turmaId, eadPayment);
+      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, eadPayment);
+      if (!result?.url || typeof result.url !== 'string') {
+        throw new Error('A resposta do checkout não retornou um link válido.');
+      }
       return {
         url: result.url,
         payment: result.payment,
@@ -768,7 +771,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
         setEadPaymentPanel({ url, payment, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
         setCheckoutError(
           awaitingWebhook
-            ? 'Pagamento localizado. O curso será liberado assim que o webhook do Asaas confirmar no sistema.'
+            ? 'Pagamento localizado. O curso será liberado assim que o webhook do gateway bancário confirmar no sistema.'
             : alreadyPending
               ? 'Você já tinha uma cobrança EAD em aberto. Reabrimos os dados de pagamento.'
               : ''
@@ -2224,7 +2227,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
               </div>
 
               <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold leading-relaxed text-amber-800">
-                O pagamento confirma a matrícula nesta turma e neste polo após a baixa do Asaas. Documentos e dados complementares poderão ser preenchidos depois no portal do aluno.
+                O pagamento confirma a matrícula nesta turma e neste polo após a baixa do gateway bancário. Documentos e dados complementares poderão ser preenchidos depois no portal do aluno.
               </div>
 
               {String(checkoutReview.course.modalidade || '').toUpperCase() === 'TECNICO' && (

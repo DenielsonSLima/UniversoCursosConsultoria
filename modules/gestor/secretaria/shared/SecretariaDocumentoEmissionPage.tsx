@@ -32,7 +32,6 @@ import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.
 import CrachaPeriodoEleitoralPreview from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
 import {
   crachaPeriodoEleitoralService,
-  formatCrachaEleitoralDate,
   isCrachaEleitoralTemplateAvailable,
 } from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 

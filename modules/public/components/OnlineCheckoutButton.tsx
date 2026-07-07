@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle2, CreditCard, Loader2, X } from 'lucide-react';
-import { asaasIntegrationService } from '../../asaas/asaas.service';
+import { paymentCheckoutService } from '../../asaas/asaas.service';
 import { ensureLinkedAlunoProfile, getPortalProfile, savePortalSession } from '../../login/portal-session';
 
 interface OnlineCheckoutButtonProps {
@@ -67,7 +67,7 @@ const OnlineCheckoutButton: React.FC<OnlineCheckoutButtonProps> = ({
       }
 
       savePortalSession(profile);
-      const result = await asaasIntegrationService.getPublicCheckout(
+      const result = await paymentCheckoutService.getPublicCheckout(
         courseId,
         profile.id,
         turmaId,

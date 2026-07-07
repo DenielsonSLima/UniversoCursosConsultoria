@@ -9,6 +9,7 @@ import { resolveEadCheckoutCharge } from "../ead/checkout.ts";
 import { resolveEspecializacaoCheckoutCharge } from "../especializacao/checkout.ts";
 import { resolveLivreCheckoutCharge } from "../livres/checkout.ts";
 import { resolveTecnicoInitialEnrollmentCharge } from "../tecnico/checkout.ts";
+import type { CoursePaymentRequest } from "../core/payment-methods.ts";
 
 export {
   buildCoursePaymentDescription,
@@ -22,13 +23,15 @@ export const resolveOnlineCharge = (
   course: any,
   turma: any,
   dueDate: string,
-  options: { eadPayment?: { method?: unknown; installments?: unknown } } = {},
+  options: {
+    payment?: CoursePaymentRequest;
+    eadPayment?: { method?: unknown; installments?: unknown };
+  } = {},
 ) => {
   const modalidade = String(course?.modalidade || "").toUpperCase();
   if (modalidade === "EAD") return resolveEadCheckoutCharge(course, turma, dueDate, options.eadPayment);
-  if (modalidade === "LIVRE") return resolveLivreCheckoutCharge(course, turma, dueDate);
-  if (modalidade === "ESPECIALIZACAO") return resolveEspecializacaoCheckoutCharge(course, turma, dueDate);
-  if (modalidade === "TECNICO") return resolveTecnicoInitialEnrollmentCharge(course, turma, dueDate);
+  if (modalidade === "LIVRE") return resolveLivreCheckoutCharge(course, turma, dueDate, options.payment);
+  if (modalidade === "ESPECIALIZACAO") return resolveEspecializacaoCheckoutCharge(course, turma, dueDate, options.payment);
+  if (modalidade === "TECNICO") return resolveTecnicoInitialEnrollmentCharge(course, turma, dueDate, options.payment);
   throw new Error("Modalidade sem regra de checkout Asaas.");
 };
-

@@ -215,11 +215,11 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
             ))}
           </div>
 
-          {routeProviderCode === 'banese_card' && paymentMethod === 'CREDIT_CARD' && (
+          {routeProviderCode === 'banese_card' && (
             <div className="mb-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
               <p className="text-xs font-bold leading-relaxed text-amber-700">
-                Cartão Banese está em validação com o banco. Por segurança, mantenha cartão em Mercado Pago ou Asaas até a confirmação do gerente.
+                Banese Card atende apenas Pix e boleto. Cartão de crédito não é aceito; Pix/Boleto seguem bloqueados até homologar payload por cobrança, exibição do retorno bancário e conciliação.
               </p>
             </div>
           )}

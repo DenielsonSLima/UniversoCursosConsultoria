@@ -20,5 +20,13 @@ export const resolveEadInstallmentCount = (
     return defaultInstallments;
   }
 
-  return clampEadInstallments(toNumber(requestedInstallments, defaultInstallments), maxInstallments);
+  const requested = Number(requestedInstallments);
+  if (!Number.isFinite(requested) || !Number.isInteger(requested) || requested < 1) {
+    throw new Error("Quantidade de parcelas invalida para o cartao.");
+  }
+  if (requested > maxInstallments) {
+    throw new Error(`Este curso EAD permite no maximo ${maxInstallments} parcelas no cartao.`);
+  }
+
+  return requested;
 };

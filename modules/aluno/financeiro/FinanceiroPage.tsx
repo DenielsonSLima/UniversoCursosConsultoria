@@ -7,7 +7,7 @@ import FinanceiroCardItem from './FinanceiroCardItem';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
-import { asaasIntegrationService } from '../../asaas/asaas.service';
+import { paymentCheckoutService } from '../../asaas/asaas.service';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
 
 interface FinanceiroPageProps {
@@ -448,7 +448,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
     setIsStartingEadPayment(true);
     try {
-      const result = await asaasIntegrationService.getPublicCheckout(
+      const result = await paymentCheckoutService.getPublicCheckout(
         courseId,
         alunoId,
         turmaId || undefined,
@@ -1157,7 +1157,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                   Escolha como pagar
                 </h3>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                  O curso será liberado somente após confirmação do Asaas via webhook.
+                  O curso será liberado somente após confirmação do gateway bancário via webhook.
                 </p>
               </div>
               <button
@@ -1214,7 +1214,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               </div>
 
               <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs font-bold leading-relaxed text-blue-700">
-                Pix e boleto usam a cobrança oficial do Asaas. Cartão abre o checkout seguro em nova aba.
+                A forma escolhida usa a rota bancária configurada para este curso. Cartão pode abrir o checkout seguro em nova aba.
               </div>
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

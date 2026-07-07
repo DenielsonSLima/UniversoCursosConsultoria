@@ -7,12 +7,10 @@ business flow.
 ## Modules
 
 - `core`: shared Mercado Pago runtime, HTTP, credentials, status mapping and error normalization.
-- `ead`: EAD checkout behavior through Mercado Pago.
-- `tecnico`: technical course enrollment, installments and monthly payment behavior.
-- `livres`: free course checkout behavior.
-- `especializacao`: specialization checkout behavior.
-- `outros-creditos`: detached financial links from Financeiro > Outros Creditos.
-- `webhook`: Mercado Pago webhook validation, idempotency and event translation.
+
+Checkout dispatch, route selection and webhook entrypoints live in
+`../gateways`. Provider-specific Mercado Pago HTTP payloads stay here under
+`core` until each business flow needs its own isolated module.
 
 ## Boundary
 

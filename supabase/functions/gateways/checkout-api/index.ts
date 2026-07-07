@@ -1,0 +1,1634 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  buildOnlinePaymentPayload,
+  mapBillingType,
+  normalizeCourseFinanceiroConfig,
+  resolveOnlineCharge,
+} from "./checkout-rules.ts";
+import { isValidCpf, missingStudentBillingFields, onlyDigits } from "../../asaas/core/customer.ts";
+import { paymentDate } from "../../asaas/core/status.ts";
+import {
+  isEadCourseModality,
+  isTecnicoCourseModality,
+  isOnlineCourseModality,
+  normalizeCourseModality,
+} from "../../asaas/core/modality.ts";
+import { findExistingCourseCheckout } from "./course-enrollment-guard.ts";
+import {
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
+  json as sendJson,
+} from "../../_shared/http.ts";
+import {
+  createGatewayCharge,
+  gatewayPrimaryUrl,
+  gatewayReceivableUpdate,
+  persistGatewayTransaction as persistProviderGatewayTransaction,
+  type GatewayPaymentMethod,
+  type GatewayProviderCode,
+} from "../router.ts";
+import { normalizeProviderCode } from "../checkout/utils.ts";
+
+const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
+const BLOCKING_ENROLLMENT_STATUSES = new Set([
+  "ATIVO",
+  "CONCLUIDO",
+  "PENDENTE",
+  "AGUARDANDO_PAGAMENTO",
+  "AGUARDANDO_CONFIRMACAO",
+]);
+
+const dueDateInDays = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const normalize = (value: unknown) => String(value || "").trim().toLowerCase();
+const isActiveStatus = (status: unknown) =>
+  ["ativo", "active"].includes(normalize(status));
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isUnsafeCallbackHost = (hostname: string) => {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host === "0.0.0.0" || host === "::1" || host.endsWith(".local")) return true;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host)) return true;
+  const private172 = host.match(/^172\.(\d+)\./);
+  return Boolean(private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31);
+};
+
+const resolvePublicBaseUrl = () => {
+  const candidates = [
+    Deno.env.get("PUBLIC_SITE_URL"),
+    Deno.env.get("SITE_URL"),
+    Deno.env.get("APP_URL"),
+    Deno.env.get("VITE_PUBLIC_SITE_URL"),
+    "https://universocc.com.br",
+  ];
+  for (const candidate of candidates) {
+    try {
+      const url = new URL(String(candidate || ""));
+      if (url.protocol === "https:" && !isUnsafeCallbackHost(url.hostname)) {
+        return url.origin.replace(/\/+$/, "");
+      }
+    } catch {
+      // Try the next configured source.
+    }
+  }
+  return null;
+};
+
+const alunoPortalUrl = (courseId?: string | null) => {
+  const publicBaseUrl = resolvePublicBaseUrl() || "https://universocc.com.br";
+  const url = new URL("/aluno", publicBaseUrl);
+  if (courseId) url.searchParams.set("courseId", courseId);
+  url.searchParams.set("checkout", "already-paid");
+  return url.toString();
+};
+
+const normalizeErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message || "Erro interno.";
+  if (typeof error === "string") return error;
+
+  const typedError = error as Record<string, unknown>;
+  if (typedError && typeof typedError === "object") {
+    const message =
+      (typedError.message && String(typedError.message))
+      || (typedError.error_description && String(typedError.error_description))
+      || (typedError.error && String(typedError.error));
+    const detail =
+      (typedError.details && String(typedError.details))
+      || (typedError.hint && String(typedError.hint))
+      || (typedError.code && `Código: ${String(typedError.code)}`);
+
+    if (message && detail) return `${message} (${detail})`;
+    if (message) return message;
+    if (detail) return detail;
+  }
+
+  return "Erro interno.";
+};
+
+const resolveCheckoutUrl = (receivable: any) =>
+  gatewayPrimaryUrl(receivable) || null;
+
+const toDateString = (value: unknown) => {
+  if (!value) return null;
+  const valueAsString = String(value);
+  return valueAsString.length >= 10 ? valueAsString.slice(0, 10) : null;
+};
+
+const currentIsoDate = () => new Date().toISOString().slice(0, 10);
+
+const isPaidPayment = (payment: any) =>
+  ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
+
+const normalizeGatewayPaymentMethod = (value: unknown) => {
+  const method = String(value || "").trim().toUpperCase();
+  if (method === "PIX" || method === "BOLETO" || method === "CREDIT_CARD") return method;
+  if (method === "CARTAO" || method === "CARTÃO") return "CREDIT_CARD";
+  return "CREDIT_CARD";
+};
+
+const tryNormalizeGatewayPaymentMethod = (value: unknown): GatewayPaymentMethod | null => {
+  const method = String(value || "").trim().toUpperCase();
+  if (method === "PIX" || method === "BOLETO" || method === "CREDIT_CARD") return method;
+  if (method === "CARTAO" || method === "CARTÃO" || method === "CARD") return "CREDIT_CARD";
+  return null;
+};
+
+const activePaymentMethodsForCourse = (course: any) => {
+  const financeiroConfig = normalizeCourseFinanceiroConfig(course?.financeiro_config || {});
+  const methods: string[] = [];
+  if (financeiroConfig.metodosRecebimento.pix) methods.push("PIX");
+  if (financeiroConfig.metodosRecebimento.boleto) methods.push("BOLETO");
+  if (
+    financeiroConfig.metodosRecebimento.cartao &&
+    financeiroConfig.cartao.aceitar
+  ) {
+    methods.push("CREDIT_CARD");
+  }
+  return methods;
+};
+
+const assertRequestedPaymentMethodMatchesCourse = (
+  course: any,
+  rawMethod: unknown,
+) => {
+  const requestedMethod = tryNormalizeGatewayPaymentMethod(rawMethod);
+  if (rawMethod && !requestedMethod) {
+    throw new Error("Forma de pagamento invalida para este curso.");
+  }
+
+  const activeMethods = activePaymentMethodsForCourse(course);
+  if (activeMethods.length === 0) {
+    throw new Error("Nenhuma forma de recebimento configurada para este curso.");
+  }
+  if (activeMethods.length > 1 && !requestedMethod) {
+    throw new Error("Escolha Pix, boleto ou cartao antes de iniciar o checkout do curso.");
+  }
+  if (requestedMethod && !activeMethods.includes(requestedMethod)) {
+    throw new Error("Este curso nao permite a forma de pagamento escolhida.");
+  }
+
+  return requestedMethod;
+};
+
+const providerLabelFor = (providerCode: string) => {
+  if (providerCode === "mercado_pago") return "Mercado Pago";
+  if (providerCode === "banese_card") return "Banese Card";
+  return "Asaas";
+};
+
+const asaasApiSecretName = (environment: string) =>
+  environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key";
+
+const asaasBaseUrl = (environment: string) =>
+  environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+
+const tryCancelLegacyAsaasPayment = async (
+  admin: any,
+  environment: string,
+  paymentId?: string | null,
+) => {
+  if (!paymentId) return;
+  try {
+    const { data: apiKey, error } = await admin.rpc("asaas_get_secret", {
+      p_secret_name: asaasApiSecretName(environment),
+    });
+    if (error || !apiKey) {
+      console.warn("Nao foi possivel ler chave Asaas para cancelar cobranca substituida:", error);
+      return;
+    }
+    const response = await fetch(`${asaasBaseUrl(environment)}/payments/${paymentId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Universo-Cursos-Aluno",
+        access_token: apiKey,
+      },
+    });
+    if (!response.ok && response.status !== 404) {
+      console.warn("Nao foi possivel cancelar cobranca Asaas substituida:", response.status, await response.text());
+    }
+  } catch (error) {
+    console.warn("Falha ao cancelar cobranca Asaas substituida:", error);
+  }
+};
+
+const checkoutRouteModalidade = (value: unknown) => {
+  const modalidade = normalizeCourseModality(value);
+  return ["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(modalidade) ? modalidade : null;
+};
+
+const resolvePaymentGatewayRoute = async (
+  admin: any,
+  modalidade: string,
+  paymentMethod: string,
+  environment: string,
+) => {
+  const { data, error } = await admin
+    .from("payment_gateway_routes")
+    .select("provider_code, credential_id, enabled")
+    .eq("modalidade", modalidade)
+    .eq("payment_method", paymentMethod)
+    .eq("environment", environment)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Nao foi possivel consultar a rota bancaria do checkout:", error);
+    throw new Error("Nao foi possivel validar a rota bancaria antes de gerar a cobranca.");
+  }
+
+  if (!data || data.enabled === false) {
+    throw new Error(
+      `Rota ${paymentMethod} de ${modalidade} em ${environment === "production" ? "producao" : "sandbox"} nao esta ativa.`,
+    );
+  }
+
+  const providerCode = normalizeProviderCode(data.provider_code);
+  if (!providerCode) {
+    throw new Error(
+      `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${environment === "production" ? "producao" : "sandbox"}.`,
+    );
+  }
+
+  return {
+    providerCode,
+    credentialId: data.credential_id || null,
+    enabled: data.enabled !== false,
+  };
+};
+
+const formatDatePtBr = (value: unknown) => {
+  const date = toDateString(value);
+  if (!date) return "";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR");
+};
+
+const getMatriculasTotal = (turma: any) => {
+  const matriculas = turma?.matriculas;
+  if (!Array.isArray(matriculas)) return 0;
+  return matriculas.filter((matricula: any) =>
+    BLOCKING_ENROLLMENT_STATUSES.has(String(matricula?.status || "").toUpperCase())
+  ).length;
+};
+
+const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
+  const today = currentIsoDate();
+  const alunosMatriculados = getMatriculasTotal(turma);
+  const vagasTotais = Number(turma?.vagas_totais || 0);
+  const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
+  const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
+
+  const inicioInscricao = toDateString(turma?.data_inicio_inscricao);
+  const fimInscricao = toDateString(turma?.data_fim_inscricao);
+
+  if (requireOnlinePermission && turma?.permitir_inscricoes_online !== true) {
+    return "Inscrições online não liberadas para esta turma.";
+  }
+
+  if (inicioInscricao && today < inicioInscricao) {
+    return `As inscrições ainda não abriram. Abertura prevista para ${formatDatePtBr(inicioInscricao)}.`;
+  }
+
+  if (fimInscricao && today > fimInscricao) {
+    return `As inscrições foram encerradas em ${formatDatePtBr(fimInscricao)}. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.`;
+  }
+
+  if (bloquearMatriculasAposCompletarVagas) {
+    if (vagasMinima > 0 && alunosMatriculados >= vagasMinima) {
+      return `A turma atingiu o limite configurado de ${vagasMinima} alunos e não está aceitando novos alunos.`;
+    }
+
+    if (vagasTotais > 0 && alunosMatriculados >= vagasTotais) {
+      return "A turma está com vagas completas. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.";
+    }
+  }
+
+  return null;
+};
+
+const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission = true) => {
+  const evaluated = (turmas || []).map((turma) => {
+    return {
+      turma,
+      reason: getTurmaUnavailabilityReason(turma, requireOnlinePermission),
+    };
+  });
+
+  const available = evaluated.find((row) => !row.reason);
+  if (available) {
+    return {
+      turma: available.turma,
+      reason: null,
+    };
+  }
+
+  return {
+    turma: null,
+    reason: evaluated[0]?.reason || "Não há turma aberta para este curso para receber inscrições.",
+  };
+};
+
+const normalizeDocumentType = (value: unknown) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+
+const isAcceptedTechnicalDocumentType = (value: unknown) => {
+  const normalized = normalizeDocumentType(value);
+  return [
+    "CARTEIRA NACIONAL DE IDENTIFICACAO",
+    "CIN",
+    "CNI",
+    "CNH",
+    "RG",
+    "RG ANTIGO",
+  ].some((allowed) => normalized === allowed || normalized.includes(allowed));
+};
+
+const missingTechnicalEnrollmentFields = (student: any) => {
+  const missing: string[] = [];
+  const hasText = (value: unknown) => String(value || "").trim().length > 0;
+  const hasThirdPartyResponsible = [
+    student?.responsavel_nome,
+    student?.responsavel_cpf,
+    student?.responsavel_telefone,
+    student?.responsavel_parentesco,
+  ].some(hasText);
+
+  if (!hasText(student?.nome_mae)) missing.push("nome da mãe");
+  if (!isAcceptedTechnicalDocumentType(student?.tipo_documento)) missing.push("tipo de documento (CIN, CNH ou RG)");
+  if (!hasText(student?.rg)) missing.push("número do documento");
+  if (student?.responsavel_financeiro !== true) missing.push("responsável financeiro");
+  if (hasThirdPartyResponsible && !hasText(student?.responsavel_nome)) missing.push("nome do responsável financeiro");
+  if (hasThirdPartyResponsible && (!hasText(student?.responsavel_cpf) || !isValidCpf(onlyDigits(student?.responsavel_cpf)))) {
+    missing.push("CPF válido do responsável financeiro");
+  }
+
+  return missing;
+};
+
+export const handlePaymentCheckout = async (req: Request) => {
+  const corsHeadersForRequest = buildCorsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    sendJson(body, status, req);
+
+  if (isRateLimitExceeded(`checkout-api:${getClientIp(req)}`, 30, 60000)) {
+    return json({
+      error: "Muitas tentativas de checkout em curto intervalo. Tente novamente em alguns segundos.",
+    }, 429);
+  }
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
+  if (req.method !== "POST") return json({ error: "Método não permitido." }, 405);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  let checkoutMatriculaId: string | null = null;
+  let checkoutReceivableId: string | null = null;
+  let paymentCreated = false;
+
+  try {
+    const requestBody = await req.json();
+    const { courseId, alunoId: requestedAlunoId, turmaId } = requestBody;
+    const requestedPaymentMethod = requestBody?.eadPaymentMethod ??
+      requestBody?.paymentMethod ??
+      requestBody?.method ??
+      requestBody?.billingType;
+    const requestedInstallments = requestBody?.eadInstallments ?? requestBody?.installments;
+    if (!courseId) throw new Error("Curso não informado.");
+
+    const authorization = req.headers.get("Authorization") || "";
+    const token = authorization.replace(/^Bearer\s+/i, "").trim();
+    if (!token) throw new Error("Entre como aluno antes de comprar o curso.");
+
+    const { data: authData, error: authError } = await admin.auth.getUser(token);
+    const authEmail = authData?.user?.email ? String(authData.user.email).trim().toLowerCase() : "";
+    if (authError || !authEmail) throw new Error("Sessão inválida para checkout.");
+
+    const { data: usuarioSistema, error: usuarioError } = await admin
+      .from("usuarios_sistema")
+      .select("id, perfil, status, context")
+      .ilike("email", authEmail)
+      .maybeSingle();
+    if (usuarioError) throw usuarioError;
+    const gestorContext = usuarioSistema?.context ? String(usuarioSistema.context).trim() : null;
+    let gestorPoloId = UUID_RE.test(gestorContext || "") ? gestorContext : null;
+    let gestorGlobal = normalize(gestorContext) === "global";
+    if (gestorPoloId) {
+      const { data: polo, error: poloError } = await admin
+        .from("polos")
+        .select("is_matriz")
+        .eq("id", gestorPoloId)
+        .maybeSingle();
+      if (poloError) throw poloError;
+      if (polo?.is_matriz === true) gestorGlobal = true;
+    }
+    const isGestorAtivo = Boolean(
+      usuarioSistema
+      && normalize(usuarioSistema.perfil) === "gestor"
+      && isActiveStatus(usuarioSistema.status)
+    );
+    if (requestedAlunoId && isGestorAtivo && !gestorGlobal && !gestorPoloId) {
+      throw new Error("Gestor sem polo definido não pode gerar checkout para outro aluno.");
+    }
+
+    const { data: course, error } = await admin
+      .from("cursos")
+      .select("id, nome, modalidade, valor, publicar_site, status, financeiro_config")
+      .eq("id", courseId)
+      .single();
+    if (error) throw error;
+    if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
+    if (!isOnlineCourseModality(course.modalidade)) throw new Error("Modalidade sem checkout online.");
+    const isEadCheckout = isEadCourseModality(course.modalidade);
+    const hasExplicitPaymentSelection = Boolean(String(requestedPaymentMethod || "").trim());
+    let alunoQuery = admin
+      .from("parceiros")
+      .select("*")
+      .in("tipo", ["Aluno", "Professor"]);
+    if (isGestorAtivo && requestedAlunoId) {
+      alunoQuery = alunoQuery.eq("id", requestedAlunoId);
+    } else {
+      alunoQuery = alunoQuery.ilike("email", authEmail);
+    }
+    const { data: aluno, error: alunoError } = await alunoQuery
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (alunoError) throw alunoError;
+    if (!aluno) throw new Error("Comprador não encontrado. Faça seu cadastro antes de comprar.");
+    if (!isGestorAtivo && requestedAlunoId && requestedAlunoId !== aluno.id) {
+      throw new Error("Você só pode gerar checkout para o seu próprio cadastro.");
+    }
+    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
+      const alunoPoloIds = Array.isArray(aluno.polo_ids) ? aluno.polo_ids.map(String) : [];
+      const alunoNoPolo = aluno.polo_id === gestorPoloId || alunoPoloIds.includes(String(gestorPoloId));
+      if (!alunoNoPolo) {
+        throw new Error("Gestor sem permissão para gerar checkout deste aluno.");
+      }
+    }
+
+    const cpfCnpj = onlyDigits(aluno.cpf_cnpj);
+    const hasValidCpfCnpjForGateway = !cpfCnpj
+      ? false
+      : cpfCnpj.length === 11
+        ? isValidCpf(cpfCnpj)
+        : true;
+    const gatewayDocument = hasValidCpfCnpjForGateway ? cpfCnpj : "";
+    if (isTecnicoCourseModality(course.modalidade)) {
+      const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno);
+      if (missingTechnicalFields.length > 0) {
+        throw new Error(`Antes da matrícula técnica online, complete em Meu Perfil: ${missingTechnicalFields.join(", ")}.`);
+      }
+    }
+
+    const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id, {
+      ignorePending: hasExplicitPaymentSelection,
+    });
+    if (existingCourseCheckout?.state === "paid") {
+      const existingStatus = normalize(existingCourseCheckout.matricula?.status);
+      if (!["ativo", "concluido", "trancado"].includes(existingStatus)) {
+        await admin
+          .from("matriculas")
+          .update({ status: "ATIVO" })
+          .eq("id", existingCourseCheckout.matricula.id);
+      }
+      return json({
+        url: existingCourseCheckout.url || alunoPortalUrl(course.id),
+        alreadyPaid: true,
+        matriculaId: existingCourseCheckout.matricula.id,
+      });
+    }
+    if (existingCourseCheckout?.state === "pending") {
+      if (existingCourseCheckout.url) {
+        return json({
+          url: existingCourseCheckout.url,
+          alreadyPending: true,
+          matriculaId: existingCourseCheckout.matricula.id,
+        });
+      }
+      throw new Error("Este aluno já possui uma matrícula aguardando pagamento para este curso. Atualize a tela ou procure a secretaria antes de gerar uma nova cobrança.");
+    }
+
+    assertRequestedPaymentMethodMatchesCourse(course, requestedPaymentMethod);
+
+    const requireOnlinePermission = !isEadCheckout;
+    let turmasQuery = admin
+      .from("turmas")
+      .select(`
+        id,
+        nome,
+        polo_id,
+        vagas_totais,
+        permitir_inscricoes_online,
+        qtd_vagas_minima,
+        bloquear_matriculas_apos_completar_vagas,
+        data_inicio_inscricao,
+        data_fim_inscricao,
+        valor_matricula,
+        valor_parcela,
+        qtd_parcelas,
+        desconto_pontualidade,
+        juros_atraso,
+        multa_atraso,
+        aplicar_desconto_matricula,
+        aplicar_multa_juros_matricula,
+        gerar_cobrancas_futuras,
+        matriculas(status)
+      `)
+      .eq("curso_id", course.id)
+      .eq("status", "EM_ANDAMENTO");
+    if (turmaId) {
+      turmasQuery = turmasQuery.eq("id", turmaId);
+    }
+    if (isGestorAtivo && requestedAlunoId && !gestorGlobal) {
+      turmasQuery = turmasQuery.eq("polo_id", gestorPoloId);
+    }
+    if (requireOnlinePermission) {
+      turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
+    }
+    const { data: turmas, error: turmasError } = await turmasQuery.order("data_inicio", { ascending: true });
+    if (turmasError) throw turmasError;
+    if (turmaId && (!turmas || turmas.length === 0)) {
+      throw new Error("A turma escolhida não está aberta para matrícula online.");
+    }
+    const availableSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
+    if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
+    const turma = availableSelection.turma;
+    const gerarCobrancaFutura = isEadCheckout
+      ? false
+      : turma.gerar_cobrancas_futuras === true;
+
+    const { data: matricula, error: matriculaError } = await admin.rpc("asaas_checkout_upsert_matricula", {
+      p_aluno_id: aluno.id,
+      p_turma_id: turma.id,
+      p_gerar_cobranca_futura: gerarCobrancaFutura,
+    });
+    if (matriculaError) throw matriculaError;
+    if (!matricula?.id) throw new Error("Não foi possível registrar a matrícula para o checkout.");
+    checkoutMatriculaId = matricula.id;
+
+    const { data: config, error: configError } = await admin
+      .from("asaas_config")
+      .select("environment, notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled")
+      .maybeSingle();
+    if (configError) throw configError;
+    const environment = config?.environment === "production" ? "production" : "sandbox";
+    const notificationsEnabled = config?.notifications_enabled === true
+      || config?.notification_whatsapp_enabled === true
+      || config?.notification_email_enabled === true
+      || config?.notification_sms_enabled === true;
+
+    const dataVencimento = dueDateInDays(7);
+    const charge = resolveOnlineCharge(course, turma, dataVencimento, {
+      eadPayment: isEadCheckout
+        ? { method: requestedPaymentMethod, installments: requestedInstallments }
+        : undefined,
+      payment: !isEadCheckout
+        ? { method: requestedPaymentMethod, installments: requestedInstallments }
+        : undefined,
+    });
+    const receivableFeeFields = isEadCheckout ? {
+      asaas_fee_value:
+        typeof (charge as any).feeValue === "number" && Number.isFinite((charge as any).feeValue)
+          ? (charge as any).feeValue
+          : null,
+      asaas_net_value:
+        typeof (charge as any).netValue === "number" && Number.isFinite((charge as any).netValue)
+          ? (charge as any).netValue
+          : null,
+    } : {};
+    const gatewayPaymentMethodForCharge = tryNormalizeGatewayPaymentMethod(charge.billingType);
+    if (!gatewayPaymentMethodForCharge) {
+      throw new Error("Forma de pagamento do checkout nao foi definida para este curso.");
+    }
+    const routeModalidade = checkoutRouteModalidade(course.modalidade);
+    let gatewayRoute: { providerCode: string; credentialId: string | null; enabled: boolean } = {
+      providerCode: "asaas",
+      credentialId: null,
+      enabled: true,
+    };
+    if (routeModalidade) {
+      gatewayRoute = await resolvePaymentGatewayRoute(admin, routeModalidade, gatewayPaymentMethodForCharge, environment);
+    }
+
+    if (gatewayRoute.providerCode === "asaas") {
+      if (!cpfCnpj) throw new Error("O aluno precisa ter CPF cadastrado para gerar a cobrança no Asaas.");
+      if (cpfCnpj.length === 11 && !isValidCpf(cpfCnpj)) {
+        throw new Error("CPF inválido para cobrança. Atualize o cadastro do aluno antes de comprar.");
+      }
+      const missingBillingFields = missingStudentBillingFields(aluno);
+      if (missingBillingFields.length > 0) {
+        throw new Error(`Atualize o cadastro do aluno antes de gerar a cobrança no Asaas. Campos obrigatórios: ${missingBillingFields.join(", ")}.`);
+      }
+    } else if (cpfCnpj && !hasValidCpfCnpjForGateway) {
+      console.warn("CPF/CNPJ do aluno invalido; checkout bancario seguira sem documento de identificacao do pagador.");
+    }
+
+    if (gatewayRoute.providerCode !== "asaas") {
+      const providerCode = gatewayRoute.providerCode as GatewayProviderCode;
+      const { data: existingReceivables, error: existingReceivableError } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("matricula_id", matricula.id)
+        .eq("tipo_lancamento", "MATRICULA")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (existingReceivableError) throw existingReceivableError;
+      let gatewayReceivable = existingReceivables?.[0] || null;
+
+      if (gatewayReceivable?.status === "PAGO") {
+        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPaid: true });
+      }
+
+      if (
+        gatewayReceivable
+        && gatewayReceivable.gateway_provider === providerCode
+        && gatewayReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
+        && gatewayReceivable.gateway_environment === environment
+        && Number(gatewayReceivable.gateway_installments || 1) === Number(charge.installmentCount || 1)
+        && resolveCheckoutUrl(gatewayReceivable)
+      ) {
+        return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPending: true });
+      }
+
+      if (
+        gatewayReceivable
+        && gatewayReceivable.gateway_provider === "asaas"
+        && (gatewayReceivable.asaas_payment_id || gatewayReceivable.asaas_payment_link_id)
+      ) {
+        await tryCancelLegacyAsaasPayment(admin, environment, gatewayReceivable.asaas_payment_id);
+        const switchMessage = `Cobrança Asaas anterior substituída por ${providerLabelFor(providerCode)} conforme a rota da integração bancária.`;
+        const { data: clearedReceivable, error: clearReceivableError } = await admin
+          .from("contas_receber")
+          .update({
+            asaas_payment_id: null,
+            asaas_customer_id: null,
+            asaas_payment_link_id: null,
+            nosso_numero_asaas: null,
+            asaas_invoice_url: null,
+            asaas_bank_slip_url: null,
+            asaas_installment_id: null,
+            asaas_transaction_receipt_url: null,
+            asaas_status: null,
+            asaas_synced_at: null,
+            asaas_last_error: switchMessage,
+            gateway_provider: null,
+            gateway_environment: null,
+            gateway_payment_method: null,
+            gateway_payment_id: null,
+            gateway_customer_id: null,
+            gateway_payment_link_id: null,
+            gateway_installment_id: null,
+            gateway_invoice_url: null,
+            gateway_bank_slip_url: null,
+            gateway_pix_payload: null,
+            gateway_pix_encoded_image: null,
+            gateway_transaction_receipt_url: null,
+            gateway_status: null,
+            gateway_last_error: switchMessage,
+            gateway_synced_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", gatewayReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle();
+        if (clearReceivableError) throw clearReceivableError;
+        gatewayReceivable = clearedReceivable || gatewayReceivable;
+      }
+
+      const receivablePayload: any = {
+        polo_id: turma.polo_id,
+        descricao: charge.description,
+        valor: charge.value,
+        data_vencimento: dataVencimento,
+        status: "PENDENTE",
+        cliente_id: aluno.id,
+        matricula_id: matricula.id,
+        turma_id: turma.id,
+        categoria: "MENSALIDADE",
+        tipo_lancamento: "MATRICULA",
+        origem_cronograma_id: "matricula",
+        origem_pagamento: "GATEWAY_ONLINE",
+        gateway_provider: providerCode,
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_installments: charge.installmentCount || 1,
+        gateway_status: null,
+        gateway_last_error: null,
+        updated_at: new Date().toISOString(),
+        ...(isEadCheckout ? receivableFeeFields : {}),
+      };
+
+      if (gatewayReceivable?.id) {
+        const { data: updated, error: updateError } = await admin
+          .from("contas_receber")
+          .update(receivablePayload)
+          .eq("id", gatewayReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle();
+        if (updateError) throw updateError;
+        gatewayReceivable = updated || gatewayReceivable;
+      } else {
+        const { data: inserted, error: insertError } = await admin
+          .from("contas_receber")
+          .insert(receivablePayload)
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        gatewayReceivable = inserted;
+      }
+
+      checkoutReceivableId = gatewayReceivable?.id || null;
+      const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data: lockedReceivable, error: lockError } = await admin
+        .from("contas_receber")
+        .update({
+          gateway_provider: providerCode,
+          gateway_environment: environment,
+          gateway_payment_method: gatewayPaymentMethodForCharge,
+          gateway_installments: charge.installmentCount || 1,
+          gateway_status: "CREATING",
+          gateway_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", gatewayReceivable.id)
+        .is("gateway_payment_id", null)
+        .or(`gateway_status.is.null,gateway_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
+        .select()
+        .maybeSingle();
+      if (lockError) throw lockError;
+      if (!lockedReceivable) {
+        const { data: currentReceivable } = await admin
+          .from("contas_receber")
+          .select("*")
+          .eq("id", gatewayReceivable.id)
+          .maybeSingle();
+        const currentUrl = resolveCheckoutUrl(currentReceivable);
+        if (currentUrl) return json({ url: currentUrl, alreadyPending: true });
+        throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
+      }
+
+      let gatewayResult: any;
+      try {
+        const publicBaseUrl = resolvePublicBaseUrl();
+        gatewayResult = await createGatewayCharge({
+          admin,
+          supabaseUrl,
+          providerCode,
+          credentialId: gatewayRoute.credentialId,
+          environment,
+          paymentMethod: gatewayPaymentMethodForCharge,
+          receivable: lockedReceivable,
+          payer: {
+            id: aluno.id,
+            name: aluno.nome,
+            email: aluno.email,
+            document: gatewayDocument,
+            phone: aluno.telefone,
+            address: aluno.endereco,
+            postalCode: aluno.cep,
+            district: aluno.bairro,
+            city: aluno.cidade,
+            state: aluno.estado,
+          },
+          amount: Number(charge.value || 0),
+          description: charge.description,
+          dueDate: dataVencimento,
+          installments: charge.installmentCount || 1,
+          successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=success` : null,
+          failureUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=failure` : null,
+          pendingUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=pending` : null,
+        });
+        paymentCreated = true;
+      } catch (gatewayError) {
+        await admin.from("contas_receber").update({
+          gateway_status: null,
+          gateway_last_error: normalizeErrorMessage(gatewayError),
+          updated_at: new Date().toISOString(),
+        }).eq("id", lockedReceivable.id);
+        throw gatewayError;
+      }
+
+      const { data: updatedReceivable, error: updateGatewayError } = await admin
+        .from("contas_receber")
+        .update(gatewayReceivableUpdate({
+          providerCode,
+          environment,
+          paymentMethod: gatewayPaymentMethodForCharge,
+          installments: charge.installmentCount || 1,
+          result: gatewayResult,
+        }))
+        .eq("id", lockedReceivable.id)
+        .select()
+        .single();
+      if (updateGatewayError) throw updateGatewayError;
+
+      const inscricaoPayload = {
+        curso_id: course.id,
+        turma_id: turma.id,
+        aluno_id: aluno.id,
+        matricula_id: matricula.id,
+        asaas_payment_id: null,
+        asaas_customer_id: null,
+        asaas_payment_link_id: null,
+        gateway_provider: providerCode,
+        gateway_environment: environment,
+        gateway_payment_id: gatewayResult.remotePaymentId || gatewayResult.remotePaymentLinkId,
+        gateway_customer_id: gatewayResult.remoteCustomerId,
+        gateway_payment_link_id: gatewayResult.remotePaymentLinkId,
+        nome: aluno.nome,
+        cpf_cnpj: gatewayDocument || null,
+        email: aluno.email || null,
+        telefone: aluno.telefone || null,
+        valor: charge.value,
+        status: PENDENTE_INSCRICAO_STATUS,
+        forma_pagamento: mapBillingType(gatewayPaymentMethodForCharge),
+        erro: null,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
+        .from("inscricoes_online")
+        .select("id")
+        .eq("matricula_id", matricula.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (pendingInscricaoError) throw pendingInscricaoError;
+      const inscriptionQuery = pendingInscricoes?.[0]
+        ? admin.from("inscricoes_online").update(inscricaoPayload).eq("id", pendingInscricoes[0].id)
+        : admin.from("inscricoes_online").insert(inscricaoPayload);
+      const { data: savedInscricao, error: inscriptionError } = await inscriptionQuery.select("id").maybeSingle();
+      if (inscriptionError) throw inscriptionError;
+
+      await persistProviderGatewayTransaction(admin, {
+        receivable: updatedReceivable,
+        inscricaoOnlineId: savedInscricao?.id || pendingInscricoes?.[0]?.id || null,
+        providerCode,
+        environment,
+        paymentMethod: gatewayPaymentMethodForCharge,
+        amount: Number(charge.value || 0),
+        installments: charge.installmentCount || 1,
+        result: gatewayResult,
+      });
+
+      return json({
+        url: resolveCheckoutUrl(updatedReceivable),
+        matriculaId: matricula.id,
+        receivableId: updatedReceivable.id,
+        payment: {
+          id: gatewayResult.remotePaymentId || gatewayResult.remotePaymentLinkId,
+          provider: providerCode,
+          method: gatewayPaymentMethodForCharge,
+          status: gatewayResult.remoteStatus,
+          value: Number(charge.value || 0),
+          invoiceUrl: updatedReceivable.gateway_invoice_url,
+          bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
+          pixQrCode: gatewayResult.pixPayload || gatewayResult.pixEncodedImage
+            ? { payload: gatewayResult.pixPayload, encodedImage: gatewayResult.pixEncodedImage }
+            : null,
+        },
+      });
+    }
+
+    const { data: apiKey, error: secretError } = await admin.rpc("asaas_get_secret", {
+      p_secret_name: environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key",
+    });
+    if (secretError) throw secretError;
+    if (!apiKey) throw new Error("Integração Asaas ainda não configurada.");
+
+    const baseUrl = environment === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
+    const callAsaas = async (path: string, init: RequestInit = {}) => {
+      const response = await fetch(`${baseUrl}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "Universo-Cursos-Aluno",
+          access_token: apiKey,
+          ...(init.headers || {}),
+        },
+      });
+      const payload = response.status === 204 ? null : await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = payload?.errors?.map((item: any) => item.description).join(" ")
+          || payload?.message
+          || `Erro ${response.status} na API do Asaas.`;
+        const error = new Error(message) as Error & { status?: number };
+        error.status = response.status;
+        throw error;
+      }
+      return payload;
+    };
+
+    const recoverPaymentByReceivableId = async (receivableId: string) => {
+      const response = await callAsaas(
+        `/payments?externalReference=${encodeURIComponent(receivableId)}&limit=10`,
+      ).catch(() => null);
+      const recoveredPayment = (response?.data || []).find((item: any) =>
+        String(item.externalReference || "") === receivableId
+        && !["DELETED", "REFUNDED"].includes(String(item.status || "").toUpperCase())
+      );
+      if (!recoveredPayment?.id) return null;
+
+      const { data: recoveredReceivable, error: recoveredError } = await admin
+        .from("contas_receber")
+        .update({
+          asaas_payment_id: recoveredPayment.id,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: recoveredPayment.id,
+          asaas_invoice_url: recoveredPayment.invoiceUrl || null,
+          asaas_bank_slip_url: recoveredPayment.bankSlipUrl || null,
+          asaas_installment_id: recoveredPayment.installment || recoveredPayment.installmentId || null,
+          asaas_transaction_receipt_url: recoveredPayment.transactionReceiptUrl || null,
+          asaas_status: recoveredPayment.status || null,
+          gateway_provider: "asaas",
+          gateway_environment: environment,
+          gateway_payment_method: normalizeGatewayPaymentMethod(recoveredPayment.billingType),
+          gateway_payment_id: recoveredPayment.id,
+          gateway_customer_id: recoveredPayment.customer || null,
+          gateway_payment_link_id: null,
+          gateway_installment_id: recoveredPayment.installment || recoveredPayment.installmentId || null,
+          gateway_invoice_url: recoveredPayment.invoiceUrl || null,
+          gateway_bank_slip_url: recoveredPayment.bankSlipUrl || null,
+          gateway_transaction_receipt_url: recoveredPayment.transactionReceiptUrl || null,
+          gateway_status: recoveredPayment.status || null,
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
+          asaas_synced_at: new Date().toISOString(),
+          asaas_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .select()
+        .single();
+      if (recoveredError) throw recoveredError;
+      return {
+        receivable: recoveredReceivable,
+        payment: recoveredPayment,
+      };
+    };
+
+    const persistCustomerId = async (customerId: string) => {
+      await admin.from("parceiros")
+        .update({ asaas_customer_id: customerId, updated_at: new Date().toISOString() })
+        .eq("id", aluno.id);
+      await admin.from("payment_gateway_customers").upsert({
+        parceiro_id: aluno.id,
+        provider_code: "asaas",
+        environment,
+        remote_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: "parceiro_id,provider_code,environment",
+      }).then(({ error }: any) => {
+        if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway bancario:", error);
+      });
+      aluno.asaas_customer_id = customerId;
+      return customerId;
+    };
+
+    const findOrCreateCustomerByCpf = async () => {
+      const found = await callAsaas(`/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}&limit=1`);
+      let customer = found?.data?.[0];
+      if (!customer) {
+        customer = await callAsaas("/customers", {
+          method: "POST",
+          body: JSON.stringify({
+            name: aluno.nome,
+            cpfCnpj,
+            email: aluno.email || undefined,
+            mobilePhone: aluno.telefone || undefined,
+            postalCode: onlyDigits(aluno.cep) || undefined,
+            address: aluno.endereco || undefined,
+            addressNumber: aluno.numero || undefined,
+            complement: aluno.complemento || undefined,
+            province: aluno.bairro || undefined,
+            externalReference: aluno.id,
+            notificationDisabled: !notificationsEnabled,
+            groupName: "Alunos Universo",
+          }),
+        });
+      }
+
+      await callAsaas(`/customers/${customer.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ notificationDisabled: !notificationsEnabled, externalReference: aluno.id }),
+      }).catch((updateError) => {
+        console.warn("Não foi possível atualizar preferência de notificações do cliente no Asaas:", updateError);
+      });
+
+      return persistCustomerId(customer.id);
+    };
+
+    const ensureCustomer = async () => {
+      if (aluno.asaas_customer_id) {
+        try {
+          const updatedCustomer = await callAsaas(`/customers/${aluno.asaas_customer_id}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              name: aluno.nome,
+              cpfCnpj,
+              email: aluno.email || undefined,
+              mobilePhone: aluno.telefone || undefined,
+              postalCode: onlyDigits(aluno.cep) || undefined,
+              address: aluno.endereco || undefined,
+              addressNumber: aluno.numero || undefined,
+              complement: aluno.complemento || undefined,
+              province: aluno.bairro || undefined,
+              externalReference: aluno.id,
+              notificationDisabled: !notificationsEnabled,
+            }),
+          });
+          if (updatedCustomer?.cpfCnpj && onlyDigits(updatedCustomer.cpfCnpj) !== cpfCnpj) {
+            console.warn("Cliente Asaas vinculado possui CPF/CNPJ diferente; será feita busca pelo CPF do aluno.");
+            return findOrCreateCustomerByCpf();
+          }
+          return aluno.asaas_customer_id as string;
+        } catch (updateError) {
+          console.warn("Não foi possível atualizar cliente Asaas já vinculado; será feita busca por CPF.", updateError);
+          return findOrCreateCustomerByCpf();
+        }
+      }
+
+      return findOrCreateCustomerByCpf();
+    };
+
+    const persistGatewayTransaction = async (payment: any, currentReceivable: any) => {
+      if (!payment?.id || !currentReceivable?.id) return;
+      const payload = {
+        receivable_id: currentReceivable.id,
+        provider_code: "asaas",
+        environment,
+        payment_method: gatewayPaymentMethodForCharge,
+        remote_payment_id: payment.id,
+        remote_customer_id: payment.customer || currentReceivable.gateway_customer_id || null,
+        remote_payment_link_id: null,
+        remote_installment_id: payment.installment || payment.installmentId || null,
+        remote_status: payment.status || null,
+        amount: Number(payment.value || currentReceivable.valor || charge.value || 0),
+        fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+        net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+        invoice_url: payment.invoiceUrl || null,
+        bank_slip_url: payment.bankSlipUrl || null,
+        transaction_receipt_url: payment.transactionReceiptUrl || null,
+        raw_payload: payment,
+        synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { data: existing, error: existingError } = await admin
+        .from("payment_gateway_transactions")
+        .select("id")
+        .eq("provider_code", "asaas")
+        .eq("environment", environment)
+        .eq("remote_payment_id", payment.id)
+        .maybeSingle();
+      if (existingError) {
+        console.warn("Nao foi possivel consultar transacao gateway:", existingError);
+        return;
+      }
+      const result = existing?.id
+        ? await admin.from("payment_gateway_transactions").update(payload).eq("id", existing.id)
+        : await admin.from("payment_gateway_transactions").insert(payload);
+      if (result.error) console.warn("Nao foi possivel persistir transacao gateway:", result.error);
+    };
+    let existingReceivable: any = null;
+
+    const clearLocalAsaasPayment = async (receivableId: string, reason: string) => {
+      const { data, error } = await admin
+        .from("contas_receber")
+        .update({
+          asaas_payment_id: null,
+          asaas_payment_link_id: null,
+          nosso_numero_asaas: null,
+          asaas_invoice_url: null,
+          asaas_bank_slip_url: null,
+          asaas_installment_id: null,
+          asaas_transaction_receipt_url: null,
+          asaas_status: null,
+          asaas_synced_at: null,
+          asaas_last_error: reason,
+          gateway_payment_id: null,
+          gateway_payment_link_id: null,
+          gateway_installment_id: null,
+          gateway_invoice_url: null,
+          gateway_bank_slip_url: null,
+          gateway_transaction_receipt_url: null,
+          gateway_status: null,
+          gateway_synced_at: null,
+          gateway_last_error: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .neq("status", "PAGO")
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    };
+
+    const moneyValue = (value: unknown) =>
+      Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+    const remotePaymentMatchesCharge = (payment: any, expectedCharge: any) => {
+      if (!expectedCharge) return true;
+      const expectedBillingType = String(expectedCharge.billingType || "").toUpperCase();
+      const remoteBillingType = String(payment?.billingType || "").toUpperCase();
+      if (!expectedBillingType || remoteBillingType !== expectedBillingType) return false;
+
+      const expectedInstallments = Number(expectedCharge.installmentCount || 1);
+      const expectedHasInstallments = expectedBillingType === "CREDIT_CARD" && expectedInstallments > 1;
+      const remoteHasInstallments = Boolean(payment?.installment || payment?.installmentId);
+      if (expectedHasInstallments !== remoteHasInstallments) return false;
+
+      const expectedPaymentValue = expectedHasInstallments
+        ? moneyValue(Number(expectedCharge.value || 0) / expectedInstallments)
+        : moneyValue(expectedCharge.value);
+      return Math.abs(moneyValue(payment?.value) - expectedPaymentValue) <= 0.01;
+    };
+
+    const cancelRemoteAndClearLocalPayment = async (currentReceivable: any, reason: string) => {
+      if (currentReceivable?.asaas_payment_id) {
+        const response = await fetch(`${baseUrl}/payments/${currentReceivable.asaas_payment_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "Universo-Cursos-Aluno",
+            access_token: apiKey,
+          },
+        });
+        const payload = response.status === 204 ? null : await response.json().catch(() => null);
+        if (!response.ok && response.status !== 404) {
+          const message = payload?.errors?.map((item: any) => item.description).join(" ")
+            || payload?.message
+            || `Erro ${response.status} ao cancelar cobrança anterior no Asaas.`;
+          throw new Error(message);
+        }
+      }
+
+      return clearLocalAsaasPayment(currentReceivable.id, reason);
+    };
+
+    const getReusableExistingPaymentUrl = async (currentReceivable: any, expectedCharge?: any) => {
+      if (!currentReceivable?.asaas_payment_id) return null;
+      const localAsaasStatus = String(currentReceivable.asaas_status || "").toUpperCase();
+      if (["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(localAsaasStatus)) {
+        existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas local estava cancelada/deletada; será gerado novo checkout.");
+        return null;
+      }
+
+      try {
+        const remotePayment = await callAsaas(`/payments/${currentReceivable.asaas_payment_id}`);
+        const remoteStatus = String(remotePayment?.status || "").toUpperCase();
+        if (["DELETED", "REFUNDED", "CANCELLED", "CANCELED"].includes(remoteStatus)) {
+          existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas remota estava cancelada/deletada; será gerado novo checkout.");
+          return null;
+        }
+
+        const paid = isPaidPayment(remotePayment);
+        if (!paid && expectedCharge && !remotePaymentMatchesCharge(remotePayment, expectedCharge)) {
+          existingReceivable = await cancelRemoteAndClearLocalPayment(
+            currentReceivable,
+            "Cobrança Asaas anterior não corresponde à opção de pagamento EAD escolhida; será gerado novo checkout.",
+          );
+          return null;
+        }
+        const { data: refreshedReceivable, error: refreshError } = await admin
+          .from("contas_receber")
+          .update({
+            asaas_payment_id: remotePayment.id || currentReceivable.asaas_payment_id,
+            nosso_numero_asaas: remotePayment.id || currentReceivable.nosso_numero_asaas,
+            asaas_invoice_url: remotePayment.invoiceUrl || currentReceivable.asaas_invoice_url || null,
+            asaas_bank_slip_url: remotePayment.bankSlipUrl || currentReceivable.asaas_bank_slip_url || null,
+            asaas_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
+            asaas_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
+            asaas_status: remotePayment.status || currentReceivable.asaas_status || null,
+            gateway_provider: "asaas",
+            gateway_environment: environment,
+            gateway_payment_method: normalizeGatewayPaymentMethod(remotePayment.billingType),
+            gateway_payment_id: remotePayment.id || currentReceivable.asaas_payment_id,
+            gateway_customer_id: remotePayment.customer || currentReceivable.gateway_customer_id || null,
+            gateway_payment_link_id: currentReceivable.asaas_payment_link_id || null,
+            gateway_installment_id: remotePayment.installment || remotePayment.installmentId || currentReceivable.asaas_installment_id || null,
+            gateway_invoice_url: remotePayment.invoiceUrl || currentReceivable.asaas_invoice_url || null,
+            gateway_bank_slip_url: remotePayment.bankSlipUrl || currentReceivable.asaas_bank_slip_url || null,
+            gateway_transaction_receipt_url: remotePayment.transactionReceiptUrl || currentReceivable.asaas_transaction_receipt_url || null,
+            gateway_status: remotePayment.status || currentReceivable.asaas_status || null,
+            gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+            gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+            gateway_synced_at: new Date().toISOString(),
+            gateway_last_error: null,
+            ...(isEadCheckout ? receivableFeeFields : {}),
+            status: paid ? "PAGO" : currentReceivable.status,
+            valor_pago: paid ? Number(remotePayment.value || currentReceivable.valor) : currentReceivable.valor_pago,
+            data_pagamento: paid ? paymentDate(remotePayment) : currentReceivable.data_pagamento,
+            forma_pagamento: paid ? mapBillingType(remotePayment.billingType) : currentReceivable.forma_pagamento,
+            origem_pagamento: paid ? "ASAAS" : currentReceivable.origem_pagamento,
+            asaas_synced_at: new Date().toISOString(),
+            asaas_last_error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentReceivable.id)
+          .select()
+          .single();
+        if (refreshError) throw refreshError;
+        existingReceivable = refreshedReceivable;
+        if (paid) {
+          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        }
+        return refreshedReceivable.asaas_invoice_url || refreshedReceivable.asaas_bank_slip_url || null;
+      } catch (paymentLookupError) {
+        if ((paymentLookupError as Error & { status?: number })?.status === 404) {
+          existingReceivable = await clearLocalAsaasPayment(currentReceivable.id, "Cobrança Asaas não localizada; será gerado novo checkout.");
+          return null;
+        }
+        throw paymentLookupError;
+      }
+    };
+
+    const { data: existingReceivables, error: existingReceivableError } = await admin
+      .from("contas_receber")
+      .select("*")
+      .eq("matricula_id", matricula.id)
+      .eq("tipo_lancamento", "MATRICULA")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (existingReceivableError) throw existingReceivableError;
+    existingReceivable = existingReceivables?.[0] || null;
+
+    if (existingReceivable?.status === "PAGO") {
+      await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      return json({ url: existingReceivable.asaas_invoice_url || existingReceivable.asaas_bank_slip_url, alreadyPaid: true });
+    }
+
+    if (existingReceivable?.asaas_payment_id) {
+      const reusableUrl = await getReusableExistingPaymentUrl(existingReceivable, hasExplicitPaymentSelection ? charge : undefined);
+      if (reusableUrl) return json({ url: reusableUrl });
+    }
+
+    if (existingReceivable?.asaas_payment_link_id && !existingReceivable?.asaas_payment_id) {
+      const search = await callAsaas(`/payments?externalReference=${encodeURIComponent(existingReceivable.id)}&limit=20`);
+      const matchedPayment = (search?.data || []).find(isPaidPayment) || search?.data?.[0] || null;
+      if (matchedPayment?.id) {
+        const paid = isPaidPayment(matchedPayment);
+        const updates = {
+          asaas_payment_id: matchedPayment.id,
+          asaas_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          nosso_numero_asaas: matchedPayment.id,
+          asaas_invoice_url: matchedPayment.invoiceUrl || existingReceivable.asaas_invoice_url || null,
+          asaas_bank_slip_url: matchedPayment.bankSlipUrl || null,
+          asaas_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
+          asaas_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
+          asaas_status: matchedPayment.status || null,
+          gateway_provider: "asaas",
+          gateway_environment: environment,
+          gateway_payment_method: normalizeGatewayPaymentMethod(matchedPayment.billingType),
+          gateway_payment_id: matchedPayment.id,
+          gateway_customer_id: matchedPayment.customer || existingReceivable.gateway_customer_id || null,
+          gateway_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          gateway_installment_id: matchedPayment.installment || matchedPayment.installmentId || null,
+          gateway_invoice_url: matchedPayment.invoiceUrl || existingReceivable.asaas_invoice_url || null,
+          gateway_bank_slip_url: matchedPayment.bankSlipUrl || null,
+          gateway_transaction_receipt_url: matchedPayment.transactionReceiptUrl || existingReceivable.asaas_transaction_receipt_url || null,
+          gateway_status: matchedPayment.status || null,
+          gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+          gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+          gateway_synced_at: new Date().toISOString(),
+          gateway_last_error: null,
+          ...(isEadCheckout ? receivableFeeFields : {}),
+          status: paid ? "PAGO" : existingReceivable.status,
+          valor_pago: paid ? Number(matchedPayment.value || existingReceivable.valor) : existingReceivable.valor_pago,
+          data_pagamento: paid ? paymentDate(matchedPayment) : existingReceivable.data_pagamento,
+          forma_pagamento: paid ? mapBillingType(matchedPayment.billingType) : existingReceivable.forma_pagamento,
+          origem_pagamento: paid ? "ASAAS" : existingReceivable.origem_pagamento,
+          asaas_synced_at: new Date().toISOString(),
+          asaas_last_error: null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: reconciledReceivable, error: reconcileError } = await admin
+          .from("contas_receber")
+          .update(updates)
+          .eq("id", existingReceivable.id)
+          .select()
+          .single();
+        if (reconcileError) throw reconcileError;
+
+        const inscriptionPayload = {
+          curso_id: course.id,
+          turma_id: turma.id,
+          aluno_id: aluno.id,
+          matricula_id: matricula.id,
+          asaas_payment_id: matchedPayment.id,
+          asaas_customer_id: matchedPayment.customer || aluno.asaas_customer_id || null,
+          asaas_payment_link_id: matchedPayment.paymentLink || existingReceivable.asaas_payment_link_id,
+          nome: aluno.nome,
+          cpf_cnpj: cpfCnpj || null,
+          email: aluno.email || null,
+          telefone: aluno.telefone || null,
+          valor: Number(matchedPayment.value || course.valor || 0),
+          status: paid ? "PAGO" : PENDENTE_INSCRICAO_STATUS,
+          pago_em: paid ? new Date().toISOString() : null,
+          confirmado_em: paid ? new Date().toISOString() : null,
+          forma_pagamento: matchedPayment.billingType || null,
+          erro: null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
+          .from("inscricoes_online")
+          .select("id")
+          .eq("matricula_id", matricula.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (pendingInscricaoError) throw pendingInscricaoError;
+        const inscriptionQuery = pendingInscricoes?.[0]
+          ? admin.from("inscricoes_online").update(inscriptionPayload).eq("id", pendingInscricoes[0].id)
+          : admin.from("inscricoes_online").insert(inscriptionPayload);
+        const { error: inscriptionError } = await inscriptionQuery;
+        if (inscriptionError) throw inscriptionError;
+
+        if (paid) {
+          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+          return json({ url: reconciledReceivable.asaas_invoice_url || reconciledReceivable.asaas_bank_slip_url, alreadyPaid: true });
+        }
+
+        if (reconciledReceivable.asaas_invoice_url) {
+          return json({ url: reconciledReceivable.asaas_invoice_url });
+        }
+      }
+    }
+
+    const receivablePayload: any = {
+      polo_id: turma.polo_id,
+      descricao: charge.description,
+      valor: charge.value,
+      data_vencimento: dataVencimento,
+      status: "PENDENTE",
+      cliente_id: aluno.id,
+      matricula_id: matricula.id,
+      turma_id: turma.id,
+      categoria: "MENSALIDADE",
+      tipo_lancamento: "MATRICULA",
+      origem_cronograma_id: "matricula",
+      origem_pagamento: "ASAAS_ONLINE",
+      gateway_provider: "asaas",
+      gateway_environment: environment,
+      gateway_payment_method: gatewayPaymentMethodForCharge,
+      gateway_status: null,
+      gateway_last_error: null,
+      updated_at: new Date().toISOString(),
+      ...(isEadCheckout ? receivableFeeFields : {}),
+    };
+
+    const existingIsCreatingWithoutPayment = existingReceivable
+      && !existingReceivable.asaas_payment_id
+      && String(existingReceivable.asaas_status || "").toUpperCase() === "CREATING";
+
+    let receivable = existingReceivable
+      ? existingIsCreatingWithoutPayment
+        ? existingReceivable
+        : (await admin
+          .from("contas_receber")
+          .update(receivablePayload)
+          .eq("id", existingReceivable.id)
+          .neq("status", "PAGO")
+          .select()
+          .maybeSingle()).data || existingReceivable
+      : null;
+
+    if (!receivable) {
+      const { data: insertedReceivable, error: insertReceivableError } = await admin
+        .from("contas_receber")
+        .insert(receivablePayload)
+        .select()
+        .single();
+
+      if (insertReceivableError) {
+        const { data: duplicatedReceivable, error: duplicatedReceivableError } = await admin
+          .from("contas_receber")
+          .select("*")
+          .eq("matricula_id", matricula.id)
+          .eq("categoria", "MENSALIDADE")
+          .eq("tipo_lancamento", "MATRICULA")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (duplicatedReceivableError || !duplicatedReceivable) throw insertReceivableError;
+        receivable = duplicatedReceivable;
+      } else {
+        receivable = insertedReceivable;
+      }
+    }
+    checkoutReceivableId = receivable?.id || null;
+
+    if (!receivable) throw new Error("Não foi possível registrar a cobrança interna.");
+    if (receivable.status === "PAGO") {
+      await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      return json({ url: receivable.asaas_invoice_url || receivable.asaas_bank_slip_url, alreadyPaid: true });
+    }
+
+    const customerId = await ensureCustomer();
+    const publicBaseUrl = resolvePublicBaseUrl();
+    const successUrl = publicBaseUrl ? `${publicBaseUrl}/aluno?checkout=success&gateway=asaas` : null;
+    const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: lockedReceivable, error: lockReceivableError } = await admin
+      .from("contas_receber")
+      .update({
+        asaas_status: "CREATING",
+        asaas_last_error: null,
+        gateway_provider: "asaas",
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_status: "CREATING",
+        gateway_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receivable.id)
+      .is("asaas_payment_id", null)
+      .or(`asaas_status.is.null,asaas_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`)
+      .select()
+      .maybeSingle();
+    if (lockReceivableError) throw lockReceivableError;
+    if (!lockedReceivable) {
+      const { data: inProgressReceivable } = await admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivable.id)
+        .maybeSingle();
+      if (inProgressReceivable?.asaas_invoice_url) {
+        return json({ url: inProgressReceivable.asaas_invoice_url });
+      }
+      if (String(inProgressReceivable?.asaas_status || "").toUpperCase() === "CREATING") {
+        const recovered = await recoverPaymentByReceivableId(receivable.id);
+        if (recovered?.receivable?.asaas_invoice_url || recovered?.payment?.invoiceUrl) {
+          return json({ url: recovered.receivable.asaas_invoice_url || recovered.payment.invoiceUrl });
+        }
+      }
+      throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
+    }
+    receivable = lockedReceivable;
+
+    let payment: any;
+    try {
+      const recovered = await recoverPaymentByReceivableId(receivable.id);
+      if (recovered?.receivable?.asaas_invoice_url || recovered?.payment?.invoiceUrl) {
+        return json({ url: recovered.receivable.asaas_invoice_url || recovered.payment.invoiceUrl });
+      }
+
+      payment = await callAsaas("/payments", {
+        method: "POST",
+        body: JSON.stringify(buildOnlinePaymentPayload(customerId, receivable.id, charge, successUrl)),
+      });
+      paymentCreated = true;
+    } catch (paymentError) {
+      await admin
+        .from("contas_receber")
+        .update({
+          asaas_status: null,
+          asaas_last_error: normalizeErrorMessage(paymentError),
+          gateway_status: null,
+          gateway_last_error: normalizeErrorMessage(paymentError),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivable.id);
+      throw paymentError;
+    }
+
+    const { data: updatedReceivable, error: updateReceivableError } = await admin
+      .from("contas_receber")
+      .update({
+        asaas_payment_id: payment.id,
+        asaas_payment_link_id: null,
+        nosso_numero_asaas: payment.id,
+        asaas_invoice_url: payment.invoiceUrl || null,
+        asaas_bank_slip_url: payment.bankSlipUrl || null,
+        asaas_installment_id: payment.installment || payment.installmentId || null,
+        asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
+        asaas_status: payment.status || null,
+        gateway_provider: "asaas",
+        gateway_environment: environment,
+        gateway_payment_method: gatewayPaymentMethodForCharge,
+        gateway_payment_id: payment.id,
+        gateway_customer_id: customerId,
+        gateway_payment_link_id: null,
+        gateway_installment_id: payment.installment || payment.installmentId || null,
+        gateway_invoice_url: payment.invoiceUrl || null,
+        gateway_bank_slip_url: payment.bankSlipUrl || null,
+        gateway_transaction_receipt_url: payment.transactionReceiptUrl || null,
+        gateway_status: payment.status || null,
+        gateway_fee_value: isEadCheckout ? (receivableFeeFields as any).asaas_fee_value : null,
+        gateway_net_value: isEadCheckout ? (receivableFeeFields as any).asaas_net_value : null,
+        gateway_synced_at: new Date().toISOString(),
+        gateway_last_error: null,
+        ...(isEadCheckout ? receivableFeeFields : {}),
+        asaas_synced_at: new Date().toISOString(),
+        asaas_last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", receivable.id)
+      .select()
+      .single();
+    if (updateReceivableError) throw updateReceivableError;
+    await persistGatewayTransaction(payment, updatedReceivable);
+
+    const inscricaoPayload = {
+      curso_id: course.id,
+      turma_id: turma.id,
+      aluno_id: aluno.id,
+      matricula_id: matricula.id,
+      asaas_payment_id: payment.id,
+      asaas_customer_id: customerId,
+      asaas_payment_link_id: null,
+      gateway_provider: "asaas",
+      gateway_environment: environment,
+      gateway_payment_id: payment.id,
+      gateway_customer_id: customerId,
+      gateway_payment_link_id: null,
+      nome: aluno.nome,
+      cpf_cnpj: cpfCnpj || null,
+      email: aluno.email || null,
+      telefone: aluno.telefone || null,
+      valor: charge.value,
+      status: PENDENTE_INSCRICAO_STATUS,
+      forma_pagamento: mapBillingType(payment.billingType),
+      erro: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
+      .from("inscricoes_online")
+      .select("id")
+      .eq("matricula_id", matricula.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (pendingInscricaoError) throw pendingInscricaoError;
+
+    if (pendingInscricoes?.[0]) {
+      const { error } = await admin
+        .from("inscricoes_online")
+        .update(inscricaoPayload)
+        .eq("id", pendingInscricoes[0].id);
+      if (error) throw error;
+    } else {
+      const { error } = await admin.from("inscricoes_online").insert(inscricaoPayload);
+      if (error) throw error;
+    }
+
+    return json({ url: updatedReceivable.asaas_invoice_url || payment.invoiceUrl });
+  } catch (error) {
+    const errorMessage = normalizeErrorMessage(error);
+    console.error("Erro ao gerar checkout público:", error);
+    if (!paymentCreated && checkoutReceivableId) {
+      try {
+        await admin
+          .from("contas_receber")
+          .delete()
+          .eq("id", checkoutReceivableId)
+          .is("asaas_payment_id", null)
+          .is("asaas_invoice_url", null)
+          .is("asaas_payment_link_id", null)
+          .neq("status", "PAGO");
+      } catch (cleanupError) {
+        console.warn("Não foi possível limpar cobrança local falha:", cleanupError);
+      }
+    }
+    if (!paymentCreated && checkoutMatriculaId) {
+      try {
+        await admin
+          .from("matriculas")
+          .update({ status: "CANCELADO" })
+          .eq("id", checkoutMatriculaId)
+          .in("status", ["PENDENTE", "AGUARDANDO_PAGAMENTO", "AGUARDANDO_CONFIRMACAO"]);
+      } catch (cleanupError) {
+        console.warn("Não foi possível cancelar matrícula local falha:", cleanupError);
+      }
+      try {
+        await admin
+          .from("inscricoes_online")
+          .update({
+            status: "CANCELADO",
+            erro: "Checkout cancelado automaticamente por falha antes da criação da cobrança bancária.",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("matricula_id", checkoutMatriculaId)
+          .eq("status", PENDENTE_INSCRICAO_STATUS)
+          .is("asaas_payment_id", null);
+      } catch (cleanupError) {
+        console.warn("Não foi possível cancelar inscrição online local falha:", cleanupError);
+      }
+    }
+    return json({ error: errorMessage }, 400);
+  }
+};
+
+if (import.meta.main) {
+  Deno.serve(handlePaymentCheckout);
+}

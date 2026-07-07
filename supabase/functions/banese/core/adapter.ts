@@ -1,3 +1,4 @@
+// Provider identifier for the bank named Banese Card; CREDIT_CARD is not supported.
 export const BANESE_PROVIDER_CODE = "banese_card" as const;
 
 export type Environment = "sandbox" | "production";
@@ -39,6 +40,9 @@ export type AdapterCreateChargeInput = {
 export type AdapterCreateChargeResult = {
   id: string;
   link: string | null;
+  bankSlipUrl?: string | null;
+  pixPayload?: string | null;
+  pixEncodedImage?: string | null;
   status: string;
   raw: unknown;
 };
@@ -78,7 +82,7 @@ export class BaneseAdapterConfigurationError extends BaneseAdapterError {
 
 export class BaneseAdapterNotImplementedError extends Error {
   constructor(feature: string) {
-    super(`Adapter Banese ainda nao implementado para ${feature}.`);
+    super(`Adapter Banese Card ainda nao implementado para ${feature}.`);
     this.name = "BaneseAdapterNotImplementedError";
   }
 }
@@ -136,24 +140,42 @@ const onlyDigits = (value: unknown) => stringValue(value).replace(/\D/g, "");
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
+const BANESE_PIX_GUIA_SCOPE =
+  "sab.guiasmanutencao,cobv.write,payloadlocation.read";
+
 const assertEnvironment = (environment: Environment) => {
   if (environment !== "sandbox" && environment !== "production") {
-    throw new BaneseAdapterError("Ambiente Banese invalido.");
+    throw new BaneseAdapterError("Ambiente Banese Card invalido.");
   }
 };
 
 const assertAmount = (amount: number) => {
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw new BaneseAdapterError("Valor da cobranca Banese deve ser maior que zero.");
+    throw new BaneseAdapterError(
+      "Valor da cobranca Banese Card deve ser maior que zero.",
+    );
   }
 };
 
 const assertIsoDate = (value: unknown, fieldName: string) => {
   const date = stringValue(value);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new BaneseAdapterError(`${fieldName} deve estar no formato YYYY-MM-DD.`);
+    throw new BaneseAdapterError(
+      `${fieldName} deve estar no formato YYYY-MM-DD.`,
+    );
   }
   return date;
+};
+
+const boundedInteger = (
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) => {
+  const parsed = Number(value);
+  const normalized = Number.isFinite(parsed) ? Math.floor(parsed) : fallback;
+  return Math.max(min, Math.min(max, normalized));
 };
 
 const readResponseBody = async (response: Response) => {
@@ -183,7 +205,9 @@ const mergeDefined = (
 ) => ({
   ...base,
   ...Object.fromEntries(
-    Object.entries(extra).filter(([, value]) => value !== undefined && value !== null),
+    Object.entries(extra).filter(([, value]) =>
+      value !== undefined && value !== null
+    ),
   ),
 });
 
@@ -204,7 +228,9 @@ const requestAccessToken = async (
   const response = await fetch(tokenUrl, {
     method: "POST",
     headers: {
-      Authorization: `Basic ${btoa(`${credentials.clientId}:${credentials.clientSecret}`)}`,
+      Authorization: `Basic ${
+        btoa(`${credentials.clientId}:${credentials.clientSecret}`)
+      }`,
       "Content-Type": "application/x-www-form-urlencoded",
       ...extraHeaders,
     },
@@ -214,16 +240,21 @@ const requestAccessToken = async (
 
   if (!response.ok) {
     throw new BaneseAdapterError(
-      `Banese recusou autenticacao (${response.status}): ${
+      `Banese Card recusou autenticacao (${response.status}): ${
         typeof raw === "string" ? raw : JSON.stringify(raw)
       }`,
     );
   }
 
   const rawRecord = asRecord(raw);
-  const accessToken = firstString(rawRecord.access_token, rawRecord.accessToken);
+  const accessToken = firstString(
+    rawRecord.access_token,
+    rawRecord.accessToken,
+  );
   if (!accessToken) {
-    throw new BaneseAdapterError("Banese retornou autenticacao sem access token.");
+    throw new BaneseAdapterError(
+      "Banese Card retornou autenticacao sem access token.",
+    );
   }
 
   return {
@@ -260,7 +291,7 @@ export const getBaneseBoletoCredentials = async (
   ]);
   if (!clientId || !clientSecret) {
     throw new BaneseAdapterConfigurationError(
-      `Client ID e Client Secret do Banese nao configurados para ${environment}.`,
+      `Client ID e Client Secret do Banese Card nao configurados para ${environment}.`,
     );
   }
   return { clientId, clientSecret };
@@ -277,7 +308,7 @@ export const getBanesePixCredentials = async (
   ]);
   if (!clientId || !clientSecret || !crtAccessToken) {
     throw new BaneseAdapterConfigurationError(
-      `Client ID, Client Secret e CrtAccessToken do Banese Pix devem estar configurados para ${environment}.`,
+      `Client ID, Client Secret e CrtAccessToken do Banese Card Pix devem estar configurados para ${environment}.`,
     );
   }
   return { clientId, clientSecret, crtAccessToken };
@@ -299,20 +330,27 @@ export const requestBaneseBoletoAccessToken = async (
 export const requestBanesePixAccessToken = async (
   admin: SupabaseAdminRpcClient,
   environment: Environment,
+  scope = BANESE_PIX_GUIA_SCOPE,
 ) => {
   assertEnvironment(environment);
   const credentials = await getBanesePixCredentials(admin, environment);
   return requestAccessToken(
     BANESE_PIX_ENDPOINTS[environment].tokenUrl,
     credentials,
-    undefined,
-    { CrtAccessToken: credentials.crtAccessToken },
+    scope,
+    {
+      CrtAccessToken: credentials.crtAccessToken,
+      Terminal: BANESE_PIX_ENDPOINTS[environment].terminal,
+    },
   );
 };
 
 export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
   assertAmount(input.amount);
-  const dueDate = assertIsoDate(input.dueDate, "Vencimento do boleto Banese");
+  const dueDate = assertIsoDate(
+    input.dueDate,
+    "Vencimento do boleto Banese Card",
+  );
   const metadata = metadataFrom(input.receivable || {});
   const payer = input.payer || {};
 
@@ -321,7 +359,9 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
   );
   const payerName = firstString(payer.name, payer.nome);
   if (!payerDocument || !payerName) {
-    throw new BaneseAdapterError("Pagador do boleto Banese deve ter nome e CPF/CNPJ.");
+    throw new BaneseAdapterError(
+      "Pagador do boleto Banese Card deve ter nome e CPF/CNPJ.",
+    );
   }
 
   const externalReference = firstString(
@@ -330,7 +370,17 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
     metadata.external_reference,
   );
   if (!externalReference) {
-    throw new BaneseAdapterError("Boleto Banese requer identificador do recebivel.");
+    throw new BaneseAdapterError(
+      "Boleto Banese Card requer identificador do recebivel.",
+    );
+  }
+  const nossoNumero = onlyDigits(
+    metadata.baneseNossoNumero ?? metadata.nossoNumero ?? metadata.NossoNumero,
+  );
+  if (!/^\d{9}$/.test(nossoNumero)) {
+    throw new BaneseAdapterConfigurationError(
+      "Boleto Banese Card requer NossoNumero com 8 digitos + DV, unico por convenio.",
+    );
   }
 
   const address = mergeDefined({}, {
@@ -340,10 +390,14 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
       metadata.pagadorEndereco,
       metadata.payerAddress,
     ) || undefined,
-    CEP: onlyDigits(payer.cep ?? payer.postalCode ?? metadata.pagadorCep) || undefined,
-    Bairro: firstString(payer.bairro, payer.province, metadata.pagadorBairro) || undefined,
-    Cidade: firstString(payer.cidade, payer.city, metadata.pagadorCidade) || undefined,
-    UnidadeFederativa: firstString(payer.uf, payer.state, metadata.pagadorUf) || undefined,
+    CEP: onlyDigits(payer.cep ?? payer.postalCode ?? metadata.pagadorCep) ||
+      undefined,
+    Bairro: firstString(payer.bairro, payer.province, metadata.pagadorBairro) ||
+      undefined,
+    Cidade: firstString(payer.cidade, payer.city, metadata.pagadorCidade) ||
+      undefined,
+    UnidadeFederativa: firstString(payer.uf, payer.state, metadata.pagadorUf) ||
+      undefined,
   });
 
   const pagador = mergeDefined({
@@ -354,23 +408,33 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
   }, Object.keys(address).length ? { Endereco: address } : {});
 
   const basePayload = {
+    NossoNumero: nossoNumero,
     CodigoMoeda: 9,
     DataEmissao: todayIsoDate(),
     DataVencimento: dueDate,
     ValorNominal: Number(input.amount.toFixed(2)),
     ValorAbatimento: 0,
-    NumeroDocumento: externalReference.slice(0, 20),
-    CodigoEspecie: 2,
+    NumeroDocumento: externalReference.slice(0, 15),
+    CodigoEspecie: boundedInteger(metadata.baneseCodigoEspecie, 21, 1, 99),
     CodigoTipoBaixaDevolucao: 1,
-    QuantidadeDiasBaixaDevolucao: Number(metadata.quantidadeDiasBaixaDevolucao || 30),
+    QuantidadeDiasBaixaDevolucao: boundedInteger(
+      metadata.quantidadeDiasBaixaDevolucao,
+      30,
+      1,
+      180,
+    ),
     IndicadorPagamentoParcial: false,
+    QuantidadePagamentoParcial: 0,
     TipoValorAceito: 3,
     FlAceite: false,
     IdTituloEmpresa: externalReference,
     Pagador: pagador,
   };
 
-  return mergeDefined(basePayload, extractBanesePayload(input.receivable || {}, "baneseBoletoPayload"));
+  return mergeDefined(
+    basePayload,
+    extractBanesePayload(input.receivable || {}, "baneseBoletoPayload"),
+  );
 };
 
 export const createBaneseBoletoCharge = async (
@@ -378,24 +442,31 @@ export const createBaneseBoletoCharge = async (
 ): Promise<AdapterCreateChargeResult> => {
   assertEnvironment(input.environment);
   if (input.paymentMethod !== "BOLETO") {
-    throw new BaneseAdapterError("createBaneseBoletoCharge aceita apenas BOLETO.");
+    throw new BaneseAdapterError(
+      "createBaneseBoletoCharge aceita apenas BOLETO.",
+    );
   }
 
   const metadata = metadataFrom(input.receivable || {});
   const convenio = onlyDigits(
-    metadata.baneseBoletoConvenio ?? metadata.baneseConvenio ?? metadata.convenio ??
+    metadata.baneseBoletoConvenio ?? metadata.baneseConvenio ??
+      metadata.convenio ??
       metadata.idConvenio ?? metadata.id_convenio,
   );
   if (!convenio) {
     throw new BaneseAdapterConfigurationError(
-      "Boleto Banese requer convenio em receivable.metadata.baneseBoletoConvenio ou baneseConvenio.",
+      "Boleto Banese Card requer convenio em receivable.metadata.baneseBoletoConvenio ou baneseConvenio.",
     );
   }
 
-  const token = await requestBaneseBoletoAccessToken(input.admin, input.environment);
+  const token = await requestBaneseBoletoAccessToken(
+    input.admin,
+    input.environment,
+  );
   const payload = buildBaneseBoletoPayload(input);
-  const endpoint =
-    `${BANESE_BOLETO_ENDPOINTS[input.environment].baseUrl}/convenios/${convenio}/boletos`;
+  const endpoint = `${
+    BANESE_BOLETO_ENDPOINTS[input.environment].baseUrl
+  }/convenios/${convenio}/boletos`;
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -409,7 +480,7 @@ export const createBaneseBoletoCharge = async (
 
   if (!response.ok) {
     throw new BaneseAdapterError(
-      `Banese recusou criacao do boleto (${response.status}): ${
+      `Banese Card recusou criacao do boleto (${response.status}): ${
         typeof raw === "string" ? raw : JSON.stringify(raw)
       }`,
     );
@@ -424,6 +495,7 @@ export const createBaneseBoletoCharge = async (
       rawRecord.nossoNumero,
       rawRecord.NumeroDocumento,
       rawRecord.numeroDocumento,
+      payload.NossoNumero,
       payload.IdTituloEmpresa,
     ),
     link: firstString(
@@ -432,36 +504,51 @@ export const createBaneseBoletoCharge = async (
       rawRecord.Url,
       rawRecord.urlBoleto,
       rawRecord.UrlBoleto,
-      rawRecord.LinhaDigitavel,
-      rawRecord.linhaDigitavel,
     ) || null,
+    bankSlipUrl: firstString(rawRecord.urlBoleto, rawRecord.UrlBoleto) || null,
     status: firstString(rawRecord.status, rawRecord.Status, "created"),
     raw,
   };
 };
 
-export const validateBanesePixChargeInput = async (input: AdapterCreateChargeInput) => {
+export const validateBanesePixChargeInput = async (
+  input: AdapterCreateChargeInput,
+) => {
   assertEnvironment(input.environment);
   assertAmount(input.amount);
   const metadata = metadataFrom(input.receivable || {});
-  const credentials = await getBanesePixCredentials(input.admin, input.environment);
+  const credentials = await getBanesePixCredentials(
+    input.admin,
+    input.environment,
+  );
   const convenio = firstString(
     metadata.banesePixConvenio,
     metadata.baneseConvenio,
     metadata.convenio,
   );
-  const chave = firstString(metadata.banesePixChave, metadata.pixChave, metadata.chave);
+  const chave = firstString(
+    metadata.banesePixChave,
+    metadata.pixChave,
+    metadata.chave,
+  );
   if (!credentials.crtAccessToken || !convenio || !chave) {
     throw new BaneseAdapterConfigurationError(
-      "Pix Banese requer CrtAccessToken configurado, convenio Pix e chave Pix do recebedor.",
+      "Pix Banese Card requer CrtAccessToken configurado, convenio Pix e chave Pix do recebedor.",
     );
   }
   return {
     credentials,
     convenio,
     chave,
-    pixPayload: extractBanesePayload(input.receivable || {}, "banesePixPayload"),
-    pixEndpointPath: firstString(metadata.banesePixEndpointPath, metadata.pixEndpointPath),
+    pixPayload: extractBanesePayload(
+      input.receivable || {},
+      "banesePixPayload",
+    ),
+    pixEndpointPath: firstString(
+      metadata.banesePixEndpointPath,
+      metadata.pixEndpointPath,
+      "/manutencao/guiaVencimentoFuturo",
+    ),
   };
 };
 
@@ -473,15 +560,22 @@ export const createBanesePixCharge = async (
   }
 
   const validation = await validateBanesePixChargeInput(input);
-  if (!Object.keys(validation.pixPayload).length || !validation.pixEndpointPath) {
+  if (
+    !Object.keys(validation.pixPayload).length || !validation.pixEndpointPath
+  ) {
     throw new BaneseAdapterConfigurationError(
-      "Pix Banese nao foi enviado: informe payload e endpoint homologados no manual Banese (banesePixPayload e banesePixEndpointPath). Nenhuma cobranca Pix foi simulada.",
+      "Pix Banese Card nao foi enviado: o manual SAB Guias exige CodigoBarra de 48 digitos e payload por cobranca. Informe o payload homologado em banesePixPayload. Nenhuma cobranca Pix foi simulada.",
     );
   }
 
-  const token = await requestBanesePixAccessToken(input.admin, input.environment);
+  const token = await requestBanesePixAccessToken(
+    input.admin,
+    input.environment,
+  );
   const endpoint = `${BANESE_PIX_ENDPOINTS[input.environment].baseUrl}${
-    validation.pixEndpointPath.startsWith("/") ? validation.pixEndpointPath : `/${validation.pixEndpointPath}`
+    validation.pixEndpointPath.startsWith("/")
+      ? validation.pixEndpointPath
+      : `/${validation.pixEndpointPath}`
   }`;
   const response = await fetch(endpoint, {
     method: "POST",
@@ -497,16 +591,37 @@ export const createBanesePixCharge = async (
 
   if (!response.ok) {
     throw new BaneseAdapterError(
-      `Banese recusou criacao do Pix (${response.status}): ${
+      `Banese Card recusou criacao do Pix (${response.status}): ${
         typeof raw === "string" ? raw : JSON.stringify(raw)
       }`,
     );
   }
 
   const rawRecord = asRecord(raw);
+  // In SAB Guias, brCodeEMV/dsUrl are the Pix copy-paste payload, while
+  // base64/qrCode are QR image data.
+  const pixPayload = firstString(
+    rawRecord.brCodeEMV,
+    rawRecord.dsUrl,
+  );
+  const pixEncodedImage = firstString(
+    rawRecord.base64,
+    rawRecord.qrCode,
+    rawRecord.qrcode,
+    rawRecord.qrCodeBase64,
+    rawRecord.qr_code_base64,
+  );
   return {
-    id: firstString(rawRecord.id, rawRecord.txid, rawRecord.TxId, rawRecord.identificador),
-    link: firstString(rawRecord.link, rawRecord.url, rawRecord.qrCode, rawRecord.qrcode) || null,
+    id: firstString(
+      rawRecord.id,
+      rawRecord.txid,
+      rawRecord.txId,
+      rawRecord.TxId,
+      rawRecord.identificador,
+    ),
+    link: pixPayload || firstString(rawRecord.link, rawRecord.url) || null,
+    pixPayload: pixPayload || null,
+    pixEncodedImage: pixEncodedImage || null,
     status: firstString(rawRecord.status, rawRecord.situacao, "created"),
     raw,
   };
@@ -515,7 +630,9 @@ export const createBanesePixCharge = async (
 export const createBaneseCharge = (input: AdapterCreateChargeInput) => {
   if (input.paymentMethod === "BOLETO") return createBaneseBoletoCharge(input);
   if (input.paymentMethod === "PIX") return createBanesePixCharge(input);
-  throw new BaneseAdapterError("Banese nao suporta CREDIT_CARD neste adapter.");
+  throw new BaneseAdapterError(
+    "Banese Card nao suporta CREDIT_CARD neste adapter.",
+  );
 };
 
 export const requireBaneseAdapter = (feature: string): never => {

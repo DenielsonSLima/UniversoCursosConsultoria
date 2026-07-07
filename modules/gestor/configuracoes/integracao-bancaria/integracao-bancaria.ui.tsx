@@ -156,7 +156,7 @@ export const ProviderLogo = ({
   const label = code === 'mercado_pago'
     ? 'Mercado'
     : code === 'banese_card'
-      ? 'Banese'
+      ? 'Banese Card'
       : brand.shortLabel;
 
   if (hero) {
@@ -319,7 +319,7 @@ const BrandWordmark = ({
   }
 
   return (
-    <span className={`inline-flex min-w-0 items-center ${scale.gap}`} aria-label="Banese">
+    <span className={`inline-flex min-w-0 items-center ${scale.gap}`} aria-label="Banese Card">
       <span className={`${scale.icon} inline-flex shrink-0 items-center justify-center rounded-md bg-white/15`}>
         <svg viewBox="0 0 32 32" className="h-2/3 w-2/3" aria-hidden="true">
           <path d="M16 4 4 10v3h24v-3L16 4Z" fill="#ffffff" />
@@ -329,7 +329,7 @@ const BrandWordmark = ({
       <span
         className={`${scale.primary} min-w-0 truncate font-black uppercase leading-none tracking-wider text-white`}
       >
-        Banese
+        Banese Card
       </span>
     </span>
   );
@@ -506,7 +506,7 @@ export const ProviderChoiceCard = ({
           {supported
             ? `${methodLabel(paymentMethod)} disponível neste banco`
             : provider.code === 'banese_card' && paymentMethod === 'CREDIT_CARD'
-              ? 'Cartão Banese em validação com o banco'
+              ? 'Banese Card não aceita cartão de crédito neste fluxo'
               : `${methodLabel(paymentMethod)} não disponível neste banco`}
         </p>
       )}

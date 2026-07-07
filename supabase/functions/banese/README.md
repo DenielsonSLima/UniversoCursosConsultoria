@@ -7,18 +7,18 @@ business flow.
 ## Modules
 
 - `core`: shared Banese runtime, HTTP, credentials, status mapping and error normalization.
-- `ead`: EAD Pix/boleto behavior through Banese.
-- `tecnico`: technical course Pix/boleto behavior.
-- `livres`: free course Pix/boleto behavior.
-- `especializacao`: specialization Pix/boleto behavior.
-- `outros-creditos`: detached financial links from Financeiro > Outros Creditos.
-- `webhook`: Banese webhook validation, idempotency and event translation.
+
+Checkout dispatch, route selection and webhook entrypoints live in
+`../gateways`. Banese real checkout remains blocked in `../gateways/router.ts`
+and in `../gateways/api/index.ts` until Pix/Boleto are homologated end to end,
+including payload generation per charge, display of the bank return, and
+conciliation.
 
 ## Boundary
 
-Banese currently routes only Pix and boleto in the gateway configuration. Card
-routes should stay with Asaas or Mercado Pago unless the Banese card adapter is
-explicitly implemented later.
+Banese Card is the bank/provider name. Its local documentation covers Pix/SAB
+Guias and boleto/cobranca, but the CREDIT_CARD payment method is not supported
+in this flow. Card routes must stay with Asaas or Mercado Pago.
 
 ## Public API references
 
@@ -35,6 +35,10 @@ technical reference; the official API contract is the Banese PDF/manual.
 - Production token URL: `https://webapi.banese.b.br/autenticacao/oauth/v1/token`.
 - Scope: `boletos`.
 - Main creation endpoint: `POST /convenios/{id_convenio}/boletos`.
+- `NossoNumero` is mandatory: 8 digits plus the check digit, unique per convenio.
+- The API returns `NumeroCodigoBarras` and `NumeroLinhaDigitavel`, not a hosted
+  checkout URL. The checkout flow must not be enabled until the student-facing
+  boleto display/download and payment polling are implemented.
 
 ### Pix / SAB Guias
 
@@ -43,6 +47,12 @@ technical reference; the official API contract is the Banese PDF/manual.
 - Production base URL: `https://apipix.banese.b.br/guias/v1`.
 - Sandbox token URL: `https://apipix-h.banese.b.br/security/v3/oauth/token`.
 - Production token URL: `https://apipix.banese.b.br/security/v3/oauth/token`.
+- Scope for future-dated guia creation: `sab.guiasmanutencao,cobv.write,payloadlocation.read`.
+- Main creation endpoint from the manual: `POST /manutencao/guiaVencimentoFuturo`.
+- The creation payload requires a 48-digit `codigoBarra` per charge. Do not fake
+  this value; it must come from the homologated Banese/SAB Guias layout.
+- The creation response returns `brCodeEMV` for Pix copy-paste and `base64` for
+  the QR image. Query responses may return `dsUrl` and `qrCode`.
 - Webhook endpoint: `/manutencao/webhook/{chave}`.
 - Required `Terminal` header according to the available manual:
   - Sandbox: `99000090054`.

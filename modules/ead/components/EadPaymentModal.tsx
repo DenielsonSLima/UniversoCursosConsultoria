@@ -12,6 +12,7 @@ export interface EadPaymentPanelData {
     id?: string | null;
     provider?: string | null;
     method?: string | null;
+    installments?: number | null;
     status?: string | null;
     value?: number | string | null;
     displayValue?: string | null;
@@ -55,7 +56,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
   const provider = String(payment.provider || 'asaas').toLowerCase();
-  const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese' : 'Asaas';
+  const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese Card' : 'Asaas';
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
   const showInlinePix = isPix && provider === 'asaas';

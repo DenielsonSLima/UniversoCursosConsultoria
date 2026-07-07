@@ -8,7 +8,8 @@ import {
   Building, 
   Award, 
   ClipboardCheck, 
-  FileSignature 
+  FileSignature,
+  Landmark
 } from 'lucide-react';
 
 interface CadastrosPageProps {
@@ -24,12 +25,13 @@ const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = fa
     { id: 'cadastros-livres', title: 'Cursos Livres', desc: 'Capacitação rápida.', icon: <Zap size={28} />, color: 'bg-amber-500' },
     { id: 'cadastros-tecnicos', title: 'Cursos Técnicos', desc: 'Formação profissional.', icon: <Briefcase size={28} />, color: 'bg-emerald-600' },
     { id: 'cadastros-superior', title: 'Ensino Superior', desc: 'Graduação e Pós.', icon: <Building size={28} />, color: 'bg-blue-800' },
+    { id: 'cadastros-tributario', title: 'Planejamento Tributário', desc: 'Regras, anexos e enquadramentos.', icon: <Landmark size={28} />, color: 'bg-amber-600' },
     { id: 'cadastros-ficha', title: 'Ficha Matrícula', icon: <FileSignature size={28} />, desc: 'Formulários de ingresso.', color: 'bg-slate-800' },
     { id: 'cadastros-modelos', title: 'Modelos Documentos', desc: 'Templates oficiais.', icon: <FileCode size={28} />, color: 'bg-slate-700' },
   ];
 
   const visibleItems = readOnly
-    ? hubItems.filter(item => ['cadastros-ead', 'cadastros-especializacao', 'cadastros-livres', 'cadastros-superior'].includes(item.id))
+    ? hubItems.filter(item => ['cadastros-ead', 'cadastros-especializacao', 'cadastros-livres', 'cadastros-superior', 'cadastros-tributario'].includes(item.id))
     : hubItems;
 
   return (

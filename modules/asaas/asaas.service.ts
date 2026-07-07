@@ -4,7 +4,7 @@ const extractFunctionErrorMessage = async (error: any) => {
   const context = error?.context;
   const canReadJson = context && typeof context.json === 'function';
   const body = canReadJson ? await context.json().catch(() => null) : null;
-  return body?.error || body?.message || error?.message || 'Erro ao comunicar com o Asaas.';
+  return body?.error || body?.message || error?.message || 'Erro ao comunicar com a integração bancária.';
 };
 
 const invokeFunction = async <T>(functionName: string, payload: Record<string, unknown> = {}): Promise<T> => {
@@ -107,22 +107,46 @@ export const asaasIntegrationService = {
     alunoId: string,
     turmaId?: string | null,
     eadPayment?: { method?: string; installments?: number },
-  ) {
-    const { data, error } = await supabase.functions.invoke('payment-checkout', {
-      body: {
-        courseId,
-        alunoId,
-        turmaId,
-        method: eadPayment?.method,
-        eadPaymentMethod: eadPayment?.method,
-        eadInstallments: eadPayment?.installments,
-      },
-    });
-    if (error) {
-      throw new Error(await extractFunctionErrorMessage(error));
-    }
-    if (data?.error) throw new Error(data.error);
-    return data as {
+  ): Promise<{
+    url: string;
+    alreadyPaid?: boolean;
+    alreadyPending?: boolean;
+    awaitingWebhook?: boolean;
+    matriculaId?: string;
+    receivableId?: string;
+    payment?: {
+      id?: string | null;
+      provider?: string | null;
+      method?: string | null;
+      installments?: number | null;
+      status?: string | null;
+      value?: number | null;
+      displayValue?: string | null;
+      dueDate?: string | null;
+      invoiceUrl?: string | null;
+      bankSlipUrl?: string | null;
+      courseName?: string | null;
+      recipient?: {
+        name?: string | null;
+        document?: string | null;
+      } | null;
+      pixQrCode?: {
+        encodedImage?: string | null;
+        payload?: string | null;
+        expirationDate?: string | null;
+      } | null;
+    };
+  }> {
+    const payload = {
+      courseId,
+      alunoId,
+      turmaId,
+      method: eadPayment?.method,
+      eadPaymentMethod: eadPayment?.method,
+      eadInstallments: eadPayment?.installments,
+    };
+
+    let result: {
       url: string;
       alreadyPaid?: boolean;
       alreadyPending?: boolean;
@@ -133,6 +157,7 @@ export const asaasIntegrationService = {
         id?: string | null;
         provider?: string | null;
         method?: string | null;
+        installments?: number | null;
         status?: string | null;
         value?: number | null;
         displayValue?: string | null;
@@ -151,5 +176,46 @@ export const asaasIntegrationService = {
         } | null;
       };
     };
+
+    result = await invokeFunction<{
+      url: string;
+      alreadyPaid?: boolean;
+      alreadyPending?: boolean;
+      awaitingWebhook?: boolean;
+      matriculaId?: string;
+      receivableId?: string;
+      payment?: {
+        id?: string | null;
+        provider?: string | null;
+        method?: string | null;
+        installments?: number | null;
+        status?: string | null;
+        value?: number | null;
+        displayValue?: string | null;
+        dueDate?: string | null;
+        invoiceUrl?: string | null;
+        bankSlipUrl?: string | null;
+        courseName?: string | null;
+        recipient?: {
+          name?: string | null;
+          document?: string | null;
+        } | null;
+        pixQrCode?: {
+          encodedImage?: string | null;
+          payload?: string | null;
+          expirationDate?: string | null;
+        } | null;
+      };
+    }>('payment-checkout', payload);
+
+    if (!result?.url) {
+      throw new Error('Resposta do checkout sem URL do pagamento.');
+    }
+
+    return result;
   },
+};
+
+export const paymentCheckoutService = {
+  getPublicCheckout: asaasIntegrationService.getPublicCheckout,
 };
