@@ -425,11 +425,6 @@ export const createMercadoPagoPixPayment = async (
     input.environment,
     input,
   );
-  if (input.environment === "sandbox" && !accessToken.startsWith("TEST-")) {
-    throw new MercadoPagoAdapterError(
-      "Pix Mercado Pago sandbox precisa usar Access Token de teste com prefixo TEST-. A credencial atual foi reconhecida pelo Mercado Pago como credencial live/producao e nao gera QR Code Pix de teste.",
-    );
-  }
 
   const description = stringValue(input.description);
   if (!description) {
