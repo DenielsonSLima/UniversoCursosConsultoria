@@ -68,7 +68,7 @@ export class MercadoPagoAdapterNotImplementedError extends Error {
 
 const MERCADO_PAGO_CHECKOUT_PREFERENCES_URL =
   "https://api.mercadopago.com/checkout/preferences";
-const MERCADO_PAGO_PAYMENTS_URL = "https://api.mercadopago.com/v1/payments";
+const MERCADO_PAGO_ORDERS_URL = "https://api.mercadopago.com/v1/orders";
 
 const secretName = (environment: Environment, kind: string) =>
   `payment_gateway_${MERCADO_PAGO_PROVIDER_CODE}_${environment}_${kind}`;
@@ -212,6 +212,20 @@ const payerIdentification = (payer: AdapterPayer) => {
     type: document.length > 11 ? "CNPJ" : "CPF",
     number: document,
   };
+};
+
+const pixExpirationDuration = (dueDate?: string | null) => {
+  if (!dueDate) return undefined;
+  const due = new Date(`${dueDate}T23:59:59-03:00`);
+  if (Number.isNaN(due.getTime())) return undefined;
+
+  const diffMs = due.getTime() - Date.now();
+  const minMs = 30 * 60 * 1000;
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (diffMs <= minMs) return "PT30M";
+
+  const days = Math.min(30, Math.max(1, Math.ceil(diffMs / dayMs)));
+  return `P${days}D`;
 };
 
 const paymentMethodOptions = (
@@ -447,38 +461,44 @@ export const createMercadoPagoPixPayment = async (
     input.receivable?.external_reference,
   );
   const idempotencyKey = firstString(
-    externalReference && `ead-pix-${input.environment}-${externalReference}`,
+    externalReference && `ead-pix-order-${input.environment}-${externalReference}`,
     crypto.randomUUID(),
   );
+  const amount = input.amount.toFixed(2);
+  const expirationTime = pixExpirationDuration(input.dueDate);
 
   const payload = {
-    transaction_amount: Number(input.amount.toFixed(2)),
-    description: description.slice(0, 255),
-    payment_method_id: "pix",
-    notification_url: endpointUrl(
-      input.supabaseUrl,
-      MERCADO_PAGO_PROVIDER_CODE,
-      input.environment,
-    ),
-    external_reference: externalReference || undefined,
-    payer: {
-      email,
-      first_name: payerNameParts(payer).firstName,
-      last_name: payerNameParts(payer).lastName,
-      identification: payerIdentification(payer),
+    type: "online",
+    total_amount: amount,
+    external_reference: externalReference || idempotencyKey,
+    processing_mode: "automatic",
+    transactions: {
+      payments: [
+        {
+          amount,
+          payment_method: {
+            id: "pix",
+            type: "bank_transfer",
+          },
+          expiration_time: expirationTime,
+        },
+      ],
     },
+    payer: { email },
     metadata: {
       provider_code: MERCADO_PAGO_PROVIDER_CODE,
       environment: input.environment,
       payment_method: "PIX",
       receivable_id: externalReference || undefined,
       due_date: input.dueDate || undefined,
+      description: description.slice(0, 255),
     },
   };
 
-  const response = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
+  const response = await fetch(MERCADO_PAGO_ORDERS_URL, {
     method: "POST",
     headers: {
+      accept: "application/json",
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
       "X-Idempotency-Key": idempotencyKey,
@@ -490,29 +510,37 @@ export const createMercadoPagoPixPayment = async (
   if (!response.ok) {
     const rawMessage = typeof raw === "string" ? raw : JSON.stringify(raw);
     throw new MercadoPagoAdapterError(
-      `Mercado Pago recusou a criacao do Pix (${response.status}): ${rawMessage}`,
+      `Mercado Pago recusou a criacao da order Pix (${response.status}): ${rawMessage}`,
     );
   }
 
   const rawRecord = asRecord(raw);
-  const interaction = asRecord(rawRecord.point_of_interaction);
-  const transactionData = asRecord(interaction.transaction_data);
-  const id = stringValue(rawRecord.id);
-  const pixPayload = firstString(transactionData.qr_code);
-  const pixEncodedImage = firstString(transactionData.qr_code_base64);
-  const ticketUrl = firstString(transactionData.ticket_url);
+  const transactions = asRecord(rawRecord.transactions);
+  const payments = Array.isArray(transactions.payments)
+    ? transactions.payments
+    : [];
+  const payment = asRecord(payments[0]);
+  const paymentMethod = asRecord(payment.payment_method);
+  const orderId = stringValue(rawRecord.id);
+  const paymentId = firstString(payment.id, orderId);
+  const pixPayload = firstString(paymentMethod.qr_code, payment.qr_code);
+  const pixEncodedImage = firstString(
+    paymentMethod.qr_code_base64,
+    payment.qr_code_base64,
+  );
+  const ticketUrl = firstString(paymentMethod.ticket_url, payment.ticket_url);
 
-  if (!id || !pixPayload) {
+  if (!paymentId || !pixPayload) {
     throw new MercadoPagoAdapterError(
-      "Mercado Pago retornou Pix sem QR Code.",
+      "Mercado Pago retornou order Pix sem QR Code.",
     );
   }
 
   return {
-    id,
+    id: paymentId,
     link: ticketUrl || null,
     invoiceUrl: ticketUrl || null,
-    status: firstString(rawRecord.status, "pending"),
+    status: firstString(payment.status, rawRecord.status, "action_required"),
     pixPayload,
     pixEncodedImage,
     raw,

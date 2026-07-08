@@ -2,6 +2,7 @@ import { getMercadoPagoAccessToken } from "../../../mercado-pago/core/adapter.ts
 import type { GatewayWebhookContext } from "../types.ts";
 
 const MERCADO_PAGO_PAYMENT_URL = "https://api.mercadopago.com/v1/payments";
+const MERCADO_PAGO_ORDER_URL = "https://api.mercadopago.com/v1/orders";
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,9 +40,9 @@ const normalizeRemotePaymentId = (value: unknown) => {
 
 const statusForMercadoPago = (status: unknown) => {
   const normalized = String(status || "").trim().toLowerCase();
-  if (normalized === "approved") return "PAGO";
+  if (["approved", "paid", "processed"].includes(normalized)) return "PAGO";
   if (["cancelled", "rejected", "refunded", "charged_back"].includes(normalized)) return "CANCELADO";
-  if (["pending", "in_process", "authorized"].includes(normalized)) return PENDENTE_INSCRICAO_STATUS;
+  if (["pending", "in_process", "authorized", "action_required"].includes(normalized)) return PENDENTE_INSCRICAO_STATUS;
   return null;
 };
 
@@ -99,6 +100,77 @@ const fetchPayment = async (context: GatewayWebhookContext, paymentId: string) =
     throw new Error(`Mercado Pago recusou consulta do pagamento (${response.status}): ${text}`);
   }
   return asRecord(body);
+};
+
+const paymentFromOrder = (order: Record<string, unknown>) => {
+  const transactions = asRecord(order.transactions);
+  const payments = Array.isArray(transactions.payments) ? transactions.payments : [];
+  const payment = asRecord(payments[0]);
+  const paymentMethod = asRecord(payment.payment_method);
+  const qrCode = firstString(paymentMethod.qr_code, payment.qr_code);
+  const qrCodeBase64 = firstString(paymentMethod.qr_code_base64, payment.qr_code_base64);
+  const ticketUrl = firstString(paymentMethod.ticket_url, payment.ticket_url);
+  const status = firstString(payment.status, order.status);
+  const statusDetail = firstString(payment.status_detail, order.status_detail);
+  const amount = firstNumber(payment.amount, order.total_amount);
+
+  return {
+    ...payment,
+    id: firstString(payment.id, order.id),
+    external_reference: firstString(order.external_reference, payment.external_reference),
+    status,
+    status_detail: statusDetail,
+    transaction_amount: amount,
+    total_paid_amount: amount,
+    payment_method_id: firstString(paymentMethod.id, payment.payment_method_id),
+    payment_type_id: firstString(paymentMethod.type, payment.payment_type_id),
+    point_of_interaction: {
+      transaction_data: {
+        qr_code: qrCode,
+        qr_code_base64: qrCodeBase64,
+        ticket_url: ticketUrl,
+      },
+    },
+    metadata: {
+      ...asRecord(order.metadata),
+      ...asRecord(payment.metadata),
+    },
+    order_id: firstString(order.id),
+    raw_order: order,
+  };
+};
+
+const fetchOrder = async (context: GatewayWebhookContext, orderId: string) => {
+  const normalizedOrderId = normalizeRemotePaymentId(orderId);
+  if (!normalizedOrderId) throw new Error("Webhook Mercado Pago sem id da order.");
+  const token = await getMercadoPagoAccessToken(context.admin, context.environment);
+  const response = await fetch(`${MERCADO_PAGO_ORDER_URL}/${encodeURIComponent(normalizedOrderId)}`, {
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const text = await response.text().catch(() => "");
+  const body = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    throw new Error(`Mercado Pago recusou consulta da order (${response.status}): ${text}`);
+  }
+  return paymentFromOrder(asRecord(body));
+};
+
+const fetchMercadoPagoResource = async (
+  context: GatewayWebhookContext,
+  remoteId: string,
+) => {
+  const eventType = firstString(context.payload?.type, context.payload?.topic);
+  const normalizedRemoteId = normalizeRemotePaymentId(remoteId);
+  if (
+    eventType.toLowerCase() === "order" ||
+    normalizedRemoteId.toUpperCase().startsWith("ORD")
+  ) {
+    return fetchOrder(context, normalizedRemoteId);
+  }
+  return fetchPayment(context, normalizedRemoteId);
 };
 
 const findReceivable = async (
@@ -266,7 +338,7 @@ export const processMercadoPagoWebhook = async (context: GatewayWebhookContext) 
   const paymentId = normalizeRemotePaymentId(firstString(context.remotePaymentId));
   if (!paymentId) return { processed: true, ignored: true, reason: "missing_payment_id" };
 
-  const payment = await fetchPayment(context, paymentId);
+  const payment = await fetchMercadoPagoResource(context, paymentId);
   const receivable = await findReceivable(context, payment);
   if (!receivable) return { processed: true, ignored: true, reason: "receivable_not_found" };
 
