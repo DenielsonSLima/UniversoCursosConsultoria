@@ -656,6 +656,11 @@ export const handlePaymentCheckout = async (req: Request) => {
         && gatewayReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
         && gatewayReceivable.gateway_environment === environment
         && Number(gatewayReceivable.gateway_installments || 1) === Number(charge.installmentCount || 1)
+        && (
+          providerCode !== "mercado_pago" ||
+          gatewayPaymentMethodForCharge !== "PIX" ||
+          Boolean(gatewayReceivable.gateway_pix_payload || gatewayReceivable.gateway_pix_encoded_image)
+        )
         && resolveCheckoutUrl(gatewayReceivable)
       ) {
         return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPending: true });
@@ -797,6 +802,11 @@ export const handlePaymentCheckout = async (req: Request) => {
           && currentReceivable?.gateway_payment_method === gatewayPaymentMethodForCharge
           && currentReceivable?.gateway_environment === environment
           && Number(currentReceivable?.gateway_installments || 1) === Number(charge.installmentCount || 1)
+          && (
+            providerCode !== "mercado_pago" ||
+            gatewayPaymentMethodForCharge !== "PIX" ||
+            Boolean(currentReceivable?.gateway_pix_payload || currentReceivable?.gateway_pix_encoded_image)
+          )
         ) {
           return json({ url: currentUrl, alreadyPending: true });
         }
