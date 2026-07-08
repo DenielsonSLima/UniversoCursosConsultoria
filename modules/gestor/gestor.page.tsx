@@ -36,7 +36,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getGestorAccessScope, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 
@@ -97,6 +97,8 @@ const POLO_CADASTROS_ALLOWED = new Set([
 
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const storedProfile = getPortalSessionFromStorage();
+  const initialGestorProfile = storedProfile?.tipo === 'Gestor' ? storedProfile : null;
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
@@ -113,8 +115,8 @@ const GestorPage: React.FC = () => {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [profile, setProfile] = useState<PortalAuthProfile | null>(initialGestorProfile);
+  const [isAuthLoading, setIsAuthLoading] = useState(!initialGestorProfile);
   // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(() =>
     sessionStorage.getItem('current_polo_id') ||
@@ -228,12 +230,13 @@ const GestorPage: React.FC = () => {
         }
 
         setProfile(portalProfile);
-        setIsAuthLoading(false);
       } catch {
         clearPortalSession();
         await loginService.logout().catch(() => undefined);
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
         navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
+      } finally {
+        if (mounted) setIsAuthLoading(false);
       }
     };
 

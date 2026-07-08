@@ -17,7 +17,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { loginService } from '../login/login.service';
-import { clearPortalSession, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import ConfirmModal from '../shared/components/ConfirmModal';
@@ -35,12 +35,14 @@ const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const storedProfile = getPortalSessionFromStorage();
+  const initialProfessorProfile = storedProfile?.tipo === 'Professor' ? storedProfile : null;
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(null);
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
-  const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [profile, setProfile] = useState<PortalAuthProfile | null>(initialProfessorProfile);
+  const [isAuthLoading, setIsAuthLoading] = useState(!initialProfessorProfile);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const scrollContentToTop = useCallback(() => {
@@ -87,12 +89,13 @@ const ProfessorPage: React.FC = () => {
 
         setCurrentPoloId(preferredPolo || null);
         setProfile(portalProfile);
-        setIsAuthLoading(false);
       } catch {
         clearPortalSession();
         await loginService.logout().catch(() => undefined);
         const redirect = encodeURIComponent(window.location.pathname + window.location.search);
         navigate(`/sistema/login?redirect=${redirect}`, { replace: true });
+      } finally {
+        if (mounted) setIsAuthLoading(false);
       }
     };
 
