@@ -45,6 +45,8 @@ export type AdapterCreateChargeResult = {
   link: string | null;
   invoiceUrl: string | null;
   bankSlipUrl: string | null;
+  pixPayload: string | null;
+  pixEncodedImage: string | null;
   customer: string | null;
   installmentId: string | null;
   transactionReceiptUrl: string | null;
@@ -347,16 +349,53 @@ const buildPaymentPayload = (
   return payload;
 };
 
-const resultFromPayment = (payment: any): AdapterCreateChargeResult => {
+const pixQrCodeForPayment = async (
+  runtime: AsaasRuntime,
+  payment: any,
+  paymentMethod: PaymentMethod,
+) => {
+  const paymentId = firstString(payment?.id);
+  if (paymentMethod !== "PIX" || !paymentId) {
+    return { payload: null, encodedImage: null };
+  }
+
+  const pix = await callAsaas(
+    runtime,
+    `/payments/${encodeURIComponent(paymentId)}/pixQrCode`,
+    { method: "GET" },
+    "Universo-Cursos-Gateway",
+  ).catch((error) => {
+    console.warn("Nao foi possivel recuperar QR Code Pix Asaas:", error);
+    return null;
+  });
+
+  return {
+    payload: firstString(pix?.payload) || null,
+    encodedImage: firstString(pix?.encodedImage) || null,
+  };
+};
+
+const resultFromPayment = async (
+  runtime: AsaasRuntime,
+  input: AdapterCreateChargeInput,
+  payment: any,
+): Promise<AdapterCreateChargeResult> => {
   const id = firstString(payment?.id);
   if (!id) throw new AsaasAdapterError("Asaas retornou cobranca sem id.");
   const invoiceUrl = firstString(payment?.invoiceUrl) || null;
   const bankSlipUrl = firstString(payment?.bankSlipUrl) || null;
+  const pixQrCode = await pixQrCodeForPayment(
+    runtime,
+    payment,
+    input.paymentMethod,
+  );
   return {
     id,
     link: invoiceUrl || bankSlipUrl,
     invoiceUrl,
     bankSlipUrl,
+    pixPayload: pixQrCode.payload,
+    pixEncodedImage: pixQrCode.encodedImage,
     customer: firstString(payment?.customer) || null,
     installmentId: firstString(payment?.installment, payment?.installmentId) || null,
     transactionReceiptUrl: firstString(payment?.transactionReceiptUrl) || null,
@@ -376,12 +415,12 @@ export const createAsaasCharge = async (
   const runtime = await resolveRuntime(input.admin, environment);
   const customerId = await ensureCustomer(runtime, input.admin, input.payer || {});
   const recoveredPayment = await recoverPaymentByReceivable(runtime, input);
-  if (recoveredPayment?.id) return resultFromPayment(recoveredPayment);
+  if (recoveredPayment?.id) return resultFromPayment(runtime, input, recoveredPayment);
 
   const payment = await callAsaas(runtime, "/payments", {
     method: "POST",
     body: JSON.stringify(buildPaymentPayload(customerId, input)),
   }, "Universo-Cursos-Gateway");
 
-  return resultFromPayment(payment);
+  return resultFromPayment(runtime, input, payment);
 };

@@ -756,6 +756,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
       setCheckoutError('');
     },
     onSuccess: ({ url, payment, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+      setEadCheckoutReview(null);
       const paymentMethod = String(payment?.method || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
       const usesInlinePaymentPanel = paymentProvider === 'asaas';
@@ -2367,6 +2368,12 @@ const CursosPage: React.FC<CursosPageProps> = ({
                     ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)}.`
                     : `${selectedMethod === 'PIX' ? 'Pix' : 'Boleto'} selecionado: cobrança única de ${formatEadCheckoutMoney(options.amount)}.`}
                 </div>
+
+                {checkoutError && (
+                  <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold leading-relaxed text-red-700">
+                    {checkoutError}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 border-t border-slate-100 px-6 py-5 sm:flex-row sm:justify-end">
@@ -2382,7 +2389,6 @@ const CursosPage: React.FC<CursosPageProps> = ({
                   disabled={checkoutMutation.isPending || options.options.length === 0}
                   onClick={() => {
                     const review = eadCheckoutReview;
-                    setEadCheckoutReview(null);
                     startCheckout(review.course, null, {
                       method: selectedMethod,
                       installments: selectedInstallments,
