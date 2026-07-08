@@ -57,14 +57,24 @@ const shouldReuseReceivable = (
   receivable: any,
   context: EadCheckoutContext,
   providerCode: GatewayProviderCode,
-) =>
-  receivable &&
-  receivable.gateway_provider === providerCode &&
-  receivable.gateway_payment_method === context.charge.method &&
-  receivable.gateway_environment === context.environment &&
-  Number(receivable.gateway_installments || 1) ===
-    context.charge.installmentCount &&
-  !!gatewayPrimaryUrl(receivable);
+) => {
+  if (
+    !receivable ||
+    receivable.gateway_provider !== providerCode ||
+    receivable.gateway_payment_method !== context.charge.method ||
+    receivable.gateway_environment !== context.environment ||
+    Number(receivable.gateway_installments || 1) !== context.charge.installmentCount ||
+    !gatewayPrimaryUrl(receivable)
+  ) {
+    return false;
+  }
+
+  if (providerCode === "mercado_pago" && context.charge.method === "PIX") {
+    return Boolean(receivable.gateway_pix_payload || receivable.gateway_pix_encoded_image);
+  }
+
+  return true;
+};
 
 const paymentResponseFromReceivable = (
   receivable: any,
