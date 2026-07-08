@@ -1,5 +1,5 @@
 import {
-  MERCADO_PAGO_ORDERS_URL,
+  MERCADO_PAGO_PAYMENTS_URL,
   MERCADO_PAGO_PROVIDER_CODE,
 } from "./constants.ts";
 import { MercadoPagoAdapterError } from "./errors.ts";
@@ -11,7 +11,9 @@ import type {
 import {
   asRecord,
   firstString,
-  pixExpirationDuration,
+  mercadoPagoWebhookUrl,
+  payerIdentification,
+  payerNameParts,
   readResponseBody,
   stringValue,
 } from "./utils.ts";
@@ -55,30 +57,28 @@ export const createMercadoPagoPixPayment = async (
     input.receivable?.external_reference,
   );
   const idempotencyKey = firstString(
-    externalReference && `ead-pix-order-${input.environment}-${externalReference}`,
+    externalReference &&
+      `ead-pix-payment-${input.environment}-${externalReference}`,
     crypto.randomUUID(),
   );
-  const amount = input.amount.toFixed(2);
-  const expirationTime = pixExpirationDuration(input.dueDate);
+  const { firstName, lastName } = payerNameParts(payer);
+  const identification = payerIdentification(payer);
 
   const payload = {
-    type: "online",
-    total_amount: amount,
+    transaction_amount: Number(input.amount.toFixed(2)),
+    description: description.slice(0, 255),
+    payment_method_id: "pix",
     external_reference: externalReference || idempotencyKey,
-    processing_mode: "automatic",
-    transactions: {
-      payments: [
-        {
-          amount,
-          payment_method: {
-            id: "pix",
-            type: "bank_transfer",
-          },
-          expiration_time: expirationTime,
-        },
-      ],
+    notification_url: mercadoPagoWebhookUrl(
+      input.supabaseUrl,
+      input.environment,
+    ),
+    payer: {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      identification,
     },
-    payer: { email },
     metadata: {
       provider_code: MERCADO_PAGO_PROVIDER_CODE,
       environment: input.environment,
@@ -89,7 +89,7 @@ export const createMercadoPagoPixPayment = async (
     },
   };
 
-  const response = await fetch(MERCADO_PAGO_ORDERS_URL, {
+  const response = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
     method: "POST",
     headers: {
       accept: "application/json",
@@ -104,29 +104,23 @@ export const createMercadoPagoPixPayment = async (
   if (!response.ok) {
     const rawMessage = typeof raw === "string" ? raw : JSON.stringify(raw);
     throw new MercadoPagoAdapterError(
-      `Mercado Pago recusou a criacao da order Pix (${response.status}): ${rawMessage}`,
+      `Mercado Pago recusou a criacao do Pix (${response.status}): ${rawMessage}`,
     );
   }
 
   const rawRecord = asRecord(raw);
-  const transactions = asRecord(rawRecord.transactions);
-  const payments = Array.isArray(transactions.payments)
-    ? transactions.payments
-    : [];
-  const payment = asRecord(payments[0]);
-  const paymentMethod = asRecord(payment.payment_method);
-  const orderId = stringValue(rawRecord.id);
-  const paymentId = firstString(payment.id, orderId);
-  const pixPayload = firstString(paymentMethod.qr_code, payment.qr_code);
+  const pointOfInteraction = asRecord(rawRecord.point_of_interaction);
+  const transactionData = asRecord(pointOfInteraction.transaction_data);
+  const paymentId = stringValue(rawRecord.id);
+  const pixPayload = firstString(transactionData.qr_code);
   const pixEncodedImage = firstString(
-    paymentMethod.qr_code_base64,
-    payment.qr_code_base64,
+    transactionData.qr_code_base64,
   );
-  const ticketUrl = firstString(paymentMethod.ticket_url, payment.ticket_url);
+  const ticketUrl = firstString(transactionData.ticket_url);
 
   if (!paymentId || !pixPayload) {
     throw new MercadoPagoAdapterError(
-      "Mercado Pago retornou order Pix sem QR Code.",
+      "Mercado Pago retornou Pix sem QR Code.",
     );
   }
 
@@ -134,7 +128,7 @@ export const createMercadoPagoPixPayment = async (
     id: paymentId,
     link: ticketUrl || null,
     invoiceUrl: ticketUrl || null,
-    status: firstString(payment.status, rawRecord.status, "action_required"),
+    status: firstString(rawRecord.status, "pending"),
     pixPayload,
     pixEncodedImage,
     raw,
