@@ -172,6 +172,10 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
 
                 <div className="mt-4 grid gap-3 text-xs font-bold text-slate-600 sm:grid-cols-2">
                   <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Banco/Gateway</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">{providerName}</p>
+                  </div>
+                  <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
                     <p className="mt-1 text-sm font-black text-[#001a33]">{recipientName}</p>
                   </div>
@@ -198,6 +202,10 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
 
           {!showInlinePix && (
             <div className="grid gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-600 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Banco/Gateway</p>
+                <p className="mt-1 text-sm font-black text-[#001a33]">{providerName}</p>
+              </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recebedor</p>
                 <p className="mt-1 text-sm font-black text-[#001a33]">{recipientName}</p>
