@@ -223,9 +223,6 @@ const paymentMethodOptions = (
   if (paymentMethod === "PIX") {
     return {
       payment_methods: {
-        excluded_payment_methods: [
-          { id: "account_money" },
-        ],
         excluded_payment_types: [
           { id: "credit_card" },
           { id: "debit_card" },

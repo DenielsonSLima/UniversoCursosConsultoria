@@ -2397,7 +2397,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
                   {selectedMethod === 'CREDIT_CARD'
-                    ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)}.`
+                    ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)} sobre o valor do curso. Juros do gateway podem alterar o total no checkout.`
                     : `${selectedMethod === 'PIX' ? 'Pix' : 'Boleto'} selecionado: cobrança única de ${formatEadCheckoutMoney(options.amount)}.`}
                 </div>
 
