@@ -254,7 +254,6 @@ export const gatewayReceivableUpdate = (
 
   if (input.providerCode === "asaas") {
     update.asaas_payment_id = remotePaymentId;
-    update.asaas_customer_id = input.result.remoteCustomerId;
     update.asaas_payment_link_id = input.result.remotePaymentLinkId;
     update.nosso_numero_asaas = remotePaymentId;
     update.asaas_invoice_url = input.result.invoiceUrl;

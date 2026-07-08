@@ -29,7 +29,6 @@ const firstHttpUrl = (value: unknown) => {
 
 const clearPreviousGatewayFields = (message: string) => ({
   asaas_payment_id: null,
-  asaas_customer_id: null,
   asaas_payment_link_id: null,
   nosso_numero_asaas: null,
   asaas_invoice_url: null,
