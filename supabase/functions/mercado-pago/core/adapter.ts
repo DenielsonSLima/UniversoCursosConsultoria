@@ -47,6 +47,9 @@ export type AdapterCreateChargeResult = {
   link: string | null;
   status: string;
   raw: unknown;
+  invoiceUrl?: string | null;
+  pixPayload?: string | null;
+  pixEncodedImage?: string | null;
 };
 
 export class MercadoPagoAdapterError extends Error {
@@ -65,6 +68,7 @@ export class MercadoPagoAdapterNotImplementedError extends Error {
 
 const MERCADO_PAGO_CHECKOUT_PREFERENCES_URL =
   "https://api.mercadopago.com/checkout/preferences";
+const MERCADO_PAGO_PAYMENTS_URL = "https://api.mercadopago.com/v1/payments";
 
 const secretName = (environment: Environment, kind: string) =>
   `payment_gateway_${MERCADO_PAGO_PROVIDER_CODE}_${environment}_${kind}`;
@@ -408,6 +412,112 @@ export const createMercadoPagoPreference = async (
 };
 
 export const createMercadoPagoCharge = createMercadoPagoPreference;
+
+export const createMercadoPagoPixPayment = async (
+  input: AdapterCreateChargeInput,
+): Promise<AdapterCreateChargeResult> => {
+  assertEnvironment(input.environment);
+  assertPaymentMethod("PIX");
+  assertAmount(input.amount);
+
+  const accessToken = await getMercadoPagoAccessToken(
+    input.admin,
+    input.environment,
+    input,
+  );
+  const description = stringValue(input.description);
+  if (!description) {
+    throw new MercadoPagoAdapterError(
+      "Descricao da cobranca Mercado Pago e obrigatoria.",
+    );
+  }
+
+  const payer = input.payer || {};
+  const email = firstString(payer.email);
+  if (!email) {
+    throw new MercadoPagoAdapterError(
+      "Email do pagador e obrigatorio para Pix Mercado Pago.",
+    );
+  }
+
+  const externalReference = firstString(
+    input.receivable?.id,
+    input.receivable?.externalReference,
+    input.receivable?.external_reference,
+  );
+  const idempotencyKey = firstString(
+    externalReference && `ead-pix-${input.environment}-${externalReference}`,
+    crypto.randomUUID(),
+  );
+
+  const payload = {
+    transaction_amount: Number(input.amount.toFixed(2)),
+    description: description.slice(0, 255),
+    payment_method_id: "pix",
+    notification_url: endpointUrl(
+      input.supabaseUrl,
+      MERCADO_PAGO_PROVIDER_CODE,
+      input.environment,
+    ),
+    external_reference: externalReference || undefined,
+    payer: {
+      email,
+      first_name: payerNameParts(payer).firstName,
+      last_name: payerNameParts(payer).lastName,
+      identification: payerIdentification(payer),
+    },
+    metadata: {
+      provider_code: MERCADO_PAGO_PROVIDER_CODE,
+      environment: input.environment,
+      payment_method: "PIX",
+      receivable_id: externalReference || undefined,
+      due_date: input.dueDate || undefined,
+    },
+  };
+
+  const response = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(payload),
+  });
+  const raw = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new MercadoPagoAdapterError(
+      `Mercado Pago recusou a criacao do Pix (${response.status}): ${
+        typeof raw === "string" ? raw : JSON.stringify(raw)
+      }`,
+    );
+  }
+
+  const rawRecord = asRecord(raw);
+  const interaction = asRecord(rawRecord.point_of_interaction);
+  const transactionData = asRecord(interaction.transaction_data);
+  const id = stringValue(rawRecord.id);
+  const pixPayload = firstString(transactionData.qr_code);
+  const pixEncodedImage = firstString(transactionData.qr_code_base64);
+  const ticketUrl = firstString(transactionData.ticket_url);
+
+  if (!id || !pixPayload) {
+    throw new MercadoPagoAdapterError(
+      "Mercado Pago retornou Pix sem QR Code.",
+    );
+  }
+
+  return {
+    id,
+    link: ticketUrl || null,
+    invoiceUrl: ticketUrl || null,
+    status: firstString(rawRecord.status, "pending"),
+    pixPayload,
+    pixEncodedImage,
+    raw,
+  };
+};
 
 export const requireMercadoPagoAdapter = (feature: string): never => {
   throw new MercadoPagoAdapterNotImplementedError(feature);

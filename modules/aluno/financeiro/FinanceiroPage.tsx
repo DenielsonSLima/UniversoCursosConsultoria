@@ -478,18 +478,29 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         { method: eadPaymentMethod } as any
       );
 
+      const checkoutResult = result as any;
+      const provider = String(checkoutResult?.payment?.provider || '').toLowerCase();
+      const checkoutUrl = checkoutResult?.url || checkoutResult?.payment?.invoiceUrl || checkoutResult?.paymentLinkUrl;
+      const hasPixQrCode = Boolean(checkoutResult?.payment?.pixQrCode?.payload || checkoutResult?.payment?.pixQrCode?.encodedImage);
+      if (eadPaymentMethod === 'PIX' && hasPixQrCode) {
+        setSelectedEadPayment(null);
+        setEadPaymentPanel(result as EadPaymentPanelData);
+        invalidateAlunoPaymentQueries();
+        return;
+      }
+
       if (eadPaymentMethod === 'CREDIT_CARD') {
-        const checkoutResult = result as any;
-        const checkoutUrl = checkoutResult?.url || checkoutResult?.paymentLinkUrl || checkoutResult?.invoiceUrl;
         if (!checkoutUrl) throw new Error('O gateway não retornou o link do checkout do cartão.');
-        window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        if (provider === 'mercado_pago') {
+          invalidateAlunoPaymentQueries();
+          window.location.assign(checkoutUrl);
+        } else {
+          window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        }
         setSelectedEadPayment(null);
         return;
       }
 
-      const checkoutResult = result as any;
-      const provider = String(checkoutResult?.payment?.provider || '').toLowerCase();
-      const checkoutUrl = checkoutResult?.url || checkoutResult?.payment?.invoiceUrl || checkoutResult?.paymentLinkUrl;
       if (eadPaymentMethod === 'BOLETO' && checkoutUrl) {
         invalidateAlunoPaymentQueries();
         window.location.assign(checkoutUrl);

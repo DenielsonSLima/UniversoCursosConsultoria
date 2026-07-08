@@ -778,7 +778,8 @@ const CursosPage: React.FC<CursosPageProps> = ({
       setEadCheckoutReview(null);
       const paymentMethod = String(payment?.method || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
-      const usesInlinePaymentPanel = paymentProvider === 'asaas';
+      const hasPixQrCode = Boolean((payment as any)?.pixQrCode?.payload || (payment as any)?.pixQrCode?.encodedImage);
+      const usesInlinePaymentPanel = paymentProvider === 'asaas' || (paymentMethod === 'PIX' && hasPixQrCode);
       if (payment && usesInlinePaymentPanel && ['PIX', 'BOLETO'].includes(paymentMethod)) {
         if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
         if (paymentMethod === 'BOLETO') {
@@ -2360,7 +2361,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
                         type="button"
                         onClick={() => {
                           setEadPaymentMethod(option.method);
-                          setEadInstallments(option.method === 'CREDIT_CARD' ? Math.max(1, Math.min(options.maxParcelas, options.parcelasPadrao)) : 1);
+                          setEadInstallments(option.method === 'CREDIT_CARD' ? Math.max(1, options.maxParcelas) : 1);
                         }}
                         className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
                           active

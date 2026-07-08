@@ -250,6 +250,12 @@ const configuredMethodsForCourse = (course: any): GatewayPaymentMethod[] => {
   return methods;
 };
 
+const mercadoPagoCardInstallmentsForCourse = (course: any) => {
+  const parsed = Number(course?.financeiro_config?.cartao?.maxParcelas || 1);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.max(1, Math.min(21, Math.floor(parsed)));
+};
+
 export const assertNonEadCheckoutRequestIsRoutable = async (
   admin: any,
   course: any,
@@ -356,6 +362,9 @@ export const buildEadCheckoutContext = async (
     "EAD",
     charge.method,
   );
+  if (route.providerCode === "mercado_pago" && charge.method === "CREDIT_CARD") {
+    charge.installmentCount = mercadoPagoCardInstallmentsForCourse(course);
+  }
 
   const token = String(runtime.req.headers.get("Authorization") || "").replace(
     /^Bearer\s+/i,

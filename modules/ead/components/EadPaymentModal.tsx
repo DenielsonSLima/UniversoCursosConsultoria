@@ -60,7 +60,8 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese Card' : 'Asaas';
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
-  const showInlinePix = isPix && provider === 'asaas';
+  const hasPixQrCode = Boolean(payment.pixQrCode?.payload || payment.pixQrCode?.encodedImage);
+  const showInlinePix = isPix && (provider === 'asaas' || hasPixQrCode);
   const recipientName = payment.recipient?.name || 'Universo Cursos e Consultoria';
   const recipientDocument = payment.recipient?.document || '13.278.137/0001-54';
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
