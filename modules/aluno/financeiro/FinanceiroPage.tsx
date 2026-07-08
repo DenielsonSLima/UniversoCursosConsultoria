@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
 import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap } from 'lucide-react';
@@ -14,7 +14,12 @@ interface FinanceiroPageProps {
   alunoId: string;
 }
 
+const RECEIVABLE_PAID_STATUSES = new Set(['PAGO', 'RECEIVED', 'CONFIRMED']);
+const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
+const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
+
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
+  const queryClient = useQueryClient();
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [selectedEadPayment, setSelectedEadPayment] = useState<any | null>(null);
   const [eadPaymentMethod, setEadPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
@@ -31,6 +36,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  const invalidateAlunoPaymentQueries = React.useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] });
+    queryClient.invalidateQueries({ queryKey: ['aluno-cursos-disponiveis', alunoId] });
+    queryClient.invalidateQueries({ queryKey: ['aluno-matriculas', alunoId] });
+  }, [alunoId, queryClient]);
+
+  const confirmEadPayment = React.useCallback(() => {
+    setEadPaymentPanel(null);
+    setNotice('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
+    invalidateAlunoPaymentQueries();
+    window.setTimeout(() => setNotice(''), 6500);
+  }, [invalidateAlunoPaymentQueries]);
 
   // Fetch actual contas_receber from Supabase
   const { data: dbRecords = [], isLoading } = useQuery<any[]>({
@@ -70,6 +88,64 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       return data || [];
     }
   });
+
+  useEffect(() => {
+    if (!eadPaymentPanel) return;
+
+    const receivableId = String(eadPaymentPanel.receivableId || '').trim();
+    const matriculaId = String(eadPaymentPanel.matriculaId || '').trim();
+
+    if (eadPaymentPanel.alreadyPaid) {
+      confirmEadPayment();
+      return;
+    }
+
+    if (!receivableId && !matriculaId) return;
+
+    const isPaidReceivable = (row: any) => (
+      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.status)) ||
+      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.gateway_status)) ||
+      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.asaas_status))
+    );
+    const isActiveEnrollment = (row: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(row?.status));
+
+    let channel = supabase.channel(`financeiro_ead_payment_confirmation_${alunoId}_${receivableId || matriculaId}`);
+
+    if (receivableId) {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contas_receber', filter: `id=eq.${receivableId}` },
+        (payload) => {
+          invalidateAlunoPaymentQueries();
+          if (isPaidReceivable(payload.new)) confirmEadPayment();
+        }
+      );
+    }
+
+    if (matriculaId) {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matriculas', filter: `id=eq.${matriculaId}` },
+        (payload) => {
+          invalidateAlunoPaymentQueries();
+          if (isActiveEnrollment(payload.new)) confirmEadPayment();
+        }
+      ).on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inscricoes_online', filter: `matricula_id=eq.${matriculaId}` },
+        (payload) => {
+          invalidateAlunoPaymentQueries();
+          if (RECEIVABLE_PAID_STATUSES.has(normalizeStatus(payload.new?.status))) confirmEadPayment();
+        }
+      );
+    }
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [alunoId, confirmEadPayment, eadPaymentPanel, invalidateAlunoPaymentQueries]);
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
@@ -1245,10 +1321,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         <EadPaymentModal
           panel={eadPaymentPanel}
           onClose={() => setEadPaymentPanel(null)}
-          onCopied={() => {
-            setNotice('Código Pix copiado.');
-            setTimeout(() => setNotice(''), 2500);
-          }}
         />
       )}
 

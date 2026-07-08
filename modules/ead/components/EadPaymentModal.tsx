@@ -5,6 +5,7 @@ import { ArrowUpRight, Copy, FileText, QrCode, X } from 'lucide-react';
 export interface EadPaymentPanelData {
   url?: string | null;
   receivableId?: string | null;
+  matriculaId?: string | null;
   alreadyPaid?: boolean;
   alreadyPending?: boolean;
   awaitingWebhook?: boolean;
@@ -35,7 +36,6 @@ export interface EadPaymentPanelData {
 interface EadPaymentModalProps {
   panel: EadPaymentPanelData;
   onClose: () => void;
-  onCopied?: () => void;
 }
 
 const formatCurrencyDisplay = (value: number | string | null | undefined) => {
@@ -52,7 +52,7 @@ const formatDateDisplay = (value?: string | null) => {
   return `${day}/${month}/${year}`;
 };
 
-const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCopied }) => {
+const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => {
   const [pixCopied, setPixCopied] = useState(false);
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
@@ -82,7 +82,6 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
     if (!payload) return;
     await navigator.clipboard.writeText(payload);
     setPixCopied(true);
-    onCopied?.();
     window.setTimeout(() => setPixCopied(false), 2200);
   };
 
