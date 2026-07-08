@@ -223,6 +223,9 @@ const paymentMethodOptions = (
   if (paymentMethod === "PIX") {
     return {
       payment_methods: {
+        excluded_payment_methods: [
+          { id: "account_money" },
+        ],
         excluded_payment_types: [
           { id: "credit_card" },
           { id: "debit_card" },
@@ -487,10 +490,15 @@ export const createMercadoPagoPixPayment = async (
   const raw = await readResponseBody(response);
 
   if (!response.ok) {
+    const rawMessage = typeof raw === "string" ? raw : JSON.stringify(raw);
+    if (
+      response.status === 401 &&
+      rawMessage.toLowerCase().includes("live credentials")
+    ) {
+      return createMercadoPagoPreference(input);
+    }
     throw new MercadoPagoAdapterError(
-      `Mercado Pago recusou a criacao do Pix (${response.status}): ${
-        typeof raw === "string" ? raw : JSON.stringify(raw)
-      }`,
+      `Mercado Pago recusou a criacao do Pix (${response.status}): ${rawMessage}`,
     );
   }
 

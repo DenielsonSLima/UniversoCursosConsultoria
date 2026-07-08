@@ -661,6 +661,21 @@ export const handlePaymentCheckout = async (req: Request) => {
         return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPending: true });
       }
 
+      const staleGatewayFields = gatewayReceivable?.id
+        ? {
+          gateway_payment_id: null,
+          gateway_customer_id: null,
+          gateway_payment_link_id: null,
+          gateway_installment_id: null,
+          gateway_invoice_url: null,
+          gateway_bank_slip_url: null,
+          gateway_pix_payload: null,
+          gateway_pix_encoded_image: null,
+          gateway_transaction_receipt_url: null,
+          gateway_synced_at: null,
+        }
+        : {};
+
       if (
         gatewayReceivable
         && gatewayReceivable.gateway_provider === "asaas"
@@ -725,6 +740,7 @@ export const handlePaymentCheckout = async (req: Request) => {
         gateway_installments: charge.installmentCount || 1,
         gateway_status: null,
         gateway_last_error: null,
+        ...staleGatewayFields,
         updated_at: new Date().toISOString(),
         ...(isEadCheckout ? receivableFeeFields : {}),
       };
@@ -775,7 +791,15 @@ export const handlePaymentCheckout = async (req: Request) => {
           .eq("id", gatewayReceivable.id)
           .maybeSingle();
         const currentUrl = resolveCheckoutUrl(currentReceivable);
-        if (currentUrl) return json({ url: currentUrl, alreadyPending: true });
+        if (
+          currentUrl
+          && currentReceivable?.gateway_provider === providerCode
+          && currentReceivable?.gateway_payment_method === gatewayPaymentMethodForCharge
+          && currentReceivable?.gateway_environment === environment
+          && Number(currentReceivable?.gateway_installments || 1) === Number(charge.installmentCount || 1)
+        ) {
+          return json({ url: currentUrl, alreadyPending: true });
+        }
         throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
       }
 
