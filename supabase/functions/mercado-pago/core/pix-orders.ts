@@ -18,6 +18,8 @@ import {
   assertPaymentMethod,
 } from "./validators.ts";
 
+const MERCADO_PAGO_SANDBOX_PAYER_EMAIL = "comprador@testuser.com";
+
 export const createMercadoPagoPixPayment = async (
   input: AdapterCreateChargeInput,
 ): Promise<AdapterCreateChargeResult> => {
@@ -58,6 +60,9 @@ export const createMercadoPagoPixPayment = async (
   );
   const amount = input.amount.toFixed(2);
   const expirationTime = pixExpirationDuration(input.dueDate);
+  const payerEmail = input.environment === "sandbox"
+    ? MERCADO_PAGO_SANDBOX_PAYER_EMAIL
+    : email;
 
   const payload = {
     type: "online",
@@ -77,7 +82,7 @@ export const createMercadoPagoPixPayment = async (
       ],
     },
     payer: {
-      email,
+      email: payerEmail,
     },
   };
 
