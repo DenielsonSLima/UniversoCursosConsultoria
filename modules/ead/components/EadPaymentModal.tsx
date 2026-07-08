@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, Copy, FileText, QrCode, X } from 'lucide-react';
 
@@ -53,6 +53,7 @@ const formatDateDisplay = (value?: string | null) => {
 };
 
 const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCopied }) => {
+  const [pixCopied, setPixCopied] = useState(false);
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
   const provider = String(payment.provider || 'asaas').toLowerCase();
@@ -80,7 +81,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
     const payload = payment.pixQrCode?.payload;
     if (!payload) return;
     await navigator.clipboard.writeText(payload);
+    setPixCopied(true);
     onCopied?.();
+    window.setTimeout(() => setPixCopied(false), 2200);
   };
 
   if (typeof document === 'undefined') return null;
@@ -101,7 +104,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
               {showInlinePix ? 'Pague com Pix' : isBoleto ? 'Boleto gerado' : 'Pagamento gerado'}
             </h3>
             <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-              O curso só será liberado depois que o webhook confirmado do {providerName} atualizar a matrícula.
+              O curso será liberado automaticamente após a confirmação do pagamento.
             </p>
           </div>
           <button
@@ -140,7 +143,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
                   className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
                 >
                   <Copy size={14} />
-                  Copiar Pix
+                  {pixCopied ? 'Copiado' : 'Copiar Pix'}
                 </button>
               </div>
 
@@ -170,7 +173,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose, onCop
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Liberacao</p>
-                    <p className="mt-1 text-sm font-black text-[#001a33]">Apos confirmacao do {providerName}</p>
+                    <p className="mt-1 text-sm font-black text-[#001a33]">Após confirmação do pagamento</p>
                   </div>
                 </div>
               </div>
