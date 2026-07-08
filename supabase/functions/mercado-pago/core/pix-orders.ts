@@ -8,7 +8,6 @@ import type {
 import {
   asRecord,
   firstString,
-  mercadoPagoWebhookUrl,
   pixExpirationDuration,
   readResponseBody,
   stringValue,
@@ -80,10 +79,6 @@ export const createMercadoPagoPixPayment = async (
     payer: {
       email,
     },
-    notification_url: mercadoPagoWebhookUrl(
-      input.supabaseUrl,
-      input.environment,
-    ),
   };
 
   const response = await fetch(MERCADO_PAGO_ORDERS_URL, {
