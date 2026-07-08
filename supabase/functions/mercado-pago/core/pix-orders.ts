@@ -1,7 +1,4 @@
-import {
-  MERCADO_PAGO_PAYMENTS_URL,
-  MERCADO_PAGO_PROVIDER_CODE,
-} from "./constants.ts";
+import { MERCADO_PAGO_ORDERS_URL } from "./constants.ts";
 import { MercadoPagoAdapterError } from "./errors.ts";
 import { getMercadoPagoAccessToken } from "./auth.ts";
 import type {
@@ -12,8 +9,7 @@ import {
   asRecord,
   firstString,
   mercadoPagoWebhookUrl,
-  payerIdentification,
-  payerNameParts,
+  pixExpirationDuration,
   readResponseBody,
   stringValue,
 } from "./utils.ts";
@@ -58,38 +54,39 @@ export const createMercadoPagoPixPayment = async (
   );
   const idempotencyKey = firstString(
     externalReference &&
-      `ead-pix-payment-${input.environment}-${externalReference}`,
+      `ead-pix-order-${input.environment}-${externalReference}`,
     crypto.randomUUID(),
   );
-  const { firstName, lastName } = payerNameParts(payer);
-  const identification = payerIdentification(payer);
+  const amount = input.amount.toFixed(2);
+  const expirationTime = pixExpirationDuration(input.dueDate);
 
   const payload = {
-    transaction_amount: Number(input.amount.toFixed(2)),
-    description: description.slice(0, 255),
-    payment_method_id: "pix",
+    type: "online",
+    total_amount: amount,
     external_reference: externalReference || idempotencyKey,
+    processing_mode: "automatic",
+    transactions: {
+      payments: [
+        {
+          amount,
+          payment_method: {
+            id: "pix",
+            type: "bank_transfer",
+          },
+          expiration_time: expirationTime,
+        },
+      ],
+    },
+    payer: {
+      email,
+    },
     notification_url: mercadoPagoWebhookUrl(
       input.supabaseUrl,
       input.environment,
     ),
-    payer: {
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      identification,
-    },
-    metadata: {
-      provider_code: MERCADO_PAGO_PROVIDER_CODE,
-      environment: input.environment,
-      payment_method: "PIX",
-      receivable_id: externalReference || undefined,
-      due_date: input.dueDate || undefined,
-      description: description.slice(0, 255),
-    },
   };
 
-  const response = await fetch(MERCADO_PAGO_PAYMENTS_URL, {
+  const response = await fetch(MERCADO_PAGO_ORDERS_URL, {
     method: "POST",
     headers: {
       accept: "application/json",
@@ -104,23 +101,29 @@ export const createMercadoPagoPixPayment = async (
   if (!response.ok) {
     const rawMessage = typeof raw === "string" ? raw : JSON.stringify(raw);
     throw new MercadoPagoAdapterError(
-      `Mercado Pago recusou a criacao do Pix (${response.status}): ${rawMessage}`,
+      `Mercado Pago recusou a criacao da order Pix (${response.status}): ${rawMessage}`,
     );
   }
 
   const rawRecord = asRecord(raw);
-  const pointOfInteraction = asRecord(rawRecord.point_of_interaction);
-  const transactionData = asRecord(pointOfInteraction.transaction_data);
-  const paymentId = stringValue(rawRecord.id);
-  const pixPayload = firstString(transactionData.qr_code);
+  const transactions = asRecord(rawRecord.transactions);
+  const payments = Array.isArray(transactions.payments)
+    ? transactions.payments
+    : [];
+  const payment = asRecord(payments[0]);
+  const paymentMethod = asRecord(payment.payment_method);
+  const orderId = stringValue(rawRecord.id);
+  const paymentId = firstString(payment.id, orderId);
+  const pixPayload = firstString(paymentMethod.qr_code, payment.qr_code);
   const pixEncodedImage = firstString(
-    transactionData.qr_code_base64,
+    paymentMethod.qr_code_base64,
+    payment.qr_code_base64,
   );
-  const ticketUrl = firstString(transactionData.ticket_url);
+  const ticketUrl = firstString(paymentMethod.ticket_url, payment.ticket_url);
 
   if (!paymentId || !pixPayload) {
     throw new MercadoPagoAdapterError(
-      "Mercado Pago retornou Pix sem QR Code.",
+      "Mercado Pago retornou order Pix sem QR Code.",
     );
   }
 
@@ -128,7 +131,7 @@ export const createMercadoPagoPixPayment = async (
     id: paymentId,
     link: ticketUrl || null,
     invoiceUrl: ticketUrl || null,
-    status: firstString(rawRecord.status, "pending"),
+    status: firstString(payment.status, rawRecord.status, "action_required"),
     pixPayload,
     pixEncodedImage,
     raw,
