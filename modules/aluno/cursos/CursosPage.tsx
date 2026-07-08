@@ -932,6 +932,49 @@ const CursosPage: React.FC<CursosPageProps> = ({
     );
     const isActiveEnrollment = (row: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(row?.status));
     const handlePaid = () => confirmEadPayment();
+    let stopped = false;
+
+    const checkPaymentStatus = async () => {
+      if (stopped) return;
+      try {
+        if (receivableId) {
+          const { data } = await supabase
+            .from('contas_receber')
+            .select('status,gateway_status,asaas_status')
+            .eq('id', receivableId)
+            .maybeSingle();
+          if (isPaidReceivable(data)) {
+            handlePaid();
+            return;
+          }
+        }
+
+        if (matriculaId) {
+          const [{ data: matricula }, { data: inscricoes }] = await Promise.all([
+            supabase
+              .from('matriculas')
+              .select('status')
+              .eq('id', matriculaId)
+              .maybeSingle(),
+            supabase
+              .from('inscricoes_online')
+              .select('status')
+              .eq('matricula_id', matriculaId)
+              .order('updated_at', { ascending: false })
+              .limit(1),
+          ]);
+
+          if (
+            isActiveEnrollment(matricula) ||
+            RECEIVABLE_PAID_STATUSES.has(normalizeStatus(inscricoes?.[0]?.status))
+          ) {
+            handlePaid();
+          }
+        }
+      } catch (error) {
+        console.warn('Nao foi possivel conferir confirmacao do Pix EAD:', error);
+      }
+    };
 
     let channel = supabase.channel(`ead_payment_confirmation_${alunoId}_${receivableId || matriculaId}`);
 
@@ -965,8 +1008,12 @@ const CursosPage: React.FC<CursosPageProps> = ({
     }
 
     channel.subscribe();
+    void checkPaymentStatus();
+    const paymentCheckTimer = window.setInterval(checkPaymentStatus, 2500);
 
     return () => {
+      stopped = true;
+      window.clearInterval(paymentCheckTimer);
       supabase.removeChannel(channel);
     };
   }, [alunoId, confirmEadPayment, eadPaymentPanel, hasAlunoContext, invalidateStudentCourseAccess]);
