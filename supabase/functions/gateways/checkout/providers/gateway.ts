@@ -419,7 +419,13 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   }
 
   const url = checkoutUrl(updatedReceivable);
-  if (!url) {
+  const pixQrCode = gatewayResult.pixPayload || gatewayResult.pixEncodedImage
+    ? {
+      payload: gatewayResult.pixPayload,
+      encodedImage: gatewayResult.pixEncodedImage,
+    }
+    : null;
+  if (!url && !pixQrCode) {
     throw new Error(
       "Nao foi possivel recuperar o link do checkout gerado pelo provedor configurado.",
     );
@@ -442,12 +448,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         dueDate: context.charge.dueDate,
         invoiceUrl: updatedReceivable.gateway_invoice_url,
         bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
-        pixQrCode: gatewayResult.pixPayload || gatewayResult.pixEncodedImage
-          ? {
-            payload: gatewayResult.pixPayload,
-            encodedImage: gatewayResult.pixEncodedImage,
-          }
-          : null,
+        pixQrCode,
       },
     },
     createdRemotePayment: true,
