@@ -9,14 +9,14 @@ import { jsPDF } from 'jspdf';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
+import {
+  invalidateAlunoEadPaymentQueries,
+  useEadPaymentConfirmationWatcher,
+} from '../../ead/hooks/useEadPaymentConfirmationWatcher';
 
 interface FinanceiroPageProps {
   alunoId: string;
 }
-
-const RECEIVABLE_PAID_STATUSES = new Set(['PAGO', 'RECEIVED', 'CONFIRMED']);
-const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
-const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const queryClient = useQueryClient();
@@ -38,9 +38,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const invalidateAlunoPaymentQueries = React.useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] });
-    queryClient.invalidateQueries({ queryKey: ['aluno-cursos-disponiveis', alunoId] });
-    queryClient.invalidateQueries({ queryKey: ['aluno-matriculas', alunoId] });
+    invalidateAlunoEadPaymentQueries(queryClient, alunoId);
   }, [alunoId, queryClient]);
 
   const confirmEadPayment = React.useCallback(() => {
@@ -49,6 +47,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     invalidateAlunoPaymentQueries();
     window.setTimeout(() => setNotice(''), 6500);
   }, [invalidateAlunoPaymentQueries]);
+
+  useEadPaymentConfirmationWatcher({
+    alunoId,
+    panel: eadPaymentPanel,
+    queryClient,
+    onConfirmed: confirmEadPayment,
+  });
 
   // Fetch actual contas_receber from Supabase
   const { data: dbRecords = [], isLoading } = useQuery<any[]>({
@@ -88,111 +93,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       return data || [];
     }
   });
-
-  useEffect(() => {
-    if (!eadPaymentPanel) return;
-
-    const receivableId = String(eadPaymentPanel.receivableId || '').trim();
-    const matriculaId = String(eadPaymentPanel.matriculaId || '').trim();
-
-    if (eadPaymentPanel.alreadyPaid) {
-      confirmEadPayment();
-      return;
-    }
-
-    if (!receivableId && !matriculaId) return;
-
-    const isPaidReceivable = (row: any) => (
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.status)) ||
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.gateway_status)) ||
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.asaas_status))
-    );
-    const isActiveEnrollment = (row: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(row?.status));
-    let stopped = false;
-
-    const checkPaymentStatus = async () => {
-      if (stopped) return;
-      try {
-        if (receivableId) {
-          const { data } = await supabase
-            .from('contas_receber')
-            .select('status,gateway_status,asaas_status')
-            .eq('id', receivableId)
-            .maybeSingle();
-          if (isPaidReceivable(data)) {
-            confirmEadPayment();
-            return;
-          }
-        }
-
-        if (matriculaId) {
-          const [{ data: matricula }, { data: inscricoes }] = await Promise.all([
-            supabase
-              .from('matriculas')
-              .select('status')
-              .eq('id', matriculaId)
-              .maybeSingle(),
-            supabase
-              .from('inscricoes_online')
-              .select('status')
-              .eq('matricula_id', matriculaId)
-              .order('updated_at', { ascending: false })
-              .limit(1),
-          ]);
-
-          if (
-            isActiveEnrollment(matricula) ||
-            RECEIVABLE_PAID_STATUSES.has(normalizeStatus(inscricoes?.[0]?.status))
-          ) {
-            confirmEadPayment();
-          }
-        }
-      } catch (error) {
-        console.warn('Nao foi possivel conferir confirmacao do Pix EAD:', error);
-      }
-    };
-
-    let channel = supabase.channel(`financeiro_ead_payment_confirmation_${alunoId}_${receivableId || matriculaId}`);
-
-    if (receivableId) {
-      channel = channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_receber', filter: `id=eq.${receivableId}` },
-        (payload) => {
-          invalidateAlunoPaymentQueries();
-          if (isPaidReceivable(payload.new)) confirmEadPayment();
-        }
-      );
-    }
-
-    if (matriculaId) {
-      channel = channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas', filter: `id=eq.${matriculaId}` },
-        (payload) => {
-          invalidateAlunoPaymentQueries();
-          if (isActiveEnrollment(payload.new)) confirmEadPayment();
-        }
-      ).on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'inscricoes_online', filter: `matricula_id=eq.${matriculaId}` },
-        (payload) => {
-          invalidateAlunoPaymentQueries();
-          if (RECEIVABLE_PAID_STATUSES.has(normalizeStatus(payload.new?.status))) confirmEadPayment();
-        }
-      );
-    }
-
-    channel.subscribe();
-    void checkPaymentStatus();
-    const paymentCheckTimer = window.setInterval(checkPaymentStatus, 2500);
-
-    return () => {
-      stopped = true;
-      window.clearInterval(paymentCheckTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [alunoId, confirmEadPayment, eadPaymentPanel, invalidateAlunoPaymentQueries]);
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
@@ -590,6 +490,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       const checkoutResult = result as any;
       const provider = String(checkoutResult?.payment?.provider || '').toLowerCase();
       const checkoutUrl = checkoutResult?.url || checkoutResult?.payment?.invoiceUrl || checkoutResult?.paymentLinkUrl;
+      if (eadPaymentMethod === 'BOLETO' && checkoutUrl) {
+        invalidateAlunoPaymentQueries();
+        window.location.assign(checkoutUrl);
+        setSelectedEadPayment(null);
+        return;
+      }
+
       const isHostedMercadoPagoCheckout = provider === 'mercado_pago'
         || String(checkoutUrl || '').includes('mercadopago.com');
       if (isHostedMercadoPagoCheckout && checkoutUrl) {

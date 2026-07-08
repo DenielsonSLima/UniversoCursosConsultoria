@@ -80,7 +80,11 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const copyPix = async () => {
     const payload = payment.pixQrCode?.payload;
     if (!payload) return;
-    await navigator.clipboard.writeText(payload);
+    try {
+      await navigator.clipboard.writeText(payload);
+    } catch (error) {
+      console.warn('Nao foi possivel copiar o Pix automaticamente:', error);
+    }
     setPixCopied(true);
     window.setTimeout(() => setPixCopied(false), 2200);
   };
@@ -96,7 +100,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
       onClick={(event) => event.stopPropagation()}
     >
       {pixCopied && createPortal((
-        <div className="fixed top-6 right-6 z-[100002] pointer-events-none animate-fadeIn">
+        <div className="fixed right-6 top-6 z-[2147483647] pointer-events-none animate-fadeIn">
           <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 border-l-4 border-l-emerald-500 bg-white px-5 py-4 text-emerald-700 shadow-2xl shadow-slate-900/15">
             <CheckCircle2 size={20} className="shrink-0 text-emerald-500" />
             <div>

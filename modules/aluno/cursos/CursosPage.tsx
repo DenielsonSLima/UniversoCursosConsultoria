@@ -10,7 +10,11 @@ import {
   resolveEadCheckoutOptions,
 } from './eadCheckoutOptions';
 import type { EadCheckoutPaymentMethod } from './eadCheckoutOptions';
-import EadPaymentModal from '../../ead/components/EadPaymentModal';
+import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
+import {
+  invalidateAlunoEadPaymentQueries,
+  useEadPaymentConfirmationWatcher,
+} from '../../ead/hooks/useEadPaymentConfirmationWatcher';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { diplomaService } from '../../gestor/cadastros/modelos-documentos/diploma/diploma.service';
@@ -152,7 +156,6 @@ const normalizeEadProgressState = (value?: Partial<EadProgressState> | null): Ea
 const EAD_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 const EAD_PENDING_STATUSES = new Set(['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO']);
 const RECEIVABLE_PENDING_STATUSES = new Set(['PENDENTE', 'VENCIDO']);
-const RECEIVABLE_PAID_STATUSES = new Set(['PAGO', 'RECEIVED', 'CONFIRMED']);
 const ONLINE_CLASS_MODALITIES = new Set(['LIVRE', 'ESPECIALIZACAO', 'TECNICO']);
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
   'ATIVO',
@@ -576,7 +579,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
     missingFields: TechnicalEnrollmentRequirement[];
   } | null>(null);
   const [eadCheckoutReview, setEadCheckoutReview] = useState<{ course: any } | null>(null);
-  const [eadPaymentPanel, setEadPaymentPanel] = useState<any | null>(null);
+  const [eadPaymentPanel, setEadPaymentPanel] = useState<EadPaymentPanelData | null>(null);
   const [eadPaymentConfirmation, setEadPaymentConfirmation] = useState('');
   const [eadPaymentMethod, setEadPaymentMethod] = useState<EadCheckoutPaymentMethod>('PIX');
   const [eadInstallments, setEadInstallments] = useState(1);
@@ -596,10 +599,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   }, [eadCheckoutReview]);
 
   const invalidateStudentCourseAccess = React.useCallback(() => {
-    if (!alunoId) return;
-    queryClient.invalidateQueries({ queryKey: ['aluno-cursos-disponiveis', alunoId] });
-    queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] });
-    queryClient.invalidateQueries({ queryKey: ['aluno-matriculas', alunoId] });
+    invalidateAlunoEadPaymentQueries(queryClient, alunoId);
   }, [alunoId, queryClient]);
 
   const confirmEadPayment = React.useCallback((message = 'Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.') => {
@@ -608,6 +608,14 @@ const CursosPage: React.FC<CursosPageProps> = ({
     invalidateStudentCourseAccess();
     window.setTimeout(() => setEadPaymentConfirmation(''), 6500);
   }, [invalidateStudentCourseAccess]);
+
+  useEadPaymentConfirmationWatcher({
+    alunoId,
+    panel: eadPaymentPanel,
+    queryClient,
+    enabled: hasAlunoContext,
+    onConfirmed: confirmEadPayment,
+  });
 
   const { data: courses = [], isLoading, isError } = useQuery<any[]>({
     queryKey: ['aluno-cursos-disponiveis', alunoId],
@@ -776,7 +784,8 @@ const CursosPage: React.FC<CursosPageProps> = ({
         if (paymentMethod === 'BOLETO') {
           const boletoUrl = payment.bankSlipUrl || payment.invoiceUrl || url;
           if (boletoUrl) {
-            window.open(boletoUrl, '_blank', 'noopener,noreferrer');
+            invalidateStudentCourseAccess();
+            window.location.assign(boletoUrl);
             return;
           }
         }
@@ -911,112 +920,6 @@ const CursosPage: React.FC<CursosPageProps> = ({
       supabase.removeChannel(channel);
     };
   }, [alunoId, hasAlunoContext, invalidateStudentCourseAccess]);
-
-  useEffect(() => {
-    if (!hasAlunoContext || !alunoId || !eadPaymentPanel) return;
-
-    const receivableId = String(eadPaymentPanel.receivableId || '').trim();
-    const matriculaId = String(eadPaymentPanel.matriculaId || '').trim();
-
-    if (eadPaymentPanel.alreadyPaid) {
-      confirmEadPayment('Pagamento já confirmado. Curso liberado em Meus Cursos.');
-      return;
-    }
-
-    if (!receivableId && !matriculaId) return;
-
-    const isPaidReceivable = (row: any) => (
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.status)) ||
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.gateway_status)) ||
-      RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.asaas_status))
-    );
-    const isActiveEnrollment = (row: any) => EAD_ACCESS_STATUSES.has(normalizeStatus(row?.status));
-    const handlePaid = () => confirmEadPayment();
-    let stopped = false;
-
-    const checkPaymentStatus = async () => {
-      if (stopped) return;
-      try {
-        if (receivableId) {
-          const { data } = await supabase
-            .from('contas_receber')
-            .select('status,gateway_status,asaas_status')
-            .eq('id', receivableId)
-            .maybeSingle();
-          if (isPaidReceivable(data)) {
-            handlePaid();
-            return;
-          }
-        }
-
-        if (matriculaId) {
-          const [{ data: matricula }, { data: inscricoes }] = await Promise.all([
-            supabase
-              .from('matriculas')
-              .select('status')
-              .eq('id', matriculaId)
-              .maybeSingle(),
-            supabase
-              .from('inscricoes_online')
-              .select('status')
-              .eq('matricula_id', matriculaId)
-              .order('updated_at', { ascending: false })
-              .limit(1),
-          ]);
-
-          if (
-            isActiveEnrollment(matricula) ||
-            RECEIVABLE_PAID_STATUSES.has(normalizeStatus(inscricoes?.[0]?.status))
-          ) {
-            handlePaid();
-          }
-        }
-      } catch (error) {
-        console.warn('Nao foi possivel conferir confirmacao do Pix EAD:', error);
-      }
-    };
-
-    let channel = supabase.channel(`ead_payment_confirmation_${alunoId}_${receivableId || matriculaId}`);
-
-    if (receivableId) {
-      channel = channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_receber', filter: `id=eq.${receivableId}` },
-        (payload) => {
-          invalidateStudentCourseAccess();
-          if (isPaidReceivable(payload.new)) handlePaid();
-        }
-      );
-    }
-
-    if (matriculaId) {
-      channel = channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas', filter: `id=eq.${matriculaId}` },
-        (payload) => {
-          invalidateStudentCourseAccess();
-          if (isActiveEnrollment(payload.new)) handlePaid();
-        }
-      ).on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'inscricoes_online', filter: `matricula_id=eq.${matriculaId}` },
-        (payload) => {
-          invalidateStudentCourseAccess();
-          if (RECEIVABLE_PAID_STATUSES.has(normalizeStatus(payload.new?.status))) handlePaid();
-        }
-      );
-    }
-
-    channel.subscribe();
-    void checkPaymentStatus();
-    const paymentCheckTimer = window.setInterval(checkPaymentStatus, 2500);
-
-    return () => {
-      stopped = true;
-      window.clearInterval(paymentCheckTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [alunoId, confirmEadPayment, eadPaymentPanel, hasAlunoContext, invalidateStudentCourseAccess]);
 
   useEffect(() => {
     setSelectedLessonIdx(0);
@@ -2401,10 +2304,13 @@ const CursosPage: React.FC<CursosPageProps> = ({
       )}
 
       {eadPaymentConfirmation && typeof document !== 'undefined' && createPortal((
-        <div className="fixed inset-x-0 top-5 z-[100001] flex justify-center px-4 pointer-events-none">
-          <div className="flex max-w-xl items-center gap-3 rounded-2xl border border-emerald-100 bg-white px-5 py-4 text-sm font-black text-emerald-700 shadow-2xl">
-            <CheckCircle2 size={20} className="shrink-0" />
-            <span>{eadPaymentConfirmation}</span>
+        <div className="fixed right-6 top-6 z-[2147483647] flex max-w-[calc(100vw-3rem)] justify-end pointer-events-none">
+          <div className="flex max-w-md items-center gap-3 rounded-2xl border border-emerald-100 border-l-4 border-l-emerald-500 bg-white px-5 py-4 text-sm font-black text-emerald-700 shadow-2xl shadow-slate-900/15">
+            <CheckCircle2 size={20} className="shrink-0 text-emerald-500" />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pagamento EAD</p>
+              <p>{eadPaymentConfirmation}</p>
+            </div>
           </div>
         </div>
       ), document.body)}
