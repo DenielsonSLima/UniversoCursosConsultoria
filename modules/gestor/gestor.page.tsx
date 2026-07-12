@@ -124,6 +124,31 @@ const GestorPage: React.FC = () => {
     '44444444-4444-4444-4444-444444444444'
   );
 
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedDate = useMemo(() => {
+    return currentDateTime.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }, [currentDateTime]);
+
+  const formattedTime = useMemo(() => {
+    return currentDateTime.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }, [currentDateTime]);
+
   const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<any[]>({
     queryKey: ['active_polos'],
     queryFn: async () => {
@@ -641,7 +666,16 @@ const GestorPage: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-white/10 space-y-4">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white font-extrabold text-xs border border-white/20 shadow-inner flex-shrink-0">
+              {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate leading-tight">{profile?.nome || 'Administrador'}</p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.email || 'gestor@universo.com'}</p>
+            </div>
+          </div>
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider">
             <LogOut size={18} />
             <span>Sair</span>
@@ -880,14 +914,9 @@ const GestorPage: React.FC = () => {
 
             <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-[#001a33]">{profile?.nome || 'Administrador'}</p>
-                <p className="text-[10px] text-slate-500">{profile?.email || 'gestor@universo.com'}</p>
-              </div>
-              <div className="w-10 h-10 bg-[#001a33] rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-slate-200 shadow-sm">
-                {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
-              </div>
+            <div className="text-right hidden sm:flex flex-col justify-center min-w-[6rem]">
+              <p className="text-xs font-extrabold text-[#001a33] tracking-wide">{formattedDate}</p>
+              <p className="text-[10px] text-slate-500 font-bold mt-0.5 tracking-wider">{formattedTime}</p>
             </div>
             
           </div>
