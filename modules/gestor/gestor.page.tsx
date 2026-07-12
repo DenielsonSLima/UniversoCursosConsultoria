@@ -611,20 +611,20 @@ const GestorPage: React.FC = () => {
                 }}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
                   activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-bold' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-semibold' 
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white font-normal'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`relative ${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
                     {item.icon}
                     {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-0.5 shadow-md animate-pulse">
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 shadow-md animate-pulse">
                         {(item as any).badge > 99 ? '99+' : (item as any).badge}
                       </span>
                     )}
                   </div>
-                  <span className="text-sm tracking-wide">{item.label}</span>
+                  <span className="text-sm">{item.label}</span>
                 </div>
                 {item.subItems && (
                   <div className="transition-transform duration-300">
@@ -632,7 +632,7 @@ const GestorPage: React.FC = () => {
                   </div>
                 )}
                 {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                  <span className="text-[9px] font-black bg-red-500 text-white rounded-full min-w-[18px] h-4 flex items-center justify-center px-1">
+                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-4 flex items-center justify-center px-1">
                     {(item as any).badge > 99 ? '99+' : (item as any).badge}
                   </span>
                 )}
@@ -649,8 +649,8 @@ const GestorPage: React.FC = () => {
                         onClick={() => setActiveModule(sub.id)}
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-xs transition-all ${
                           activeModule === sub.id 
-                            ? 'text-blue-400 bg-white/5 font-bold' 
-                            : 'text-slate-500 hover:text-white hover:bg-white/5'
+                            ? 'text-blue-400 bg-white/5 font-semibold' 
+                            : 'text-slate-500 hover:text-white hover:bg-white/5 font-normal'
                         }`}
                       >
                         {sub.icon}
