@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookUser, CalendarClock, CheckCircle2, MessageCircle, Search, Send, Wallet } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { CheckSquare2, MessageCircle, Search, Send, Square, Trash2 } from 'lucide-react';
 import { WhatsAppConversation, WhatsAppMessage } from './whatsapp.types';
 import { formatMessageDate, formatMessageTime, formatPhone, initials, normalizePhone } from './whatsapp.utils';
 
@@ -8,15 +8,12 @@ interface WhatsAppInboxProps {
   messages: WhatsAppMessage[];
   activeConversationId: string | null;
   apiReady: boolean;
-  automationCount: number;
-  overdueCount: number;
   loadingConversations: boolean;
   loadingMessages: boolean;
   onSelectConversation: (conversationId: string) => void;
   onOpenStartModal: () => void;
-  onOpenAutomations: () => void;
-  onOpenOverdue: () => void;
   onSendReply: (message: string) => Promise<void>;
+  onDeleteConversations: (conversationIds: string[]) => Promise<void>;
 }
 
 const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
@@ -24,26 +21,65 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   messages,
   activeConversationId,
   apiReady,
-  automationCount,
-  overdueCount,
   loadingConversations,
   loadingMessages,
   onSelectConversation,
   onOpenStartModal,
-  onOpenAutomations,
-  onOpenOverdue,
   onSendReply,
+  onDeleteConversations,
 }) => {
   const [search, setSearch] = useState('');
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const activeConversation = conversations.find((item) => item.id === activeConversationId) || null;
   const filtered = conversations.filter((item) => {
     const term = search.trim().toLowerCase();
     if (!term) return true;
     return [item.contato_nome, item.telefone, item.ultimo_texto].filter(Boolean).join(' ').toLowerCase().includes(term);
   });
+  const validSelectedIds = useMemo(
+    () => [...selectedIds].filter((id) => conversations.some((item) => item.id === id)),
+    [conversations, selectedIds]
+  );
+  const filteredIds = filtered.map((item) => item.id);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
   const unreadTotal = conversations.reduce((sum, item) => sum + Number(item.unread_count || 0), 0);
+
+  const toggleConversationSelection = (conversationId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(conversationId)) next.delete(conversationId);
+      else next.add(conversationId);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) filteredIds.forEach((id) => next.delete(id));
+      else filteredIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (validSelectedIds.length === 0) return;
+    const confirmed = window.confirm(
+      `Apagar ${validSelectedIds.length} conversa(s) do WhatsApp? O histórico de mensagens dessas conversas também será removido.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await onDeleteConversations(validSelectedIds);
+      setSelectedIds(new Set());
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSend = async () => {
     const text = reply.trim();
@@ -58,7 +94,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   };
 
   return (
-    <div className="grid h-[calc(100%-132px)] min-h-[520px] grid-cols-[360px_minmax(0,1fr)] overflow-hidden xl:grid-cols-[360px_minmax(0,1fr)_300px]">
+    <div className="grid min-h-0 flex-1 grid-cols-[380px_minmax(0,1fr)] overflow-hidden">
       <aside className="flex min-h-0 flex-col border-r border-slate-200 bg-white">
         <div className="space-y-3 border-b border-slate-100 p-4">
           <div className="flex items-center justify-between">
@@ -73,6 +109,31 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
             >
               <Send size={15} />
             </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleAllFiltered}
+              disabled={filteredIds.length === 0}
+              className="flex min-h-[36px] items-center gap-2 rounded-xl bg-slate-50 px-3 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-40"
+              title={allFilteredSelected ? 'Limpar seleção' : 'Selecionar conversas'}
+            >
+              {allFilteredSelected ? <CheckSquare2 size={15} /> : <Square size={15} />}
+              {validSelectedIds.length > 0 ? `${validSelectedIds.length} selecionada(s)` : 'Selecionar'}
+            </button>
+            {validSelectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="flex min-h-[36px] items-center gap-2 rounded-xl bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                title="Apagar conversas selecionadas"
+              >
+                <Trash2 size={15} />
+                {deleting ? 'Apagando...' : 'Apagar'}
+              </button>
+            )}
           </div>
 
           <label className="relative block">
@@ -102,31 +163,49 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
               <p className="mt-1 text-xs font-medium leading-relaxed text-slate-400">Assim que o webhook da Meta receber mensagem, ela aparece aqui.</p>
             </div>
           ) : (
-            filtered.map((conversation) => (
-              <button
+            filtered.map((conversation) => {
+              const isSelected = selectedIds.has(conversation.id);
+              return (
+              <div
                 key={conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
-                className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all ${
+                className={`flex w-full items-center gap-2 rounded-2xl p-2 transition-all ${
                   conversation.id === activeConversationId ? 'bg-emerald-50 ring-1 ring-emerald-100' : 'hover:bg-slate-50'
                 }`}
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                  {initials(conversation.contato_nome)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-bold text-[#001a33]">{conversation.contato_nome}</p>
-                    <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatMessageDate(conversation.ultima_data)}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleConversationSelection(conversation.id)}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                    isSelected ? 'bg-emerald-100 text-emerald-700' : 'text-slate-300 hover:bg-slate-100 hover:text-slate-500'
+                  }`}
+                  title={isSelected ? 'Remover da seleção' : 'Selecionar conversa'}
+                >
+                  {isSelected ? <CheckSquare2 size={17} /> : <Square size={17} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectConversation(conversation.id)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-left"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                    {initials(conversation.contato_nome)}
                   </div>
-                  <p className="mt-1 truncate text-xs font-medium text-slate-500">{conversation.ultimo_texto || formatPhone(conversation.telefone)}</p>
-                </div>
-                {conversation.unread_count > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white">
-                    {conversation.unread_count}
-                  </span>
-                )}
-              </button>
-            ))
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-bold text-[#001a33]">{conversation.contato_nome}</p>
+                      <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatMessageDate(conversation.ultima_data)}</span>
+                    </div>
+                    <p className="mt-1 truncate text-xs font-medium text-slate-500">{conversation.ultimo_texto || formatPhone(conversation.telefone)}</p>
+                  </div>
+                  {conversation.unread_count > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white">
+                      {conversation.unread_count}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+            })
           )}
         </div>
       </aside>
@@ -214,52 +293,6 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
         )}
       </main>
 
-      <aside className="hidden min-h-0 flex-col border-l border-slate-200 bg-white p-5 xl:flex">
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-xs font-medium text-slate-400">Status da API</p>
-          <p className={`mt-1 text-sm font-bold ${apiReady ? 'text-emerald-700' : 'text-amber-700'}`}>
-            {apiReady ? 'Pronta para envio' : 'Aguardando configuração'}
-          </p>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-400">Avisos ativos</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-[#001a33]">{automationCount}</p>
-          </div>
-          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4">
-            <p className="text-xs font-medium text-rose-400">Atrasos</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-rose-700">{overdueCount}</p>
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <button
-            onClick={onOpenAutomations}
-            className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
-          >
-            <CalendarClock size={15} />
-            Automações
-          </button>
-          <button
-            onClick={onOpenOverdue}
-            className="flex min-h-[42px] w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100"
-          >
-            <Wallet size={15} />
-            Ver atrasados
-          </button>
-        </div>
-
-        <div className="mt-auto rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-          <p className="flex items-center gap-2 text-xs font-bold text-emerald-800">
-            <CheckCircle2 size={14} />
-            Webhook
-          </p>
-          <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-800/80">
-            Quando a Meta chamar a URL do webhook, as conversas entram nesta caixa em tempo real.
-          </p>
-        </div>
-      </aside>
     </div>
   );
 };

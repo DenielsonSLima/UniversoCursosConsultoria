@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   BookUser,
   CalendarClock,
+  ChevronDown,
   CheckCircle2,
   Clock3,
   FileText,
@@ -13,6 +14,7 @@ import {
   Save,
   Search,
   Send,
+  Settings,
   Wallet,
   X,
 } from 'lucide-react';
@@ -22,6 +24,7 @@ import { financeiroService } from '../../financeiro/financeiro.service';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { MensageriaConfigData, mensageriaService } from '../../configuracoes/mensageria/mensageria.service';
 import WhatsAppInbox from './whatsapp/WhatsAppInbox';
+import WhatsAppSettingsPanel from './whatsapp/WhatsAppSettingsPanel';
 import { whatsappService } from './whatsapp/whatsapp.service';
 import {
   defaultMessageFor,
@@ -31,7 +34,7 @@ import {
   normalizePhone,
 } from './whatsapp/whatsapp.utils';
 
-type WhatsAppOpsTab = 'conversas' | 'automacoes' | 'atrasados';
+type WhatsAppOpsTab = 'conversas' | 'automacoes' | 'atrasados' | 'configuracoes';
 
 const DEFAULT_AUTOMATION: Partial<MensageriaConfigData> = {
   waDueNoticeDays: 3,
@@ -45,7 +48,23 @@ const DEFAULT_AUTOMATION: Partial<MensageriaConfigData> = {
   waSendMultipleOverdueNotice: true,
   waMultipleOverdueMinInstallments: 2,
   waMultipleOverdueTemplate: 'Olá {{nome_aluno}}, identificamos {{quantidade_parcelas}} parcelas em atraso, totalizando {{valor_total_atrasado}}. Para regularizar, acesse: {{link_pagamento}}',
+  waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waMultipleOverdueModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
 };
+
+const COURSE_MODALITIES = [
+  { id: 'EAD', label: 'EAD' },
+  { id: 'TECNICO', label: 'Técnico' },
+  { id: 'LIVRES', label: 'Livres' },
+  { id: 'ESPECIALIZACAO', label: 'Especialização' },
+  { id: 'SUPERIOR', label: 'Superior' },
+];
+
+const DEFAULT_MODALITIES = COURSE_MODALITIES
+  .filter((item) => item.id !== 'SUPERIOR')
+  .map((item) => item.id);
 
 const TEMPLATE_VARIABLES = {
   due: ['{{nome_aluno}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{link_pagamento}}'],
@@ -55,6 +74,7 @@ const TEMPLATE_VARIABLES = {
 };
 
 type AutomationTone = 'blue' | 'emerald' | 'amber' | 'rose';
+type AutomationKey = 'due' | 'receipt' | 'overdue' | 'multiple';
 
 const AUTOMATION_TONES: Record<AutomationTone, {
   section: string;
@@ -129,12 +149,15 @@ const contactTone = (type?: string) => {
 
 const AutomationCard = ({
   icon: Icon,
+  automationKey,
   step,
   tone,
   title,
   description,
   triggerValue,
   audienceValue,
+  isOpen,
+  onToggleOpen,
   checked,
   onChange,
   timingLabel,
@@ -144,14 +167,21 @@ const AutomationCard = ({
   message,
   onMessageChange,
   variables,
+  modalities,
+  onModalitiesChange,
+  onSave,
+  isSaving,
 }: {
   icon: React.ElementType;
+  automationKey: AutomationKey;
   step: string;
   tone: AutomationTone;
   title: string;
   description: string;
   triggerValue: string;
   audienceValue: string;
+  isOpen: boolean;
+  onToggleOpen: () => void;
   checked: boolean;
   onChange: (checked: boolean) => void;
   timingLabel?: string;
@@ -161,18 +191,37 @@ const AutomationCard = ({
   message: string;
   onMessageChange: (value: string) => void;
   variables: string[];
+  modalities: string[];
+  onModalitiesChange: (value: string[]) => void;
+  onSave: (key: AutomationKey) => void;
+  isSaving: boolean;
 }) => {
   const classes = AUTOMATION_TONES[tone];
+  const selectedLabels = COURSE_MODALITIES
+    .filter((item) => modalities.includes(item.id))
+    .map((item) => item.label)
+    .join(', ');
+
+  const toggleModality = (modality: string) => {
+    const next = modalities.includes(modality)
+      ? modalities.filter((item) => item !== modality)
+      : [...modalities, modality];
+    onModalitiesChange(next.length > 0 ? next : [modality]);
+  };
 
   return (
-  <section className={`relative overflow-hidden rounded-xl border p-4 transition-colors ${checked ? classes.section : 'border-slate-100 bg-slate-50 opacity-70'}`}>
+  <section className={`relative overflow-hidden rounded-xl border transition-colors ${checked ? classes.section : 'border-slate-100 bg-slate-50 opacity-70'}`}>
     <span className={`absolute left-0 top-0 h-full w-1 ${checked ? classes.rail : 'bg-slate-200'}`} />
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex items-start gap-3">
+    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+      <button
+        type="button"
+        onClick={onToggleOpen}
+        className="flex flex-1 items-start gap-3 text-left"
+      >
         <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${checked ? classes.icon : 'bg-slate-100 text-slate-400'}`}>
           <Icon size={18} />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`inline-flex h-6 items-center rounded-full px-2 text-[10px] font-black uppercase tracking-wide ${checked ? classes.step : 'bg-slate-200 text-slate-500'}`}>
               {step}
@@ -180,67 +229,127 @@ const AutomationCard = ({
             <h3 className="text-base font-black tracking-tight text-[#001a33]">{title}</h3>
           </div>
           <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">{description}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold ${classes.panel}`}>
+              {triggerValue}
+            </span>
+            <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600">
+              Cursos: {selectedLabels || 'nenhum'}
+            </span>
+          </div>
         </div>
-      </div>
-      <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-          className="h-5 w-5 accent-emerald-600"
-        />
-        {checked ? 'Ativo' : 'Inativo'}
-      </label>
-    </div>
-
-    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-      <div className={`rounded-xl border p-3 ${classes.panel}`}>
-        <p className="text-[10px] font-black uppercase tracking-wide opacity-60">Quando dispara</p>
-        <p className="mt-1 text-sm font-black">{triggerValue}</p>
-      </div>
-      <div className={`rounded-xl border p-3 ${classes.panel}`}>
-        <p className="text-[10px] font-black uppercase tracking-wide opacity-60">Quem recebe</p>
-        <p className="mt-1 text-sm font-black">{audienceValue}</p>
-      </div>
-    </div>
-
-    {timingLabel && onTimingChange && (
-      <label className="mt-4 block space-y-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{timingLabel}</span>
-        <div className={`flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white ${classes.focus}`}>
+        <ChevronDown size={18} className={`mt-2 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
           <input
-            type="number"
-            min="0"
-            value={timingValue ?? 0}
-            onChange={(event) => onTimingChange(Number(event.target.value))}
-            className="h-11 w-24 border-0 px-4 text-sm font-bold text-[#001a33] outline-none"
+            type="checkbox"
+            checked={checked}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-5 w-5 accent-emerald-600"
           />
-          <span className="border-l border-slate-100 px-3 text-xs font-semibold text-slate-500">{timingSuffix}</span>
-        </div>
-      </label>
-    )}
-
-    <label className="mt-4 block space-y-2">
-      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Mensagem enviada</span>
-      <textarea
-        value={message}
-        onChange={(event) => onMessageChange(event.target.value)}
-        className={`h-28 w-full resize-none rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-700 outline-none ${classes.focus}`}
-      />
-    </label>
-
-    <div className="mt-3 flex flex-wrap gap-2">
-      {variables.map((variable) => (
-        <button
-          key={`${title}-${variable}`}
-          type="button"
-          onClick={() => onMessageChange(`${message}${message.endsWith(' ') || message.length === 0 ? '' : ' '}${variable}`)}
-          className={`rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 transition-colors ${classes.variable}`}
-        >
-          {variable}
-        </button>
-      ))}
+          {checked ? 'Ativo' : 'Inativo'}
+        </label>
+        {!isOpen && (
+          <button
+            type="button"
+            onClick={onToggleOpen}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:border-emerald-200 hover:text-emerald-700"
+          >
+            Editar
+          </button>
+        )}
+      </div>
     </div>
+
+    {isOpen && (
+      <div className="border-t border-white/70 p-4 pt-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className={`rounded-xl border p-3 ${classes.panel}`}>
+            <p className="text-[10px] font-black uppercase tracking-wide opacity-60">Quando dispara</p>
+            <p className="mt-1 text-sm font-black">{triggerValue}</p>
+          </div>
+          <div className={`rounded-xl border p-3 ${classes.panel}`}>
+            <p className="text-[10px] font-black uppercase tracking-wide opacity-60">Quem recebe</p>
+            <p className="mt-1 text-sm font-black">{audienceValue}</p>
+          </div>
+        </div>
+
+        {timingLabel && onTimingChange && (
+          <label className="mt-4 block space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{timingLabel}</span>
+            <div className={`flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white ${classes.focus}`}>
+              <input
+                type="number"
+                min="0"
+                value={timingValue ?? 0}
+                onChange={(event) => onTimingChange(Number(event.target.value))}
+                className="h-11 w-24 border-0 px-4 text-sm font-bold text-[#001a33] outline-none"
+              />
+              <span className="border-l border-slate-100 px-3 text-xs font-semibold text-slate-500">{timingSuffix}</span>
+            </div>
+          </label>
+        )}
+
+        <div className="mt-4 space-y-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Exibir cobrança para</span>
+          <div className="flex flex-wrap gap-2">
+            {COURSE_MODALITIES.map((modality) => {
+              const selected = modalities.includes(modality.id);
+              return (
+                <button
+                  key={`${title}-${modality.id}`}
+                  type="button"
+                  onClick={() => toggleModality(modality.id)}
+                  className={`inline-flex min-h-[34px] items-center gap-2 rounded-lg border px-3 text-xs font-bold transition-colors ${
+                    selected
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${selected ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  {modality.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <label className="mt-4 block space-y-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Mensagem enviada</span>
+          <textarea
+            value={message}
+            onChange={(event) => onMessageChange(event.target.value)}
+            className={`h-28 w-full resize-none rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold leading-relaxed text-slate-700 outline-none ${classes.focus}`}
+          />
+        </label>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {variables.map((variable) => (
+            <button
+              key={`${title}-${variable}`}
+              type="button"
+              onClick={() => onMessageChange(`${message}${message.endsWith(' ') || message.length === 0 ? '' : ' '}${variable}`)}
+              className={`rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 transition-colors ${classes.variable}`}
+            >
+              {variable}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onSave(automationKey)}
+            disabled={isSaving}
+            className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg bg-[#001a33] px-5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-blue-900 disabled:opacity-50"
+          >
+            {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            Salvar este aviso
+          </button>
+        </div>
+      </div>
+    )}
   </section>
   );
 };
@@ -250,6 +359,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<WhatsAppOpsTab>('conversas');
   const [automation, setAutomation] = useState<MensageriaConfigData>({ tipo: 'whatsapp', ...DEFAULT_AUTOMATION });
+  const [openAutomation, setOpenAutomation] = useState<AutomationKey | null>(null);
   const [contactSearch, setContactSearch] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [quickMessage, setQuickMessage] = useState('');
@@ -282,11 +392,20 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     queryFn: () => whatsappService.getMessages(activeConversationId),
   });
 
+  const { data: usageSummary = null, isLoading: loadingUsageSummary } = useQuery({
+    queryKey: ['whatsapp', 'uso-mensal'],
+    queryFn: whatsappService.getUsageSummary,
+  });
+
   useEffect(() => {
     const next = {
       tipo: 'whatsapp' as const,
       ...DEFAULT_AUTOMATION,
       ...config,
+      waDueNoticeModalities: config?.waDueNoticeModalities?.length ? config.waDueNoticeModalities : DEFAULT_MODALITIES,
+      waPaymentReceiptModalities: config?.waPaymentReceiptModalities?.length ? config.waPaymentReceiptModalities : DEFAULT_MODALITIES,
+      waOverdueNoticeModalities: config?.waOverdueNoticeModalities?.length ? config.waOverdueNoticeModalities : DEFAULT_MODALITIES,
+      waMultipleOverdueModalities: config?.waMultipleOverdueModalities?.length ? config.waMultipleOverdueModalities : DEFAULT_MODALITIES,
     };
     setAutomation(next);
   }, [config]);
@@ -363,14 +482,32 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     email: contacts.filter((contact) => contact.email).length,
   }), [contacts]);
 
-  const saveMutation = useMutation({
-    mutationFn: () => mensageriaService.saveConfig('whatsapp', automation),
-    onSuccess: () => {
+  const automationLabels: Record<AutomationKey, string> = {
+    due: 'Aviso de vencimento',
+    receipt: 'Aviso de recebimento',
+    overdue: 'Aviso de atraso',
+    multiple: 'Múltiplas parcelas em atraso',
+  };
+
+  const saveAutomationMutation = useMutation({
+    mutationFn: (key: AutomationKey) => mensageriaService.saveWhatsappAutomationConfig(automation).then(() => key),
+    onSuccess: (key) => {
       queryClient.invalidateQueries({ queryKey: ['mensageria_config', 'whatsapp'] });
-      toast.success('Automações salvas', 'Regras de comunicação WhatsApp atualizadas.');
+      toast.success('Aviso salvo', `${automationLabels[key]} atualizado.`);
     },
     onError: (err: any) => toast.error('Erro ao salvar', err?.message || 'Não foi possível salvar as automações.'),
   });
+
+  const toggleAutomationOpen = (key: AutomationKey) => {
+    setOpenAutomation((current) => (current === key ? null : key));
+  };
+
+  const updateAutomationModalities = (
+    field: 'waDueNoticeModalities' | 'waPaymentReceiptModalities' | 'waOverdueNoticeModalities' | 'waMultipleOverdueModalities',
+    value: string[]
+  ) => {
+    setAutomation((current) => ({ ...current, [field]: value }));
+  };
 
   const apiReady = Boolean(config?.waEnabled && config?.waPhoneNumberId && config?.waTokenConfigured);
 
@@ -405,6 +542,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
       if ((data as any)?.conversaId) setActiveConversationId((data as any).conversaId);
       queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
       queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
       setIsStartModalOpen(false);
       setActiveTab('conversas');
     } catch (error: any) {
@@ -436,6 +574,23 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     toast.success('Resposta enviada', `Mensagem enviada para ${conversation.contato_nome}.`);
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens', activeConversationId] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
+  };
+
+  const deleteWhatsAppConversations = async (conversationIds: string[]) => {
+    try {
+      await whatsappService.deleteConversations(conversationIds);
+      if (activeConversationId && conversationIds.includes(activeConversationId)) {
+        setActiveConversationId(null);
+      }
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
+      toast.success('Conversas apagadas', `${conversationIds.length} conversa(s) removida(s) da caixa WhatsApp.`);
+    } catch (error: any) {
+      toast.error('Erro ao apagar', error?.message || 'Não foi possível apagar as conversas selecionadas.');
+      throw error;
+    }
   };
 
   const openWhatsApp = () => {
@@ -452,15 +607,34 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-hidden bg-white antialiased">
+    <div className="flex flex-1 flex-col overflow-hidden bg-white antialiased">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex min-h-[74px] flex-col gap-3 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-[#001a33]">WhatsApp da escola</h2>
-          <p className="mt-1 text-xs font-medium text-slate-400">Conversas externas, mensagens para alunos e avisos financeiros.</p>
+      <div className="flex min-h-[64px] flex-col gap-3 border-b border-slate-100 bg-white px-5 py-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-slate-50 p-1 xl:w-auto">
+          {[
+            { id: 'conversas', label: 'Conversas', icon: MessageCircle },
+            { id: 'automacoes', label: 'Automações', icon: CalendarClock },
+            { id: 'atrasados', label: 'Atrasados', icon: Wallet },
+            { id: 'configuracoes', label: 'Configurações', icon: Settings },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as WhatsAppOpsTab)}
+                className={`flex min-h-[38px] shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
+                  activeTab === item.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-emerald-700'
+                }`}
+              >
+                <Icon size={14} />
+                {item.label}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <span className={`inline-flex min-h-[34px] items-center gap-2 rounded-xl px-3 text-xs font-bold ${
             apiReady ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
           }`}>
@@ -477,43 +651,25 @@ const WhatsAppCommunicationPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex w-full gap-1 overflow-x-auto border-b border-slate-100 bg-white px-5 py-3">
-        {[
-          { id: 'conversas', label: 'Conversas', icon: MessageCircle },
-          { id: 'automacoes', label: 'Automações', icon: CalendarClock },
-          { id: 'atrasados', label: 'Atrasados', icon: Wallet },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as WhatsAppOpsTab)}
-              className={`flex min-h-[38px] shrink-0 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
-                activeTab === item.id ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-emerald-700'
-              }`}
-            >
-              <Icon size={14} />
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
       {activeTab === 'conversas' && (
         <WhatsAppInbox
           conversations={conversations}
           messages={conversationMessages}
           activeConversationId={activeConversationId}
           apiReady={apiReady}
-          automationCount={[automation.waSendDueNotice, automation.waSendPaymentReceipt, automation.waSendOverdueNotice].filter(Boolean).length}
-          overdueCount={totals.count}
           loadingConversations={loadingConversations}
           loadingMessages={loadingConversationMessages}
           onSelectConversation={selectConversation}
           onOpenStartModal={() => setIsStartModalOpen(true)}
-          onOpenAutomations={() => setActiveTab('automacoes')}
-          onOpenOverdue={() => setActiveTab('atrasados')}
           onSendReply={sendConversationReply}
+          onDeleteConversations={deleteWhatsAppConversations}
+        />
+      )}
+
+      {activeTab === 'configuracoes' && (
+        <WhatsAppSettingsPanel
+          summary={usageSummary}
+          loading={loadingUsageSummary}
         />
       )}
 
@@ -706,7 +862,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
       )}
 
       {activeTab === 'automacoes' && (
-        <div className="h-[calc(100%-132px)] overflow-y-auto p-5 custom-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
           <div className="max-w-5xl space-y-5">
           {loadingConfig ? (
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm font-bold text-slate-500">
@@ -719,28 +875,26 @@ const WhatsAppCommunicationPanel: React.FC = () => {
                 <div>
                   <p className="text-sm font-bold text-[#001a33]">Automações financeiras por WhatsApp</p>
                   <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-slate-500">
-                    Configure cada aviso separadamente. O texto salvo aqui será usado no disparo automático ou em envios manuais futuros.
+                    Abra somente o aviso que deseja ajustar. Cada cartão tem modalidades, texto e salvamento próprio.
                   </p>
                 </div>
-                <button
-                  onClick={() => saveMutation.mutate()}
-                  disabled={saveMutation.isPending}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-[#001a33] px-5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-blue-900 disabled:opacity-50"
-                >
-                  {saveMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                  Salvar alterações
-                </button>
+                <span className="inline-flex min-h-[34px] items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-500">
+                  Cartões recolhidos por padrão
+                </span>
               </div>
 
               <div className="space-y-4">
                 <AutomationCard
                   icon={CalendarClock}
+                  automationKey="due"
                   step="01"
                   tone="blue"
                   title="Aviso de vencimento"
                   description="Enviado somente para alunos que ainda não pagaram a parcela. Se a parcela já estiver paga, este aviso não deve disparar."
                   triggerValue={`${automation.waDueNoticeDays ?? 3} dia(s) antes do vencimento`}
                   audienceValue="Aluno com parcela aberta e não paga"
+                  isOpen={openAutomation === 'due'}
+                  onToggleOpen={() => toggleAutomationOpen('due')}
                   checked={Boolean(automation.waSendDueNotice)}
                   onChange={(checked) => setAutomation((current) => ({ ...current, waSendDueNotice: checked }))}
                   timingLabel="Avisar quantos dias antes"
@@ -750,31 +904,45 @@ const WhatsAppCommunicationPanel: React.FC = () => {
                   message={automation.waDueNoticeTemplate || DEFAULT_AUTOMATION.waDueNoticeTemplate || ''}
                   onMessageChange={(value) => setAutomation((current) => ({ ...current, waDueNoticeTemplate: value }))}
                   variables={TEMPLATE_VARIABLES.due}
+                  modalities={automation.waDueNoticeModalities || DEFAULT_MODALITIES}
+                  onModalitiesChange={(value) => updateAutomationModalities('waDueNoticeModalities', value)}
+                  onSave={(key) => saveAutomationMutation.mutate(key)}
+                  isSaving={saveAutomationMutation.isPending && saveAutomationMutation.variables === 'due'}
                 />
 
                 <AutomationCard
                   icon={BadgeCheck}
+                  automationKey="receipt"
                   step="02"
                   tone="emerald"
                   title="Aviso de recebimento"
                   description="Enviado na confirmação do pagamento, quando a baixa/recebimento for reconhecida no financeiro."
                   triggerValue="Na confirmação do pagamento"
                   audienceValue="Aluno que teve a parcela recebida"
+                  isOpen={openAutomation === 'receipt'}
+                  onToggleOpen={() => toggleAutomationOpen('receipt')}
                   checked={Boolean(automation.waSendPaymentReceipt)}
                   onChange={(checked) => setAutomation((current) => ({ ...current, waSendPaymentReceipt: checked }))}
                   message={automation.waPaymentReceiptTemplate || DEFAULT_AUTOMATION.waPaymentReceiptTemplate || ''}
                   onMessageChange={(value) => setAutomation((current) => ({ ...current, waPaymentReceiptTemplate: value }))}
                   variables={TEMPLATE_VARIABLES.receipt}
+                  modalities={automation.waPaymentReceiptModalities || DEFAULT_MODALITIES}
+                  onModalitiesChange={(value) => updateAutomationModalities('waPaymentReceiptModalities', value)}
+                  onSave={(key) => saveAutomationMutation.mutate(key)}
+                  isSaving={saveAutomationMutation.isPending && saveAutomationMutation.variables === 'receipt'}
                 />
 
                 <AutomationCard
                   icon={Clock3}
+                  automationKey="overdue"
                   step="03"
                   tone="amber"
                   title="Aviso de atraso"
                   description="Enviado para aluno com parcela vencida e ainda não paga. Use para cobrança simples de atraso."
                   triggerValue={`${automation.waOverdueNoticeDays ?? 1} dia(s) após o vencimento`}
                   audienceValue="Aluno com uma parcela vencida"
+                  isOpen={openAutomation === 'overdue'}
+                  onToggleOpen={() => toggleAutomationOpen('overdue')}
                   checked={Boolean(automation.waSendOverdueNotice)}
                   onChange={(checked) => setAutomation((current) => ({ ...current, waSendOverdueNotice: checked }))}
                   timingLabel="Avisar quantos dias depois"
@@ -784,16 +952,23 @@ const WhatsAppCommunicationPanel: React.FC = () => {
                   message={automation.waDefaultOverdueTemplate || DEFAULT_AUTOMATION.waDefaultOverdueTemplate || ''}
                   onMessageChange={(value) => setAutomation((current) => ({ ...current, waDefaultOverdueTemplate: value }))}
                   variables={TEMPLATE_VARIABLES.overdue}
+                  modalities={automation.waOverdueNoticeModalities || DEFAULT_MODALITIES}
+                  onModalitiesChange={(value) => updateAutomationModalities('waOverdueNoticeModalities', value)}
+                  onSave={(key) => saveAutomationMutation.mutate(key)}
+                  isSaving={saveAutomationMutation.isPending && saveAutomationMutation.variables === 'overdue'}
                 />
 
                 <AutomationCard
                   icon={FileText}
+                  automationKey="multiple"
                   step="04"
                   tone="rose"
                   title="Múltiplas parcelas em atraso"
                   description="Enviado quando o aluno acumula mais de uma parcela vencida. Use esta regra para uma cobrança mais direta, separada do atraso comum."
                   triggerValue={`A partir de ${automation.waMultipleOverdueMinInstallments ?? 2} parcelas vencidas`}
                   audienceValue="Aluno com atraso recorrente"
+                  isOpen={openAutomation === 'multiple'}
+                  onToggleOpen={() => toggleAutomationOpen('multiple')}
                   checked={Boolean(automation.waSendMultipleOverdueNotice)}
                   onChange={(checked) => setAutomation((current) => ({ ...current, waSendMultipleOverdueNotice: checked }))}
                   timingLabel="Disparar a partir de quantas parcelas"
@@ -803,6 +978,10 @@ const WhatsAppCommunicationPanel: React.FC = () => {
                   message={automation.waMultipleOverdueTemplate || DEFAULT_AUTOMATION.waMultipleOverdueTemplate || ''}
                   onMessageChange={(value) => setAutomation((current) => ({ ...current, waMultipleOverdueTemplate: value }))}
                   variables={TEMPLATE_VARIABLES.multiple}
+                  modalities={automation.waMultipleOverdueModalities || DEFAULT_MODALITIES}
+                  onModalitiesChange={(value) => updateAutomationModalities('waMultipleOverdueModalities', value)}
+                  onSave={(key) => saveAutomationMutation.mutate(key)}
+                  isSaving={saveAutomationMutation.isPending && saveAutomationMutation.variables === 'multiple'}
                 />
               </div>
             </>
@@ -812,7 +991,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
       )}
 
       {activeTab === 'atrasados' && (
-        <div className="h-[calc(100%-132px)] space-y-4 overflow-y-auto p-5 custom-scrollbar">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 custom-scrollbar">
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-bold text-[#001a33]">{totals.count} parcelas em atraso</p>

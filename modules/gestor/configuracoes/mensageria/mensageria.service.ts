@@ -32,6 +32,10 @@ export interface MensageriaConfigData {
   waSendMultipleOverdueNotice?: boolean;
   waMultipleOverdueMinInstallments?: number;
   waMultipleOverdueTemplate?: string;
+  waDueNoticeModalities?: string[];
+  waPaymentReceiptModalities?: string[];
+  waOverdueNoticeModalities?: string[];
+  waMultipleOverdueModalities?: string[];
   smtpServer?: string;
   smtpPort?: string;
   smtpUser?: string;
@@ -84,6 +88,10 @@ export const mensageriaService = {
         wa_send_multiple_overdue_notice,
         wa_multiple_overdue_min_installments,
         wa_multiple_overdue_template,
+        wa_due_notice_modalities,
+        wa_payment_receipt_modalities,
+        wa_overdue_notice_modalities,
+        wa_multiple_overdue_modalities,
         smtp_server,
         smtp_port,
         smtp_user,
@@ -139,6 +147,10 @@ export const mensageriaService = {
         ? undefined
         : Number(data.wa_multiple_overdue_min_installments),
       waMultipleOverdueTemplate: data.wa_multiple_overdue_template,
+      waDueNoticeModalities: data.wa_due_notice_modalities || undefined,
+      waPaymentReceiptModalities: data.wa_payment_receipt_modalities || undefined,
+      waOverdueNoticeModalities: data.wa_overdue_notice_modalities || undefined,
+      waMultipleOverdueModalities: data.wa_multiple_overdue_modalities || undefined,
       smtpServer: data.smtp_server,
       smtpPort: data.smtp_port,
       smtpUser: data.smtp_user,
@@ -153,13 +165,21 @@ export const mensageriaService = {
    */
   async saveConfig(tipo: 'whatsapp' | 'email', config: Partial<MensageriaConfigData>): Promise<boolean> {
     if (tipo === 'whatsapp') {
-      const { error } = await supabase.functions.invoke('whatsapp-config', {
+      const { data, error } = await supabase.functions.invoke('whatsapp-config', {
         body: config,
       });
 
       if (error) {
         console.error('Erro ao salvar config de whatsapp:', error);
-        throw new Error(error.message);
+        const context = (error as any)?.context;
+        const details = typeof context?.json === 'function'
+          ? await context.json().catch(() => null)
+          : null;
+        throw new Error(details?.error || error.message);
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       return true;
@@ -194,6 +214,10 @@ export const mensageriaService = {
       wa_send_multiple_overdue_notice: config.waSendMultipleOverdueNotice,
       wa_multiple_overdue_min_installments: config.waMultipleOverdueMinInstallments,
       wa_multiple_overdue_template: config.waMultipleOverdueTemplate,
+      wa_due_notice_modalities: config.waDueNoticeModalities,
+      wa_payment_receipt_modalities: config.waPaymentReceiptModalities,
+      wa_overdue_notice_modalities: config.waOverdueNoticeModalities,
+      wa_multiple_overdue_modalities: config.waMultipleOverdueModalities,
       smtp_server: config.smtpServer,
       smtp_port: config.smtpPort,
       smtp_user: config.smtpUser,
@@ -213,6 +237,42 @@ export const mensageriaService = {
 
     if (error) {
       console.error(`Erro ao salvar config de ${tipo}:`, error);
+      throw new Error(error.message);
+    }
+
+    return true;
+  },
+
+  async saveWhatsappAutomationConfig(config: Partial<MensageriaConfigData>): Promise<boolean> {
+    const dbPayload: any = {
+      tipo: 'whatsapp',
+      wa_due_notice_days: config.waDueNoticeDays,
+      wa_send_due_notice: config.waSendDueNotice,
+      wa_due_notice_template: config.waDueNoticeTemplate,
+      wa_send_payment_receipt: config.waSendPaymentReceipt,
+      wa_payment_receipt_template: config.waPaymentReceiptTemplate,
+      wa_send_overdue_notice: config.waSendOverdueNotice,
+      wa_overdue_notice_days: config.waOverdueNoticeDays,
+      wa_default_overdue_template: config.waDefaultOverdueTemplate,
+      wa_send_multiple_overdue_notice: config.waSendMultipleOverdueNotice,
+      wa_multiple_overdue_min_installments: config.waMultipleOverdueMinInstallments,
+      wa_multiple_overdue_template: config.waMultipleOverdueTemplate,
+      wa_due_notice_modalities: config.waDueNoticeModalities,
+      wa_payment_receipt_modalities: config.waPaymentReceiptModalities,
+      wa_overdue_notice_modalities: config.waOverdueNoticeModalities,
+      wa_multiple_overdue_modalities: config.waMultipleOverdueModalities,
+    };
+
+    Object.keys(dbPayload).forEach(key => {
+      if (dbPayload[key] === undefined) delete dbPayload[key];
+    });
+
+    const { error } = await supabase
+      .from('mensageria_config')
+      .upsert(dbPayload, { onConflict: 'tipo' });
+
+    if (error) {
+      console.error('Erro ao salvar automações do WhatsApp:', error);
       throw new Error(error.message);
     }
 

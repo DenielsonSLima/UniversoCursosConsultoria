@@ -30,6 +30,7 @@ import {
   FileSignature,
   Building,
   MessageSquare,
+  MessageCircle,
   Lock,
   Clock
 } from 'lucide-react';
@@ -285,7 +286,11 @@ const GestorPage: React.FC = () => {
     ? currentPoloId
     : currentPoloId || gestorScope.activePoloId;
   const canOpenModule = useCallback((moduleId: string) => {
-    const rootModule = moduleId.startsWith('cadastros-') ? 'cadastros' : moduleId;
+    const rootModule = moduleId.startsWith('cadastros-')
+      ? 'cadastros'
+      : moduleId.startsWith('comunicacao-')
+        ? 'comunicacao'
+        : moduleId;
     if (!canAccessGestorModule(gestorPermissions, rootModule)) return false;
     if (rootModule === 'configuracoes' && !isMatrizSelected) return false;
     if (!isMatrizSelected && moduleId.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(moduleId)) {
@@ -486,6 +491,11 @@ const GestorPage: React.FC = () => {
     { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
   ].filter(subItem => canAccessTab(gestorPermissions, 'cadastros', subItem.id));
 
+  const comunicacaoSubItems = [
+    { id: 'comunicacao-mensagem', label: 'Mensagem', icon: <MessageSquare size={16} /> },
+    { id: 'comunicacao-whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} /> },
+  ];
+
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={20} /> },
@@ -503,7 +513,13 @@ const GestorPage: React.FC = () => {
     { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={20} /> },
     { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={20} /> },
-    { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: pendingChatsCount },
+    {
+      id: 'comunicacao',
+      label: 'Comunicação',
+      icon: <MessageSquare size={20} />,
+      badge: pendingChatsCount,
+      subItems: comunicacaoSubItems,
+    },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={20} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
   ];
@@ -560,7 +576,9 @@ const GestorPage: React.FC = () => {
       case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={gestorScope.isGlobal} />;
       case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={gestorPermissions.financeiroTabs} />;
       case 'biblioteca': return <BibliotecaPage />;
-      case 'comunicacao': return <ComunicacaoPage gestorProfile={profile} />;
+      case 'comunicacao':
+      case 'comunicacao-mensagem': return <ComunicacaoPage gestorProfile={profile} channel="mensagem" />;
+      case 'comunicacao-whatsapp': return <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
       case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
       case 'configuracoes':
         if (!isMatrizSelected) {
@@ -748,7 +766,9 @@ const GestorPage: React.FC = () => {
                       else { setActiveModule(item.id); setIsMobileMenuOpen(false); }
                     }}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${
-                      activeModule === item.id ? 'bg-blue-600 font-bold' : 'text-slate-400'
+                      activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
+                        ? 'bg-blue-600 font-bold'
+                        : 'text-slate-400'
                     }`}
                   >
                     <div className="flex items-center gap-3">

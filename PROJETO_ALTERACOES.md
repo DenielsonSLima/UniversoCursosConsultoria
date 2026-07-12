@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-07-12 — Automacoes WhatsApp Recolhidas e Modalidades por Aviso
+
+**O que foi feito:**
+- Os cards de automacao financeira do WhatsApp agora ficam recolhidos por padrao.
+- Cada aviso possui botao proprio de salvar, evitando salvar todas as regras de uma vez.
+- Adicionada selecao de modalidades por aviso: EAD, Tecnico, Livres, Especializacao e Superior.
+- O salvamento das automacoes foi separado da configuracao sensivel da API; token e credenciais continuam pela Edge Function, enquanto regras de aviso gravam apenas campos nao sensiveis em `mensageria_config`.
+- Criada migracao para armazenar as modalidades permitidas de cada automacao no Supabase.
+- A aba de Configuracoes do WhatsApp passou a consumir o resumo financeiro calculado no banco pela RPC `whatsapp_usage_summary`, sem calculo de custo no frontend.
+- Aplicadas no Supabase remoto as migracoes de modalidades e resumo de uso mensal do WhatsApp.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `modules/gestor/configuracoes/mensageria/mensageria.service.ts`
+- `modules/gestor/configuracoes/mensageria/MensageriaConfig.tsx`
+- `modules/gestor/comunicacao/components/whatsapp/WhatsAppSettingsPanel.tsx`
+- `modules/gestor/comunicacao/components/whatsapp/whatsapp.service.ts`
+- `modules/gestor/comunicacao/components/whatsapp/whatsapp.types.ts`
+- `supabase/functions/whatsapp-config/index.ts`
+- `supabase/migrations/20260712235000_whatsapp_usage_billing_server_side.sql`
+- `supabase/migrations/20260713001000_whatsapp_automation_modalities.sql`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Comunicação Como Submódulos no Menu Lateral
+
+**O que foi feito:**
+- O módulo **Comunicação** passou a usar submódulos expansivos no menu lateral, seguindo o mesmo padrão de **Cadastros**.
+- Criados os submódulos **Mensagem** e **WhatsApp** dentro de Comunicação.
+- Removida a barra superior interna que alternava entre Interna/WhatsApp/Atendimentos/Configurações.
+- A tela de Mensagem abre diretamente os atendimentos internos; a tela de WhatsApp abre diretamente o atendimento externo e automações.
+- Compactado o cabeçalho do WhatsApp para remover títulos e descrições duplicadas, mantendo apenas a barra operacional com conversas, automações, atrasados, status da API e iniciar conversa.
+- Removido o painel lateral informativo do início do WhatsApp, incluindo status da API, avisos ativos, atrasos, automações, ver atrasados e webhook.
+- Adicionada seleção de conversas WhatsApp, seleção em massa do filtro atual e ação para apagar conversas selecionadas com confirmação.
+
+**Por quê:**
+- A navegação duplicada no topo deixava a tela confusa. Separar os canais no menu lateral deixa claro que Mensagem e WhatsApp são áreas diferentes dentro de Comunicação.
+
+**Arquivos afetados:**
+- `modules/gestor/gestor.page.tsx`
+- `modules/gestor/comunicacao/ComunicacaoPage.tsx`
+- `PROJETO_ALTERACOES.md`
+
+---
+
 ## 2026-07-12 — Automação WhatsApp Separada por Evento Financeiro
 
 **O que foi feito:**

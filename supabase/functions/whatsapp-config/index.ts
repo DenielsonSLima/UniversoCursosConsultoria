@@ -27,6 +27,18 @@ const numberOrNull = (value: unknown) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const allowedModalities = new Set(["EAD", "TECNICO", "LIVRES", "ESPECIALIZACAO", "SUPERIOR"]);
+
+const normalizeModalities = (value: unknown) => {
+  if (!Array.isArray(value)) return ["EAD", "TECNICO", "LIVRES", "ESPECIALIZACAO"];
+
+  const modalities = value
+    .map((item) => String(item || "").trim().toUpperCase())
+    .filter((item, index, list) => allowedModalities.has(item) && list.indexOf(item) === index);
+
+  return modalities.length > 0 ? modalities : ["EAD", "TECNICO", "LIVRES", "ESPECIALIZACAO"];
+};
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
   const respondJson = (body: unknown, status = 200) => json(body, status, req);
@@ -107,6 +119,10 @@ Deno.serve(async (req: Request) => {
         wa_multiple_overdue_min_installments: Math.max(Number(body.waMultipleOverdueMinInstallments || 2), 2),
         wa_multiple_overdue_template: trimOrNull(body.waMultipleOverdueTemplate) ||
           "Ola {{nome_aluno}}, identificamos {{quantidade_parcelas}} parcelas em atraso, totalizando {{valor_total_atrasado}}. Para regularizar, acesse: {{link_pagamento}}",
+        wa_due_notice_modalities: normalizeModalities(body.waDueNoticeModalities),
+        wa_payment_receipt_modalities: normalizeModalities(body.waPaymentReceiptModalities),
+        wa_overdue_notice_modalities: normalizeModalities(body.waOverdueNoticeModalities),
+        wa_multiple_overdue_modalities: normalizeModalities(body.waMultipleOverdueModalities),
       }, { onConflict: "tipo" });
     if (upsertError) throw upsertError;
 

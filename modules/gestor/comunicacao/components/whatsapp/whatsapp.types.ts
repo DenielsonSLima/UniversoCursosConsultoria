@@ -36,3 +36,30 @@ export interface WhatsAppContact {
   foto: string | null;
   poloNome: string;
 }
+
+export interface WhatsAppUsageSummary {
+  usage_month: string;
+  monthly_limit: number;
+  currency: string;
+  meta_balance: number | null;
+  meta_balance_source: string | null;
+  meta_synced_at: string | null;
+  marketing_sent: number;
+  marketing_rate: number;
+  marketing_cost: number;
+  marketing_available: number | null;
+  marketing_percent: number;
+  billing_sent: number;
+  billing_rate: number;
+  billing_cost: number;
+  billing_available: number | null;
+  billing_percent: number;
+  service_sent: number;
+  service_rate: number;
+  service_cost: number;
+  service_percent: number;
+  total_sent: number;
+  spent: number;
+  remaining: number;
+  spent_percent: number;
+}

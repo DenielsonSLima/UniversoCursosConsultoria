@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle, MessageCircle, Plus, Info, UserRound } from 'lucide-react';
+import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle, MessageCircle, Plus } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import ComunicacaoConfig from './components/ComunicacaoConfig';
 import WhatsAppCommunicationPanel from './components/WhatsAppCommunicationPanel';
 import StartInternalConversationModal, { InternalConversationContact } from './components/StartInternalConversationModal';
 import ToastNotification, { useToast } from '../components/ToastNotification';
@@ -42,6 +41,7 @@ interface Category {
 
 interface ComunicacaoPageProps {
   gestorProfile?: PortalAuthProfile | null;
+  channel?: 'mensagem' | 'whatsapp';
 }
 
 const playMessageSound = (tone: 'send' | 'receive') => {
@@ -66,10 +66,8 @@ const playMessageSound = (tone: 'send' | 'receive') => {
   }
 };
 
-const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
+const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channel = 'mensagem' }) => {
   const { toasts, removeToast, toast } = useToast();
-  const [channelTab, setChannelTab] = useState<'interna' | 'whatsapp'>('interna');
-  const [mainTab, setMainTab] = useState<'tickets' | 'config'>('tickets');
   const [activeTicketStatus, setActiveTicketStatus] = useState<'pendente' | 'solucionada'>('pendente');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
   const [searchText, setSearchText] = useState('');
@@ -428,8 +426,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
           ? [...prev, newMsg]
           : prev
         );
-        setChannelTab('interna');
-        setMainTab('tickets');
         setActiveTicketStatus('pendente');
         setActiveChatId(existingChat.id);
         playMessageSound('send');
@@ -468,8 +464,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
 
       setChats(prev => prev.some(item => item.id === chat.id) ? prev : [chat, ...prev]);
       setMessages(newMsg ? [newMsg] : []);
-      setChannelTab('interna');
-      setMainTab('tickets');
       setActiveTicketStatus('pendente');
       setActiveChatId(chat.id);
       playMessageSound('send');
@@ -668,70 +662,32 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
         onStart={handleStartInternalConversation}
       />
       
-      {/* Top Header & Navigation Tabs */}
+      {/* Top Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-            <MessageSquare size={22} />
+          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+            channel === 'whatsapp' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+          }`}>
+            {channel === 'whatsapp' ? <MessageCircle size={22} /> : <MessageSquare size={22} />}
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#001a33]">Central de Comunicação</h1>
+            <h1 className="text-xl font-bold tracking-tight text-[#001a33]">
+              {channel === 'whatsapp' ? 'Comunicação WhatsApp' : 'Mensagens internas'}
+            </h1>
             <p className="text-xs font-medium text-slate-400">
-              {channelTab === 'interna' ? `${pendingCount} em aberto, ${solvedCount} solucionadas` : 'Conversas e mensagens externas via WhatsApp'}
+              {channel === 'whatsapp'
+                ? 'Caixa externa de atendimento e automações financeiras.'
+                : `${pendingCount} em aberto, ${solvedCount} solucionadas`}
             </p>
           </div>
-        </div>
-
-        <div className="flex flex-wrap justify-end gap-2">
-          <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1">
-            <button
-              onClick={() => setChannelTab('interna')}
-              className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
-                channelTab === 'interna' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <MessageSquare size={14} /> Interna
-            </button>
-            <button
-              onClick={() => setChannelTab('whatsapp')}
-              className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
-                channelTab === 'whatsapp' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-emerald-700'
-              }`}
-            >
-              <MessageCircle size={14} /> WhatsApp
-            </button>
-          </div>
-
-          {channelTab === 'interna' && (
-            <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1">
-              <button
-                onClick={() => setMainTab('tickets')}
-                className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
-                  mainTab === 'tickets' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <MessageSquare size={14} /> Atendimentos
-              </button>
-              <button
-                onClick={() => setMainTab('config')}
-                className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
-                  mainTab === 'config' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                <Settings size={14} /> Configurações
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         
-        {channelTab === 'whatsapp' ? (
+        {channel === 'whatsapp' ? (
           <WhatsAppCommunicationPanel />
-        ) : mainTab === 'config' ? (
-          <ComunicacaoConfig />
         ) : (
           <>
             {/* Sidebar: Tickets list */}

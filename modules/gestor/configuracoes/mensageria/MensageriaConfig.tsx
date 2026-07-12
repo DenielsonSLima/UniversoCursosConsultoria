@@ -28,6 +28,10 @@ const DEFAULT_WHATSAPP_DRAFT: MensageriaConfigData = {
   waSendMultipleOverdueNotice: true,
   waMultipleOverdueMinInstallments: 2,
   waMultipleOverdueTemplate: 'Olá {{nome_aluno}}, identificamos {{quantidade_parcelas}} parcelas em atraso, totalizando {{valor_total_atrasado}}. Para regularizar, acesse: {{link_pagamento}}',
+  waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waMultipleOverdueModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
 };
 
 const MensageriaConfig: React.FC = () => {
