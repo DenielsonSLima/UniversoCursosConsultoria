@@ -30,7 +30,8 @@ import {
   FileSignature,
   Building,
   MessageSquare,
-  Lock
+  Lock,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -65,7 +66,7 @@ import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
 
 import { loginService } from '../login/login.service';
 import ConfirmModal from '../shared/components/ConfirmModal';
-import { canAccessGestorModule, normalizeGestorPermissions } from './access-control';
+import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -387,6 +388,43 @@ const GestorPage: React.FC = () => {
     return <AccessCheckingScreen portal="Gestor" />;
   }
 
+  if (profile.isBlockedSchedule) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans p-6 text-white">
+        <div className="bg-slate-800/80 border border-slate-700/50 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 text-center max-w-md w-full relative overflow-hidden flex flex-col items-center">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-8 -mt-8"></div>
+          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
+            <Clock size={32} />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Acesso Fora do Expediente</h2>
+          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+            Olá, <span className="text-white font-semibold">{profile.nome}</span>. Seu perfil possui restrição de dias e horários para uso do sistema.
+          </p>
+
+          <div className="bg-slate-900/50 border border-slate-700/30 rounded-2xl p-4 w-full text-left space-y-2 mb-8">
+            <p className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider">Regras de Horário</p>
+            <p className="text-xs text-slate-300 font-medium leading-relaxed">
+              <strong>Dias permitidos:</strong> {profile.restricao_horario?.dias.map(d => {
+                const map: Record<number, string> = {1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb', 0: 'Dom'};
+                return map[d] || '';
+              }).join(', ')}
+            </p>
+            <p className="text-xs text-slate-300 font-medium">
+              <strong>Horário:</strong> das {profile.restricao_horario?.horario_inicio} às {profile.restricao_horario?.horario_fim}
+            </p>
+          </div>
+
+          <button
+            onClick={executeLogout}
+            className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-purple-600/20 hover:shadow-xl transition-all"
+          >
+            Sair do Sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handlePoloChange = (poloId: string) => {
     if (!gestorScope.isGlobal && !gestorScope.allowedPoloIds?.includes(poloId)) {
       return;
@@ -446,7 +484,7 @@ const GestorPage: React.FC = () => {
     { id: 'cadastros-superior', label: 'Ensino Superior', icon: <Building size={16} /> },
     { id: 'cadastros-ficha', label: 'Ficha Matrícula', icon: <FileSignature size={16} /> },
     { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
-  ];
+  ].filter(subItem => canAccessTab(gestorPermissions, 'cadastros', subItem.id));
 
   const menuItems = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
@@ -493,14 +531,14 @@ const GestorPage: React.FC = () => {
     }
 
     if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
-      return <CadastrosPage onNavigate={setActiveModule} readOnly />;
+      return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={cadastroSubItems.map(item => item.id)} />;
     }
 
     switch (activeModule) {
       case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
       case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
-      case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} />;
+      case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={cadastroSubItems.map(item => item.id)} />;
       case 'cadastros-checklist': return <ChecklistEstagioPage />;
       case 'cadastros-ead': return <CursosEadPage readOnly={!isMatrizSelected} />;
       case 'cadastros-especializacao': return <CursosEspecializacaoPage readOnly={!isMatrizSelected} />;
@@ -518,7 +556,7 @@ const GestorPage: React.FC = () => {
           onRequestScrollTop={scrollContentToTop}
         />
       );
-      case 'secretaria': return <SecretariaPage />;
+      case 'secretaria': return <SecretariaPage gestorPermissions={gestorPermissions} />;
       case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={gestorScope.isGlobal} />;
       case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={gestorPermissions.financeiroTabs} />;
       case 'biblioteca': return <BibliotecaPage />;

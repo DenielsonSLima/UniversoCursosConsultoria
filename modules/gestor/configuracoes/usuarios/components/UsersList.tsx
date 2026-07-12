@@ -70,6 +70,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       context: contextId,
       polo_ids: newUser.todosPolos ? [] : newUser.polosAcesso,
       permissoes: permissions,
+      perfil_acesso_id: newUser.perfil_acesso_id
     };
 
     createUserMutation.mutate(payload, {

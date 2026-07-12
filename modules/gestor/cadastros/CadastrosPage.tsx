@@ -13,9 +13,10 @@ import {
 interface CadastrosPageProps {
   onNavigate?: (id: string) => void;
   readOnly?: boolean;
+  allowedTabs?: string[];
 }
 
-const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = false }) => {
+const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = false, allowedTabs }) => {
   const hubItems = [
     { id: 'cadastros-checklist', title: 'Check List Estágio', desc: 'Controle de documentos.', icon: <ClipboardCheck size={28} />, color: 'bg-teal-600' },
     { id: 'cadastros-ead', title: 'Cursos EAD', desc: 'Ambiente digital.', icon: <MonitorPlay size={28} />, color: 'bg-purple-600' },
@@ -27,9 +28,10 @@ const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = fa
     { id: 'cadastros-modelos', title: 'Modelos Documentos', desc: 'Templates oficiais.', icon: <FileCode size={28} />, color: 'bg-slate-700' },
   ];
 
-  const visibleItems = readOnly
+  const visibleItems = (readOnly
     ? hubItems.filter(item => ['cadastros-ead', 'cadastros-especializacao', 'cadastros-livres', 'cadastros-superior'].includes(item.id))
-    : hubItems;
+    : hubItems
+  ).filter(item => !allowedTabs || allowedTabs.includes(item.id));
 
   return (
     <div className="animate-fadeIn">

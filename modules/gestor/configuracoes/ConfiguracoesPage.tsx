@@ -17,7 +17,8 @@ import {
   MessageCircle,
   FileCode2,
   GraduationCap,
-  Megaphone
+  Megaphone,
+  Lock
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -39,6 +40,7 @@ import AssinaturasConfig from './assinaturas/AssinaturasConfig';
 import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFinanceirasConfig';
 import SitePublicoConfig from './site-publico/SitePublicoConfig';
 import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
+import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -51,6 +53,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
+    { id: 'perfis-acesso', title: 'Perfis de Acesso', desc: 'Gerenciar permissões por perfil', icon: <Lock size={24} />, color: 'bg-rose-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
@@ -73,6 +76,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'categorias': return <CategoriasConfig />;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
+      case 'perfis-acesso': return <PerfisAcessoConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
       case 'assinaturas': return <AssinaturasConfig />;
       case 'contas': return <ContasBancariasConfig />;

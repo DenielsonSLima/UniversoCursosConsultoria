@@ -1,8 +1,9 @@
 
 // File: modules/gestor/secretaria/SecretariaPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, ArrowLeft } from 'lucide-react';
+import { canAccessTab } from '../access-control';
 import SecretariaDashboard from './components/SecretariaDashboard';
 import SecretariaAlunosPage from './alunos/SecretariaAlunosPage';
 import SecretariaBoletinsPage from './boletins/SecretariaBoletinsPage';
@@ -93,8 +94,39 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   },
 };
 
-const SecretariaPage: React.FC = () => {
+interface SecretariaPageProps {
+  gestorPermissions?: any;
+}
+
+const SecretariaPage: React.FC<SecretariaPageProps> = ({ gestorPermissions }) => {
   const [activeModule, setActiveModule] = useState<string>('dashboard');
+
+  const allowedTabsList = useMemo(() => {
+    if (!gestorPermissions) return null;
+    const permissionMap: Record<string, string> = {
+      'solicitacoes': 'solicitacoes',
+      'carteirinha': 'carteirinhas',
+      'declaracao-matricula': 'declaracoes',
+      'declaracao-frequencia': 'declaracoes',
+      'declaracao-irpf': 'declaracoes',
+      'atestado-conclusao': 'declaracoes',
+      'historico-escolar': 'historico',
+      'historico-emissoes': 'historico',
+    };
+
+    return Object.keys(secretariaModuleHeaders).filter(id => {
+      const permKey = permissionMap[id];
+      if (!permKey) return true;
+      return canAccessTab(gestorPermissions, 'secretaria', permKey);
+    });
+  }, [gestorPermissions]);
+
+  useEffect(() => {
+    if (activeModule !== 'dashboard' && allowedTabsList && !allowedTabsList.includes(activeModule)) {
+      setActiveModule('dashboard');
+    }
+  }, [activeModule, allowedTabsList]);
+
   const isDashboard = activeModule === 'dashboard';
   const currentHeader = isDashboard
     ? {
@@ -143,7 +175,7 @@ const SecretariaPage: React.FC = () => {
       case 'certificados':
         return <SecretariaCertificadosPage />;
       default:
-        return <SecretariaDashboard onNavigate={setActiveModule} />;
+        return <SecretariaDashboard onNavigate={setActiveModule} allowedTabs={allowedTabsList || undefined} />;
     }
   };
 

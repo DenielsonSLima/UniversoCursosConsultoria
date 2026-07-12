@@ -30,6 +30,7 @@ export interface GestorPermissions {
   modules: GestorModuleId[];
   financeiroTabs: FinanceiroTabId[];
   allPolos: boolean;
+  tabs?: Record<string, string[]>;
 }
 
 export const DEFAULT_GESTOR_MODULES = [...GESTOR_MODULE_IDS] as GestorModuleId[];
@@ -67,7 +68,7 @@ export const normalizeFinanceiroTabs = (value: unknown): FinanceiroTabId[] => {
 export const hasExplicitGestorPermissions = (value: unknown) => {
   if (Array.isArray(value)) return value.length > 0;
   if (!value || typeof value !== 'object') return false;
-  return 'modules' in value || 'financeiroTabs' in value || 'allPolos' in value;
+  return 'modules' in value || 'financeiroTabs' in value || 'allPolos' in value || 'tabs' in value;
 };
 
 export const normalizeGestorPermissions = (
@@ -86,6 +87,16 @@ export const normalizeGestorPermissions = (
     ? modules
     : DEFAULT_GESTOR_MODULES;
 
+  const rawTabs = source.tabs && typeof source.tabs === 'object' ? source.tabs as Record<string, unknown> : undefined;
+  const tabs: Record<string, string[]> = {};
+  if (rawTabs) {
+    for (const key in rawTabs) {
+      if (Array.isArray(rawTabs[key])) {
+        tabs[key] = normalizeStringArray(rawTabs[key]);
+      }
+    }
+  }
+
   return {
     modules: modulesWithFallback,
     financeiroTabs: financeiroTabs.length || hasExplicit || !fallbackFullAccess
@@ -94,14 +105,21 @@ export const normalizeGestorPermissions = (
     allPolos: typeof source.allPolos === 'boolean'
       ? source.allPolos
       : fallbackFullAccess && !hasExplicit,
+    tabs: Object.keys(tabs).length > 0 ? tabs : undefined,
   };
 };
 
-export const buildGestorPermissionsPayload = (permissions: GestorPermissions) => ({
-  modules: normalizeGestorModules(permissions.modules),
-  financeiroTabs: normalizeFinanceiroTabs(permissions.financeiroTabs),
-  allPolos: Boolean(permissions.allPolos),
-});
+export const buildGestorPermissionsPayload = (permissions: GestorPermissions) => {
+  const payload: any = {
+    modules: normalizeGestorModules(permissions.modules),
+    financeiroTabs: normalizeFinanceiroTabs(permissions.financeiroTabs),
+    allPolos: Boolean(permissions.allPolos),
+  };
+  if (permissions.tabs) {
+    payload.tabs = permissions.tabs;
+  }
+  return payload;
+};
 
 export const canAccessGestorModule = (
   permissions: GestorPermissions,
@@ -115,3 +133,22 @@ export const canAccessFinanceiroTab = (
   permissions: GestorPermissions,
   tabId: string,
 ) => permissions.financeiroTabs.includes(tabId as FinanceiroTabId);
+
+export const canAccessTab = (
+  permissions: GestorPermissions,
+  moduleId: string,
+  tabId: string,
+): boolean => {
+  if (moduleId === 'financeiro') {
+    const hasLegacy = permissions.financeiroTabs?.includes(tabId as FinanceiroTabId);
+    const hasNew = permissions.tabs?.['financeiro']?.includes(tabId);
+    if (permissions.tabs?.['financeiro']) return hasNew;
+    return hasLegacy ?? true;
+  }
+
+  if (!permissions.tabs || !permissions.tabs[moduleId]) {
+    return true;
+  }
+
+  return permissions.tabs[moduleId].includes(tabId);
+};

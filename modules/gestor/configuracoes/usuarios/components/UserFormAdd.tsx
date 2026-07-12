@@ -15,6 +15,7 @@ import {
 } from '../../../access-control';
 import { useUsuariosPolosQuery } from '../hooks/useUsuariosConfigQueries';
 import { NovoUsuarioFormData } from '../usuarios.types';
+import { perfisAcessoService, PerfilAcesso } from '../../perfis-acesso/perfis-acesso.service';
 
 interface UserFormAddProps {
   contextId: string;
@@ -48,6 +49,7 @@ const FINANCEIRO_TABS = [
 
 const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }) => {
   const { data: companies = [] } = useUsuariosPolosQuery();
+  const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
   
   const [formData, setFormData] = useState<NovoUsuarioFormData>({
     nome: '',
@@ -61,7 +63,8 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
     todosPolos: contextId === 'global',
     polosAcesso: contextId === 'global' ? [] : [contextId],
     permissoes: ['inicio'],
-    financeiroAbas: []
+    financeiroAbas: [],
+    perfil_acesso_id: null
   });
 
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -77,6 +80,18 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       }));
     }
   }, [contextId]);
+
+  useEffect(() => {
+    const fetchPerfis = async () => {
+      try {
+        const data = await perfisAcessoService.getAll();
+        setPerfis(data);
+      } catch (err) {
+        console.error('Erro ao buscar perfis de acesso:', err);
+      }
+    };
+    fetchPerfis();
+  }, []);
 
   // Formatadores
   const formatCPF = (value: string) => {
@@ -191,13 +206,15 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       alert('Selecione ao menos um polo para este usuário.');
       return;
     }
-    if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
-      alert('Selecione ao menos um módulo para este usuário.');
-      return;
-    }
-    if (formData.permissoes.includes('financeiro') && formData.financeiroAbas.length === 0) {
-      alert('Selecione ao menos uma aba do módulo financeiro.');
-      return;
+    if (!formData.perfil_acesso_id) {
+      if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
+        alert('Selecione ao menos um módulo para este usuário.');
+        return;
+      }
+      if (formData.permissoes.includes('financeiro') && formData.financeiroAbas.length === 0) {
+        alert('Selecione ao menos uma aba do módulo financeiro.');
+        return;
+      }
     }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
   };
@@ -407,79 +424,114 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
         <section className="mb-6">
           <div className="flex items-center gap-2 mb-6 text-blue-600 border-t border-slate-100 pt-8">
             <Lock size={20} />
-            <h4 className="text-sm font-black uppercase tracking-wider">Permissões de Módulo</h4>
+            <h4 className="text-sm font-black uppercase tracking-wider">Permissões e Acessos</h4>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mb-6 flex gap-3">
-             <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
-             <div>
-               <p className="text-xs font-bold text-yellow-800 uppercase mb-1">Atenção</p>
-               <p className="text-xs text-yellow-700 leading-relaxed">
-                 O usuário só conseguirá acessar os módulos selecionados abaixo. Caso tente acessar uma área não permitida, o sistema exibirá uma mensagem de "Acesso Negado".
-               </p>
-             </div>
+          {/* Vínculo de Perfil de Acesso */}
+          <div className="mb-8 space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Perfil de Acesso</label>
+            <select
+              name="perfil_acesso_id"
+              value={formData.perfil_acesso_id || ''}
+              onChange={e => {
+                const val = e.target.value;
+                setFormData(prev => ({
+                  ...prev,
+                  perfil_acesso_id: val || null
+                }));
+              }}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all text-sm"
+            >
+              <option value="">Personalizado (Definir permissões manuais abaixo)</option>
+              {perfis.map(p => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+            {formData.perfil_acesso_id && (
+              <p className="text-[11px] text-blue-600 font-semibold mt-1">
+                ✓ As permissões e restrições de horário serão gerenciadas automaticamente pelo perfil selecionado.
+              </p>
+            )}
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {MODULES.map(module => (
-              <div 
-                key={module.id}
-                onClick={() => togglePermission(module.id)}
-                className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all duration-200 h-32 ${
-                  formData.permissoes.includes(module.id)
-                    ? 'bg-[#001a33] border-[#001a33] text-white shadow-lg'
-                    : 'bg-white border-slate-200 hover:border-slate-300 text-slate-400 hover:bg-slate-50'
-                }`}
-              >
-                <div className={`${formData.permissoes.includes(module.id) ? 'text-blue-400' : 'text-slate-300'}`}>
-                  {module.icon}
-                </div>
-                <p className="text-xs font-bold uppercase tracking-widest">
-                  {module.label}
-                </p>
-                {formData.permissoes.includes(module.id) && (
-                   <span className="text-[9px] bg-blue-500/20 text-blue-200 px-2 py-0.5 rounded-full font-medium">
-                     Liberado
-                   </span>
-                )}
+
+          {formData.perfil_acesso_id ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center text-slate-500 font-semibold text-sm">
+              Permissões individuais desabilitadas porque este usuário está associado a um Perfil de Acesso.
+            </div>
+          ) : (
+            <>
+              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mb-6 flex gap-3">
+                 <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
+                 <div>
+                   <p className="text-xs font-bold text-yellow-800 uppercase mb-1">Atenção</p>
+                   <p className="text-xs text-yellow-700 leading-relaxed">
+                     O usuário só conseguirá acessar os módulos selecionados abaixo. Caso tente acessar uma área não permitida, o sistema exibirá uma mensagem de "Acesso Negado".
+                   </p>
+                 </div>
               </div>
-            ))}
-          </div>
-
-          {formData.permissoes.includes('financeiro') && (
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-              <div className="mb-4 flex items-center gap-2 text-emerald-700">
-                <TrendingUp size={18} />
-                <h5 className="text-xs font-black uppercase tracking-widest">Abas do Financeiro</h5>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {FINANCEIRO_TABS.map(tab => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => toggleFinanceiroTab(tab.id)}
-                    className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                      formData.financeiroAbas.includes(tab.id)
-                        ? 'border-emerald-500 bg-white text-emerald-800 shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200'
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {MODULES.map(module => (
+                  <div 
+                    key={module.id}
+                    onClick={() => togglePermission(module.id)}
+                    className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all duration-200 h-32 ${
+                      formData.permissoes.includes(module.id)
+                        ? 'bg-[#001a33] border-[#001a33] text-white shadow-lg'
+                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-400 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className={formData.financeiroAbas.includes(tab.id) ? 'text-emerald-600' : 'text-slate-300'}>
-                        {tab.icon}
-                      </span>
-                      <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
-                    </span>
-                    {formData.financeiroAbas.includes(tab.id) && (
-                      <span className="rounded-full bg-emerald-500 p-1 text-white">
-                        <Check size={11} />
-                      </span>
+                    <div className={`${formData.permissoes.includes(module.id) ? 'text-blue-400' : 'text-slate-300'}`}>
+                      {module.icon}
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-widest">
+                      {module.label}
+                    </p>
+                    {formData.permissoes.includes(module.id) && (
+                       <span className="text-[9px] bg-blue-500/20 text-blue-200 px-2 py-0.5 rounded-full font-medium">
+                         Liberado
+                       </span>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
-            </div>
+
+              {formData.permissoes.includes('financeiro') && (
+                <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                  <div className="mb-4 flex items-center gap-2 text-emerald-700">
+                    <TrendingUp size={18} />
+                    <h5 className="text-xs font-black uppercase tracking-widest">Abas do Financeiro</h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {FINANCEIRO_TABS.map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => toggleFinanceiroTab(tab.id)}
+                        className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                          formData.financeiroAbas.includes(tab.id)
+                            ? 'border-emerald-500 bg-white text-emerald-800 shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={formData.financeiroAbas.includes(tab.id) ? 'text-emerald-600' : 'text-slate-300'}>
+                            {tab.icon}
+                          </span>
+                          <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
+                        </span>
+                        {formData.financeiroAbas.includes(tab.id) && (
+                          <span className="rounded-full bg-emerald-500 p-1 text-white">
+                            <Check size={11} />
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
 

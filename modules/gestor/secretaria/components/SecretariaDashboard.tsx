@@ -61,30 +61,37 @@ const colorClasses: Record<string, { soft: string; text: string; hover: string; 
   cyan: { soft: 'bg-cyan-50', text: 'text-cyan-700', hover: 'hover:border-cyan-300', accent: 'bg-cyan-600' },
 };
 
-const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-fadeIn">
-    {cards.map((card) => {
-      const Icon = card.icon;
-      const palette = colorClasses[card.color];
-      return (
-        <button
-          key={card.id}
-          onClick={() => onNavigate(card.id)}
-          className={`group relative flex items-start gap-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${palette.hover}`}
-        >
-          <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${palette.soft} ${palette.text} group-hover:scale-105 transition-transform`}>
-            <Icon size={22} />
-          </div>
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h4 className="font-black text-[#001a33] text-sm uppercase tracking-tight">{card.title}</h4>
-            <p className="text-slate-500 text-xs leading-relaxed font-medium mt-1">{card.desc}</p>
-          </div>
-          <ChevronRight size={16} className={`self-center opacity-0 group-hover:opacity-100 ${palette.text} transition-opacity`} />
-          <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${palette.accent} opacity-0 group-hover:opacity-100 transition-opacity`} />
-        </button>
-      );
-    })}
-  </div>
-);
+const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, allowedTabs }) => {
+  const visibleCards = React.useMemo(() => {
+    if (!allowedTabs) return cards;
+    return cards.filter(card => allowedTabs.includes(card.id));
+  }, [allowedTabs]);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 animate-fadeIn">
+      {visibleCards.map((card) => {
+        const Icon = card.icon;
+        const palette = colorClasses[card.color];
+        return (
+          <button
+            key={card.id}
+            onClick={() => onNavigate(card.id)}
+            className={`group relative flex items-start gap-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${palette.hover}`}
+          >
+            <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${palette.soft} ${palette.text} group-hover:scale-105 transition-transform`}>
+              <Icon size={22} />
+            </div>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <h4 className="font-black text-[#001a33] text-sm uppercase tracking-tight">{card.title}</h4>
+              <p className="text-slate-500 text-xs leading-relaxed font-medium mt-1">{card.desc}</p>
+            </div>
+            <ChevronRight size={16} className={`self-center opacity-0 group-hover:opacity-100 ${palette.text} transition-opacity`} />
+            <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${palette.accent} opacity-0 group-hover:opacity-100 transition-opacity`} />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 export default SecretariaDashboard;

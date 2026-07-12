@@ -11,6 +11,7 @@ export interface UsuarioSistema {
   context: string;
   polo_ids?: string[];
   permissoes?: GestorPermissions;
+  perfil_acesso_id?: string | null;
   created_at?: string;
 }
 
@@ -25,6 +26,7 @@ export interface UsuarioSistemaInput {
   context: string;
   polo_ids: string[];
   permissoes: GestorPermissions;
+  perfil_acesso_id?: string | null;
 }
 
 export interface NovoUsuarioFormData {
@@ -40,4 +42,5 @@ export interface NovoUsuarioFormData {
   polosAcesso: string[];
   permissoes: string[];
   financeiroAbas: string[];
+  perfil_acesso_id?: string | null;
 }
