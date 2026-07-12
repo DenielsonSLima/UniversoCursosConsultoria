@@ -135,8 +135,8 @@ const GestorPage: React.FC = () => {
 
   const formattedDate = useMemo(() => {
     return currentDateTime.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
+      day: 'numeric',
+      month: 'long',
       year: 'numeric'
     });
   }, [currentDateTime]);
@@ -914,7 +914,7 @@ const GestorPage: React.FC = () => {
 
             <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
 
-            <div className="text-right hidden sm:flex flex-col justify-center min-w-[6rem]">
+            <div className="text-right hidden sm:flex flex-col justify-center min-w-[11rem]">
               <p className="text-xs font-extrabold text-[#001a33] tracking-wide">{formattedDate}</p>
               <p className="text-[10px] text-slate-500 font-bold mt-0.5 tracking-wider">{formattedTime}</p>
             </div>
