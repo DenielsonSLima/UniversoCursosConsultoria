@@ -814,18 +814,18 @@ const GestorPage: React.FC = () => {
 
           <div className="flex items-center gap-6">
             
-            <div className="relative hidden h-14 w-[23rem] md:block">
+            <div className="relative hidden h-12 w-[23rem] md:block">
               {isLoadingPolos || !currentPolo ? (
-                <div className="flex h-14 w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3">
-                  <div className="h-8 w-8 flex-shrink-0 rounded-lg bg-slate-200/80" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="h-3 w-4/5 rounded-full bg-slate-200/80" />
-                    <div className="h-2.5 w-3/5 rounded-full bg-slate-200/70" />
+                <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
+                  <div className="h-7 w-7 flex-shrink-0 rounded-lg bg-slate-100 animate-pulse" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="h-2.5 w-4/5 rounded-full bg-slate-200/80" />
+                    <div className="h-2 w-3/5 rounded-full bg-slate-200/70" />
                   </div>
                 </div>
               ) : (
               <div
-                className="h-14 w-full"
+                className="h-12 w-full"
                 onBlur={event => {
                   if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                     setIsPoloSelectorOpen(false);
@@ -838,28 +838,28 @@ const GestorPage: React.FC = () => {
                   aria-haspopup="listbox"
                   aria-expanded={isPoloSelectorOpen}
                   disabled={visiblePolos.length <= 1}
-                  className="flex h-14 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left transition-all hover:border-blue-200 hover:bg-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-default disabled:hover:border-slate-200 disabled:hover:bg-slate-50"
+                  className="flex h-12 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 text-left transition-all hover:bg-slate-50 hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 disabled:cursor-default disabled:hover:bg-white disabled:hover:border-slate-200 shadow-sm"
                 >
-                  <Building size={16} className="text-blue-500 flex-shrink-0" />
+                  <Building size={16} className="text-blue-600 flex-shrink-0" />
                   <span className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-xs font-extrabold text-[#001a33] uppercase tracking-wide">
+                      <span className="truncate text-xs font-bold text-slate-800 tracking-tight">
                         {currentPolo?.nome}
                       </span>
-                      <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${
+                      <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
                         currentPolo?.is_matriz
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-200 text-slate-600'
+                          ? 'bg-blue-50 text-blue-600 border border-blue-200/50'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
                       }`}>
                         {currentPolo?.is_matriz ? 'Matriz' : 'Polo'}
                       </span>
                     </span>
-                    <span className="block truncate text-[9px] font-bold text-slate-500 uppercase tracking-wide mt-0.5">
+                    <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
                       {formatPoloDetails(currentPolo)}
                     </span>
                   </span>
                   <ChevronDown
-                    size={15}
+                    size={14}
                     className={`text-slate-400 flex-shrink-0 transition-transform ${visiblePolos.length <= 1 ? 'opacity-0' : ''} ${
                       isPoloSelectorOpen ? 'rotate-180' : ''
                     }`}
@@ -883,30 +883,30 @@ const GestorPage: React.FC = () => {
                           onClick={() => handlePoloChange(polo.id)}
                           className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${
                             isSelected
-                              ? 'bg-blue-50 text-blue-900'
+                              ? 'bg-blue-50/60 text-blue-900'
                               : 'text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          <span className="flex items-center gap-2">
+                          <span className="flex items-center gap-3">
                             <span
                               className={`h-2 w-2 flex-shrink-0 rounded-full ${
                                 isSelected ? 'bg-blue-600' : 'bg-slate-300'
                               }`}
                             />
-                            <span className="min-w-0">
+                            <span className="min-w-0 flex-1">
                               <span className="flex min-w-0 items-center gap-2">
-                                <span className="truncate text-xs font-extrabold uppercase tracking-wide">
+                                <span className={`truncate text-xs tracking-tight ${isSelected ? 'font-bold text-blue-900' : 'font-semibold text-slate-700'}`}>
                                   {polo.nome}
                                 </span>
-                                <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-[7px] font-black uppercase tracking-widest ${
+                                <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
                                   polo.is_matriz
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-slate-200 text-slate-600'
+                                    ? 'bg-blue-100/50 text-blue-700'
+                                    : 'bg-slate-200/50 text-slate-600'
                                 }`}>
                                   {polo.is_matriz ? 'Matriz' : 'Polo'}
                                 </span>
                               </span>
-                              <span className="block truncate text-[9px] font-bold text-slate-500 uppercase tracking-wide mt-0.5">
+                              <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
                                 {formatPoloDetails(polo)}
                               </span>
                             </span>
