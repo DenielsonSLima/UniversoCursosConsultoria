@@ -30,8 +30,7 @@ import {
   FileSignature,
   Building,
   MessageSquare,
-  Lock,
-  Landmark
+  Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -63,7 +62,6 @@ import EnsinoSuperiorPage from './cadastros/ensino-superior/EnsinoSuperiorPage';
 import CursosEspecializacaoPage from './cadastros/cursos-especializacao/CursosEspecializacaoPage';
 import ChecklistEstagioPage from './cadastros/checklist-estagio/ChecklistEstagioPage';
 import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
-import PlanejamentoTributarioPage from './cadastros/tributario/PlanejamentoTributarioPage';
 
 import { loginService } from '../login/login.service';
 import ConfirmModal from '../shared/components/ConfirmModal';
@@ -77,7 +75,6 @@ const MOCK_SEARCH_DATA = [
   { id: 5, type: 'module', title: 'Emitir Declaração', subtitle: 'Acesso rápido à Secretaria', module: 'secretaria' },
   { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Cadastros', module: 'cadastros-alunos' },
   { id: 7, type: 'partner', title: 'Prefeitura de Japoatã', subtitle: 'Convênio Ativo', module: 'parceiros' },
-  { id: 8, type: 'module', title: 'Planejamento Tributário', subtitle: 'Regras, anexos e enquadramentos', module: 'cadastros-tributario' },
 ];
 
 const formatPoloLocation = (polo: any) =>
@@ -92,7 +89,6 @@ const POLO_CADASTROS_ALLOWED = new Set([
   'cadastros-especializacao',
   'cadastros-livres',
   'cadastros-superior',
-  'cadastros-tributario',
 ]);
 
 const GestorPage: React.FC = () => {
@@ -448,7 +444,6 @@ const GestorPage: React.FC = () => {
     { id: 'cadastros-livres', label: 'Cursos Livres', icon: <Zap size={16} /> },
     { id: 'cadastros-tecnicos', label: 'Cursos Técnicos', icon: <Briefcase size={16} /> },
     { id: 'cadastros-superior', label: 'Ensino Superior', icon: <Building size={16} /> },
-    { id: 'cadastros-tributario', label: 'Planejamento Tributário', icon: <Landmark size={16} /> },
     { id: 'cadastros-ficha', label: 'Ficha Matrícula', icon: <FileSignature size={16} /> },
     { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
   ];
@@ -512,7 +507,6 @@ const GestorPage: React.FC = () => {
       case 'cadastros-livres': return <CursosLivresPage readOnly={!isMatrizSelected} />;
       case 'cadastros-tecnicos': return <CursosTecnicosPage />;
       case 'cadastros-superior': return <EnsinoSuperiorPage readOnly={!isMatrizSelected} />;
-      case 'cadastros-tributario': return <PlanejamentoTributarioPage />;
       case 'cadastros-ficha': return <FichaMatriculaPage />;
       case 'cadastros-modelos': return <ModelosDocumentosPage />;
       case 'gestao': return (
