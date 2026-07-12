@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Settings, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle, MessageCircle, Plus, Info, UserRound } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import ComunicacaoConfig from './components/ComunicacaoConfig';
+import WhatsAppCommunicationPanel from './components/WhatsAppCommunicationPanel';
+import StartInternalConversationModal, { InternalConversationContact } from './components/StartInternalConversationModal';
 import ToastNotification, { useToast } from '../components/ToastNotification';
 import { PortalAuthProfile } from '../../login/portal-session';
 
@@ -66,6 +68,7 @@ const playMessageSound = (tone: 'send' | 'receive') => {
 
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
   const { toasts, removeToast, toast } = useToast();
+  const [channelTab, setChannelTab] = useState<'interna' | 'whatsapp'>('interna');
   const [mainTab, setMainTab] = useState<'tickets' | 'config'>('tickets');
   const [activeTicketStatus, setActiveTicketStatus] = useState<'pendente' | 'solucionada'>('pendente');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
@@ -82,6 +85,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
   const [messageText, setMessageText] = useState('');
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [showStartConversation, setShowStartConversation] = useState(false);
 
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -374,6 +378,109 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
     }
   };
 
+  const handleStartInternalConversation = async (
+    contact: InternalConversationContact,
+    content: string,
+    categoryId: string | null
+  ) => {
+    const existingChat = chats.find((chat) =>
+      chat.remetente_id === contact.id && chat.status === 'pendente'
+    );
+
+    try {
+      if (existingChat) {
+        const { data: newMsg, error: msgErr } = await supabase
+          .from('comunicacao_mensagens')
+          .insert({
+            chat_id: existingChat.id,
+            remetente_id: gestorId,
+            remetente_nome: gestorNome,
+            remetente_tipo: 'gestor',
+            conteudo: content,
+          })
+          .select()
+          .single();
+        if (msgErr) throw msgErr;
+
+        const nextDate = new Date().toISOString();
+        const { error: chatErr } = await supabase
+          .from('comunicacao_chats')
+          .update({
+            categoria_id: categoryId || existingChat.categoria_id,
+            ultimo_texto: content,
+            ultima_data: nextDate,
+            updated_at: nextDate,
+          })
+          .eq('id', existingChat.id);
+        if (chatErr) throw chatErr;
+
+        setChats(prev => prev.map(chat => chat.id === existingChat.id
+          ? {
+              ...chat,
+              categoria_id: categoryId || chat.categoria_id,
+              ultimo_texto: content,
+              ultima_data: nextDate,
+              updated_at: nextDate,
+            }
+          : chat
+        ).sort((a, b) => new Date(b.ultima_data).getTime() - new Date(a.ultima_data).getTime()));
+        setMessages(prev => activeChatId === existingChat.id && newMsg && !prev.some(msg => msg.id === newMsg.id)
+          ? [...prev, newMsg]
+          : prev
+        );
+        setChannelTab('interna');
+        setMainTab('tickets');
+        setActiveTicketStatus('pendente');
+        setActiveChatId(existingChat.id);
+        playMessageSound('send');
+        toast.success('Atendimento aberto', `Conversa existente com ${contact.nome} foi atualizada.`);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const { data: chat, error: chatError } = await supabase
+        .from('comunicacao_chats')
+        .insert({
+          remetente_id: contact.id,
+          remetente_nome: contact.nome,
+          remetente_tipo: contact.tipo,
+          categoria_id: categoryId,
+          status: 'pendente',
+          ultimo_texto: content,
+          ultima_data: now,
+        })
+        .select()
+        .single();
+      if (chatError) throw chatError;
+
+      const { data: newMsg, error: messageError } = await supabase
+        .from('comunicacao_mensagens')
+        .insert({
+          chat_id: chat.id,
+          remetente_id: gestorId,
+          remetente_nome: gestorNome,
+          remetente_tipo: 'gestor',
+          conteudo: content,
+        })
+        .select()
+        .single();
+      if (messageError) throw messageError;
+
+      setChats(prev => prev.some(item => item.id === chat.id) ? prev : [chat, ...prev]);
+      setMessages(newMsg ? [newMsg] : []);
+      setChannelTab('interna');
+      setMainTab('tickets');
+      setActiveTicketStatus('pendente');
+      setActiveChatId(chat.id);
+      playMessageSound('send');
+      toast.success('Atendimento iniciado', `Conversa interna criada para ${contact.nome}.`);
+    } catch (err: any) {
+      console.error('Erro ao iniciar atendimento interno:', err);
+      toast.error('Erro ao iniciar atendimento', err?.message || 'Não foi possível criar a conversa.');
+      throw err;
+    }
+  };
+
   const handleTransferCategory = async (nextCategoryId: string) => {
     if (!activeChatId || !currentChat || !nextCategoryId || nextCategoryId === currentChat.categoria_id) return;
     const previousCategory = getCategoryInfo(currentChat.categoria_id).nome;
@@ -523,6 +630,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
 
   // Get active chat data
   const currentChat = chats.find(c => c.id === activeChatId);
+  const pendingCount = chats.filter(chat => chat.status === 'pendente').length;
+  const solvedCount = chats.filter(chat => chat.status === 'solucionada').length;
 
   // Filtered chats list
   const filteredChats = chats.filter(c => {
@@ -550,54 +659,95 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+    <div className="flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm animate-fadeIn antialiased">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      <StartInternalConversationModal
+        open={showStartConversation}
+        categories={categories}
+        onClose={() => setShowStartConversation(false)}
+        onStart={handleStartInternalConversation}
+      />
       
       {/* Top Header & Navigation Tabs */}
-      <div className="bg-white px-6 py-4 border-b border-slate-150 flex justify-between items-center shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <MessageSquare size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Central de Comunicação</h1>
-            <p className="text-xs text-slate-400 font-medium">Atendimentos internos em tempo real</p>
+            <h1 className="text-xl font-bold tracking-tight text-[#001a33]">Central de Comunicação</h1>
+            <p className="text-xs font-medium text-slate-400">
+              {channelTab === 'interna' ? `${pendingCount} em aberto, ${solvedCount} solucionadas` : 'Conversas e mensagens externas via WhatsApp'}
+            </p>
           </div>
         </div>
 
-        <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl">
-          <button
-            onClick={() => setMainTab('tickets')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-              mainTab === 'tickets' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <MessageSquare size={14} /> Atendimentos
-          </button>
-          <button
-            onClick={() => setMainTab('config')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-              mainTab === 'config' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Settings size={14} /> Configurações
-          </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1">
+            <button
+              onClick={() => setChannelTab('interna')}
+              className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
+                channelTab === 'interna' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <MessageSquare size={14} /> Interna
+            </button>
+            <button
+              onClick={() => setChannelTab('whatsapp')}
+              className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
+                channelTab === 'whatsapp' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-emerald-700'
+              }`}
+            >
+              <MessageCircle size={14} /> WhatsApp
+            </button>
+          </div>
+
+          {channelTab === 'interna' && (
+            <div className="flex gap-1.5 rounded-2xl bg-slate-100 p-1">
+              <button
+                onClick={() => setMainTab('tickets')}
+                className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
+                  mainTab === 'tickets' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <MessageSquare size={14} /> Atendimentos
+              </button>
+              <button
+                onClick={() => setMainTab('config')}
+                className={`flex min-h-[40px] items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wide transition-all ${
+                  mainTab === 'config' ? 'bg-[#001a33] text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Settings size={14} /> Configurações
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
         
-        {mainTab === 'config' ? (
+        {channelTab === 'whatsapp' ? (
+          <WhatsAppCommunicationPanel />
+        ) : mainTab === 'config' ? (
           <ComunicacaoConfig />
         ) : (
           <>
             {/* Sidebar: Tickets list */}
-            <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50/50 shrink-0">
+            <div className="w-[360px] border-r border-slate-200 flex flex-col bg-white shrink-0">
               
               {/* Ticket Status Selectors */}
-              <div className="p-4 border-b border-slate-200 bg-white space-y-4">
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+              <div className="space-y-3 border-b border-slate-100 bg-white p-4">
+                <button
+                  onClick={() => setShowStartConversation(true)}
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-4 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-blue-900"
+                >
+                  <Plus size={15} />
+                  Iniciar conversa
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => {
                       setActiveTicketStatus('pendente');
@@ -605,11 +755,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                       const matches = chats.filter(c => c.status === 'pendente');
                       if (matches.length > 0) setActiveChatId(matches[0].id);
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
-                      activeTicketStatus === 'pendente' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-amber-600'
+                    className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${
+                      activeTicketStatus === 'pendente' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-amber-600'
                     }`}
                   >
-                    <Clock size={14} /> Pendentes
+                    <Clock size={14} /> Abertas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{pendingCount}</span>
                   </button>
                   <button 
                     onClick={() => {
@@ -617,11 +767,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                       const matches = chats.filter(c => c.status === 'solucionada');
                       if (matches.length > 0) setActiveChatId(matches[0].id);
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
-                      activeTicketStatus === 'solucionada' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-emerald-600'
+                    className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${
+                      activeTicketStatus === 'solucionada' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-emerald-600'
                     }`}
                   >
-                    <CheckCircle size={14} /> Solucionadas
+                    <CheckCircle size={14} /> Resolvidas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{solvedCount}</span>
                   </button>
                 </div>
 
@@ -630,10 +780,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                   <div className="relative">
                     <input 
                       type="text" 
-                      placeholder="Buscar por nome..."
+                      placeholder="Buscar conversa..."
                       value={searchText}
                       onChange={(e) => setSearchText(e.target.value)}
-                      className="w-full bg-slate-100 border border-transparent focus:border-blue-500 outline-none rounded-xl pl-9 pr-3 py-2 text-xs font-bold text-slate-700 transition-all"
+                      className="h-11 w-full rounded-2xl border border-slate-100 bg-slate-50 pl-9 pr-3 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-200 focus:bg-white"
                     />
                     <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
@@ -642,9 +792,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                     <select
                       value={selectedCategoryFilter}
                       onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                      className="w-full appearance-none bg-slate-100 border border-transparent outline-none rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-slate-700 cursor-pointer"
+                      className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-transparent bg-slate-50 pl-9 pr-8 text-xs font-semibold text-slate-600 outline-none transition-colors hover:bg-slate-100"
                     >
-                      <option value="todos">Todas Categorias</option>
+                      <option value="todos">Todas as categorias</option>
                       {categories.map(c => (
                         <option key={c.id} value={c.id}>{c.nome}</option>
                       ))}
@@ -661,10 +811,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                     <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 ) : filteredChats.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 px-4">
-                    <MessageSquare size={24} className="mx-auto text-slate-350 mb-2" />
-                    <p className="text-[10px] font-black uppercase tracking-widest">Nenhum atendimento</p>
-                    <p className="text-[9px] mt-0.5">Use o Simulador na aba Configurações para abrir atendimentos de teste.</p>
+                  <div className="px-6 py-12 text-center">
+                    <MessageSquare size={26} className="mx-auto mb-3 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-600">Nenhuma conversa</p>
+                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-400">Inicie uma conversa com um aluno ou altere o filtro.</p>
                   </div>
                 ) : (
                   filteredChats.map(chat => {
@@ -675,11 +825,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                       <button 
                         key={chat.id}
                         onClick={() => setActiveChatId(chat.id)}
-                        className={`w-full flex items-start gap-3 p-3 rounded-2xl text-left transition-all ${
-                          isSelected ? 'bg-white shadow-sm border border-slate-200' : 'hover:bg-slate-100 border border-transparent'
+                        className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all border ${
+                          isSelected ? 'bg-blue-50/80 shadow-sm border-blue-100' : 'hover:bg-slate-50 border-transparent'
                         }`}
                       >
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-sm ${
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm ${
                           chat.remetente_tipo === 'Professor' ? 'bg-purple-600' : 'bg-blue-600'
                         }`}>
                           {chat.remetente_nome.slice(0, 2).toUpperCase()}
@@ -687,26 +837,26 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-baseline mb-0.5">
-                            <h4 className="font-bold truncate text-xs text-[#001a33] flex items-center gap-1.5">
+                            <h4 className="font-bold truncate text-sm text-[#001a33] flex items-center gap-1.5">
                               {chat.remetente_nome}
                               {unreadChatIds.has(chat.id) && (
                                 <span className="w-2 h-2 bg-red-500 rounded-full shrink-0 animate-pulse" />
                               )}
                             </h4>
-                            <span className="text-[9px] text-slate-400 font-bold shrink-0">{formatTime(chat.ultima_data)}</span>
+                            <span className="text-[10px] text-slate-400 font-medium shrink-0">{formatTime(chat.ultima_data)}</span>
                           </div>
                           
-                          <p className="text-[10px] text-slate-500 truncate font-medium">
+                          <p className="text-xs text-slate-500 truncate font-medium">
                             {chat.ultimo_texto || 'Sem mensagens...'}
                           </p>
 
                           <div className="flex items-center gap-1.5 mt-2">
                              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: catInfo.cor }}></div>
-                             <span className="text-[8px] text-slate-400 font-black uppercase tracking-wider">Setor: {catInfo.nome}</span>
-                             <span className="text-[8px] text-slate-300 font-medium">|</span>
-                             <span className={`text-[8px] font-black uppercase tracking-wider ${
+                             <span className="text-[10px] text-slate-400 font-semibold">Setor: {catInfo.nome}</span>
+                             <span className="text-[10px] text-slate-300 font-medium">|</span>
+                             <span className={`text-[10px] font-bold ${
                                chat.remetente_tipo === 'Professor' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
-                             } px-1 rounded`}>
+                             } px-2 py-0.5 rounded-full`}>
                                {chat.remetente_tipo}
                              </span>
                           </div>
@@ -723,28 +873,28 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
               <div className="flex-1 flex flex-col bg-white">
                 
                 {/* Chat Topbar */}
-                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white shadow-sm z-10">
+                <div className="min-h-[72px] border-b border-slate-100 flex justify-between items-center bg-white px-5 z-10">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white ${
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white ${
                       currentChat.remetente_tipo === 'Professor' ? 'bg-purple-600' : 'bg-blue-600'
                     }`}>
                       {currentChat.remetente_nome.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-[#001a33] flex items-center gap-2">
                         {currentChat.remetente_nome}
-                        <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           currentChat.remetente_tipo === 'Professor' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-blue-50 text-blue-600 border border-blue-100'
                         }`}>
                           {currentChat.remetente_tipo}
                         </span>
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] uppercase font-black text-slate-500 tracking-wider flex items-center gap-1">
+                        <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
                           <Tag size={9} /> Setor: {getCategoryInfo(currentChat.categoria_id).nome}
                         </span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className={`text-[9px] uppercase font-black tracking-wider flex items-center gap-1 ${
+                        <span className={`text-[11px] font-semibold flex items-center gap-1 ${
                           currentChat.status === 'pendente' ? 'text-amber-500' : 'text-emerald-500'
                         }`}>
                           {currentChat.status === 'pendente' ? <Clock size={9} /> : <CheckCircle size={9} />}
@@ -761,7 +911,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                         <select
                           value={currentChat.categoria_id || ''}
                           onChange={(event) => handleTransferCategory(event.target.value)}
-                          className="h-9 appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none transition-colors hover:bg-white focus:border-blue-500"
+                          className="h-10 appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-xs font-semibold text-slate-600 outline-none transition-colors hover:bg-white focus:border-blue-500"
                         >
                           <option value="" disabled>Transferir setor</option>
                           {categories.filter(category => category.ativo).map(category => (
@@ -774,9 +924,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                     {currentChat.status === 'pendente' && (
                       <button 
                         onClick={handleMarkAsSolved}
-                        className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                        className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
                       >
-                        <CheckCircle size={12} /> Finalizar Atendimento
+                        <CheckCircle size={12} /> Finalizar
                       </button>
                     )}
                     <button
@@ -790,7 +940,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                 </div>
 
                 {/* Messages Display */}
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-50/50 space-y-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-5 bg-[#f7f9fb] space-y-3 custom-scrollbar">
                   {loadingMessages ? (
                     <div className="flex justify-center items-center py-20">
                       <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -803,7 +953,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                       if (isSystem) {
                         return (
                           <div key={msg.id} className="flex justify-center my-6">
-                            <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-inner flex items-center gap-1">
+                            <span className="bg-white border border-slate-200 text-slate-500 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
                               <Sparkles size={9} /> {msg.conteudo}
                             </span>
                           </div>
@@ -816,7 +966,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                           className={`flex items-end gap-2 ${isGestor ? 'justify-end' : 'justify-start'}`}
                         >
                           {!isGestor && (
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0 ${
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
                               currentChat.remetente_tipo === 'Professor' ? 'bg-purple-500' : 'bg-blue-500'
                             }`}>
                               {msg.remetente_nome.slice(0, 2).toUpperCase()}
@@ -858,17 +1008,17 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                             )}
                             {/* Text */}
                             {msg.conteudo && !msg.conteudo.startsWith('📎') && (
-                              <div className="px-3 pt-2 pb-1">
-                                <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
+                              <div className="px-3.5 pt-2.5 pb-1">
+                                <p className={`text-[10px] font-semibold mb-1 ${
                                   isGestor ? 'text-blue-300' : 'text-blue-600'
                                 }`}>
                                   {msg.remetente_nome}
                                 </p>
-                                <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
+                                <p className="text-sm font-medium leading-relaxed break-words">{msg.conteudo}</p>
                               </div>
                             )}
                             <div className={`flex items-center justify-end px-3 pb-1.5 ${ msg.conteudo && !msg.conteudo.startsWith('📎') ? '' : 'pt-1.5' }`}>
-                              <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
+                              <span className="text-[10px] font-medium text-slate-400">{formatTime(msg.created_at)}</span>
                             </div>
                           </div>
                         </div>
@@ -879,11 +1029,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                 </div>
 
                 {/* Messages Input Box */}
-                <div className="shrink-0 border-t border-slate-200 bg-white">
+                <div className="shrink-0 border-t border-slate-100 bg-white">
                   {currentChat.status === 'solucionada' ? (
                     <div className="px-4 py-4">
-                      <div className="text-center bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                        <CheckCircle size={12} /> Esta solicitação já foi finalizada.
+                      <div className="text-center bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-2">
+                        <CheckCircle size={12} /> Atendimento finalizado.
                       </div>
                     </div>
                   ) : (
@@ -926,22 +1076,21 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                            placeholder="Escreva sua resposta..."
-                            className="w-full bg-transparent border-none outline-none text-xs text-slate-700 py-3 font-medium"
+                            placeholder="Escreva uma mensagem..."
+                            className="w-full bg-transparent border-none outline-none text-sm text-slate-700 py-3 font-medium placeholder:text-slate-400"
                           />
                         </div>
 
                         <button 
                           onClick={handleSendMessage}
                           disabled={!messageText.trim() && !pendingFile || uploadingFile}
-                          className="p-2.5 bg-[#001a33] text-white rounded-xl hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-40 shrink-0"
+                          className="p-2.5 bg-[#001a33] text-white rounded-full hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-40 shrink-0"
                         >
                           {uploadingFile
                             ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             : <Send size={16} />}
                         </button>
                       </div>
-                      <p className="text-[9px] text-slate-400 pl-12 font-medium">Aceita: imagens, PDF, Word, Excel, PowerPoint</p>
                     </div>
                   )}
                 </div>
@@ -952,7 +1101,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                 <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-300 mb-4 shadow-sm">
                   <MessageSquare size={30} />
                 </div>
-                <h3 className="text-lg font-black text-[#001a33] tracking-tight">Atendimento ao Usuário</h3>
+                <h3 className="text-lg font-bold text-[#001a33] tracking-tight">Atendimento ao usuário</h3>
                 <p className="text-slate-400 text-xs font-medium max-w-xs mt-1">
                   Selecione um chamado ao lado para iniciar a conversa em tempo real.
                 </p>
@@ -973,7 +1122,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
               </div>
 
               <div>
-                <h4 className="text-base font-black text-[#001a33] uppercase tracking-tight">Excluir Atendimento</h4>
+                <h4 className="text-base font-bold text-[#001a33] tracking-tight">Excluir atendimento</h4>
                 <p className="text-slate-500 text-xs mt-2 leading-relaxed">
                   Esta ação é <strong>irreversível</strong>. O atendimento, todas as mensagens
                   e <strong>todos os arquivos anexados</strong> serão permanentemente deletados.
@@ -985,14 +1134,14 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile }) => {
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deletingChat}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-widest rounded-xl transition-all"
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide rounded-xl transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleDeleteChat}
                   disabled={deletingChat}
-                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wide rounded-xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {deletingChat
                     ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

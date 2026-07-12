@@ -209,7 +209,7 @@ const ProfessorPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+    <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
       
       {/* Sidebar - Desktop Layout */}
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">

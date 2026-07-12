@@ -61,7 +61,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
     { id: 'regras-cobranca', title: 'Regras de Cobrança', desc: 'Juros, multas e descontos', icon: <Percent size={24} />, color: 'bg-yellow-500' },
     { id: 'taxas-pagamento', title: 'Taxas e Formas Pgto', desc: 'Descontos de maquininhas', icon: <Calculator size={24} />, color: 'bg-fuchsia-500' },
-    { id: 'mensageria', title: 'Mensageria', desc: 'WhatsApp e E-mail', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
+    { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
     { id: 'api', title: 'Status da API', desc: 'Monitoramento de serviços', icon: <Server size={24} />, color: 'bg-violet-500' },

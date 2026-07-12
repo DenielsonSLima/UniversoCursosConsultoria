@@ -5,6 +5,175 @@
 
 ---
 
+## 2026-07-12 — Automação WhatsApp Separada por Evento Financeiro
+
+**O que foi feito:**
+- Remodelada a aba **Automações** do WhatsApp em cartões verticais separados: aviso de vencimento, aviso de recebimento, aviso de atraso e múltiplas parcelas em atraso.
+- O aviso de vencimento agora deixa claro que só deve disparar para aluno com parcela aberta/ainda não paga e mantém configuração de dias antes do vencimento.
+- O aviso de recebimento fica separado e representa a mensagem enviada na confirmação/baixa do pagamento.
+- O aviso de atraso comum mantém dias após vencimento e texto próprio para parcela vencida.
+- Criada a regra **Múltiplas parcelas em atraso**, com quantidade mínima configurável de parcelas vencidas e template próprio usando `{{quantidade_parcelas}}` e `{{valor_total_atrasado}}`.
+- Diferenciada a leitura visual de cada regra: vencimento, recebimento, atraso e múltiplas parcelas agora usam cor, numeração, gatilho, público-alvo e variáveis próprias.
+- Aplicadas migrations remotas para os novos campos em `mensageria_config` e republicada a Edge Function `whatsapp-config` para persistir os novos templates.
+
+**Por quê:**
+- A tela anterior agrupava três comportamentos diferentes em um único bloco e só permitia personalizar o texto de atraso, dificultando entender quando cada aviso seria enviado.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `modules/gestor/configuracoes/mensageria/MensageriaConfig.tsx`
+- `modules/gestor/configuracoes/mensageria/mensageria.service.ts`
+- `supabase/functions/whatsapp-config/index.ts`
+- `supabase/migrations/20260712214000_whatsapp_automation_templates.sql`
+- `supabase/migrations/20260712221000_whatsapp_multiple_overdue_automation.sql`
+- `supabase/migrations/20260712222000_normalize_whatsapp_student_placeholders.sql`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Segurança dos Segredos WhatsApp Meta
+
+**O que foi feito:**
+- Criada e aplicada a migration `20260712174000_secure_whatsapp_meta_secrets.sql`, com RPCs `whatsapp_set_secret` e `whatsapp_get_secret` restritas ao `service_role` para armazenar tokens no Supabase Vault.
+- Movido o access token da Meta para o Vault e zerada a coluna `mensageria_config.wa_token`; a conferência remota retornou `token_removido_da_tabela=true` e `token_no_vault=true`.
+- Atualizada e republicada a Edge Function `whatsapp-send` (versão 3, `verify_jwt=true`) para ler `whatsapp_meta_access_token` via Vault/RPC, sem buscar token na tabela.
+- Criada e publicada a Edge Function `whatsapp-config` (versão 1, `verify_jwt=true`) para salvar configuração do WhatsApp e gravar/substituir tokens diretamente no Vault.
+- Ajustado `mensageria.service.ts` para chamar `whatsapp-config` ao salvar WhatsApp, impedindo novas gravações de token pela tela em `mensageria_config`.
+
+**Por quê:**
+- Tokens da Meta são segredos de servidor e não podem ficar disponíveis em tabela comum, payload público de configuração ou chamada direta do navegador.
+
+**Arquivos afetados:**
+- `modules/gestor/configuracoes/mensageria/mensageria.service.ts`
+- `supabase/functions/whatsapp-send/index.ts`
+- `supabase/functions/whatsapp-config/index.ts`
+- `supabase/migrations/20260712174000_secure_whatsapp_meta_secrets.sql`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Modal de Iniciar Conversa WhatsApp
+
+**O que foi feito:**
+- Removida a aba operacional **Iniciar conversa** do WhatsApp e substituída por botão direto que abre modal de busca.
+- O modal permite digitar e selecionar aluno, exibindo nome, CPF formatado, telefone formatado, e-mail, polo/cidade e campo de mensagem antes do envio.
+- O aluno deixa de ser selecionado automaticamente; a seleção acontece somente por clique do usuário.
+- Melhorado o tratamento de erro do envio WhatsApp para tentar exibir a mensagem real retornada pela Edge Function/Meta.
+- Adicionado aviso contextual sobre teste da Meta: destinatário precisa estar liberado no painel de teste e, fora da janela de atendimento, o envio inicial deve usar template aprovado.
+
+**Por quê:**
+- A aba separada confundia o fluxo principal. Para o usuário comum, iniciar conversa deve ser uma ação rápida a partir da caixa de conversas, com conferência clara dos dados do aluno.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Webhook e Caixa Real do WhatsApp
+
+**O que foi feito:**
+- Criada e aplicada a migration `20260712182000_whatsapp_conversations_and_webhook_events.sql` com as tabelas `whatsapp_conversas`, `whatsapp_mensagens` e `whatsapp_webhook_events`.
+- Criado módulo compartilhado `supabase/functions/_shared/whatsapp.ts` para normalização de telefone, vínculo com aluno, criação de conversa e gravação de mensagens.
+- Publicada a Edge Function `whatsapp-webhook` (versão 1, `verify_jwt=false`) para verificação GET da Meta e recebimento POST de mensagens/status.
+- Republicada a Edge Function `whatsapp-send` (versão 4, `verify_jwt=true`) para gravar mensagens enviadas na caixa externa.
+- Configurado o verify token temporário do webhook no Vault e testada a URL pública com `hub.challenge`, retornando corretamente o desafio de validação.
+- Modularizado o frontend WhatsApp em `components/whatsapp/` com `whatsapp.service.ts`, `whatsapp.types.ts`, `whatsapp.utils.ts` e `WhatsAppInbox.tsx`.
+- A tela WhatsApp agora lê conversas reais de `whatsapp_conversas`, histórico de `whatsapp_mensagens` e usa Realtime para atualizar a caixa.
+- Removidos botões grandes duplicados de iniciar conversa; ficou apenas o botão principal no topo e um ícone discreto na lista.
+
+**Por quê:**
+- O envio pela API não bastava para atendimento externo: respostas do aluno só entram no sistema quando a Meta chama um webhook publicado e esse webhook grava a conversa no banco.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `modules/gestor/comunicacao/components/whatsapp/WhatsAppInbox.tsx`
+- `modules/gestor/comunicacao/components/whatsapp/whatsapp.service.ts`
+- `modules/gestor/comunicacao/components/whatsapp/whatsapp.types.ts`
+- `modules/gestor/comunicacao/components/whatsapp/whatsapp.utils.ts`
+- `supabase/functions/_shared/whatsapp.ts`
+- `supabase/functions/whatsapp-send/index.ts`
+- `supabase/functions/whatsapp-webhook/index.ts`
+- `supabase/migrations/20260712182000_whatsapp_conversations_and_webhook_events.sql`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Iniciar Conversa no Módulo Comunicação
+
+**O que foi feito:**
+- Adicionado o fluxo **Iniciar conversa** no canal interno do módulo Comunicação, listando alunos diretamente do cadastro e criando/abrindo atendimento em `comunicacao_chats` sem exigir telefone.
+- O botão fica no painel de atendimentos internos; ao iniciar, grava a primeira mensagem do gestor em `comunicacao_mensagens`, seleciona o atendimento pendente e mantém o fluxo Supabase Realtime já existente.
+- Ajustado o canal WhatsApp para ter aba **Iniciar conversa** focada em alunos, com busca por aluno/telefone/CPF/cidade e envio externo usando o telefone do aluno.
+- Criada e publicada no Supabase remoto a Edge Function `whatsapp-send`, que valida gestor ativo, lê a configuração em `mensageria_config`, mantém o token fora do navegador e chama a Meta Cloud API `/messages`.
+- Confirmado que o módulo Parceiros não recebeu alteração funcional para esse fluxo.
+
+**Por quê:**
+- O fluxo de conversa deve pertencer ao módulo Comunicação. Atendimento interno não depende de telefone porque ocorre dentro do portal; WhatsApp depende do número do aluno e deve passar por backend seguro para usar a API oficial da Meta.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/ComunicacaoPage.tsx`
+- `modules/gestor/comunicacao/components/StartInternalConversationModal.tsx`
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `supabase/functions/whatsapp-send/index.ts`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Remodelagem Visual da Central de Comunicação
+
+**O que foi feito:**
+- Remodelada a hierarquia visual da Central de Comunicação para priorizar conversas, inspirada em uma caixa de entrada de WhatsApp clara.
+- A comunicação interna recebeu lista lateral mais legível, filtros com contadores, mensagens com bolhas maiores e campo de resposta mais parecido com mensageria.
+- A primeira aba do WhatsApp deixou de ser um painel de cards e passou a ser uma caixa de entrada com coluna de conversas, área central de chat e painel lateral de ações/status.
+- Reduzidos `font-black`, `tracking-widest` e microtextos no módulo Comunicação, aproximando o padrão tipográfico do Dashboard/Início do gestor.
+- Ajustadas também as telas auxiliares do módulo, incluindo modal de iniciar conversa, configurações e automações.
+
+**Por quê:**
+- A tela anterior misturava atendimento, configurações, API e indicadores financeiros no primeiro contato, deixando confuso onde ver conversas abertas e responder alunos. A nova estrutura deixa o uso diário mais direto: escolher conversa, responder e acionar tarefas secundárias quando necessário.
+
+**Arquivos afetados:**
+- `modules/gestor/comunicacao/ComunicacaoPage.tsx`
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `modules/gestor/comunicacao/components/StartInternalConversationModal.tsx`
+- `modules/gestor/comunicacao/components/ComunicacaoConfig.tsx`
+- `PROJETO_ALTERACOES.md`
+
+---
+
+## 2026-07-12 — Fase 1 da Integração WhatsApp Meta Cloud API
+
+**O que foi feito:**
+- Reorganizada a tela de Configurações > Mensageria para virar uma configuração dedicada de **WhatsApp Business API**.
+- Removida a aba de SMTP da tela de mensageria e adicionadas abas **Resumo** e **Configurar API**.
+- Adicionados campos próprios da Meta Cloud API: WABA ID, Phone Number ID, App ID, versão Graph API, número exibido, verify token do webhook, token de acesso, qualidade, limite de mensagens, moeda e saldo estimado.
+- Criado painel operacional em Comunicação com separação entre **Interna** e **WhatsApp**.
+- Mantido o fluxo interno atual de chamados aluno/professor sem alteração de comportamento.
+- Adicionada aba WhatsApp no módulo Comunicação com conversas, automações e lista de parcelas em atraso para disparo futuro.
+- Criada migração local `20260712170000_whatsapp_meta_messaging_config.sql` com os novos campos de configuração e regras de automação.
+
+**Por quê:**
+- O app da Meta já foi criado e o próximo passo é sair de uma configuração genérica de provedores não oficiais para uma base compatível com a documentação oficial da WhatsApp Business Platform.
+- O envio real precisa passar por Supabase Edge Function/webhook para proteger o token da Meta, registrar tentativas e receber mensagens/status por webhook.
+
+**Arquivos afetados:**
+- `modules/gestor/configuracoes/mensageria/MensageriaConfig.tsx`
+- `modules/gestor/configuracoes/mensageria/mensageria.service.ts`
+- `modules/gestor/configuracoes/mensageria/components/WhatsAppSummaryTab.tsx`
+- `modules/gestor/configuracoes/mensageria/components/WhatsAppApiConfigTab.tsx`
+- `modules/gestor/configuracoes/ConfiguracoesPage.tsx`
+- `modules/gestor/comunicacao/ComunicacaoPage.tsx`
+- `modules/gestor/comunicacao/components/WhatsAppCommunicationPanel.tsx`
+- `supabase/migrations/20260712170000_whatsapp_meta_messaging_config.sql`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+
+---
+
 ## 2026-07-03 — Otimização de URLs Canônicas para SEO (Google Search Console)
 
 **O que foi feito:**

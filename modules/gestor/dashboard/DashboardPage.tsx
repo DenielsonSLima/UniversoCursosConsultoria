@@ -104,7 +104,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
   const maxVal = Math.max(...chartData.map(d => Math.max(d.receitas, d.despesas)), 1000);
 
   return (
-    <div className="space-y-8 animate-fadeIn select-none">
+    <div className="space-y-8 animate-fadeIn antialiased select-none">
       
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

@@ -615,7 +615,7 @@ const GestorPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans overflow-hidden">
+    <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
       
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
         <div className="p-6 border-b border-white/10">

@@ -40,7 +40,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ professorId, professorNome, pol
   const turmasSemProximaAula = turmas.filter((turma) => !turma.proximaAula).length;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn antialiased">
       {/* Welcome Banner (Vibrant Purple-Petroleum Gradient for Teachers) */}
       <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-800 to-[#001a33] text-white rounded-3xl px-6 py-5 md:px-8 md:py-6 shadow-lg">
         <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>

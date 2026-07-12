@@ -336,7 +336,7 @@ const ComunicacaoConfig: React.FC = () => {
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl self-start mb-6 shrink-0">
         <button
           onClick={() => setActiveSubTab('welcome')}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
             activeSubTab === 'welcome' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'
           }`}
         >
@@ -344,7 +344,7 @@ const ComunicacaoConfig: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveSubTab('categories')}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
             activeSubTab === 'categories' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'
           }`}
         >
@@ -352,7 +352,7 @@ const ComunicacaoConfig: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveSubTab('simulator')}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
             activeSubTab === 'simulator' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-600'
           }`}
         >
@@ -365,7 +365,7 @@ const ComunicacaoConfig: React.FC = () => {
         {/* SUBTAB: MENSAGEM DE BOAS-VINDAS */}
         {activeSubTab === 'welcome' && (
           <div className="max-w-2xl bg-slate-50/50 border border-slate-100 rounded-3xl p-6 shadow-sm">
-            <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight mb-2">Mensagem de Boas-vindas</h3>
+            <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide mb-2">Mensagem de Boas-vindas</h3>
             <p className="text-xs text-slate-500 font-medium mb-6">
               Esta é a mensagem inicial exibida pelo atendente virtual (chatbot) assim que o aluno ou professor inicia um atendimento. Ela serve para instruí-lo a selecionar uma categoria de assunto.
             </p>
@@ -397,7 +397,7 @@ const ComunicacaoConfig: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Lista de Categorias */}
             <div className="lg:col-span-7 space-y-4">
-              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Categorias de Atendimento</h3>
+              <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide">Categorias de Atendimento</h3>
               <p className="text-xs text-slate-500 font-medium mb-4">
                 Configure os setores disponíveis para direcionamento automático de chamados.
               </p>
@@ -430,7 +430,7 @@ const ComunicacaoConfig: React.FC = () => {
 
             {/* Criar Categoria Form */}
             <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-3xl p-5 shadow-inner">
-              <h3 className="text-sm font-black text-[#001a33] uppercase tracking-wider mb-4">Nova Categoria</h3>
+              <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide mb-4">Nova Categoria</h3>
               <form onSubmit={handleAddCategory} className="space-y-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Nome do Setor</label>
@@ -490,7 +490,7 @@ const ComunicacaoConfig: React.FC = () => {
             
             {/* Esquerda: Instruções do Simulador */}
             <div className="md:col-span-6 space-y-4">
-              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide flex items-center gap-2">
                 <Smartphone size={20} className="text-blue-600 animate-bounce" /> Simulador de URA / Atendimento
               </h3>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -499,7 +499,7 @@ const ComunicacaoConfig: React.FC = () => {
               </p>
               
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl space-y-3">
-                <h4 className="text-xs font-black text-blue-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide flex items-center gap-1.5">
                   <Sparkles size={12} /> Como funciona?
                 </h4>
                 <ol className="list-decimal list-inside text-[11px] text-blue-700 font-medium space-y-1.5">
@@ -544,7 +544,7 @@ const ComunicacaoConfig: React.FC = () => {
               {simStep > 1 && (
                 <button
                   onClick={() => setSimStep(1)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors shadow-sm"
                 >
                   Voltar e Trocar Usuário
                 </button>
@@ -565,16 +565,16 @@ const ComunicacaoConfig: React.FC = () => {
                   <div className="bg-white border-b border-slate-200 py-3 px-4 flex items-center justify-between shadow-sm shrink-0">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider">Atendente Universo</span>
+                      <span className="text-[10px] font-bold text-slate-800 uppercase tracking-wide">Atendente Universo</span>
                     </div>
-                    <span className="text-[9px] font-medium text-slate-400">Online</span>
+                    <span className="text-[10px] font-medium text-slate-400">Online</span>
                   </div>
 
                   {/* Celular Chat Area */}
                   {simStep === 1 ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 bg-white">
                       <Smartphone size={32} className="text-slate-300 mb-3" />
-                      <p className="text-xs font-bold uppercase tracking-widest">Aguardando início</p>
+                      <p className="text-xs font-bold uppercase tracking-wide">Aguardando início</p>
                       <p className="text-[10px] text-slate-400 mt-1">Configure o personagem na esquerda e clique em Iniciar.</p>
                     </div>
                   ) : (
@@ -588,7 +588,7 @@ const ComunicacaoConfig: React.FC = () => {
                               isSelf ? 'align-self-end items-end self-end' : 'align-self-start items-start self-start'
                             }`}
                           >
-                            <span className="text-[8px] font-bold text-slate-400 mb-0.5 ml-1 px-1">{msg.remetente_nome}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 mb-0.5 ml-1 px-1">{msg.remetente_nome}</span>
                             <div
                               className={`p-2.5 rounded-xl text-[11px] leading-snug shadow-sm ${
                                 isSelf
@@ -605,7 +605,7 @@ const ComunicacaoConfig: React.FC = () => {
                       {/* Simulador Passo 2: Botões das Categorias */}
                       {simStep === 2 && (
                         <div className="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 mt-2 shadow-sm animate-fadeIn">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center border-b pb-1">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide text-center border-b pb-1">
                             Setores de Atendimento
                           </p>
                           <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -645,7 +645,7 @@ const ComunicacaoConfig: React.FC = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="text-center py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-lg">
+                      <div className="text-center py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide bg-slate-50 rounded-lg">
                         Chatbot Direcionando...
                       </div>
                     )}

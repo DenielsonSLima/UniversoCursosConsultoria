@@ -7,7 +7,31 @@ export interface MensageriaConfigData {
   waInstanceName?: string;
   waInstanceUrl?: string;
   waToken?: string;
+  waTokenConfigured?: boolean;
   waStatus?: string;
+  waBusinessAccountId?: string;
+  waPhoneNumberId?: string;
+  waDisplayPhoneNumber?: string;
+  waGraphVersion?: string;
+  waAppId?: string;
+  waWebhookVerifyToken?: string;
+  waAccountCurrency?: string;
+  waEstimatedBalance?: number;
+  waQualityRating?: string;
+  waMessagingLimit?: string;
+  waEnabled?: boolean;
+  waLastHealthCheckAt?: string;
+  waDueNoticeDays?: number;
+  waSendDueNotice?: boolean;
+  waDueNoticeTemplate?: string;
+  waSendPaymentReceipt?: boolean;
+  waPaymentReceiptTemplate?: string;
+  waSendOverdueNotice?: boolean;
+  waOverdueNoticeDays?: number;
+  waDefaultOverdueTemplate?: string;
+  waSendMultipleOverdueNotice?: boolean;
+  waMultipleOverdueMinInstallments?: number;
+  waMultipleOverdueTemplate?: string;
   smtpServer?: string;
   smtpPort?: string;
   smtpUser?: string;
@@ -30,7 +54,42 @@ export const mensageriaService = {
   async getConfig(tipo: 'whatsapp' | 'email'): Promise<MensageriaConfigData | null> {
     const { data, error } = await supabase
       .from('mensageria_config')
-      .select('*')
+      .select(`
+        id,
+        tipo,
+        wa_provider,
+        wa_instance_name,
+        wa_instance_url,
+        wa_status,
+        wa_business_account_id,
+        wa_phone_number_id,
+        wa_display_phone_number,
+        wa_graph_version,
+        wa_app_id,
+        wa_webhook_verify_token,
+        wa_account_currency,
+        wa_estimated_balance,
+        wa_quality_rating,
+        wa_messaging_limit,
+        wa_enabled,
+        wa_last_health_check_at,
+        wa_due_notice_days,
+        wa_send_due_notice,
+        wa_due_notice_template,
+        wa_send_payment_receipt,
+        wa_payment_receipt_template,
+        wa_send_overdue_notice,
+        wa_overdue_notice_days,
+        wa_default_overdue_template,
+        wa_send_multiple_overdue_notice,
+        wa_multiple_overdue_min_installments,
+        wa_multiple_overdue_template,
+        smtp_server,
+        smtp_port,
+        smtp_user,
+        smtp_sender_name,
+        smtp_sender_email
+      `)
       .eq('tipo', tipo)
       .maybeSingle();
 
@@ -47,8 +106,39 @@ export const mensageriaService = {
       waProvider: data.wa_provider,
       waInstanceName: data.wa_instance_name,
       waInstanceUrl: data.wa_instance_url,
-      waToken: data.wa_token,
+      waTokenConfigured: data.wa_status === 'configurado',
       waStatus: data.wa_status,
+      waBusinessAccountId: data.wa_business_account_id,
+      waPhoneNumberId: data.wa_phone_number_id,
+      waDisplayPhoneNumber: data.wa_display_phone_number,
+      waGraphVersion: data.wa_graph_version,
+      waAppId: data.wa_app_id,
+      waWebhookVerifyToken: data.wa_webhook_verify_token,
+      waAccountCurrency: data.wa_account_currency,
+      waEstimatedBalance: data.wa_estimated_balance === null || data.wa_estimated_balance === undefined
+        ? undefined
+        : Number(data.wa_estimated_balance),
+      waQualityRating: data.wa_quality_rating,
+      waMessagingLimit: data.wa_messaging_limit,
+      waEnabled: data.wa_enabled,
+      waLastHealthCheckAt: data.wa_last_health_check_at,
+      waDueNoticeDays: data.wa_due_notice_days === null || data.wa_due_notice_days === undefined
+        ? undefined
+        : Number(data.wa_due_notice_days),
+      waSendDueNotice: data.wa_send_due_notice,
+      waDueNoticeTemplate: data.wa_due_notice_template,
+      waSendPaymentReceipt: data.wa_send_payment_receipt,
+      waPaymentReceiptTemplate: data.wa_payment_receipt_template,
+      waSendOverdueNotice: data.wa_send_overdue_notice,
+      waOverdueNoticeDays: data.wa_overdue_notice_days === null || data.wa_overdue_notice_days === undefined
+        ? undefined
+        : Number(data.wa_overdue_notice_days),
+      waDefaultOverdueTemplate: data.wa_default_overdue_template,
+      waSendMultipleOverdueNotice: data.wa_send_multiple_overdue_notice,
+      waMultipleOverdueMinInstallments: data.wa_multiple_overdue_min_installments === null || data.wa_multiple_overdue_min_installments === undefined
+        ? undefined
+        : Number(data.wa_multiple_overdue_min_installments),
+      waMultipleOverdueTemplate: data.wa_multiple_overdue_template,
       smtpServer: data.smtp_server,
       smtpPort: data.smtp_port,
       smtpUser: data.smtp_user,
@@ -62,13 +152,48 @@ export const mensageriaService = {
    * Salva ou atualiza as configurações de mensageria
    */
   async saveConfig(tipo: 'whatsapp' | 'email', config: Partial<MensageriaConfigData>): Promise<boolean> {
+    if (tipo === 'whatsapp') {
+      const { error } = await supabase.functions.invoke('whatsapp-config', {
+        body: config,
+      });
+
+      if (error) {
+        console.error('Erro ao salvar config de whatsapp:', error);
+        throw new Error(error.message);
+      }
+
+      return true;
+    }
+
     const dbPayload: any = {
       tipo,
       wa_provider: config.waProvider,
       wa_instance_name: config.waInstanceName,
       wa_instance_url: config.waInstanceUrl,
-      wa_token: config.waToken,
       wa_status: config.waStatus,
+      wa_business_account_id: config.waBusinessAccountId,
+      wa_phone_number_id: config.waPhoneNumberId,
+      wa_display_phone_number: config.waDisplayPhoneNumber,
+      wa_graph_version: config.waGraphVersion,
+      wa_app_id: config.waAppId,
+      wa_webhook_verify_token: config.waWebhookVerifyToken,
+      wa_account_currency: config.waAccountCurrency,
+      wa_estimated_balance: config.waEstimatedBalance,
+      wa_quality_rating: config.waQualityRating,
+      wa_messaging_limit: config.waMessagingLimit,
+      wa_enabled: config.waEnabled,
+      wa_last_health_check_at: config.waLastHealthCheckAt,
+      wa_due_notice_days: config.waDueNoticeDays,
+      wa_send_due_notice: config.waSendDueNotice,
+      wa_due_notice_template: config.waDueNoticeTemplate,
+      wa_send_payment_receipt: config.waSendPaymentReceipt,
+      wa_payment_receipt_template: config.waPaymentReceiptTemplate,
+      wa_send_overdue_notice: config.waSendOverdueNotice,
+      wa_overdue_notice_days: config.waOverdueNoticeDays,
+      wa_default_overdue_template: config.waDefaultOverdueTemplate,
+      wa_send_multiple_overdue_notice: config.waSendMultipleOverdueNotice,
+      wa_multiple_overdue_min_installments: config.waMultipleOverdueMinInstallments,
+      wa_multiple_overdue_template: config.waMultipleOverdueTemplate,
       smtp_server: config.smtpServer,
       smtp_port: config.smtpPort,
       smtp_user: config.smtpUser,

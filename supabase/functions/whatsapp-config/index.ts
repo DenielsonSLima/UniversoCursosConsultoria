@@ -1,0 +1,120 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  requireGestorAtivo,
+  requireGestorGlobal,
+} from "../_shared/authz.ts";
+import {
+  buildCorsHeaders,
+  getClientIp,
+  isRateLimitExceeded,
+  json,
+} from "../_shared/http.ts";
+
+const trimOrNull = (value: unknown) => {
+  const text = String(value || "").trim();
+  return text || null;
+};
+
+const normalizeGraphVersion = (value: unknown) => {
+  const version = String(value || "v23.0").trim();
+  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
+};
+
+const numberOrNull = (value: unknown) => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+Deno.serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req);
+  const respondJson = (body: unknown, status = 200) => json(body, status, req);
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return respondJson({ error: "Metodo nao permitido." }, 405);
+
+  if (isRateLimitExceeded(`whatsapp-config:${getClientIp(req)}`, 20, 60000)) {
+    return respondJson({ error: "Muitas alteracoes em curto periodo. Aguarde alguns instantes." }, 429);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return respondJson({ error: "Ambiente Supabase incompleto para configurar WhatsApp." }, 500);
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  try {
+    const gestor = await requireGestorAtivo(req, admin);
+    requireGestorGlobal(gestor);
+
+    const body = await req.json();
+    const accessToken = trimOrNull(body.waToken);
+    if (accessToken) {
+      const { error: tokenError } = await admin.rpc("whatsapp_set_secret", {
+        p_secret_name: "whatsapp_meta_access_token",
+        p_secret_value: accessToken,
+      });
+      if (tokenError) throw tokenError;
+    }
+
+    const verifyToken = trimOrNull(body.waWebhookVerifyToken);
+    if (verifyToken) {
+      const { error: verifyTokenError } = await admin.rpc("whatsapp_set_secret", {
+        p_secret_name: "whatsapp_webhook_verify_token",
+        p_secret_value: verifyToken,
+      });
+      if (verifyTokenError) throw verifyTokenError;
+    }
+
+    const { error: upsertError } = await admin
+      .from("mensageria_config")
+      .upsert({
+        tipo: "whatsapp",
+        wa_provider: trimOrNull(body.waProvider) || "meta_cloud",
+        wa_instance_name: trimOrNull(body.waInstanceName),
+        wa_instance_url: trimOrNull(body.waInstanceUrl) || "https://graph.facebook.com",
+        wa_token: null,
+        wa_status: trimOrNull(body.waStatus) || (body.waEnabled ? "configurado" : "inativo"),
+        wa_business_account_id: trimOrNull(body.waBusinessAccountId),
+        wa_phone_number_id: trimOrNull(body.waPhoneNumberId),
+        wa_display_phone_number: trimOrNull(body.waDisplayPhoneNumber),
+        wa_graph_version: normalizeGraphVersion(body.waGraphVersion),
+        wa_app_id: trimOrNull(body.waAppId),
+        wa_webhook_verify_token: null,
+        wa_account_currency: trimOrNull(body.waAccountCurrency) || "BRL",
+        wa_estimated_balance: numberOrNull(body.waEstimatedBalance),
+        wa_quality_rating: trimOrNull(body.waQualityRating),
+        wa_messaging_limit: trimOrNull(body.waMessagingLimit),
+        wa_enabled: body.waEnabled === true,
+        wa_last_health_check_at: new Date().toISOString(),
+        wa_due_notice_days: Number(body.waDueNoticeDays || 3),
+        wa_send_due_notice: body.waSendDueNotice !== false,
+        wa_due_notice_template: trimOrNull(body.waDueNoticeTemplate) ||
+          "Ola {{nome_aluno}}, sua parcela de {{valor_fatura}} vence em {{data_vencimento}}. Para pagar, acesse: {{link_pagamento}}",
+        wa_send_payment_receipt: body.waSendPaymentReceipt !== false,
+        wa_payment_receipt_template: trimOrNull(body.waPaymentReceiptTemplate) ||
+          "Ola {{nome_aluno}}, recebemos seu pagamento de {{valor_fatura}} referente a {{descricao_fatura}}. Obrigado!",
+        wa_send_overdue_notice: body.waSendOverdueNotice !== false,
+        wa_overdue_notice_days: Number(body.waOverdueNoticeDays || 1),
+        wa_default_overdue_template: trimOrNull(body.waDefaultOverdueTemplate) ||
+          "Ola {{nome_aluno}}, identificamos uma parcela em atraso no valor de {{valor_fatura}}, vencida em {{data_vencimento}}. Regularize pelo link: {{link_pagamento}}",
+        wa_send_multiple_overdue_notice: body.waSendMultipleOverdueNotice !== false,
+        wa_multiple_overdue_min_installments: Math.max(Number(body.waMultipleOverdueMinInstallments || 2), 2),
+        wa_multiple_overdue_template: trimOrNull(body.waMultipleOverdueTemplate) ||
+          "Ola {{nome_aluno}}, identificamos {{quantidade_parcelas}} parcelas em atraso, totalizando {{valor_total_atrasado}}. Para regularizar, acesse: {{link_pagamento}}",
+      }, { onConflict: "tipo" });
+    if (upsertError) throw upsertError;
+
+    return respondJson({ ok: true });
+  } catch (error) {
+    console.error("whatsapp-config error:", error);
+    return respondJson({
+      error: error instanceof Error ? error.message : "Erro inesperado ao configurar WhatsApp.",
+    }, 400);
+  }
+});

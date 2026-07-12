@@ -361,7 +361,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 animate-fadeIn antialiased">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {/* KPI 1 */}
