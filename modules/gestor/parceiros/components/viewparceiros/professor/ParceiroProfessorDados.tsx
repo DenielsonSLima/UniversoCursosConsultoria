@@ -76,7 +76,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   // Helper para renderizar os campos
   const DisplayField = ({ label, value }: { label: string, value: any }) => (
     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
       <p className="font-medium text-[#001a33] mt-1">{value || <span className="text-slate-400 italic">Não informado</span>}</p>
     </div>
   );
@@ -86,7 +86,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
       {/* Dados Pessoais */}
       <section className="mb-12">
         <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-black text-[#001a33] tracking-tight">Dados Pessoais</h3>
+            <h3 className="text-lg font-bold text-[#001a33] tracking-tight">Dados Pessoais</h3>
             {!isEditing && (
                 <button 
                   onClick={() => setIsEditing(true)}
@@ -184,10 +184,10 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
 
       {/* Polos / Vínculos de Unidade */}
       <section className="mb-12">
-        <h3 className="text-lg font-black text-[#001a33] tracking-tight mb-6">Polos / Vínculos de Unidade</h3>
+        <h3 className="text-lg font-bold text-[#001a33] tracking-tight mb-6">Polos / Vínculos de Unidade</h3>
         {isEditing ? (
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 ml-0.5">Polos Vinculados (Selecione um ou mais)</label>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2 ml-0.5">Polos Vinculados (Selecione um ou mais)</label>
             <div className="flex flex-wrap gap-3 mt-1">
               {polosList.map((poloItem) => {
                 const isSelected = (formData.poloIds || []).includes(poloItem.id);
@@ -248,7 +248,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
 
       {/* Endereço */}
       <section className="mb-12">
-        <h3 className="text-lg font-black text-[#001a33] tracking-tight mb-6">Endereço</h3>
+        <h3 className="text-lg font-bold text-[#001a33] tracking-tight mb-6">Endereço</h3>
         {isEditing ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1 space-y-2">

@@ -77,7 +77,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
   const DisplayField = ({ label, value }: { label: string, value?: string }) => (
     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</span>
+      <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{label}</span>
       <span className="block text-slate-800 font-medium">{value || '-'}</span>
     </div>
   );
@@ -166,7 +166,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
         {/* Identificação Principal */}
         <div className="flex-1 space-y-6">
-          <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Informações Pessoais</h4>
+          <h4 className="text-sm font-bold text-[#001a33] uppercase tracking-wide border-b border-slate-100 pb-2">Informações Pessoais</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isEditing ? (
               <>
@@ -228,7 +228,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
       {/* Filiação */}
       <div className="space-y-6 pt-6">
-        <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Filiação</h4>
+        <h4 className="text-sm font-bold text-[#001a33] uppercase tracking-wide border-b border-slate-100 pb-2">Filiação</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {isEditing ? (
             <>
@@ -252,7 +252,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
       {/* Responsável financeiro */}
       <div className="space-y-6 pt-6">
-        <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Responsável legal e financeiro</h4>
+        <h4 className="text-sm font-bold text-[#001a33] uppercase tracking-wide border-b border-slate-100 pb-2">Responsável legal e financeiro</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {isEditing ? (
             <>
@@ -299,7 +299,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
       {/* Documentação Civil */}
       <div className="space-y-6 pt-6">
-        <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Documentação Civil</h4>
+        <h4 className="text-sm font-bold text-[#001a33] uppercase tracking-wide border-b border-slate-100 pb-2">Documentação Civil</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {isEditing ? (
             <>
@@ -352,7 +352,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({ aluno, onChange
 
       {/* Contato e Endereço */}
       <div className="space-y-6 pt-6">
-        <h4 className="text-sm font-black text-[#001a33] uppercase tracking-wider border-b border-slate-100 pb-2">Contato e Endereço</h4>
+        <h4 className="text-sm font-bold text-[#001a33] uppercase tracking-wide border-b border-slate-100 pb-2">Contato e Endereço</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {isEditing ? (
             <>

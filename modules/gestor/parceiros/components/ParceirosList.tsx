@@ -80,7 +80,7 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
       {items.length > 0 && (
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
         <div className="mb-4 md:mb-0">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
             Exibindo <span className="text-[#001a33]">{(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, items.length)}</span> de <span className="text-[#001a33]">{items.length}</span> resultados
           </p>
         </div>

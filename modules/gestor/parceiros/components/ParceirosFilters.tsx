@@ -117,8 +117,8 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
       <div className="rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="px-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Filtro de alunos</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-500">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Filtro de alunos</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-500">
               Selecione uma ou mais modalidades para listar alunos vinculados. Ex.: EAD + Técnico.
             </p>
           </div>
@@ -126,7 +126,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
             <button
               type="button"
               onClick={onClearAlunoModalidades}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                 !hasAlunoModalidadeFilter
                   ? 'border-[#001a33] bg-[#001a33] text-white'
                   : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -143,7 +143,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
                   key={id}
                   type="button"
                   onClick={() => onToggleAlunoModalidade?.(id)}
-                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                     active
                       ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-900/15'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'

@@ -23,7 +23,7 @@ const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','P
 
 const Field: React.FC<{ label: string; value?: string | null; mono?: boolean }> = ({ label, value, mono }) => (
   <div>
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
     <p className={`text-sm font-semibold text-[#001a33] ${mono ? 'font-mono' : ''}`}>
       {value || <span className="text-slate-300 italic font-normal">Não informado</span>}
     </p>
@@ -31,7 +31,7 @@ const Field: React.FC<{ label: string; value?: string | null; mono?: boolean }> 
 );
 
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-amber-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
-const labelCls = 'block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5';
+const labelCls = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
 
 const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBack }) => {
   const [activeTab, setActiveTab] = useState<TabPF>('dados');

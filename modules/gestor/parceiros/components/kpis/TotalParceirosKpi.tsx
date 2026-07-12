@@ -16,11 +16,11 @@ const TotalParceirosKpi: React.FC<TotalParceirosKpiProps> = ({ total, ativos }) 
             <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
                 <Building2 size={18} className="text-blue-300" />
             </div>
-            <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">Total de Parceiros</p>
+            <p className="text-blue-200 text-xs font-medium">Total de Parceiros</p>
         </div>
         <div className="flex items-end justify-between">
-          <h3 className="text-3xl font-black tracking-tight leading-none">{total}</h3>
-          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-lg">
+          <h3 className="text-3xl font-bold tracking-tight leading-none">{total}</h3>
+          <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-lg">
             <TrendingUp size={12} /> {ativos} Ativos
           </span>
         </div>

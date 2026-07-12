@@ -147,9 +147,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={16} className="text-[#4169E1]" />
-            <span className="text-xs font-bold text-[#4169E1] uppercase tracking-[0.2em]">Módulo Gestão</span>
+            <span className="text-xs font-semibold text-[#4169E1] tracking-wide">Módulo Gestão</span>
           </div>
-          <h2 className="text-4xl font-black text-[#001a33] uppercase tracking-tighter">
+          <h2 className="text-3xl font-bold text-[#001a33]">
             Parceiros & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4169E1] to-[#003366]">Convênios</span>
           </h2>
           <p className="text-slate-500 font-medium mt-2 max-w-lg">
@@ -160,7 +160,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-slate-700 px-6 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-slate-50 hover:text-blue-600 transition-all border border-slate-200 shadow-sm"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-slate-700 px-6 py-3 rounded-2xl font-semibold text-xs hover:bg-slate-50 hover:text-blue-600 transition-all border border-slate-200 shadow-sm"
           >
             <Download size={16} />
             Exportar
@@ -168,7 +168,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
 
           <button
             onClick={() => setShowForm('selection')}
-            className="group relative flex-1 md:flex-none px-6 md:px-8 py-4 bg-[#001a33] text-white rounded-2xl font-bold uppercase tracking-widest text-xs overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-blue-900/20 transition-all hover:-translate-y-1"
+            className="group relative flex-1 md:flex-none px-6 md:px-8 py-3 bg-[#001a33] text-white rounded-2xl font-semibold text-xs overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-blue-900/20 transition-all hover:-translate-y-1"
           >
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-[#001a33] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="relative flex items-center justify-center gap-3">
@@ -208,9 +208,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold transition-all ${
                 activeTab === id
-                  ? 'bg-[#001a33] text-white shadow-lg'
+                  ? 'bg-[#001a33] text-white shadow-lg font-bold'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >

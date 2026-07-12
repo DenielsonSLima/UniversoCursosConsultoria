@@ -19,19 +19,19 @@ const AlunosKpi: React.FC<AlunosKpiProps> = ({ total, ativos, inativos }) => {
           <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
              <GraduationCap size={18} />
           </div>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Desc. Alunos</p>
+          <p className="text-slate-500 text-xs font-medium">Desc. Alunos</p>
         </div>
-        <h3 className="text-3xl font-black text-[#001a33] leading-none">{total}</h3>
+        <h3 className="text-3xl font-bold text-[#001a33] leading-none">{total}</h3>
       </div>
       
       <div className="relative z-10 flex items-center gap-5 mt-auto border-t border-slate-50 pt-3">
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Ativos</span>
+          <span className="text-[10px] text-slate-400 font-medium mb-0.5">Ativos</span>
           <span className="text-sm font-bold text-emerald-600 leading-none">{ativos}</span>
         </div>
         <div className="w-px h-6 bg-slate-100"></div>
         <div className="flex flex-col">
-           <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Inativos</span>
+           <span className="text-[10px] text-slate-400 font-medium mb-0.5">Inativos</span>
            <span className="text-sm font-bold text-slate-400 leading-none">{inativos}</span>
         </div>
       </div>

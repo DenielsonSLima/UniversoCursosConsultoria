@@ -80,13 +80,13 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
             <div className="absolute right-0 top-8 w-44 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-900/10 z-50 overflow-hidden animate-fadeIn">
               <button
                 onClick={() => { setMenuOpen(false); onClick?.(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors uppercase tracking-wide"
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Edit3 size={13} className="text-slate-400" /> Ver / Editar
               </button>
               <button
                 onClick={() => { setMenuOpen(false); toggleStatusMutation.mutate(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors uppercase tracking-wide"
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 {isAtivo
                   ? <><ToggleLeft size={13} className="text-orange-400" /> Inativar</>
@@ -96,7 +96,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
               <div className="h-px bg-slate-100 mx-3" />
               <button
                 onClick={() => { setMenuOpen(false); onDelete?.(); }}
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors uppercase tracking-wide"
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors"
               >
                 <Trash2 size={13} /> Excluir
               </button>
@@ -107,13 +107,13 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 mb-3 relative z-10">
-        <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
           isAtivo ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'
         }`}>
           {isAtivo ? 'Ativo' : 'Inativo'}
         </span>
         {data.tipoPj && (
-          <span className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-widest rounded-full border border-slate-200">
+          <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-full border border-slate-200">
             <Tag size={9} />{data.tipoPj}
           </span>
         )}
@@ -141,7 +141,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
         )}
         {data.responsavelNome && (
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase">Contato:</span>
+            <span className="text-[10px] font-semibold text-slate-400">Contato:</span>
             <span className="truncate font-medium text-slate-600">{data.responsavelNome}</span>
           </div>
         )}
@@ -150,7 +150,7 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between relative z-10">
         <span className="text-[10px] text-slate-400 font-medium">{data.poloNome || 'Geral'}</span>
-        <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-slate-800 transition-colors">
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-slate-800 transition-colors">
           Abrir <ChevronRight size={13} className="opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
         </div>
       </div>
