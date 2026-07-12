@@ -21,7 +21,7 @@ export const cursosTecnicosQueryKeys = {
   list: () => [...cursosTecnicosQueryKeys.all, 'list'] as const
 };
 
-const compressImage = (file: File): Promise<Blob> => {
+const compressImage = (file: File): Promise<{ blob: Blob; ext: string; type: string }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -44,12 +44,23 @@ const compressImage = (file: File): Promise<Blob> => {
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(file);
+          resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', type: file.type });
           return;
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => resolve(blob || file), 'image/webp', 0.8);
+
+        const isWebpSupported = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+        const format = isWebpSupported ? 'image/webp' : 'image/jpeg';
+        const ext = isWebpSupported ? 'webp' : 'jpg';
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve({ blob, ext, type: format });
+          } else {
+            resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', type: file.type });
+          }
+        }, format, 0.8);
       };
       img.onerror = reject;
     };
@@ -91,18 +102,19 @@ export const cursosTecnicosService = {
   },
 
   async uploadImagem(file: File): Promise<string> {
+    const { blob, ext, type } = await compressImage(file);
     const timestamp = Date.now();
-    const compressedBlob = await compressImage(file);
-    const compressedFile = new File([compressedBlob], `curso_${timestamp}.webp`, {
-      type: 'image/webp'
+    const compressedFile = new File([blob], `curso_${timestamp}.${ext}`, {
+      type
     });
-    const filePath = `cursos/curso_${timestamp}.webp`;
+    const filePath = `cursos/curso_${timestamp}.${ext}`;
 
     const { data, error } = await supabase.storage
       .from('documentos')
       .upload(filePath, compressedFile, {
         cacheControl: '31536000',
-        upsert: true
+        upsert: true,
+        contentType: type
       });
 
     if (error) throw error;

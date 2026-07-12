@@ -50,7 +50,7 @@ export const compressImageToWebp = (file: File): Promise<File> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1600;
+        const MAX_WIDTH = 1000; // REDUCED FROM 1600 TO 1000 FOR EVEN BETTER COMPRESSION!
         let width = img.width;
         let height = img.height;
 
@@ -70,19 +70,23 @@ export const compressImageToWebp = (file: File): Promise<File> => {
 
         ctx.drawImage(img, 0, 0, width, height);
 
+        const isWebpSupported = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+        const format = isWebpSupported ? 'image/webp' : 'image/jpeg';
+        const ext = isWebpSupported ? 'webp' : 'jpg';
+
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              const webpFile = new File([blob], `ead-${Date.now()}.webp`, {
-                type: 'image/webp'
+              const compressedFile = new File([blob], `ead-${Date.now()}.${ext}`, {
+                type: format
               });
-              resolve(webpFile);
+              resolve(compressedFile);
               return;
             }
 
             resolve(file);
           },
-          'image/webp',
+          format,
           0.82
         );
       };

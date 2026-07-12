@@ -323,14 +323,15 @@ const EadCourseWizard: React.FC<EadCourseWizardProps> = ({ curso, onBack, onSave
     try {
       const previousUrl = type === 'capa' ? imagemUrl : assinaturaUrl;
       const compressedFile = await compressImageToWebp(file);
-      const filePath = `${STORAGE_BASE_PATH}/${type}_${Date.now()}.webp`;
+      const ext = compressedFile.name.split('.').pop() || 'webp';
+      const filePath = `${STORAGE_BASE_PATH}/${type}_${Date.now()}.${ext}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
         .upload(filePath, compressedFile, {
           cacheControl: '31536000',
           upsert: true,
-          contentType: 'image/webp'
+          contentType: compressedFile.type
         });
 
       if (error) throw error;

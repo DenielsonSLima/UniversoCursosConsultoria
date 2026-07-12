@@ -246,7 +246,7 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     }
   };
 
-  const compressImage = (file: File): Promise<Blob> => {
+  const compressImage = (file: File): Promise<{ blob: Blob; ext: string; type: string }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -269,21 +269,25 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
 
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            resolve(file);
+            resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', type: file.type });
             return;
           }
 
           ctx.drawImage(img, 0, 0, width, height);
 
+          const isWebpSupported = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+          const format = isWebpSupported ? 'image/webp' : 'image/jpeg';
+          const ext = isWebpSupported ? 'webp' : 'jpg';
+
           canvas.toBlob(
             (blob) => {
               if (blob) {
-                resolve(blob);
+                resolve({ blob, ext, type: format });
               } else {
-                resolve(file);
+                resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', type: file.type });
               }
             },
-            'image/webp',
+            format,
             0.8
           );
         };
@@ -298,18 +302,19 @@ const CursoGradeCurricularDetails: React.FC<CursoGradeCurricularDetailsProps> = 
     if (target === 'd1') setIsUploadingD1(true);
     if (target === 'd2') setIsUploadingD2(true);
     try {
-      const compressedBlob = await compressImage(file);
-      const compressedFile = new File([compressedBlob], `curso_${target}_${Date.now()}.webp`, {
-        type: 'image/webp'
+      const { blob, ext, type } = await compressImage(file);
+      const compressedFile = new File([blob], `curso_${target}_${Date.now()}.${ext}`, {
+        type
       });
 
-      const filePath = `cursos/curso_${target}_${Date.now()}.webp`;
+      const filePath = `cursos/curso_${target}_${Date.now()}.${ext}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
         .upload(filePath, compressedFile, {
           cacheControl: '31536000',
-          upsert: true
+          upsert: true,
+          contentType: type
         });
 
       if (error) throw error;
