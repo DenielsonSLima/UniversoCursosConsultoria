@@ -141,12 +141,10 @@ const GestorPage: React.FC = () => {
     });
   }, [currentDateTime]);
 
-  const formattedTime = useMemo(() => {
-    return currentDateTime.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const formattedDayOfWeek = useMemo(() => {
+    return currentDateTime.toLocaleDateString('pt-BR', {
+      weekday: 'long'
+    }).toLowerCase();
   }, [currentDateTime]);
 
   const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<any[]>({
@@ -666,20 +664,30 @@ const GestorPage: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10 space-y-4">
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white font-extrabold text-xs border border-white/20 shadow-inner flex-shrink-0">
-              {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
+        <div className="p-4 border-t border-white/10 mt-auto">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-md flex-shrink-0">
+                {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate leading-tight">
+                  {profile?.nome || 'Administrador'}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate mt-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Online
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate leading-tight">{profile?.nome || 'Administrador'}</p>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">{profile?.email || 'gestor@universo.com'}</p>
-            </div>
+            <button 
+              onClick={handleLogout} 
+              title="Sair"
+              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-200"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider">
-            <LogOut size={18} />
-            <span>Sair</span>
-          </button>
         </div>
       </aside>
 
@@ -914,9 +922,16 @@ const GestorPage: React.FC = () => {
 
             <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
 
-            <div className="text-right hidden sm:flex flex-col justify-center min-w-[11rem]">
-              <p className="text-xs font-extrabold text-[#001a33] tracking-wide">{formattedDate}</p>
-              <p className="text-[10px] text-slate-500 font-bold mt-0.5 tracking-wider">{formattedTime}</p>
+            <div className="flex items-center gap-2.5 pl-4 hidden sm:flex text-left">
+              <CalendarDays size={18} className="text-amber-500 flex-shrink-0" />
+              <div className="flex flex-col justify-center">
+                <span className="text-xs font-bold text-slate-800 leading-tight">
+                  {formattedDate}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">
+                  {formattedDayOfWeek}
+                </span>
+              </div>
             </div>
             
           </div>
