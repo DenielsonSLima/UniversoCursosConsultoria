@@ -26,7 +26,7 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
   
   if (isZero) {
     return (
-      <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide text-slate-500 bg-slate-50 border border-slate-150">
+      <span className="px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-150">
         Estável
       </span>
     );
@@ -42,7 +42,7 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
   }
   
   return (
-    <span className={`flex items-center gap-0.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide border ${colorClass}`}>
+    <span className={`flex items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold border ${colorClass}`}>
       <Icon size={11} />
       {isPositive ? '+' : ''}{value}%
     </span>
@@ -109,10 +109,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[#001a33] flex items-center gap-2">
             Visão Geral <Sparkles className="text-yellow-500 animate-pulse" size={20} />
           </h1>
-          <p className="text-slate-400 text-xs font-semibold">
+          <p className="text-slate-400 text-xs font-medium">
             {poloId ? 'Acompanhe os principais indicadores da unidade selecionada.' : 'Acompanhe os principais indicadores consolidados de todas as unidades.'}
           </p>
         </div>
@@ -151,11 +151,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
           <div>
-            <h3 className="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-0.5">Alunos Ativos</h3>
+            <h3 className="text-slate-400 text-xs font-medium mb-0.5">Alunos Ativos</h3>
             {loadingKpis ? (
               <div className="w-24 h-8 bg-slate-100 rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-black text-[#001a33] tracking-tight">
+              <p className="text-3xl font-bold text-[#001a33] tracking-tight">
                 {kpis?.alunosAtivos.toLocaleString('pt-BR') || 0}
               </p>
             )}
@@ -175,11 +175,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
           <div>
-            <h3 className="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-0.5">Receita (Mês)</h3>
+            <h3 className="text-slate-400 text-xs font-medium mb-0.5">Receita (Mês)</h3>
             {loadingKpis ? (
               <div className="w-28 h-8 bg-slate-100 rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-black text-[#001a33] tracking-tight">
+              <p className="text-3xl font-bold text-[#001a33] tracking-tight">
                 {formatCurrency(kpis?.receitaMes || 0)}
               </p>
             )}
@@ -199,11 +199,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
           <div>
-            <h3 className="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-0.5">Inadimplência Geral</h3>
+            <h3 className="text-slate-400 text-xs font-medium mb-0.5">Inadimplência Geral</h3>
             {loadingKpis ? (
               <div className="w-16 h-8 bg-slate-100 rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-black text-rose-500 tracking-tight">
+              <p className="text-3xl font-bold text-rose-500 tracking-tight">
                 {kpis?.taxaInadimplencia || 0}%
               </p>
             )}
@@ -223,11 +223,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
           <div>
-            <h3 className="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-0.5">Matrículas (Mês)</h3>
+            <h3 className="text-slate-400 text-xs font-medium mb-0.5">Matrículas (Mês)</h3>
             {loadingKpis ? (
               <div className="w-16 h-8 bg-slate-100 rounded animate-pulse" />
             ) : (
-              <p className="text-3xl font-black text-[#001a33] tracking-tight">
+              <p className="text-3xl font-bold text-[#001a33] tracking-tight">
                 {kpis?.novasMatriculas || 0}
               </p>
             )}
@@ -241,10 +241,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
         <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[28rem]">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-sm font-black text-[#001a33] uppercase tracking-wider">Desempenho de Caixa</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Fluxo de Entradas vs Saídas Liquidadas</p>
+              <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide">Desempenho de Caixa</h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Fluxo de Entradas vs Saídas Liquidadas</p>
             </div>
-            <div className="flex flex-col items-end gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <div className="flex flex-col items-end gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-blue-500 rounded" /> Recebido</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 bg-rose-450 rounded" /> Pago</span>
             </div>
@@ -305,7 +305,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                           </div>
                         </div>
                       </div>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">{point.mesNome}</span>
+                      <span className="text-[10px] font-medium text-slate-450 mt-2">{point.mesNome}</span>
                     </div>
                   );
                 })
@@ -320,7 +320,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
           {/* Quick Actions */}
           <div className="bg-[#001a33] p-5 rounded-3xl text-white shadow-xl relative overflow-hidden flex-none flex flex-col min-h-[14rem]">
             <div className="relative z-10">
-              <h3 className="text-sm font-black uppercase tracking-wider mb-4">Ações Rápidas</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Ações Rápidas</h3>
               <div className="space-y-2.5">
                 <button 
                   onClick={() => onNavigate?.('parceiros')}
@@ -331,7 +331,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                   </div>
                   <div>
                     <span className="text-xs font-bold block">Matricular / Criar Parceiro</span>
-                    <span className="text-[9px] text-white/50 block">Novo cadastro de aluno ou docente</span>
+                    <span className="text-[10px] text-white/50 block font-normal">Novo cadastro de aluno ou docente</span>
                   </div>
                 </button>
                 <button 
@@ -343,7 +343,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                   </div>
                   <div>
                     <span className="text-xs font-bold block">Frente de Caixa</span>
-                    <span className="text-[9px] text-white/50 block">Registrar recebimento ou sangria</span>
+                    <span className="text-[10px] text-white/50 block font-normal">Registrar recebimento ou sangria</span>
                   </div>
                 </button>
               </div>
@@ -357,7 +357,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
           {/* Recent Activity List */}
           <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex-1 flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-black text-[#001a33] uppercase tracking-widest mb-3">Atividade Recente</h3>
+              <h3 className="text-xs font-bold text-[#001a33] uppercase tracking-wide mb-3">Atividade Recente</h3>
               
               {loadingActivity ? (
                 <div className="space-y-3 py-4">
@@ -386,15 +386,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-[#001a33] truncate">{activity.titulo}</p>
-                        <p className="text-[9px] text-slate-450 mt-0.5 truncate leading-tight">{activity.descricao}</p>
+                        <p className="text-[10px] text-slate-450 mt-0.5 truncate leading-tight font-normal">{activity.descricao}</p>
                       </div>
-                      <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider whitespace-nowrap mt-0.5">
+                      <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap mt-0.5">
                         {formatTimeAgo(activity.dataEvento)}
                       </span>
                     </div>
                   ))}
                   {recentActivity.length === 0 && (
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center py-4">
+                    <p className="text-[10px] font-medium text-slate-400 text-center py-4">
                       Sem atividades registradas.
                     </p>
                   )}
@@ -404,7 +404,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             
             <button 
               onClick={() => onNavigate?.('parceiros')}
-              className="w-full text-center text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest pt-3 border-t border-slate-50"
+              className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-800 pt-3 border-t border-slate-50"
             >
               Visualizar Alunos
             </button>
