@@ -22,6 +22,19 @@ export const detectLinkRequest = (value: unknown) =>
 export const detectIrpfRequest = (value: unknown) =>
   /\b(irpf|imposto\s*de\s*renda|declara[cç][aã]o|recibo\s*irpf|ano\s*calend[aá]rio)\b/i.test(String(value || ""));
 
+export const studentDisplayName = (aluno: any, conversation?: any) =>
+  String(aluno?.nome_social || aluno?.nome || aluno?.razao_social || conversation?.contato_nome || "aluno(a)")
+    .trim()
+    .replace(/\s+/g, " ");
+
+export const renderFlowText = (text: unknown, context: { aluno?: any | null; conversation?: any | null }) => {
+  const name = studentDisplayName(context.aluno, context.conversation);
+  return String(text || "")
+    .replace(/{{\s*nome_aluno\s*}}/gi, name)
+    .replace(/{{\s*aluno_nome\s*}}/gi, name)
+    .replace(/{{\s*nome\s*}}/gi, name);
+};
+
 export const money = (value: unknown) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
     .format(Number(value || 0));

@@ -23,6 +23,9 @@ const statusLabel: Record<WhatsAppFlowSession['status'], string> = {
   closed: 'Encerrado',
 };
 
+const previewText = (value: unknown) =>
+  String(value || '').replace(/\\n/g, '\n').replace(/{{\s*nome_aluno\s*}}/gi, 'Denielson Santos Lima');
+
 const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
   settings,
   sessions,
@@ -72,7 +75,7 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
         ['bot', 'https://www.universocc.com.br/validador?q=IRPF-0000-0000-0000'],
       ],
     }[activeTab];
-    return byTab.map(([side, text]) => ({ side, text: String(text || '').replace(/\\n/g, '\n') }));
+    return byTab.map(([side, text]) => ({ side, text: previewText(text) }));
   }, [activeTab, draft]);
 
   const update = (field: keyof WhatsAppFlowSettings, value: string | number | boolean) => {

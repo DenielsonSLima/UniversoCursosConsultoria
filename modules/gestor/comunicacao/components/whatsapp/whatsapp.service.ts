@@ -8,7 +8,7 @@ export const DEFAULT_WHATSAPP_FLOW_SETTINGS: WhatsAppFlowSettings = {
   welcome_message: 'Olá! Sou o atendimento automático da Universo Cursos. Para proteger seus dados e localizar seu cadastro com segurança, informe seu CPF. Pode enviar com ou sem pontuação.',
   invalid_cpf_message: 'Não consegui validar esse CPF. Envie novamente apenas os 11 números, ou no formato 000.000.000-00.',
   mismatch_message: 'Por segurança, não consegui confirmar esse CPF com o telefone desta conversa. Vou encaminhar seu atendimento para nossa equipe conferir.',
-  menu_message: 'Cadastro confirmado. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente',
+  menu_message: 'Cadastro confirmado, {{nome_aluno}}. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente',
   receivable_choice_message: 'Encontrei mais de uma parcela disponível. Responda com o número da parcela que deseja pagar:',
   no_receivables_message: 'No momento não encontrei parcela aberta, vencida ou próxima do vencimento com dados de pagamento disponíveis. Vou encaminhar para nossa equipe conferir.',
   fallback_message: 'Desculpe, não consegui entender sua resposta. Escolha uma das opções do menu ou digite 4 para falar com atendente.',

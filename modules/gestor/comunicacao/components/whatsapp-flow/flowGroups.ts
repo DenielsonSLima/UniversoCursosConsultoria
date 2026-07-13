@@ -47,7 +47,7 @@ export const flowGroupsByTab: Record<FlowTabId, FlowGroup[]> = {
       title: 'Menu e atendimento humano',
       description: 'Menu central depois da validação. Mantém cobrança, IRPF e atendente em caminhos separados.',
       fields: [
-        { field: 'menu_message', label: 'Menu principal', help: 'Opções numéricas depois que o cadastro é confirmado.', rows: 6 },
+        { field: 'menu_message', label: 'Menu principal', help: 'Use {{nome_aluno}} para chamar a pessoa pelo nome depois da confirmação.', rows: 6 },
         { field: 'fallback_message', label: 'Quando não entender', help: 'Resposta enviada quando o aluno digita algo fora do menu.', rows: 3 },
         { field: 'handoff_message', label: 'Encaminhar atendente', help: 'Mensagem antes de pausar o robô naquela conversa.', rows: 3 },
       ],

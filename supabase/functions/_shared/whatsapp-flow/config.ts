@@ -28,7 +28,7 @@ export const DEFAULT_FLOW_SETTINGS: FlowSettings = {
   mismatch_message:
     "Por segurança, não consegui confirmar esse CPF com o telefone desta conversa. Vou encaminhar seu atendimento para nossa equipe conferir.",
   menu_message:
-    "Cadastro confirmado. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente",
+    "Cadastro confirmado, {{nome_aluno}}. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente",
   receivable_choice_message:
     "Encontrei mais de uma parcela disponível. Responda com o número da parcela que deseja pagar:",
   no_receivables_message:

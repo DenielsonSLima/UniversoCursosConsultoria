@@ -6,6 +6,7 @@ import {
   detectPixRequest,
   normalizeCpf,
   parseMenuNumber,
+  renderFlowText,
 } from "./format.ts";
 import {
   formatIrpfOptionsList,
@@ -78,6 +79,9 @@ const handoff = async (admin: any, settings: any, session: any, input: FlowInput
   await logEvent(admin, next, "handoff", { reason });
 };
 
+const flowText = (text: unknown, input: FlowInput) =>
+  renderFlowText(text, { aluno: input.alunoByPhone, conversation: input.conversation });
+
 const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInput) => {
   const cpf = normalizeCpf(input.content);
   if (!cpf) {
@@ -121,7 +125,7 @@ const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInp
     handoff_required: false,
     data: { cpfLast4: cpf.slice(-4) },
   });
-  await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: settings.menu_message });
+  await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: flowText(settings.menu_message, input) });
   await logEvent(admin, next, "verified", { alunoId: input.alunoByPhone.id });
 };
 
@@ -241,7 +245,7 @@ const fallback = async (admin: any, settings: any, session: any, input: FlowInpu
   const attempts = Number(session?.attempts || 0) + 1;
   const next = await saveSession(admin, { ...session, attempts });
   if (attempts >= Number(settings.max_attempts || 2)) return handoff(admin, settings, next, input, "fallback_limit");
-  await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: `${settings.fallback_message}\n\n${settings.menu_message}` });
+  await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: flowText(`${settings.fallback_message}\n\n${settings.menu_message}`, input) });
 };
 
 export const processWhatsAppFlow = async (admin: any, input: FlowInput) => {
