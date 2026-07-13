@@ -7,6 +7,9 @@ import {
   insertWhatsAppMessage,
   upsertWhatsAppConversation,
 } from "../_shared/whatsapp.ts";
+import { processWhatsAppFlow } from "../_shared/whatsapp-flow/engine.ts";
+
+type FlowTask = () => Promise<void>;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -39,9 +42,50 @@ const getVerifyToken = async (admin: any) => {
   return String(data || "").trim();
 };
 
-const processMessage = async (admin: any, message: any, contact: any) => {
+const processFlowSafely = async (
+  admin: any,
+  input: {
+    conversation: any;
+    aluno: any | null;
+    phone: string;
+    content: string;
+  },
+) => {
+  try {
+    await processWhatsAppFlow(admin, {
+      conversation: input.conversation,
+      alunoByPhone: input.aluno,
+      phone: input.phone,
+      content: input.content,
+    });
+  } catch (flowError) {
+    console.error("whatsapp-flow error:", flowError);
+    await admin.from("whatsapp_flow_events").insert({
+      conversa_id: input.conversation.id,
+      aluno_id: input.aluno?.id || null,
+      event_type: "flow_error",
+      details: {
+        message: flowError instanceof Error ? flowError.message : "Erro inesperado no fluxo WhatsApp.",
+      },
+    });
+  }
+};
+
+const scheduleFlowTasks = async (tasks: FlowTask[]) => {
+  const run = async () => {
+    for (const task of tasks) await task();
+  };
+  const waitUntil = (globalThis as any).EdgeRuntime?.waitUntil;
+  if (typeof waitUntil === "function") {
+    waitUntil(run());
+    return;
+  }
+  await run();
+};
+
+const processMessage = async (admin: any, message: any, contact: any): Promise<FlowTask | null> => {
   const phone = normalizeWhatsAppPhone(message?.from);
-  if (!phone) return;
+  if (!phone) return null;
 
   const aluno = await findAlunoByPhone(admin, phone);
   const content = textFromWhatsAppMessage(message);
@@ -53,7 +97,7 @@ const processMessage = async (admin: any, message: any, contact: any) => {
     direction: "entrada",
   });
 
-  await insertWhatsAppMessage(admin, {
+  const insertedMessage = await insertWhatsAppMessage(admin, {
     conversaId: conversation.id,
     alunoId: aluno?.id || null,
     metaMessageId: message?.id || null,
@@ -66,6 +110,9 @@ const processMessage = async (admin: any, message: any, contact: any) => {
     rawPayload: message,
     read: false,
   });
+
+  if (!insertedMessage) return null;
+  return () => processFlowSafely(admin, { conversation, aluno, phone, content });
 };
 
 const processStatus = async (admin: any, status: any) => {
@@ -114,6 +161,7 @@ Deno.serve(async (req: Request) => {
     if (eventError) throw eventError;
 
     try {
+      const flowTasks: FlowTask[] = [];
       for (const entry of payload?.entry || []) {
         for (const change of entry?.changes || []) {
           const value = change?.value || {};
@@ -122,7 +170,8 @@ Deno.serve(async (req: Request) => {
           );
 
           for (const message of value.messages || []) {
-            await processMessage(admin, message, contactsByWaId.get(String(message?.from || "")));
+            const task = await processMessage(admin, message, contactsByWaId.get(String(message?.from || "")));
+            if (task) flowTasks.push(task);
           }
 
           for (const status of value.statuses || []) {
@@ -135,6 +184,8 @@ Deno.serve(async (req: Request) => {
         .from("whatsapp_webhook_events")
         .update({ processed: true, processed_at: new Date().toISOString() })
         .eq("id", eventRow.id);
+
+      await scheduleFlowTasks(flowTasks);
     } catch (error) {
       await admin
         .from("whatsapp_webhook_events")

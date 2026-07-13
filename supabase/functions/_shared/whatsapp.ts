@@ -30,15 +30,9 @@ export const findAlunoByPhone = async (admin: any, phone: string) => {
   if (!normalized) return null;
 
   const { data, error } = await admin
-    .from("parceiros")
-    .select("id, nome, telefone")
-    .eq("tipo", "Aluno")
-    .limit(5000);
+    .rpc("whatsapp_find_aluno_by_phone", { p_phone: normalized });
   if (error) throw error;
-
-  return (data || []).find((row: any) =>
-    normalizeWhatsAppPhone(row.telefone) === normalized
-  ) || null;
+  return Array.isArray(data) ? data[0] || null : data || null;
 };
 
 export const upsertWhatsAppConversation = async (

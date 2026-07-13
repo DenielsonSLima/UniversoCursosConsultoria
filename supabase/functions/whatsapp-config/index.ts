@@ -107,18 +107,18 @@ Deno.serve(async (req: Request) => {
         wa_due_notice_days: Number(body.waDueNoticeDays || 3),
         wa_send_due_notice: body.waSendDueNotice !== false,
         wa_due_notice_template: trimOrNull(body.waDueNoticeTemplate) ||
-          "Ola {{nome_aluno}}, sua parcela de {{valor_fatura}} vence em {{data_vencimento}}. Para pagar, acesse: {{link_pagamento}}",
+          "Ola, {{nome_aluno}}. Passando para lembrar que sua parcela de {{valor_fatura}} vence em {{data_vencimento}}. Para facilitar, o pagamento pode ser feito por este link: {{link_pagamento}}. Se voce ja realizou o pagamento, por favor desconsidere esta mensagem.",
         wa_send_payment_receipt: body.waSendPaymentReceipt !== false,
         wa_payment_receipt_template: trimOrNull(body.waPaymentReceiptTemplate) ||
-          "Ola {{nome_aluno}}, recebemos seu pagamento de {{valor_fatura}} referente a {{descricao_fatura}}. Obrigado!",
+          "Ola, {{nome_aluno}}. Confirmamos o recebimento do pagamento de {{valor_fatura}} referente a {{descricao_fatura}}. Obrigado por manter tudo em dia com a Universo Cursos.",
         wa_send_overdue_notice: body.waSendOverdueNotice !== false,
         wa_overdue_notice_days: Number(body.waOverdueNoticeDays || 1),
         wa_default_overdue_template: trimOrNull(body.waDefaultOverdueTemplate) ||
-          "Ola {{nome_aluno}}, identificamos uma parcela em atraso no valor de {{valor_fatura}}, vencida em {{data_vencimento}}. Regularize pelo link: {{link_pagamento}}",
+          "Ola, {{nome_aluno}}. Verificamos uma parcela de {{valor_fatura}} com vencimento em {{data_vencimento}} ainda em aberto. Para regularizar, voce pode usar este link: {{link_pagamento}}. Se o pagamento ja foi feito, por favor desconsidere esta mensagem.",
         wa_send_multiple_overdue_notice: body.waSendMultipleOverdueNotice !== false,
         wa_multiple_overdue_min_installments: Math.max(Number(body.waMultipleOverdueMinInstallments || 2), 2),
         wa_multiple_overdue_template: trimOrNull(body.waMultipleOverdueTemplate) ||
-          "Ola {{nome_aluno}}, identificamos {{quantidade_parcelas}} parcelas em atraso, totalizando {{valor_total_atrasado}}. Para regularizar, acesse: {{link_pagamento}}",
+          "Ola, {{nome_aluno}}. Identificamos {{quantidade_parcelas}} parcelas em aberto no seu cadastro, totalizando {{valor_total_atrasado}}. Queremos ajudar voce a regularizar sua situacao com tranquilidade. Responda esta mensagem para nossa equipe verificar uma condicao especial para deixar tudo em dia. Se voce ja regularizou, por favor desconsidere esta mensagem.",
         wa_due_notice_modalities: normalizeModalities(body.waDueNoticeModalities),
         wa_payment_receipt_modalities: normalizeModalities(body.waPaymentReceiptModalities),
         wa_overdue_notice_modalities: normalizeModalities(body.waOverdueNoticeModalities),
