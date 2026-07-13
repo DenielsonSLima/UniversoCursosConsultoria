@@ -88,6 +88,16 @@ const WhatsAppApiConfigTab: React.FC<WhatsAppApiConfigTabProps> = ({ draft, onCh
           />
         </Field>
 
+        <Field icon={KeyRound} label="App Secret">
+          <input
+            type="password"
+            value={draft.waAppSecret || ''}
+            onChange={(event) => onChange('waAppSecret', event.target.value)}
+            className={inputClass}
+            placeholder="Usado para validar a assinatura do webhook"
+          />
+        </Field>
+
         <Field icon={Hash} label="WhatsApp Business Account ID">
           <input
             value={draft.waBusinessAccountId || ''}

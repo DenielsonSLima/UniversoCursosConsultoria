@@ -42,6 +42,72 @@ const getVerifyToken = async (admin: any) => {
   return String(data || "").trim();
 };
 
+const getAppSecret = async (admin: any) => {
+  const { data, error } = await admin.rpc("whatsapp_get_secret", {
+    p_secret_name: "whatsapp_app_secret",
+  });
+  if (error) throw error;
+  return String(data || "").trim();
+};
+
+const hexFromBuffer = (buffer: ArrayBuffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+const safeEqual = (left: string, right: string) => {
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+};
+
+const validateSignature = async (admin: any, req: Request, rawBody: string) => {
+  const appSecret = await getAppSecret(admin);
+  if (!appSecret) throw new Error("App Secret do WhatsApp nao configurado para validar webhook.");
+
+  const signature = String(req.headers.get("x-hub-signature-256") || "").trim();
+  if (!signature.startsWith("sha256=")) throw new Error("Assinatura do webhook WhatsApp ausente.");
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(appSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const expected = `sha256=${hexFromBuffer(digest)}`;
+  if (!safeEqual(signature, expected)) throw new Error("Assinatura do webhook WhatsApp invalida.");
+};
+
+const validatePayloadSource = async (admin: any, payload: any) => {
+  if (payload?.object !== "whatsapp_business_account") {
+    throw new Error("Evento WhatsApp com objeto invalido.");
+  }
+
+  const { data: config, error } = await admin
+    .from("mensageria_config")
+    .select("wa_phone_number_id")
+    .eq("tipo", "whatsapp")
+    .maybeSingle();
+  if (error) throw error;
+
+  const expectedPhoneId = String(config?.wa_phone_number_id || "").trim();
+  if (!expectedPhoneId) return;
+
+  for (const entry of payload?.entry || []) {
+    for (const change of entry?.changes || []) {
+      const receivedPhoneId = String(change?.value?.metadata?.phone_number_id || "").trim();
+      if (receivedPhoneId && receivedPhoneId !== expectedPhoneId) {
+        throw new Error("Webhook recebido para um Phone Number ID diferente do configurado.");
+      }
+    }
+  }
+};
+
 const processFlowSafely = async (
   admin: any,
   input: {
@@ -147,7 +213,12 @@ Deno.serve(async (req: Request) => {
 
     if (req.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
 
-    const payload = await req.json();
+    const rawBody = await req.text();
+    await validateSignature(admin, req, rawBody);
+
+    const payload = JSON.parse(rawBody || "{}");
+    await validatePayloadSource(admin, payload);
+
     const firstChange = payload?.entry?.[0]?.changes?.[0];
     const { data: eventRow, error: eventError } = await admin
       .from("whatsapp_webhook_events")

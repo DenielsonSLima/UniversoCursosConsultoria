@@ -9,6 +9,7 @@ import {
 } from "../_shared/http.ts";
 import {
   insertWhatsAppMessage,
+  phoneBelongsToAluno,
   upsertWhatsAppConversation,
 } from "../_shared/whatsapp.ts";
 
@@ -65,6 +66,11 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (alunoError) throw alunoError;
     if (!aluno) throw new Error("Aluno nao encontrado.");
+
+    const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
+    if (!allowedPhone) {
+      throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
+    }
 
     const { data: config, error: configError } = await admin
       .from("mensageria_config")

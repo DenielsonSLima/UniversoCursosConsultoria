@@ -83,6 +83,15 @@ Deno.serve(async (req: Request) => {
       if (verifyTokenError) throw verifyTokenError;
     }
 
+    const appSecret = trimOrNull(body.waAppSecret);
+    if (appSecret) {
+      const { error: appSecretError } = await admin.rpc("whatsapp_set_secret", {
+        p_secret_name: "whatsapp_app_secret",
+        p_secret_value: appSecret,
+      });
+      if (appSecretError) throw appSecretError;
+    }
+
     const { error: upsertError } = await admin
       .from("mensageria_config")
       .upsert({

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireGestorAtivo } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
-import { insertWhatsAppMessage, normalizeWhatsAppPhone, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
+import { insertWhatsAppMessage, normalizeWhatsAppPhone, phoneBelongsToAluno, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
 
 type MediaKind = "image" | "audio" | "document";
 type MediaFile = { base64?: string; type?: string; name?: string };
@@ -102,6 +102,11 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
     .maybeSingle();
   if (alunoError) throw alunoError;
   if (!aluno) throw new Error("Aluno nao encontrado.");
+
+  const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
+  if (!allowedPhone) {
+    throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
+  }
 
   const caption = trim(body.caption);
   const file = body.file || {};

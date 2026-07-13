@@ -35,6 +35,31 @@ export const findAlunoByPhone = async (admin: any, phone: string) => {
   return Array.isArray(data) ? data[0] || null : data || null;
 };
 
+export const findAlunoByPhoneAndCpf = async (admin: any, phone: string, cpf: string) => {
+  const normalized = normalizeWhatsAppPhone(phone);
+  const normalizedCpf = String(cpf || "").replace(/\D/g, "");
+  if (!normalized || normalizedCpf.length !== 11) return null;
+
+  const { data, error } = await admin.rpc("whatsapp_find_aluno_by_phone_and_cpf", {
+    p_phone: normalized,
+    p_cpf: normalizedCpf,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] || null : data || null;
+};
+
+export const phoneBelongsToAluno = async (admin: any, alunoId: string, phone: string) => {
+  const normalized = normalizeWhatsAppPhone(phone);
+  if (!alunoId || !normalized) return false;
+
+  const { data, error } = await admin.rpc("whatsapp_phone_belongs_to_aluno", {
+    p_aluno_id: alunoId,
+    p_phone: normalized,
+  });
+  if (error) throw error;
+  return data === true;
+};
+
 export const upsertWhatsAppConversation = async (
   admin: any,
   input: {

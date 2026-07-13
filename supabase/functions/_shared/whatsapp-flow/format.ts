@@ -1,8 +1,24 @@
 export const onlyDigits = (value: unknown) => String(value || "").replace(/\D/g, "");
 
+const isValidCpf = (digits: string) => {
+  if (!/^\d{11}$/.test(digits)) return false;
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+
+  const calcDigit = (size: number) => {
+    let sum = 0;
+    for (let index = 0; index < size; index += 1) {
+      sum += Number(digits[index]) * (size + 1 - index);
+    }
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+
+  return calcDigit(9) === Number(digits[9]) && calcDigit(10) === Number(digits[10]);
+};
+
 export const normalizeCpf = (value: unknown) => {
   const digits = onlyDigits(value);
-  return digits.length === 11 ? digits : "";
+  return isValidCpf(digits) ? digits : "";
 };
 
 export const parseMenuNumber = (value: unknown) => {
@@ -30,6 +46,7 @@ export const studentDisplayName = (aluno: any, conversation?: any) =>
 export const renderFlowText = (text: unknown, context: { aluno?: any | null; conversation?: any | null }) => {
   const name = studentDisplayName(context.aluno, context.conversation);
   return String(text || "")
+    .replace(/\\n/g, "\n")
     .replace(/{{\s*nome_aluno\s*}}/gi, name)
     .replace(/{{\s*aluno_nome\s*}}/gi, name)
     .replace(/{{\s*nome\s*}}/gi, name);

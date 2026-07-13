@@ -433,3 +433,18 @@ verify_jwt = true
 
 [functions.payment-gateway-webhook]
 verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.whatsapp-config]
+verify_jwt = true
+
+[functions.whatsapp-send]
+verify_jwt = true
+
+[functions.whatsapp-media]
+verify_jwt = true
+
+[functions.whatsapp-profile]
+verify_jwt = true

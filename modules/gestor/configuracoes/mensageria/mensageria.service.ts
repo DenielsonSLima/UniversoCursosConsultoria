@@ -14,6 +14,7 @@ export interface MensageriaConfigData {
   waDisplayPhoneNumber?: string;
   waGraphVersion?: string;
   waAppId?: string;
+  waAppSecret?: string;
   waWebhookVerifyToken?: string;
   waAccountCurrency?: string;
   waEstimatedBalance?: number;

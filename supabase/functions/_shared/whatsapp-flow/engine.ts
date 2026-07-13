@@ -22,6 +22,7 @@ import {
   paymentValueFor,
 } from "./payment.ts";
 import { sendFlowText } from "./sender.ts";
+import { findAlunoByPhoneAndCpf } from "../whatsapp.ts";
 
 type FlowInput = {
   conversation: any;
@@ -99,8 +100,10 @@ const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInp
     return;
   }
 
-  const alunoCpf = normalizeCpf(input.alunoByPhone?.cpf_cnpj);
-  if (!input.alunoByPhone?.id || alunoCpf !== cpf) {
+  const matchedAluno = await findAlunoByPhoneAndCpf(admin, input.phone, cpf);
+  const verifiedInput = { ...input, alunoByPhone: matchedAluno || input.alunoByPhone || null };
+
+  if (!matchedAluno?.id) {
     const next = await saveSession(admin, {
       conversa_id: input.conversation.id,
       telefone: input.phone,
@@ -110,7 +113,7 @@ const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInp
       handoff_required: true,
       data: { cpfLast4: cpf.slice(-4), reason: "cpf_phone_mismatch" },
     });
-    await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: settings.mismatch_message });
+    await sendFlowText(admin, { conversation: input.conversation, aluno: verifiedInput.alunoByPhone, phone: input.phone, text: settings.mismatch_message });
     await logEvent(admin, next, "cpf_mismatch", { hasAlunoByPhone: Boolean(input.alunoByPhone?.id) });
     return;
   }
@@ -118,15 +121,15 @@ const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInp
   const next = await saveSession(admin, {
     conversa_id: input.conversation.id,
     telefone: input.phone,
-    aluno_id: input.alunoByPhone.id,
+    aluno_id: matchedAluno.id,
     status: "menu",
     verified_at: new Date().toISOString(),
     attempts: 0,
     handoff_required: false,
-    data: { cpfLast4: cpf.slice(-4) },
+    data: { cpfLast4: cpf.slice(-4), matchSource: matchedAluno.match_source || null },
   });
-  await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: flowText(settings.menu_message, input) });
-  await logEvent(admin, next, "verified", { alunoId: input.alunoByPhone.id });
+  await sendFlowText(admin, { conversation: input.conversation, aluno: matchedAluno, phone: input.phone, text: flowText(settings.menu_message, verifiedInput) });
+  await logEvent(admin, next, "verified", { alunoId: matchedAluno.id, matchSource: matchedAluno.match_source || null });
 };
 
 const sendPayment = async (
