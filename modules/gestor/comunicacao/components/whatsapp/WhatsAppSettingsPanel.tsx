@@ -1,9 +1,11 @@
 import React from 'react';
 import { BarChart3, CheckCircle2, MessageCircle, RefreshCw, Wallet } from 'lucide-react';
+import { BirthdayProjectionRow } from '../whatsapp-agents/birthday.types';
 import { WhatsAppUsageSummary } from './whatsapp.types';
 
 interface WhatsAppSettingsPanelProps {
   summary: WhatsAppUsageSummary | null;
+  birthdayProjection: BirthdayProjectionRow[];
   loading: boolean;
 }
 
@@ -28,40 +30,37 @@ const toneClasses = {
   },
 };
 
-const fallbackSummary: WhatsAppUsageSummary = {
-  usage_month: new Date().toISOString(),
-  monthly_limit: 120,
-  currency: 'BRL',
-  meta_balance: null,
-  meta_balance_source: 'server',
-  meta_synced_at: null,
-  marketing_sent: 0,
-  marketing_rate: 0.62,
-  marketing_cost: 0,
-  marketing_available: 193,
-  marketing_percent: 0,
-  billing_sent: 0,
-  billing_rate: 0.32,
-  billing_cost: 0,
-  billing_available: 375,
-  billing_percent: 0,
-  service_sent: 0,
-  service_rate: 0,
-  service_cost: 0,
-  service_percent: 0,
-  total_sent: 0,
-  spent: 0,
-  remaining: 120,
-  spent_percent: 0,
-};
+const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, birthdayProjection, loading }) => {
+  if (loading) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
+        <div className="flex min-h-[320px] max-w-6xl items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm">
+          <RefreshCw size={18} className="mr-2 animate-spin" />
+          <span className="text-sm font-semibold">Carregando resumo pela RPC...</span>
+        </div>
+      </div>
+    );
+  }
 
-const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, loading }) => {
-  const usage = summary || fallbackSummary;
+  if (!summary) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
+        <div className="max-w-6xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
+          <p className="text-sm font-bold">Resumo indisponível</p>
+          <p className="mt-1 text-xs font-semibold">
+            A RPC `whatsapp_usage_summary` não retornou dados. Nenhum valor será calculado no frontend.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const usage = summary;
   const buckets = [
     {
       kind: 'marketing',
       label: 'Marketing',
-      description: 'Mensagens iniciadas pela escola fora da janela de atendimento.',
+      description: 'Promoções, ofertas e campanhas iniciadas pela escola.',
       sent: usage.marketing_sent,
       rate: usage.marketing_rate,
       cost: usage.marketing_cost,
@@ -72,7 +71,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
     {
       kind: 'billing',
       label: 'Avisos de cobrança',
-      description: 'Vencimento, recebimento e atraso financeiro.',
+      description: 'Utilidade: boleto, PIX, vencimento, recebimento e atraso.',
       sent: usage.billing_sent,
       rate: usage.billing_rate,
       cost: usage.billing_cost,
@@ -83,7 +82,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
     {
       kind: 'service',
       label: 'Resposta em 24h',
-      description: 'Resposta dentro da janela aberta pelo aluno.',
+      description: 'Atendimento dentro da janela aberta pelo aluno.',
       sent: usage.service_sent,
       rate: usage.service_rate,
       cost: usage.service_cost,
@@ -103,7 +102,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Controle mensal</p>
                 <h3 className="mt-1 text-2xl font-bold tracking-tight text-[#001a33]">Saldo estimado WhatsApp</h3>
                 <p className="mt-1 max-w-2xl text-sm font-medium leading-relaxed text-slate-500">
-                  Orçamento interno de {money(usage.monthly_limit)} para acompanhar marketing, avisos financeiros e respostas dentro da janela de atendimento.
+                  Orçamento interno de {money(usage.monthly_limit)} com cálculo por mensagem entregue, conforme categoria e país do destinatário.
                 </p>
               </div>
               <div className="rounded-2xl bg-[#001a33] px-5 py-4 text-white">
@@ -138,7 +137,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
               <p className="text-xl font-bold text-[#001a33]">{usage.total_sent}</p>
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              {loading ? <RefreshCw size={18} className="animate-spin text-slate-500" /> : <CheckCircle2 size={18} className="text-emerald-600" />}
+              <CheckCircle2 size={18} className="text-emerald-600" />
               <p className="mt-3 text-xs font-medium text-slate-400">Base do cálculo</p>
               <p className="text-xl font-bold text-[#001a33]">Mês atual</p>
             </div>
@@ -155,7 +154,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
                     <MessageCircle size={20} />
                   </div>
                   <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone.soft}`}>
-                    {bucket.rate > 0 ? `${money(bucket.rate)} / msg` : 'R$ 0,00'}
+                    {bucket.rate > 0 ? `${money(bucket.rate)} / msg entregue` : 'R$ 0,00'}
                   </span>
                 </div>
 
@@ -180,7 +179,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
                   <p className="mt-2 text-xs font-semibold text-slate-500">
                     {bucket.rate > 0
                       ? `Ainda cabem aproximadamente ${bucket.available || 0} mensagens neste saldo.`
-                      : 'Respostas dentro de 24h não consomem o limite estimado.'}
+                      : 'Respostas dentro da janela de atendimento não consomem custo estimado de template.'}
                   </p>
                 </div>
               </div>
@@ -191,7 +190,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <p className="text-sm font-bold text-[#001a33]">Resumo do mês atual</p>
           <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
-            As mensagens são classificadas pelo banco conforme texto financeiro e janela de resposta de 24h. Os valores retornam da funcao `whatsapp_usage_summary`.
+            As mensagens são classificadas e precificadas pela RPC `whatsapp_usage_summary`. O frontend apenas exibe os valores retornados pelo servidor.
           </p>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="rounded-xl bg-white p-4">
@@ -210,6 +209,50 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
               <p className="text-xs font-medium text-slate-400">Uso do limite</p>
               <p className="mt-1 text-xl font-bold text-[#001a33]">{Number(usage.spent_percent || 0).toFixed(0)}%</p>
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-bold text-[#001a33]">Projeção de aniversários</p>
+              <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
+                Estimativa mensal retornada pela RPC `whatsapp_birthday_monthly_projection`, usando a tarifa de marketing configurada no servidor.
+              </p>
+            </div>
+            <span className="rounded-full bg-pink-50 px-3 py-1 text-xs font-black text-pink-700">
+              Marketing
+            </span>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Mês</th>
+                  <th className="px-4 py-3 text-right">Aniversariantes</th>
+                  <th className="px-4 py-3 text-right">Custo estimado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {birthdayProjection.map((row) => (
+                  <tr key={row.month_num}>
+                    <td className="px-4 py-3 font-bold text-[#001a33]">{row.month_label}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-600">{row.recipients_count}</td>
+                    <td className="px-4 py-3 text-right font-black text-emerald-700">
+                      {money(row.estimated_cost)}
+                    </td>
+                  </tr>
+                ))}
+                {birthdayProjection.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 text-center text-sm font-bold text-slate-400">
+                      Sem projeção carregada.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>

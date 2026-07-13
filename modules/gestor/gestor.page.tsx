@@ -636,21 +636,21 @@ const GestorPage: React.FC = () => {
     <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
       
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
-        <div className="p-6 border-b border-white/10">
-          <div className="bg-white p-3 rounded-2xl shadow-md flex items-center justify-center">
+        <div className="px-5 py-4 border-b border-white/10">
+          <div className="bg-white h-[70px] px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center">
             <img 
               src="/LogoUniverso.png" 
               alt="Universo Cursos e Consultoria" 
-              className="h-11 w-full object-contain" 
+              className="h-12 w-full max-w-[190px] object-contain" 
             />
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5 custom-scrollbar">
           {visibleMenuItems.map((item) => (
             <div 
               key={item.id} 
-              className="space-y-1 relative"
+              className="space-y-0.5 relative"
               onMouseEnter={() => item.subItems && setMenuHovered(item.id, true)}
               onMouseLeave={() => item.subItems && setMenuHovered(item.id, false)}
             >
@@ -659,7 +659,7 @@ const GestorPage: React.FC = () => {
                   if (item.subItems) toggleMenu(item.id);
                   else setActiveModule(item.id);
                 }}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 group ${
                   activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-semibold' 
                     : 'text-slate-400 hover:bg-white/5 hover:text-white font-normal'
@@ -690,14 +690,14 @@ const GestorPage: React.FC = () => {
 
               {item.subItems && (
                 <div className={`grid transition-all duration-300 ease-in-out ${
-                  isDesktopMenuExpanded(item.id) ? 'grid-rows-[1fr] opacity-100 mt-1' : 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                  isDesktopMenuExpanded(item.id) ? 'grid-rows-[1fr] opacity-100 mt-0.5' : 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
                 }`}>
-                  <div className="overflow-hidden pl-6 space-y-1">
+                  <div className="overflow-hidden pl-6 space-y-0.5">
                     {item.subItems.map(sub => (
                       <button
                         key={sub.id}
                         onClick={() => setActiveModule(sub.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-xs transition-all ${
+                        className={`w-full flex items-center gap-3 px-4 py-1.5 rounded-lg text-xs transition-all ${
                           activeModule === sub.id 
                             ? 'text-blue-400 bg-white/5 font-semibold' 
                             : 'text-slate-500 hover:text-white hover:bg-white/5 font-normal'

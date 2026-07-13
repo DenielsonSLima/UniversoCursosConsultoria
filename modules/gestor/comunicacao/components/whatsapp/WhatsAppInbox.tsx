@@ -1,11 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import { CheckSquare2, MessageCircle, Search, Send, Square, Trash2 } from 'lucide-react';
-import { WhatsAppConversation, WhatsAppMessage } from './whatsapp.types';
-import { formatMessageDate, formatMessageTime, formatPhone, initials, normalizePhone } from './whatsapp.utils';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Bell, BellOff, Bot, CheckSquare2, MessageCircle, PauseCircle, RefreshCcw, Search, Send, Square, Trash2 } from 'lucide-react';
+import { WhatsAppConversation, WhatsAppFlowSession, WhatsAppMessage } from './whatsapp.types';
+import { formatMessageDate, formatPhone, normalizePhone } from './whatsapp.utils';
+import { whatsappService } from './whatsapp.service';
+import BatchMessageModal, { BatchSendResult } from './inbox/BatchMessageModal';
+import ContactAvatar from './inbox/ContactAvatar';
+import MessageComposer from './inbox/MessageComposer';
+import MessageThread from './inbox/MessageThread';
+import TypingIndicator from './inbox/TypingIndicator';
+import { fileToBase64 } from './inbox/mediaUtils';
+import { isWhatsAppSoundEnabled, playIncomingWhatsAppSound, setWhatsAppSoundEnabled } from './inbox/notificationSound';
+import { useWhatsAppTypingPresence } from './inbox/useWhatsAppTypingPresence';
 
 interface WhatsAppInboxProps {
   conversations: WhatsAppConversation[];
   messages: WhatsAppMessage[];
+  flowSessions: WhatsAppFlowSession[];
   activeConversationId: string | null;
   apiReady: boolean;
   loadingConversations: boolean;
@@ -14,11 +25,14 @@ interface WhatsAppInboxProps {
   onOpenStartModal: () => void;
   onSendReply: (message: string) => Promise<void>;
   onDeleteConversations: (conversationIds: string[]) => Promise<void>;
+  onPauseFlow: (conversationId: string) => void;
+  onResetFlow: (conversationId: string) => void;
 }
 
 const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   conversations,
   messages,
+  flowSessions,
   activeConversationId,
   apiReady,
   loadingConversations,
@@ -27,13 +41,22 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   onOpenStartModal,
   onSendReply,
   onDeleteConversations,
+  onPauseFlow,
+  onResetFlow,
 }) => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [reply, setReply] = useState('');
-  const [sending, setSending] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => isWhatsAppSoundEnabled());
   const activeConversation = conversations.find((item) => item.id === activeConversationId) || null;
+  const flowByConversation = useMemo(
+    () => new Map(flowSessions.map((session) => [session.conversa_id, session])),
+    [flowSessions]
+  );
+  const activeFlowSession = activeConversation ? flowByConversation.get(activeConversation.id) || null : null;
+  const { isContactTyping, sendTyping } = useWhatsAppTypingPresence(activeConversationId);
   const filtered = conversations.filter((item) => {
     const term = search.trim().toLowerCase();
     if (!term) return true;
@@ -42,6 +65,14 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   const validSelectedIds = useMemo(
     () => [...selectedIds].filter((id) => conversations.some((item) => item.id === id)),
     [conversations, selectedIds]
+  );
+  const selectedConversations = useMemo(
+    () => validSelectedIds.map((id) => conversations.find((item) => item.id === id)).filter(Boolean) as WhatsAppConversation[],
+    [conversations, validSelectedIds]
+  );
+  const sendableSelectedConversations = useMemo(
+    () => selectedConversations.filter((item) => item.aluno_id && normalizePhone(item.telefone)),
+    [selectedConversations]
   );
   const filteredIds = filtered.map((item) => item.id);
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
@@ -81,16 +112,51 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
     }
   };
 
-  const handleSend = async () => {
-    const text = reply.trim();
-    if (!text) return;
-    setSending(true);
-    try {
-      await onSendReply(text);
-      setReply('');
-    } finally {
-      setSending(false);
+  const handleBatchSend = async (message: string): Promise<BatchSendResult> => {
+    let sent = 0;
+    const failures: string[] = [];
+
+    for (const conversation of sendableSelectedConversations) {
+      try {
+        await whatsappService.sendMessage({ alunoId: conversation.aluno_id!, to: conversation.telefone, message });
+        sent += 1;
+      } catch (error: any) {
+        failures.push(`${conversation.contato_nome}: ${error?.message || 'falha no envio'}`);
+      }
     }
+
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
+    if (sent > 0) setSelectedIds(new Set());
+    return { sent, skipped: selectedConversations.length - sendableSelectedConversations.length, failures };
+  };
+
+  const toggleSound = () => {
+    setSoundEnabled((current) => {
+      const next = !current;
+      setWhatsAppSoundEnabled(next);
+      if (next) playIncomingWhatsAppSound();
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    sendTyping(false);
+  }, [activeConversationId, sendTyping]);
+
+  const sendMedia = async ({ file, kind, caption }: { file: File; kind: 'image' | 'audio' | 'document'; caption: string }) => {
+    if (!activeConversation?.aluno_id) throw new Error('Esta conversa ainda não está vinculada a um aluno cadastrado.');
+    await whatsappService.sendMediaMessage({
+      alunoId: activeConversation.aluno_id,
+      to: activeConversation.telefone,
+      kind,
+      caption,
+      file: { base64: await fileToBase64(file), type: file.type || 'application/octet-stream', name: file.name },
+    });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens', activeConversation.id] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
   };
 
   return (
@@ -102,13 +168,22 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
               <h3 className="text-base font-bold text-[#001a33]">Conversas</h3>
               <p className="text-xs font-medium text-slate-400">Caixa de entrada WhatsApp</p>
             </div>
-            <button
-              onClick={onOpenStartModal}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100"
-              title="Iniciar conversa"
-            >
-              <Send size={15} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSound}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${soundEnabled ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                title={soundEnabled ? 'Som de novas mensagens ligado' : 'Som de novas mensagens desligado'}
+              >
+                {soundEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+              </button>
+              <button
+                onClick={onOpenStartModal}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition-colors hover:bg-emerald-100"
+                title="Iniciar conversa"
+              >
+                <Send size={15} />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -123,6 +198,17 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
               {validSelectedIds.length > 0 ? `${validSelectedIds.length} selecionada(s)` : 'Selecionar'}
             </button>
             {validSelectedIds.length > 0 && (
+              <>
+              <button
+                type="button"
+                onClick={() => setBatchOpen(true)}
+                disabled={sendableSelectedConversations.length === 0}
+                className="flex min-h-[36px] items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-40"
+                title="Enviar mensagem em lote"
+              >
+                <Send size={15} />
+                Mensagem
+              </button>
               <button
                 type="button"
                 onClick={handleDeleteSelected}
@@ -133,6 +219,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
                 <Trash2 size={15} />
                 {deleting ? 'Apagando...' : 'Apagar'}
               </button>
+              </>
             )}
           </div>
 
@@ -165,6 +252,8 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
           ) : (
             filtered.map((conversation) => {
               const isSelected = selectedIds.has(conversation.id);
+              const flowSession = flowByConversation.get(conversation.id);
+              const isHandoff = flowSession?.handoff_required || flowSession?.status === 'handoff';
               return (
               <div
                 key={conversation.id}
@@ -187,15 +276,18 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
                   onClick={() => onSelectConversation(conversation.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-left"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                    {initials(conversation.contato_nome)}
-                  </div>
+                  <ContactAvatar name={conversation.contato_nome} photo={conversation.contato_foto} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-bold text-[#001a33]">{conversation.contato_nome}</p>
                       <span className="shrink-0 text-[11px] font-semibold text-slate-400">{formatMessageDate(conversation.ultima_data)}</span>
                     </div>
                     <p className="mt-1 truncate text-xs font-medium text-slate-500">{conversation.ultimo_texto || formatPhone(conversation.telefone)}</p>
+                    {flowSession && (
+                      <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${isHandoff ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {isHandoff ? 'Atendente' : 'Robô ativo'}
+                      </span>
+                    )}
                   </div>
                   {conversation.unread_count > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white">
@@ -214,12 +306,14 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
         <div className="flex min-h-[72px] items-center justify-between border-b border-slate-100 bg-white px-5">
           {activeConversation ? (
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                {initials(activeConversation.contato_nome)}
-              </div>
+              <ContactAvatar name={activeConversation.contato_nome} photo={activeConversation.contato_foto} />
               <div className="min-w-0">
                 <h3 className="truncate text-sm font-bold text-[#001a33]">{activeConversation.contato_nome}</h3>
-                <p className="text-xs font-medium text-slate-400">{formatPhone(activeConversation.telefone)}</p>
+                {isContactTyping ? (
+                  <TypingIndicator name={activeConversation.contato_nome} />
+                ) : (
+                  <p className="text-xs font-medium text-slate-400">{formatPhone(activeConversation.telefone)}</p>
+                )}
               </div>
             </div>
           ) : (
@@ -233,65 +327,52 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
               </div>
             </div>
           )}
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
-          {!activeConversation ? (
-            <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-emerald-500 shadow-sm">
-                <MessageCircle size={30} />
-              </div>
-              <h3 className="text-lg font-bold tracking-tight text-[#001a33]">WhatsApp conectado ao atendimento</h3>
-              <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-slate-500">
-                As mensagens enviadas e recebidas pela API ficam salvas aqui.
-              </p>
-            </div>
-          ) : loadingMessages ? (
-            <div className="p-8 text-center text-xs font-bold text-slate-400">Carregando mensagens...</div>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => {
-                const outgoing = message.direcao === 'saida';
-                return (
-                  <div key={message.id} className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[76%] rounded-2xl px-4 py-3 shadow-sm ${
-                      outgoing ? 'bg-emerald-600 text-white' : 'bg-white text-slate-800'
-                    }`}>
-                      <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed">{message.conteudo}</p>
-                      <div className={`mt-1 flex justify-end gap-1 text-[10px] font-semibold ${outgoing ? 'text-emerald-50/80' : 'text-slate-400'}`}>
-                        <span>{formatMessageTime(message.created_at)}</span>
-                        {outgoing && <span>{message.status || 'sent'}</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          {activeConversation && (
+            <div className="flex items-center gap-2">
+              {activeFlowSession && (
+                <span className={`inline-flex min-h-[30px] items-center gap-1 rounded-xl px-3 text-[11px] font-bold uppercase ${activeFlowSession.handoff_required || activeFlowSession.status === 'handoff' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  <Bot size={13} />
+                  {activeFlowSession.handoff_required || activeFlowSession.status === 'handoff' ? 'Atendente' : 'Robô ativo'}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => onPauseFlow(activeConversation.id)}
+                className="inline-flex min-h-[34px] items-center gap-2 rounded-xl bg-amber-50 px-3 text-[11px] font-bold uppercase text-amber-700 transition-colors hover:bg-amber-100"
+                title="Assumir atendimento e pausar robô"
+              >
+                <PauseCircle size={14} />
+                Assumir
+              </button>
+              {activeFlowSession && (
+                <button
+                  type="button"
+                  onClick={() => onResetFlow(activeConversation.id)}
+                  className="inline-flex min-h-[34px] items-center gap-2 rounded-xl bg-slate-100 px-3 text-[11px] font-bold uppercase text-slate-600 transition-colors hover:bg-slate-200"
+                  title="Retomar robô na próxima mensagem"
+                >
+                  <RefreshCcw size={14} />
+                  Retomar
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {activeConversation && (
-          <div className="border-t border-slate-100 bg-white p-4">
-            <div className="flex items-end gap-3">
-              <textarea
-                value={reply}
-                onChange={(event) => setReply(event.target.value)}
-                rows={1}
-                placeholder={activeConversation.aluno_id ? 'Escreva sua resposta...' : 'Contato sem aluno vinculado'}
-                disabled={!activeConversation.aluno_id || !apiReady}
-                className="max-h-28 min-h-[44px] flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-50"
-              />
-              <button
-                onClick={handleSend}
-                disabled={sending || !reply.trim() || !activeConversation.aluno_id || !normalizePhone(activeConversation.telefone) || !apiReady}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40"
-              >
-                <Send size={17} />
-              </button>
-            </div>
-          </div>
-        )}
+        <MessageThread activeConversation={activeConversation} messages={messages} loadingMessages={loadingMessages} />
+
+        <MessageComposer activeConversation={activeConversation} apiReady={apiReady} sendTyping={sendTyping} onSendReply={onSendReply} onSendMedia={sendMedia} />
       </main>
+
+      {batchOpen && (
+        <BatchMessageModal
+          selectedCount={selectedConversations.length}
+          sendableCount={sendableSelectedConversations.length}
+          apiReady={apiReady}
+          onClose={() => setBatchOpen(false)}
+          onSend={handleBatchSend}
+        />
+      )}
 
     </div>
   );

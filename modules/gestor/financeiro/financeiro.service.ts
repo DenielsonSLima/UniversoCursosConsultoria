@@ -37,6 +37,7 @@ export interface ContasReceber {
   clienteId?: string;
   clienteNome?: string;
   clienteCpfCnpj?: string;
+  clienteTelefone?: string;
   matriculaId?: string;
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
@@ -59,6 +60,7 @@ export interface ContasReceber {
   origemCronogramaId?: string;
   turmaNome?: string;
   cursoNome?: string;
+  cursoModalidade?: string;
 }
 
 export interface ContasPagar {
@@ -250,7 +252,16 @@ export const financeiroService = {
   async getContasReceber(filters?: { poloId?: string; status?: string; categoria?: string }): Promise<ContasReceber[]> {
     let query = supabase
       .from('contas_receber')
-      .select('*, parceiros(nome, cpf_cnpj), polos(nome, cnpj, cidade, estado)');
+      .select(`
+        *,
+        parceiros(nome, cpf_cnpj, telefone),
+        polos(nome, cnpj, cidade, estado),
+        turmas(
+          nome,
+          codigo,
+          cursos(nome, modalidade)
+        )
+      `);
 
     if (filters?.poloId && filters.poloId !== 'todos') {
       query = query.eq('polo_id', filters.poloId);
@@ -285,8 +296,12 @@ export const financeiroService = {
       clienteId: cr.cliente_id,
       clienteNome: cr.parceiros?.nome || 'Cliente Geral',
       clienteCpfCnpj: cr.parceiros?.cpf_cnpj || '',
+      clienteTelefone: cr.parceiros?.telefone || '',
       matriculaId: cr.matricula_id,
       turmaId: cr.turma_id,
+      turmaNome: cr.turmas?.nome || '',
+      cursoNome: cr.turmas?.cursos?.nome || '',
+      cursoModalidade: cr.turmas?.cursos?.modalidade || '',
       formaPagamento: cr.forma_pagamento,
       origemPagamento: cr.origem_pagamento,
       contaBancariaId: cr.conta_bancaria_id,
@@ -313,7 +328,7 @@ export const financeiroService = {
       .from('contas_receber')
       .select(`
         *,
-        parceiros(nome, cpf_cnpj),
+        parceiros(nome, cpf_cnpj, telefone),
         polos(nome, cnpj, cidade, estado),
         turmas!inner(
           nome,
@@ -347,10 +362,12 @@ export const financeiroService = {
       clienteId: cr.cliente_id,
       clienteNome: cr.parceiros?.nome || 'Aluno',
       clienteCpfCnpj: cr.parceiros?.cpf_cnpj || '',
+      clienteTelefone: cr.parceiros?.telefone || '',
       matriculaId: cr.matricula_id,
       turmaId: cr.turma_id,
       turmaNome: cr.turmas?.nome || '',
       cursoNome: cr.turmas?.cursos?.nome || '',
+      cursoModalidade: cr.turmas?.cursos?.modalidade || '',
       formaPagamento: cr.forma_pagamento,
       origemPagamento: cr.origem_pagamento,
       contaBancariaId: cr.conta_bancaria_id,
