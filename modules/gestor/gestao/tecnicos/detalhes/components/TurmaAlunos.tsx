@@ -247,6 +247,16 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     setDestinationInstitution('');
   };
 
+  const openEnrollmentSearch = () => {
+    setSearchTerm('');
+    setShowMatricularModal(true);
+  };
+
+  const closeEnrollmentSearch = () => {
+    setShowMatricularModal(false);
+    setSearchTerm('');
+  };
+
   const openMovement = (student: AcademicStudent) => {
     setSelectedStudent(student);
     setOperationMode('MOVIMENTACAO');
@@ -282,7 +292,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           </p>
         </div>
         <button
-          onClick={() => setShowMatricularModal(true)}
+          onClick={openEnrollmentSearch}
           className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-md"
         >
           <UserPlus size={16} /> Matricular Aluno
@@ -307,7 +317,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           requireTechnicalProfile={requireTechnicalProfile}
           onSearchChange={setSearchTerm}
           onConfirmStudent={confirmEnrollment}
-          onClose={() => setShowMatricularModal(false)}
+          onClose={closeEnrollmentSearch}
         />
       )}
 

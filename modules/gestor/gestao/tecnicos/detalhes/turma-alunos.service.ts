@@ -4,6 +4,7 @@ export interface AvailableStudent {
   id: string;
   nome: string;
   cpf_cnpj: string | null;
+  telefone?: string | null;
   tipo_documento?: string | null;
   rg?: string | null;
   nome_mae?: string | null;
@@ -73,7 +74,7 @@ export const turmaAlunosService = {
 
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, cpf_cnpj, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro')
+      .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro')
       .eq('tipo', 'Aluno')
       .eq('status', 'ATIVO')
       .order('nome');
