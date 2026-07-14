@@ -60,13 +60,11 @@ export const useTurmaAcademicInvalidation = (turmaId: string) => {
 
 export const useEnrollStudentMutation = (
   turmaId: string,
-  responsavelId: string | null,
   onSuccess: MutationSuccess<Awaited<ReturnType<typeof turmaAsaasService.matricularAlunoComCobranca>>, EnrollInput>,
   onError: MutationError<EnrollInput>,
 ) => useMutation({
   mutationFn: (input: EnrollInput) => turmaAsaasService.matricularAlunoComCobranca({
     turmaId,
-    responsavelId,
     ...input,
   }),
   onSuccess,
@@ -83,7 +81,6 @@ export const useRemoveEnrollmentMutation = (
 });
 
 export const useMovementMutation = (
-  responsavelId: string | null,
   onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.movimentar>>, MovementInput>,
   onError: MutationError<MovementInput>,
 ) => useMutation({
@@ -93,14 +90,12 @@ export const useMovementMutation = (
     motivo: input.motivo,
     observacao: input.observacao,
     dataRetornoPrevista: input.dataRetornoPrevista,
-    responsavelId,
   }),
   onSuccess,
   onError,
 });
 
 export const useTransferMutation = (
-  responsavelId: string | null,
   onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.transferir>>, TransferInput>,
   onError: MutationError<TransferInput>,
 ) => useMutation({
@@ -111,7 +106,6 @@ export const useTransferMutation = (
     turmaDestinoId: input.tipo === 'EXTERNA_ENVIADA' ? undefined : input.turmaDestinoId,
     instituicaoDestino: input.tipo === 'EXTERNA_ENVIADA' ? input.instituicaoDestino : undefined,
     observacao: input.observacao,
-    responsavelId,
   }),
   onSuccess,
   onError,

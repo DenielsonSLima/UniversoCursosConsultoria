@@ -5,6 +5,7 @@ import { Turma } from '../../../../gestao.types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleService } from '../../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
+import TechnicalDataError from '../TechnicalDataError';
 
 interface Disciplina {
   id: string;
@@ -32,7 +33,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
   const [activeDisciplina, setActiveDisciplina] = useState<Disciplina | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: modulosData = [], isLoading: loading } = useQuery<Modulo[]>({
+  const modulosQuery = useQuery<Modulo[]>({
     queryKey: [...academicLifecycleKeys.diarios(turma.id), 'normalized-v2'],
     queryFn: async () => {
       const rows = await academicLifecycleService.getDiarios(turma.id);
@@ -59,6 +60,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
       return Array.from(grouped.values());
     }
   });
+  const modulosData = modulosQuery.data || [];
   const modulos = (Array.isArray(modulosData) ? modulosData : []).map((modulo) => ({
     ...modulo,
     disciplinas: Array.isArray(modulo?.disciplinas) ? modulo.disciplinas : [],
@@ -74,12 +76,23 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
     queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
   };
 
-  if (loading) {
+  if (modulosQuery.isLoading) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
         <span className="text-slate-500 font-bold ml-3">Carregando diários de classe...</span>
       </div>
+    );
+  }
+
+  if (modulosQuery.isError) {
+    return (
+      <TechnicalDataError
+        title="Diários não carregados"
+        message="A grade foi ocultada para não informar incorretamente que a turma está sem disciplinas ou sem diários."
+        retrying={modulosQuery.isFetching}
+        onRetry={() => { void modulosQuery.refetch(); }}
+      />
     );
   }
 

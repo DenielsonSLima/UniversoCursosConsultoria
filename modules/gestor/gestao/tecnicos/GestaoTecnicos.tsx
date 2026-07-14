@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Briefcase, Archive, Activity } from 'lucide-react';
+import { Plus, Briefcase, Archive, Activity, CalendarClock, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
@@ -14,6 +14,7 @@ import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 import ConfirmModal from '../../components/ConfirmModal';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
+import TechnicalDataError from './detalhes/components/TechnicalDataError';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -63,7 +64,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       console.error('Turma criada, mas a lista não recarregou:', error);
       toast.error('Lista não atualizada', error?.message || 'A turma foi criada, mas a lista não recarregou automaticamente.');
     }
-    toast.success('Turma criada', `${turma.codigo} foi aberta com sucesso.`);
+    toast.success('Turma criada', `${turma.codigo} foi criada como ${turma.status.replaceAll('_', ' ').toLowerCase()}.`);
   };
 
   const handleSelectTurma = (turma: Turma) => {
@@ -74,6 +75,9 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const handleCloseDetails = () => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
+    void list.reload().catch((error: any) => {
+      toast.error('Lista não atualizada', error?.message || 'Atualize a página para conferir a fase da turma.');
+    });
   };
 
   const handleDeleteTurma = async () => {
@@ -116,15 +120,37 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         </div>
         
         <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-900/20"
+          onClick={() => { if (!list.error) setIsModalOpen(true); }}
+          disabled={Boolean(list.error)}
+          title={list.error ? 'Recarregue a lista antes de criar uma turma.' : 'Abrir nova turma'}
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
         </button>
       </div>
 
       {/* Abas Internas */}
-      <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1">
+      <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
+        <button
+          onClick={() => list.changeStatus('PLANEJADA')}
+          className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            list.status === 'PLANEJADA'
+              ? 'text-indigo-600 border-b-2 border-indigo-600'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <CalendarClock size={14} /> Planejadas
+        </button>
+        <button
+          onClick={() => list.changeStatus('INSCRICOES_ABERTAS')}
+          className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            list.status === 'INSCRICOES_ABERTAS'
+              ? 'text-amber-600 border-b-2 border-amber-600'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Megaphone size={14} /> Inscrições
+        </button>
         <button 
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -155,6 +181,14 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {list.loading ? (
           <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
+        ) : list.error ? (
+          <div className="col-span-full">
+            <TechnicalDataError
+              title="Turmas técnicas não carregadas"
+              message="A lista e a criação foram bloqueadas para não confundir uma falha de consulta com uma categoria vazia."
+              onRetry={() => { void list.reload().catch(() => undefined); }}
+            />
+          </div>
         ) : list.turmas.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-400">
                 Nenhuma turma encontrada nesta categoria.

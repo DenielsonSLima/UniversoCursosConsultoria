@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Loader2,
   PauseCircle,
+  RefreshCw,
   RotateCcw,
   X,
 } from 'lucide-react';
@@ -34,6 +35,8 @@ interface MovimentacaoAlunoModalProps {
   destinationClasses: any[];
   movementPending: boolean;
   transferPending: boolean;
+  destinationError?: boolean;
+  destinationRetrying?: boolean;
   onOperationModeChange: (mode: OperationMode) => void;
   onMovementTypeChange: (type: AcademicMovementType) => void;
   onTransferTypeChange: (type: TransferType) => void;
@@ -44,6 +47,7 @@ interface MovimentacaoAlunoModalProps {
   onDestinationInstitutionChange: (value: string) => void;
   onClose: () => void;
   onConfirm: () => void;
+  onRetryDestination?: () => void;
 }
 
 const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
@@ -59,6 +63,8 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   destinationClasses,
   movementPending,
   transferPending,
+  destinationError = false,
+  destinationRetrying = false,
   onOperationModeChange,
   onMovementTypeChange,
   onTransferTypeChange,
@@ -69,13 +75,14 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   onDestinationInstitutionChange,
   onClose,
   onConfirm,
+  onRetryDestination,
 }) => {
   const disabled = !reason.trim()
     || movementPending
     || transferPending
     || (operationMode === 'TRANSFERENCIA'
       && transferType !== 'EXTERNA_ENVIADA'
-      && !destinationClassId)
+      && (!destinationClassId || destinationError || destinationRetrying))
     || (operationMode === 'TRANSFERENCIA'
       && transferType === 'EXTERNA_ENVIADA'
       && !destinationInstitution.trim());
@@ -152,18 +159,29 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
                   className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500"
                 />
               ) : (
-                <select
-                  value={destinationClassId}
-                  onChange={(event) => onDestinationClassChange(event.target.value)}
-                  className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500"
-                >
-                  <option value="">Selecione a turma de destino...</option>
-                  {destinationClasses.map((destination: any) => (
-                    <option key={destination.id} value={destination.id}>
-                      {destination.nome} - {destination.polos?.nome || 'Polo não informado'}
-                    </option>
-                  ))}
-                </select>
+                destinationError ? (
+                  <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
+                    <p>Não foi possível carregar as turmas de destino. A transferência foi bloqueada.</p>
+                    <button type="button" onClick={onRetryDestination} disabled={destinationRetrying}
+                      className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">
+                      <RefreshCw size={12} className={destinationRetrying ? 'animate-spin' : ''} /> Tentar novamente
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={destinationClassId}
+                    onChange={(event) => onDestinationClassChange(event.target.value)}
+                    disabled={destinationRetrying}
+                    className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500 disabled:opacity-50"
+                  >
+                    <option value="">{destinationRetrying ? 'Carregando turmas...' : 'Selecione a turma de destino...'}</option>
+                    {destinationClasses.map((destination: any) => (
+                      <option key={destination.id} value={destination.id}>
+                        {destination.nome} - {destination.polos?.nome || 'Polo não informado'}
+                      </option>
+                    ))}
+                  </select>
+                )
               )}
             </>
           )}

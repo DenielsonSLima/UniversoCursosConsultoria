@@ -12,20 +12,30 @@ import { useAtividadesExtraClasse } from './useAtividadesExtraClasse';
 const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
   const {
     atividades,
+    accessMessage,
     archiveMutation,
+    canCreate,
+    canOperateAtividade,
+    canRemoveAtividade,
     corrigirMutation,
     correctionDrafts,
+    createAsDraft,
     createMutation,
     disciplinaSelecionada,
     disciplinas,
     form,
     hasLoadError,
     loading,
+    publishMutation,
+    realtimeError,
     removeToast,
+    retryLoad,
     setCorrectionDrafts,
     setForm,
     toasts,
   } = useAtividadesExtraClasse(props);
+  const publicadasCount = atividades.filter((atividade) => atividade.status === 'PUBLICADA').length;
+  const rascunhosCount = atividades.filter((atividade) => atividade.status === 'RASCUNHO').length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -38,7 +48,7 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
         </div>
         <span className="inline-flex w-max items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700">
           <ClipboardCheck size={14} />
-          {atividades.length} publicadas
+          {publicadasCount} publicadas{rascunhosCount > 0 ? ` • ${rascunhosCount} rascunho(s)` : ''}
         </span>
       </div>
 
@@ -47,15 +57,22 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
         disciplinaIdRestrita={props.disciplinaIdRestrita}
         disciplinaSelecionada={disciplinaSelecionada}
         disciplinas={disciplinas}
-        disabled={props.readOnly}
+        disabled={!canCreate}
         form={form}
         onSubmit={() => createMutation.mutate()}
         setForm={setForm}
+        submitLabel={createAsDraft ? 'Salvar rascunho' : 'Publicar atividade'}
       />
 
-      {props.readOnly && (
+      {accessMessage && (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold text-amber-800">
-          {props.readOnlyMessage || 'Este período está fechado. As atividades ficam disponíveis apenas para consulta.'}
+          {accessMessage}
+        </div>
+      )}
+
+      {realtimeError && (
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-bold text-amber-800">
+          {realtimeError}
         </div>
       )}
 
@@ -66,7 +83,14 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
         </div>
       ) : hasLoadError ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-xs font-bold text-red-700">
-          Não consegui carregar as atividades extra-classe desta turma. Atualize a página ou tente novamente em instantes.
+          <p>Não consegui carregar as atividades extra-classe desta turma.</p>
+          <button
+            type="button"
+            onClick={() => void retryLoad()}
+            className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-700"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : atividades.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -81,11 +105,15 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
               key={atividade.id}
               archivePending={archiveMutation.isPending}
               atividade={atividade}
+              canCorrect={canOperateAtividade(atividade)}
+              canPublish={atividade.status === 'RASCUNHO' && canOperateAtividade(atividade)}
+              canRemove={canRemoveAtividade(atividade)}
               corrigirPending={corrigirMutation.isPending}
               correctionDrafts={correctionDrafts}
-              onArchive={(atividadeId) => archiveMutation.mutate(atividadeId)}
+              onPublish={(atividadeId) => publishMutation.mutate(atividadeId)}
+              onRemove={() => archiveMutation.mutate(atividade)}
               onCorrigir={(resposta) => corrigirMutation.mutate(resposta)}
-              readOnly={props.readOnly}
+              publishPending={publishMutation.isPending && publishMutation.variables === atividade.id}
               setCorrectionDrafts={setCorrectionDrafts}
             />
           ))}

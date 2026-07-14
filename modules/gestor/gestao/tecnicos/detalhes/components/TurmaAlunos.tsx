@@ -1,8 +1,4 @@
 import React, { useState } from 'react';
-import {
-  Loader2,
-  UserPlus,
-} from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import ConfirmModal from '../../../../components/ConfirmModal';
@@ -12,6 +8,8 @@ import ConfirmarMatriculaModal, { EnrollmentFinance, EnrollmentStep } from './al
 import MatricularAlunoModal from './alunos/MatricularAlunoModal';
 import MovimentacaoAlunoModal, { OperationMode, TransferType } from './alunos/MovimentacaoAlunoModal';
 import TurmaAlunosTable from './alunos/TurmaAlunosTable';
+import TurmaAlunosHeader from './alunos/TurmaAlunosHeader';
+import TurmaAlunosQueryState from './alunos/TurmaAlunosQueryState';
 import {
   useAvailableStudents,
   useDestinationClasses,
@@ -27,6 +25,7 @@ import {
   useTurmaAcademicInvalidation,
 } from '../hooks/useTurmaAlunosMutations';
 import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
+import { getMaceioIsoDate } from '../../technicalClassDates';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -39,11 +38,10 @@ interface EnrollmentFlagConfig {
   sincronizar_asaas: boolean | null;
 }
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const ENROLLMENT_PHASES = new Set(['PLANEJADA', 'INSCRICOES_ABERTAS', 'EM_ANDAMENTO']);
 
 const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
-  const responsavelId = window.sessionStorage.getItem('logged_user_id');
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<any>(null);
   const [enrollmentStep, setEnrollmentStep] = useState<EnrollmentStep>('PREVIEW');
@@ -51,7 +49,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     valorMatricula: turma.valorMatricula || 0,
     valorParcela: turma.valorParcela || 0,
     valorRematricula: turma.valorRematricula || 0,
-    dataVencimentoMatricula: todayISO(),
+    dataVencimentoMatricula: getMaceioIsoDate(),
     diaVencimento: 10,
   });
   const [enrollmentFlags, setEnrollmentFlags] = useState<EnrollmentFlagConfig>({
@@ -72,28 +70,32 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const [destinationClassId, setDestinationClassId] = useState('');
   const [destinationInstitution, setDestinationInstitution] = useState('');
   const requireTechnicalProfile = String(turma.modalidade || '').toUpperCase() === 'TECNICO';
+  const turmaStatus = String(turma.status || '').toUpperCase();
+  const canEnroll = ENROLLMENT_PHASES.has(turmaStatus);
+  const isReadOnly = turmaStatus === 'FINALIZADA';
 
-  const { data: students = [], isLoading } = useTurmaStudents(turma.id);
-  const { filteredAvailableStudents, isLoading: loadingAvailable } = useAvailableStudents(
+  const studentsQuery = useTurmaStudents(turma.id);
+  const students = studentsQuery.data || [];
+  const availableStudentsQuery = useAvailableStudents(
     turma.id,
     students,
     showMatricularModal,
     searchTerm,
   );
-  const { data: turmaFinanceiroConfig } = useTurmaFinanceiroMatriculaConfig(
+  const financeiroConfigQuery = useTurmaFinanceiroMatriculaConfig(
     turma.id,
-    showMatricularModal || !!pendingEnrollment,
+    canEnroll && (showMatricularModal || !!pendingEnrollment),
   );
-  const { data: previsao } = usePrevisaoFinanceiraTurma(turma.id, !!turmaFinanceiroConfig || !!pendingEnrollment);
-  const { data: destinationClasses = [] } = useDestinationClasses(
+  const turmaFinanceiroConfig = financeiroConfigQuery.data;
+  const previsaoQuery = usePrevisaoFinanceiraTurma(turma.id, !!pendingEnrollment && !!turmaFinanceiroConfig);
+  const destinationClassesQuery = useDestinationClasses(
     turma.id,
     !!selectedStudent && operationMode === 'TRANSFERENCIA' && transferType !== 'EXTERNA_ENVIADA',
   );
+  const destinationClasses = destinationClassesQuery.data || [];
   const invalidateAcademicData = useTurmaAcademicInvalidation(turma.id);
-
   const enrollMutation = useEnrollStudentMutation(
     turma.id,
-    responsavelId,
     async (result) => {
       await invalidateAcademicData();
       setShowMatricularModal(false);
@@ -123,6 +125,10 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
 
   const confirmEnrollment = (student: any) => {
+    if (!canEnroll || financeiroConfigQuery.isError || financeiroConfigQuery.isLoading || !turmaFinanceiroConfig) {
+      toast.error('Matrícula indisponível', 'A fase da turma e a configuração financeira precisam estar carregadas antes da matrícula.');
+      return;
+    }
     if (requireTechnicalProfile) {
       const missingFields = getTechnicalEnrollmentMissingFields(student);
       if (missingFields.length > 0) {
@@ -134,17 +140,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       }
     }
 
-    const defaults = turmaFinanceiroConfig || {
-      valorMatricula: turma.valorMatricula || 0,
-      valorParcela: turma.valorParcela || 0,
-      valorRematricula: turma.valorRematricula || 0,
-      diaVencimento: 10,
-      qtdParcelas: turma.qtdParcelas || 11,
-      origemFinanceira: turma.origemFinanceira || 'NORMAL',
-      financeiroHerdado: turma.financeiroHerdado || false,
-      gerarCobrancasFuturas: turma.gerarCobrancasFuturas ?? false,
-      sincronizarAsaasFuturo: turma.sincronizarAsaasFuturo ?? true,
-    };
+    const defaults = turmaFinanceiroConfig;
     const financeiroHerdado = defaults.financeiroHerdado || defaults.origemFinanceira === 'LEGADO';
     const gerarCobrancaInicial = defaults.origemFinanceira === 'NORMAL' && !financeiroHerdado;
     const deveSincronizarAsaas = gerarCobrancaInicial && (defaults.sincronizarAsaasFuturo ?? true);
@@ -161,7 +157,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         valorMatricula: defaults.valorMatricula,
         valorParcela: defaults.valorParcela,
         valorRematricula: defaults.valorRematricula,
-        dataVencimentoMatricula: todayISO(),
+        dataVencimentoMatricula: getMaceioIsoDate(),
         diaVencimento: defaults.diaVencimento,
       });
       setEnrollmentFlags({
@@ -178,7 +174,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     setPendingEnrollment(null);
     setEnrollmentStep('PREVIEW');
   };
-
   const updateEnrollmentFinance = (field: keyof typeof enrollmentFinance, value: string) => {
     setEnrollmentFinance((current) => ({
       ...current,
@@ -187,9 +182,12 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         : Number(value) || 0,
     }));
   };
-
   const confirmEnrollmentFinance = () => {
     if (!pendingEnrollment) return;
+    if (!canEnroll || !turmaFinanceiroConfig || financeiroConfigQuery.isError) {
+      toast.error('Configuração não carregada', 'Recarregue os dados financeiros antes de confirmar a matrícula.');
+      return;
+    }
     if (!enrollmentFinance.dataVencimentoMatricula) {
       toast.error('Vencimento obrigatório', 'Informe a data de vencimento da matrícula.');
       return;
@@ -210,7 +208,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   };
 
   const movementMutation = useMovementMutation(
-    responsavelId,
     async () => {
       await invalidateAcademicData();
       closeOperationModal();
@@ -220,7 +217,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
 
   const transferMutation = useTransferMutation(
-    responsavelId,
     async (_result, input) => {
       await invalidateAcademicData(input.turmaDestinoId);
       closeOperationModal();
@@ -248,6 +244,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   };
 
   const openEnrollmentSearch = () => {
+    if (!canEnroll) return;
     setSearchTerm('');
     setShowMatricularModal(true);
   };
@@ -258,6 +255,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   };
 
   const openMovement = (student: AcademicStudent) => {
+    if (isReadOnly) return;
     setSelectedStudent(student);
     setOperationMode('MOVIMENTACAO');
     setMovementType(
@@ -268,40 +266,24 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   };
 
   const openTransfer = (student: AcademicStudent) => {
+    if (isReadOnly) return;
     setSelectedStudent(student);
     setOperationMode('TRANSFERENCIA');
     setTransferType('INTERNA_TURMA');
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="animate-spin text-emerald-600" size={32} />
-        <span className="text-slate-500 font-bold ml-3">Carregando matrículas...</span>
-      </div>
-    );
-  }
+  if (studentsQuery.isLoading || studentsQuery.isError) return (
+    <TurmaAlunosQueryState {...studentsQuery} onRetry={() => { void studentsQuery.refetch(); }} />
+  );
 
   return (
     <div className="animate-fadeIn">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-[#001a33] mb-1">Matrículas da Turma</h3>
-          <p className="text-slate-500 text-xs">
-            {students.length} registros preservados, incluindo alunos inativos e transferidos.
-          </p>
-        </div>
-        <button
-          onClick={openEnrollmentSearch}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-md"
-        >
-          <UserPlus size={16} /> Matricular Aluno
-        </button>
-      </div>
+      <TurmaAlunosHeader totalStudents={students.length} onEnroll={openEnrollmentSearch} canEnroll={canEnroll} />
 
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
         <TurmaAlunosTable
           students={students}
+          readOnly={isReadOnly}
           onOpenMovement={openMovement}
           onOpenTransfer={openTransfer}
           onRemoveEnrollment={setStudentToRemove}
@@ -311,12 +293,19 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       {showMatricularModal && (
         <MatricularAlunoModal
           searchTerm={searchTerm}
-          loadingAvailable={loadingAvailable}
-          enrollPending={enrollMutation.isPending}
-          students={filteredAvailableStudents}
+          loadingAvailable={availableStudentsQuery.isLoading || financeiroConfigQuery.isLoading}
+          enrollPending={enrollMutation.isPending || financeiroConfigQuery.isLoading}
+          loadError={financeiroConfigQuery.isError
+            ? 'A configuração financeira da turma não foi carregada. A matrícula foi bloqueada.'
+            : availableStudentsQuery.isError
+              ? 'A busca de alunos falhou. Nenhuma matrícula pode ser iniciada com dados incompletos.'
+              : null}
+          retrying={availableStudentsQuery.isFetching || financeiroConfigQuery.isFetching}
+          students={availableStudentsQuery.filteredAvailableStudents}
           requireTechnicalProfile={requireTechnicalProfile}
           onSearchChange={setSearchTerm}
           onConfirmStudent={confirmEnrollment}
+          onRetry={() => { void Promise.all([financeiroConfigQuery.refetch(), availableStudentsQuery.refetch()]); }}
           onClose={closeEnrollmentSearch}
         />
       )}
@@ -328,7 +317,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           step={enrollmentStep}
           finance={enrollmentFinance}
           turmaFinanceiroConfig={turmaFinanceiroConfig}
-          previsao={previsao}
+          previsao={previsaoQuery.data}
           enrollmentFlags={enrollmentFlags}
           onFlagsChange={setEnrollmentFlags}
           isPending={enrollMutation.isPending}
@@ -353,6 +342,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           destinationClasses={destinationClasses}
           movementPending={movementMutation.isPending}
           transferPending={transferMutation.isPending}
+          destinationError={destinationClassesQuery.isError}
+          destinationRetrying={destinationClassesQuery.isFetching}
           onOperationModeChange={setOperationMode}
           onMovementTypeChange={setMovementType}
           onTransferTypeChange={setTransferType}
@@ -362,6 +353,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           onDestinationClassChange={setDestinationClassId}
           onDestinationInstitutionChange={setDestinationInstitution}
           onClose={closeOperationModal}
+          onRetryDestination={() => { void destinationClassesQuery.refetch(); }}
           onConfirm={() => operationMode === 'MOVIMENTACAO'
             ? movementMutation.mutate({
               matriculaId: selectedStudent.matricula_id,
@@ -370,7 +362,10 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
               observacao: notes,
               dataRetornoPrevista: movementType === 'TRANCAMENTO' ? returnDate || undefined : undefined,
             })
-            : transferMutation.mutate({
+            : transferType !== 'EXTERNA_ENVIADA'
+              && (destinationClassesQuery.isError || destinationClassesQuery.isLoading)
+              ? toast.error('Destino não carregado', 'Recarregue as turmas de destino antes de transferir.')
+              : transferMutation.mutate({
               matriculaId: selectedStudent.matricula_id,
               tipo: transferType,
               motivo: reason,
@@ -385,7 +380,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         isOpen={!!studentToRemove}
         onClose={() => setStudentToRemove(null)}
         onConfirm={() => {
-          if (studentToRemove) {
+          if (studentToRemove && !isReadOnly) {
             removeEnrollmentMutation.mutate(studentToRemove.matricula_id);
           }
         }}

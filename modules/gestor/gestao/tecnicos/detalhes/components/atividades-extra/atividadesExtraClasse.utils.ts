@@ -1,4 +1,13 @@
-export const createAtividadeFormInitialState = (disciplinaId = '') => ({
+import {
+  AtividadeExtraClasseFormState,
+  AtividadeExtraClassePergunta,
+  AtividadeExtraClasseResposta,
+  AtividadeExtraClasseRespostaItem,
+} from './atividadesExtraClasse.types';
+
+export const createAtividadeFormInitialState = (
+  disciplinaId = '',
+): AtividadeExtraClasseFormState => ({
   disciplinaId,
   titulo: '',
   tema: '',
@@ -7,7 +16,17 @@ export const createAtividadeFormInitialState = (disciplinaId = '') => ({
   texto: '',
   videoUrl: '',
   perguntas: '',
+  tipoResposta: 'TEXTO',
 });
+
+export const isAtividadeTurmaPreparacao = (status?: string | null) =>
+  ['PLANEJADA', 'INSCRICOES_ABERTAS'].includes(String(status || '').toUpperCase());
+
+export const isAtividadeContextoOperacional = (
+  turmaStatus?: string | null,
+  periodoStatus?: string | null,
+) => String(turmaStatus || '').toUpperCase() === 'EM_ANDAMENTO'
+  && ['ABERTO', 'EM_FECHAMENTO'].includes(String(periodoStatus || '').toUpperCase());
 
 export const formatAtividadeDate = (value?: string | null) => {
   if (!value) return 'Prazo não definido';
@@ -29,9 +48,77 @@ export const parsePerguntas = (value: string) =>
     .filter(Boolean)
     .map((pergunta) => ({ pergunta }));
 
-export const getRespostaAnswers = (resposta: any) => {
+export const getRespostaAnswers = (
+  resposta: AtividadeExtraClasseResposta,
+): AtividadeExtraClasseRespostaItem[] => {
   const answers = resposta?.respostas;
-  return Array.isArray(answers) ? answers : [];
+  if (!Array.isArray(answers)) return [];
+  return answers.filter((answer): answer is AtividadeExtraClasseRespostaItem => (
+    typeof answer === 'object' && answer !== null
+  ));
+};
+
+export const getAtividadePerguntaTexto = (
+  pergunta: AtividadeExtraClassePergunta | unknown,
+  index: number,
+) => {
+  if (typeof pergunta === 'string') return pergunta;
+  if (typeof pergunta === 'object' && pergunta !== null && 'pergunta' in pergunta) {
+    const texto = (pergunta as { pergunta?: unknown }).pergunta;
+    if (typeof texto === 'string' && texto.trim()) return texto;
+  }
+  return `Pergunta ${index + 1}`;
+};
+
+const getLocalIsoDate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const isAtividadePrazoEncerrado = (
+  prazoEntrega?: string | null,
+  now = new Date(),
+) => Boolean(prazoEntrega && /^\d{4}-\d{2}-\d{2}$/.test(prazoEntrega) && prazoEntrega < getLocalIsoDate(now));
+
+export const isAtividadeRespostaAtrasada = (
+  resposta: AtividadeExtraClasseResposta,
+  prazoEntrega?: string | null,
+) => {
+  if (!resposta.created_at || !prazoEntrega || !/^\d{4}-\d{2}-\d{2}$/.test(prazoEntrega)) return false;
+  const createdAt = new Date(resposta.created_at);
+  if (Number.isNaN(createdAt.getTime())) return false;
+  return getLocalIsoDate(createdAt) > prazoEntrega;
+};
+
+export const normalizeAtividadeHttpUrl = (
+  value: string | null | undefined,
+  label: string,
+) => {
+  const trimmed = value?.trim() || '';
+  if (!trimmed) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error(`${label} precisa ser um endereço completo, começando com http:// ou https://.`);
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`${label} deve usar um endereço http:// ou https://.`);
+  }
+
+  return parsed.toString();
+};
+
+export const getSafeAtividadeHttpUrl = (value?: string | null) => {
+  try {
+    return normalizeAtividadeHttpUrl(value, 'O link');
+  } catch {
+    return null;
+  }
 };
 
 export const normalizeAtividadeErrorMessage = (message: string) =>
@@ -39,3 +126,12 @@ export const normalizeAtividadeErrorMessage = (message: string) =>
     .replace('Carga horaria', 'Carga horária')
     .replace('carga horaria', 'carga horária')
     .replace('titulo', 'título');
+
+export const getAtividadeErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' ? message : '';
+  }
+  return '';
+};

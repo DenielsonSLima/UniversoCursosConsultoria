@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import {
   AlertTriangle,
   ArrowDownToLine,
-  BookCheck,
   CalendarRange,
   CheckCircle2,
-  Clock3,
-  History,
   Loader2,
-  LockKeyhole,
-  RotateCcw,
+  Megaphone,
+  PlayCircle,
   X,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,105 +15,19 @@ import ToastNotification, { useToast } from '../../../../parceiros/components/sh
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { AcademicPeriod, academicLifecycleService } from '../academic-lifecycle.service';
 import { supabase } from '../../../../../../lib/supabase';
+import AcademicPeriodCard from './academic/AcademicPeriodCard';
+import AcademicMovementsSection from './academic/AcademicMovementsSection';
+import { getMaceioIsoDate } from '../../technicalClassDates';
+import TechnicalDataError from './TechnicalDataError';
 
 interface TurmaAcademicoProps {
   turma: Turma;
   onTurmaFinalizada?: () => void;
 }
 
-const PeriodCard: React.FC<{
-  period: AcademicPeriod;
-  onClose: (period: AcademicPeriod) => void;
-  onReopen: (period: AcademicPeriod) => void;
-  closing: boolean;
-}> = ({ period, onClose, onReopen, closing }) => {
-  const { data: pending, isLoading } = useQuery({
-    queryKey: [...academicLifecycleKeys.periodos(period.turma_id), period.id, 'pendencias'],
-    queryFn: () => academicLifecycleService.getPendencias(period.id),
-  });
-
-  const statusStyle = period.status === 'FECHADO'
-    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-    : 'bg-blue-100 text-blue-700 border-blue-200';
-
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className={`mt-0.5 p-2.5 rounded-xl ${period.status === 'FECHADO' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-            {period.status === 'FECHADO' ? <LockKeyhole size={18} /> : <CalendarRange size={18} />}
-          </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">Etapa {period.ordem}</p>
-            <h4 className="font-black text-[#001a33]">{period.nome}</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
-              {period.data_inicio ? new Date(`${period.data_inicio}T12:00:00`).toLocaleDateString('pt-BR') : 'Início não definido'}
-              {' — '}
-              {period.data_fim ? new Date(`${period.data_fim}T12:00:00`).toLocaleDateString('pt-BR') : 'Fim não definido'}
-            </p>
-          </div>
-        </div>
-        <span className={`px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase ${statusStyle}`}>
-          {period.status}
-        </span>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-5">
-        {isLoading ? (
-          <div className="col-span-3 py-3 flex justify-center"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
-        ) : (
-          <>
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-lg font-black text-[#001a33]">{pending?.disciplinasNaoConcluidas ?? 0}</p>
-              <p className="text-[8px] font-black uppercase text-slate-400">Disciplinas abertas</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-lg font-black text-[#001a33]">{pending?.disciplinasSemAula ?? 0}</p>
-              <p className="text-[8px] font-black uppercase text-slate-400">Sem aulas</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-lg font-black text-[#001a33]">{pending?.lancamentosDeNotaPendentes ?? 0}</p>
-              <p className="text-[8px] font-black uppercase text-slate-400">Notas pendentes</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-lg font-black text-[#001a33]">{pending?.frequenciasPendentes ?? 0}</p>
-              <p className="text-[8px] font-black uppercase text-slate-400">Freq. pendentes</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3 text-center">
-              <p className="text-lg font-black text-[#001a33]">{pending?.recuperacoesPendentes ?? 0}</p>
-              <p className="text-[8px] font-black uppercase text-slate-400">Recuperações</p>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="mt-4">
-        {period.status === 'FECHADO' ? (
-          <button
-            onClick={() => onReopen(period)}
-            className="w-full py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-black uppercase flex justify-center items-center gap-2"
-          >
-            <RotateCcw size={14} /> Reabrir com justificativa
-          </button>
-        ) : (
-          <button
-            onClick={() => onClose(period)}
-            disabled={!pending?.podeFechar || closing}
-            className="w-full py-2.5 rounded-xl bg-[#001a33] text-white text-[10px] font-black uppercase flex justify-center items-center gap-2 disabled:opacity-35"
-          >
-            {closing ? <Loader2 size={14} className="animate-spin" /> : <BookCheck size={14} />}
-            Fechar período
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizada }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
-  const responsavelId = sessionStorage.getItem('logged_user_id');
   const [reopenPeriod, setReopenPeriod] = useState<AcademicPeriod | null>(null);
   const [reopenReason, setReopenReason] = useState('');
   const [showReceiveTransfer, setShowReceiveTransfer] = useState(false);
@@ -125,17 +36,19 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const [originCourse, setOriginCourse] = useState('');
   const [transferReason, setTransferReason] = useState('');
 
-  const { data: periods = [], isLoading: loadingPeriods } = useQuery({
+  const periodsQuery = useQuery({
     queryKey: academicLifecycleKeys.periodos(turma.id),
     queryFn: () => academicLifecycleService.getPeriodos(turma.id),
   });
+  const periods = periodsQuery.data || [];
 
-  const { data: movements = [], isLoading: loadingMovements } = useQuery({
+  const movementsQuery = useQuery({
     queryKey: academicLifecycleKeys.movimentacoes(turma.id),
     queryFn: () => academicLifecycleService.getMovimentacoes(turma.id),
   });
+  const movements = movementsQuery.data || [];
 
-  const { data: allStudents = [] } = useQuery({
+  const allStudentsQuery = useQuery({
     queryKey: [...academicLifecycleKeys.turma(turma.id), 'alunos-recebimento'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -148,6 +61,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     },
     enabled: showReceiveTransfer,
   });
+  const allStudents = allStudentsQuery.data || [];
 
   const invalidate = async () => {
     await Promise.all([
@@ -157,7 +71,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   };
 
   const closePeriodMutation = useMutation({
-    mutationFn: (periodId: string) => academicLifecycleService.fecharPeriodo(periodId, responsavelId),
+    mutationFn: (periodId: string) => academicLifecycleService.fecharPeriodo(periodId),
     onSuccess: async () => {
       await invalidate();
       toast.success('Período fechado', 'Notas e frequências foram consolidadas em um snapshot auditável.');
@@ -166,7 +80,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   });
 
   const reopenPeriodMutation = useMutation({
-    mutationFn: () => academicLifecycleService.reabrirPeriodo(reopenPeriod!.id, reopenReason, responsavelId),
+    mutationFn: () => academicLifecycleService.reabrirPeriodo(reopenPeriod!.id, reopenReason),
     onSuccess: async () => {
       await invalidate();
       setReopenPeriod(null);
@@ -176,8 +90,34 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     onError: (error: any) => toast.error('Reabertura não realizada', error.message),
   });
 
+  const openPeriodMutation = useMutation({
+    mutationFn: (periodId: string) => academicLifecycleService.abrirPeriodo(periodId),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success('Período aberto', 'O diário acadêmico foi liberado somente para a etapa selecionada.');
+    },
+    onError: (error: any) => toast.error('Período não aberto', error.message),
+  });
+
+  const changeClassStatusMutation = useMutation({
+    mutationFn: (status: 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO') => (
+      academicLifecycleService.alterarStatusTurma(turma.id, status)
+    ),
+    onSuccess: async (_data, status) => {
+      await invalidate();
+      toast.success(
+        status === 'EM_ANDAMENTO' ? 'Turma iniciada' : 'Inscrições abertas',
+        status === 'EM_ANDAMENTO'
+          ? 'O primeiro período foi aberto e o acesso acadêmico dos alunos foi liberado.'
+          : 'A matrícula administrativa está disponível, mas o conteúdo acadêmico continua bloqueado.',
+      );
+      onTurmaFinalizada?.();
+    },
+    onError: (error: any) => toast.error('Fase não alterada', error.message),
+  });
+
   const finalizeClassMutation = useMutation({
-    mutationFn: () => academicLifecycleService.finalizarTurma(turma.id, responsavelId),
+    mutationFn: () => academicLifecycleService.finalizarTurma(turma.id),
     onSuccess: async () => {
       await invalidate();
       toast.success('Turma finalizada', 'As matrículas ativas foram concluídas após o fechamento dos períodos.');
@@ -187,14 +127,21 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   });
 
   const receiveTransferMutation = useMutation({
-    mutationFn: () => academicLifecycleService.receberTransferencia({
-      alunoId: selectedStudentId,
-      turmaDestinoId: turma.id,
-      instituicaoOrigem: originInstitution,
-      cursoOrigem: originCourse,
-      motivo: transferReason,
-      responsavelId,
-    }),
+    mutationFn: () => {
+      if (turma.status !== 'EM_ANDAMENTO') {
+        throw new Error('Transferências só podem ser recebidas com a turma em andamento.');
+      }
+      if (allStudentsQuery.isError || !allStudentsQuery.data) {
+        throw new Error('Recarregue a lista de alunos antes de receber a transferência.');
+      }
+      return academicLifecycleService.receberTransferencia({
+        alunoId: selectedStudentId,
+        turmaDestinoId: turma.id,
+        instituicaoOrigem: originInstitution,
+        cursoOrigem: originCourse,
+        motivo: transferReason,
+      });
+    },
     onSuccess: async () => {
       await invalidate();
       setShowReceiveTransfer(false);
@@ -208,6 +155,21 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   });
 
   const allPeriodsClosed = periods.length > 0 && periods.every((period) => period.status === 'FECHADO');
+  const activePeriodIndex = periods.findIndex((period) => (
+    period.status === 'ABERTO' || period.status === 'EM_FECHAMENTO'
+  ));
+  const lastClosedIndex = periods.reduce(
+    (lastIndex, period, index) => period.status === 'FECHADO' ? index : lastIndex,
+    -1,
+  );
+  const hasInvalidPeriodDates = periods.some((period, index) => {
+    if (!period.data_inicio || !period.data_fim || period.data_fim < period.data_inicio) return true;
+    const previous = periods[index - 1];
+    return Boolean(previous?.data_fim && period.data_inicio <= previous.data_fim);
+  });
+  const today = getMaceioIsoDate();
+  const canStartClass = Boolean(turma.dataInicio && turma.dataInicio <= today);
+  const canReceiveTransfer = turma.status === 'EM_ANDAMENTO';
 
   return (
     <div className="space-y-7 animate-fadeIn">
@@ -223,14 +185,16 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setShowReceiveTransfer(true)}
-              className="px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-[10px] font-black uppercase flex items-center gap-2 hover:bg-white/15"
+              onClick={() => { if (canReceiveTransfer) setShowReceiveTransfer(true); }}
+              disabled={!canReceiveTransfer}
+              title={canReceiveTransfer ? 'Receber transferência externa' : 'Transferências só podem ser recebidas com a turma em andamento.'}
+              className="px-4 py-3 rounded-xl bg-white/10 border border-white/15 text-[10px] font-black uppercase flex items-center gap-2 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ArrowDownToLine size={15} /> Receber transferência
             </button>
             <button
               onClick={() => finalizeClassMutation.mutate()}
-              disabled={!allPeriodsClosed || turma.status === 'FINALIZADA' || finalizeClassMutation.isPending}
+              disabled={periodsQuery.isError || !allPeriodsClosed || hasInvalidPeriodDates || turma.status !== 'EM_ANDAMENTO' || finalizeClassMutation.isPending}
               className="px-4 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase flex items-center gap-2 disabled:opacity-35"
             >
               {finalizeClassMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
@@ -240,13 +204,63 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
         </div>
       </div>
 
+      {turma.status !== 'FINALIZADA' && turma.status !== 'EM_ANDAMENTO' && (
+        <section className="rounded-3xl border border-indigo-100 bg-indigo-50 p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Fase da turma</p>
+              <h4 className="mt-1 font-black text-[#001a33]">{turma.status.replaceAll('_', ' ')}</h4>
+              <p className="mt-1 max-w-2xl text-xs text-slate-600">
+                Matrículas administrativas podem ser registradas nesta fase. Diário, notas, estágio e atividades só ficam disponíveis ao aluno após iniciar a turma.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {turma.status === 'PLANEJADA' && turma.permitirInscricoesOnline && (
+                <button
+                  onClick={() => changeClassStatusMutation.mutate('INSCRICOES_ABERTAS')}
+                  disabled={changeClassStatusMutation.isPending}
+                  className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3 text-[10px] font-black uppercase text-amber-700 disabled:opacity-40"
+                >
+                  <Megaphone size={15} /> Abrir inscrições
+                </button>
+              )}
+              <button
+                onClick={() => changeClassStatusMutation.mutate('EM_ANDAMENTO')}
+                disabled={periodsQuery.isError || !canStartClass || changeClassStatusMutation.isPending || hasInvalidPeriodDates}
+                title={!canStartClass ? 'A turma só pode começar na data de início configurada.' : undefined}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-[10px] font-black uppercase text-white disabled:opacity-40"
+              >
+                <PlayCircle size={15} /> Iniciar turma
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {hasInvalidPeriodDates && periods.length > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
+          <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+          <div>
+            <p className="text-xs font-black uppercase">Cronograma de períodos inválido</p>
+            <p className="mt-1 text-xs">Existem períodos sem datas, invertidos ou sobrepostos. A turma não pode ser iniciada ou finalizada até a correção.</p>
+          </div>
+        </div>
+      )}
+
       <section>
         <div className="flex items-center gap-2 mb-4">
           <CalendarRange size={17} className="text-blue-600" />
           <h4 className="font-black text-[#001a33] uppercase tracking-wider text-sm">Períodos letivos</h4>
         </div>
-        {loadingPeriods ? (
+        {periodsQuery.isLoading ? (
           <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-blue-600" /></div>
+        ) : periodsQuery.isError ? (
+          <TechnicalDataError
+            title="Períodos não carregados"
+            message="As ações de iniciar, abrir, fechar ou finalizar a turma foram bloqueadas até o cronograma ser carregado com segurança."
+            retrying={periodsQuery.isFetching}
+            onRetry={() => { void periodsQuery.refetch(); }}
+          />
         ) : periods.length === 0 ? (
           <div className="p-10 text-center bg-white border border-dashed border-slate-300 rounded-3xl text-slate-400">
             Nenhum período foi gerado. Verifique se o curso possui módulos e disciplinas cadastrados.
@@ -254,56 +268,32 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {periods.map((period) => (
-              <PeriodCard
+              <AcademicPeriodCard
                 key={period.id}
                 period={period}
                 onClose={(item) => closePeriodMutation.mutate(item.id)}
+                onOpen={(item) => openPeriodMutation.mutate(item.id)}
                 onReopen={setReopenPeriod}
-                closing={closePeriodMutation.isPending}
+                canOpen={
+                  turma.status === 'EM_ANDAMENTO'
+                  && activePeriodIndex === -1
+                  && periods.slice(0, periods.indexOf(period)).every((item) => item.status === 'FECHADO')
+                }
+                canReopen={activePeriodIndex === -1 && periods.indexOf(period) === lastClosedIndex}
+                changing={closePeriodMutation.isPending || openPeriodMutation.isPending}
               />
             ))}
           </div>
         )}
       </section>
 
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <History size={17} className="text-violet-600" />
-          <h4 className="font-black text-[#001a33] uppercase tracking-wider text-sm">Histórico de movimentações</h4>
-        </div>
-        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
-          {loadingMovements ? (
-            <div className="py-14 flex justify-center"><Loader2 className="animate-spin text-violet-600" /></div>
-          ) : movements.length === 0 ? (
-            <p className="py-14 text-center text-sm text-slate-400">Nenhuma movimentação registrada.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {movements.map((movement: any) => (
-                <div key={movement.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-violet-50 text-violet-600 rounded-xl"><Clock3 size={15} /></div>
-                    <div>
-                      <p className="font-black text-sm text-[#001a33]">{movement.aluno?.nome || 'Aluno'}</p>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-violet-600 mt-0.5">
-                        {movement.tipo.replaceAll('_', ' ')}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">{movement.motivo}</p>
-                    </div>
-                  </div>
-                  <div className="text-left md:text-right">
-                    <p className="text-[10px] font-bold text-slate-500">
-                      {new Date(movement.created_at).toLocaleString('pt-BR')}
-                    </p>
-                    <p className="text-[9px] text-slate-400 mt-1">
-                      {movement.status_anterior || 'INÍCIO'} → {movement.status_novo}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <AcademicMovementsSection
+        movements={movements}
+        isLoading={movementsQuery.isLoading}
+        isError={movementsQuery.isError}
+        isFetching={movementsQuery.isFetching}
+        onRetry={() => { void movementsQuery.refetch(); }}
+      />
 
       {reopenPeriod && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-sm">
@@ -343,18 +333,14 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
               <button onClick={() => setShowReceiveTransfer(false)} className="p-2 hover:bg-white/10 rounded-full"><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <select
-                value={selectedStudentId}
-                onChange={(event) => setSelectedStudentId(event.target.value)}
-                className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500"
-              >
-                <option value="">Selecione o aluno já cadastrado...</option>
-                {allStudents.map((student: any) => (
-                  <option key={student.id} value={student.id}>
-                    {student.nome} — {student.cpf_cnpj || 'sem CPF'}
-                  </option>
-                ))}
-              </select>
+              {allStudentsQuery.isError ? (
+                <TechnicalDataError title="Alunos não carregados" message="O recebimento foi bloqueado até a lista ser recarregada." retrying={allStudentsQuery.isFetching} onRetry={() => { void allStudentsQuery.refetch(); }} />
+              ) : (
+                <select value={selectedStudentId} onChange={(event) => setSelectedStudentId(event.target.value)} disabled={allStudentsQuery.isLoading} className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500 disabled:opacity-50">
+                  <option value="">{allStudentsQuery.isLoading ? 'Carregando alunos...' : 'Selecione o aluno já cadastrado...'}</option>
+                  {allStudents.map((student: any) => <option key={student.id} value={student.id}>{student.nome} — {student.cpf_cnpj || 'sem CPF'}</option>)}
+                </select>
+              )}
               <input
                 value={originInstitution}
                 onChange={(event) => setOriginInstitution(event.target.value)}
@@ -379,7 +365,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
               </div>
               <button
                 onClick={() => receiveTransferMutation.mutate()}
-                disabled={!selectedStudentId || !originInstitution.trim() || !transferReason.trim() || receiveTransferMutation.isPending}
+                disabled={allStudentsQuery.isLoading || allStudentsQuery.isError || !selectedStudentId || !originInstitution.trim() || !transferReason.trim() || receiveTransferMutation.isPending}
                 className="w-full py-3 bg-violet-700 text-white rounded-xl font-black uppercase text-xs disabled:opacity-40"
               >
                 {receiveTransferMutation.isPending ? 'Registrando...' : 'Registrar recebimento'}

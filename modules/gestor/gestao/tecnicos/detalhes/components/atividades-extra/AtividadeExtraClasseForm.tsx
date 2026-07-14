@@ -15,6 +15,7 @@ interface AtividadeExtraClasseFormProps {
   form: AtividadeExtraClasseFormState;
   onSubmit: () => void;
   setForm: React.Dispatch<React.SetStateAction<AtividadeExtraClasseFormState>>;
+  submitLabel: string;
 }
 
 const AtividadeExtraClasseForm: React.FC<AtividadeExtraClasseFormProps> = ({
@@ -26,6 +27,7 @@ const AtividadeExtraClasseForm: React.FC<AtividadeExtraClasseFormProps> = ({
   form,
   onSubmit,
   setForm,
+  submitLabel,
 }) => (
   <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
     <div className="mb-4 flex items-center gap-2">
@@ -50,13 +52,28 @@ const AtividadeExtraClasseForm: React.FC<AtividadeExtraClasseFormProps> = ({
         </select>
       )}
 
+      <select
+        value={form.tipoResposta}
+        onChange={(event) => setForm((prev) => ({
+          ...prev,
+          tipoResposta: event.target.value as AtividadeExtraClasseFormState['tipoResposta'],
+        }))}
+        disabled={disabled}
+        className="lg:col-span-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-emerald-500"
+      >
+        <option value="TEXTO">Resposta em texto</option>
+        <option value="PERGUNTAS">Responder perguntas</option>
+        <option value="ENVIO">Link do trabalho (HTTPS)</option>
+        <option value="MISTO">Texto/link e perguntas</option>
+      </select>
+
       <input
         type="text"
         value={form.titulo}
         onChange={(event) => setForm((prev) => ({ ...prev, titulo: event.target.value }))}
         disabled={disabled}
         placeholder="Título da atividade"
-        className={`${disciplinaIdRestrita ? 'lg:col-span-5' : 'lg:col-span-4'} rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-bold text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500`}
+        className={`${disciplinaIdRestrita ? 'lg:col-span-5' : 'lg:col-span-3'} rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-bold text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500`}
       />
       <input
         type="text"
@@ -99,14 +116,16 @@ const AtividadeExtraClasseForm: React.FC<AtividadeExtraClasseFormProps> = ({
         rows={4}
         className="lg:col-span-8 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
       />
-      <textarea
-        value={form.perguntas}
-        onChange={(event) => setForm((prev) => ({ ...prev, perguntas: event.target.value }))}
-        disabled={disabled}
-        placeholder="Perguntas para resposta, uma por linha"
-        rows={4}
-        className="lg:col-span-4 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
-      />
+      {['PERGUNTAS', 'MISTO'].includes(form.tipoResposta) && (
+        <textarea
+          value={form.perguntas}
+          onChange={(event) => setForm((prev) => ({ ...prev, perguntas: event.target.value }))}
+          disabled={disabled}
+          placeholder="Perguntas obrigatórias, uma por linha"
+          rows={4}
+          className="lg:col-span-4 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
+        />
+      )}
     </div>
 
     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -122,7 +141,7 @@ const AtividadeExtraClasseForm: React.FC<AtividadeExtraClasseFormProps> = ({
         className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {createPending ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-        Publicar atividade
+        {submitLabel}
       </button>
     </div>
   </div>

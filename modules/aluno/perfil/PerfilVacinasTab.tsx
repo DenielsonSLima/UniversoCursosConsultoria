@@ -176,6 +176,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                     {vacina.doses.map((dose) => {
                       const key = getVacinaDoseKey(context.cursoId, vacina.codigo, dose.numero);
                       const registro = registroMap.get(key);
+                      const isApproved = registro?.status === 'aprovado';
                       const draft = drafts[key] || {
                         dataAplicacao: registro?.dataAplicacao || '',
                         lote: registro?.lote || '',
@@ -195,6 +196,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                               <input
                                 type="date"
                                 value={draft.dataAplicacao}
+                                disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { dataAplicacao: event.target.value })}
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
                               />
@@ -204,6 +206,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                               <input
                                 type="text"
                                 value={draft.lote}
+                                disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { lote: event.target.value })}
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
                               />
@@ -213,6 +216,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                               <input
                                 type="text"
                                 value={draft.localAplicacao}
+                                disabled={isApproved}
                                 onChange={(event) => updateDraft(key, { localAplicacao: event.target.value })}
                                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300"
                               />
@@ -222,7 +226,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                             <button
                               type="button"
-                              disabled={saving}
+                              disabled={saving || isApproved}
                               onClick={() => {
                                 const input = buildInput(context, vacina, dose);
                                 if (input) onSave(input);
@@ -235,12 +239,16 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
 
                             <label className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700">
                               <Upload size={13} />
-                              {uploading ? 'Enviando...' : registro?.arquivoUrl ? 'Reenviar anexo' : 'Enviar anexo'}
+                              {isApproved
+                                ? 'Comprovante aprovado'
+                                : uploading
+                                  ? 'Enviando...'
+                                  : registro?.arquivoUrl ? 'Reenviar anexo' : 'Enviar anexo'}
                               <input
                                 type="file"
-                                accept="image/*,application/pdf"
+                                accept="image/jpeg,image/png,application/pdf"
                                 className="hidden"
-                                disabled={uploading}
+                                disabled={uploading || isApproved}
                                 onChange={(event) => {
                                   const file = event.target.files?.[0];
                                   event.target.value = '';

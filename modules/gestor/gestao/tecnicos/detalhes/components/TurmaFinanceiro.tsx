@@ -7,13 +7,15 @@ import FinanceiroAlunosList from './financeiro/FinanceiroAlunosList';
 import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { getMaceioIsoDate } from '../../technicalClassDates';
+import TechnicalDataError from './TechnicalDataError';
 
 interface TurmaFinanceiroProps {
   turma: Turma;
 }
 
 const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
-  const { data: summary, isLoading: loading } = useQuery({
+  const summaryQuery = useQuery({
     queryKey: ['turma-financeiro', turma.id, 'resumo'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -28,7 +30,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
         .filter((item) => item.status === 'PAGO')
         .reduce((sum, item) => sum + Number(item.valor_pago ?? item.valor ?? 0), 0);
       const overdue = records
-        .filter((item) => item.status === 'VENCIDO' || (item.status === 'PENDENTE' && item.data_vencimento < new Date().toISOString().slice(0, 10)))
+        .filter((item) => item.status === 'VENCIDO' || (item.status === 'PENDENTE' && item.data_vencimento < getMaceioIsoDate()))
         .reduce((sum, item) => sum + Number(item.valor || 0), 0);
 
       return {
@@ -40,18 +42,30 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
     },
     staleTime: 10_000,
   });
+  const summary = summaryQuery.data;
 
   const receitaPrevista = summary?.total || 0;
   const recebido = summary?.received || 0;
   const inadimplencia = summary?.overdue || 0;
   const pendentePercent = summary?.overduePercent || 0;
 
-  if (loading) {
+  if (summaryQuery.isLoading) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
         <span className="text-slate-500 font-bold ml-3">Carregando painel financeiro...</span>
       </div>
+    );
+  }
+
+  if (summaryQuery.isError) {
+    return (
+      <TechnicalDataError
+        title="Resumo financeiro não carregado"
+        message="Os totais foram ocultados para não apresentar receita, recebimentos ou inadimplência como zero por engano."
+        retrying={summaryQuery.isFetching}
+        onRetry={() => { void summaryQuery.refetch(); }}
+      />
     );
   }
 

@@ -15,21 +15,29 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const result = await gestaoService.getTurmasPage({
         modalidade, poloId, status, sortBy, page, pageSize: PAGE_SIZE, search, ...applied,
       });
       setTurmas(result.data);
       setTotal(result.total);
+    } catch (rawError) {
+      const nextError = rawError instanceof Error ? rawError : new Error('Não foi possível carregar as turmas.');
+      setTurmas([]);
+      setTotal(0);
+      setError(nextError);
+      throw nextError;
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); }, [modalidade, poloId, status, sortBy, page, search, applied]);
+  useEffect(() => { void load().catch(() => undefined); }, [modalidade, poloId, status, sortBy, page, search, applied]);
   useEffect(() => { setPage(1); }, [modalidade, poloId]);
 
   const changeStatus = (next: StatusTurma) => { setStatus(next); setPage(1); };
@@ -41,7 +49,7 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
   };
 
   return {
-    turmas, total, loading, page, pageSize: PAGE_SIZE, status, sortBy,
+    turmas, total, loading, error, page, pageSize: PAGE_SIZE, status, sortBy,
     search, dataInicial, dataFinal, setSearch: changeSearch, setDataInicial, setDataFinal,
     setPage, changeStatus, changeSortBy, applyFilters, reload: load,
   };

@@ -19,6 +19,7 @@ const AlunoAtividadesExtraClasseTab: React.FC<AlunoAtividadesExtraClasseTabProps
     getAtividadeDraftTexto,
     isError,
     isLoading,
+    retryLoad,
     submitAtividadeMutation,
     submitError,
     updateAtividadeDraft,
@@ -48,7 +49,14 @@ const AlunoAtividadesExtraClasseTab: React.FC<AlunoAtividadesExtraClasseTabProps
         </div>
       ) : isError ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
-          Não consegui carregar as atividades desta turma. Atualize a página ou tente novamente.
+          <p>Não consegui carregar as atividades desta turma.</p>
+          <button
+            type="button"
+            onClick={() => void retryLoad()}
+            className="mt-3 rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-700"
+          >
+            Tentar novamente
+          </button>
         </div>
       ) : atividades.length === 0 ? (
         <div className="border border-slate-100 rounded-2xl bg-slate-50/50 p-5 text-xs font-bold text-slate-500">

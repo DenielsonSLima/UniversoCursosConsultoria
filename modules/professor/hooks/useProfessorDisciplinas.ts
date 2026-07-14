@@ -52,6 +52,17 @@ const toNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const getMaceioIsoDate = () => {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Maceio',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
 export const useProfessorDisciplinas = (professorId: string) => useQuery<ProfessorDisciplinaAssignment[]>({
   queryKey: professorDisciplinasKeys.list(professorId),
   enabled: Boolean(professorId),
@@ -69,7 +80,7 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
     const disciplinaIds = Array.from(new Set(rows.map((row: any) => row.disciplina_id).filter(Boolean)));
     const periodoIds = Array.from(new Set(rows.map((row: any) => row.periodo_letivo_id).filter(Boolean)));
     const assignmentPairs = new Set(rows.map((row: any) => `${row.turma_id}:${row.disciplina_id}`));
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getMaceioIsoDate();
 
     let aulas: any[] = [];
     let atividades: any[] = [];
@@ -90,7 +101,7 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
           .select('id, turma_id, disciplina_id, titulo, carga_horaria_compensacao, prazo_entrega, created_at')
           .in('turma_id', turmaIds)
           .in('disciplina_id', disciplinaIds)
-          .neq('status', 'ARQUIVADA')
+          .eq('status', 'PUBLICADA')
           .order('prazo_entrega', { ascending: true }),
       ]);
 
@@ -106,11 +117,10 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         .select('id, status')
         .in('id', periodoIds);
 
-      if (!periodosError) {
-        (periodosData || []).forEach((periodo: any) => {
-          periodoStatusMap.set(periodo.id, periodo.status || 'ABERTO');
-        });
-      }
+      if (periodosError) throw periodosError;
+      (periodosData || []).forEach((periodo: any) => {
+        periodoStatusMap.set(periodo.id, periodo.status || 'FECHADO');
+      });
     }
 
     return rows.map((row: any) => {
@@ -129,7 +139,9 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         (total, aula) => total + toNumber(aula.carga_horaria, 0),
         0,
       );
-      const horasAtividades = atividadesDaDisciplina.reduce(
+      const horasAtividades = atividadesDaDisciplina
+        .filter((atividade) => !atividade.prazo_entrega || atividade.prazo_entrega <= today)
+        .reduce(
         (total, atividade) => total + toNumber(atividade.carga_horaria_compensacao, 0),
         0,
       );
@@ -175,7 +187,9 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         horasRealizadas: horasLancadas,
         cargaHoraria,
         progressoPercent,
-        periodoStatus: periodoStatusMap.get(row.periodo_letivo_id) || row.periodo_status || 'ABERTO',
+        periodoStatus: periodoStatusMap.get(row.periodo_letivo_id)
+          || row.periodo_status
+          || (modalidade === 'TECNICO' ? 'FECHADO' : 'ABERTO'),
         concluida: Boolean(row.concluida),
       };
 
@@ -232,6 +246,11 @@ export const useProfessorDisciplinasRealtime = (professorId: string) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividades_extra_classe' },
+        invalidate,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividade_extra_classe_respostas' },
         invalidate,
       )
       .on(

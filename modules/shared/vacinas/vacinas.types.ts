@@ -32,6 +32,7 @@ export interface AlunoVacinaRegistro {
   dataAplicacao?: string | null;
   lote?: string | null;
   localAplicacao?: string | null;
+  arquivoPath?: string | null;
   arquivoUrl?: string | null;
   status: VacinaStatus;
   origem: VacinaOrigem;
@@ -61,6 +62,6 @@ export interface SaveAlunoVacinaInput {
   dataAplicacao?: string | null;
   lote?: string | null;
   localAplicacao?: string | null;
-  arquivoUrl?: string | null;
+  arquivoPath?: string | null;
   origem?: VacinaOrigem;
 }
