@@ -6,8 +6,8 @@ import { formatCpf, isCpfLike, normalizeEmail, onlyDigits } from '../shared/util
 import { clearPortalSession } from './portal-session';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
-const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Seu e-mail ainda não foi confirmado. Reenviamos o link de confirmação; abra o e-mail mais recente e tente entrar novamente.';
-const AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR = 'Seu e-mail ainda não foi confirmado. Abra o link de confirmação enviado no cadastro ou solicite um novo cadastro com a secretaria.';
+const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Falta confirmar seu e-mail. Enviamos um novo link; olhe sua caixa de entrada e também o spam/lixo eletrônico.';
+const AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR = 'Falta confirmar seu e-mail. Olhe sua caixa de entrada e também o spam/lixo eletrônico antes de tentar entrar.';
 
 const isEmailNotConfirmedError = (error: any) => {
   const code = String(error?.code || error?.error_code || '').toLowerCase();
@@ -30,6 +30,24 @@ const resendSignupConfirmation = async (email: string) => {
   });
 
   return !error;
+};
+
+const getAlunoAuthStatus = async (identifier: string) => {
+  const { data, error } = await supabase.rpc('get_public_aluno_auth_status', {
+    p_identifier: identifier,
+  });
+
+  if (error) {
+    console.warn('Não foi possível consultar status de confirmação do aluno:', error);
+    return null;
+  }
+
+  return Array.isArray(data) ? data[0] : null;
+};
+
+const buildUnconfirmedEmailError = async (email: string) => {
+  const confirmationResent = await resendSignupConfirmation(email);
+  return confirmationResent ? AUTH_EMAIL_NOT_CONFIRMED_ERROR : AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR;
 };
 
 const resolveLoginEmail = async (identifier: string) => {
@@ -74,6 +92,19 @@ export const loginService = {
       };
     }
 
+    const authStatus = await getAlunoAuthStatus(resolvedEmail);
+    if (
+      authStatus?.user_exists === true &&
+      authStatus?.is_student === true &&
+      authStatus?.email_confirmed === false
+    ) {
+      return {
+        user: null,
+        session: null,
+        error: await buildUnconfirmedEmailError(authStatus.resolved_email || resolvedEmail),
+      };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: resolvedEmail,
       password,
@@ -81,11 +112,23 @@ export const loginService = {
 
     if (error) {
       if (isEmailNotConfirmedError(error)) {
-        const confirmationResent = await resendSignupConfirmation(resolvedEmail);
         return {
           user: null,
           session: null,
-          error: confirmationResent ? AUTH_EMAIL_NOT_CONFIRMED_ERROR : AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR,
+          error: await buildUnconfirmedEmailError(resolvedEmail),
+        };
+      }
+
+      const latestAuthStatus = await getAlunoAuthStatus(resolvedEmail);
+      if (
+        latestAuthStatus?.user_exists === true &&
+        latestAuthStatus?.is_student === true &&
+        latestAuthStatus?.email_confirmed === false
+      ) {
+        return {
+          user: null,
+          session: null,
+          error: await buildUnconfirmedEmailError(latestAuthStatus.resolved_email || resolvedEmail),
         };
       }
 
