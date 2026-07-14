@@ -2,12 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Home, Loader2, MailCheck, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { savePortalSession } from '../../login/portal-session';
 import { alunoPublicAuthService } from './aluno-public-auth.service';
+import { formatCpf } from '../../shared/utils/identityValidation';
+
+interface ConfirmedAlunoData {
+  nome: string;
+  email: string;
+  cpf: string;
+}
 
 type ConfirmationState =
   | { status: 'loading'; message: string }
-  | { status: 'success'; message: string; nextPath: string }
+  | { status: 'success'; message: string; nextPath: string; aluno: ConfirmedAlunoData }
   | { status: 'error'; message: string };
 
 const getHashOrSearchParam = (name: string) => {
@@ -22,6 +28,30 @@ const clearAuthParams = () => {
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
 };
 
+const getConfirmedAlunoData = async (profile: any): Promise<ConfirmedAlunoData> => {
+  const fallback = {
+    nome: String(profile?.nome || 'Aluno'),
+    email: String(profile?.email || ''),
+    cpf: '',
+  };
+
+  if (!profile?.id) return fallback;
+
+  const { data, error } = await supabase
+    .from('parceiros')
+    .select('nome, email, cpf_cnpj')
+    .eq('id', profile.id)
+    .maybeSingle();
+
+  if (error || !data) return fallback;
+
+  return {
+    nome: String(data.nome || fallback.nome),
+    email: String(data.email || fallback.email),
+    cpf: formatCpf(String(data.cpf_cnpj || '')),
+  };
+};
+
 const AlunoEmailConfirmationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -32,13 +62,13 @@ const AlunoEmailConfirmationPage: React.FC = () => {
 
   const nextPath = useMemo(() => {
     const redirect = searchParams.get('redirect');
-    if (!redirect) return '/aluno';
+    if (!redirect) return '/login';
 
     try {
       const decoded = decodeURIComponent(redirect);
-      return decoded.startsWith('/') ? decoded : '/aluno';
+      return decoded.startsWith('/') ? decoded : '/login';
     } catch {
-      return '/aluno';
+      return '/login';
     }
   }, [searchParams]);
 
@@ -67,13 +97,15 @@ const AlunoEmailConfirmationPage: React.FC = () => {
         }
 
         const profile = await alunoPublicAuthService.finishExternalLogin();
+        const aluno = await getConfirmedAlunoData(profile);
+        await supabase.auth.signOut();
         if (!mounted) return;
 
-        savePortalSession(profile as any);
         setState({
           status: 'success',
           message: 'E-mail confirmado e cadastro ativado com sucesso.',
           nextPath,
+          aluno,
         });
       } catch (error) {
         if (!mounted) return;
@@ -148,13 +180,37 @@ const AlunoEmailConfirmationPage: React.FC = () => {
             </p>
 
             {isSuccess ? (
-              <button
-                onClick={() => navigate(state.nextPath)}
-                className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#2563eb] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:bg-[#1d4ed8]"
-              >
-                Continuar para o portal
-                <ArrowRight size={18} />
-              </button>
+              <>
+                <div className="mt-8 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+                    Cadastro confirmado
+                  </p>
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div>
+                      <dt className="font-black uppercase tracking-[0.16em] text-slate-400">Aluno</dt>
+                      <dd className="mt-1 font-bold text-slate-800">{state.aluno.nome}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-black uppercase tracking-[0.16em] text-slate-400">E-mail</dt>
+                      <dd className="mt-1 break-words font-bold text-slate-800">{state.aluno.email}</dd>
+                    </div>
+                    {state.aluno.cpf ? (
+                      <div>
+                        <dt className="font-black uppercase tracking-[0.16em] text-slate-400">CPF</dt>
+                        <dd className="mt-1 font-bold text-slate-800">{state.aluno.cpf}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </div>
+
+                <button
+                  onClick={() => navigate(state.nextPath)}
+                  className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#2563eb] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-blue-500/25 transition hover:-translate-y-0.5 hover:bg-[#1d4ed8]"
+                >
+                  Ir para o login
+                  <ArrowRight size={18} />
+                </button>
+              </>
             ) : (
               <Link
                 to="/login"

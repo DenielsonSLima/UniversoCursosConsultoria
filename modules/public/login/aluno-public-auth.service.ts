@@ -218,7 +218,7 @@ export const alunoPublicAuthService = {
       email,
       password: data.password,
       options: {
-        emailRedirectTo: buildAuthRedirectUrl(`/confirmacao-email?redirect=${encodeURIComponent('/aluno')}`),
+        emailRedirectTo: buildAuthRedirectUrl(`/confirmacao-email?redirect=${encodeURIComponent('/login')}`),
         data: {
           nome,
           tipo: 'Aluno',
