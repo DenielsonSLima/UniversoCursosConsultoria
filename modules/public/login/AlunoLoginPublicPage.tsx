@@ -51,9 +51,29 @@ const formatPhone = (value: string) => {
   return digits;
 };
 
-const hasOAuthReturnInUrl = () => (
+const readAuthReturnParams = () => {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const searchParams = new URLSearchParams(window.location.search);
+
+  return { hashParams, searchParams };
+};
+
+const getAuthReturnError = () => {
+  const { hashParams, searchParams } = readAuthReturnParams();
+  return (
+    hashParams.get('error_description') ||
+    searchParams.get('error_description') ||
+    hashParams.get('error_code') ||
+    searchParams.get('error_code') ||
+    hashParams.get('error') ||
+    searchParams.get('error')
+  );
+};
+
+const hasAuthReturnInUrl = () => (
   window.location.hash.includes('access_token') ||
-  window.location.search.includes('code=')
+  window.location.search.includes('code=') ||
+  Boolean(getAuthReturnError())
 );
 
 const AlunoLoginPublicPage: React.FC = () => {
@@ -62,7 +82,7 @@ const AlunoLoginPublicPage: React.FC = () => {
   const initialMode = searchParams.get('mode') === 'cadastro' ? 'cadastro' : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasOAuthReturnInUrl);
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasAuthReturnInUrl);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -124,16 +144,25 @@ const AlunoLoginPublicPage: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    const checkGoogleReturn = async () => {
+    const checkAuthRedirectReturn = async () => {
       try {
+        const authReturnError = getAuthReturnError();
+        if (authReturnError) {
+          setMessage({
+            tone: 'error',
+            text: alunoPublicAuthService.getFriendlyAuthRedirectError(authReturnError),
+          });
+          return;
+        }
+
         const { data } = await supabase.auth.getSession();
-        const hasOAuthReturn = hasOAuthReturnInUrl();
+        const hasAuthReturn = hasAuthReturnInUrl();
 
         if (!data.session) {
-          if (hasOAuthReturn && mounted) {
+          if (hasAuthReturn && mounted) {
             setMessage({
               tone: 'error',
-              text: 'Não foi possível recuperar a sessão do Google. Tente novamente.',
+              text: 'Não foi possível recuperar a sessão de confirmação. Tente entrar novamente para receber um novo link, se necessário.',
             });
           }
           return;
@@ -146,14 +175,14 @@ const AlunoLoginPublicPage: React.FC = () => {
         if (!mounted) return;
         setMessage({
           tone: 'error',
-          text: error instanceof Error ? error.message : 'Não foi possível concluir o login com Google.',
+          text: error instanceof Error ? error.message : 'Não foi possível concluir a autenticação.',
         });
       } finally {
         if (mounted) setCheckingExternalLogin(false);
       }
     };
 
-    checkGoogleReturn();
+    checkAuthRedirectReturn();
     return () => {
       mounted = false;
     };

@@ -61,6 +61,22 @@ const getFriendlyOAuthError = (message: string) => {
   return message;
 };
 
+const getFriendlyAuthRedirectError = (message: string) => {
+  const decoded = decodeURIComponent(String(message || '').replace(/\+/g, ' '));
+  const lower = decoded.toLowerCase();
+
+  if (
+    lower.includes('token') ||
+    lower.includes('expired') ||
+    lower.includes('otp') ||
+    lower.includes('invalid')
+  ) {
+    return 'O link de confirmação é inválido ou expirou. Tente entrar novamente para receber um novo e-mail de confirmação.';
+  }
+
+  return decoded || 'Não foi possível concluir a confirmação do e-mail. Tente entrar novamente.';
+};
+
 const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
   const email = normalizeEmail(data.email);
 
@@ -144,14 +160,20 @@ export const alunoPublicAuthService = {
   },
 
   async finishExternalLogin() {
-    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    if (!profile) {
+      profile = await finalizePublicSignupFromMetadata();
+    }
+
     if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
-      throw new Error('Esta conta Google não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
+      throw new Error('Esta conta não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
     }
 
     return profile;
   },
+
+  getFriendlyAuthRedirectError,
 
   async signup(
     data: PublicAlunoSignupData,

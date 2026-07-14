@@ -6,10 +6,30 @@ import { formatCpf, isCpfLike, normalizeEmail, onlyDigits } from '../shared/util
 import { clearPortalSession } from './portal-session';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
+const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Seu e-mail ainda não foi confirmado. Reenviamos o link de confirmação; abra o e-mail mais recente e tente entrar novamente.';
+const AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR = 'Seu e-mail ainda não foi confirmado. Abra o link de confirmação enviado no cadastro ou solicite um novo cadastro com a secretaria.';
+
+const isEmailNotConfirmedError = (error: any) => {
+  const code = String(error?.code || error?.error_code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+  return code === 'email_not_confirmed' || message.includes('email not confirmed');
+};
 
 const sanitizeAuthError = (message: string) => {
   if (!message) return AUTH_GENERIC_ERROR;
   return AUTH_GENERIC_ERROR;
+};
+
+const resendSignupConfirmation = async (email: string) => {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent('/aluno')}`),
+    },
+  });
+
+  return !error;
 };
 
 const resolveLoginEmail = async (identifier: string) => {
@@ -60,6 +80,15 @@ export const loginService = {
     });
 
     if (error) {
+      if (isEmailNotConfirmedError(error)) {
+        const confirmationResent = await resendSignupConfirmation(resolvedEmail);
+        return {
+          user: null,
+          session: null,
+          error: confirmationResent ? AUTH_EMAIL_NOT_CONFIRMED_ERROR : AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR,
+        };
+      }
+
       return {
         user: null,
         session: null,
