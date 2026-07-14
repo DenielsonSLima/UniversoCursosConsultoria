@@ -1,6 +1,9 @@
 import { supabase } from '../../lib/supabase';
 import { onlyDigits } from '../shared/utils/identityValidation';
 import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
+import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
+import { isPortalScheduleBlocked } from './portal-schedule';
+import { isActivePortalStatus } from './portal-status';
 
 export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
 
@@ -39,14 +42,6 @@ export interface GestorAccessScope {
 }
 
 const MATRIZ_POLO_ID = '44444444-4444-4444-4444-444444444444';
-
-const normalizeStatus = (status?: string | null) => (status || '').trim().toUpperCase();
-
-const isActiveStatus = (status?: string | null) => {
-  if (!status) return true;
-  const normalized = normalizeStatus(status);
-  return normalized !== 'INATIVO' && normalized !== 'INACTIVE' && normalized !== 'BLOQUEADO';
-};
 
 const normalizeStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -88,10 +83,15 @@ const resolvePartnerPoloScope = (selectedPartner: any) => {
   };
 };
 
-const getAuthenticatedEmail = async () => {
+const getAuthenticatedUser = async () => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData?.user?.email) return null;
-  return userData.user.email.trim().toLowerCase();
+  if (userError || !userData?.user) return null;
+  return userData.user;
+};
+
+const getAuthenticatedEmail = async () => {
+  const user = await getAuthenticatedUser();
+  return user?.email?.trim().toLowerCase() || null;
 };
 
 const isRoleAllowed = (role: PortalRole, allowedRoles?: PortalRole[]) =>
@@ -173,7 +173,7 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
 };
 
 const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string): Promise<PortalAuthProfile | null> => {
-  if (!selectedPartner || !isActiveStatus(selectedPartner.status)) return null;
+  if (!selectedPartner || !isActivePortalStatus(selectedPartner.status)) return null;
 
   const { activePoloId, poloIds } = resolvePartnerPoloScope(selectedPartner);
   let acceptedTermsAt: string | null = null;
@@ -216,24 +216,8 @@ const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string):
   };
 };
 
-const isScheduleBlocked = (restriction: any): boolean => {
-  if (!restriction || !restriction.ativo) return false;
-  const now = new Date();
-  const currentDay = now.getDay(); // 0 = Domingo, 1 = Segunda, etc.
-  if (!restriction.dias.includes(currentDay)) return true;
-
-  const currentHour = now.getHours().toString().padStart(2, '0');
-  const currentMinute = now.getMinutes().toString().padStart(2, '0');
-  const currentTimeStr = `${currentHour}:${currentMinute}`;
-
-  if (restriction.horario_inicio && currentTimeStr < restriction.horario_inicio) return true;
-  if (restriction.horario_fim && currentTimeStr > restriction.horario_fim) return true;
-
-  return false;
-};
-
 const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
-  if (!gestorRows || !isActiveStatus(gestorRows.status)) return null;
+  if (!gestorRows || !isActivePortalStatus(gestorRows.status)) return null;
 
   // Se houver perfil de acesso vinculado (pode vir como array dependendo do join ou objeto unico)
   const perfilAcesso = Array.isArray(gestorRows.perfis_acesso) 
@@ -245,7 +229,7 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
   const explicitPoloIds = normalizeStringArray(gestorRows.polo_ids);
 
   const restricao = perfilAcesso?.restricao_horario;
-  const isBlocked = isScheduleBlocked(restricao);
+  const isBlocked = isPortalScheduleBlocked(restricao);
 
   return {
     id: gestorRows.id,
@@ -264,10 +248,11 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
 };
 
 export const getPortalProfile = async (options: PortalProfileOptions = {}): Promise<PortalAuthProfile | null> => {
-  const email = await getAuthenticatedEmail();
+  const authenticatedUser = await getAuthenticatedUser();
+  const email = authenticatedUser?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const partnerSelect = 'id, nome, email, tipo, polo_id, polo_ids, status';
+  const partnerSelect = 'id, nome, email, tipo, polo_id, polo_ids, status, foto_url';
 
   const { data: partnerRows, error: partnerError } = await supabase
     .from('parceiros')
@@ -284,7 +269,10 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
   for (const role of orderedPartnerRoles) {
     if (!isRoleAllowed(role, options.allowedRoles)) continue;
     const selectedPartner = (partnerRows || []).find((p) => p.tipo === role);
-    const profile = await buildPartnerProfile(selectedPartner, email);
+    const partnerWithAvatar = selectedPartner?.tipo === 'Aluno'
+      ? await syncAlunoGoogleAvatar(selectedPartner, authenticatedUser)
+      : selectedPartner;
+    const profile = await buildPartnerProfile(partnerWithAvatar, email);
     if (profile) return profile;
   }
 
