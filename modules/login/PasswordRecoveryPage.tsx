@@ -6,6 +6,14 @@ import { ArrowLeft, CheckCircle, Eye, EyeOff, LoaderCircle, Lock, Mail } from 'l
 
 type RecoveryMode = 'request' | 'reset';
 
+const getAuthReturnParam = (name: string) => {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const searchParams = new URLSearchParams(window.location.search);
+  return hashParams.get(name) || searchParams.get(name);
+};
+
+const hasRecoveryTypeInUrl = () => getAuthReturnParam('type') === 'recovery';
+
 const PasswordRecoveryPage: React.FC = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<RecoveryMode>('request');
@@ -15,6 +23,7 @@ const PasswordRecoveryPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [recoveryAuthorized, setRecoveryAuthorized] = useState(false);
 
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -27,18 +36,67 @@ const PasswordRecoveryPage: React.FC = () => {
   }, [password]);
 
   useEffect(() => {
+    let mounted = true;
+    const recoveryType = hasRecoveryTypeInUrl();
+
+    const authorizeRecovery = (sessionEmail?: string | null) => {
+      if (!mounted) return;
+      setRecoveryAuthorized(true);
+      setMode('reset');
+      if (sessionEmail) setEmail(sessionEmail);
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') authorizeRecovery(session?.user?.email);
+    });
+
     const detectRecoverySession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token && data.session.user?.email) {
-        setMode('reset');
+      const returnError = getAuthReturnParam('error_description') || getAuthReturnParam('error');
+      if (returnError) {
+        if (mounted) {
+          setMessage({
+            tone: 'error',
+            text: 'O link de recuperação é inválido ou expirou. Solicite um novo link abaixo.',
+          });
+        }
+        return;
       }
 
-      if (data.session?.user?.email) {
-        setEmail(data.session.user.email);
+      const code = getAuthReturnParam('code');
+
+      if (code) {
+        const { data: exchangedData, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          if (mounted) {
+            setMessage({
+              tone: 'error',
+              text: 'O link de recuperação é inválido ou expirou. Solicite um novo link abaixo.',
+            });
+          }
+          return;
+        }
+        authorizeRecovery(exchangedData.session?.user?.email);
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      const recoveryAccessToken = getAuthReturnParam('access_token');
+      if (
+        data.session &&
+        recoveryType &&
+        recoveryAccessToken &&
+        data.session.access_token === recoveryAccessToken
+      ) {
+        authorizeRecovery(data.session.user?.email);
       }
     };
 
     void detectRecoverySession();
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const requestReset = async (event: React.FormEvent) => {
@@ -70,6 +128,15 @@ const PasswordRecoveryPage: React.FC = () => {
     event.preventDefault();
     setMessage(null);
 
+    if (!recoveryAuthorized) {
+      setMessage({
+        tone: 'error',
+        text: 'Abra o link de recuperação mais recente enviado ao seu e-mail antes de definir uma nova senha.',
+      });
+      setMode('request');
+      return;
+    }
+
     if (!hasPasswordStrength) {
       setMessage({
         tone: 'error',
@@ -91,6 +158,9 @@ const PasswordRecoveryPage: React.FC = () => {
         setMessage({ tone: 'error', text: error });
         return;
       }
+
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (signOutError) console.warn('A senha foi alterada, mas a sessão local não pôde ser encerrada.', signOutError);
 
       setMessage({
         tone: 'success',
@@ -153,6 +223,8 @@ const PasswordRecoveryPage: React.FC = () => {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -180,6 +252,8 @@ const PasswordRecoveryPage: React.FC = () => {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="new-password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -203,6 +277,8 @@ const PasswordRecoveryPage: React.FC = () => {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input
                   type={showConfirmation ? 'text' : 'password'}
+                  name="confirm-password"
+                  autoComplete="new-password"
                   required
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}

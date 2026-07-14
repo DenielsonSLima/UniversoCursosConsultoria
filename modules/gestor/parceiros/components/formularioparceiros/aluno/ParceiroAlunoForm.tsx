@@ -1,21 +1,27 @@
-// File: modules/gestor/parceiros/components/formularioparceiros/aluno/ParceiroAlunoForm.tsx
 // Formulário completo de Aluno em 5 etapas (Wizard) para cursos técnicos
 
 import React, { useEffect, useState } from 'react';
-import {
-  User, MapPin, Phone, Mail, Save, X, AlertCircle, FileText,
-  CheckCircle2, BookOpen, ChevronRight, ChevronLeft, GraduationCap,
-  Shield, Heart, Home, Accessibility, Upload, Loader2
-} from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
+
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
 import {
-  TECHNICAL_DOCUMENT_TYPE_OPTIONS,
   getTechnicalEnrollmentMissingFields,
   isAcceptedTechnicalDocumentType,
 } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { parceirosService } from '../../../parceiros.service';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
+import ParceiroAlunoFormStepContact from './ParceiroAlunoFormStepContact';
+import ParceiroAlunoFormStepDocuments from './ParceiroAlunoFormStepDocuments';
+import ParceiroAlunoFormStepEducation from './ParceiroAlunoFormStepEducation';
+import ParceiroAlunoFormStepFamily from './ParceiroAlunoFormStepFamily';
+import ParceiroAlunoFormStepPersonal from './ParceiroAlunoFormStepPersonal';
+import {
+  createInitialFormData,
+  MATRIZ_POLO_ID,
+  STEPS,
+} from './parceiro-aluno-form.constants';
+import type { AlunoFormData, PoloOption } from './parceiro-aluno-form.types';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
@@ -23,98 +29,16 @@ interface ParceiroAlunoFormProps {
   defaultPoloId?: string | null;
 }
 
-const STEPS = [
-  { id: 1, label: 'Dados Pessoais', icon: User, color: 'blue' },
-  { id: 2, label: 'Documentação', icon: Shield, color: 'indigo' },
-  { id: 3, label: 'Filiação', icon: Heart, color: 'rose' },
-  { id: 4, label: 'Escolaridade', icon: GraduationCap, color: 'emerald' },
-  { id: 5, label: 'Endereço & Contato', icon: Home, color: 'violet' },
-];
-
-const ESTADOS_CIVIS = ['SOLTEIRO(A)', 'CASADO(A)', 'DIVORCIADO(A)', 'VIÚVO(A)', 'UNIÃO ESTÁVEL', 'SEPARADO(A)'];
-const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const ESCOLARIDADES = ['ENSINO MÉDIO COMPLETO','ENSINO MÉDIO INCOMPLETO','CURSANDO ENSINO MÉDIO','ENSINO SUPERIOR COMPLETO','ENSINO SUPERIOR INCOMPLETO','PÓS-GRADUAÇÃO'];
-const PCD_TIPOS = ['FÍSICA','AUDITIVA','VISUAL','INTELECTUAL','MÚLTIPLA','TRANSTORNO DO ESPECTRO AUTISTA (TEA)'];
-const MATRIZ_POLO_ID = '44444444-4444-4444-4444-444444444444';
-
-const formatPoloOption = (polo: any) => {
-  const cidadeUf = [polo.cidade, polo.estado || polo.uf].filter(Boolean).join('/');
-  return cidadeUf ? `${polo.nome} - ${cidadeUf}` : polo.nome;
-};
+const maskCEP = (value: string) => value.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
+const maskPhone = (value: string) => value.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
+const maskDate = (value: string) => value.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
 
 const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave, defaultPoloId }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showMatriculaModal, setShowMatriculaModal] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [polos, setPolos] = useState<any[]>([]);
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploadingPhoto(true);
-    try {
-      const url = await empresasService.uploadLogo(file);
-      setFormData(prev => ({ ...prev, foto: url }));
-    } catch (err: any) {
-      alert('Erro ao enviar foto: ' + (err.message || err));
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const [formData, setFormData] = useState({
-    // Step 1 — Dados Pessoais
-    poloId: defaultPoloId || MATRIZ_POLO_ID,
-    status: 'ATIVO',
-    foto: '',
-    nomeCompleto: '',
-    nomeSocial: '',
-    cpf: '',
-    dataNascimento: '',
-    sexo: '',
-    estadoCivil: '',
-    nacionalidade: 'BRASILEIRA',
-    naturalidade: '',
-    pcd: false,
-    pcdTipo: '',
-
-    // Step 2 — Documentação
-    tipoDocumento: 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-    rg: '',
-    orgaoEmissor: '',
-    rgUfEmissao: '',
-    rgDataEmissao: '',
-    tituloEleitor: '',
-    reservista: '',
-
-    // Step 3 — Filiação & Responsável
-    nomeMae: '',
-    nomePai: '',
-    responsavelNome: '',
-    responsavelCpf: '',
-    responsavelParentesco: '',
-    responsavelTelefone: '',
-    responsavelEmail: '',
-    responsavelFinanceiro: false,
-
-    // Step 4 — Escolaridade
-    escolaridadeAnterior: '',
-    instituicaoOrigem: '',
-    anoConclusaoEnsinoMedio: '',
-
-    // Step 5 — Endereço & Contato
-    cep: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
-    email: '',
-    contato1: '',
-    contato2: '',
-    observacao: '',
-  });
+  const [polos, setPolos] = useState<PoloOption[]>([]);
+  const [formData, setFormData] = useState<AlunoFormData>(() => createInitialFormData(defaultPoloId));
 
   useEffect(() => {
     let mounted = true;
@@ -122,13 +46,12 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       .then((data) => {
         if (!mounted) return;
         setPolos(data);
-        setFormData(prev => {
+        setFormData((previous) => {
           if (defaultPoloId && data.some((polo) => polo.id === defaultPoloId)) {
-            return { ...prev, poloId: defaultPoloId };
+            return { ...previous, poloId: defaultPoloId };
           }
-          const hasSelectedPolo = data.some((polo) => polo.id === prev.poloId);
-          if (hasSelectedPolo) return prev;
-          return { ...prev, poloId: defaultPoloId || data[0]?.id || MATRIZ_POLO_ID };
+          if (data.some((polo) => polo.id === previous.poloId)) return previous;
+          return { ...previous, poloId: defaultPoloId || data[0]?.id || MATRIZ_POLO_ID };
         });
       })
       .catch((error) => {
@@ -139,42 +62,51 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
     };
   }, [defaultPoloId]);
 
-  // Máscaras
-  const maskCPF = formatCpf;
-  const maskCEP = (v: string) => v.replace(/\D/g,'').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{3})\d+?$/,'$1');
-  const maskPhone = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').replace(/(-\d{4})\d+?$/,'$1');
-  const maskDate = (v: string) => v.replace(/\D/g,'').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\d{2})(\d)/,'$1/$2').replace(/(\/\d{4})\d+?$/,'$1');
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const url = await empresasService.uploadLogo(file);
+      setFormData((previous) => ({ ...previous, foto: url }));
+    } catch (error: any) {
+      alert('Erro ao enviar foto: ' + (error.message || error));
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value, type } = event.target;
     let finalValue: any = value;
     if (type === 'checkbox') {
-      finalValue = (e.target as HTMLInputElement).checked;
+      finalValue = (event.target as HTMLInputElement).checked;
     } else {
-      if (type === 'text' || type === 'textarea' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+      if (type === 'text' || type === 'textarea' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
         if (name !== 'email' && name !== 'responsavelEmail' && name !== 'poloId') {
           finalValue = value.toUpperCase();
         }
       }
       if (name === 'email' || name === 'responsavelEmail') finalValue = normalizeEmail(finalValue);
-      if (name === 'cpf' || name === 'responsavelCpf') finalValue = maskCPF(finalValue);
+      if (name === 'cpf' || name === 'responsavelCpf') finalValue = formatCpf(finalValue);
       if (name === 'cep') finalValue = maskCEP(finalValue);
       if (name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
       if (name === 'rgDataEmissao' || name === 'dataNascimento') finalValue = maskDate(finalValue);
     }
-    setFormData(prev => ({ ...prev, [name]: finalValue }));
+    setFormData((previous) => ({ ...previous, [name]: finalValue }));
   };
 
-  // Auto-preencher CEP
   const handleCepBlur = async () => {
     const cep = formData.cep.replace(/\D/g, '');
     if (cep.length !== 8) return;
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
       if (!data.erro) {
-        setFormData(prev => ({
-          ...prev,
+        setFormData((previous) => ({
+          ...previous,
           endereco: String(data.logradouro || '').toUpperCase(),
           bairro: String(data.bairro || '').toUpperCase(),
           cidade: String(data.localidade || '').toUpperCase(),
@@ -188,11 +120,12 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   const isMinor = () => {
     if (!formData.dataNascimento) return false;
-    const [d, m, y] = formData.dataNascimento.split('/').map(Number);
-    if (!y) return false;
-    const birth = new Date(y, m - 1, d);
+    const [day, month, year] = formData.dataNascimento.split('/').map(Number);
+    if (!year) return false;
+    const birth = new Date(year, month - 1, day);
     const today = new Date();
-    const age = today.getFullYear() - birth.getFullYear() - (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
+    const age = today.getFullYear() - birth.getFullYear()
+      - (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
     return age < 18;
   };
 
@@ -214,12 +147,11 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
       return;
     }
-    if (currentStep < 5) setCurrentStep(s => s + 1);
+    if (currentStep < 5) setCurrentStep((step) => step + 1);
   };
-  const handleBack = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     if (currentStep === 5) setShowMatriculaModal(true);
   };
 
@@ -253,24 +185,17 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       alert('E-mail do responsável inválido.');
       return;
     }
-    if (onSave) {
-      onSave(uppercaseAlunoTextFields({
-        ...formData,
-        email: normalizeEmail(formData.email),
-        responsavelEmail: normalizeEmail(formData.responsavelEmail),
-        matricularAgora,
-      }));
-    }
+    onSave?.(uppercaseAlunoTextFields({
+      ...formData,
+      email: normalizeEmail(formData.email),
+      responsavelEmail: normalizeEmail(formData.responsavelEmail),
+      matricularAgora,
+    }));
     setShowMatriculaModal(false);
   };
 
-  const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
-  const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
-  const sectionHeaderCls = (color: string) => `flex items-center gap-2 text-${color}-600 border-b border-slate-100 pb-2 mb-5`;
-
   return (
     <div className="animate-fadeIn">
-      {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Aluno</h3>
@@ -283,10 +208,9 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
         )}
       </div>
 
-      {/* Step Indicator */}
       <div className="flex items-center justify-between mb-8 relative">
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-100 z-0" />
-        {STEPS.map((step, idx) => {
+        {STEPS.map((step) => {
           const Icon = step.icon;
           const done = currentStep > step.id;
           const active = currentStep === step.id;
@@ -314,492 +238,25 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* ══════════════ STEP 1: DADOS PESSOAIS ══════════════ */}
         {currentStep === 1 && (
-          <div className="space-y-5 animate-fadeIn">
-            <div className={sectionHeaderCls('blue')}>
-              <User size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Vínculo</h4>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-5">
-              <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-200 relative overflow-hidden group shrink-0">
-                {formData.foto ? (
-                  <img src={formData.foto} alt="Prévia da Foto" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    <User size={40} />
-                  </div>
-                )}
-                {isUploadingPhoto && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
-                    <Loader2 size={24} className="animate-spin" />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2 text-left w-full">
-                <h5 className="text-sm font-bold text-[#001a33] uppercase">Foto do Aluno</h5>
-                <p className="text-xs text-slate-400">Envie uma foto recente de identificação (JPG, PNG).</p>
-                <div className="flex gap-2">
-                  <label className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/10">
-                    <Upload size={14} />
-                    Selecionar Foto
-                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
-                  </label>
-                  {formData.foto && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, foto: '' }))}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
-                    >
-                      Remover
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div>
-                <label className={labelCls}>Polo/Unidade <span className="text-red-500">*</span></label>
-                <select name="poloId" value={formData.poloId} onChange={handleChange} className={inputCls}>
-                  {polos.length === 0 && <option value={formData.poloId}>Carregando polos...</option>}
-                  {polos.map((polo) => (
-                    <option key={polo.id} value={polo.id}>
-                      {formatPoloOption(polo)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Status do Aluno <span className="text-red-500">*</span></label>
-                <select name="status" value={formData.status} onChange={handleChange} className={inputCls} required>
-                  <option value="ATIVO">ATIVO</option>
-                  <option value="INATIVO">INATIVO</option>
-                  <option value="TRANCADO">TRANCADO</option>
-                  <option value="CONCLUÍDO">CONCLUÍDO</option>
-                  <option value="DESISTENTE">DESISTENTE</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Nome Completo <span className="text-red-500">*</span></label>
-                <input type="text" name="nomeCompleto" value={formData.nomeCompleto} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: Maria da Silva Santos" required />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Nome Social (Opcional)</label>
-                <input type="text" name="nomeSocial" value={formData.nomeSocial} onChange={handleChange}
-                  className={inputCls} placeholder="Nome pelo qual prefere ser chamado(a)" />
-              </div>
-
-              <div>
-                <label className={labelCls}>CPF <span className="text-red-500">*</span></label>
-                <input type="text" name="cpf" value={formData.cpf} onChange={handleChange}
-                  maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>Data de Nascimento <span className="text-red-500">*</span></label>
-                <input type="text" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange}
-                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>Sexo <span className="text-red-500">*</span></label>
-                <select name="sexo" value={formData.sexo} onChange={handleChange} className={inputCls} required>
-                  <option value="">Selecione...</option>
-                  <option value="MASCULINO">MASCULINO</option>
-                  <option value="FEMININO">FEMININO</option>
-                  <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
-                  <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Estado Civil</label>
-                <select name="estadoCivil" value={formData.estadoCivil} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione...</option>
-                  {ESTADOS_CIVIS.map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Nacionalidade</label>
-                <input type="text" name="nacionalidade" value={formData.nacionalidade} onChange={handleChange}
-                  className={inputCls} placeholder="Brasileira" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Naturalidade (Cidade/UF)</label>
-                <input type="text" name="naturalidade" value={formData.naturalidade} onChange={handleChange}
-                  className={inputCls} placeholder="Ex: Aracaju/SE" />
-              </div>
-            </div>
-
-            {/* PcD */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-              <div className="flex items-center gap-3 mb-3">
-                <input type="checkbox" id="pcd" name="pcd" checked={formData.pcd}
-                  onChange={handleChange} className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
-                <label htmlFor="pcd" className="flex items-center gap-2 text-sm font-bold text-[#001a33] cursor-pointer">
-                  <Accessibility size={16} className="text-blue-500" />
-                  Pessoa com Deficiência (PcD)
-                </label>
-              </div>
-              {formData.pcd && (
-                <div className="mt-2">
-                  <label className={labelCls}>Tipo de Deficiência</label>
-                  <select name="pcdTipo" value={formData.pcdTipo} onChange={handleChange} className={inputCls}>
-                    <option value="">Selecione...</option>
-                    {PCD_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
+          <ParceiroAlunoFormStepPersonal
+            formData={formData}
+            polos={polos}
+            isUploadingPhoto={isUploadingPhoto}
+            onChange={handleChange}
+            onPhotoUpload={handlePhotoUpload}
+            onRemovePhoto={() => setFormData((previous) => ({ ...previous, foto: '' }))}
+          />
         )}
+        {currentStep === 2 && <ParceiroAlunoFormStepDocuments formData={formData} onChange={handleChange} />}
+        {currentStep === 3 && <ParceiroAlunoFormStepFamily formData={formData} isMinor={isMinor()} onChange={handleChange} />}
+        {currentStep === 4 && <ParceiroAlunoFormStepEducation formData={formData} onChange={handleChange} />}
+        {currentStep === 5 && <ParceiroAlunoFormStepContact formData={formData} onChange={handleChange} onCepBlur={handleCepBlur} />}
 
-        {/* ══════════════ STEP 2: DOCUMENTAÇÃO ══════════════ */}
-        {currentStep === 2 && (
-          <div className="space-y-5 animate-fadeIn">
-            <div className={sectionHeaderCls('indigo')}>
-              <Shield size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Documentos de Identificação</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="md:col-span-3">
-                <label className={labelCls}>Tipo de Documento de Identificação <span className="text-red-500">*</span></label>
-                <select name="tipoDocumento" value={formData.tipoDocumento} onChange={handleChange} className={inputCls}>
-                  {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Número do Documento <span className="text-red-500">*</span></label>
-                <input type="text" name="rg" value={formData.rg} onChange={handleChange}
-                  className={inputCls} placeholder="Número do documento de identificação" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Órgão Emissor</label>
-                <input type="text" name="orgaoEmissor" value={formData.orgaoEmissor} onChange={handleChange}
-                  className={inputCls} placeholder="SSP, IFP, DETRAN..." />
-              </div>
-
-              <div>
-                <label className={labelCls}>UF Emissão</label>
-                <select name="rgUfEmissao" value={formData.rgUfEmissao} onChange={handleChange} className={inputCls}>
-                  <option value="">UF</option>
-                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Data de Emissão do Documento</label>
-                <input type="text" name="rgDataEmissao" value={formData.rgDataEmissao} onChange={handleChange}
-                  maxLength={10} className={inputCls} placeholder="DD/MM/AAAA" />
-              </div>
-
-              <div className="md:col-span-3">
-                <div className="h-px bg-slate-100 my-1" />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Título de Eleitor</label>
-                <input type="text" name="tituloEleitor" value={formData.tituloEleitor} onChange={handleChange}
-                  className={inputCls} placeholder="Número do título" />
-                <p className="text-[10px] text-slate-400 mt-1 ml-0.5">Obrigatório para maiores de 18 anos</p>
-              </div>
-
-              <div>
-                <label className={labelCls}>Certificado de Reservista</label>
-                <input type="text" name="reservista" value={formData.reservista} onChange={handleChange}
-                  className={inputCls} placeholder="Nº do certificado (homens)" />
-              </div>
-            </div>
-
-            <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-start gap-3">
-              <AlertCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-indigo-700 font-medium leading-relaxed">
-                Para curso técnico, a identificação acadêmica deve ser feita com <strong>CIN</strong>, <strong>CNH</strong> ou <strong>RG</strong>. Os originais serão solicitados no momento da conferência documental.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════ STEP 3: FILIAÇÃO & RESPONSÁVEL ══════════════ */}
-        {currentStep === 3 && (
-          <div className="space-y-5 animate-fadeIn">
-            <div className={sectionHeaderCls('rose')}>
-              <Heart size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Filiação</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className={labelCls}>Nome da Mãe <span className="text-red-500">*</span></label>
-                <input type="text" name="nomeMae" value={formData.nomeMae} onChange={handleChange}
-                  className={inputCls} placeholder="Nome completo da mãe" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Nome do Pai</label>
-                <input type="text" name="nomePai" value={formData.nomePai} onChange={handleChange}
-                  className={inputCls} placeholder="Nome completo do pai (opcional)" />
-              </div>
-            </div>
-
-            {/* Responsável Legal (para menores) */}
-            {isMinor() ? (
-              <div className="mt-2">
-                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 flex items-start gap-3 mb-5">
-                  <AlertCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-amber-700 font-bold">
-                    Aluno menor de idade — Dados do responsável legal são obrigatórios.
-                  </p>
-                </div>
-
-                <div className={sectionHeaderCls('rose')}>
-                  <Shield size={16} />
-                  <h4 className="text-xs font-black uppercase tracking-wider">Responsável Legal</h4>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="md:col-span-2">
-                    <label className={labelCls}>Nome do Responsável <span className="text-red-500">*</span></label>
-                    <input type="text" name="responsavelNome" value={formData.responsavelNome} onChange={handleChange}
-                      className={inputCls} placeholder="Nome completo do responsável" />
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>CPF do Responsável <span className="text-red-500">*</span></label>
-                    <input type="text" name="responsavelCpf" value={formData.responsavelCpf} onChange={handleChange}
-                      maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" />
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Parentesco <span className="text-red-500">*</span></label>
-                    <select name="responsavelParentesco" value={formData.responsavelParentesco} onChange={handleChange} className={inputCls}>
-                      <option value="">Selecione...</option>
-                      <option value="Mãe">Mãe</option>
-                      <option value="Pai">Pai</option>
-                      <option value="Avó/Avô">Avó/Avô</option>
-                      <option value="Tio(a)">Tio(a)</option>
-                      <option value="Irmão/Irmã">Irmão/Irmã</option>
-                      <option value="Tutor(a) Legal">Tutor(a) Legal</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelCls}>Telefone do Responsável <span className="text-red-500">*</span></label>
-                    <input type="tel" name="responsavelTelefone" value={formData.responsavelTelefone} onChange={handleChange}
-                      maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                <p className="text-xs text-slate-500 font-medium text-center">
-                  Responsável legal não obrigatório para alunos maiores de 18 anos.
-                  <br />Caso deseje cadastrar mesmo assim, informe abaixo.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-                  <div className="md:col-span-2">
-                    <label className={labelCls}>Nome do Responsável (Opcional)</label>
-                    <input type="text" name="responsavelNome" value={formData.responsavelNome} onChange={handleChange}
-                      className={inputCls} placeholder="Nome completo" />
-                  </div>
-                  <div>
-                    <label className={labelCls}>CPF do Responsável</label>
-                    <input type="text" name="responsavelCpf" value={formData.responsavelCpf} onChange={handleChange}
-                      maxLength={14} className={`${inputCls} font-mono`} placeholder="000.000.000-00" />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Parentesco</label>
-                    <select name="responsavelParentesco" value={formData.responsavelParentesco} onChange={handleChange} className={inputCls}>
-                      <option value="">Selecione...</option>
-                      <option value="Cônjuge">Cônjuge</option>
-                      <option value="Mãe">Mãe</option>
-                      <option value="Pai">Pai</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="responsavelFinanceiro"
-                  checked={formData.responsavelFinanceiro}
-                  onChange={handleChange}
-                  className="mt-0.5 h-4 w-4 accent-blue-600"
-                />
-                <span>
-                  <strong className="block text-xs uppercase tracking-wider text-blue-800">Responsável financeiro obrigatório</strong>
-                  <span className="mt-1 block text-xs text-blue-700">Marque para declarar que este responsável ou o próprio aluno assumirá as cobranças da matrícula técnica.</span>
-                </span>
-              </label>
-              <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
-                {!isMinor() && (
-                  <div>
-                    <label className={labelCls}>Telefone do Responsável</label>
-                    <input type="tel" name="responsavelTelefone" value={formData.responsavelTelefone} onChange={handleChange}
-                      maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
-                  </div>
-                )}
-                <div>
-                  <label className={labelCls}>E-mail do Responsável</label>
-                  <input type="email" name="responsavelEmail" value={formData.responsavelEmail} onChange={handleChange}
-                    className={inputCls} placeholder="responsavel@email.com" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════ STEP 4: ESCOLARIDADE ══════════════ */}
-        {currentStep === 4 && (
-          <div className="space-y-5 animate-fadeIn">
-            <div className={sectionHeaderCls('emerald')}>
-              <GraduationCap size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Formação Acadêmica Anterior</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <label className={labelCls}>Nível de Escolaridade Anterior <span className="text-red-500">*</span></label>
-                <select name="escolaridadeAnterior" value={formData.escolaridadeAnterior} onChange={handleChange} className={inputCls}>
-                  <option value="">Selecione a escolaridade...</option>
-                  {ESCOLARIDADES.map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelCls}>Instituição de Ensino Anterior</label>
-                <input type="text" name="instituicaoOrigem" value={formData.instituicaoOrigem} onChange={handleChange}
-                  className={inputCls} placeholder="Nome da escola/faculdade" />
-              </div>
-
-              <div>
-                <label className={labelCls}>Ano de Conclusão do Ensino Médio</label>
-                <input type="text" name="anoConclusaoEnsinoMedio" value={formData.anoConclusaoEnsinoMedio} onChange={handleChange}
-                  maxLength={4} className={inputCls} placeholder="Ex: 2019" />
-              </div>
-            </div>
-
-            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-              <p className="text-xs text-emerald-700 font-medium leading-relaxed">
-                <strong>Cursos Técnicos:</strong> O Ensino Médio completo é requisito mínimo obrigatório para inscrição em cursos técnicos subsequentes. O comprovante será verificado no momento da entrega de documentos.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ══════════════ STEP 5: ENDEREÇO & CONTATO ══════════════ */}
-        {currentStep === 5 && (
-          <div className="space-y-6 animate-fadeIn">
-            <div className={sectionHeaderCls('violet')}>
-              <MapPin size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-              <div>
-                <label className={labelCls}>CEP <span className="text-red-500">*</span></label>
-                <input type="text" name="cep" value={formData.cep} onChange={handleChange} onBlur={handleCepBlur}
-                  maxLength={9} className={inputCls} placeholder="00000-000" required />
-              </div>
-
-              <div className="md:col-span-3">
-                <label className={labelCls}>Endereço (Rua/Av) <span className="text-red-500">*</span></label>
-                <input type="text" name="endereco" value={formData.endereco} onChange={handleChange}
-                  className={inputCls} placeholder="Nome da rua" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>Número <span className="text-red-500">*</span></label>
-                <input type="text" name="numero" value={formData.numero} onChange={handleChange}
-                  className={inputCls} placeholder="123" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>Complemento</label>
-                <input type="text" name="complemento" value={formData.complemento} onChange={handleChange}
-                  className={inputCls} placeholder="Apto, Bloco..." />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className={labelCls}>Bairro <span className="text-red-500">*</span></label>
-                <input type="text" name="bairro" value={formData.bairro} onChange={handleChange}
-                  className={inputCls} placeholder="Bairro" required />
-              </div>
-
-              <div className="md:col-span-3">
-                <label className={labelCls}>Cidade <span className="text-red-500">*</span></label>
-                <input type="text" name="cidade" value={formData.cidade} onChange={handleChange}
-                  className={inputCls} placeholder="Nome da cidade" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>UF <span className="text-red-500">*</span></label>
-                <select name="uf" value={formData.uf} onChange={handleChange} className={inputCls} required>
-                  <option value="">UF</option>
-                  {UFS.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className={sectionHeaderCls('violet')}>
-              <Phone size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">Contato</h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <label className={labelCls}><Mail size={12} className="inline mr-1" />E-mail <span className="text-red-500">*</span></label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange}
-                  className={inputCls} placeholder="aluno@email.com" required />
-                <p className="text-[10px] text-slate-400 mt-1 ml-0.5 flex items-center gap-1">
-                  <AlertCircle size={10} />Boleto e acesso ao portal serão enviados para este e-mail.
-                </p>
-              </div>
-
-              <div>
-                <label className={labelCls}>Celular / WhatsApp <span className="text-red-500">*</span></label>
-                <input type="tel" name="contato1" value={formData.contato1} onChange={handleChange}
-                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" required />
-              </div>
-
-              <div>
-                <label className={labelCls}>Telefone de Recado (Opcional)</label>
-                <input type="tel" name="contato2" value={formData.contato2} onChange={handleChange}
-                  maxLength={15} className={inputCls} placeholder="(00) 00000-0000" />
-              </div>
-            </div>
-
-            <div>
-              <label className={labelCls}><FileText size={12} className="inline mr-1" />Observações Internas (Opcional)</label>
-              <textarea name="observacao" value={formData.observacao} onChange={handleChange} rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:border-violet-400 focus:bg-white outline-none transition-all resize-none" placeholder="Anotações internas da secretaria..." />
-            </div>
-          </div>
-        )}
-
-        {/* Botões de Navegação */}
         <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-100">
           <button
             type="button"
-            onClick={currentStep === 1 ? onCancel : handleBack}
+            onClick={currentStep === 1 ? onCancel : () => setCurrentStep((step) => step - 1)}
             className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
           >
             <ChevronLeft size={16} />
@@ -825,7 +282,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
           )}
         </div>
 
-        {/* Progresso */}
         <div className="mt-4">
           <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
             <span>Etapa {currentStep} de 5</span>
@@ -840,7 +296,6 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
         </div>
       </form>
 
-      {/* Modal Matrícula */}
       {showMatriculaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border border-slate-100">

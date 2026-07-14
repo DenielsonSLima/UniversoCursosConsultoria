@@ -8,11 +8,18 @@ import { clearPortalSession } from './portal-session';
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Falta confirmar seu e-mail. Enviamos um novo link; olhe sua caixa de entrada e também o spam/lixo eletrônico.';
 const AUTH_EMAIL_NOT_CONFIRMED_RESEND_ERROR = 'Falta confirmar seu e-mail. Olhe sua caixa de entrada e também o spam/lixo eletrônico antes de tentar entrar.';
+const AUTH_CONFIRMED_INVALID_PASSWORD_ERROR = 'Seu e-mail já está confirmado, mas a senha não confere. Digite novamente ou use “Esqueceu a senha?”.';
 
 const isEmailNotConfirmedError = (error: any) => {
   const code = String(error?.code || error?.error_code || '').toLowerCase();
   const message = String(error?.message || '').toLowerCase();
   return code === 'email_not_confirmed' || message.includes('email not confirmed');
+};
+
+const isInvalidCredentialsError = (error: any) => {
+  const code = String(error?.code || error?.error_code || '').toLowerCase();
+  const message = String(error?.message || '').toLowerCase();
+  return code === 'invalid_credentials' || message.includes('invalid login credentials');
 };
 
 const sanitizeAuthError = (message: string) => {
@@ -129,6 +136,19 @@ export const loginService = {
           user: null,
           session: null,
           error: await buildUnconfirmedEmailError(latestAuthStatus.resolved_email || resolvedEmail),
+        };
+      }
+
+      if (
+        isInvalidCredentialsError(error) &&
+        latestAuthStatus?.user_exists === true &&
+        latestAuthStatus?.is_student === true &&
+        latestAuthStatus?.email_confirmed === true
+      ) {
+        return {
+          user: null,
+          session: null,
+          error: AUTH_CONFIRMED_INVALID_PASSWORD_ERROR,
         };
       }
 

@@ -83,6 +83,15 @@ const AlunoEmailConfirmationPage: React.FC = () => {
         }
 
         const code = getHashOrSearchParam('code');
+        const accessToken = getHashOrSearchParam('access_token');
+        const hasAuthReturn = Boolean(
+          code ||
+          accessToken,
+        );
+        if (!hasAuthReturn) {
+          throw new Error('Abra o link de confirmação enviado ao seu e-mail. Se ele já foi usado, entre normalmente com sua senha.');
+        }
+
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) {
@@ -95,10 +104,18 @@ const AlunoEmailConfirmationPage: React.FC = () => {
         if (!data.session) {
           throw new Error('Não foi possível abrir a sessão de confirmação. Tente entrar com seu e-mail e senha.');
         }
+        if (accessToken && data.session.access_token !== accessToken) {
+          throw new Error('O link de confirmação não corresponde à sessão aberta. Abra novamente o link recebido por e-mail.');
+        }
 
         const profile = await alunoPublicAuthService.finishExternalLogin();
         const aluno = await getConfirmedAlunoData(profile);
-        await supabase.auth.signOut();
+        try {
+          const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+          if (signOutError) console.warn('Não foi possível encerrar a sessão local após a confirmação.', signOutError);
+        } catch (signOutError) {
+          console.warn('Não foi possível encerrar a sessão local após a confirmação.', signOutError);
+        }
         if (!mounted) return;
 
         setState({

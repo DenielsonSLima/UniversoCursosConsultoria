@@ -71,7 +71,7 @@ const getFriendlyAuthRedirectError = (message: string) => {
     lower.includes('otp') ||
     lower.includes('invalid')
   ) {
-    return 'O link de confirmação é inválido ou expirou. Tente entrar novamente para receber um novo e-mail de confirmação.';
+    return 'Este link já foi usado ou expirou. Se você já confirmou o e-mail, entre normalmente com sua senha; caso contrário, solicite um novo link.';
   }
 
   return decoded || 'Não foi possível concluir a confirmação do e-mail. Tente entrar novamente.';
@@ -79,9 +79,10 @@ const getFriendlyAuthRedirectError = (message: string) => {
 
 const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
   const email = normalizeEmail(data.email);
+  const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
 
   const { error } = await supabase.rpc('finalizar_cadastro_publico_aluno', {
-    p_nome: data.nome.trim(),
+    p_nome: nome,
     p_email: email,
     p_telefone: onlyDigits(data.telefone),
     p_cpf: onlyDigits(data.cpf),
@@ -179,7 +180,7 @@ export const alunoPublicAuthService = {
     data: PublicAlunoSignupData,
   ) {
     const email = normalizeEmail(data.email);
-    const nome = data.nome.trim();
+    const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
     const telefone = onlyDigits(data.telefone);
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
