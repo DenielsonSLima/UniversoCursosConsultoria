@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --force",
-    "build": "vite build",
+    "build": "npm run check:version && vite build",
+    "check:version": "node scripts/check-version-record.mjs",
     "preview": "vite preview",
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
