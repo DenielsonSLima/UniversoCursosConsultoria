@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-07-13 — Cadastro Publico Sincronizado Com Auth
+
+**O que foi feito:**
+- Removido o teste `bruna.alves0999@gmail.com` de `parceiros` e `auth.users` via MCP Supabase para permitir reteste limpo do fluxo.
+- Confirmado que o modulo Parceiros usa TanStack Query (`useQuery`, `useMutation`, `useQueryClient`) e Realtime (`postgres_changes` na tabela `parceiros`) para invalidar cache e atualizar a tela.
+- Criada e aplicada via MCP Supabase a migration `20260714015500_sync_public_signup_auth_to_partner.sql`.
+- A RPC `finalizar_cadastro_publico_aluno` agora grava `polo_id` e `polo_ids` da Matriz, evitando aluno criado fora do escopo visivel no gestor.
+- Criado trigger `trg_sync_public_aluno_auth_profile` em `auth.users` para criar/atualizar automaticamente o registro do aluno em `parceiros` quando o Auth recebe metadata do fluxo `cadastro_publico_ead`.
+
+**Por que:**
+- Quando a confirmacao de e-mail esta ativa, `auth.signUp` cria o usuario no Auth mas pode nao devolver sessao para o frontend finalizar a RPC. Isso deixava usuario em Auth sem perfil em `parceiros`, e o gestor nao enxergava o aluno.
+
+**Arquivos afetados:**
+- `supabase/migrations/20260714015500_sync_public_signup_auth_to_partner.sql`
+- `PROJETO_ALTERACOES.md`
+
+**Validacao:**
+- Bruna removida: `parceiros=0`, `auth.users=0`.
+- Trigger `trg_sync_public_aluno_auth_profile` ativo em `auth.users` para `INSERT` e `UPDATE`.
+- `finalizar_cadastro_publico_aluno`: `authenticated` executa e `anon` nao executa.
+- Modulo Parceiros confirmado com `useParceirosQueries`, `useParceirosMutations` e `useParceirosRealtime`.
+
+---
+
 ## 2026-07-13 — Cadastro Publico de Aluno Sem Insert Anonimo
 
 **O que foi feito:**
