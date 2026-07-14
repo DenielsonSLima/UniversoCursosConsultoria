@@ -43,6 +43,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
   const latestCodeRef = useRef<string | null>(null);
   const latestSessionEventRef = useRef<Record<string, unknown> | null>(null);
   const completedCodeRef = useRef<string | null>(null);
+  const pendingLaunchWarningRef = useRef<number | null>(null);
   const pendingSessionWarningRef = useRef<number | null>(null);
 
   const appId = (draft.waAppId || '').trim();
@@ -62,6 +63,23 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     pendingSessionWarningRef.current = null;
   }, []);
 
+  const clearPendingLaunchWarning = useCallback(() => {
+    if (!pendingLaunchWarningRef.current) return;
+    window.clearTimeout(pendingLaunchWarningRef.current);
+    pendingLaunchWarningRef.current = null;
+  }, []);
+
+  const scheduleMissingLaunchWarning = useCallback(() => {
+    clearPendingLaunchWarning();
+    pendingLaunchWarningRef.current = window.setTimeout(() => {
+      if (latestCodeRef.current || latestSessionEventRef.current || completedCodeRef.current) return;
+
+      setOnboardingError(
+        'A Meta abriu o popup, mas nao retornou code nem evento do WhatsApp. Se a tela disser que esta pessoa nao pode integrar clientes no momento, a App/conta da Meta ainda nao esta habilitada para onboarding de clientes. Feche o popup e confira Acoes necessarias, App Review, Access Verification e permissoes avancadas no Meta for Developers.',
+      );
+    }, 12000);
+  }, [clearPendingLaunchWarning]);
+
   const scheduleMissingSessionWarning = useCallback((code: string) => {
     clearPendingSessionWarning();
     pendingSessionWarningRef.current = window.setTimeout(() => {
@@ -79,6 +97,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
 
   const completeEmbeddedSignup = useCallback(async (code: string, sessionEvent: Record<string, unknown>) => {
     if (completedCodeRef.current === code) return;
+    clearPendingLaunchWarning();
     clearPendingSessionWarning();
 
     const eventName = typeof sessionEvent.event === 'string' ? sessionEvent.event : '';
@@ -115,7 +134,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     } finally {
       setIsCompleting(false);
     }
-  }, [appId, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, onChange, queryClient]);
+  }, [appId, clearPendingLaunchWarning, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, onChange, queryClient]);
 
   useEffect(() => {
     const handleMessage = (event: any) => {
@@ -130,6 +149,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
       ].slice(0, 5));
 
       latestSessionEventRef.current = payload;
+      clearPendingLaunchWarning();
       clearPendingSessionWarning();
 
       const data = payload.data && typeof payload.data === 'object' ? payload.data as Record<string, unknown> : null;
@@ -148,9 +168,10 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     window.addEventListener('message', handleMessage);
     return () => {
       window.removeEventListener('message', handleMessage);
+      clearPendingLaunchWarning();
       clearPendingSessionWarning();
     };
-  }, [clearPendingSessionWarning, completeEmbeddedSignup, onChange]);
+  }, [clearPendingLaunchWarning, clearPendingSessionWarning, completeEmbeddedSignup, onChange]);
 
   const handleLaunch = async () => {
     if (!appId || !configurationId) {
@@ -166,6 +187,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     setOnboardingResult(null);
     setOnboardingError(null);
     setLoginResult(null);
+    clearPendingLaunchWarning();
     clearPendingSessionWarning();
     latestCodeRef.current = null;
     latestSessionEventRef.current = null;
@@ -173,9 +195,11 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
 
     try {
       await loadFacebookSdk(appId, graphVersion || DEFAULT_GRAPH_VERSION);
+      scheduleMissingLaunchWarning();
       facebookWindow().FB?.login((response) => {
         const code = response.authResponse?.code;
         if (code) {
+          clearPendingLaunchWarning();
           latestCodeRef.current = code;
           setLoginResult({
             receivedAt: new Date().toISOString(),
@@ -193,6 +217,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
           return;
         }
 
+        clearPendingLaunchWarning();
         setLoginResult({
           receivedAt: new Date().toISOString(),
           status: response.status === 'unknown' ? 'cancelled' : 'error',
