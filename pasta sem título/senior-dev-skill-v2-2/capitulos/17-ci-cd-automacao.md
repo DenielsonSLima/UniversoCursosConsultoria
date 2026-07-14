@@ -101,13 +101,8 @@ jobs:
           --health-interval 10s
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-
-      - name: Iniciar Supabase local
-        run: supabase start
-
-      - name: Aplicar migrações
-        run: supabase db reset
+      # Neste projeto, agentes nao executam Supabase CLI.
+      # Validacoes de schema/RLS em ambiente autorizado devem ser feitas via MCP Supabase.
 
       # ✅ REGRA #4 — RLS habilitada em todas as tabelas de cliente
       - name: Verificar RLS em todas as tabelas
@@ -159,13 +154,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - run: npm ci
-      - uses: supabase/setup-cli@v1
-
-      - name: Iniciar Supabase
-        run: supabase start
-
-      - name: Aplicar migrações
-        run: supabase db reset
+      # Neste projeto, agentes nao executam Supabase CLI.
+      # Testes que exigem banco devem usar ambiente autorizado/configurado fora deste fluxo.
 
       # ✅ Testes unitários com cobertura
       - name: Testes unitários
@@ -240,19 +230,16 @@ Branch: main
 
 ## Automação de Tipos do Banco
 
-Execute sempre que o schema mudar. Pode ser automatizado como hook de migração:
+Quando o schema mudar, atualize os tipos por fluxo aprovado do projeto ou ferramenta MCP equivalente, sem executar comandos `supabase ...`.
 
 ```bash
 #!/bin/bash
-# scripts/gen-types.sh — rodar após toda migração
-
-echo "Gerando tipos TypeScript a partir do schema..."
-supabase gen types typescript --local > src/types/database.types.ts
+# scripts/check-types.sh — rodar após ajustes que alterem tipos usados no app
 
 echo "Verificando se tipos compilam..."
 npx tsc --noEmit
 
-echo "✅ Tipos atualizados em src/types/database.types.ts"
+echo "Tipos verificados em src/types/database.types.ts"
 ```
 
 ---

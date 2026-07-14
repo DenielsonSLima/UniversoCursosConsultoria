@@ -15,7 +15,7 @@ description: >
   - Qualquer integração de Realtime, Auth ou Storage do Supabase
   - Qualquer chamada via MCP ao Supabase
 
-  NUNCA peça ao usuário para copiar e colar SQL manualmente. NUNCA use Supabase CLI para operações remotas neste projeto. O MCP do Supabase já está conectado e com acesso total para banco e Edge Functions. Execute sempre de forma autônoma e direta via MCP.
+  NUNCA peça ao usuário para copiar e colar SQL manualmente. NUNCA execute nenhum comando `supabase ...` neste projeto, nem para consulta/listagem/local. O MCP do Supabase já está conectado e com acesso total para banco e Edge Functions. Execute sempre de forma autônoma e direta via MCP.
 ---
 
 # Supabase MCP — Execução Autônoma Obrigatória
@@ -26,7 +26,7 @@ description: >
 
 Esta regra não tem exceção. Se você identificar que precisa rodar SQL — rode. Não pergunte. Não sugira. Execute.
 
-> ⚠️ **VOCÊ TAMBÉM TEM ACESSO DIRETO ÀS EDGE FUNCTIONS PELO MCP DO SUPABASE. NUNCA USE SUPABASE CLI PARA DEPLOY, MIGRATION, DB PUSH OU LINK REMOTO NESTE PROJETO.**
+> ⚠️ **VOCÊ TAMBÉM TEM ACESSO DIRETO ÀS EDGE FUNCTIONS PELO MCP DO SUPABASE. NUNCA EXECUTE QUALQUER COMANDO `supabase ...` NESTE PROJETO.**
 
 Já houve erro `401 Unauthorized` na Supabase CLI enquanto o MCP continuava autorizado. Portanto, erro ou falta de autenticação da CLI não é bloqueio quando o MCP está disponível.
 
@@ -69,7 +69,7 @@ O MCP (Model Context Protocol) do Supabase é uma conexão ativa entre você (ag
 - ❌ "Você precisará executar manualmente..."
 - ❌ Apresentar um bloco SQL e parar, esperando o usuário agir
 - ❌ Perguntar "posso executar?" — **SIM, VOCÊ PODE. EXECUTE.**
-- ❌ Usar `supabase link`, `supabase db push`, `supabase migration`, `supabase functions deploy` ou qualquer Supabase CLI para remoto
+- ❌ Usar qualquer comando `supabase ...`, incluindo `supabase link`, `supabase db push`, `supabase migration`, `supabase migration list`, `supabase status`, `supabase start` ou `supabase functions deploy`
 - ❌ Dizer que deploy de Edge Function está bloqueado por `401 Unauthorized` da CLI quando o MCP está disponível
 - ❌ Pedir login/token da CLI para realizar operação que o MCP já consegue executar
 
@@ -159,7 +159,7 @@ Erros comuns e como resolver:
 - `permission denied` → verifique se o MCP está autenticado (reporte ao usuário apenas neste caso)
 - `syntax error` → corrija o SQL e reexecute
 - `relation does not exist` → crie a dependência primeiro, depois execute novamente
-- `401 Unauthorized` na Supabase CLI → ignore a CLI para remoto e execute pelo MCP; só reporte se o MCP também falhar
+- `401 Unauthorized` na Supabase CLI → não tente usar CLI; execute pelo MCP e só reporte se o MCP também falhar
 
 ---
 

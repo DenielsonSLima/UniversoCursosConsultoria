@@ -11,13 +11,12 @@
 |---|---|---|
 | Node.js | 20.x LTS | `node --version` |
 | npm | 10.x | `npm --version` |
-| Supabase CLI | 1.x, opcional apenas para ambiente local | `supabase --version` |
 | Git | qualquer | `git --version` |
 | Docker Desktop | qualquer | `docker --version` |
 
-> Docker é necessário para rodar o Supabase localmente.
+> Docker pode ser útil para outros serviços locais, mas agentes de IA não devem tentar iniciar Supabase local neste projeto.
 
-> Operações remotas no projeto Supabase da Universo Cursos e Consultoria devem ser feitas via MCP Supabase. Não use Supabase CLI para deploy remoto, migrations remotas, `db push`, `link` remoto ou Edge Functions remotas; a CLI já apresentou `401 Unauthorized` neste projeto enquanto o MCP estava autorizado.
+> Supabase neste projeto é somente via MCP Supabase. Não execute nenhum comando `supabase ...`, nem local, nem remoto, nem apenas para listar/consultar. A CLI já apresentou `401 Unauthorized` enquanto o MCP estava autorizado.
 
 ---
 
@@ -40,9 +39,9 @@ cp .env.example .env.local
 Edite `.env.local` com os valores corretos:
 
 ```env
-# Supabase — valores do projeto local (não de produção!)
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_ANON_KEY=eyJ...  # gerado pelo supabase start
+# Supabase — valores do projeto autorizado
+VITE_SUPABASE_URL=https://...
+VITE_SUPABASE_ANON_KEY=eyJ...
 
 # Nunca aqui:
 # VITE_SUPABASE_SERVICE_ROLE_KEY ← PROIBIDO no frontend
@@ -52,35 +51,15 @@ VITE_SUPABASE_ANON_KEY=eyJ...  # gerado pelo supabase start
 
 ---
 
-## Passo 3: Iniciar Supabase Local
+## Passo 3: Usar Supabase Pelo MCP
 
-```bash
-# Inicia o banco local e as Edge Functions (precisa de Docker)
-supabase start
-
-# Saída esperada:
-# API URL: http://127.0.0.1:54321
-# Anon key: eyJ...
-# Service role key: eyJ...  ← use APENAS em Edge Functions
-# Studio URL: http://127.0.0.1:54323
-```
+Para banco, migrations, logs, Auth, Storage, RLS e Edge Functions, use as ferramentas MCP Supabase disponíveis na sessão (`execute_sql`, `apply_migration`, logs e equivalentes). Não execute comandos `supabase ...`.
 
 ---
 
 ## Passo 4: Rodar as Migrações
 
-```bash
-# Aplica todos os arquivos de supabase/migrations/ em ordem
-supabase db reset
-
-# Saída esperada:
-# Resetting database...
-# Applying migration 20240101000000_create_organizations.sql
-# Applying migration 20240101000001_create_contas.sql
-# ...
-# Seeding data supabase/seed.sql
-# Done.
-```
+Crie o arquivo SQL versionado em `supabase/migrations/` e aplique no projeto autorizado usando MCP Supabase `apply_migration`. Valide com `execute_sql`/logs MCP quando necessário.
 
 ---
 
@@ -98,8 +77,6 @@ npm run dev
 ```bash
 # Desenvolvimento
 npm run dev              # Inicia frontend
-supabase start           # Inicia backend local
-supabase db reset        # Reset + migrações + seed
 
 # Testes
 npm run test             # Testes unitários (Vitest)
@@ -107,13 +84,11 @@ npm run test:coverage    # Com relatório de cobertura
 npm run test:e2e         # Playwright E2E
 
 # Banco de dados
-supabase migration new nome_da_migracao   # Cria nova migração
-supabase db diff                          # Mostra diff do schema
-supabase gen types typescript             # Gera tipos a partir do banco
+# Criar migrations manualmente em supabase/migrations/
+# Aplicar e validar sempre pelo MCP Supabase
 
 # Edge Functions
-supabase functions serve                  # Serve Edge Functions localmente
-# Deploy remoto de Edge Functions: usar MCP Supabase (`deploy_edge_function`)
+# Deploy/listagem/leitura de Edge Functions: usar MCP Supabase
 
 # Qualidade
 npm run lint             # ESLint
@@ -164,11 +139,9 @@ Lançamentos de exemplo para testar extrato
 
 | Problema | Causa | Solução |
 |---|---|---|
-| `supabase start` falha | Docker não está rodando | Inicie o Docker Desktop |
-| Tipos desatualizados | Schema mudou sem regenerar | `supabase gen types typescript` |
 | RLS bloqueando query | Usuário não autenticado localmente | Faça login no app antes |
 | Edge Function com erro 401 | JWT inválido ou expirado | Refaça login |
-| Supabase CLI com `401 Unauthorized` em operação remota | CLI sem autenticação válida, mesmo com MCP autorizado | Não use CLI para remoto; execute via MCP Supabase |
+| Tentação de usar Supabase CLI | Hábito antigo/atalho incorreto | Não execute; use MCP Supabase |
 | Migração falhando | SQL com erro de sintaxe | Verifique o arquivo em `supabase/migrations/` |
 
 ---
@@ -182,4 +155,4 @@ Se você é um agente gerando código para este projeto:
 3. Variáveis disponíveis em Edge Functions: todas do Supabase + as definidas em `supabase/functions/.env`
 4. **Nunca gere código que usa `SERVICE_ROLE_KEY` no frontend**
 5. Ao gerar migrações, use o formato: `YYYYMMDDHHMMSS_descricao_da_mudanca.sql`
-6. Para aplicar migrations remotas, configurar RLS remoto ou fazer deploy de Edge Functions remotas, use MCP Supabase. Não tente Supabase CLI neste projeto.
+6. Para qualquer ação de Supabase, use MCP Supabase. Não tente nenhum comando `supabase ...` neste projeto.

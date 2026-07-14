@@ -66,12 +66,12 @@ RPC quando: múltiplas tabelas precisam ser atualizadas juntas (atomicidade), a 
 Não. Lançamentos são imutáveis. Para "desfazer", crie um estorno (lançamento com valor oposto). Isso mantém rastreabilidade e auditoria. Veja Cap. 13.
 
 **Q13: Como faço uma mudança no schema do banco?**
-1. `supabase migration new nome_descritivo`
-2. Escreva o SQL no arquivo gerado
-3. `supabase db reset` para testar localmente
-4. Commit o arquivo de migração
-5. Em produção, o CI aplica automaticamente
-Nunca execute SQL diretamente em produção. Veja Cap. 7.
+1. Crie manualmente um arquivo SQL versionado em `supabase/migrations/`
+2. Escreva a migration de forma idempotente e revisável
+3. Aplique no projeto autorizado usando MCP Supabase `apply_migration`
+4. Valide com MCP Supabase (`execute_sql`, logs ou ferramenta equivalente)
+5. Commit o arquivo de migração
+Nunca use comando `supabase ...` neste projeto. Veja Cap. 7.
 
 **Q14: Preciso criar índice para toda coluna?**
 Não. Crie índice apenas em colunas usadas em `WHERE`, `JOIN` ou `ORDER BY` frequentemente. Use `EXPLAIN ANALYZE` para confirmar. Índice em excesso prejudica INSERT/UPDATE. Veja Cap. 12.

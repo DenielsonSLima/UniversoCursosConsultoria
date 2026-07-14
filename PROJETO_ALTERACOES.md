@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-07-13 — Cadastro Publico de Aluno Sem Insert Anonimo
+
+**O que foi feito:**
+- Revisado o fluxo de cadastro publico do aluno na tela de login.
+- Removida a tentativa do navegador anonimo inserir/atualizar diretamente a tabela `parceiros`.
+- Criada e aplicada via MCP Supabase a RPC autenticada `finalizar_cadastro_publico_aluno`, responsavel por validar CPF, telefone, e-mail, termos e finalizar/criar o perfil de aluno.
+- Ajustado o frontend para salvar os dados do cadastro no metadata do Supabase Auth e finalizar o perfil por RPC quando houver sessao autenticada.
+- Adicionado fallback para e-mail ja criado pelo fluxo anterior com falha: se a senha confere, o sistema entra e conclui o perfil do aluno.
+- Ajustadas as policies de insert em `parceiros` para separar cadastro self-service de aluno e cadastro por gestor.
+
+**Por que:**
+- O cadastro falhava apos `auth.signUp` porque o cliente anonimo tentava inserir em `parceiros` e batia em RLS/function sem grant, gerando `permission denied for function is_partner_in_gestor_scope`.
+
+**Arquivos afetados:**
+- `modules/public/login/aluno-public-auth.service.ts`
+- `supabase/migrations/20260713183000_fix_public_aluno_signup_flow.sql`
+- `PROJETO_ALTERACOES.md`
+
+**Validacao:**
+- Migration aplicada com sucesso pelo MCP Supabase.
+- RPC existe como `SECURITY DEFINER`; `authenticated` executa, `anon` nao executa.
+- `anon` nao possui mais grants diretas de `SELECT/INSERT/UPDATE` em `parceiros`.
+- `./node_modules/.bin/eslint modules/public/login/aluno-public-auth.service.ts --plugin react-hooks --rule react-hooks/rules-of-hooks:error`
+- `npm run build`
+
+---
+
+## 2026-07-13 — Regra Absoluta Supabase Somente Via MCP
+
+**O que foi feito:**
+- Criado `AGENTS.md` na raiz do projeto com a regra critica: nenhuma chamada `supabase ...` deve ser executada neste projeto.
+- Atualizados os arquivos de memoria e skills para deixar explicito que banco, migrations, logs, Auth, Storage, RLS e Edge Functions devem usar somente MCP Supabase.
+- Removidas instrucoes auxiliares que ensinavam comandos da Supabase CLI em documentos de ambiente/FAQ/CI.
+- Registrada a mesma proibicao na skill global `supabase-postgres-best-practices`.
+
+**Por que:**
+- O projeto ja possui MCP Supabase autorizado e a Supabase CLI ja apresentou falha `401 Unauthorized`; tentar a CLI quebra o fluxo e contradiz a regra operacional do projeto.
+
+**Arquivos afetados:**
+- `AGENTS.md`
+- `PROJETO_CONTEXTO.md`
+- `PROJETO_ALTERACOES.md`
+- `pasta sem título/memory/SKILL.md`
+- `pasta sem título/Acesso/SKILL.md`
+- `pasta sem título/senior-dev-skill-v2-2/SKILL.md`
+- `pasta sem título/senior-dev-skill-v2-2/AMBIENTE.md`
+- `pasta sem título/senior-dev-skill-v2-2/FAQ.md`
+- `pasta sem título/senior-dev-skill-v2-2/capitulos/17-ci-cd-automacao.md`
+- `/Users/denielson/.agents/skills/supabase-postgres-best-practices/SKILL.md`
+
+---
+
 ## 2026-07-12 — Automacoes WhatsApp Recolhidas e Modalidades por Aviso
 
 **O que foi feito:**

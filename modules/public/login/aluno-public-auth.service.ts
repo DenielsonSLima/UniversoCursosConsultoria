@@ -23,6 +23,8 @@ interface FinalizeAlunoFirstAccessData {
   newPassword?: string;
 }
 
+type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password'>;
+
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 const isStrongPassword = (value: string) => (
   value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
@@ -42,6 +44,11 @@ const getFriendlySignupError = (message: string) => {
   return message;
 };
 
+const isExistingUserError = (message: string) => {
+  const lower = message.toLowerCase();
+  return lower.includes('already registered') || lower.includes('user already');
+};
+
 const getFriendlyOAuthError = (message: string) => {
   if (message.includes('Manual linking is disabled')) {
     return 'O projeto do Supabase não permite vínculo manual de contas. Ative "Allow manual linking" em Authentication > Settings.';
@@ -52,6 +59,49 @@ const getFriendlyOAuthError = (message: string) => {
   }
 
   return message;
+};
+
+const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
+  const email = normalizeEmail(data.email);
+
+  const { error } = await supabase.rpc('finalizar_cadastro_publico_aluno', {
+    p_nome: data.nome.trim(),
+    p_email: email,
+    p_telefone: onlyDigits(data.telefone),
+    p_cpf: onlyDigits(data.cpf),
+    p_data_nascimento: data.dataNascimento,
+    p_aceitou_termos: data.acceptedTerms,
+    p_termos_versao: TERMS_VERSION,
+  });
+
+  if (error) {
+    throw new Error(getFriendlySignupError(error.message));
+  }
+
+  const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+  if (!profile || profile.tipo !== 'Aluno') {
+    throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
+  }
+
+  return profile;
+};
+
+const finalizePublicSignupFromMetadata = async () => {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user?.email) return null;
+
+  const metadata = data.user.user_metadata || {};
+  if (metadata.origem !== 'cadastro_publico_ead' && metadata.tipo !== 'Aluno') return null;
+  if (!metadata.cpf || !metadata.dataNascimento) return null;
+
+  return finalizePublicAlunoSignup({
+    nome: String(metadata.nome || data.user.email),
+    email: data.user.email,
+    telefone: String(metadata.telefone || ''),
+    cpf: String(metadata.cpf || ''),
+    dataNascimento: String(metadata.dataNascimento || ''),
+    acceptedTerms: metadata.acceptedTerms === true,
+  });
 };
 
 export const alunoPublicAuthService = {
@@ -65,7 +115,11 @@ export const alunoPublicAuthService = {
     });
     if (error) throw new Error(error);
 
-    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    if (!profile) {
+      profile = await finalizePublicSignupFromMetadata();
+    }
+
     if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
       throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
@@ -107,6 +161,7 @@ export const alunoPublicAuthService = {
     const telefone = onlyDigits(data.telefone);
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
+    const acceptedTerms = data.acceptedTerms;
 
     if (!isValidEmail(email)) {
       throw new Error('Informe um e-mail válido. Ele será usado como login do aluno.');
@@ -128,6 +183,15 @@ export const alunoPublicAuthService = {
       throw new Error('Informe a data de nascimento para concluir o cadastro.');
     }
 
+    const finalizeSignup = async () => finalizePublicAlunoSignup({
+      nome,
+      email,
+      telefone,
+      cpf,
+      dataNascimento,
+      acceptedTerms,
+    });
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: data.password,
@@ -137,65 +201,40 @@ export const alunoPublicAuthService = {
           nome,
           tipo: 'Aluno',
           origem: 'cadastro_publico_ead',
+          cpf,
+          telefone,
+          dataNascimento,
+          acceptedTerms,
+          termsVersion: TERMS_VERSION,
         },
       },
     });
 
     if (authError) {
+      if (isExistingUserError(authError.message)) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
+        if (signInError) throw new Error(getFriendlySignupError(authError.message));
+
+        const profile = await finalizeSignup();
+        return { profile, emailConfirmationRequired: false };
+      }
       throw new Error(getFriendlySignupError(authError.message));
     }
 
     const identities = (authData.user as any)?.identities;
     if (Array.isArray(identities) && identities.length === 0) {
-      throw new Error('Este e-mail já possui acesso. Entre com sua senha para continuar a compra.');
-    }
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
+      if (signInError) throw new Error('Este e-mail já possui acesso. Entre com sua senha para continuar a compra.');
 
-    const { data: existingAluno, error: existingError } = await supabase
-      .from('parceiros')
-      .select('id')
-      .ilike('email', email)
-      .eq('tipo', 'Aluno')
-      .maybeSingle();
-
-    if (existingError && existingError.code !== 'PGRST116') {
-      throw new Error(existingError.message);
-    }
-
-    const agora = new Date().toISOString();
-    const alunoPayload = {
-      tipo: 'Aluno',
-      nome,
-      email,
-      telefone,
-      cpf_cnpj: cpf || null,
-      data_nascimento: dataNascimento,
-      status: 'ATIVO',
-      observacao: 'Cadastro publico criado pelo fluxo de compra online EAD.',
-      aceitou_termos_uso: true,
-      aceitou_termos_uso_em: agora,
-      termos_uso_versao: TERMS_VERSION,
-    };
-
-    if (existingAluno?.id) {
-      const { error } = await supabase
-        .from('parceiros')
-        .update(alunoPayload)
-        .eq('id', existingAluno.id);
-      if (error) throw new Error(getFriendlySignupError(error.message));
-    } else {
-      const { error } = await supabase.from('parceiros').insert(alunoPayload);
-      if (error) throw new Error(getFriendlySignupError(error.message));
+      const profile = await finalizeSignup();
+      return { profile, emailConfirmationRequired: false };
     }
 
     if (!authData.session) {
       return { profile: null, emailConfirmationRequired: true };
     }
 
-    const profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    if (!profile || profile.tipo !== 'Aluno') {
-      throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
-    }
-
+    const profile = await finalizeSignup();
     return { profile, emailConfirmationRequired: false };
   },
 
