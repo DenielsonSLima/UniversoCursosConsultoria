@@ -22,6 +22,7 @@ import SeoManager from './modules/public/components/SeoManager';
 import EadPublicPage from './modules/public/ead/EadPublicPage';
 import EadDetailPage from './modules/public/ead/EadDetailPage';
 import AlunoLoginPublicPage from './modules/public/login/AlunoLoginPublicPage';
+import AlunoEmailConfirmationPage from './modules/public/login/AlunoEmailConfirmationPage';
 import ValidatorPage from './modules/public/validator/ValidatorPage';
 import PasswordRecoveryPage from './modules/login/PasswordRecoveryPage';
 import AlunoFirstAccessPage from './modules/public/login/AlunoFirstAccessPage';
@@ -55,6 +56,7 @@ const App: React.FC = () => {
 
         {/* ── Login público do aluno ── */}
         <Route path="/login" element={<AlunoLoginPublicPage />} />
+        <Route path="/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
 

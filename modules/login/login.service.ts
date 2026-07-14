@@ -25,7 +25,7 @@ const resendSignupConfirmation = async (email: string) => {
     type: 'signup',
     email,
     options: {
-      emailRedirectTo: buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent('/aluno')}`),
+      emailRedirectTo: buildAuthRedirectUrl(`/confirmacao-email?redirect=${encodeURIComponent('/aluno')}`),
     },
   });
 
