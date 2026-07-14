@@ -440,6 +440,9 @@ verify_jwt = false
 [functions.whatsapp-config]
 verify_jwt = true
 
+[functions.whatsapp-embedded-signup]
+verify_jwt = true
+
 [functions.whatsapp-send]
 verify_jwt = true
 

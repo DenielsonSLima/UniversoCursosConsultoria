@@ -1,19 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Save, Settings2, WalletCards } from 'lucide-react';
+import { PlugZap, RefreshCw, Save, Settings2, WalletCards } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import WhatsAppApiConfigTab from './components/WhatsAppApiConfigTab';
+import WhatsAppCoexistenceTab from './components/WhatsAppCoexistenceTab';
 import WhatsAppSummaryTab from './components/WhatsAppSummaryTab';
-import { MensageriaConfigData, mensageriaService } from './mensageria.service';
+import { mensageriaService } from './mensageria.service';
+import type { MensageriaConfigData } from './mensageria.types';
 
-type MensageriaTab = 'resumo' | 'api';
+type MensageriaTab = 'resumo' | 'api' | 'coexistencia';
 
 const DEFAULT_WHATSAPP_DRAFT: MensageriaConfigData = {
   tipo: 'whatsapp',
   waProvider: 'meta_cloud',
   waInstanceUrl: 'https://graph.facebook.com',
-  waGraphVersion: 'v23.0',
+  waGraphVersion: 'v25.0',
   waStatus: 'nao_configurado',
   waAccountCurrency: 'BRL',
   waEnabled: false,
@@ -56,7 +58,7 @@ const MensageriaConfig: React.FC = () => {
       ...waConfig,
       waProvider: waConfig.waProvider || 'meta_cloud',
       waInstanceUrl: waConfig.waInstanceUrl || 'https://graph.facebook.com',
-      waGraphVersion: waConfig.waGraphVersion || 'v23.0',
+      waGraphVersion: waConfig.waGraphVersion || 'v25.0',
       waStatus: waConfig.waStatus || 'nao_configurado',
       waAccountCurrency: waConfig.waAccountCurrency || 'BRL',
       waEnabled: Boolean(waConfig.waEnabled),
@@ -167,12 +169,23 @@ const MensageriaConfig: React.FC = () => {
           <Settings2 size={15} />
           Configurar API
         </button>
+        <button
+          onClick={() => setActiveTab('coexistencia')}
+          className={`flex min-h-[42px] items-center gap-2 rounded-lg px-4 text-xs font-black uppercase tracking-widest transition-all ${
+            activeTab === 'coexistencia' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-emerald-700'
+          }`}
+        >
+          <PlugZap size={15} />
+          Coexistência
+        </button>
       </div>
 
       {activeTab === 'resumo' ? (
         <WhatsAppSummaryTab config={draft} webhookUrl={webhookUrl} />
-      ) : (
+      ) : activeTab === 'api' ? (
         <WhatsAppApiConfigTab draft={draft} onChange={updateDraft} />
+      ) : (
+        <WhatsAppCoexistenceTab draft={draft} webhookUrl={webhookUrl} onChange={updateDraft} />
       )}
     </div>
   );

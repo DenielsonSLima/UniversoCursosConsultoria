@@ -1,56 +1,17 @@
 import { supabase } from '../../../../lib/supabase';
+import {
+  MensageriaConfigData,
+  TemplateMensagem,
+  WhatsAppEmbeddedSignupRequest,
+  WhatsAppEmbeddedSignupResult,
+} from './mensageria.types';
 
-export interface MensageriaConfigData {
-  id?: string;
-  tipo: 'whatsapp' | 'email';
-  waProvider?: string;
-  waInstanceName?: string;
-  waInstanceUrl?: string;
-  waToken?: string;
-  waTokenConfigured?: boolean;
-  waStatus?: string;
-  waBusinessAccountId?: string;
-  waPhoneNumberId?: string;
-  waDisplayPhoneNumber?: string;
-  waGraphVersion?: string;
-  waAppId?: string;
-  waAppSecret?: string;
-  waWebhookVerifyToken?: string;
-  waAccountCurrency?: string;
-  waEstimatedBalance?: number;
-  waQualityRating?: string;
-  waMessagingLimit?: string;
-  waEnabled?: boolean;
-  waLastHealthCheckAt?: string;
-  waDueNoticeDays?: number;
-  waSendDueNotice?: boolean;
-  waDueNoticeTemplate?: string;
-  waSendPaymentReceipt?: boolean;
-  waPaymentReceiptTemplate?: string;
-  waSendOverdueNotice?: boolean;
-  waOverdueNoticeDays?: number;
-  waDefaultOverdueTemplate?: string;
-  waSendMultipleOverdueNotice?: boolean;
-  waMultipleOverdueMinInstallments?: number;
-  waMultipleOverdueTemplate?: string;
-  waDueNoticeModalities?: string[];
-  waPaymentReceiptModalities?: string[];
-  waOverdueNoticeModalities?: string[];
-  waMultipleOverdueModalities?: string[];
-  smtpServer?: string;
-  smtpPort?: string;
-  smtpUser?: string;
-  smtpPass?: string;
-  smtpSenderName?: string;
-  smtpSenderEmail?: string;
-}
-
-export interface TemplateMensagem {
-  id?: string;
-  nome: string;
-  gatilho: string;
-  conteudo: string;
-}
+export type {
+  MensageriaConfigData,
+  TemplateMensagem,
+  WhatsAppEmbeddedSignupRequest,
+  WhatsAppEmbeddedSignupResult,
+} from './mensageria.types';
 
 export const mensageriaService = {
   /**
@@ -71,6 +32,7 @@ export const mensageriaService = {
         wa_display_phone_number,
         wa_graph_version,
         wa_app_id,
+        wa_embedded_signup_config_id,
         wa_webhook_verify_token,
         wa_account_currency,
         wa_estimated_balance,
@@ -122,6 +84,7 @@ export const mensageriaService = {
       waDisplayPhoneNumber: data.wa_display_phone_number,
       waGraphVersion: data.wa_graph_version,
       waAppId: data.wa_app_id,
+      waEmbeddedSignupConfigId: data.wa_embedded_signup_config_id,
       waWebhookVerifyToken: data.wa_webhook_verify_token,
       waAccountCurrency: data.wa_account_currency,
       waEstimatedBalance: data.wa_estimated_balance === null || data.wa_estimated_balance === undefined
@@ -197,6 +160,7 @@ export const mensageriaService = {
       wa_display_phone_number: config.waDisplayPhoneNumber,
       wa_graph_version: config.waGraphVersion,
       wa_app_id: config.waAppId,
+      wa_embedded_signup_config_id: config.waEmbeddedSignupConfigId,
       wa_webhook_verify_token: config.waWebhookVerifyToken,
       wa_account_currency: config.waAccountCurrency,
       wa_estimated_balance: config.waEstimatedBalance,
@@ -242,6 +206,27 @@ export const mensageriaService = {
     }
 
     return true;
+  },
+
+  async completeWhatsAppEmbeddedSignup(payload: WhatsAppEmbeddedSignupRequest): Promise<WhatsAppEmbeddedSignupResult> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-embedded-signup', {
+      body: payload,
+    });
+
+    if (error) {
+      console.error('Erro ao concluir Embedded Signup do WhatsApp:', error);
+      const context = (error as any)?.context;
+      const details = typeof context?.json === 'function'
+        ? await context.json().catch(() => null)
+        : null;
+      throw new Error(details?.error || error.message);
+    }
+
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    return data as WhatsAppEmbeddedSignupResult;
   },
 
   async saveWhatsappAutomationConfig(config: Partial<MensageriaConfigData>): Promise<boolean> {
