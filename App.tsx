@@ -32,6 +32,7 @@ import LoginPage from './modules/login/LoginPage';
 import GestorPage from './modules/gestor/gestor.page';
 import ProfessorPage from './modules/professor/professor.page';
 import AlunoPage from './modules/aluno/aluno.page';
+import VersionedPortal from './modules/shared/components/VersionedPortal';
 
 const App: React.FC = () => {
   return (
@@ -80,10 +81,10 @@ const App: React.FC = () => {
 
         {/* ── Rotas do Sistema Interno ── */}
         <Route path="/sistema/login" element={<LoginPage />} />
-        <Route path="/gestor/*" element={<GestorPage />} />
-        <Route path="/professor/*" element={<ProfessorPage />} />
+        <Route path="/gestor/*" element={<VersionedPortal><GestorPage /></VersionedPortal>} />
+        <Route path="/professor/*" element={<VersionedPortal><ProfessorPage /></VersionedPortal>} />
         <Route path="/cad-aed" element={<Navigate to="/sistema/login" replace />} />
-        <Route path="/aluno/*" element={<AlunoPage />} />
+        <Route path="/aluno/*" element={<VersionedPortal><AlunoPage /></VersionedPortal>} />
 
         {/* Redireciona qualquer rota não encontrada para a home */}
         <Route path="*" element={<Navigate to="/" replace />} />
