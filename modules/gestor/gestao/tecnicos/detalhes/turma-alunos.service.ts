@@ -50,7 +50,21 @@ export const isValidStudentCpf = (value?: string | null) => {
 };
 
 export const turmaAlunosService = {
-  async getAvailableStudents(turmaId: string, enrolledIds: Set<string>): Promise<AvailableStudent[]> {
+  async getAvailableStudents(turmaId: string, enrolledIds: Set<string>, searchTerm: string): Promise<AvailableStudent[]> {
+    const normalizedSearch = searchTerm.trim().replace(/\s+/g, ' ');
+    if (!normalizedSearch) return [];
+
+    const textSearch = normalizedSearch.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
+    const digitSearch = normalizedSearch.replace(/\D/g, '');
+    const searchFilters = [
+      textSearch ? `nome.ilike.%${textSearch}%` : null,
+      digitSearch ? `cpf_cnpj.ilike.%${digitSearch}%` : null,
+      digitSearch ? `telefone.ilike.%${digitSearch}%` : null,
+      digitSearch ? `responsavel_telefone.ilike.%${digitSearch}%` : null,
+    ].filter(Boolean);
+
+    if (searchFilters.length === 0) return [];
+
     const excludedIds = new Set(enrolledIds);
     const { data: turma, error: turmaError } = await supabase
       .from('turmas')
@@ -77,7 +91,9 @@ export const turmaAlunosService = {
       .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro')
       .eq('tipo', 'Aluno')
       .eq('status', 'ATIVO')
-      .order('nome');
+      .or(searchFilters.join(','))
+      .order('nome')
+      .limit(30);
 
     if (error) throw error;
     return ((data || []) as AvailableStudent[]).filter((student) => !excludedIds.has(student.id));

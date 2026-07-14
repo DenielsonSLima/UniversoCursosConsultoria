@@ -16,15 +16,16 @@ export const useAvailableStudents = (
   enabled: boolean,
   searchTerm: string,
 ) => {
-  const hasSearch = searchTerm.trim().length > 0;
+  const normalizedSearchTerm = searchTerm.trim();
+  const hasSearch = normalizedSearchTerm.length > 0;
   const enrolledIds = useMemo(
     () => new Set(students.map((student) => student.aluno_id)),
     [students],
   );
 
   const query = useQuery({
-    queryKey: academicLifecycleKeys.alunosDisponiveis(turmaId),
-    queryFn: () => turmaAlunosService.getAvailableStudents(turmaId, enrolledIds),
+    queryKey: [...academicLifecycleKeys.alunosDisponiveis(turmaId), normalizedSearchTerm],
+    queryFn: () => turmaAlunosService.getAvailableStudents(turmaId, enrolledIds, normalizedSearchTerm),
     enabled: enabled && hasSearch,
   });
 
@@ -36,10 +37,16 @@ export const useAvailableStudents = (
     return (query.data || []).filter((student) => {
       const document = String(student.cpf_cnpj || '').toLocaleLowerCase('pt-BR');
       const documentDigits = document.replace(/\D/g, '');
+      const phoneDigits = String(student.telefone || '').replace(/\D/g, '');
+      const responsiblePhoneDigits = String(student.responsavel_telefone || '').replace(/\D/g, '');
 
       return student.nome.toLocaleLowerCase('pt-BR').includes(search)
         || document.includes(search)
-        || (searchDigits.length > 0 && documentDigits.includes(searchDigits));
+        || (searchDigits.length > 0 && (
+          documentDigits.includes(searchDigits)
+          || phoneDigits.includes(searchDigits)
+          || responsiblePhoneDigits.includes(searchDigits)
+        ));
     });
   }, [query.data, searchTerm]);
 

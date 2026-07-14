@@ -44,7 +44,7 @@ const MatricularAlunoModal: React.FC<MatricularAlunoModalProps> = ({
             <input
               value={searchTerm}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Buscar por nome ou CPF..."
+              placeholder="Buscar por nome, CPF ou telefone..."
               className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none focus:border-emerald-500"
             />
           </div>
@@ -68,12 +68,12 @@ const MatricularAlunoModal: React.FC<MatricularAlunoModalProps> = ({
               }`}>
                 <div className="min-w-0">
                   <p className="font-bold text-[#001a33]">{student.nome}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                    <span>
-                      <span className="font-bold text-slate-400">CPF:</span> {formattedDocument}
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                    <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold">
+                      CPF: <span className="font-mono text-slate-700">{formattedDocument}</span>
                     </span>
-                    <span>
-                      <span className="font-bold text-slate-400">Telefone:</span> {formattedPhone}
+                    <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold">
+                      Telefone: <span className="font-mono text-slate-700">{formattedPhone}</span>
                     </span>
                   </div>
                   {!canEnroll && (
