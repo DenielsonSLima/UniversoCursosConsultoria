@@ -201,6 +201,8 @@ const AlunoFirstAccessPage: React.FC = () => {
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      name="new-password"
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       placeholder="Mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número"
@@ -222,6 +224,8 @@ const AlunoFirstAccessPage: React.FC = () => {
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      name="confirm-password"
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       placeholder="Repita a nova senha"
