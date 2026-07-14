@@ -1,5 +1,6 @@
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
 import { PerfilData, PerfilUpdatePayload } from './perfil.types';
+import { updateAlunoEditableProfile } from './perfil-update.service';
 
 export const alunoPerfilKeys = {
   profile: (alunoId: string) => ['aluno-perfil', alunoId] as const,
@@ -13,10 +14,8 @@ export const alunoPerfilService = {
 
   getDocuments: (alunoId: string) => parceirosService.getDocumentos(alunoId),
 
-  updateProfile: (alunoId: string, currentProfile: PerfilData, payload: PerfilUpdatePayload) => {
-    const { email, cpf, cnpj, cpf_cnpj, nome, nomeCompleto, ...editableProfile } = currentProfile || {};
-    return parceirosService.update(alunoId, { ...editableProfile, ...payload });
-  },
+  updateProfile: (alunoId: string, _currentProfile: PerfilData, payload: PerfilUpdatePayload) =>
+    updateAlunoEditableProfile(alunoId, payload),
 
   uploadDocument: (alunoId: string, docName: string, file: File) =>
     parceirosService.uploadDocumento(alunoId, docName, file),
