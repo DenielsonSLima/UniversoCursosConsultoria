@@ -43,6 +43,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
   const latestCodeRef = useRef<string | null>(null);
   const latestSessionEventRef = useRef<Record<string, unknown> | null>(null);
   const completedCodeRef = useRef<string | null>(null);
+  const pendingSessionWarningRef = useRef<number | null>(null);
 
   const appId = (draft.waAppId || '').trim();
   const configurationId = (draft.waEmbeddedSignupConfigId || '').trim();
@@ -55,8 +56,30 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     lastSessionEvent ? JSON.stringify(lastSessionEvent, null, 2) : ''
   ), [lastSessionEvent]);
 
+  const clearPendingSessionWarning = useCallback(() => {
+    if (!pendingSessionWarningRef.current) return;
+    window.clearTimeout(pendingSessionWarningRef.current);
+    pendingSessionWarningRef.current = null;
+  }, []);
+
+  const scheduleMissingSessionWarning = useCallback((code: string) => {
+    clearPendingSessionWarning();
+    pendingSessionWarningRef.current = window.setTimeout(() => {
+      if (
+        latestCodeRef.current !== code ||
+        latestSessionEventRef.current ||
+        completedCodeRef.current === code
+      ) return;
+
+      setOnboardingError(
+        'A Meta retornou apenas o code, mas nao enviou o evento do WhatsApp. No popup, clique em Editar configuracoes e conclua a selecao da conta/numero do WhatsApp. Se continuar aparecendo so vinculacao anterior, crie uma nova Configuration ID com o modelo WhatsApp Embedded Signup.',
+      );
+    }, 8000);
+  }, [clearPendingSessionWarning]);
+
   const completeEmbeddedSignup = useCallback(async (code: string, sessionEvent: Record<string, unknown>) => {
     if (completedCodeRef.current === code) return;
+    clearPendingSessionWarning();
 
     const eventName = typeof sessionEvent.event === 'string' ? sessionEvent.event : '';
     if (eventName !== COEXISTENCE_FINISH_EVENT) {
@@ -92,7 +115,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     } finally {
       setIsCompleting(false);
     }
-  }, [appId, configurationId, draft.waAppSecret, graphVersion, onChange, queryClient]);
+  }, [appId, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, onChange, queryClient]);
 
   useEffect(() => {
     const handleMessage = (event: any) => {
@@ -107,6 +130,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
       ].slice(0, 5));
 
       latestSessionEventRef.current = payload;
+      clearPendingSessionWarning();
 
       const data = payload.data && typeof payload.data === 'object' ? payload.data as Record<string, unknown> : null;
       if (typeof data?.waba_id === 'string') onChange('waBusinessAccountId', data.waba_id);
@@ -122,8 +146,11 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [completeEmbeddedSignup, onChange]);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearPendingSessionWarning();
+    };
+  }, [clearPendingSessionWarning, completeEmbeddedSignup, onChange]);
 
   const handleLaunch = async () => {
     if (!appId || !configurationId) {
@@ -139,6 +166,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     setOnboardingResult(null);
     setOnboardingError(null);
     setLoginResult(null);
+    clearPendingSessionWarning();
     latestCodeRef.current = null;
     latestSessionEventRef.current = null;
     completedCodeRef.current = null;
@@ -159,6 +187,8 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
 
           if (latestSessionEventRef.current) {
             void completeEmbeddedSignup(code, latestSessionEventRef.current);
+          } else {
+            scheduleMissingSessionWarning(code);
           }
           return;
         }
