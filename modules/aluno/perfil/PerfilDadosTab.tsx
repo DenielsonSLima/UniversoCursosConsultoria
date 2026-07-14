@@ -113,7 +113,6 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
     { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, placeholder: 'DD/MM/AAAA' },
     { label: 'Naturalidade', value: naturalidade, setter: setNaturalidade, placeholder: 'Cidade/UF' },
     { label: 'Nacionalidade', value: nacionalidade, setter: setNacionalidade, placeholder: 'Brasileira' },
-    { label: 'Número do documento', value: rg, setter: setRg, placeholder: 'RG, CIN ou CNH' },
     { label: 'Órgão emissor', value: orgaoEmissor, setter: setOrgaoEmissor, placeholder: 'SSP, DETRAN...' },
     { label: 'UF emissão', value: rgUfEmissao, setter: setRgUfEmissao, placeholder: 'SE' },
     { label: 'Data emissão', value: rgDataEmissao, setter: setRgDataEmissao, placeholder: 'DD/MM/AAAA' },
@@ -377,6 +376,28 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
             </p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de documento</label>
+                {editing ? (
+                  <select value={tipoDocumento} onChange={(event) => setTipoDocumento(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white">
+                    {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">{tipoDocumento || '—'}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Número do documento</label>
+                {editing ? (
+                  <input value={rg} placeholder="RG, CIN ou CNH" onChange={(event) => setRg(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white" />
+                ) : (
+                  <p className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">{rg || '—'}</p>
+                )}
+              </div>
+
               {supplementalFields.map((field) => (
                 <div key={field.label} className="space-y-1">
                   <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{field.label}</label>
@@ -412,19 +433,6 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                   </select>
                 ) : (
                   <p className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">{estadoCivil || '—'}</p>
-                )}
-              </div>
-
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de documento</label>
-                {editing ? (
-                  <select value={tipoDocumento} onChange={(event) => setTipoDocumento(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white">
-                    {TECHNICAL_DOCUMENT_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">{tipoDocumento || '—'}</p>
                 )}
               </div>
 
