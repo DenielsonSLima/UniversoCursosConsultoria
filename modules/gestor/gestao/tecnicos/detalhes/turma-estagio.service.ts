@@ -3,6 +3,7 @@ import { normalizeCursoVacinasConfig, getVacinaDoseKey } from '../../../../share
 import { cadastrosService } from '../../../cadastros/cadastros.service';
 import { checklistEstagioService } from '../../../cadastros/checklist-estagio/checklist-estagio.service';
 import { academicLifecycleService } from './academic-lifecycle.service';
+import { getMaceioIsoDate } from '../technicalClassDates';
 import {
   EstagioCriteriosValores,
   EstagioEvaluationDraft,
@@ -51,7 +52,7 @@ const DEFAULT_INSTRUMENTOS = [
   },
 ];
 
-const today = () => new Date().toISOString().split('T')[0];
+const today = getMaceioIsoDate;
 
 const cloneDefaultInstrumentos = () => JSON.parse(JSON.stringify(DEFAULT_INSTRUMENTOS));
 
@@ -73,20 +74,30 @@ export const turmaEstagioService = {
     const [
       modulos,
       { data: matriculasData, error: matriculasError },
+      diarios,
     ] = await Promise.all([
       cadastrosService.getGrade(cursoId),
       supabase
         .from('matriculas')
         .select('id, status, parceiros(*)')
         .eq('turma_id', turmaId),
+      academicLifecycleService.getDiarios(turmaId),
     ]);
 
     if (matriculasError) throw matriculasError;
 
+    const periodoStatusByDisciplina = new Map(
+      diarios.map((diario: any) => [diario.disciplina_id, diario.periodo_status]),
+    );
     const disciplinasEstagio: any[] = [];
     modulos.forEach((modulo: any) => {
       modulo.disciplinas.forEach((disciplina: any) => {
-        if (disciplina.cargaHorariaEstagio > 0) disciplinasEstagio.push(disciplina);
+        if (disciplina.cargaHorariaEstagio > 0) {
+          disciplinasEstagio.push({
+            ...disciplina,
+            periodoStatus: periodoStatusByDisciplina.get(disciplina.id) || null,
+          });
+        }
       });
     });
 

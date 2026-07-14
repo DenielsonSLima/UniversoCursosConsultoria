@@ -1,5 +1,9 @@
 
-export type StatusTurma = 'EM_ANDAMENTO' | 'FINALIZADA';
+export type StatusTurma =
+  | 'PLANEJADA'
+  | 'INSCRICOES_ABERTAS'
+  | 'EM_ANDAMENTO'
+  | 'FINALIZADA';
 export type Turno = 'MATUTINO' | 'VESPERTINO' | 'NOTURNO' | 'INTEGRAL' | 'EAD';
 export type TurmasSortBy = 'NOME_ASC' | 'NOME_DESC' | 'ALUNOS_DESC';
 

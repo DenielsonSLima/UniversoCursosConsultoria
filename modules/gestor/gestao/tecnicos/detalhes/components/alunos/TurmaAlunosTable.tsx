@@ -5,6 +5,7 @@ import { AcademicStudent } from '../../academic-lifecycle.service';
 
 interface TurmaAlunosTableProps {
   students: AcademicStudent[];
+  readOnly?: boolean;
   onOpenMovement: React.Dispatch<AcademicStudent>;
   onOpenTransfer: React.Dispatch<AcademicStudent>;
   onRemoveEnrollment: React.Dispatch<AcademicStudent>;
@@ -24,6 +25,7 @@ const getStatusStyle = (status: string) => {
 
 const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
   students,
+  readOnly = false,
   onOpenMovement,
   onOpenTransfer,
   onRemoveEnrollment,
@@ -84,7 +86,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                 <div className="flex items-center justify-end gap-2">
                   <button
                     onClick={() => onOpenMovement(student)}
-                    disabled={student.status === 'TRANSFERIDO' || student.status === 'CONCLUIDO'}
+                    disabled={readOnly || student.status === 'TRANSFERIDO' || student.status === 'CONCLUIDO'}
                     title="Movimentar matrícula"
                     className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -94,7 +96,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                   </button>
                   <button
                     onClick={() => onOpenTransfer(student)}
-                    disabled={student.status !== 'ATIVO'}
+                    disabled={readOnly || student.status !== 'ATIVO'}
                     title="Transferir aluno"
                     className="p-2.5 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
                   >
@@ -102,7 +104,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                   </button>
                   <button
                     onClick={() => onRemoveEnrollment(student)}
-                    disabled={!student.pode_remover}
+                    disabled={readOnly || !student.pode_remover}
                     title={student.pode_remover
                       ? 'Remover aluno da turma'
                       : 'So e possivel remover antes do inicio e sem lancamentos academicos'}

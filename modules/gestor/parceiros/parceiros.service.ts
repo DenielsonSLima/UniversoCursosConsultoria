@@ -3,8 +3,9 @@
 import { supabase } from '../../../lib/supabase';
 import { portalActivationService } from './portal-activation.service';
 import { errorMessage, getFileExtension } from './utils/file-utils';
-import { formatPoloNome, mapAlunoLookup, toCamel, toSnake } from './utils/parceiro-mappers';
+import { mapAlunoLookup, toCamel, toSnake } from './utils/parceiro-mappers';
 import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
+import { parceirosMatriculasService } from './parceiros-matriculas.service';
 
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
@@ -307,85 +308,7 @@ export const parceirosService = {
     return publicUrl;
   },
 
-  // Matrículas & Turmas
-  async getMatriculas(alunoId: string) {
-    const { data, error } = await supabase
-      .from('matriculas')
-      .select('*, turmas(*, cursos(*))')
-      .eq('aluno_id', alunoId);
-      
-    if (error) {
-      console.error('Erro ao buscar matriculas do aluno:', error);
-      throw error;
-    }
-    
-    return data || [];
-  },
-
-  async matricularAluno(alunoId: string, turmaId: string) {
-    const { data, error } = await supabase
-      .from('matriculas')
-      .insert({
-        aluno_id: alunoId,
-        turma_id: turmaId,
-        status: 'ATIVO'
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Erro ao matricular aluno:', error);
-      throw error;
-    }
-    
-    return data;
-  },
-
-  async updateMatriculaStatus(matriculaId: string, status: string) {
-    const { data, error } = await supabase
-      .from('matriculas')
-      .update({ status: status.toUpperCase() })
-      .eq('id', matriculaId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Erro ao atualizar status da matricula:', error);
-      throw error;
-    }
-    
-    return data;
-  },
-
-  async getTurmasDisponiveis(poloId?: string) {
-    let query = supabase
-      .from('turmas')
-      .select('*, cursos(*), polos(nome,cidade,estado)')
-      .eq('status', 'EM_ANDAMENTO');
-
-    if (poloId && poloId !== 'todos') {
-      query = query.eq('polo_id', poloId);
-    }
-
-    const { data, error } = await query.order('nome', { ascending: true });
-      
-    if (error) {
-      console.error('Erro ao buscar turmas disponíveis:', error);
-      throw error;
-    }
-    
-    return (data || []).map(t => ({
-      id: t.id,
-      codigo: t.codigo,
-      nome: t.nome,
-      cursoNome: t.cursos?.nome,
-      modalidade: t.cursos?.modalidade,
-      poloId: t.polo_id,
-      poloNome: formatPoloNome(t.polos, t.polo_id),
-      turno: t.turno,
-      vagasTotais: t.vagas_totais
-    }));
-  },
+  ...parceirosMatriculasService,
 
   async getPolos() {
     const { data, error } = await supabase

@@ -4,7 +4,6 @@ import { academicLifecycleService } from '../academic-lifecycle.service';
 export interface MatricularAlunoComCobrancaInput {
   turmaId: string;
   alunoId: string;
-  responsavelId?: string | null;
   financeiro_herdado?: boolean;
   gerar_cobranca_inicial?: boolean;
   gerar_cobranca_futura?: boolean | null;
@@ -31,7 +30,6 @@ export const turmaAsaasService = {
     const matricula = await academicLifecycleService.matricularAlunoComFinanceiro({
       turmaId: input.turmaId,
       alunoId: input.alunoId,
-      responsavelId: input.responsavelId,
       financeiro_herdado: input.financeiro_herdado,
       gerar_cobranca_inicial: input.gerar_cobranca_inicial,
       gerar_cobranca_futura: input.gerar_cobranca_futura,

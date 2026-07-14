@@ -84,6 +84,7 @@ export const useAlunoAtividadesExtraClasse = (alunoId: string, turmaId: string) 
   };
 
   const updateAtividadeDraft = (atividadeId: string, patch: ActivityResponseDraft) => {
+    setSubmitError(null);
     setActivityResponseDrafts((prev) => ({
       ...prev,
       [atividadeId]: {
@@ -98,12 +99,13 @@ export const useAlunoAtividadesExtraClasse = (alunoId: string, turmaId: string) 
   };
 
   return {
-    atividades: atividadesQuery.data || [],
+    atividades: atividadesQuery.data ?? [],
     getAtividadeDraftAnexo,
     getAtividadeDraftResposta,
     getAtividadeDraftTexto,
     isError: atividadesQuery.isError,
     isLoading: atividadesQuery.isLoading,
+    retryLoad: atividadesQuery.refetch,
     submitAtividadeMutation,
     submitError,
     updateAtividadeDraft,

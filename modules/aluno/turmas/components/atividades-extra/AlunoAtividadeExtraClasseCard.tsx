@@ -11,6 +11,9 @@ import {
   formatAlunoAtividadeHoras,
   getAtividadeRespostaAtual,
   getPerguntaTexto,
+  getSafeAlunoAtividadeHttpUrl,
+  isAlunoAtividadeEntregaAtrasada,
+  isAlunoAtividadePrazoEncerrado,
 } from './alunoAtividadesExtra.utils';
 
 interface AlunoAtividadeExtraClasseCardProps {
@@ -39,6 +42,13 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
   const respostaAtual = getAtividadeRespostaAtual(atividade);
   const corrigida = respostaAtual?.status === 'CORRIGIDA';
   const entregue = Boolean(respostaAtual);
+  const prazoEncerrado = isAlunoAtividadePrazoEncerrado(atividade.prazo_entrega);
+  const entregaAtrasada = isAlunoAtividadeEntregaAtrasada(respostaAtual, atividade.prazo_entrega);
+  const podeEditar = !corrigida && !prazoEncerrado && !isSubmitting;
+  const safeVideoUrl = getSafeAlunoAtividadeHttpUrl(atividade.video_url);
+  const safeAnexoUrl = getSafeAlunoAtividadeHttpUrl(respostaAtual?.anexo_url, true);
+  const aceitaTexto = ['TEXTO', 'MISTO'].includes(atividade.tipo_resposta);
+  const aceitaLink = ['ENVIO', 'MISTO'].includes(atividade.tipo_resposta);
 
   return (
     <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -61,6 +71,21 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
                 {corrigida ? 'Corrigida' : 'Entregue'}
               </span>
             )}
+            {respostaAtual?.entregue_em && (
+              <span className="text-[10px] font-bold text-slate-400">
+                Enviada em {new Date(respostaAtual.entregue_em).toLocaleString('pt-BR')}
+              </span>
+            )}
+            {prazoEncerrado && !entregue && (
+              <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-red-700">
+                Atrasada
+              </span>
+            )}
+            {entregaAtrasada && (
+              <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-red-700">
+                Entregue com atraso
+              </span>
+            )}
           </div>
           <h5 className="text-base font-black leading-tight text-[#001a33]">{atividade.titulo}</h5>
           {atividade.tema && <p className="mt-1 text-xs font-bold text-slate-500">Tema: {atividade.tema}</p>}
@@ -70,6 +95,11 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800 lg:w-56">
             <p className="text-[9px] font-black uppercase tracking-widest">Correção</p>
             <p className="mt-1 font-black">Nota: {respostaAtual.nota ?? '--'}</p>
+            {respostaAtual.corrigido_em && (
+              <p className="mt-1 text-[10px] font-bold text-emerald-700">
+                Corrigida em {new Date(respostaAtual.corrigido_em).toLocaleString('pt-BR')}
+              </p>
+            )}
             {respostaAtual.feedback && (
               <p className="mt-2 whitespace-pre-wrap font-semibold leading-relaxed">{respostaAtual.feedback}</p>
             )}
@@ -89,9 +119,9 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
         )}
 
         <div className="space-y-3">
-          {atividade.video_url && (
+          {safeVideoUrl && (
             <a
-              href={atividade.video_url}
+              href={safeVideoUrl}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-black text-blue-700"
@@ -101,7 +131,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
             </a>
           )}
 
-          {perguntas.length > 0 && (
+          {['PERGUNTAS', 'MISTO'].includes(atividade.tipo_resposta) && perguntas.length > 0 && (
             <div className="space-y-3">
               {perguntas.map((pergunta, index) => (
                 <label key={`${atividade.id}-pergunta-${index}`} className="block">
@@ -110,7 +140,7 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
                   </span>
                   <textarea
                     rows={3}
-                    disabled={corrigida || isSubmitting}
+                    disabled={!podeEditar}
                     value={getAtividadeDraftResposta(atividade, index)}
                     onChange={(event) => updateAtividadeDraft(atividade.id, {
                       respostas: { [index]: event.target.value },
@@ -125,33 +155,52 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_260px]">
-        <textarea
-          rows={4}
-          disabled={corrigida || isSubmitting}
-          value={getAtividadeDraftTexto(atividade)}
-          onChange={(event) => updateAtividadeDraft(atividade.id, { texto: event.target.value })}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
-          placeholder="Resposta geral, comentário ou desenvolvimento da atividade"
-        />
+      <div className={`mt-4 grid gap-3 ${aceitaTexto && aceitaLink ? 'lg:grid-cols-[1fr_260px]' : ''}`}>
+        {aceitaTexto && (
+          <textarea
+            rows={4}
+            disabled={!podeEditar}
+            value={getAtividadeDraftTexto(atividade)}
+            onChange={(event) => updateAtividadeDraft(atividade.id, { texto: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold leading-relaxed text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+            placeholder="Resposta em texto"
+          />
+        )}
 
         <div className="space-y-3">
-          <div className="relative">
+          {aceitaLink && (
+            <div className="relative">
             <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="url"
-              disabled={corrigida || isSubmitting}
+              disabled={!podeEditar}
               value={getAtividadeDraftAnexo(atividade)}
               onChange={(event) => updateAtividadeDraft(atividade.id, { anexoUrl: event.target.value })}
               className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-xs font-bold text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
-              placeholder="Link ou anexo"
+              placeholder="Link do trabalho (HTTPS)"
             />
-          </div>
+            {!podeEditar && safeAnexoUrl && (
+              <a
+                href={safeAnexoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex text-[10px] font-black uppercase tracking-widest text-blue-700 underline"
+              >
+                Abrir link do trabalho (HTTPS)
+              </a>
+            )}
+            {podeEditar && (
+              <p className="mt-1 text-[9px] font-bold text-slate-400">
+                Informe um link HTTPS compartilhável. Este campo não envia arquivos.
+              </p>
+            )}
+            </div>
+          )}
 
           <button
             type="button"
             onClick={() => onSubmit(atividade)}
-            disabled={corrigida || isSubmitting}
+            disabled={!podeEditar}
             className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             {isSubmitting ? (
@@ -159,10 +208,16 @@ const AlunoAtividadeExtraClasseCard: React.FC<AlunoAtividadeExtraClasseCardProps
             ) : (
               <Send size={14} />
             )}
-            {entregue ? 'Atualizar envio' : 'Enviar atividade'}
+            {corrigida ? 'Atividade corrigida' : prazoEncerrado ? 'Prazo encerrado' : entregue ? 'Atualizar envio' : 'Enviar atividade'}
           </button>
         </div>
       </div>
+
+      {prazoEncerrado && (
+        <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+          O prazo foi encerrado. A resposta permanece disponível para consulta, mas não pode mais ser enviada ou alterada.
+        </div>
+      )}
     </article>
   );
 };

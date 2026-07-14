@@ -1,10 +1,5 @@
-// File: modules/gestor/gestao/tecnicos/detalhes/components/TurmaGrade.tsx
-
 import React, { useEffect, useState } from 'react';
-import { 
-  Layers, BookOpen, UserPlus, ChevronDown, ChevronRight, 
-  UserCheck, CheckCircle2, X, Trash2, CornerDownRight, Loader2, Save, ClipboardCheck
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import {
@@ -16,17 +11,49 @@ import {
   useToggleDisciplinaConcluidaMutation,
   useTurmaGradeData,
 } from '../hooks/useTurmaGrade';
+import {
+  TurmaGradeDeleteAulaDialog,
+  TurmaGradeDocenteDialog,
+} from './grade/TurmaGradeDialogs';
+import TurmaGradeModulo from './grade/TurmaGradeModulo';
+import {
+  formatGradeHours,
+  getTurmaGradeTheme,
+  TurmaGradeColorTheme,
+} from './grade/turma-grade-ui';
 
 interface TurmaGradeProps {
   turma: Turma;
   singleProfessor?: boolean;
-  colorTheme?: 'emerald' | 'amber' | 'rose';
+  colorTheme?: TurmaGradeColorTheme;
 }
 
-const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false, colorTheme = 'emerald' }) => {
+interface DocenteModalState {
+  isOpen: boolean;
+  disciplinaId: string;
+}
+
+interface AulaDeleteState {
+  disciplinaId: string;
+  aulaId: string;
+}
+
+const CLOSED_DOCENTE_MODAL: DocenteModalState = { isOpen: false, disciplinaId: '' };
+
+const TurmaGrade = ({
+  turma,
+  singleProfessor = false,
+  colorTheme = 'emerald',
+}: TurmaGradeProps) => {
   const { toasts, removeToast, toast } = useToast();
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedDisciplines, setExpandedDisciplines] = useState<Set<string>>(new Set());
+  const [newAulaTitulo, setNewAulaTitulo] = useState<Record<string, string>>({});
+  const [newAulaHoras, setNewAulaHoras] = useState<Record<string, string>>({});
+  const [newAulaData, setNewAulaData] = useState<Record<string, string>>({});
+  const [newAulaExtraClasse, setNewAulaExtraClasse] = useState<Record<string, boolean>>({});
+  const [showDocenteModal, setShowDocenteModal] = useState<DocenteModalState>(CLOSED_DOCENTE_MODAL);
+  const [aulaParaExcluir, setAulaParaExcluir] = useState<AulaDeleteState | null>(null);
   const { data: gradeData, isLoading: loading } = useTurmaGradeData(turma.id, turma.cursoId);
   const cursoBase = gradeData?.cursoBase || null;
   const disciplinasConfig = gradeData?.disciplinasConfig || {};
@@ -34,105 +61,46 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const atividadesExtraClasse = gradeData?.atividadesExtraClasse || {};
   const professores = gradeData?.professores || [];
   const metricasGrade = gradeData?.metricasGrade || [];
+  const theme = getTurmaGradeTheme(colorTheme);
 
-  const getThemeColors = () => {
-    switch (colorTheme) {
-      case 'rose':
-        return {
-          text: 'text-rose-600',
-          textDark: 'text-rose-700',
-          bg: 'bg-rose-50',
-          border: 'border-rose-100',
-          focusBorder: 'focus:border-rose-500',
-          hoverBg: 'hover:bg-rose-600',
-          hoverText: 'hover:text-rose-600',
-          hoverBorder: 'hover:border-rose-300',
-          hoverBgSubtle: 'hover:bg-rose-50',
-          fill: 'bg-rose-500',
-          loader: 'text-rose-600',
-          hoverBorderDark: 'hover:border-rose-400'
-        };
-      case 'amber':
-        return {
-          text: 'text-amber-600',
-          textDark: 'text-amber-700',
-          bg: 'bg-amber-50',
-          border: 'border-amber-100',
-          focusBorder: 'focus:border-amber-500',
-          hoverBg: 'hover:bg-amber-600',
-          hoverText: 'hover:text-amber-600',
-          hoverBorder: 'hover:border-amber-300',
-          hoverBgSubtle: 'hover:bg-amber-50',
-          fill: 'bg-amber-500',
-          loader: 'text-amber-600',
-          hoverBorderDark: 'hover:border-amber-400'
-        };
-      case 'emerald':
-      default:
-        return {
-          text: 'text-emerald-600',
-          textDark: 'text-emerald-700',
-          bg: 'bg-emerald-50',
-          border: 'border-emerald-100',
-          focusBorder: 'focus:border-emerald-500',
-          hoverBg: 'hover:bg-emerald-600',
-          hoverText: 'hover:text-emerald-600',
-          hoverBorder: 'hover:border-emerald-300',
-          hoverBgSubtle: 'hover:bg-emerald-50',
-          fill: 'bg-emerald-500',
-          loader: 'text-emerald-600',
-          hoverBorderDark: 'hover:border-emerald-400'
-        };
-    }
-  };
-  const theme = getThemeColors();
+  const closeDocenteModal = () => setShowDocenteModal(CLOSED_DOCENTE_MODAL);
 
-  // Form inputs for adding lessons
-  const [newAulaTitulo, setNewAulaTitulo] = useState<Record<string, string>>({});
-  const [newAulaHoras, setNewAulaHoras] = useState<Record<string, string>>({});
-  const [newAulaData, setNewAulaData] = useState<Record<string, string>>({});
-  const [newAulaExtraClasse, setNewAulaExtraClasse] = useState<Record<string, boolean>>({});
-
-  // Modal states
-  const [showDocenteModal, setShowDocenteModal] = useState<{ isOpen: boolean; disciplinaId: string }>({ isOpen: false, disciplinaId: '' });
-  const [aulaParaExcluir, setAulaParaExcluir] = useState<{ disciplinaId: string; aulaId: string } | null>(null);
   const assignProfessorMutation = useAssignProfessorMutation(
     turma.id,
-    () => setShowDocenteModal({ isOpen: false, disciplinaId: '' }),
-    (err) => {
-      console.error('Erro ao atribuir docente:', err);
+    closeDocenteModal,
+    (error) => {
+      console.error('Erro ao atribuir docente:', error);
       toast.error('Docente não salvo', 'Não consegui atualizar o docente desta disciplina. Tente novamente.');
-      setShowDocenteModal({ isOpen: false, disciplinaId: '' });
+      closeDocenteModal();
     },
   );
   const assignProfessorToAllMutation = useAssignProfessorToAllMutation(
     turma.id,
     () => toast.success('Sucesso', 'Docente atribuído com sucesso a todas as disciplinas.'),
-    (err) => {
-      console.error('Erro ao atribuir docente para a turma:', err);
+    (error) => {
+      console.error('Erro ao atribuir docente para a turma:', error);
       toast.error('Docente não salvo', 'Não consegui atualizar o docente da turma. Tente novamente.');
     },
   );
-  const toggleConcluidaMutation = useToggleDisciplinaConcluidaMutation(
-    turma.id,
-    (err) => {
-      console.error('Erro ao alternar status da disciplina:', err);
-      toast.error('Status não salvo', 'Não consegui atualizar o status desta disciplina. Tente novamente.');
-    },
-  );
+  const toggleConcluidaMutation = useToggleDisciplinaConcluidaMutation(turma.id, (error) => {
+    console.error('Erro ao alternar status da disciplina:', error);
+    toast.error('Status não salvo', 'Não consegui atualizar o status desta disciplina. Tente novamente.');
+  });
   const addAulaMutation = useAddTurmaAulaMutation(
     turma.id,
     (input) => {
-      setNewAulaTitulo(prev => ({ ...prev, [input.disciplinaId]: '' }));
-      setNewAulaHoras(prev => ({ ...prev, [input.disciplinaId]: '' }));
-      setNewAulaData(prev => ({ ...prev, [input.disciplinaId]: '' }));
+      setNewAulaTitulo((current) => ({ ...current, [input.disciplinaId]: '' }));
+      setNewAulaHoras((current) => ({ ...current, [input.disciplinaId]: '' }));
+      setNewAulaData((current) => ({ ...current, [input.disciplinaId]: '' }));
       toast.success('Aula salva', 'O planejamento foi registrado e já aparece no diário e na agenda.');
     },
-    (err) => {
-      console.error('Erro ao adicionar aula:', err);
-      const message = String(err?.message || '');
+    (error) => {
+      console.error('Erro ao adicionar aula:', error);
+      const message = String(error?.message || '');
       if (message.includes('Carga horaria excedida')) {
-        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), { contextLabel: 'Planejamento da grade' });
+        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
+          contextLabel: 'Planejamento da grade',
+        });
         return;
       }
       toast.error('Aula não salva', 'Não consegui registrar esta aula no planejamento. Tente novamente.');
@@ -141,17 +109,19 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const addAtividadeExtraClasseMutation = useAddTurmaAtividadeExtraClasseMutation(
     turma.id,
     (input) => {
-      setNewAulaTitulo(prev => ({ ...prev, [input.disciplinaId]: '' }));
-      setNewAulaHoras(prev => ({ ...prev, [input.disciplinaId]: '' }));
-      setNewAulaData(prev => ({ ...prev, [input.disciplinaId]: '' }));
-      setNewAulaExtraClasse(prev => ({ ...prev, [input.disciplinaId]: false }));
+      setNewAulaTitulo((current) => ({ ...current, [input.disciplinaId]: '' }));
+      setNewAulaHoras((current) => ({ ...current, [input.disciplinaId]: '' }));
+      setNewAulaData((current) => ({ ...current, [input.disciplinaId]: '' }));
+      setNewAulaExtraClasse((current) => ({ ...current, [input.disciplinaId]: false }));
       toast.success('Atividade criada', 'A atividade extra-classe foi liberada para os alunos na aba Atividades.');
     },
-    (err) => {
-      console.error('Erro ao adicionar atividade extra-classe:', err);
-      const message = String(err?.message || '');
+    (error) => {
+      console.error('Erro ao adicionar atividade extra-classe:', error);
+      const message = String(error?.message || '');
       if (message.includes('Carga horaria excedida')) {
-        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), { contextLabel: 'Atividade extra-classe' });
+        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
+          contextLabel: 'Atividade extra-classe',
+        });
         return;
       }
       toast.error('Atividade não salva', 'Não consegui liberar esta atividade extra-classe. Tente novamente.');
@@ -160,8 +130,8 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
   const removeAulaMutation = useRemoveTurmaAulaMutation(
     turma.id,
     () => setAulaParaExcluir(null),
-    (err) => {
-      console.error('Erro ao remover aula:', err);
+    (error) => {
+      console.error('Erro ao remover aula:', error);
       toast.error('Aula não excluída', 'Não consegui remover esta aula do planejamento. Tente novamente.');
     },
   );
@@ -172,66 +142,46 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     setExpandedModules(new Set([firstModuleId]));
   }, [cursoBase, expandedModules.size]);
 
-  const toggleModule = (id: string) => {
-    const newSet = new Set(expandedModules);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setExpandedModules(newSet);
-  };
+  const toggleSetItem = (
+    setter: React.Dispatch<React.SetStateAction<Set<string>>>,
+    id: string,
+  ) => setter((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
 
-  const toggleDiscipline = (id: string) => {
-    const newSet = new Set(expandedDisciplines);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setExpandedDisciplines(newSet);
-  };
-  
   const handleAssignProfessor = async (disciplinaId: string, professorId: string) => {
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
     const professor = professores.find((item) => item.id === professorId) || null;
-    await assignProfessorMutation.mutateAsync({
-      disciplinaId,
-      professor,
-      currentConfig,
-    });
+    await assignProfessorMutation.mutateAsync({ disciplinaId, professor, currentConfig });
   };
 
   const handleAssignProfessorToAll = async (professorId: string) => {
     if (!cursoBase) return;
-    const disciplineIds = (cursoBase.modulos || []).flatMap(m => m.disciplinas.map(d => d.id));
+    const disciplineIds = (cursoBase.modulos || []).flatMap((modulo) => (
+      modulo.disciplinas.map((disciplina) => disciplina.id)
+    ));
     if (disciplineIds.length === 0) return;
     const professor = professores.find((item) => item.id === professorId) || null;
-
-    await assignProfessorToAllMutation.mutateAsync({
-      disciplineIds,
-      professor,
-      configs: disciplinasConfig,
-    });
+    await assignProfessorToAllMutation.mutateAsync({ disciplineIds, professor, configs: disciplinasConfig });
   };
-  
-  const toggleConcluida = async (disciplinaId: string) => {
+
+  const handleToggleConcluida = async (disciplinaId: string) => {
     const currentConfig = disciplinasConfig[disciplinaId] || { professor: null, concluida: false };
-    await toggleConcluidaMutation.mutateAsync({
-      disciplinaId,
-      currentConfig,
-    });
-  };
-
-  const formatHoras = (value: number) => {
-    if (!Number.isFinite(value)) return '0';
-    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
-  };
-
-  const getDisciplinaCargaHoraria = (disciplinaId: string) => {
-    const disciplina = (cursoBase?.modulos || [])
-      .flatMap((modulo) => modulo.disciplinas)
-      .find((item) => item.id === disciplinaId);
-    return Number(disciplina?.cargaHoraria || 0);
+    await toggleConcluidaMutation.mutateAsync({ disciplinaId, currentConfig });
   };
 
   const getHorasPlanejadas = (disciplinaId: string) => {
-    const horasAulas = (aulas[disciplinaId] || []).reduce((total, aula) => total + Number(aula.cargaHoraria || 0), 0);
-    const horasAtividades = (atividadesExtraClasse[disciplinaId] || []).reduce((total, atividade) => total + Number(atividade.cargaHoraria || 0), 0);
+    const horasAulas = (aulas[disciplinaId] || []).reduce(
+      (total, aula) => total + Number(aula.cargaHoraria || 0),
+      0,
+    );
+    const horasAtividades = (atividadesExtraClasse[disciplinaId] || []).reduce(
+      (total, atividade) => total + Number(atividade.cargaHoraria || 0),
+      0,
+    );
     return horasAulas + horasAtividades;
   };
 
@@ -250,17 +200,19 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       return;
     }
 
-    const cargaOficial = getDisciplinaCargaHoraria(disciplinaId);
-    const horasPlanejadas = getHorasPlanejadas(disciplinaId);
-    const horasRestantes = Math.max(0, cargaOficial - horasPlanejadas);
+    const disciplina = (cursoBase?.modulos || [])
+      .flatMap((modulo) => modulo.disciplinas)
+      .find((item) => item.id === disciplinaId);
+    const cargaOficial = Number(disciplina?.cargaHoraria || 0);
+    const horasRestantes = Math.max(0, cargaOficial - getHorasPlanejadas(disciplinaId));
 
     if (cargaOficial > 0 && horas > horasRestantes) {
       const excesso = horas - horasRestantes;
       toast.info(
         'Carga horária excedida',
         horasRestantes > 0
-          ? `Restam ${formatHoras(horasRestantes)}h nesta disciplina. Esta inclusão excederia em ${formatHoras(excesso)}h a carga oficial de ${formatHoras(cargaOficial)}h.`
-          : `A disciplina já atingiu a carga oficial de ${formatHoras(cargaOficial)}h. Remova ou ajuste uma aula/atividade antes de lançar novas horas.`,
+          ? `Restam ${formatGradeHours(horasRestantes)}h nesta disciplina. Esta inclusão excederia em ${formatGradeHours(excesso)}h a carga oficial de ${formatGradeHours(cargaOficial)}h.`
+          : `A disciplina já atingiu a carga oficial de ${formatGradeHours(cargaOficial)}h. Remova ou ajuste uma aula/atividade antes de lançar novas horas.`,
         { contextLabel: newAulaExtraClasse[disciplinaId] ? 'Atividade extra-classe' : 'Planejamento da aula' },
       );
       return;
@@ -278,17 +230,14 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
       return;
     }
 
-    await addAulaMutation.mutateAsync({
-      disciplinaId,
-      titulo,
-      horas,
-      dataAula: dataStr,
-    });
+    await addAulaMutation.mutateAsync({ disciplinaId, titulo, horas, dataAula: dataStr });
   };
 
-  const handleRemoveAula = async (disciplinaId: string, aulaId: string) => {
-    await removeAulaMutation.mutateAsync(aulaId);
-  };
+  const updateDraft = <T,>(
+    setter: React.Dispatch<React.SetStateAction<Record<string, T>>>,
+    disciplinaId: string,
+    value: T,
+  ) => setter((current) => ({ ...current, [disciplinaId]: value }));
 
   if (loading) {
     return (
@@ -311,395 +260,84 @@ const TurmaGrade: React.FC<TurmaGradeProps> = ({ turma, singleProfessor = false,
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-[#001a33]">Grade Curricular & Corpo Docente</h3>
-        <span className="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">Baseado em: {cursoBase.nome}</span>
+        <span className="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">
+          Baseado em: {cursoBase.nome}
+        </span>
       </div>
 
       {singleProfessor && (
         <div className="bg-indigo-50/70 border border-indigo-100 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shadow-sm">
           <div>
             <h4 className="text-sm font-black text-indigo-900 uppercase tracking-tight">Docente Responsável pela Turma</h4>
-            <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">Estes cursos possuem apenas um docente para toda a grade curricular.</p>
+            <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">
+              Estes cursos possuem apenas um docente para toda a grade curricular.
+            </p>
           </div>
           <div className="w-full md:w-64">
             <select
-              value={
-                (Object.values(disciplinasConfig) as any[]).find((c) => c.professorId)?.professorId || ''
-              }
-              onChange={(e) => handleAssignProfessorToAll(e.target.value)}
+              value={Object.values(disciplinasConfig).find((config) => config.professorId)?.professorId || ''}
+              onChange={(event) => handleAssignProfessorToAll(event.target.value)}
               className="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 px-3.5 py-3 transition-colors text-slate-700 shadow-sm"
             >
               <option value="">Selecione um professor...</option>
-              {professores.map(p => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
+              {professores.map((professor) => (
+                <option key={professor.id} value={professor.id}>{professor.nome}</option>
               ))}
             </select>
           </div>
         </div>
       )}
 
-      {(!cursoBase.modulos || cursoBase.modulos.length === 0) && (
+      {(cursoBase.modulos || []).length === 0 && (
         <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
           <p className="text-slate-500">A grade deste curso ainda não foi configurada no cadastro.</p>
         </div>
       )}
 
-      {(cursoBase.modulos || []).map((modulo, index) => {
-        const moduloMetricas = metricasGrade.find((item: any) => item.modulo_id === modulo.id);
-        const totalDiscs = Number(moduloMetricas?.modulo_total_disciplinas || modulo.disciplinas.length);
-        const moduloProgress = Number(moduloMetricas?.modulo_progresso_percent || 0);
-        
-        return (
-          <div key={modulo.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <button 
-              onClick={() => toggleModule(modulo.id)}
-              className="w-full flex items-center justify-between p-5 bg-slate-50/50 hover:bg-slate-100/50 transition-colors"
-            >
-              <div className="flex items-center gap-4 flex-1">
-                <div className={`p-3 shadow-sm ${theme.bg} ${theme.text} border ${theme.border} rounded-xl flex shrink-0`}>
-                  <Layers size={20} />
-                </div>
-                <div className="text-left flex-1">
-                  <h4 className="font-black text-[#001a33] text-base mb-1">{modulo.nome}</h4>
-                  <div className="flex items-center gap-4">
-                    <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1 font-bold tracking-wider">
-                      <BookOpen size={12} /> {totalDiscs} Disciplinas
-                    </p>
-                    {totalDiscs > 0 && (
-                      <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${moduloProgress === 100 ? theme.fill : 'bg-blue-500'}`} style={{ width: `${moduloProgress}%` }}></div>
-                        </div>
-                        <span className={`text-[10px] font-black ${moduloProgress === 100 ? theme.text : 'text-blue-600'}`}>{moduloProgress}%</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="pl-4">
-                {expandedModules.has(modulo.id) ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronRight size={20} className="text-slate-400" />}
-              </div>
-            </button>
+      {(cursoBase.modulos || []).map((modulo) => (
+        <TurmaGradeModulo
+          key={modulo.id}
+          modulo={modulo}
+          metricasGrade={metricasGrade}
+          disciplinasConfig={disciplinasConfig}
+          aulas={aulas}
+          atividades={atividadesExtraClasse}
+          expanded={expandedModules.has(modulo.id)}
+          expandedDisciplines={expandedDisciplines}
+          singleProfessor={singleProfessor}
+          theme={theme}
+          savingAulaDisciplinaId={addAulaMutation.isPending ? addAulaMutation.variables?.disciplinaId : undefined}
+          savingAtividadeDisciplinaId={addAtividadeExtraClasseMutation.isPending ? addAtividadeExtraClasseMutation.variables?.disciplinaId : undefined}
+          titulos={newAulaTitulo}
+          datas={newAulaData}
+          horas={newAulaHoras}
+          extrasClasse={newAulaExtraClasse}
+          onToggleModulo={() => toggleSetItem(setExpandedModules, modulo.id)}
+          onToggleDisciplina={(id) => toggleSetItem(setExpandedDisciplines, id)}
+          onToggleConcluida={handleToggleConcluida}
+          onOpenProfessor={(disciplinaId) => setShowDocenteModal({ isOpen: true, disciplinaId })}
+          onDeleteAula={(disciplinaId, aulaId) => setAulaParaExcluir({ disciplinaId, aulaId })}
+          onTituloChange={(id, value) => updateDraft(setNewAulaTitulo, id, value)}
+          onDataChange={(id, value) => updateDraft(setNewAulaData, id, value)}
+          onHorasChange={(id, value) => updateDraft(setNewAulaHoras, id, value)}
+          onExtraClasseChange={(id, value) => updateDraft(setNewAulaExtraClasse, id, value)}
+          onAddPlanejamento={handleAddAula}
+        />
+      ))}
 
-            <div className={`grid transition-all duration-300 ease-in-out ${
-              expandedModules.has(modulo.id) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-            }`}>
-              <div className="overflow-hidden">
-                <div className="border-t border-slate-100 divide-y divide-slate-100 bg-white">
-                  {modulo.disciplinas.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-400 font-medium">Sem disciplinas cadastradas neste módulo.</div>
-                  ) : (
-                    modulo.disciplinas.map((disc) => {
-                      const discConfig = disciplinasConfig[disc.id] || { professor: null, concluida: false };
-                      const isComplete = discConfig.concluida;
-                      const discAulas = aulas[disc.id] || [];
-                      const discAtividades = atividadesExtraClasse[disc.id] || [];
-                      const discMetricas = metricasGrade.find((item: any) => item.disciplina_id === disc.id);
-                      const sumHorasAulas = discAulas.reduce((total, aula) => total + Number(aula.cargaHoraria || 0), 0);
-                      const sumHorasAtividades = discAtividades.reduce((total, atividade) => total + Number(atividade.cargaHoraria || 0), 0);
-                      const sumHoras = sumHorasAulas + sumHorasAtividades;
-                      const aulasCount = Number(discMetricas?.aulas_count || discAulas.length);
-                      const progressoDisciplina = disc.cargaHoraria > 0
-                        ? Math.min(100, Math.round((sumHoras / disc.cargaHoraria) * 100))
-                        : 0;
-                      const horasStatus = sumHoras === disc.cargaHoraria ? 'EXATA' : sumHoras > disc.cargaHoraria ? 'EXCESSO' : 'PENDENTE';
-                      const horasDiferenca = Math.abs(disc.cargaHoraria - sumHoras);
-                      const isExpanded = expandedDisciplines.has(disc.id);
-                      const savingThisAula = addAulaMutation.isPending && addAulaMutation.variables?.disciplinaId === disc.id;
-                      const savingThisAtividade = addAtividadeExtraClasseMutation.isPending && addAtividadeExtraClasseMutation.variables?.disciplinaId === disc.id;
-                      const savingThisPlanejamento = savingThisAula || savingThisAtividade;
-                      const isExtraClasse = Boolean(newAulaExtraClasse[disc.id]);
-                      
-                      let progressColor = 'bg-blue-500';
-                      let progressTextClass = 'text-blue-600';
-                      if (sumHoras === disc.cargaHoraria) {
-                        progressColor = theme.fill;
-                        progressTextClass = theme.text;
-                      } else if (sumHoras > disc.cargaHoraria) {
-                        progressColor = 'bg-red-500';
-                        progressTextClass = 'text-red-600';
-                      }
-                      
-                      return (
-                        <div key={disc.id} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/30 transition-colors">
-                          {/* Cabeçalho da Disciplina */}
-                          <div className="p-4 sm:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <button 
-                                onClick={() => toggleConcluida(disc.id)}
-                                title={isComplete ? "Marcar como não concluída" : "Marcar como concluída"}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 cursor-pointer transition-colors ${isComplete ? `${theme.bg} ${theme.text} hover:bg-opacity-80` : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                              >
-                                {isComplete ? <CheckCircle2 size={16} /> : <BookOpen size={16} />}
-                              </button>
-                              
-                              <div 
-                                onClick={() => toggleDiscipline(disc.id)}
-                                className="flex-1 min-w-0 cursor-pointer text-left"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <p className={`text-sm font-bold truncate ${isComplete ? theme.textDark : 'text-[#001a33]'}`}>{disc.nome}</p>
-                                  {isExpanded ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
-                                </div>
-                                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                  {disc.cargaHoraria} horas oficiais • {aulasCount} aulas ({formatHoras(sumHorasAulas)}h)
-                                  {discAtividades.length > 0 ? ` + ${discAtividades.length} extra-classe (${formatHoras(sumHorasAtividades)}h)` : ''}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-4 shrink-0">
-                              {/* Carga Horária Status Badge */}
-                              <div 
-                                onClick={() => toggleDiscipline(disc.id)}
-                                className="cursor-pointer flex flex-col items-end shrink-0"
-                              >
-                                <span className={`text-[10px] font-black uppercase tracking-wider ${progressTextClass}`}>
-                                  {formatHoras(sumHoras)}h de {formatHoras(disc.cargaHoraria)}h
-                                </span>
-                                <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
-                                  <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${progressoDisciplina}%` }}></div>
-                                </div>
-                              </div>
-
-                              {singleProfessor ? (
-                                discConfig.professor ? (
-                                  <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
-                                    <UserCheck size={14} className="text-indigo-600" />
-                                    <div className="flex flex-col">
-                                      <span className="text-[9px] text-indigo-400 uppercase font-black tracking-widest text-left">Docente</span>
-                                      <span className="text-xs font-bold text-indigo-900">{discConfig.professor}</span>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-slate-400 italic font-semibold">Sem docente</span>
-                                )
-                              ) : discConfig.professor ? (
-                                <div 
-                                  onClick={() => setShowDocenteModal({ isOpen: true, disciplinaId: disc.id })}
-                                  className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-lg border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors"
-                                  title="Alterar Docente"
-                                >
-                                  <UserCheck size={14} className="text-indigo-600" />
-                                  <div className="flex flex-col">
-                                    <span className="text-[9px] text-indigo-400 uppercase font-black tracking-widest text-left">Docente</span>
-                                    <span className="text-xs font-bold text-indigo-900">{discConfig.professor}</span>
-                                  </div>
-                                  <ChevronDown size={14} className="text-indigo-300 ml-1" />
-                                </div>
-                              ) : (
-                                <button 
-                                  onClick={() => setShowDocenteModal({ isOpen: true, disciplinaId: disc.id })}
-                                  className={`flex items-center gap-2 px-4 py-2 bg-slate-50 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:${theme.text} hover:${theme.hoverBorder} hover:${theme.bg} transition-all text-xs font-bold uppercase tracking-wide`}
-                                >
-                                  <UserPlus size={14} /> Atribuir Docente
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Seção Expandida: Planejamento de Aulas */}
-                          {isExpanded && (
-                            <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/5 animate-slideDown">
-                              {/* Barra de Status Detalhada */}
-                              <div className="flex items-center justify-between gap-4 mb-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-inner">
-                                <span className="text-xs font-bold text-slate-500">Planejamento das Aulas:</span>
-                                <div className="flex items-center gap-2">
-                                  {horasStatus === 'EXATA' ? (
-                                    <span className={`${theme.bg} ${theme.text} text-[10px] font-bold px-2.5 py-1 rounded-lg border ${theme.border} uppercase tracking-wider flex items-center gap-1`}>
-                                      <CheckCircle2 size={12} /> Grade Concluída e Exata
-                                    </span>
-                                  ) : horasStatus === 'EXCESSO' ? (
-                                    <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-red-100 uppercase tracking-wider flex items-center gap-1">
-                                      Excesso de {formatHoras(horasDiferenca)}h!
-                                    </span>
-                                  ) : (
-                                    <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-amber-100 uppercase tracking-wider flex items-center gap-1">
-                                      Faltam {formatHoras(horasDiferenca)}h para completar a grade
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Lista de Aulas Operacionais */}
-                              <div className="space-y-2 mb-4 pl-4">
-                                {discAulas.length === 0 && discAtividades.length === 0 ? (
-                                  <p className="text-xs text-slate-400 italic py-2">Nenhuma aula ou atividade extra-classe cadastrada nesta turma ainda.</p>
-                                ) : (
-                                  <>
-                                    {discAulas.map((aula, idx) => (
-                                      <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-200 ${theme.hoverBorderDark} transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm`}>
-                                        <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                                          <CornerDownRight size={12} className="text-slate-400 shrink-0" />
-                                          <span className="font-semibold text-xs text-slate-500 shrink-0">
-                                            Aula {idx + 1} {aula.dataAula ? `(${new Date(aula.dataAula + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
-                                          </span>
-                                          <span className="truncate text-slate-600">{aula.titulo}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 shrink-0">
-                                          <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{formatHoras(aula.cargaHoraria)}h</span>
-                                          <button
-                                            onClick={() => setAulaParaExcluir({ disciplinaId: disc.id, aulaId: aula.id })}
-                                            className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
-                                            title="Excluir aula"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    {discAtividades.map((atividade, idx) => (
-                                      <div key={atividade.id} className="flex items-center justify-between group pl-4 border-l-2 border-emerald-300 transition-colors py-1.5 bg-emerald-50/60 pr-3 rounded-r-xl border-y border-r border-emerald-100 shadow-sm">
-                                        <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                                          <ClipboardCheck size={12} className="text-emerald-600 shrink-0" />
-                                          <span className="font-semibold text-xs text-emerald-700 shrink-0">
-                                            Extra {idx + 1} {atividade.prazoEntrega ? `(${new Date(atividade.prazoEntrega + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
-                                          </span>
-                                          <span className="truncate text-slate-600">{atividade.titulo}</span>
-                                        </div>
-                                        <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-100">{formatHoras(atividade.cargaHoraria)}h</span>
-                                      </div>
-                                    ))}
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Form para Adicionar Aula */}
-                              <div className="mt-3 pl-4 flex gap-2 items-center flex-wrap sm:flex-nowrap">
-                                <CornerDownRight size={14} className={`${theme.text} shrink-0`} />
-                                <label
-                                  className={`flex min-h-[38px] shrink-0 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                                    isExtraClasse
-                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                      : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:text-emerald-700'
-                                  }`}
-                                  title="Marcar como atividade extra-classe para os alunos responderem no portal"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="sr-only"
-                                    checked={isExtraClasse}
-                                    onChange={(e) => {
-                                      const checked = e.target.checked;
-                                      setNewAulaExtraClasse(prev => ({ ...prev, [disc.id]: checked }));
-                                    }}
-                                  />
-                                  <ClipboardCheck size={14} />
-                                  Extra-classe
-                                </label>
-                                <input 
-                                  type="text" 
-                                  placeholder={isExtraClasse ? 'Tema da atividade extra-classe...' : 'Título da aula / conteúdo...'}
-                                  className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
-                                  value={newAulaTitulo[disc.id] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setNewAulaTitulo(prev => ({ ...prev, [disc.id]: val }));
-                                  }}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById(`turma-data-input-${disc.id}`)?.focus(); }}
-                                />
-                                <input 
-                                  id={`turma-data-input-${disc.id}`}
-                                  type="date" 
-                                  className={`w-36 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700`}
-                                  value={newAulaData[disc.id] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setNewAulaData(prev => ({ ...prev, [disc.id]: val }));
-                                  }}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById(`turma-horas-input-${disc.id}`)?.focus(); }}
-                                />
-                                <input 
-                                  id={`turma-horas-input-${disc.id}`}
-                                  type="number" 
-                                  placeholder="Hrs"
-                                  className={`w-16 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-2 py-2.5 transition-colors text-center font-bold text-slate-700 placeholder-slate-400`}
-                                  value={newAulaHoras[disc.id] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setNewAulaHoras(prev => ({ ...prev, [disc.id]: val }));
-                                  }}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddAula(disc.id); }}
-                                />
-                                <button 
-                                  type="button"
-                                  onClick={() => handleAddAula(disc.id)}
-                                  className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
-                                  disabled={savingThisPlanejamento || !newAulaTitulo[disc.id]?.trim() || !newAulaHoras[disc.id]?.trim() || !newAulaData[disc.id]?.trim()}
-                                  aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Salvar aula'}
-                                >
-                                  {savingThisPlanejamento ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                                  {isExtraClasse ? 'Criar atividade' : 'Salvar aula'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Modal Selecionar Docente */}
       {showDocenteModal.isOpen && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
-               <button 
-                  type="button" 
-                  onClick={() => setShowDocenteModal({ isOpen: false, disciplinaId: '' })}
-                  className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 transition-colors"
-               >
-                  <X size={20} />
-               </button>
-               <h3 className="text-lg font-black text-[#001a33] mb-4">Selecionar Docente</h3>
-               <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {professores.length === 0 ? (
-                     <div className="text-center py-6 text-slate-400">
-                        <p className="font-bold text-sm">Nenhum professor cadastrado.</p>
-                        <p className="text-xs text-slate-500 mt-1">Cadastre professores ativos no módulo de Parceiros primeiro.</p>
-                     </div>
-                  ) : (
-                     professores.map(prof => (
-                        <button
-                           key={prof.id}
-                           onClick={() => handleAssignProfessor(showDocenteModal.disciplinaId, prof.id)}
-                           className="w-full text-left px-4 py-3 rounded-xl border border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 font-bold text-slate-700 transition-colors"
-                        >
-                           {prof.nome}
-                        </button>
-                     ))
-                  )}
-               </div>
-            </div>
-         </div>
+        <TurmaGradeDocenteDialog
+          disciplinaId={showDocenteModal.disciplinaId}
+          professores={professores}
+          onAssign={handleAssignProfessor}
+          onClose={closeDocenteModal}
+        />
       )}
       {aulaParaExcluir && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-lg font-black text-[#001a33]">Excluir aula?</h3>
-            <p className="text-sm text-slate-500 mt-2">A aula e seus lançamentos associados serão removidos.</p>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setAulaParaExcluir(null)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-black uppercase text-slate-600"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRemoveAula(aulaParaExcluir.disciplinaId, aulaParaExcluir.aulaId)}
-                className="px-4 py-2.5 rounded-xl bg-red-600 text-white text-xs font-black uppercase"
-              >
-                Excluir aula
-              </button>
-            </div>
-          </div>
-        </div>
+        <TurmaGradeDeleteAulaDialog
+          onCancel={() => setAulaParaExcluir(null)}
+          onConfirm={() => removeAulaMutation.mutate(aulaParaExcluir.aulaId)}
+        />
       )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

@@ -1,4 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
+import { getMaceioIsoDate } from '../technicalClassDates';
 
 export interface AvailableStudent {
   id: string;
@@ -124,7 +125,7 @@ export const turmaAlunosService = {
   async preverGeracaoCobrancasFuturas(turmaId: string): Promise<PrevisaoFinanceiraTurma> {
     const { data, error } = await supabase.rpc('prever_geracao_cobrancas_futuras', {
       p_turma_id: turmaId,
-      p_data_referencia: new Date().toISOString().slice(0, 10),
+      p_data_referencia: getMaceioIsoDate(),
     });
 
     if (error) throw error;

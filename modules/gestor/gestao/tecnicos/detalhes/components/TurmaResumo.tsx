@@ -5,18 +5,20 @@ import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { academicLifecycleService } from '../academic-lifecycle.service';
+import TechnicalDataError from './TechnicalDataError';
 
 interface TurmaResumoProps {
   turma: Turma;
 }
 
 const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
-  const { data: resumo, isLoading: loadingResumo } = useQuery({
+  const resumoQuery = useQuery({
     queryKey: academicLifecycleKeys.resumo(turma.id),
     queryFn: () => academicLifecycleService.getResumo(turma.id),
   });
+  const resumo = resumoQuery.data;
 
-  const { data: recentClasses = [], isLoading: loadingClasses } = useQuery({
+  const recentClassesQuery = useQuery({
     queryKey: [...academicLifecycleKeys.turma(turma.id), 'aulas-recentes'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -29,13 +31,25 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
       return data || [];
     },
   });
+  const recentClasses = recentClassesQuery.data || [];
 
-  if (loadingResumo || loadingClasses) {
+  if (resumoQuery.isLoading || recentClassesQuery.isLoading) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
         <span className="text-slate-500 font-bold ml-3">Carregando resumo acadêmico...</span>
       </div>
+    );
+  }
+
+  if (resumoQuery.isError || recentClassesQuery.isError) {
+    return (
+      <TechnicalDataError
+        title="Resumo acadêmico não carregado"
+        message="Os indicadores foram ocultados para não exibir alunos, frequência ou aulas como zero por causa de uma falha de consulta."
+        retrying={resumoQuery.isFetching || recentClassesQuery.isFetching}
+        onRetry={() => { void Promise.all([resumoQuery.refetch(), recentClassesQuery.refetch()]); }}
+      />
     );
   }
 

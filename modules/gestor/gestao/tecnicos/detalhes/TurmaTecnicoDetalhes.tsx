@@ -52,7 +52,15 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
       case 'diarios': return <TurmaDiarios turma={turma} />;
       case 'financeiro': return <TurmaFinanceiro turma={turma} />;
       case 'vacinas': return <TurmaVacinas turma={turma} />;
-      case 'estagio': return <TurmaEstagio turma={turma} />;
+      case 'estagio': return (
+        <TurmaEstagio
+          turma={turma}
+          readOnly={turma.status === 'FINALIZADA'}
+          readOnlyMessage={turma.status === 'FINALIZADA'
+            ? 'Turma finalizada. As fichas de estágio estão disponíveis apenas para consulta.'
+            : undefined}
+        />
+      );
       case 'academico': return <TurmaAcademico turma={turma} onTurmaFinalizada={onBack} />;
       case 'configuracoes': return <TurmaConfiguracoes turma={turma} />;
       default: return null;

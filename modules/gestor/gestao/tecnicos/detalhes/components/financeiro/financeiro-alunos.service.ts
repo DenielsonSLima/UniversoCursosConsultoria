@@ -1,5 +1,6 @@
 import { supabase } from '../../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
+import { getMaceioIsoDate } from '../../../technicalClassDates';
 
 export interface AlunoFinanceiro {
   id: string;
@@ -39,7 +40,7 @@ export const financeiroAlunosService = {
         const studentReceivables = (receivables || []).filter((item: any) => item.matricula_id === matricula.id);
         const hasOverdue = studentReceivables.some((item: any) =>
           item.status === 'VENCIDO'
-          || (item.status === 'PENDENTE' && item.data_vencimento < new Date().toISOString().slice(0, 10))
+          || (item.status === 'PENDENTE' && item.data_vencimento < getMaceioIsoDate())
         );
         const paid = studentReceivables.filter((item: any) => item.status === 'PAGO').length;
         const matriculaCharge = studentReceivables.find((item: any) => item.tipo_lancamento === 'MATRICULA');

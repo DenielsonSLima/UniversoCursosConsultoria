@@ -14,7 +14,10 @@ export interface DisciplinaOption {
   id: string;
   nome: string;
   cargaHoraria: number;
+  periodoStatus: string | null;
 }
+
+export type AtividadeTipoResposta = 'TEXTO' | 'PERGUNTAS' | 'ENVIO' | 'MISTO';
 
 export interface AtividadeExtraClasseFormState {
   disciplinaId: string;
@@ -25,6 +28,7 @@ export interface AtividadeExtraClasseFormState {
   texto: string;
   videoUrl: string;
   perguntas: string;
+  tipoResposta: AtividadeTipoResposta;
 }
 
 export interface CorrectionDraft {
@@ -32,18 +36,33 @@ export interface CorrectionDraft {
   feedback: string;
 }
 
+export type AtividadeExtraClasseStatus = 'RASCUNHO' | 'PUBLICADA' | 'ARQUIVADA';
+
+export type AtividadeExtraClasseRespostaStatus = 'PENDENTE' | 'ENTREGUE' | 'CORRIGIDA';
+
+export type AtividadeExtraClassePergunta = { pergunta?: string } | string;
+
+export interface AtividadeExtraClasseRespostaItem {
+  pergunta?: string;
+  resposta?: string;
+}
+
 export interface AtividadeExtraClasseRecord {
   id: string;
   disciplina_id: string;
   titulo: string;
   tema?: string | null;
-  tipo_resposta?: string | null;
+  tipo_resposta: AtividadeTipoResposta;
   texto?: string | null;
   video_url?: string | null;
-  perguntas?: Array<{ pergunta?: string } | string>;
+  perguntas?: AtividadeExtraClassePergunta[];
   carga_horaria_compensacao: number | string;
   prazo_entrega?: string | null;
-  status: string;
+  status: AtividadeExtraClasseStatus;
+  created_at?: string | null;
+  updated_at?: string | null;
+  criado_por_auth_id?: string | null;
+  atualizado_por_auth_id?: string | null;
   disciplina?: {
     id?: string;
     nome?: string | null;
@@ -57,11 +76,15 @@ export interface AtividadeExtraClasseResposta {
   atividade_id: string;
   aluno_id: string;
   resposta_texto?: string | null;
-  respostas?: Array<{ pergunta?: string; resposta?: string }>;
+  respostas?: AtividadeExtraClasseRespostaItem[];
   anexo_url?: string | null;
-  status: string;
+  status: AtividadeExtraClasseRespostaStatus;
   nota?: number | string | null;
   feedback?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  entregue_em?: string | null;
+  corrigido_em?: string | null;
   aluno?: {
     id?: string;
     nome?: string | null;

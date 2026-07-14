@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Loader2,
   NotebookTabs,
+  RefreshCw,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -29,7 +30,8 @@ interface TurmasPageProps {
 const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
   const [selectedAssignment, setSelectedAssignment] = useState<ProfessorDisciplinaAssignment | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio' | 'atividades'>('diario');
-  const { data: assignments = [], isLoading: loadingAssignments, isError } = useProfessorDisciplinas(professorId);
+  const assignmentsQuery = useProfessorDisciplinas(professorId);
+  const { data: assignments = [], isLoading: loadingAssignments, isError } = assignmentsQuery;
   useProfessorDisciplinasRealtime(professorId);
 
   if (loadingAssignments) {
@@ -53,13 +55,21 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
         </p>
       </div>
 
-      {isError && (
-        <div className="bg-red-50 border border-red-100 text-red-700 p-5 rounded-3xl text-xs font-bold">
-          Não foi possível carregar as disciplinas vinculadas ao professor.
+      {isError ? (
+        <div className="rounded-3xl border border-red-100 bg-red-50 p-5 text-xs font-bold text-red-700" role="alert">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={18} className="shrink-0" />
+            <div>
+              <p>Não foi possível carregar as disciplinas e os períodos vinculados ao professor.</p>
+              <p className="mt-1 font-medium">O acesso ao diário foi bloqueado para evitar lançamentos em uma etapa fechada.</p>
+              <button type="button" onClick={() => { void assignmentsQuery.refetch(); }} disabled={assignmentsQuery.isFetching}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">
+                <RefreshCw size={13} className={assignmentsQuery.isFetching ? 'animate-spin' : ''} /> Tentar novamente
+              </button>
+            </div>
+          </div>
         </div>
-      )}
-
-      {!selectedAssignment ? (
+      ) : !selectedAssignment ? (
         // Grid: Teacher Classes List
         assignments.length === 0 ? (
           <div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
@@ -281,6 +291,13 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
             <TurmaEstagio
               turma={selectedAssignment.turmaForDiario}
               disciplinaIdRestrita={selectedAssignment.disciplinaId}
+              readOnly={
+                selectedAssignment.turmaForDiario.status === 'FINALIZADA'
+                || selectedAssignment.disciplinaForDiario?.periodoStatus === 'FECHADO'
+              }
+              readOnlyMessage={selectedAssignment.turmaForDiario.status === 'FINALIZADA'
+                ? 'Turma finalizada. A ficha de estágio está disponível apenas para consulta.'
+                : 'Período fechado. A ficha de estágio está disponível apenas para consulta.'}
             />
           ) : (
             <DiarioClasse

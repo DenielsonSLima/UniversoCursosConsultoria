@@ -243,7 +243,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
                               <Upload size={13} /> Anexar
                               <input
                                 type="file"
-                                accept="image/*,application/pdf"
+                                accept="image/jpeg,image/png,application/pdf"
                                 className="hidden"
                                 disabled={uploadMutation.isPending}
                                 onChange={(event) => {

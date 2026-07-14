@@ -7,12 +7,16 @@ import {
   VacinaStatus,
 } from './vacinas.types';
 
-const getFileExtension = (file: File, fallback = 'bin') => {
-  const fromName = file.name.split('.').pop();
-  return (fromName || fallback).toLowerCase().replace(/[^a-z0-9]/g, '') || fallback;
+const VACINA_BUCKET = 'vacinas';
+const VACINA_SIGNED_URL_TTL_SECONDS = 300;
+const VACINA_MAX_FILE_SIZE = 10 * 1024 * 1024;
+const VACINA_FILE_EXTENSIONS: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
 };
 
-const toRegistro = (row: any): AlunoVacinaRegistro => ({
+const toRegistro = (row: any, signedUrl: string | null = null): AlunoVacinaRegistro => ({
   id: row.id,
   alunoId: row.aluno_id,
   cursoId: row.curso_id,
@@ -25,7 +29,8 @@ const toRegistro = (row: any): AlunoVacinaRegistro => ({
   dataAplicacao: row.data_aplicacao,
   lote: row.lote,
   localAplicacao: row.local_aplicacao,
-  arquivoUrl: row.arquivo_url,
+  arquivoPath: row.arquivo_url,
+  arquivoUrl: signedUrl,
   status: row.status,
   origem: row.origem,
   observacao: row.observacao,
@@ -33,12 +38,41 @@ const toRegistro = (row: any): AlunoVacinaRegistro => ({
   updatedAt: row.updated_at,
 });
 
+const getSignedArquivoUrl = async (path?: string | null): Promise<string | null> => {
+  if (!path) return null;
+  const { data, error } = await supabase.storage
+    .from(VACINA_BUCKET)
+    .createSignedUrl(path, VACINA_SIGNED_URL_TTL_SECONDS);
+  if (error) {
+    console.error('Não foi possível assinar o comprovante vacinal privado.', error);
+    return null;
+  }
+  return data?.signedUrl || null;
+};
+
+const hydrateRegistros = async (rows: any[]): Promise<AlunoVacinaRegistro[]> => Promise.all(
+  rows.map(async (row) => toRegistro(row, await getSignedArquivoUrl(row.arquivo_url))),
+);
+
+const validateVacinaFile = (file: File) => {
+  const extension = VACINA_FILE_EXTENSIONS[file.type];
+  if (!extension) {
+    throw new Error('Envie o comprovante em PDF, JPG ou PNG.');
+  }
+  if (file.size <= 0 || file.size > VACINA_MAX_FILE_SIZE) {
+    throw new Error('O comprovante deve ter no máximo 10 MB.');
+  }
+  return extension;
+};
+
 export const alunoVacinasKeys = {
   contexts: (alunoId: string) => ['aluno-vacinas-contexts', alunoId] as const,
   records: (alunoId: string) => ['aluno-vacinas-records', alunoId] as const,
 };
 
 export const alunoVacinasService = {
+  hydrateRegistros,
+
   async getCursoContexts(alunoId: string): Promise<AlunoVacinaCursoContext[]> {
     const { data, error } = await supabase
       .from('matriculas')
@@ -79,7 +113,7 @@ export const alunoVacinasService = {
       .order('dose_numero', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(toRegistro);
+    return hydrateRegistros(data || []);
   },
 
   async saveAlunoVacina(input: SaveAlunoVacinaInput): Promise<AlunoVacinaRegistro> {
@@ -94,55 +128,85 @@ export const alunoVacinasService = {
 
     if (existingError) throw existingError;
 
-    const payload: any = {
-      aluno_id: input.alunoId,
-      curso_id: input.cursoId,
-      matricula_id: input.matriculaId || null,
-      turma_id: input.turmaId || null,
-      vacina_codigo: input.vacinaCodigo,
-      vacina_nome: input.vacinaNome,
-      dose_numero: input.doseNumero,
-      dose_label: input.doseLabel,
+    const mutablePayload: any = {
       data_aplicacao: input.dataAplicacao || null,
       lote: input.lote || null,
       local_aplicacao: input.localAplicacao || null,
       status: 'em_analise',
-      origem: input.origem || 'aluno',
       observacao: null,
-      validado_em: null,
     };
 
-    if (input.arquivoUrl !== undefined) {
-      payload.arquivo_url = input.arquivoUrl;
+    if (input.arquivoPath !== undefined) {
+      mutablePayload.arquivo_url = input.arquivoPath;
     }
 
     const query = existing?.id
-      ? supabase.from('aluno_vacinas').update(payload).eq('id', existing.id)
-      : supabase.from('aluno_vacinas').insert({ ...payload, arquivo_url: input.arquivoUrl || null });
+      ? supabase.from('aluno_vacinas').update(mutablePayload).eq('id', existing.id)
+      : supabase.from('aluno_vacinas').insert({
+        ...mutablePayload,
+        aluno_id: input.alunoId,
+        curso_id: input.cursoId,
+        matricula_id: input.matriculaId || null,
+        turma_id: input.turmaId || null,
+        vacina_codigo: input.vacinaCodigo,
+        vacina_nome: input.vacinaNome,
+        dose_numero: input.doseNumero,
+        dose_label: input.doseLabel,
+        origem: input.origem || 'aluno',
+        arquivo_url: input.arquivoPath || null,
+      });
 
     const { data, error } = await query.select('*').single();
     if (error) throw error;
-    return toRegistro(data);
+    return (await hydrateRegistros([data]))[0];
   },
 
   async uploadVacinaArquivo(input: SaveAlunoVacinaInput, file: File): Promise<AlunoVacinaRegistro> {
-    const ext = getFileExtension(file);
-    const cleanName = `${input.cursoId}_${input.vacinaCodigo}_${input.doseNumero}`.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filePath = `${input.alunoId}/vacinas/${cleanName}_${Date.now()}.${ext}`;
+    const ext = validateVacinaFile(file);
+    const cleanName = `${input.vacinaCodigo}_${input.doseNumero}`
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = `${input.alunoId}/${input.cursoId}/${cleanName}_${Date.now()}.${ext}`;
+    const { data: existing, error: existingError } = await supabase
+      .from('aluno_vacinas')
+      .select('arquivo_url')
+      .eq('aluno_id', input.alunoId)
+      .eq('curso_id', input.cursoId)
+      .eq('vacina_codigo', input.vacinaCodigo)
+      .eq('dose_numero', input.doseNumero)
+      .maybeSingle();
+    if (existingError) throw existingError;
 
     const { data, error: uploadError } = await supabase.storage
-      .from('documentos')
+      .from(VACINA_BUCKET)
       .upload(filePath, file, {
         cacheControl: '3600',
-        contentType: file.type || 'application/octet-stream',
-        upsert: true,
+        contentType: file.type,
+        upsert: false,
       });
 
     if (uploadError) throw uploadError;
     if (!data?.path) throw new Error('Arquivo enviado, mas o storage nao retornou o caminho.');
 
-    const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(data.path);
-    return this.saveAlunoVacina({ ...input, arquivoUrl: urlData.publicUrl });
+    try {
+      const saved = await this.saveAlunoVacina({ ...input, arquivoPath: data.path });
+      if (existing?.arquivo_url && existing.arquivo_url !== data.path) {
+        const { error: removeError } = await supabase.storage
+          .from(VACINA_BUCKET)
+          .remove([existing.arquivo_url]);
+        if (removeError) {
+          console.error('Não foi possível remover o comprovante vacinal substituído.', removeError);
+        }
+      }
+      return saved;
+    } catch (error) {
+      const { error: cleanupError } = await supabase.storage
+        .from(VACINA_BUCKET)
+        .remove([data.path]);
+      if (cleanupError) {
+        console.error('Não foi possível limpar o comprovante vacinal não vinculado.', cleanupError);
+      }
+      throw error;
+    }
   },
 
   async updateStatus(id: string, status: VacinaStatus, observacao?: string | null): Promise<AlunoVacinaRegistro> {
@@ -151,13 +215,12 @@ export const alunoVacinasService = {
       .update({
         status,
         observacao: observacao || null,
-        validado_em: status === 'aprovado' || status === 'reprovado' ? new Date().toISOString() : null,
       })
       .eq('id', id)
       .select('*')
       .single();
 
     if (error) throw error;
-    return toRegistro(data);
+    return (await hydrateRegistros([data]))[0];
   },
 };

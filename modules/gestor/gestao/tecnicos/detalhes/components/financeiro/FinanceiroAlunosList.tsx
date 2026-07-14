@@ -7,6 +7,7 @@ import ToastNotification, { useToast } from '../../../../../parceiros/components
 import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
 import { AlunoFinanceiro } from './financeiro-alunos.service';
 import { useFinanceiroAlunos } from './hooks/useFinanceiroAlunos';
+import TechnicalDataError from '../TechnicalDataError';
 
 
 interface FinanceiroAlunosListProps {
@@ -20,7 +21,8 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
   const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMatriculaId, setSelectedMatriculaId] = useState<string | null>(null);
-  const { data: alunos = [], isLoading: loading } = useFinanceiroAlunos(turma.id);
+  const alunosQuery = useFinanceiroAlunos(turma.id);
+  const alunos = alunosQuery.data || [];
 
   const filteredAlunos = alunos.filter(a => 
     a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -53,7 +55,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
     toast.success('Link copiado', `Envie a cobrança de ${aluno.nome} pelo canal de atendimento.`);
   };
 
-  if (loading) {
+  if (alunosQuery.isLoading) {
     return (
       <div className="flex justify-center items-center py-10 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
         <Loader2 className="animate-spin text-[#001a33]" size={24} />
@@ -67,6 +69,17 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
       <AlunoFinanceiroExtrato
         matriculaId={selectedMatriculaId}
         onBack={() => setSelectedMatriculaId(null)}
+      />
+    );
+  }
+
+  if (alunosQuery.isError) {
+    return (
+      <TechnicalDataError
+        title="Situação financeira dos alunos não carregada"
+        message="A lista foi bloqueada para não confundir uma falha de consulta com uma turma sem alunos ou sem cobranças."
+        retrying={alunosQuery.isFetching}
+        onRetry={() => { void alunosQuery.refetch(); }}
       />
     );
   }

@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../../../../../../lib/supabase';
 import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
 import {
   atividadesExtraClasseKeys,
   atividadesExtraClasseService,
 } from './atividadesExtraClasse.service';
 import {
+  AtividadeExtraClasseResposta,
+  AtividadeExtraClasseRecord,
   AtividadesExtraClasseProps,
   CorrectionDraft,
 } from './atividadesExtraClasse.types';
 import {
   createAtividadeFormInitialState,
+  getAtividadeErrorMessage,
+  isAtividadeContextoOperacional,
+  isAtividadeTurmaPreparacao,
   normalizeAtividadeErrorMessage,
 } from './atividadesExtraClasse.utils';
 import { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
@@ -21,17 +27,21 @@ export const useAtividadesExtraClasse = ({
   disciplinaIdRestrita,
   professorId,
   modo = 'GESTOR',
+  readOnly = false,
+  readOnlyMessage,
 }: AtividadesExtraClasseProps) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [form, setForm] = useState(createAtividadeFormInitialState(disciplinaIdRestrita || ''));
   const [correctionDrafts, setCorrectionDrafts] = useState<Record<string, CorrectionDraft>>({});
+  const [realtimeError, setRealtimeError] = useState<string | null>(null);
 
-  const { data: turmaCurso } = useQuery({
+  const turmaCursoQuery = useQuery({
     queryKey: [...atividadesExtraClasseKeys.turma(turmaId), 'curso'],
-    enabled: !!turmaId && !cursoId,
+    enabled: !!turmaId,
     queryFn: () => atividadesExtraClasseService.getTurmaCurso(turmaId),
   });
+  const turmaCurso = turmaCursoQuery.data;
 
   const effectiveCursoId = cursoId || turmaCurso?.curso_id || null;
 
@@ -39,6 +49,7 @@ export const useAtividadesExtraClasse = ({
     queryKey: atividadesExtraClasseKeys.disciplinas(turmaId, effectiveCursoId, disciplinaIdRestrita),
     enabled: !!turmaId && (!!effectiveCursoId || !!disciplinaIdRestrita),
     queryFn: () => atividadesExtraClasseService.getDisciplinas({
+      turmaId,
       cursoId: effectiveCursoId,
       disciplinaIdRestrita,
     }),
@@ -63,6 +74,41 @@ export const useAtividadesExtraClasse = ({
     [disciplinas, form.disciplinaId],
   );
 
+  const turmaStatus = String(turmaCurso?.status || '').toUpperCase();
+  const cursoRelation = Array.isArray(turmaCurso?.curso) ? turmaCurso.curso[0] : turmaCurso?.curso;
+  const isTecnico = String(cursoRelation?.modalidade || 'TECNICO').toUpperCase() === 'TECNICO';
+  const isPreparacao = isTecnico && isAtividadeTurmaPreparacao(turmaStatus);
+  const isOperacionalSelecionada = isTecnico
+    ? isAtividadeContextoOperacional(turmaStatus, disciplinaSelecionada?.periodoStatus)
+    : !readOnly;
+  const createAsDraft = modo === 'GESTOR' && isPreparacao;
+  const canCreate = !readOnly && (createAsDraft || isOperacionalSelecionada);
+
+  const getDisciplinaPeriodoStatus = (disciplinaId: string) =>
+    disciplinas.find((disciplina) => disciplina.id === disciplinaId)?.periodoStatus || null;
+
+  const canOperateAtividade = (atividade: AtividadeExtraClasseRecord) => !readOnly && (
+    !isTecnico
+    || isAtividadeContextoOperacional(turmaStatus, getDisciplinaPeriodoStatus(atividade.disciplina_id))
+  );
+
+  const canRemoveAtividade = (atividade: AtividadeExtraClasseRecord) => (
+    canOperateAtividade(atividade)
+    || (!readOnly && modo === 'GESTOR' && isPreparacao && atividade.status === 'RASCUNHO')
+  );
+
+  const accessMessage = readOnly
+    ? readOnlyMessage || 'Este período está fechado. As atividades ficam disponíveis apenas para consulta.'
+    : createAsDraft
+      ? 'A turma ainda não começou. Nesta fase, o gestor pode salvar somente rascunhos; a publicação será liberada quando o período estiver operacional.'
+      : isTecnico && turmaStatus === 'FINALIZADA'
+        ? 'A turma está finalizada. Atividades e correções estão disponíveis somente para consulta.'
+        : isTecnico && turmaStatus !== 'EM_ANDAMENTO'
+          ? 'Atividades só podem ser publicadas durante a fase EM ANDAMENTO.'
+          : !isOperacionalSelecionada
+            ? 'Selecione uma disciplina com período ABERTO ou EM FECHAMENTO para publicar.'
+            : null;
+
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
@@ -75,7 +121,7 @@ export const useAtividadesExtraClasse = ({
       turmaId,
       form,
       modo,
-      professorId,
+      status: createAsDraft ? 'RASCUNHO' : 'PUBLICADA',
     }),
     onSuccess: async () => {
       setForm((prev) => ({
@@ -83,16 +129,21 @@ export const useAtividadesExtraClasse = ({
         disciplinaId: disciplinaIdRestrita || prev.disciplinaId,
       }));
       await invalidate();
-      toast.success('Atividade publicada', 'Os alunos já podem responder pelo portal.');
+      if (createAsDraft) {
+        toast.success('Rascunho salvo', 'A atividade poderá ser publicada quando o período estiver operacional.');
+      } else {
+        toast.success('Atividade publicada', 'Os alunos já podem responder pelo portal.');
+      }
     },
-    onError: (err: any) => {
-      const message = normalizeAtividadeErrorMessage(String(err?.message || ''));
+    onError: (err: unknown) => {
+      const message = normalizeAtividadeErrorMessage(getAtividadeErrorMessage(err));
       if (message.includes('Carga horária excedida')) {
         toast.info('Carga horária excedida', message, { contextLabel: 'Atividade extra-classe' });
         return;
       }
       const canShowMessage = message.startsWith('Selecione')
         || message.startsWith('Informe')
+        || message.startsWith('O link')
         || message.includes('carga horária');
       toast.error(
         'Atividade não publicada',
@@ -102,16 +153,34 @@ export const useAtividadesExtraClasse = ({
   });
 
   const archiveMutation = useMutation({
-    mutationFn: (atividadeId: string) => atividadesExtraClasseService.archiveAtividade(atividadeId),
-    onSuccess: async () => {
+    mutationFn: (atividade: AtividadeExtraClasseRecord) => atividade.status === 'RASCUNHO'
+      ? atividadesExtraClasseService.deleteDraft(atividade.id)
+      : atividadesExtraClasseService.archiveAtividade(atividade.id),
+    onSuccess: async (_data, atividade) => {
       await invalidate();
-      toast.success('Atividade arquivada', 'Ela não será mais exibida para os alunos.');
+      if (atividade.status === 'RASCUNHO') {
+        toast.success('Rascunho excluído', 'O rascunho foi removido sem afetar alunos.');
+      } else {
+        toast.success('Atividade arquivada', 'Ela não será mais exibida para os alunos.');
+      }
     },
     onError: () => toast.error('Atividade não arquivada', 'Não consegui arquivar esta atividade agora. Tente novamente em instantes.'),
   });
 
+  const publishMutation = useMutation({
+    mutationFn: (atividadeId: string) => atividadesExtraClasseService.publishAtividade(atividadeId),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success('Atividade publicada', 'O rascunho já está disponível aos alunos.');
+    },
+    onError: () => toast.error(
+      'Atividade não publicada',
+      'Confirme se a turma está em andamento e se o período da disciplina está aberto.',
+    ),
+  });
+
   const corrigirMutation = useMutation({
-    mutationFn: async (resposta: any) => {
+    mutationFn: async (resposta: AtividadeExtraClasseResposta) => {
       const draft = correctionDrafts[resposta.id] || {};
       const notaValue = draft.nota ?? resposta.nota ?? '';
       const nota = notaValue === '' ? null : Number(String(notaValue).replace(',', '.'));
@@ -130,28 +199,74 @@ export const useAtividadesExtraClasse = ({
       await invalidate();
       toast.success('Correção salva', 'A resposta foi atualizada para o aluno.');
     },
-    onError: (err: any) => toast.error(
+    onError: (err: unknown) => toast.error(
       'Correção não salva',
-      err?.message === 'A nota precisa estar entre 0 e 10.'
-        ? err.message
+      getAtividadeErrorMessage(err) === 'A nota precisa estar entre 0 e 10.'
+        ? getAtividadeErrorMessage(err)
         : 'Não consegui salvar a correção agora. Revise a nota e tente novamente.',
     ),
   });
 
+  useEffect(() => {
+    if (!turmaId) return undefined;
+
+    const invalidateRealtime = () => {
+      void queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) });
+      void queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) });
+    };
+
+    const channel = supabase
+      .channel(`atividades_extra_${modo.toLowerCase()}_${turmaId}_${professorId || 'gestor'}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: `turma_id=eq.${turmaId}` },
+        invalidateRealtime,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividade_extra_classe_respostas' },
+        invalidateRealtime,
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setRealtimeError(null);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setRealtimeError('As atualizações automáticas estão indisponíveis. Use “Tentar novamente” para atualizar os dados.');
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [modo, professorId, queryClient, turmaId]);
+
   return {
     atividades,
-    hasLoadError: disciplinasErro || atividadesErro,
+    hasLoadError: turmaCursoQuery.isError || disciplinasErro || atividadesErro,
     archiveMutation,
     corrigirMutation,
     correctionDrafts,
     createMutation,
+    createAsDraft,
+    publishMutation,
     disciplinaSelecionada,
     disciplinas,
     form,
-    loading: loadingDisciplinas || loadingAtividades,
+    canCreate,
+    canOperateAtividade,
+    canRemoveAtividade,
+    accessMessage,
+    loading: turmaCursoQuery.isLoading || loadingDisciplinas || loadingAtividades,
     removeToast,
     setCorrectionDrafts,
     setForm,
     toasts,
+    realtimeError,
+    retryLoad: async () => {
+      const retries = [
+        queryClient.refetchQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
+      ];
+      if (!cursoId) retries.push(turmaCursoQuery.refetch().then(() => undefined));
+      await Promise.all(retries);
+    },
   };
 };
