@@ -68,6 +68,8 @@ export const upsertWhatsAppConversation = async (
     contactName?: string | null;
     lastText?: string | null;
     direction?: "entrada" | "saida";
+    incrementUnread?: boolean;
+    lastAt?: string | null;
   },
 ) => {
   const phone = normalizeWhatsAppPhone(input.phone);
@@ -78,6 +80,10 @@ export const upsertWhatsAppConversation = async (
   ).trim();
   const lastText = String(input.lastText || "").trim();
   const now = new Date().toISOString();
+  const eventAt = input.lastAt && !Number.isNaN(Date.parse(input.lastAt))
+    ? new Date(input.lastAt).toISOString()
+    : now;
+  const shouldIncrementUnread = input.direction === "entrada" && input.incrementUnread !== false;
 
   const { data: existing, error: existingError } = await admin
     .from("whatsapp_conversas")
@@ -87,14 +93,19 @@ export const upsertWhatsAppConversation = async (
   if (existingError) throw existingError;
 
   if (existing) {
+    const existingLastAt = String(existing.ultima_data || "");
+    const isNewerPreview = Date.parse(eventAt) >= Date.parse(existingLastAt || "1970-01-01T00:00:00.000Z");
+    const nextLastAt = isNewerPreview
+      ? eventAt
+      : existing.ultima_data;
     const { data, error } = await admin
       .from("whatsapp_conversas")
       .update({
         aluno_id: input.aluno?.id || existing.aluno_id || null,
         contato_nome: contactName,
-        ultimo_texto: lastText || existing.ultimo_texto,
-        ultima_data: now,
-        unread_count: input.direction === "entrada"
+        ultimo_texto: isNewerPreview ? lastText || existing.ultimo_texto : existing.ultimo_texto,
+        ultima_data: nextLastAt,
+        unread_count: shouldIncrementUnread
           ? Number(existing.unread_count || 0) + 1
           : Number(existing.unread_count || 0),
         updated_at: now,
@@ -113,8 +124,8 @@ export const upsertWhatsAppConversation = async (
       contato_nome: contactName,
       telefone: phone,
       ultimo_texto: lastText || null,
-      ultima_data: now,
-      unread_count: input.direction === "entrada" ? 1 : 0,
+      ultima_data: eventAt,
+      unread_count: shouldIncrementUnread ? 1 : 0,
     })
     .select("*")
     .single();
@@ -136,8 +147,12 @@ export const insertWhatsAppMessage = async (
     status?: string | null;
     rawPayload?: unknown;
     read?: boolean;
+    createdAt?: string | null;
   },
 ) => {
+  const createdAt = input.createdAt && !Number.isNaN(Date.parse(input.createdAt))
+    ? new Date(input.createdAt).toISOString()
+    : null;
   const payload = {
     conversa_id: input.conversaId,
     aluno_id: input.alunoId || null,
@@ -150,6 +165,7 @@ export const insertWhatsAppMessage = async (
     status: input.status || null,
     raw_payload: input.rawPayload || {},
     lida: input.read === true,
+    ...(createdAt ? { created_at: createdAt } : {}),
   };
 
   const { data, error } = await admin

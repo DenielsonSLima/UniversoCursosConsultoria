@@ -12,7 +12,7 @@ import {
   ToggleLeft,
   Webhook,
 } from 'lucide-react';
-import { MensageriaConfigData } from '../mensageria.service';
+import type { MensageriaConfigData } from '../mensageria.types';
 
 interface WhatsAppApiConfigTabProps {
   draft: MensageriaConfigData;
@@ -75,7 +75,7 @@ const WhatsAppApiConfigTab: React.FC<WhatsAppApiConfigTabProps> = ({ draft, onCh
             value={draft.waGraphVersion || ''}
             onChange={(event) => onChange('waGraphVersion', event.target.value)}
             className={inputClass}
-            placeholder="v23.0"
+            placeholder="v25.0"
           />
         </Field>
 

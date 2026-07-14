@@ -11,7 +11,7 @@ import {
   Webhook,
   XCircle,
 } from 'lucide-react';
-import { MensageriaConfigData } from '../mensageria.service';
+import type { MensageriaConfigData } from '../mensageria.types';
 
 interface WhatsAppSummaryTabProps {
   config: MensageriaConfigData | null;
@@ -122,7 +122,7 @@ const WhatsAppSummaryTab: React.FC<WhatsAppSummaryTabProps> = ({ config, webhook
               ['WABA ID', config?.waBusinessAccountId],
               ['Phone Number ID', config?.waPhoneNumberId],
               ['App ID', config?.waAppId],
-              ['Graph API', config?.waGraphVersion || 'v23.0'],
+              ['Graph API', config?.waGraphVersion || 'v25.0'],
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-4 rounded-md bg-slate-50 px-3 py-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>

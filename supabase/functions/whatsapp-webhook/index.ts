@@ -194,6 +194,87 @@ const processStatus = async (admin: any, status: any) => {
     .eq("meta_message_id", messageId);
 };
 
+const timestampToIso = (value: unknown) => {
+  const timestamp = Number(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return null;
+  const millis = timestamp > 9999999999 ? timestamp : timestamp * 1000;
+  return new Date(millis).toISOString();
+};
+
+const processMessageEcho = async (admin: any, echo: any) => {
+  const phone = normalizeWhatsAppPhone(echo?.to);
+  if (!phone) return;
+
+  const aluno = await findAlunoByPhone(admin, phone);
+  const content = textFromWhatsAppMessage(echo);
+  const createdAt = timestampToIso(echo?.timestamp);
+  const conversation = await upsertWhatsAppConversation(admin, {
+    phone,
+    aluno,
+    lastText: content,
+    direction: "saida",
+    lastAt: createdAt,
+  });
+
+  await insertWhatsAppMessage(admin, {
+    conversaId: conversation.id,
+    alunoId: aluno?.id || null,
+    metaMessageId: echo?.id || null,
+    direction: "saida",
+    senderType: "gestor",
+    senderName: "WhatsApp Business App",
+    content,
+    messageType: String(echo?.type || "text"),
+    status: "sent",
+    rawPayload: echo,
+    read: true,
+    createdAt,
+  });
+};
+
+const processHistoryMessage = async (
+  admin: any,
+  input: {
+    threadId?: unknown;
+    message: any;
+    businessPhone?: unknown;
+  },
+) => {
+  const businessPhone = normalizeWhatsAppPhone(input.businessPhone);
+  const from = normalizeWhatsAppPhone(input.message?.from);
+  const threadPhone = normalizeWhatsAppPhone(input.threadId);
+  const isOutgoing = Boolean(businessPhone && from && businessPhone === from);
+  const phone = isOutgoing ? threadPhone : from;
+  if (!phone) return;
+
+  const aluno = await findAlunoByPhone(admin, phone);
+  const content = textFromWhatsAppMessage(input.message);
+  const createdAt = timestampToIso(input.message?.timestamp);
+  const conversation = await upsertWhatsAppConversation(admin, {
+    phone,
+    aluno,
+    lastText: content,
+    direction: isOutgoing ? "saida" : "entrada",
+    incrementUnread: false,
+    lastAt: createdAt,
+  });
+
+  await insertWhatsAppMessage(admin, {
+    conversaId: conversation.id,
+    alunoId: aluno?.id || null,
+    metaMessageId: input.message?.id || null,
+    direction: isOutgoing ? "saida" : "entrada",
+    senderType: isOutgoing ? "gestor" : "aluno",
+    senderName: isOutgoing ? "WhatsApp Business App" : aluno?.nome || phone,
+    content,
+    messageType: String(input.message?.type || "text"),
+    status: input.message?.history_context?.status || "history",
+    rawPayload: input.message,
+    read: true,
+    createdAt,
+  });
+};
+
 Deno.serve(async (req: Request) => {
   try {
     const admin = createAdmin();
@@ -247,6 +328,22 @@ Deno.serve(async (req: Request) => {
 
           for (const status of value.statuses || []) {
             await processStatus(admin, status);
+          }
+
+          for (const echo of value.message_echoes || []) {
+            await processMessageEcho(admin, echo);
+          }
+
+          for (const historyChunk of value.history || []) {
+            for (const thread of historyChunk?.threads || []) {
+              for (const message of thread?.messages || []) {
+                await processHistoryMessage(admin, {
+                  threadId: thread?.id,
+                  message,
+                  businessPhone: value?.metadata?.display_phone_number,
+                });
+              }
+            }
           }
         }
       }

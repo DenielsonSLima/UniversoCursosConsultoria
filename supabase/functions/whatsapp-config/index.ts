@@ -17,8 +17,8 @@ const trimOrNull = (value: unknown) => {
 };
 
 const normalizeGraphVersion = (value: unknown) => {
-  const version = String(value || "v23.0").trim();
-  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
+  const version = String(value || "v25.0").trim();
+  return /^v\d+\.\d+$/.test(version) ? version : "v25.0";
 };
 
 const numberOrNull = (value: unknown) => {
@@ -106,6 +106,7 @@ Deno.serve(async (req: Request) => {
         wa_display_phone_number: trimOrNull(body.waDisplayPhoneNumber),
         wa_graph_version: normalizeGraphVersion(body.waGraphVersion),
         wa_app_id: trimOrNull(body.waAppId),
+        wa_embedded_signup_config_id: trimOrNull(body.waEmbeddedSignupConfigId),
         wa_webhook_verify_token: null,
         wa_account_currency: trimOrNull(body.waAccountCurrency) || "BRL",
         wa_estimated_balance: numberOrNull(body.waEstimatedBalance),
