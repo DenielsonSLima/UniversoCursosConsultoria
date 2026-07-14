@@ -9,6 +9,7 @@ interface PdfTemplateProps {
     statusFilter?: string;
     alunoModalidadeFilter?: string[];
     turmaFilter?: string;
+    turmaFilterLabel?: string;
   };
 }
 
@@ -76,7 +77,7 @@ const PdfTemplate: React.FC<PdfTemplateProps> = ({ filtrosAtuais }) => {
             <li>• Aba / Tipo: Todos</li>
             <li>• Status: {filtrosAtuais?.statusFilter && filtrosAtuais.statusFilter !== 'todos' ? filtrosAtuais.statusFilter : 'Todos'}</li>
             <li>• Filtro de alunos: {modalidadeLabel}</li>
-            <li>• Turma: {filtrosAtuais?.turmaFilter && filtrosAtuais.turmaFilter !== 'todas' ? filtrosAtuais.turmaFilter : 'Todas as turmas'}</li>
+            <li>• Turma: {filtrosAtuais?.turmaFilter && filtrosAtuais.turmaFilter !== 'todas' ? filtrosAtuais.turmaFilterLabel || 'Turma selecionada' : 'Todas as turmas'}</li>
           </ul>
         </div>
 

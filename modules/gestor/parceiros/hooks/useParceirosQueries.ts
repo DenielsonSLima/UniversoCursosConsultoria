@@ -12,7 +12,6 @@ export const parceirosQueryKeys = {
 };
 
 export const useParceirosQueries = (
-  showEnrollmentModalForAlunoId: string | null,
   scope: { poloId?: string | null; includeGlobal?: boolean } = {},
 ) => {
   const queryClient = useQueryClient();
@@ -28,7 +27,6 @@ export const useParceirosQueries = (
   const turmasDisponiveisQuery = useQuery({
     queryKey: parceirosQueryKeys.turmasDisponiveis(scope.poloId),
     queryFn: () => parceirosService.getTurmasDisponiveis(scope.poloId || undefined),
-    enabled: !!showEnrollmentModalForAlunoId,
   });
 
   const invalidateParceiros = useCallback((changedId?: string) => {
@@ -44,6 +42,9 @@ export const useParceirosQueries = (
     allPartners: parceirosQuery.data || [],
     loadingPartners: parceirosQuery.isLoading,
     turmasDisponiveis: turmasDisponiveisQuery.data || [],
+    loadingTurmas: turmasDisponiveisQuery.isLoading,
+    turmasError: turmasDisponiveisQuery.isError,
+    reloadTurmas: turmasDisponiveisQuery.refetch,
     invalidateParceiros,
   };
 };

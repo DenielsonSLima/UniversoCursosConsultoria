@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Upload, User } from 'lucide-react';
+import { Camera, ShieldCheck, Upload, User } from 'lucide-react';
 import ProfilePhotoAdjustModal from '../../shared/components/ProfilePhotoAdjustModal';
 import { PerfilData } from './perfil.types';
 
@@ -48,17 +48,32 @@ const PerfilPhotoCard: React.FC<Props> = ({
               <User size={44} />
             )}
           </div>
-          <p className="mt-4 text-[11px] font-semibold leading-relaxed text-slate-500">
-            Envie uma foto nítida, recente e bem iluminada. Ela pode ser usada na impressão de ficha de matrícula, carteirinha, crachá e outros documentos acadêmicos.
-          </p>
-          <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700">
+          <div
+            role="note"
+            className="mt-5 w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left"
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                <ShieldCheck size={16} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wider text-amber-800">
+                  Foto oficial para documentos
+                </p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-900/80">
+                  Envie uma foto recente, nítida, de frente e sem filtros. Esta imagem poderá ser usada na carteirinha, no crachá, na ficha de matrícula e em outros documentos acadêmicos.
+                </p>
+              </div>
+            </div>
+          </div>
+          <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2">
             <Upload size={14} />
-            {uploadingPhoto ? 'Enviando foto...' : 'Enviar foto'}
+            {uploadingPhoto ? 'Enviando foto...' : (profile?.foto ? 'Alterar foto' : 'Enviar foto')}
             <input
               type="file"
               accept="image/*"
               disabled={uploadingPhoto}
-              className="hidden"
+              className="sr-only"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';

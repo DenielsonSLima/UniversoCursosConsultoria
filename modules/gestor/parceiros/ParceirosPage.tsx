@@ -63,8 +63,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     allPartners,
     loadingPartners,
     turmasDisponiveis,
+    loadingTurmas,
+    turmasError,
+    reloadTurmas,
     invalidateParceiros,
-  } = useParceirosQueries(showEnrollmentModalForAlunoId, { poloId, includeGlobal });
+  } = useParceirosQueries({ poloId, includeGlobal });
   useParceirosRealtime(invalidateParceiros);
   const {
     searchTerm,
@@ -80,6 +83,15 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     sortedAndFilteredPartners,
     kpis,
   } = useParceirosFilters(allPartners, activeTab);
+
+  useEffect(() => {
+    if (loadingTurmas || turmasError || turmaFilter === 'todas') return;
+    if (!turmasDisponiveis.some((turma: any) => turma.id === turmaFilter)) {
+      setTurmaFilter('todas');
+    }
+  }, [loadingTurmas, setTurmaFilter, turmaFilter, turmasDisponiveis, turmasError]);
+
+  const turmaFilterLabel = turmasDisponiveis.find((turma: any) => turma.id === turmaFilter)?.nome;
 
   const {
     saveAlunoMutation,
@@ -200,6 +212,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         onToggleAlunoModalidade={toggleAlunoModalidadeFilter}
         onClearAlunoModalidades={clearAlunoModalidadeFilter}
         onTurmaChange={setTurmaFilter}
+        selectedTurma={turmaFilter}
+        turmas={turmasDisponiveis}
+        loadingTurmas={loadingTurmas}
+        turmasError={turmasError}
+        onRetryTurmas={() => { void reloadTurmas(); }}
       />
 
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm w-full md:w-fit">
@@ -234,7 +251,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
       <ParceirosExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
-        filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter }}
+        filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter, turmaFilterLabel }}
       />
 
       {showEnrollmentModalForAlunoId && (

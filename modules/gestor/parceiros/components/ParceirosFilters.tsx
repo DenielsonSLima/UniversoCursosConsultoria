@@ -12,6 +12,11 @@ interface ParceirosFiltersProps {
   onToggleAlunoModalidade?: (modalidade: AlunoModalidadeFilter) => void;
   onClearAlunoModalidades?: () => void;
   onTurmaChange?: (turma: string) => void;
+  selectedTurma?: string;
+  turmas?: Array<{ id: string; nome?: string; codigo?: string; cursoNome?: string }>;
+  loadingTurmas?: boolean;
+  turmasError?: boolean;
+  onRetryTurmas?: () => void;
 }
 
 const alunoModalidadeOptions = [
@@ -28,7 +33,12 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
   selectedAlunoModalidades = [],
   onToggleAlunoModalidade,
   onClearAlunoModalidades,
-  onTurmaChange
+  onTurmaChange,
+  selectedTurma = 'todas',
+  turmas = [],
+  loadingTurmas = false,
+  turmasError = false,
+  onRetryTurmas,
 }) => {
   const hasAlunoModalidadeFilter = selectedAlunoModalidades.length > 0;
 
@@ -56,6 +66,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
               <CheckCircle2 size={18} />
             </div>
             <select 
+              aria-label="Filtrar parceiros por status"
               className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
               onChange={(e) => onStatusChange && onStatusChange(e.target.value)}
             >
@@ -76,13 +87,23 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
               <Layers size={18} />
             </div>
             <select 
+              aria-label="Filtrar parceiros por turma"
               className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              value={selectedTurma}
+              disabled={loadingTurmas || turmasError}
               onChange={(e) => onTurmaChange && onTurmaChange(e.target.value)}
             >
-              <option value="todas">Todas Turmas</option>
-              <option value="t1">Turma A - 2024</option>
-              <option value="t2">Turma B - 2024</option>
-              <option value="t3">Intensivo Fds</option>
+              <option value="todas">
+                {turmasError ? 'Turmas indisponíveis' : (loadingTurmas ? 'Carregando turmas...' : 'Todas as turmas')}
+              </option>
+              {!loadingTurmas && !turmasError && turmas.length === 0 && (
+                <option value="" disabled>Nenhuma turma em andamento</option>
+              )}
+              {turmas.map((turma) => (
+                <option key={turma.id} value={turma.id}>
+                  {turma.nome || turma.cursoNome || turma.codigo || 'Turma sem nome'}
+                </option>
+              ))}
             </select>
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,6 +118,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
               <Filter size={18} />
             </div>
             <select 
+              aria-label="Ordenar parceiros"
               className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
               onChange={(e) => onSortChange(e.target.value)}
             >
@@ -113,6 +135,21 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
           </div>
       </div>
       </div>
+
+      {turmasError && (
+        <div className="flex justify-end">
+          <div role="alert" className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700">
+            <span>Não foi possível carregar as turmas reais.</span>
+            <button
+              type="button"
+              onClick={onRetryTurmas}
+              className="font-black uppercase tracking-wider text-red-700 underline underline-offset-2 hover:text-red-900"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
