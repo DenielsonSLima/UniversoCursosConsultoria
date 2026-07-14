@@ -15,6 +15,7 @@ import {
   isAcceptedTechnicalDocumentType,
 } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { parceirosService } from '../../../parceiros.service';
+import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
 
 interface ParceiroAlunoFormProps {
   onCancel?: () => void;
@@ -174,10 +175,10 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       if (!data.erro) {
         setFormData(prev => ({
           ...prev,
-          endereco: data.logradouro || '',
-          bairro: data.bairro || '',
-          cidade: data.localidade || '',
-          uf: data.uf || '',
+          endereco: String(data.logradouro || '').toUpperCase(),
+          bairro: String(data.bairro || '').toUpperCase(),
+          cidade: String(data.localidade || '').toUpperCase(),
+          uf: String(data.uf || '').toUpperCase(),
         }));
       }
     } catch {
@@ -252,7 +253,14 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       alert('E-mail do responsável inválido.');
       return;
     }
-    if (onSave) onSave({ ...formData, email: normalizeEmail(formData.email), responsavelEmail: normalizeEmail(formData.responsavelEmail), matricularAgora });
+    if (onSave) {
+      onSave(uppercaseAlunoTextFields({
+        ...formData,
+        email: normalizeEmail(formData.email),
+        responsavelEmail: normalizeEmail(formData.responsavelEmail),
+        matricularAgora,
+      }));
+    }
     setShowMatriculaModal(false);
   };
 

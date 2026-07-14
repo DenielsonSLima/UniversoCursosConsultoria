@@ -1,5 +1,6 @@
 import { dateBrToDb, dateDbToBr } from './date-utils';
 import { ESTANCIA_LEGACY_POLO_ID, MATRIZ_POLO_ID, UUID_RE } from './parceiros.constants';
+import { uppercaseAlunoTextFields } from './aluno-formatters';
 
 const uniqueTruthy = <T,>(values: Array<T | null | undefined>) =>
   Array.from(new Set(values.filter(Boolean) as T[]));
@@ -40,7 +41,7 @@ export function toCamel(s: any) {
 
   const poloNome = formatPoloNome(s.polos, s.polo_id);
 
-  return {
+  const result = {
     id: s.id,
     tipo: s.tipo,
     nome: s.nome,
@@ -118,80 +119,84 @@ export function toCamel(s: any) {
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };
+
+  return s.tipo === 'Aluno' ? uppercaseAlunoTextFields(result) : result;
 }
 
 export function toSnake(c: any) {
   if (!c) return null;
 
-  const poloId = resolvePoloId(c);
+  const source = c.tipo === 'Aluno' ? uppercaseAlunoTextFields(c) : c;
+
+  const poloId = resolvePoloId(source);
   const poloIds = uniqueTruthy<string>([
-    ...((Array.isArray(c.poloIds) ? c.poloIds : c.polo_ids) || []),
+    ...((Array.isArray(source.poloIds) ? source.poloIds : source.polo_ids) || []),
     poloId,
   ]);
 
   return {
-    tipo: c.tipo,
-    nome: c.nomeCompleto || c.nome,
-    cpf_cnpj: c.cpf || c.cnpj || c.cpf_cnpj || null,
-    email: c.email || null,
-    telefone: c.contato1 || c.telefone || null,
-    cep: c.cep || null,
-    endereco: c.endereco || null,
-    numero: c.numero || null,
-    complemento: c.complemento || null,
-    bairro: c.bairro || null,
-    cidade: c.cidade || null,
-    uf: c.uf || null,
+    tipo: source.tipo,
+    nome: source.nomeCompleto || source.nome,
+    cpf_cnpj: source.cpf || source.cnpj || source.cpf_cnpj || null,
+    email: source.email || null,
+    telefone: source.contato1 || source.telefone || null,
+    cep: source.cep || null,
+    endereco: source.endereco || null,
+    numero: source.numero || null,
+    complemento: source.complemento || null,
+    bairro: source.bairro || null,
+    cidade: source.cidade || null,
+    uf: source.uf || null,
     polo_id: poloId,
-    status: c.status || 'ATIVO',
-    observacao: c.observacao || null,
-    foto_url: c.foto || null,
-    data_nascimento: dateBrToDb(c.dataNascimento),
-    sexo: c.sexo || null,
-    rg: c.rg || null,
-    tipo_documento: c.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-    orgao_emissor: c.orgaoEmissor || null,
-    rg_uf_emissao: c.rgUfEmissao || null,
-    rg_data_emissao: dateBrToDb(c.rgDataEmissao),
-    nacionalidade: c.nacionalidade || 'Brasileira',
-    naturalidade: c.naturalidade || null,
-    titulo_eleitor: c.tituloEleitor || null,
-    reservista: c.reservista || null,
-    nome_mae: c.nomeMae || null,
-    nome_pai: c.nomePai || null,
-    nome_social: c.nomeSocial || null,
-    estado_civil: c.estadoCivil || null,
-    pcd: c.pcd || false,
-    pcd_tipo: c.pcdTipo || null,
-    escolaridade_anterior: c.escolaridadeAnterior || null,
-    instituicao_origem: c.instituicaoOrigem || null,
-    ano_conclusao_ensino_medio: c.anoConclusaoEnsinoMedio || null,
-    responsavel_nome: c.responsavelNome || null,
-    responsavel_cpf: c.responsavelCpf || null,
-    responsavel_parentesco: c.responsavelParentesco || null,
-    responsavel_telefone: c.responsavelTelefone || null,
-    responsavel_email: c.responsavelEmail || null,
-    responsavel_financeiro: c.responsavelFinanceiro || false,
-    responsavel_cargo: c.responsavelCargo || null,
-    especialidade: c.especialidade || null,
-    titulacao: c.titulacao || null,
-    area_formacao: c.areaFormacao || null,
-    registro_profissional: c.registroProfissional || null,
-    numero_registro: c.numeroRegistro || null,
-    instituicao_formacao: c.instituicaoFormacao || null,
-    tipo_vinculo: c.tipoVinculo || null,
-    chave_pix: c.chavePix || null,
-    banco: c.banco || null,
-    agencia: c.agencia || null,
-    conta: c.conta || null,
-    tipo_conta: c.tipoConta || null,
-    tipo_servico: c.tipoServico || null,
-    tipo_pj: c.tipoPj || null,
-    tipo_convenio: c.tipoConvenio || null,
-    aceitou_termos_uso: c.aceitouTermosUso ?? c.aceitou_termos_uso ?? false,
-    aceitou_termos_uso_em: c.aceitouTermosUsoEm || c.aceitou_termos_uso_em || null,
-    termos_uso_versao: c.termosUsoVersao || c.termos_uso_versao || null,
-    troca_senha_obrigatoria: c.trocaSenhaObrigatoria ?? c.troca_senha_obrigatoria ?? false,
+    status: source.status || 'ATIVO',
+    observacao: source.observacao || null,
+    foto_url: source.foto || null,
+    data_nascimento: dateBrToDb(source.dataNascimento),
+    sexo: source.sexo || null,
+    rg: source.rg || null,
+    tipo_documento: source.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+    orgao_emissor: source.orgaoEmissor || null,
+    rg_uf_emissao: source.rgUfEmissao || null,
+    rg_data_emissao: dateBrToDb(source.rgDataEmissao),
+    nacionalidade: source.nacionalidade || 'BRASILEIRA',
+    naturalidade: source.naturalidade || null,
+    titulo_eleitor: source.tituloEleitor || null,
+    reservista: source.reservista || null,
+    nome_mae: source.nomeMae || null,
+    nome_pai: source.nomePai || null,
+    nome_social: source.nomeSocial || null,
+    estado_civil: source.estadoCivil || null,
+    pcd: source.pcd || false,
+    pcd_tipo: source.pcdTipo || null,
+    escolaridade_anterior: source.escolaridadeAnterior || null,
+    instituicao_origem: source.instituicaoOrigem || null,
+    ano_conclusao_ensino_medio: source.anoConclusaoEnsinoMedio || null,
+    responsavel_nome: source.responsavelNome || null,
+    responsavel_cpf: source.responsavelCpf || null,
+    responsavel_parentesco: source.responsavelParentesco || null,
+    responsavel_telefone: source.responsavelTelefone || null,
+    responsavel_email: source.responsavelEmail || null,
+    responsavel_financeiro: source.responsavelFinanceiro || false,
+    responsavel_cargo: source.responsavelCargo || null,
+    especialidade: source.especialidade || null,
+    titulacao: source.titulacao || null,
+    area_formacao: source.areaFormacao || null,
+    registro_profissional: source.registroProfissional || null,
+    numero_registro: source.numeroRegistro || null,
+    instituicao_formacao: source.instituicaoFormacao || null,
+    tipo_vinculo: source.tipoVinculo || null,
+    chave_pix: source.chavePix || null,
+    banco: source.banco || null,
+    agencia: source.agencia || null,
+    conta: source.conta || null,
+    tipo_conta: source.tipoConta || null,
+    tipo_servico: source.tipoServico || null,
+    tipo_pj: source.tipoPj || null,
+    tipo_convenio: source.tipoConvenio || null,
+    aceitou_termos_uso: source.aceitouTermosUso ?? source.aceitou_termos_uso ?? false,
+    aceitou_termos_uso_em: source.aceitouTermosUsoEm || source.aceitou_termos_uso_em || null,
+    termos_uso_versao: source.termosUsoVersao || source.termos_uso_versao || null,
+    troca_senha_obrigatoria: source.trocaSenhaObrigatoria ?? source.troca_senha_obrigatoria ?? false,
     polo_ids: poloIds,
   };
 }

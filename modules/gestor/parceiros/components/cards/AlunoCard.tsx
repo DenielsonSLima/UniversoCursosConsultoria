@@ -5,7 +5,7 @@ import { GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
-import { formatCpf } from '../../../../../lib/documentFormatters';
+import { formatCpf, formatPhone } from '../../../../../lib/documentFormatters';
 
 interface AlunoCardProps {
   data: any;
@@ -28,6 +28,7 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
 
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
   const formattedCpf = formatCpf(data.cpf);
+  const telefone = data.telefone || data.contato1;
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'Aluno', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -131,10 +132,10 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
 
       {/* Infos */}
       <div className="flex-1 space-y-2 relative z-10">
-        {data.telefone && (
+        {telefone && (
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Phone size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-medium">{data.telefone}</span>
+            <span className="truncate font-medium">{formatPhone(telefone)}</span>
           </div>
         )}
         {data.email && (
