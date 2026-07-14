@@ -70,9 +70,23 @@ const getAuthReturnError = () => {
   );
 };
 
+const getAuthReturnCode = () => {
+  const { searchParams } = readAuthReturnParams();
+  return searchParams.get('code');
+};
+
+const clearAuthReturnParams = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('code');
+  url.searchParams.delete('error');
+  url.searchParams.delete('error_code');
+  url.searchParams.delete('error_description');
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${window.location.hash}`);
+};
+
 const hasAuthReturnInUrl = () => (
   window.location.hash.includes('access_token') ||
-  window.location.search.includes('code=') ||
+  Boolean(getAuthReturnCode()) ||
   Boolean(getAuthReturnError())
 );
 
@@ -155,8 +169,18 @@ const AlunoLoginPublicPage: React.FC = () => {
           return;
         }
 
-        const { data } = await supabase.auth.getSession();
+        const authCode = getAuthReturnCode();
+        let { data } = await supabase.auth.getSession();
         const hasAuthReturn = hasAuthReturnInUrl();
+
+        if (!data.session && authCode) {
+          const { data: exchangedData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
+          if (exchangeError) {
+            throw new Error(alunoPublicAuthService.getFriendlyAuthRedirectError(exchangeError.message));
+          }
+          data = exchangedData;
+          clearAuthReturnParams();
+        }
 
         if (!data.session) {
           if (hasAuthReturn && mounted) {
