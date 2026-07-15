@@ -1,8 +1,8 @@
 {
-  "version": "0.4.0-beta.1",
+  "version": "0.4.0-beta.2",
   "display": "BETA",
   "stage": "beta",
-  "revision": 1,
+  "revision": 2,
   "releasedAt": "2026-07-15",
-  "summary": "Matrículas técnicas online com landing pages por turma e documentação pendente"
+  "summary": "Compatibilidade de tipos em calendário, documentos, mensageria e EAD"
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Lock, Plus, Edit3, Trash2, Clock, Calendar, Check, X, 
+import {
+  Lock, Plus, Edit3, Trash2, Clock, Check, X,
   AlertCircle, Loader2, Info, ShieldAlert
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';

@@ -118,7 +118,6 @@ export const mensageriaService = {
       smtpServer: data.smtp_server,
       smtpPort: data.smtp_port,
       smtpUser: data.smtp_user,
-      smtpPass: data.smtp_pass,
       smtpSenderName: data.smtp_sender_name,
       smtpSenderEmail: data.smtp_sender_email
     };

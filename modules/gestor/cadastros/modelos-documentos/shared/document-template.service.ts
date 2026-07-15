@@ -4,6 +4,7 @@ export interface DocumentTemplate {
   textContent: string;
   absoluteFields: any[];
   validityDays?: number;
+  pageCount?: number;
   v?: number;
 }
 

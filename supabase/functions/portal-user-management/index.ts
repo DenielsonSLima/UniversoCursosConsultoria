@@ -373,8 +373,6 @@ const findAuthUserByEmail = async (admin: any, email: string) => {
     if (!data?.users?.length || data.users.length < perPage) return null;
     page += 1;
   }
-
-  return null;
 };
 
 Deno.serve(async (req: Request) => {

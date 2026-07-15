@@ -466,6 +466,11 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
     if (enrollmentError) throw enrollmentError;
     if (!enrollment || !enrollment.turma_id) return null;
 
+    const firstRelated = <T,>(value: T | T[] | null | undefined): T | null =>
+      Array.isArray(value) ? value[0] || null : value || null;
+    const turma = firstRelated(enrollment.turmas);
+    const curso = firstRelated(turma?.cursos);
+
     const [disciplinasData, notasData, aulasData, frequenciasData] = await Promise.all([
       supabase
         .from('turmas_disciplinas')
@@ -571,15 +576,15 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
       return (a.discipline || '').localeCompare(b.discipline || '');
     });
 
-    const totalCargaCurso = Number(enrollment.turmas?.cursos?.carga_horaria || 0);
+    const totalCargaCurso = Number(curso?.carga_horaria || 0);
     const cargaHorariaTotal = totalCargaCurso || rowsSorted.reduce((sum, row) => sum + row.cargaHoraria, 0);
     const cargaHorariaCumprida = rowsSorted.reduce((sum, row) => {
       if (row.nota === null && row.frequencia === null) return sum;
       return sum + row.cargaHoraria;
     }, 0);
 
-    const inicio = parseDateOrDash(enrollment.data_matricula || enrollment.turmas?.data_inicio);
-    const fim = parseDateOrDash(enrollment.turmas?.data_previsao_termino);
+    const inicio = parseDateOrDash(enrollment.data_matricula || turma?.data_inicio);
+    const fim = parseDateOrDash(turma?.data_previsao_termino);
     const periodo = fim === '—' ? inicio : `${inicio} até ${fim}`;
 
     return {

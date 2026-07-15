@@ -32,7 +32,9 @@ export default [
         clearInterval: "readonly",
         requestAnimationFrame: "readonly",
         FileReader: "readonly",
+        AudioContext: "readonly",
         navigator: "readonly",
+        localStorage: "readonly",
         sessionStorage: "readonly",
         process: "readonly",
         Event: "readonly",
@@ -65,6 +67,10 @@ export default [
         Response: "readonly",
         crypto: "readonly",
         btoa: "readonly",
+        atob: "readonly",
+        Headers: "readonly",
+        FormData: "readonly",
+        TextEncoder: "readonly",
         Deno: "readonly"
       }
     },

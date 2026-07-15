@@ -8,6 +8,11 @@ const ENROLLMENT_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 
 const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
 
+const getRealtimeRowStatus = (row: unknown) => {
+  if (!row || typeof row !== 'object') return '';
+  return normalizeStatus(String((row as Record<string, unknown>).status || ''));
+};
+
 const isPaidReceivable = (row: any) => (
   RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.status)) ||
   RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.gateway_status)) ||
@@ -137,7 +142,7 @@ export const useEadPaymentConfirmationWatcher = ({
           { event: '*', schema: 'public', table: 'inscricoes_online', filter: `matricula_id=eq.${matriculaId}` },
           (payload) => {
             invalidate();
-            if (RECEIVABLE_PAID_STATUSES.has(normalizeStatus(payload.new?.status))) {
+            if (RECEIVABLE_PAID_STATUSES.has(getRealtimeRowStatus(payload.new))) {
               confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
             }
           },

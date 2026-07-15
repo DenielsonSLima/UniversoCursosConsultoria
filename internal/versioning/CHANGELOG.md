@@ -2,6 +2,23 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.4.0-beta.2] - 2026-07-15
+
+### Corrigido
+
+- Calendário do aluno passou a normalizar identificadores e nomes de disciplinas sem perder eventos existentes.
+- Configurações antigas de vídeo EAD continuam reconhecidas junto ao formato atual.
+- Modelos de carteirinha e transferência agora preservam e tipam corretamente seus campos de layout e paginação.
+- Histórico de emissões aceita relações de turma e curso retornadas pelo banco como objeto ou lista.
+- Presença de digitação do WhatsApp passou a descartar estados expirados de forma tipada.
+- Monitor de pagamento EAD passou a tratar com segurança o formato dos eventos em tempo real.
+- Verificações globais de TypeScript e lint foram regularizadas, incluindo os ambientes web e Edge Functions.
+
+### Segurança
+
+- A consulta de mensageria não tenta mais devolver a senha SMTP, mantendo o segredo fora da leitura do painel.
+- Nenhuma migration, cobrança ou alteração de dados cadastrais foi necessária nesta correção.
+
 ## [0.4.0-beta.1] - 2026-07-15
 
 ### Adicionado

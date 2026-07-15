@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard } from 'lucide-react';
 import CarteirinhaCard from './components/CarteirinhaCard';
 import CarteirinhaEditor from './components/CarteirinhaEditor';
-import { carteirinhaService } from './carteirinha.service';
+import { carteirinhaService, type CarteirinhaTemplate } from './carteirinha.service';
 import { assinaturasService } from '../../../configuracoes/assinaturas/assinaturas.service';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 
-const INITIAL_MODELOS = [
+const INITIAL_MODELOS: CarteirinhaTemplate[] = [
   {
     id: '1',
     nome: 'Carteira de Identificação Estudantil (CIE) - Lei 12.933',
@@ -21,7 +21,7 @@ const INITIAL_MODELOS = [
 ];
 
 const CarteirinhaPage: React.FC = () => {
-  const [modelos, setModelos] = useState(INITIAL_MODELOS);
+  const [modelos, setModelos] = useState<CarteirinhaTemplate[]>(INITIAL_MODELOS);
   const [editingModelo, setEditingModelo] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toasts, removeToast, toast } = useToast();

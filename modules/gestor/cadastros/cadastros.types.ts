@@ -167,6 +167,8 @@ export interface EadCertificacao {
 
 export interface EadConfig {
   videoUrl?: string;
+  /** Campo legado mantido para cursos cadastrados antes da padronização em videoUrl. */
+  videoPrincipalUrl?: string;
   pagina?: EadPaginaCurso;
   regras?: EadRegrasAprendizagem;
   cronograma: EadCronogramaItem[];

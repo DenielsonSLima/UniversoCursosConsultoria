@@ -44,7 +44,11 @@ export const useWhatsAppTypingPresence = (conversationId: string | null) => {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setTypingUntil((current) => {
-        const fresh = Object.fromEntries(Object.entries(current).filter(([, until]) => until > now()));
+        const fresh = Object.keys(current).reduce<Record<string, number>>((active, id) => {
+          const until = current[id];
+          if (until > now()) active[id] = until;
+          return active;
+        }, {});
         return Object.keys(fresh).length === Object.keys(current).length ? current : fresh;
       });
     }, 1000);

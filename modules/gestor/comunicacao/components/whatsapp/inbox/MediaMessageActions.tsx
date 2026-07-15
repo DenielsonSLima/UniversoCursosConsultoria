@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, FileText, Image, Loader2, Mic, Play, Wand2 } from 'lucide-react';
+import { Download, FileText, Image, Loader2, Play, Wand2 } from 'lucide-react';
 import { whatsappService } from '../whatsapp.service';
 import { WhatsAppMessage } from '../whatsapp.types';
 import { mediaDataUrl, mediaPayloadFor } from './mediaUtils';

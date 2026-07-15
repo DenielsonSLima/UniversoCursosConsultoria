@@ -69,8 +69,15 @@ const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) =>
         if (errDisciplinas) throw errDisciplinas;
         if (errConfigs) throw errConfigs;
 
-        const turmaById = new Map((turmasData || []).map((turma: any) => [turma.id, turma]));
-        const disciplinaNames = new Map((disciplinasData || []).map((disciplina: any) => [disciplina.id, disciplina.nome]));
+        const turmaById = new Map<string, any>(
+          (turmasData || []).map((turma: any) => [String(turma.id), turma])
+        );
+        const disciplinaNames = new Map<string, string>(
+          (disciplinasData || []).map((disciplina: any) => [
+            String(disciplina.id),
+            String(disciplina.nome || 'Disciplina'),
+          ])
+        );
         const configMap: Record<string, { nome: string; id: string | null }> = {};
         configs?.forEach((config: any) => {
           configMap[`${config.turma_id}-${config.disciplina_id}`] = {
@@ -81,9 +88,9 @@ const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) =>
 
         classEvents = (aulas || []).map((a: any) => {
           const config = configMap[`${a.turma_id}-${a.disciplina_id}`] || { nome: 'Não informado', id: null };
-          const turma = turmaById.get(a.turma_id) || {};
+          const turma = turmaById.get(String(a.turma_id)) || {};
           const turmaNome = turma.nome || 'Turma';
-          const disciplinaNome = disciplinaNames.get(a.disciplina_id) || 'Disciplina';
+          const disciplinaNome = disciplinaNames.get(String(a.disciplina_id)) || 'Disciplina';
           const cargaHoraria = Number(a.carga_horaria || 0);
           const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
 

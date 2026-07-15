@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { WhatsAppContact } from '../whatsapp/whatsapp.types';
-import { defaultMessageFor, formatDocument, formatPhone, initials, normalizePhone } from '../whatsapp/whatsapp.utils';
+import { formatDocument, formatPhone, initials, normalizePhone } from '../whatsapp/whatsapp.utils';
 import { contactTone } from './utils';
 
 interface StartConversationModalProps {

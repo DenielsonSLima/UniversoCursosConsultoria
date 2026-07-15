@@ -50,8 +50,8 @@ export const transferenciaService = {
     const normalizedTemplate = {
       ...template,
       textContent: normalizeTransferenciaTextContent(template?.textContent || ''),
-      pageCount: Math.max(3, Number((template as any).pageCount || 1)),
-      v: Math.max(2, Number((template as any).v || 0)),
+      pageCount: Math.max(3, Number(template.pageCount || 1)),
+      v: Math.max(2, Number(template.v || 0)),
     };
 
     if (
