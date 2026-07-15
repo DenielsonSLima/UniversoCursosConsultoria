@@ -4,7 +4,6 @@ import { supabase } from '../../../../lib/supabase';
 import type {
   AulaTurmaAluno,
   CertificadoAluno,
-  EstagioAluno,
   FrequenciaAluno,
   MatriculaAluno,
   ProgressDisplayState,
@@ -21,6 +20,7 @@ import {
   isEadMatricula,
   isPortalEnrollmentVisible,
 } from '../turmas.utils';
+import { useAlunoInternships } from './useAlunoInternships';
 
 interface TechnicalAcademicData {
   disciplines: TurmaDisciplinaAluno[];
@@ -115,7 +115,12 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
         queryFn: async (): Promise<TechnicalAcademicData> => {
           const { data: disciplineData, error: disciplineError } = await supabase
             .from('turmas_disciplinas')
-            .select('*, disciplinas(*)')
+            .select(`
+              *, disciplinas(*),
+              periodo_letivo:periodos_letivos!turmas_disciplinas_periodo_letivo_id_fkey(
+                id, nome, ordem, status, data_inicio, data_fim
+              )
+            `)
             .eq('turma_id', turmaId);
           if (disciplineError) throw disciplineError;
           const disciplines = (disciplineData || []) as unknown as TurmaDisciplinaAluno[];
@@ -204,7 +209,12 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     queryFn: async () => {
       const { data, error } = await supabase
         .from('turmas_disciplinas')
-        .select('*, disciplinas(*)')
+        .select(`
+          *, disciplinas(*),
+          periodo_letivo:periodos_letivos!turmas_disciplinas_periodo_letivo_id_fkey(
+            id, nome, ordem, status, data_inicio, data_fim
+          )
+        `)
         .eq('turma_id', selectedTurmaId!);
       if (error) throw error;
       return (data || []) as unknown as TurmaDisciplinaAluno[];
@@ -279,19 +289,27 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     ? toQueryState(selectedTechnicalQuery)
     : toQueryState(resultsQuery);
 
-  const internshipsQuery = useQuery<EstagioAluno[]>({
-    queryKey: ['aluno-turma-estagios', selectedTurmaId, alunoId],
-    enabled: Boolean(selectedTurmaId && alunoId && !selectedIsEad && selectedHasAcademicAccess),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas_estagios')
-        .select('*, disciplinas(nome)')
-        .eq('turma_id', selectedTurmaId!)
-        .eq('aluno_id', alunoId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as unknown as EstagioAluno[];
-    },
+  const internshipDisciplines = useMemo(
+    () => disciplines.filter((item) => (
+      Number(item.disciplinas?.carga_horaria_estagio || 0) > 0
+    )),
+    [disciplines],
+  );
+  const internshipDisciplineIds = useMemo(
+    () => internshipDisciplines
+      .map((item) => item.disciplinas?.id || item.disciplina_id)
+      .filter((id): id is string => Boolean(id)),
+    [internshipDisciplines],
+  );
+  const hasInternship = selectedHasAcademicAccess
+    && !disciplinesState.isLoading
+    && !disciplinesState.isError
+    && internshipDisciplineIds.length > 0;
+  const internshipsQuery = useAlunoInternships({
+    alunoId,
+    turmaId: selectedTurmaId,
+    disciplineIds: internshipDisciplineIds,
+    enabled: Boolean(!selectedIsEad && hasInternship),
   });
 
   const resultsByDiscipline = useMemo(() => {
@@ -356,6 +374,8 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     resultsState,
     internships: internshipsQuery.data || [],
     internshipsState: toQueryState(internshipsQuery),
+    internshipDisciplines,
+    hasInternship,
     disciplineSummaries,
   };
 };

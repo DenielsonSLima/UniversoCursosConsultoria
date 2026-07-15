@@ -11,6 +11,8 @@ interface EstagioStudentsPanelProps {
   vacinasResumo: any;
   readOnly: boolean;
   readOnlyMessage: string;
+  showCpf?: boolean;
+  showVaccineDetails?: boolean;
   onStartEvaluation: (aluno: EstagioAluno) => void;
 }
 
@@ -23,6 +25,8 @@ const EstagioStudentsPanel: React.FC<EstagioStudentsPanelProps> = ({
   vacinasResumo,
   readOnly,
   readOnlyMessage,
+  showCpf = true,
+  showVaccineDetails = true,
   onStartEvaluation,
 }) => (
   <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fadeIn">
@@ -101,7 +105,11 @@ const EstagioStudentsPanel: React.FC<EstagioStudentsPanelProps> = ({
                       </div>
                       <div>
                         <span className="font-bold text-[#001a33] text-sm block">{aluno.nome}</span>
-                        <span className="text-[10px] text-slate-500 font-medium">CPF: {aluno.cpf || '—'}</span>
+                        {showCpf ? (
+                          <span className="text-[10px] text-slate-500 font-medium">CPF: {aluno.cpf || '—'}</span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 font-medium">Matrícula vinculada</span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -119,9 +127,13 @@ const EstagioStudentsPanel: React.FC<EstagioStudentsPanelProps> = ({
                         <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
                           <ClipboardCheck size={12} /> Em dia
                         </span>
-                      ) : (
+                      ) : showVaccineDetails ? (
                         <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700">
                           <ShieldAlert size={12} /> {vacinaStatus?.aprovadas || 0}/{vacinaStatus?.totalDoses || vacinasResumo.totalDoses}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                          <ShieldAlert size={12} /> Pendente
                         </span>
                       )
                     ) : (

@@ -25,6 +25,20 @@ export type EstagioProcedimentosLog = Record<string, EstagioProcedimentoLogItem>
 export interface TurmaEstagioData {
   disciplinasEstagio: any[];
   alunos: EstagioAluno[];
+  vacinasResumo?: EstagioVacinasResumo;
+}
+
+export interface EstagioVacinaAlunoResumo {
+  liberado: boolean;
+  totalDoses: number;
+  aprovadas: number;
+  pendentes: unknown[];
+}
+
+export interface EstagioVacinasResumo {
+  exige: boolean;
+  totalDoses: number;
+  porAluno: Record<string, EstagioVacinaAlunoResumo>;
 }
 
 export interface EstagioEvaluationDraft {

@@ -21,10 +21,16 @@ import EstagioEvaluationPanel from './estagio/EstagioEvaluationPanel';
 import EstagioPrintSheet from './estagio/EstagioPrintSheet';
 import EstagioStudentsPanel from './estagio/EstagioStudentsPanel';
 import TechnicalDataError from './TechnicalDataError';
+import {
+  getAcademicReadOnlyContent,
+  isAcademicContextEditable,
+} from '../academic-access.utils';
 
 interface TurmaEstagioProps {
   turma: Turma;
   disciplinaIdRestrita?: string;
+  disciplinaRestrita?: any;
+  modo?: 'GESTOR' | 'PROFESSOR';
   readOnly?: boolean;
   readOnlyMessage?: string;
 }
@@ -32,10 +38,15 @@ interface TurmaEstagioProps {
 const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
   turma,
   disciplinaIdRestrita,
+  disciplinaRestrita,
+  modo = 'GESTOR',
   readOnly = false,
   readOnlyMessage,
 }) => {
   const { toasts, removeToast, toast } = useToast();
+  const effectiveModo: 'GESTOR' | 'PROFESSOR' = modo === 'PROFESSOR'
+    ? 'PROFESSOR'
+    : 'GESTOR';
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [selectedDiscId, setSelectedDiscId] = useState('');
   const [selectedAluno, setSelectedAluno] = useState<EstagioAluno | null>(null);
@@ -48,7 +59,7 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
   const [dataAvaliacao, setDataAvaliacao] = useState(getMaceioIsoDate());
   const [frequenciaEstagio, setFrequenciaEstagio] = useState(100);
 
-  const estagioQuery = useTurmaEstagioData(turma.id, turma.cursoId);
+  const estagioQuery = useTurmaEstagioData(turma.id, turma.cursoId, effectiveModo, disciplinaRestrita);
   const estagioData = estagioQuery.data;
   const disciplinasEstagio = estagioData?.disciplinasEstagio || [];
   const disciplinasDisponiveis = disciplinaIdRestrita
@@ -60,9 +71,11 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
   const vacinasQuery = useQuery({
     queryKey: ['turma-estagio-vacinas-resumo', turma.id, turma.cursoId],
     queryFn: () => turmaEstagioService.getVacinasResumo(turma.id, turma.cursoId),
-    enabled: Boolean(turma.id && turma.cursoId),
+    enabled: effectiveModo === 'GESTOR' && Boolean(turma.id && turma.cursoId),
   });
-  const vacinasResumo = vacinasQuery.data;
+  const vacinasResumo = effectiveModo === 'PROFESSOR'
+    ? estagioData?.vacinasResumo
+    : vacinasQuery.data;
   const avaliacaoQuery = useAvaliacaoEstagioCalculada(
     criteriosValores,
     Boolean(selectedAluno) && !loadingConfig,
@@ -70,35 +83,40 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
   const avaliacaoCalculada = avaliacaoQuery.data;
   const saveEvaluationMutation = useSaveEstagioEvaluationMutation(turma.id, selectedDiscId);
   const currentDisc = disciplinasDisponiveis.find((disciplina: any) => disciplina.id === selectedDiscId);
+  const invalidProfessorContext = effectiveModo === 'PROFESSOR' && (
+    !turma.id
+    || !turma.cursoId
+    || !disciplinaRestrita?.id
+    || Number(disciplinaRestrita?.cargaHorariaEstagio || 0) <= 0
+  );
   const waitingForSelection = disciplinasDisponiveis.length > 0 && !selectedDiscId;
   const loadingCriticalData = estagioQuery.isLoading
-    || vacinasQuery.isLoading
+    || (effectiveModo === 'GESTOR' && vacinasQuery.isLoading)
     || waitingForSelection
     || (Boolean(selectedDiscId) && avaliacoesQuery.isLoading);
   const criticalDataError = estagioQuery.isError
-    || vacinasQuery.isError
+    || invalidProfessorContext
+    || (effectiveModo === 'GESTOR' && vacinasQuery.isError)
     || (Boolean(selectedDiscId) && avaliacoesQuery.isError)
     || (Boolean(selectedAluno) && avaliacaoQuery.isError);
   const retryingCriticalData = estagioQuery.isFetching
-    || vacinasQuery.isFetching
+    || (effectiveModo === 'GESTOR' && vacinasQuery.isFetching)
     || avaliacoesQuery.isFetching
     || avaliacaoQuery.isFetching;
   const evaluationDataUnavailable = loadingCriticalData
     || criticalDataError
     || avaliacoesQuery.data === undefined
-    || vacinasQuery.data === undefined;
-  const readOnlyByFinalizedClass = turma.status === 'FINALIZADA';
-  const readOnlyByClosedPeriod = currentDisc?.periodoStatus === 'FECHADO';
-  const effectiveReadOnly = readOnly || readOnlyByFinalizedClass || readOnlyByClosedPeriod;
-  const effectiveReadOnlyMessage = readOnlyMessage || (readOnlyByFinalizedClass
-    ? 'Turma finalizada. As fichas de estágio estão disponíveis apenas para consulta.'
-    : readOnlyByClosedPeriod
-      ? 'Período fechado. As fichas de estágio estão disponíveis apenas para consulta.'
-      : 'O ciclo acadêmico está encerrado. As fichas estão disponíveis apenas para consulta.');
+    || vacinasResumo === undefined;
+  const academicContextEditable = isAcademicContextEditable(turma.status, currentDisc?.periodoStatus);
+  const academicReadOnlyContent = getAcademicReadOnlyContent(turma.status, currentDisc?.periodoStatus);
+  const effectiveReadOnly = readOnly || !academicContextEditable;
+  const effectiveReadOnlyMessage = readOnlyMessage || academicReadOnlyContent.message;
 
   useEffect(() => {
-    if (!selectedDiscId && disciplinasDisponiveis[0]?.id) {
-      setSelectedDiscId(disciplinasDisponiveis[0].id);
+    const firstAvailableId = disciplinasDisponiveis[0]?.id || '';
+    if (!disciplinasDisponiveis.some((disciplina: any) => disciplina.id === selectedDiscId)) {
+      setSelectedDiscId(firstAvailableId);
+      setSelectedAluno(null);
     }
   }, [disciplinasDisponiveis, selectedDiscId]);
 
@@ -121,7 +139,9 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
     if (!effectiveReadOnly && vacinasResumo?.exige && !vacinaStatus?.liberado) {
       toast.error(
         'Vacinas pendentes',
-        `${aluno.nome} ainda tem ${vacinaStatus?.pendentes?.length || vacinasResumo.totalDoses} dose(s) obrigatória(s) sem aprovação.`,
+        effectiveModo === 'PROFESSOR'
+          ? `${aluno.nome} possui pendências vacinais e ainda não está liberado para o estágio.`
+          : `${aluno.nome} ainda tem ${vacinaStatus?.pendentes?.length || vacinasResumo.totalDoses} dose(s) obrigatória(s) sem aprovação.`,
       );
       return;
     }
@@ -263,7 +283,8 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
           message="Avaliações e situação vacinal foram bloqueadas para impedir uma ficha vazia ou a liberação indevida de aluno com pendências."
           retrying={retryingCriticalData}
           onRetry={() => {
-            const queries: Promise<unknown>[] = [estagioQuery.refetch(), vacinasQuery.refetch()];
+            const queries: Promise<unknown>[] = [estagioQuery.refetch()];
+            if (effectiveModo === 'GESTOR') queries.push(vacinasQuery.refetch());
             if (selectedDiscId) queries.push(avaliacoesQuery.refetch());
             if (selectedAluno) queries.push(avaliacaoQuery.refetch());
             void Promise.all(queries);
@@ -334,6 +355,8 @@ const TurmaEstagio: React.FC<TurmaEstagioProps> = ({
           vacinasResumo={vacinasResumo}
           readOnly={effectiveReadOnly}
           readOnlyMessage={effectiveReadOnlyMessage}
+          showCpf={effectiveModo === 'GESTOR'}
+          showVaccineDetails={effectiveModo === 'GESTOR'}
           onStartEvaluation={startEvaluation}
         />
       )}

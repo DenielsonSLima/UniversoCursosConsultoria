@@ -25,14 +25,15 @@ import AtividadesExtraClasse from '../../gestor/gestao/tecnicos/detalhes/compone
 
 interface TurmasPageProps {
   professorId: string;
+  poloId: string;
 }
 
-const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
+const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
   const [selectedAssignment, setSelectedAssignment] = useState<ProfessorDisciplinaAssignment | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio' | 'atividades'>('diario');
-  const assignmentsQuery = useProfessorDisciplinas(professorId);
+  const assignmentsQuery = useProfessorDisciplinas(professorId, poloId);
   const { data: assignments = [], isLoading: loadingAssignments, isError } = assignmentsQuery;
-  useProfessorDisciplinasRealtime(professorId);
+  useProfessorDisciplinasRealtime(professorId, poloId);
 
   if (loadingAssignments) {
     return (
@@ -98,9 +99,9 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                         <span className="text-[10px] text-slate-400 font-bold font-mono">
                           {assignment.cargaHoraria || 0}h total
                         </span>
-                        {assignment.disciplinaForDiario?.periodoStatus === 'FECHADO' && (
+                        {!assignment.canEdit && (
                           <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-700">
-                            Período fechado
+                            {assignment.accessLabel}
                           </span>
                         )}
                       </div>
@@ -154,7 +155,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                       <div className="flex gap-2 rounded-2xl bg-teal-50 border border-teal-100 p-3 text-[11px] text-teal-800">
                         <Activity size={15} className="shrink-0 mt-0.5" />
                         <span>
-                          Disciplina de estágio detectada. O diário registra presença e notas; a ficha de estágio completa continua como frente própria no gestor.
+                          Esta disciplina possui {assignment.cargaHorariaEstagio}h de estágio. A ficha supervisionada está disponível neste acesso.
                         </span>
                       </div>
                     )}
@@ -166,12 +167,12 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
                       setActiveDetailTab('diario');
                     }}
                     className={`mt-6 w-full flex items-center justify-center gap-2 py-3 font-bold text-xs uppercase tracking-widest rounded-xl transition-all ${
-                      assignment.disciplinaForDiario?.periodoStatus === 'FECHADO'
+                      !assignment.canEdit
                         ? 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                         : 'bg-slate-50 group-hover:bg-purple-600 text-slate-600 group-hover:text-white'
                     }`}
                   >
-                    <span>{assignment.disciplinaForDiario?.periodoStatus === 'FECHADO' ? 'Consultar diário fechado' : 'Abrir diário da disciplina'}</span>
+                    <span>{assignment.canEdit ? 'Abrir diário da disciplina' : 'Consultar diário'}</span>
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -284,20 +285,17 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
               disciplinaIdRestrita={selectedAssignment.disciplinaId}
               professorId={professorId}
               modo="PROFESSOR"
-              readOnly={selectedAssignment.disciplinaForDiario?.periodoStatus === 'FECHADO'}
-              readOnlyMessage="Período fechado. As atividades ficam disponíveis apenas para consulta."
+              readOnly={!selectedAssignment.canEdit}
+              readOnlyMessage={selectedAssignment.accessMessage}
             />
           ) : selectedAssignment.isEstagio && activeDetailTab === 'estagio' ? (
             <TurmaEstagio
               turma={selectedAssignment.turmaForDiario}
+              modo="PROFESSOR"
               disciplinaIdRestrita={selectedAssignment.disciplinaId}
-              readOnly={
-                selectedAssignment.turmaForDiario.status === 'FINALIZADA'
-                || selectedAssignment.disciplinaForDiario?.periodoStatus === 'FECHADO'
-              }
-              readOnlyMessage={selectedAssignment.turmaForDiario.status === 'FINALIZADA'
-                ? 'Turma finalizada. A ficha de estágio está disponível apenas para consulta.'
-                : 'Período fechado. A ficha de estágio está disponível apenas para consulta.'}
+              disciplinaRestrita={selectedAssignment.disciplinaForDiario}
+              readOnly={!selectedAssignment.canEdit}
+              readOnlyMessage={selectedAssignment.accessMessage}
             />
           ) : (
             <DiarioClasse
@@ -305,6 +303,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId }) => {
               moduloNome={selectedAssignment.raw?.modulo_nome || selectedAssignment.raw?.modulo || 'Modulo da disciplina'}
               turma={selectedAssignment.turmaForDiario}
               onBack={() => setSelectedAssignment(null)}
+              accessMode="PROFESSOR"
             />
           )}
         </div>

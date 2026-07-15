@@ -1,8 +1,8 @@
 {
-  "version": "0.2.0-beta.1",
+  "version": "0.2.1-beta.2",
   "display": "BETA",
   "stage": "beta",
-  "revision": 1,
+  "revision": 2,
   "releasedAt": "2026-07-14",
-  "summary": "Ciclo seguro de turmas técnicas e portal acadêmico do aluno"
+  "summary": "Acesso seguro do professor e acompanhamento de estágio do aluno"
 }

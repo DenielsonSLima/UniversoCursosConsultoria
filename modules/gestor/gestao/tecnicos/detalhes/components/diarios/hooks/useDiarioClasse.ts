@@ -27,9 +27,14 @@ export const useDiarioTemplate = (cursoId: string) => useQuery({
   enabled: Boolean(cursoId),
 });
 
-export const useDiarioStudents = (turmaId: string) => useQuery({
-  queryKey: diarioClasseKeys.students(turmaId),
-  queryFn: () => diarioClasseService.getStudents(turmaId),
+export const useDiarioStudents = (
+  turmaId: string,
+  disciplinaId: string,
+  accessMode: 'GESTOR' | 'PROFESSOR',
+) => useQuery({
+  queryKey: diarioClasseKeys.students(turmaId, disciplinaId, accessMode),
+  queryFn: () => diarioClasseService.getStudents(turmaId, disciplinaId, accessMode),
+  enabled: Boolean(turmaId && disciplinaId),
 });
 
 export const useDiarioAulas = (turmaId: string, disciplinaId: string) => useQuery({

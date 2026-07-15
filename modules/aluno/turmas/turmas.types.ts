@@ -37,12 +37,22 @@ export interface MatriculaAluno {
 export interface TurmaDisciplinaAluno {
   id: string;
   disciplina_id?: string | null;
+  periodo_letivo_id?: string | null;
   professor_nome?: string | null;
   concluida?: boolean | null;
   disciplinas?: {
     id?: string | null;
     nome?: string | null;
     carga_horaria?: number | string | null;
+    carga_horaria_estagio?: number | string | null;
+  } | null;
+  periodo_letivo?: {
+    id?: string | null;
+    nome?: string | null;
+    ordem?: number | null;
+    status?: 'PLANEJADO' | 'ABERTO' | 'EM_FECHAMENTO' | 'FECHADO' | string | null;
+    data_inicio?: string | null;
+    data_fim?: string | null;
   } | null;
 }
 
@@ -81,6 +91,9 @@ export interface ResultadoDiarioAluno {
 
 export interface EstagioAluno {
   id?: string | null;
+  turma_id?: string | null;
+  disciplina_id?: string | null;
+  aluno_id?: string | null;
   created_at?: string | null;
   data_avaliacao?: string | null;
   instrutor_nome?: string | null;
@@ -89,7 +102,6 @@ export interface EstagioAluno {
   nota_comportamento?: number | string | null;
   nota_registros?: number | string | null;
   nota_tecnicas?: number | string | null;
-  disciplinas?: { nome?: string | null } | null;
 }
 
 export interface CertificadoAluno {

@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import {
+  getAcademicReadOnlyContent,
+  isAcademicContextEditable,
+} from '../../gestor/gestao/tecnicos/detalhes/academic-access.utils';
 
 export interface ProfessorDisciplinaAssignment {
   id: string;
@@ -15,6 +19,7 @@ export interface ProfessorDisciplinaAssignment {
   status: string;
   disciplinaNome: string;
   cargaHoraria: number;
+  cargaHorariaEstagio: number;
   totalAulas: number;
   totalAtividades: number;
   horasLancadas: number;
@@ -22,6 +27,9 @@ export interface ProfessorDisciplinaAssignment {
   proximaAulaLabel: string;
   proximaAulaTitulo: string;
   isEstagio: boolean;
+  canEdit: boolean;
+  accessLabel: string;
+  accessMessage: string;
   raw: any;
   turmaForDiario: any;
   disciplinaForDiario: any;
@@ -29,7 +37,8 @@ export interface ProfessorDisciplinaAssignment {
 
 export const professorDisciplinasKeys = {
   all: ['professor-disciplinas'] as const,
-  list: (professorId: string) => [...professorDisciplinasKeys.all, professorId, 'list'] as const,
+  list: (professorId: string, poloId: string) =>
+    [...professorDisciplinasKeys.all, professorId, poloId, 'list'] as const,
 };
 
 const toArrayItem = (value: any) => Array.isArray(value) ? value[0] : value;
@@ -40,12 +49,6 @@ const formatDate = (value?: string | null) => {
   if (Number.isNaN(date.getTime())) return 'A definir';
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
-
-const normalizeText = (value?: string | null) =>
-  String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
 
 const toNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
@@ -63,15 +66,17 @@ const getMaceioIsoDate = () => {
   return `${values.year}-${values.month}-${values.day}`;
 };
 
-export const useProfessorDisciplinas = (professorId: string) => useQuery<ProfessorDisciplinaAssignment[]>({
-  queryKey: professorDisciplinasKeys.list(professorId),
-  enabled: Boolean(professorId),
+export const useProfessorDisciplinas = (professorId: string, poloId: string) => useQuery<ProfessorDisciplinaAssignment[]>({
+  queryKey: professorDisciplinasKeys.list(professorId, poloId),
+  enabled: Boolean(professorId && poloId),
   staleTime: 15_000,
   queryFn: async () => {
     const { data, error } = await supabase
       .from('turmas_disciplinas')
-      .select('*, turmas(*, cursos(*)), disciplinas(*)')
-      .eq('professor_id', professorId);
+      .select('*, turmas!inner(*, cursos!inner(*)), disciplinas(*)')
+      .eq('professor_id', professorId)
+      .eq('turmas.polo_id', poloId)
+      .eq('turmas.cursos.modalidade', 'TECNICO');
 
     if (error) throw error;
 
@@ -135,6 +140,12 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
       );
       const proximaAula = aulasDaDisciplina.find((aula) => !aula.data_aula || aula.data_aula >= today);
       const cargaHoraria = toNumber(row.carga_horaria ?? disciplina.carga_horaria, 0);
+      const cargaHorariaEstagio = toNumber(
+        row.carga_horaria_estagio
+          ?? disciplina.carga_horaria_estagio
+          ?? disciplina.cargaHorariaEstagio,
+        0,
+      );
       const horasAulas = aulasDaDisciplina.reduce(
         (total, aula) => total + toNumber(aula.carga_horaria, 0),
         0,
@@ -154,7 +165,13 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
       const cursoNome = curso.nome || 'Curso nao informado';
       const turmaCodigo = turma.codigo || 'Sem codigo';
       const modalidade = String(curso.modalidade || turma.modalidade || 'TECNICO').toUpperCase();
-      const isEstagio = normalizeText(disciplinaNome).includes('estagio');
+      const isEstagio = cargaHorariaEstagio > 0;
+      const turmaStatus = turma.status || 'STATUS_INDEFINIDO';
+      const periodoStatus = periodoStatusMap.get(row.periodo_letivo_id)
+        || row.periodo_status
+        || 'STATUS_INDEFINIDO';
+      const canEdit = isAcademicContextEditable(turmaStatus, periodoStatus);
+      const accessContent = getAcademicReadOnlyContent(turmaStatus, periodoStatus);
 
       const turmaForDiario = {
         id: row.turma_id,
@@ -168,7 +185,7 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         dataInicio: turma.data_inicio || '',
         dataPrevisaoTermino: turma.data_previsao_termino || '',
         turno: turma.turno || 'EAD',
-        status: turma.status || 'EM_ANDAMENTO',
+        status: turmaStatus,
         alunosMatriculados: toNumber(turma.alunos_matriculados, 0),
         vagasTotais: toNumber(turma.vagas_totais, 0),
         valorMatricula: toNumber(turma.valor_matricula, 0),
@@ -187,10 +204,9 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         horasRealizadas: horasLancadas,
         cargaHoraria,
         progressoPercent,
-        periodoStatus: periodoStatusMap.get(row.periodo_letivo_id)
-          || row.periodo_status
-          || (modalidade === 'TECNICO' ? 'FECHADO' : 'ABERTO'),
+        periodoStatus,
         concluida: Boolean(row.concluida),
+        cargaHorariaEstagio,
       };
 
       return {
@@ -203,9 +219,10 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         cursoId: curso.id || turma.curso_id || '',
         modalidade,
         turno: turma.turno || 'Geral',
-        status: turma.status || 'EM_ANDAMENTO',
+        status: turmaStatus,
         disciplinaNome,
         cargaHoraria,
+        cargaHorariaEstagio,
         totalAulas: aulasDaDisciplina.length,
         totalAtividades: atividadesDaDisciplina.length,
         horasLancadas,
@@ -213,6 +230,9 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
         proximaAulaLabel: formatDate(proximaAula?.data_aula),
         proximaAulaTitulo: proximaAula?.titulo || 'Proxima aula a definir pela secretaria',
         isEstagio,
+        canEdit,
+        accessLabel: canEdit ? 'Lançamentos liberados' : accessContent.label,
+        accessMessage: canEdit ? '' : accessContent.message,
         raw: row,
         turmaForDiario,
         disciplinaForDiario,
@@ -221,14 +241,14 @@ export const useProfessorDisciplinas = (professorId: string) => useQuery<Profess
   },
 });
 
-export const useProfessorDisciplinasRealtime = (professorId: string) => {
+export const useProfessorDisciplinasRealtime = (professorId: string, poloId: string) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!professorId) return undefined;
+    if (!professorId || !poloId) return undefined;
 
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: professorDisciplinasKeys.list(professorId) });
+      queryClient.invalidateQueries({ queryKey: professorDisciplinasKeys.list(professorId, poloId) });
     };
 
     const channel = supabase
@@ -268,5 +288,5 @@ export const useProfessorDisciplinasRealtime = (professorId: string) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [professorId, queryClient]);
+  }, [poloId, professorId, queryClient]);
 };
