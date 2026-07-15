@@ -52,9 +52,12 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
       { id: 'diario', label: 'Diário', icon: <ScrollText size={14} /> },
       { id: 'atividades', label: 'Atividades', icon: <ClipboardCheck size={14} /> },
       { id: 'notas', label: 'Notas', icon: <NotebookText size={14} /> },
-      { id: 'estagio', label: 'Estágio', icon: <Shield size={14} /> },
+      ...(data.hasInternship
+        ? [{ id: 'estagio' as const, label: 'Estágio', icon: <Shield size={14} /> }]
+        : []),
       { id: 'certificado', label: 'Certificado', icon: <Award size={14} /> },
     ];
+  const activeTab = detailTab === 'estagio' && !data.hasInternship ? 'resumo' : detailTab;
 
   return (
     <div className="space-y-6 rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm md:p-8">
@@ -74,15 +77,15 @@ const TurmaDetail: React.FC<TurmaDetailProps> = ({ alunoId, matricula, detailTab
           <div className="flex items-start gap-4"><div className="rounded-2xl bg-white p-3 text-amber-600"><Clock3 size={22} /></div><div><p className="text-xs font-black uppercase tracking-widest">Matrícula confirmada — aguardando início</p><p className="mt-2 max-w-2xl text-sm font-semibold leading-relaxed text-amber-800">Sua vaga está registrada. Diário, notas, atividades e estágio serão liberados quando a turma entrar em andamento. Até lá, nenhuma consulta acadêmica protegida é realizada.</p>{matricula.turmas?.status ? <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-amber-600">Fase atual: {matricula.turmas.status.replaceAll('_', ' ')}</p> : null}</div></div>
         </div>
       ) : <>
-        <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">{tabs.map((tab) => <button key={tab.id} type="button" onClick={() => onDetailTabChange(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${detailTab === tab.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>{tab.icon}{tab.label}</button>)}</div>
+        <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">{tabs.map((tab) => <button key={tab.id} type="button" onClick={() => onDetailTabChange(tab.id)} className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>{tab.icon}{tab.label}</button>)}</div>
 
-      {detailTab === 'certificado' ? <CertificateTab certificate={certificate} state={data.certificatesState} eadProgress={data.selectedEadProgress} /> : null}
-      {detailTab === 'resumo' && data.selectedIsEad ? <EadSummaryTab matricula={matricula} progress={data.selectedEadProgress} onOpenCourse={onOpenEad} /> : null}
-      {detailTab === 'resumo' && !data.selectedIsEad ? <AcademicSummaryTab disciplines={data.disciplines} summaries={data.disciplineSummaries} isTechnical={data.selectedIsTechnical} state={data.disciplinesState} /> : null}
-      {detailTab === 'atividades' && data.selectedTurmaId ? <AlunoAtividadesExtraClasseTab alunoId={alunoId} turmaId={data.selectedTurmaId} /> : null}
-      {detailTab === 'diario' ? <AttendanceTab disciplines={data.disciplineSummaries} classes={data.classes} attendance={data.attendance} disciplinesState={data.disciplinesState} classesState={data.classesState} attendanceState={data.attendanceState} /> : null}
-      {detailTab === 'notas' ? <GradesTab disciplines={data.disciplineSummaries} disciplinesState={data.disciplinesState} resultsState={data.resultsState} sharedQueryState={data.selectedIsTechnical} /> : null}
-      {detailTab === 'estagio' ? <InternshipTab internships={data.internships} state={data.internshipsState} /> : null}
+      {activeTab === 'certificado' ? <CertificateTab certificate={certificate} state={data.certificatesState} eadProgress={data.selectedEadProgress} /> : null}
+      {activeTab === 'resumo' && data.selectedIsEad ? <EadSummaryTab matricula={matricula} progress={data.selectedEadProgress} onOpenCourse={onOpenEad} /> : null}
+      {activeTab === 'resumo' && !data.selectedIsEad ? <AcademicSummaryTab disciplines={data.disciplines} summaries={data.disciplineSummaries} isTechnical={data.selectedIsTechnical} state={data.disciplinesState} /> : null}
+      {activeTab === 'atividades' && data.selectedTurmaId ? <AlunoAtividadesExtraClasseTab alunoId={alunoId} turmaId={data.selectedTurmaId} /> : null}
+      {activeTab === 'diario' ? <AttendanceTab disciplines={data.disciplineSummaries} classes={data.classes} attendance={data.attendance} disciplinesState={data.disciplinesState} classesState={data.classesState} attendanceState={data.attendanceState} /> : null}
+      {activeTab === 'notas' ? <GradesTab disciplines={data.disciplineSummaries} disciplinesState={data.disciplinesState} resultsState={data.resultsState} sharedQueryState={data.selectedIsTechnical} /> : null}
+      {activeTab === 'estagio' ? <InternshipTab disciplines={data.internshipDisciplines} internships={data.internships} state={data.internshipsState} /> : null}
       </>}
     </div>
   );

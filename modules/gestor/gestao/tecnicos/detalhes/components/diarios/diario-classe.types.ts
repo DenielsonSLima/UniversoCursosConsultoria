@@ -37,6 +37,7 @@ export interface DiarioClasseProps {
   moduloNome: string;
   turma: any;
   onBack: () => void;
+  accessMode?: 'GESTOR' | 'PROFESSOR';
 }
 
 export interface DiarioPrintDocumentProps {

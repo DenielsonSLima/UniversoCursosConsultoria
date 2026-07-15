@@ -8,6 +8,7 @@ import {
   EstagioCriteriosValores,
   EstagioEvaluationDraft,
   EstagioProcedimentosLog,
+  EstagioVacinasResumo,
   SaveEstagioEvaluationInput,
   TurmaEstagioData,
 } from './turma-estagio.types';
@@ -70,6 +71,47 @@ const buildInitialCriterios = (instrumentos: any[]): EstagioCriteriosValores => 
 };
 
 export const turmaEstagioService = {
+  async getProfessorEstagioData(
+    turmaId: string,
+    disciplina: any,
+  ): Promise<TurmaEstagioData> {
+    if (!turmaId || !disciplina?.id || Number(disciplina?.cargaHorariaEstagio || 0) <= 0) {
+      throw new Error('Não foi possível confirmar uma disciplina de estágio vinculada ao professor.');
+    }
+
+    const { data, error } = await supabase.rpc('get_estagio_alunos_contexto', {
+      p_turma_id: turmaId,
+      p_disciplina_id: disciplina.id,
+    });
+    if (error) throw error;
+
+    const rows = data || [];
+    const exige = rows.some((row: any) => Boolean(row.vacinas_exigidas));
+    const porAluno: EstagioVacinasResumo['porAluno'] = {};
+
+    rows.forEach((row: any) => {
+      const liberado = !row.vacinas_exigidas || Boolean(row.vacinas_liberadas);
+      porAluno[row.aluno_id] = {
+        liberado,
+        totalDoses: 0,
+        aprovadas: 0,
+        pendentes: liberado ? [] : [true],
+      };
+    });
+
+    return {
+      disciplinasEstagio: [disciplina],
+      alunos: rows.map((row: any) => ({
+        matriculaId: row.matricula_id,
+        id: row.aluno_id,
+        nome: row.nome || 'Estudante não identificado',
+        cpf: '',
+        statusMatricula: row.status_matricula,
+      })),
+      vacinasResumo: { exige, totalDoses: 0, porAluno },
+    };
+  },
+
   async getEstagioData(turmaId: string, cursoId: string): Promise<TurmaEstagioData> {
     const [
       modulos,
@@ -186,7 +228,10 @@ export const turmaEstagioService = {
 
     const { data, error } = await supabase
       .from('matriculas_estagios')
-      .select('*')
+      .select(`
+        aluno_id, nota_final, frequencia_estagio, criterios_detalhes,
+        checklist_procedimentos, perfil_aluno, instrutor_nome, data_avaliacao
+      `)
       .eq('turma_id', turmaId)
       .eq('disciplina_id', disciplinaId);
 

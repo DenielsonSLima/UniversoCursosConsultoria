@@ -45,10 +45,18 @@ export const diarioClasseService = {
     return diariosService.getTemplate(cursoId);
   },
 
-  async getStudents(turmaId: string): Promise<DiarioStudent[]> {
-    const { data, error } = await supabase.rpc('get_turma_alunos_academico', {
-      p_turma_id: turmaId,
-    });
+  async getStudents(
+    turmaId: string,
+    disciplinaId: string,
+    accessMode: 'GESTOR' | 'PROFESSOR',
+  ): Promise<DiarioStudent[]> {
+    const rpcName = accessMode === 'PROFESSOR'
+      ? 'get_diario_alunos'
+      : 'get_turma_alunos_academico';
+    const params = accessMode === 'PROFESSOR'
+      ? { p_turma_id: turmaId, p_disciplina_id: disciplinaId }
+      : { p_turma_id: turmaId };
+    const { data, error } = await supabase.rpc(rpcName, params);
 
     if (error) throw error;
 

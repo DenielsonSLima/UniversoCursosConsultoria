@@ -6,9 +6,17 @@ import {
   SaveEstagioEvaluationInput,
 } from '../turma-estagio.types';
 
-export const useTurmaEstagioData = (turmaId: string, cursoId: string) => useQuery({
-  queryKey: academicLifecycleKeys.estagio(turmaId),
-  queryFn: () => turmaEstagioService.getEstagioData(turmaId, cursoId),
+export const useTurmaEstagioData = (
+  turmaId: string,
+  cursoId: string,
+  modo: 'GESTOR' | 'PROFESSOR',
+  disciplinaRestrita?: any,
+) => useQuery({
+  queryKey: academicLifecycleKeys.estagio(turmaId, modo, disciplinaRestrita?.id || ''),
+  queryFn: () => modo === 'PROFESSOR'
+    ? turmaEstagioService.getProfessorEstagioData(turmaId, disciplinaRestrita)
+    : turmaEstagioService.getEstagioData(turmaId, cursoId),
+  enabled: Boolean(turmaId && cursoId && (modo === 'GESTOR' || disciplinaRestrita?.id)),
   staleTime: 15_000,
 });
 
@@ -41,7 +49,7 @@ export const useSaveEstagioEvaluationMutation = (
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.estagioAvaliacoes(turmaId, disciplinaId) }),
-        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.estagio(turmaId) }),
+        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
       ]);
       await onSuccess?.();
     },

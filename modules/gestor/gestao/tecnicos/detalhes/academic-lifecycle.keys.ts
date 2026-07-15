@@ -9,8 +9,13 @@ export const academicLifecycleKeys = {
   transferencias: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'transferencias'] as const,
   grade: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'grade'] as const,
   diarios: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'diarios'] as const,
-  estagio: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'estagio'] as const,
-  estagioAvaliacoes: (turmaId: string, disciplinaId: string) => [...academicLifecycleKeys.estagio(turmaId), 'avaliacoes', disciplinaId] as const,
+  estagio: (
+    turmaId: string,
+    modo: 'GESTOR' | 'PROFESSOR' = 'GESTOR',
+    disciplinaId = '',
+  ) => [...academicLifecycleKeys.turma(turmaId), 'estagio', modo, disciplinaId] as const,
+  estagioAvaliacoes: (turmaId: string, disciplinaId: string) =>
+    [...academicLifecycleKeys.turma(turmaId), 'estagio-avaliacoes', disciplinaId] as const,
   avaliacaoEstagio: (criterios: unknown) => [...academicLifecycleKeys.all, 'avaliacao-estagio', criterios] as const,
   turmasDestino: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'turmas-destino'] as const,
   financeiroMatriculaConfig: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'financeiro-matricula-config'] as const,

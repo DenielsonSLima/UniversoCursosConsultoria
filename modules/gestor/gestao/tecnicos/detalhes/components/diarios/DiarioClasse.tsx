@@ -36,19 +36,28 @@ import {
   buildPraticasMap,
   getStudentStats,
 } from './diario-classe.utils';
+import {
+  getAcademicReadOnlyContent,
+  isAcademicContextEditable,
+} from '../../academic-access.utils';
 
-const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, turma, onBack }) => {
+const DiarioClasse: React.FC<DiarioClasseProps> = ({
+  disciplina,
+  moduloNome,
+  turma,
+  onBack,
+  accessMode = 'GESTOR',
+}) => {
   const { toasts, removeToast, toast } = useToast();
+  const effectiveAccessMode: 'GESTOR' | 'PROFESSOR' = accessMode === 'PROFESSOR'
+    ? 'PROFESSOR'
+    : 'GESTOR';
   const [activeTab, setActiveTab] = useState<DiarioActiveTab>('frequencia');
   const printDocumentRef = useRef<HTMLDivElement>(null);
-  const isReadOnly =
-    String(disciplina?.periodoStatus || '').toUpperCase() === 'FECHADO' ||
-    String(turma?.status || '').toUpperCase() === 'FINALIZADA';
-  const isTurmaFinalizada = String(turma?.status || '').toUpperCase() === 'FINALIZADA';
-  const readOnlyLabel = isTurmaFinalizada ? 'Turma encerrada' : 'Período fechado';
-  const readOnlyMessage = isTurmaFinalizada
-    ? 'Esta turma foi encerrada pela gestão. O professor pode consultar o diário, mas não pode alterar frequência, notas, conteúdo ou aulas.'
-    : 'Este período foi fechado. Notas, frequência, conteúdo e observações ficam bloqueados até a coordenação reabrir o período com justificativa.';
+  const isReadOnly = !isAcademicContextEditable(turma?.status, disciplina?.periodoStatus);
+  const readOnlyContent = getAcademicReadOnlyContent(turma?.status, disciplina?.periodoStatus);
+  const readOnlyLabel = readOnlyContent.label;
+  const readOnlyMessage = readOnlyContent.message;
 
   const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
   const { data: watermark } = useQuery({
@@ -60,7 +69,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({ disciplina, moduloNome, tur
     queryKey: ['central-signatures'],
     queryFn: () => assinaturasService.getSignatures(),
   });
-  const studentsQuery = useDiarioStudents(turma.id);
+  const studentsQuery = useDiarioStudents(turma.id, disciplina.id, effectiveAccessMode);
   const aulasQuery = useDiarioAulas(turma.id, disciplina.id);
   const attendanceQuery = useDiarioAttendance(turma.id, disciplina.id);
   const gradesQuery = useDiarioGrades(turma.id, disciplina.id);
