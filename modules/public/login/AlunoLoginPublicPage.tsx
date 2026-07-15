@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { alunoPublicAuthService } from './aluno-public-auth.service';
+import {
+  alunoPublicAuthService,
+  getSafePublicAlunoRedirectPath,
+} from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
@@ -58,13 +61,7 @@ const AlunoLoginPublicPage: React.FC = () => {
 
   const redirectPath = useMemo(() => {
     const redirect = searchParams.get('redirect');
-    if (!redirect) return '/aluno';
-    try {
-      const decoded = decodeURIComponent(redirect);
-      return decoded.startsWith('/') ? decoded : '/aluno';
-    } catch {
-      return '/aluno';
-    }
+    return getSafePublicAlunoRedirectPath(redirect);
   }, [searchParams]);
   const hasExplicitRedirect = searchParams.has('redirect');
 
@@ -223,6 +220,7 @@ const AlunoLoginPublicPage: React.FC = () => {
         dataNascimento,
         password,
         acceptedTerms,
+        redirectPath: hasExplicitRedirect ? redirectPath : undefined,
       });
 
       if (result.emailConfirmationRequired) {

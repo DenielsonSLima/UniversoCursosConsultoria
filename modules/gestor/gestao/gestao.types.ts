@@ -25,6 +25,9 @@ export interface Turma {
   dataFimInscricao?: string;
   permitirInscricoesOnline?: boolean;
   exigeMatricula?: boolean;
+  aceitaConcomitante?: boolean;
+  aceitaSubsequente?: boolean;
+  serieMinimaEnsinoMedio?: number;
   bloquearMatriculasAposCompletarVagas?: boolean;
   qtdVagasMinima?: number;
   frequenciaMinimaPercent?: number;

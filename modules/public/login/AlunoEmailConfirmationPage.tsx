@@ -2,7 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Home, Loader2, MailCheck, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { alunoPublicAuthService } from './aluno-public-auth.service';
+import {
+  alunoPublicAuthService,
+  getSafePublicAlunoRedirectPath,
+} from './aluno-public-auth.service';
 import { formatCpf } from '../../shared/utils/identityValidation';
 
 interface ConfirmedAlunoData {
@@ -62,14 +65,7 @@ const AlunoEmailConfirmationPage: React.FC = () => {
 
   const nextPath = useMemo(() => {
     const redirect = searchParams.get('redirect');
-    if (!redirect) return '/login';
-
-    try {
-      const decoded = decodeURIComponent(redirect);
-      return decoded.startsWith('/') ? decoded : '/login';
-    } catch {
-      return '/login';
-    }
+    return getSafePublicAlunoRedirectPath(redirect, '/login');
   }, [searchParams]);
 
   useEffect(() => {

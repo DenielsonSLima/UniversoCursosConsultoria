@@ -33,6 +33,8 @@ import GestorPage from './modules/gestor/gestor.page';
 import ProfessorPage from './modules/professor/professor.page';
 import AlunoPage from './modules/aluno/aluno.page';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
+import TechnicalLandingRoute from './modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute';
+import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 const App: React.FC = () => {
   return (
@@ -50,6 +52,7 @@ const App: React.FC = () => {
         <Route path="/ensino-superior" element={<EnsinoSuperiorPublicPage />} />
         <Route path="/cursos-tecnicos" element={<CursosTecnicosPublicPage />} />
         <Route path="/cursos-tecnicos/detalhes/:id" element={<CursoTecnicoDetailPage />} />
+        <Route path={TECHNICAL_LANDING_ROUTE_PATTERN} element={<TechnicalLandingRoute />} />
         <Route path="/cursos-livres" element={<CursosLivresPublicPage />} />
         <Route path="/cursos-livres/detalhes/:id" element={<CursoLivreDetailPage />} />
         <Route path="/especializacao" element={<EspecializacaoPublicPage />} />

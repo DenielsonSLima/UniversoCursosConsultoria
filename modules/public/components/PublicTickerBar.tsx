@@ -1,6 +1,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Megaphone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { SITE_PUBLIC_TICKER_CONFIG_ID, siteTickerService } from '../siteTicker.service';
 import { siteTickerKeys } from '../siteTicker.keys';
@@ -78,8 +79,17 @@ const PublicTickerBarContent: React.FC = () => {
             style={{ '--ticker-speed': speed } as React.CSSProperties}
           >
             {loopItems.map((item, index) => (
-              <span key={`${item}-${index}`} className="flex items-center gap-8">
-                <span>{item}</span>
+              <span key={`${item.text}-${index}`} className="flex items-center gap-8">
+                {item.href ? (
+                  <Link
+                    to={item.href}
+                    className="rounded-full px-1 py-1 underline-offset-4 transition hover:text-emerald-300 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  >
+                    {item.text}
+                  </Link>
+                ) : (
+                  <span>{item.text}</span>
+                )}
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               </span>
             ))}

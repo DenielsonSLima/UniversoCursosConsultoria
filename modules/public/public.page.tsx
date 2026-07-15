@@ -12,6 +12,7 @@ import Footer from './components/Footer';
 import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../login/portal-session';
 import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import OpenTechnicalEnrollmentsSection from './landing-pages/cursos-tecnicos/components/OpenTechnicalEnrollmentsSection';
 
 const resolvePortalRoute = (profile: PortalAuthProfile) => {
   if (profile.tipo === 'Aluno') return '/aluno';
@@ -137,6 +138,8 @@ const PublicPage: React.FC = () => {
         <section id="inicio">
           <HeroSlider />
         </section>
+
+        <OpenTechnicalEnrollmentsSection />
 
         {/* Cursos Ofertados */}
         <section id="cursos" className="scroll-mt-24">

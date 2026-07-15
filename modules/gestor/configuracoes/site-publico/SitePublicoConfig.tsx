@@ -10,6 +10,11 @@ import {
   SiteTickerPhraseCategory,
 } from '../../../public/siteTicker.service';
 import { invalidateSiteTickerQueries, siteTickerKeys } from '../../../public/siteTicker.keys';
+import {
+  PUBLIC_ENROLLMENT_TURMA_STATUSES,
+  isEligiblePublicTurmaStatus,
+  isWithinPublicEnrollmentWindow,
+} from '../../../public/courseAvailability';
 import { sitePublicoConfigService } from './site-publico.service';
 
 type SiteTickerCursoOption = {
@@ -28,6 +33,9 @@ type SiteTickerTurmaOption = {
   id: string;
   nome: string;
   curso_id: string;
+  status: string;
+  data_inicio_inscricao?: string | null;
+  data_fim_inscricao?: string | null;
   cursos?: SiteTickerCursoOption | SiteTickerCursoOption[] | null;
   polos?: SiteTickerPoloOption | SiteTickerPoloOption[] | null;
 };
@@ -87,8 +95,8 @@ const SitePublicoConfig: React.FC = () => {
     queryFn: async () => {
       let query = supabase
         .from('turmas')
-        .select('id, nome, curso_id, cursos!inner(nome, modalidade), polos(nome, cidade, estado)')
-        .eq('status', 'EM_ANDAMENTO')
+        .select('id, nome, curso_id, status, data_inicio_inscricao, data_fim_inscricao, cursos!inner(nome, modalidade), polos(nome, cidade, estado)')
+        .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
         .eq('permitir_inscricoes_online', true)
         .in('cursos.modalidade', config.modalidades.filter((item) => item !== 'EAD'))
         .order('nome', { ascending: true });
@@ -97,7 +105,11 @@ const SitePublicoConfig: React.FC = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as SiteTickerTurmaOption[];
+      return (data || []).filter((turma: any) => {
+        const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade)
+          && isWithinPublicEnrollmentWindow(turma);
+      }) as SiteTickerTurmaOption[];
     },
     enabled: config.modalidades.some((item) => item !== 'EAD'),
     refetchOnMount: 'always',

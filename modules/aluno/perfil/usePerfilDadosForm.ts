@@ -1,7 +1,7 @@
 import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
 import { getTechnicalEnrollmentMissingFields } from '../../shared/utils/technicalEnrollmentRequirements';
-import { PerfilData, PerfilUpdatePayload } from './perfil.types';
+import { PerfilData, PerfilSituacaoEnsinoMedio, PerfilUpdatePayload } from './perfil.types';
 
 export type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
 
@@ -46,6 +46,10 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
   const [escolaridadeAnterior, setEscolaridadeAnterior] = useState('');
   const [instituicaoOrigem, setInstituicaoOrigem] = useState('');
   const [anoConclusaoEnsinoMedio, setAnoConclusaoEnsinoMedio] = useState('');
+  const [situacaoEnsinoMedio, setSituacaoEnsinoMedio] = useState<PerfilSituacaoEnsinoMedio>('');
+  const [serieEnsinoMedioAtual, setSerieEnsinoMedioAtual] = useState('');
+  const [escolaEnsinoMedio, setEscolaEnsinoMedio] = useState('');
+  const [anoPrevistoConclusaoEnsinoMedio, setAnoPrevistoConclusaoEnsinoMedio] = useState('');
   const [responsavelNome, setResponsavelNome] = useState('');
   const [responsavelCpf, setResponsavelCpf] = useState('');
   const [responsavelParentesco, setResponsavelParentesco] = useState('');
@@ -78,6 +82,27 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     setEscolaridadeAnterior(profile?.escolaridadeAnterior || '');
     setInstituicaoOrigem(profile?.instituicaoOrigem || '');
     setAnoConclusaoEnsinoMedio(profile?.anoConclusaoEnsinoMedio || '');
+    const legacySchoolSituation = profile?.escolaridadeAnterior === 'CURSANDO ENSINO MÉDIO'
+      ? 'CURSANDO'
+      : profile?.escolaridadeAnterior === 'ENSINO MÉDIO COMPLETO'
+        ? 'CONCLUIDO'
+        : '';
+    setSituacaoEnsinoMedio(
+      (profile?.situacaoEnsinoMedio || profile?.situacao_ensino_medio || legacySchoolSituation) as PerfilSituacaoEnsinoMedio,
+    );
+    setSerieEnsinoMedioAtual(String(profile?.serieEnsinoMedioAtual ?? profile?.serie_ensino_medio_atual ?? ''));
+    setEscolaEnsinoMedio(
+      profile?.escolaEnsinoMedio
+      || profile?.escola_ensino_medio
+      || profile?.instituicaoOrigem
+      || '',
+    );
+    setAnoPrevistoConclusaoEnsinoMedio(String(
+      profile?.anoPrevistoConclusaoEnsinoMedio
+      ?? profile?.anoPrevisaoConclusaoEnsinoMedio
+      ?? profile?.ano_previsto_conclusao_ensino_medio
+      ?? '',
+    ));
     setResponsavelNome(profile?.responsavelNome || '');
     setResponsavelCpf(profile?.responsavelCpf || '');
     setResponsavelParentesco(profile?.responsavelParentesco || '');
@@ -132,8 +157,6 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     { label: 'Data emissão', value: rgDataEmissao, setter: setRgDataEmissao, placeholder: 'DD/MM/AAAA' },
     { label: 'Nome da mãe', value: nomeMae, setter: setNomeMae, placeholder: 'Nome completo' },
     { label: 'Nome do pai', value: nomePai, setter: setNomePai, placeholder: 'Opcional' },
-    { label: 'Instituição de origem', value: instituicaoOrigem, setter: setInstituicaoOrigem, placeholder: 'Escola/faculdade anterior' },
-    { label: 'Ano conclusão ensino médio', value: anoConclusaoEnsinoMedio, setter: setAnoConclusaoEnsinoMedio, placeholder: 'Ex: 2022' },
     { label: 'Responsável', value: responsavelNome, setter: setResponsavelNome, placeholder: 'Se aplicável' },
     { label: 'CPF responsável', value: responsavelCpf, setter: setResponsavelCpf, placeholder: '000.000.000-00' },
     { label: 'Telefone responsável', value: responsavelTelefone, setter: setResponsavelTelefone, placeholder: '(00) 00000-0000' },
@@ -146,6 +169,10 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     dataNascimento, sexo, estadoCivil, nacionalidade, naturalidade,
     tipoDocumento, rg, orgaoEmissor, rgUfEmissao, rgDataEmissao,
     nomeMae, nomePai, escolaridadeAnterior, instituicaoOrigem, anoConclusaoEnsinoMedio,
+    situacaoEnsinoMedio, serieEnsinoMedioAtual, escolaEnsinoMedio,
+    anoPrevistoConclusaoEnsinoMedio,
+    // Compatibilidade com o nome camelCase legado ainda retornado pelo mapper.
+    anoPrevisaoConclusaoEnsinoMedio: anoPrevistoConclusaoEnsinoMedio,
     responsavelNome, responsavelCpf, responsavelParentesco, responsavelTelefone,
     responsavelEmail, responsavelFinanceiro,
     ...payload,
@@ -166,6 +193,8 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
       dataNascimento, sexo, estadoCivil, nacionalidade, naturalidade,
       tipoDocumento, rg, orgaoEmissor, rgUfEmissao, rgDataEmissao,
       nomeMae, nomePai, escolaridadeAnterior, instituicaoOrigem, anoConclusaoEnsinoMedio,
+      situacaoEnsinoMedio, serieEnsinoMedioAtual, escolaEnsinoMedio,
+      anoPrevistoConclusaoEnsinoMedio,
       responsavelNome, responsavelCpf, responsavelParentesco, responsavelTelefone,
       responsavelEmail, responsavelFinanceiro,
     };
@@ -185,7 +214,11 @@ export const usePerfilDadosForm = ({ profile, editing, technicalEnrollmentNotice
     nacionalidade, naturalidade, tipoDocumento, setTipoDocumento, rg, setRg,
     orgaoEmissor, rgUfEmissao, rgDataEmissao, nomeMae, nomePai,
     escolaridadeAnterior, setEscolaridadeAnterior, instituicaoOrigem,
-    anoConclusaoEnsinoMedio, responsavelNome, responsavelCpf, responsavelParentesco,
+    anoConclusaoEnsinoMedio, situacaoEnsinoMedio, setSituacaoEnsinoMedio,
+    serieEnsinoMedioAtual, setSerieEnsinoMedioAtual, escolaEnsinoMedio,
+    setEscolaEnsinoMedio, anoPrevistoConclusaoEnsinoMedio,
+    setAnoPrevistoConclusaoEnsinoMedio, setAnoConclusaoEnsinoMedio,
+    responsavelNome, responsavelCpf, responsavelParentesco,
     setResponsavelParentesco, responsavelTelefone, responsavelEmail,
     responsavelFinanceiro, setResponsavelFinanceiro, supplementalFields,
     technicalMissingFields, updateUppercase, submit,

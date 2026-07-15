@@ -26,6 +26,8 @@ const ALUNO_UPPERCASE_FIELDS = [
   'escolaridadeAnterior',
   'instituicaoOrigem',
   'anoConclusaoEnsinoMedio',
+  'situacaoEnsinoMedio',
+  'escolaEnsinoMedio',
   'responsavelNome',
   'responsavelParentesco',
 ] as const;

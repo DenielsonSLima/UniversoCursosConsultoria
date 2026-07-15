@@ -18,10 +18,103 @@ const PerfilTechnicalSection: React.FC<Props> = ({ editing, form }) => (
       <IdCard size={14} className="text-blue-500" /> Dados complementares para cursos técnicos
     </h4>
     <p className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[10px] font-semibold leading-relaxed text-blue-800">
-      Para curso técnico com inscrição online, estes dados são obrigatórios antes do pagamento: CIN/CNH/RG, número do documento, nome da mãe e responsável financeiro.
+      Para curso técnico com inscrição online, informe sua situação atual no Ensino Médio, a escola e o ano de conclusão ou previsão de conclusão.
     </p>
 
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="space-y-1">
+        <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Situação do Ensino Médio</label>
+        {editing ? (
+          <select
+            value={form.situacaoEnsinoMedio}
+            onChange={(event) => {
+              const situation = event.target.value as typeof form.situacaoEnsinoMedio;
+              form.setSituacaoEnsinoMedio(situation);
+              if (situation === 'CURSANDO') {
+                form.setAnoConclusaoEnsinoMedio('');
+              } else {
+                form.setSerieEnsinoMedioAtual('');
+                form.setAnoPrevistoConclusaoEnsinoMedio('');
+              }
+            }}
+            className={selectClassName}
+          >
+            <option value="">Selecione...</option>
+            <option value="CURSANDO">CURSANDO</option>
+            <option value="CONCLUIDO">CONCLUÍDO</option>
+          </select>
+        ) : (
+          <p className={readOnlyClassName}>{form.situacaoEnsinoMedio === 'CONCLUIDO' ? 'CONCLUÍDO' : form.situacaoEnsinoMedio || '—'}</p>
+        )}
+      </div>
+
+      {form.situacaoEnsinoMedio === 'CURSANDO' ? (
+        <div className="space-y-1">
+          <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Série atual</label>
+          {editing ? (
+            <select value={form.serieEnsinoMedioAtual} onChange={(event) => form.setSerieEnsinoMedioAtual(event.target.value)} className={selectClassName}>
+              <option value="">Selecione...</option>
+              <option value="2">2º ANO</option>
+              <option value="3">3º ANO</option>
+            </select>
+          ) : (
+            <p className={readOnlyClassName}>{form.serieEnsinoMedioAtual ? `${form.serieEnsinoMedioAtual}º ANO` : '—'}</p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="space-y-1 sm:col-span-2">
+        <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          {form.situacaoEnsinoMedio === 'CONCLUIDO' ? 'Escola onde concluiu' : 'Escola onde estuda'}
+        </label>
+        {editing ? (
+          <input
+            value={form.escolaEnsinoMedio}
+            placeholder="Nome completo da escola"
+            onChange={form.updateUppercase(form.setEscolaEnsinoMedio)}
+            className={inputClassName}
+          />
+        ) : (
+          <p className={readOnlyClassName}>{form.escolaEnsinoMedio || '—'}</p>
+        )}
+      </div>
+
+      {form.situacaoEnsinoMedio === 'CURSANDO' ? (
+        <div className="space-y-1">
+          <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Previsão de conclusão</label>
+          {editing ? (
+            <input
+              value={form.anoPrevistoConclusaoEnsinoMedio}
+              placeholder="Ex.: 2027"
+              inputMode="numeric"
+              maxLength={4}
+              onChange={(event) => form.setAnoPrevistoConclusaoEnsinoMedio(event.target.value.replace(/\D/g, '').slice(0, 4))}
+              className={inputClassName}
+            />
+          ) : (
+            <p className={readOnlyClassName}>{form.anoPrevistoConclusaoEnsinoMedio || '—'}</p>
+          )}
+        </div>
+      ) : null}
+
+      {form.situacaoEnsinoMedio === 'CONCLUIDO' ? (
+        <div className="space-y-1">
+          <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Ano de conclusão</label>
+          {editing ? (
+            <input
+              value={form.anoConclusaoEnsinoMedio}
+              placeholder="Ex.: 2024"
+              inputMode="numeric"
+              maxLength={4}
+              onChange={(event) => form.setAnoConclusaoEnsinoMedio(event.target.value.replace(/\D/g, '').slice(0, 4))}
+              className={inputClassName}
+            />
+          ) : (
+            <p className={readOnlyClassName}>{form.anoConclusaoEnsinoMedio || '—'}</p>
+          )}
+        </div>
+      ) : null}
+
       <div className="space-y-1">
         <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Tipo de documento</label>
         {editing ? (

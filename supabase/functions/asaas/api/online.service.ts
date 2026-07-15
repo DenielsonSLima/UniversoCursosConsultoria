@@ -1,6 +1,10 @@
 import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
 import { buildCoursePaymentDescription } from "./shared.ts";
-import { isEadCourseModality, isOnlineCourseModality } from "../core/modality.ts";
+import {
+  isEadCourseModality,
+  isOnlineCourseModality,
+  isTecnicoCourseModality,
+} from "../core/modality.ts";
 
 export const createAsaasOnlineService = (
   admin: any,
@@ -20,7 +24,16 @@ export const createAsaasOnlineService = (
     return valueAsString.length >= 10 ? valueAsString.slice(0, 10) : null;
   };
 
-  const currentIsoDate = () => new Date().toISOString().slice(0, 10);
+  const currentMaceioDate = () => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Maceio",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${value.year}-${value.month}-${value.day}`;
+  };
 
   const formatDatePtBr = (value: unknown) => {
     const date = toDateString(value);
@@ -37,7 +50,7 @@ export const createAsaasOnlineService = (
   };
 
   const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
-    const today = currentIsoDate();
+    const today = currentMaceioDate();
     const alunosMatriculados = getMatriculasTotal(turma);
     const vagasTotais = Number(turma?.vagas_totais || 0);
     const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
@@ -173,7 +186,9 @@ export const createAsaasOnlineService = (
           matriculas(status)
         `)
         .eq("curso_id", targetCourse.id)
-        .eq("status", "EM_ANDAMENTO");
+        .in("status", isEadCourseModality(targetCourse.modalidade)
+          ? ["EM_ANDAMENTO"]
+          : ["INSCRICOES_ABERTAS", "EM_ANDAMENTO"]);
       if (requireOnlinePermission) {
         turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
       }
@@ -193,14 +208,27 @@ export const createAsaasOnlineService = (
         .maybeSingle();
       if (existingMatriculaError) throw existingMatriculaError;
 
-      const matricula = existingMatricula
-        ? (await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", existingMatricula.id).select().single()).data
-        : (await admin.from("matriculas").insert({
+      const keepTechnicalDocumentationPending = isTecnicoCourseModality(targetCourse.modalidade);
+      const existingStatus = String(existingMatricula?.status || "").toUpperCase();
+      const preserveApprovedTechnicalStatus = keepTechnicalDocumentationPending
+        && ["ATIVO", "CONCLUIDO", "TRANCADO"].includes(existingStatus);
+      let matricula = existingMatricula;
+
+      if (!existingMatricula) {
+        matricula = (await admin.from("matriculas").insert({
           aluno_id: aluno.id,
           turma_id: turma.id,
-          status: "ATIVO",
+          status: keepTechnicalDocumentationPending ? "PENDENTE" : "ATIVO",
         }).select().single()).data;
-      if (!matricula) throw new Error("Não foi possível ativar a matrícula reconciliada.");
+      } else if (!preserveApprovedTechnicalStatus) {
+        matricula = (await admin
+          .from("matriculas")
+          .update({ status: keepTechnicalDocumentationPending ? "PENDENTE" : "ATIVO" })
+          .eq("id", existingMatricula.id)
+          .select()
+          .single()).data;
+      }
+      if (!matricula) throw new Error("Não foi possível registrar a matrícula reconciliada.");
 
       const paidAt = String(payment.paymentDate || payment.clientPaymentDate || payment.confirmedDate || new Date().toISOString()).slice(0, 10);
       const receivablePayload = {

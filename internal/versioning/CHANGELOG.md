@@ -2,6 +2,33 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.4.0-beta.1] - 2026-07-15
+
+### Adicionado
+
+- Landing pages modulares por tipo de curso técnico, com formulário próprio e reaproveitamento seguro das regras comuns.
+- Seção pública de matrículas técnicas abertas logo abaixo do banner, limitada a três turmas reais e com vagas calculadas no banco.
+- Cadastro da situação do ensino médio, escola e ano de conclusão ou previsão, incluindo alunos da segunda e terceira séries.
+- Configurações da turma para aceitar matrícula concomitante ou subsequente e definir a série mínima do ensino médio.
+- Fluxo de análise documental com aprovação ou recusa pelo gestor e arquivos novos armazenados de forma privada.
+
+### Corrigido
+
+- Turmas técnicas com inscrições abertas passaram a aparecer no site e aceitar checkout dentro da janela configurada.
+- Confirmação de e-mail e login preservam a turma escolhida e devolvem o aluno à landing page correta.
+- Pagamentos técnicos confirmados mantêm a matrícula e a documentação pendentes até a conferência da instituição.
+- Após o pagamento, o aluno é direcionado à área de documentos do próprio perfil.
+- Formas de pagamento exibidas na landing page agora acompanham a configuração real do curso.
+
+### Segurança
+
+- A consulta pública de turmas expõe somente informações comerciais e quantidade agregada de vagas, sem dados de alunos.
+- Regras de escolaridade são validadas novamente no checkout e registradas como fotografia da inscrição.
+- Redirecionamentos do fluxo de autenticação aceitam somente caminhos internos seguros.
+- Reserva de vagas técnicas usa trava transacional para impedir duplicidade e superlotação em checkouts simultâneos.
+- Alunos podem enviar ou substituir documentos, mas somente gestores autorizados podem aprovar ou recusar.
+- A matrícula técnica só pode ser ativada pelo gestor após pagamento confirmado e aprovação dos documentos enviados.
+
 ## [0.3.0-beta.2] - 2026-07-15
 
 ### Adicionado

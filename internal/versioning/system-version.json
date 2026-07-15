@@ -1,8 +1,8 @@
 {
-  "version": "0.3.0-beta.2",
+  "version": "0.4.0-beta.1",
   "display": "BETA",
   "stage": "beta",
-  "revision": 2,
+  "revision": 1,
   "releasedAt": "2026-07-15",
-  "summary": "Ciclo técnico com frequência por horas, transferências, retornos e equivalências auditáveis"
+  "summary": "Matrículas técnicas online com landing pages por turma e documentação pendente"
 }

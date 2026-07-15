@@ -6,6 +6,7 @@ import { errorMessage, getFileExtension } from './utils/file-utils';
 import { mapAlunoLookup, toCamel, toSnake } from './utils/parceiro-mappers';
 import { validateAlunoProfessorIdentity } from './utils/parceiro-validators';
 import { parceirosMatriculasService } from './parceiros-matriculas.service';
+import { documentosAlunoService } from './documentos-aluno.service';
 
 export const parceirosService = {
   async getAll(tipo?: string, filters?: { poloId?: string; includeGlobal?: boolean }) {
@@ -230,107 +231,7 @@ export const parceirosService = {
     return portalActivationService.deletePartner(id);
   },
 
-  // Documentos Métodos
-  async getDocumentos(alunoId: string) {
-    const { data, error } = await supabase
-      .from('documentos_aluno')
-      .select('*')
-      .eq('aluno_id', alunoId)
-      .order('nome_documento', { ascending: true });
-      
-    if (error) {
-      console.error('Erro ao buscar documentos do aluno:', error);
-      throw error;
-    }
-    
-    return (data || []).map(d => ({
-      id: d.id,
-      alunoId: d.aluno_id,
-      nome: d.nome_documento,
-      status: d.status,
-      arquivoUrl: d.arquivo_url,
-      observacao: d.observacao,
-      updatedAt: d.updated_at
-    }));
-  },
-
-  async updateDocumentoStatus(docId: string, status: string, observacao?: string) {
-    const { data, error } = await supabase
-      .from('documentos_aluno')
-      .update({ status, observacao, updated_at: new Date().toISOString() })
-      .eq('id', docId)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Erro ao atualizar status do documento:', error);
-      throw error;
-    }
-    
-    return data;
-  },
-
-  async uploadDocumento(alunoId: string, docName: string, file: File) {
-    if (!alunoId) {
-      throw new Error('Aluno não identificado para vincular o documento.');
-    }
-    if (!docName) {
-      throw new Error('Documento não identificado para upload.');
-    }
-    if (!file) {
-      throw new Error('Selecione um arquivo para enviar.');
-    }
-
-    const cleanDocName = docName.replace(/[^a-zA-Z0-9]/g, '_');
-    const fileExt = getFileExtension(file, 'bin');
-    const filePath = `${alunoId}/${cleanDocName}_${Date.now()}.${fileExt}`;
-    
-    const { data, error: uploadError } = await supabase.storage
-      .from('documentos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        contentType: file.type || 'application/octet-stream',
-        upsert: true
-      });
-      
-    if (uploadError) {
-      console.error('Erro no upload do arquivo:', uploadError);
-      throw new Error(errorMessage(uploadError, 'Não foi possível enviar o arquivo para o storage'));
-    }
-
-    if (!data?.path) {
-      throw new Error('Arquivo enviado, mas o storage não retornou o caminho do arquivo.');
-    }
-    
-    const { data: urlData } = supabase.storage
-      .from('documentos')
-      .getPublicUrl(data.path);
-      
-    const publicUrl = urlData.publicUrl;
-    
-    const { data: updatedDocument, error: dbError } = await supabase
-      .from('documentos_aluno')
-      .update({
-        arquivo_url: publicUrl,
-        status: 'entregue',
-        updated_at: new Date().toISOString()
-      })
-      .eq('aluno_id', alunoId)
-      .eq('nome_documento', docName)
-      .select('id')
-      .maybeSingle();
-      
-    if (dbError) {
-      console.error('Erro ao atualizar arquivo no banco:', dbError);
-      throw new Error(errorMessage(dbError, 'Arquivo enviado, mas não foi possível vincular no banco'));
-    }
-
-    if (!updatedDocument) {
-      throw new Error(`Arquivo enviado, mas nenhum registro do checklist foi atualizado para "${docName}". Verifique se o checklist existe e se o usuário tem permissão para este aluno.`);
-    }
-    
-    return publicUrl;
-  },
+  ...documentosAlunoService,
 
   ...parceirosMatriculasService,
 

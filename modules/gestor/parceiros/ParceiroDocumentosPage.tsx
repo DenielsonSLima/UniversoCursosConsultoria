@@ -115,7 +115,7 @@ const ParceiroDocumentosPage: React.FC = () => {
 
     // 3. Status filter
     const totalDocs = aluno.documentos.length;
-    const deliveredDocs = aluno.documentos.filter(d => d.status === 'entregue').length;
+    const deliveredDocs = aluno.documentos.filter(d => d.status === 'aprovado').length;
     const hasPendency = deliveredDocs < totalDocs;
 
     if (statusFilter === 'pendentes' && !hasPendency) return false;
@@ -127,7 +127,7 @@ const ParceiroDocumentosPage: React.FC = () => {
   // Calculate KPIs
   const totalAlunos = alunos.length;
   const alunosComPendencias = alunos.filter(aluno => 
-    aluno.documentos.filter(d => d.status === 'entregue').length < aluno.documentos.length
+    aluno.documentos.filter(d => d.status === 'aprovado').length < aluno.documentos.length
   ).length;
   const alunosRegulares = totalAlunos - alunosComPendencias;
 
@@ -249,7 +249,7 @@ const ParceiroDocumentosPage: React.FC = () => {
           <div className="divide-y divide-slate-100">
             {filteredAlunos.map((aluno) => {
               const total = aluno.documentos.length;
-              const delivered = aluno.documentos.filter(d => d.status === 'entregue').length;
+              const delivered = aluno.documentos.filter(d => d.status === 'aprovado').length;
               const isExpanded = expandedAlunoId === aluno.id;
 
               return (
@@ -282,7 +282,7 @@ const ParceiroDocumentosPage: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <span className="text-xs font-bold text-slate-700 block">
-                            {delivered} de {total} Entregues
+                            {delivered} de {total} Aprovados
                           </span>
                           <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-bold mt-0.5">
                             Checklist
@@ -318,19 +318,19 @@ const ParceiroDocumentosPage: React.FC = () => {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3">
-                                <div className={`p-2 rounded-xl mt-0.5 ${doc.status === 'entregue' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                                <div className={`p-2 rounded-xl mt-0.5 ${doc.status === 'aprovado' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
                                   <FileText size={20} />
                                 </div>
                                 <div>
                                   <span className="text-sm font-bold text-slate-800 block leading-tight">{doc.nome}</span>
                                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 block">
-                                    {doc.status === 'entregue' ? 'Entregue em formato PDF' : 'Aguardando envio'}
+                                    {doc.status === 'aprovado' ? 'Documento aprovado' : doc.arquivoUrl ? 'Aguardando análise' : 'Aguardando envio'}
                                   </span>
                                 </div>
                               </div>
 
                               <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                                doc.status === 'entregue' 
+                                doc.status === 'aprovado'
                                   ? 'bg-emerald-100 text-emerald-800' 
                                   : 'bg-orange-100 text-orange-850'
                               }`}>
@@ -358,7 +358,7 @@ const ParceiroDocumentosPage: React.FC = () => {
                               {/* Upload Button */}
                               <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#001a33] bg-slate-100 hover:bg-[#001a33] hover:text-white px-4 py-2.5 rounded-xl transition-all cursor-pointer">
                                 <Upload size={12} />
-                                {doc.status === 'entregue' ? 'Reenviar' : 'Enviar'}
+                                {doc.arquivoUrl ? 'Substituir' : 'Enviar'}
                                 <input
                                   type="file"
                                   accept="application/pdf,image/*"

@@ -1,4 +1,10 @@
 import { supabase } from '../../lib/supabase';
+import {
+  PUBLIC_ENROLLMENT_TURMA_STATUSES,
+  isEligiblePublicTurmaStatus,
+  isWithinPublicEnrollmentWindow,
+} from './courseAvailability';
+import { buildTechnicalLandingPath } from './landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 export type SiteTickerMode = 'manual' | 'open_classes' | 'automatic_phrases';
 export type SiteTickerModality = 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO';
@@ -21,7 +27,12 @@ export interface SitePublicTickerConfig {
 
 export interface SiteTickerData {
   config: SitePublicTickerConfig;
-  items: string[];
+  items: SiteTickerItem[];
+}
+
+export interface SiteTickerItem {
+  text: string;
+  href?: string;
 }
 
 export const SITE_PUBLIC_TICKER_CONFIG_ID = 'site_publico_ticker_config';
@@ -65,13 +76,6 @@ const getPoloLabel = (turma: any) => {
     .join(' - ');
 };
 
-const isWithinEnrollmentWindow = (turma: any) => {
-  const today = new Date().toISOString().slice(0, 10);
-  const start = turma?.data_inicio_inscricao ? String(turma.data_inicio_inscricao).slice(0, 10) : null;
-  const end = turma?.data_fim_inscricao ? String(turma.data_fim_inscricao).slice(0, 10) : null;
-  return (!start || today >= start) && (!end || today <= end);
-};
-
 export const siteTickerService = {
   async getConfig(): Promise<SitePublicTickerConfig> {
     const { data, error } = await supabase
@@ -92,7 +96,8 @@ export const siteTickerService = {
       const items = String(config.manualText || '')
         .split(/\n+/)
         .map((item) => item.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .map((text) => ({ text }));
       return items.length ? { config, items } : null;
     }
 
@@ -113,16 +118,16 @@ export const siteTickerService = {
 
       const rows = data || [];
       if (!rows.length) {
-        return { config, items: ['A oportunidade cresce com preparo, organização e propósito.'] };
+        return { config, items: [{ text: 'A oportunidade cresce com preparo, organização e propósito.' }] };
       }
 
       const startOfYear = new Date(new Date().getFullYear(), 0, 0);
       const dayOfYear = Math.floor((Date.now() - startOfYear.getTime()) / 86_400_000);
       const selected = rows[dayOfYear % rows.length];
-      return { config, items: [selected.texto] };
+      return { config, items: [{ text: selected.texto }] };
     }
 
-    const items: string[] = [];
+    const items: SiteTickerItem[] = [];
     const modalities = config.modalidades.length ? config.modalidades : DEFAULT_SITE_TICKER_CONFIG.modalidades;
     const nonEadModalities = modalities.filter((item) => item !== 'EAD');
 
@@ -135,16 +140,16 @@ export const siteTickerService = {
           data_inicio,
           data_inicio_inscricao,
           data_fim_inscricao,
+          status,
           cursos!inner(id, nome, modalidade, status, publicar_site),
           polos(nome, cidade, estado)
         `)
-        .eq('status', 'EM_ANDAMENTO')
+        .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
         .eq('permitir_inscricoes_online', true)
         .eq('cursos.status', 'ativo')
         .eq('cursos.publicar_site', true)
         .in('cursos.modalidade', nonEadModalities)
-        .order('data_inicio', { ascending: true })
-        .limit(config.maxItems);
+        .order('data_inicio', { ascending: true });
 
       if (config.turmaIds.length) query = query.in('id', config.turmaIds);
       if (config.cursoIds.length) query = query.in('curso_id', config.cursoIds);
@@ -152,11 +157,21 @@ export const siteTickerService = {
       const { data, error } = await query;
       if (error) throw error;
 
-      for (const turma of (data || []).filter(isWithinEnrollmentWindow)) {
+      for (const turma of (data || []).filter((item: any) => {
+        const curso = Array.isArray(item?.cursos) ? item.cursos[0] : item?.cursos;
+        return isEligiblePublicTurmaStatus(item?.status, curso?.modalidade)
+          && isWithinPublicEnrollmentWindow(item);
+      })) {
         const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
         const polo = getPoloLabel(turma);
         const start = config.showStartDate && turma.data_inicio ? ` • Início ${formatDate(turma.data_inicio)}` : '';
-        items.push(`Turma aberta: ${curso?.nome || turma.nome}${config.showPolo && polo ? ` • ${polo}` : ''}${start}`);
+        const text = `Turma aberta: ${curso?.nome || turma.nome}${config.showPolo && polo ? ` • ${polo}` : ''}${start}`;
+        items.push({
+          text,
+          href: curso?.modalidade === 'TECNICO'
+            ? buildTechnicalLandingPath(curso?.nome || turma.nome, turma.id)
+            : undefined,
+        });
       }
     }
 
@@ -174,11 +189,11 @@ export const siteTickerService = {
 
       const { data, error } = await query;
       if (error) throw error;
-      for (const curso of data || []) items.push(`EAD disponível: ${curso.nome}`);
+      for (const curso of data || []) items.push({ text: `EAD disponível: ${curso.nome}` });
     }
 
     if (!items.length) {
-      return { config, items: ['Novas turmas abertas serão anunciadas em breve.'] };
+      return { config, items: [{ text: 'Novas turmas abertas serão anunciadas em breve.' }] };
     }
 
     return { config, items: items.slice(0, config.maxItems) };

@@ -21,6 +21,7 @@ import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import ConfirmModal from '../shared/components/ConfirmModal';
+import type { PerfilTabId } from './perfil/perfil.types';
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
 const InicioPage = lazy(() => import('./inicio/InicioPage'));
 const TurmasPage = lazy(() => import('./turmas/TurmasPage'));
@@ -50,6 +51,7 @@ const AlunoPage: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(!initialAlunoProfile);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [profileNotice, setProfileNotice] = useState<'technical-enrollment' | null>(null);
+  const [initialProfileTab, setInitialProfileTab] = useState<PerfilTabId>('perfil');
   const [initialCourseId, setInitialCourseId] = useState<string | null>(null);
   const [initialTurmaId, setInitialTurmaId] = useState<string | null>(null);
 
@@ -68,6 +70,7 @@ const AlunoPage: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const requestedModule = params.get('module');
     const requestedCourseId = params.get('courseId');
+    const requestedProfileTab = params.get('tab');
     if (requestedModule && ['inicio', 'turmas', 'cursos', 'financeiro', 'biblioteca', 'comunicacao', 'secretaria', 'perfil'].includes(requestedModule)) {
       setActiveModule(requestedModule);
     }
@@ -75,8 +78,12 @@ const AlunoPage: React.FC = () => {
       setInitialCourseId(requestedCourseId);
       setActiveModule('cursos');
     }
+    if (requestedProfileTab && ['perfil', 'documentos', 'vacinas', 'google', 'senha'].includes(requestedProfileTab)) {
+      setInitialProfileTab(requestedProfileTab as PerfilTabId);
+    }
     if (params.get('technicalEnrollment') === '1') {
       setProfileNotice('technical-enrollment');
+      setInitialProfileTab('documentos');
       setActiveModule('perfil');
       navigate('/aluno', { replace: true });
       return;
@@ -321,6 +328,7 @@ const AlunoPage: React.FC = () => {
         return (
           <PerfilPage
             alunoId={alunoId}
+            initialTab={initialProfileTab}
             technicalEnrollmentNotice={profileNotice === 'technical-enrollment'}
             onTechnicalEnrollmentNoticeResolved={() => setProfileNotice(null)}
           />

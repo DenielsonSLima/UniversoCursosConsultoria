@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import {
+  PUBLIC_ENROLLMENT_TURMA_STATUSES,
+  getCurrentDateInMaceio,
+  isEligiblePublicTurmaStatus,
+} from '../courseAvailability';
 
 interface CourseEnrollmentTurma {
   id: string;
@@ -36,6 +41,22 @@ const getUnavailabilityReason = (turma: any) => {
 
   if (!permitirInscricoesOnline) {
     return 'Inscrições online não liberadas para esta turma.';
+  }
+
+  const today = getCurrentDateInMaceio();
+  const enrollmentStart = turma.data_inicio_inscricao
+    ? String(turma.data_inicio_inscricao).slice(0, 10)
+    : null;
+  const enrollmentEnd = turma.data_fim_inscricao
+    ? String(turma.data_fim_inscricao).slice(0, 10)
+    : null;
+
+  if (enrollmentStart && today < enrollmentStart) {
+    return `Inscrições abrem em ${new Date(`${enrollmentStart}T12:00:00`).toLocaleDateString('pt-BR')}.`;
+  }
+
+  if (enrollmentEnd && today > enrollmentEnd) {
+    return `Inscrições encerradas em ${new Date(`${enrollmentEnd}T12:00:00`).toLocaleDateString('pt-BR')}.`;
   }
 
   if (bloquearMatriculasAposCompletarVagas) {
@@ -96,10 +117,12 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
           bloquear_matriculas_apos_completar_vagas,
           data_inicio_inscricao,
           data_fim_inscricao,
+          status,
+          cursos!inner(modalidade),
           matriculas(status)
         `)
         .eq('curso_id', courseId)
-        .eq('status', 'EM_ANDAMENTO')
+        .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
         .eq('permitir_inscricoes_online', true)
         .order('data_inicio', { ascending: true });
 
@@ -107,7 +130,12 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
         throw error;
       }
 
-      if (!turmas || turmas.length === 0) {
+      const eligibleTurmas = (turmas || []).filter((turma: any) => {
+        const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade);
+      });
+
+      if (eligibleTurmas.length === 0) {
         return {
           isAvailable: false,
           turma: null,
@@ -115,7 +143,7 @@ export const useCourseEnrollmentAvailability = (courseId?: string) => {
         };
       }
 
-      const analyzed = turmas.map((turma: any) => {
+      const analyzed = eligibleTurmas.map((turma: any) => {
         return {
           turma: hydrateTurma(turma),
           reason: getUnavailabilityReason(turma),

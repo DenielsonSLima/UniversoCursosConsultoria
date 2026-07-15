@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/viewparceiros/aluno/ParceiroAlunoDocumentos.tsx
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, CheckCircle2, AlertCircle, Download, Eye, Loader } from 'lucide-react';
+import { FileText, Upload, CheckCircle2, AlertCircle, Download, Eye, Loader, ShieldCheck, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
 import { parceirosService } from '../../../parceiros.service';
@@ -29,6 +29,12 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
   const { data: docs = [], isLoading: loading } = useQuery<any[]>({
     queryKey: ['documentos', alunoId],
     queryFn: () => parceirosService.getDocumentos(alunoId),
+    enabled: !!alunoId,
+  });
+
+  const { data: pendingTechnicalEnrollments = [] } = useQuery({
+    queryKey: ['matriculas-tecnicas-documentos-pendentes', alunoId],
+    queryFn: () => parceirosService.getMatriculasTecnicasPendentes(alunoId),
     enabled: !!alunoId,
   });
 
@@ -68,6 +74,34 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
     }
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: ({ docId, status, observacao }: { docId: string; status: 'aprovado' | 'recusado'; observacao?: string }) =>
+      parceirosService.updateDocumentoStatus(docId, status, observacao),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documentos', alunoId] }),
+  });
+
+  const activateEnrollmentMutation = useMutation({
+    mutationFn: (matriculaId: string) => parceirosService.ativarMatriculaTecnicaAposDocumentos(matriculaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['matriculas-tecnicas-documentos-pendentes', alunoId] });
+      queryClient.invalidateQueries({ queryKey: ['matriculas', alunoId] });
+      alert('Matrícula técnica ativada após a conferência documental.');
+    },
+  });
+
+  const handleReview = async (doc: any, status: 'aprovado' | 'recusado') => {
+    const observacao = status === 'recusado'
+      ? window.prompt('Informe ao aluno o motivo da recusa:')?.trim()
+      : undefined;
+    if (status === 'recusado' && !observacao) return;
+
+    try {
+      await reviewMutation.mutateAsync({ docId: doc.id, status, observacao });
+    } catch (error) {
+      alert(getUploadErrorMessage(error));
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docName: string) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -90,17 +124,17 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
 
   const getStatusBadge = (status: string) => {
     const s = (status || '').toLowerCase();
-    if (s === 'entregue') {
+    if (s === 'aprovado') {
       return (
         <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold uppercase tracking-widest mt-1">
-          <CheckCircle2 size={12} /> Entregue
+          <CheckCircle2 size={12} /> Aprovado
         </div>
       );
     }
-    if (s === 'rejeitado') {
+    if (s === 'recusado' || s === 'rejeitado') {
       return (
         <div className="flex items-center gap-1.5 text-red-500 text-[10px] font-bold uppercase tracking-widest mt-1">
-          <AlertCircle size={12} /> Rejeitado
+          <XCircle size={12} /> Recusado
         </div>
       );
     }
@@ -146,7 +180,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
                 />
 
                 <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <div className={`p-3 rounded-xl shrink-0 ${doc.status === 'entregue' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                  <div className={`p-3 rounded-xl shrink-0 ${doc.status === 'aprovado' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
                     <FileText size={24} />
                   </div>
                   <div>
@@ -163,7 +197,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
                     <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider py-2 px-4 border border-slate-100 rounded-xl bg-slate-50">
                       <Loader className="animate-spin" size={14} /> Enviando...
                     </div>
-                  ) : doc.status === 'pendente' || !doc.arquivoUrl ? (
+                  ) : !doc.arquivoUrl ? (
                     <button 
                       onClick={() => triggerFileInput(doc.nome)}
                       className="flex items-center gap-2 px-4 py-2 bg-[#001a33] text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-blue-900 transition-colors shrink-0"
@@ -194,6 +228,20 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
                       >
                         <Upload size={14} />
                       </button>
+                      <button
+                        onClick={() => handleReview(doc, 'aprovado')}
+                        disabled={reviewMutation.isPending || doc.status === 'aprovado'}
+                        className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={14} /> Aprovar
+                      </button>
+                      <button
+                        onClick={() => handleReview(doc, 'recusado')}
+                        disabled={reviewMutation.isPending || doc.status === 'recusado'}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <XCircle size={14} /> Recusar
+                      </button>
                     </>
                   )}
                 </div>
@@ -201,6 +249,44 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
             );
           })}
         </div>
+      )}
+
+      {pendingTechnicalEnrollments.length > 0 && (
+        <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 shrink-0 text-emerald-700" size={20} />
+            <div className="min-w-0 flex-1">
+              <h4 className="text-sm font-black uppercase tracking-wide text-emerald-900">Concluir análise da matrícula</h4>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
+                Use esta ação somente depois de confirmar o pagamento e aprovar todos os documentos enviados. Itens condicionais sem arquivo ficam sob decisão da secretaria.
+              </p>
+              <div className="mt-4 space-y-3">
+                {pendingTechnicalEnrollments.map((enrollment) => (
+                  <div key={enrollment.id} className="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black text-slate-800">{enrollment.cursoNome}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{enrollment.turmaNome}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={activateEnrollmentMutation.isPending}
+                      onClick={async () => {
+                        try {
+                          await activateEnrollmentMutation.mutateAsync(enrollment.id);
+                        } catch (error) {
+                          alert(getUploadErrorMessage(error));
+                        }
+                      }}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-emerald-800 disabled:opacity-50"
+                    >
+                      <ShieldCheck size={14} /> Ativar matrícula
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
       )}
     </div>
   );

@@ -31,6 +31,11 @@ import {
   getTechnicalEnrollmentMissingFields,
 } from '../../shared/utils/technicalEnrollmentRequirements';
 import {
+  PUBLIC_ENROLLMENT_TURMA_STATUSES,
+  getCurrentDateInMaceio,
+  isEligiblePublicTurmaStatus,
+} from '../../public/courseAvailability';
+import {
   ArrowLeft,
   ArrowUpRight,
   Award,
@@ -167,7 +172,7 @@ const BLOCKING_ENROLLMENT_STATUSES = new Set([
 
 const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
 
-const todayDate = () => new Date().toISOString().slice(0, 10);
+const todayDate = getCurrentDateInMaceio;
 
 const escapeCheckoutHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => ({
@@ -650,7 +655,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
             polos(nome, cidade, estado),
             matriculas(status)
           `)
-          .eq('status', 'EM_ANDAMENTO')
+          .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
           .eq('permitir_inscricoes_online', true)
           .in('cursos.modalidade', ['LIVRE', 'ESPECIALIZACAO', 'TECNICO'])
           .order('data_inicio', { ascending: true })
@@ -662,7 +667,11 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
       const allMatriculas = matriculasResult.data || [];
       const turmasByCourse = new Map<string, any[]>();
-      for (const turma of turmasOnlineResult.data || []) {
+      const eligibleOnlineTurmas = (turmasOnlineResult.data || []).filter((turma: any) => {
+        const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade);
+      });
+      for (const turma of eligibleOnlineTurmas) {
         if (!turma?.curso_id) continue;
         turmasByCourse.set(turma.curso_id, [...(turmasByCourse.get(turma.curso_id) || []), turma]);
       }

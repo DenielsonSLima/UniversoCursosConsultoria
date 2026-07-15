@@ -8,16 +8,11 @@ interface PerfilDocumentosTabProps {
   onUpload: React.Dispatch<{ docName: string; file: File }>;
 }
 
-const standardDocuments = [
-  'Registro Geral (RG)',
-  'CPF ou CNH',
-  'Histórico Escolar Ensino Médio',
-  'Comprovante de Residência',
-];
-
-const getDocStatusBadge = (status?: string | null) => {
+const getDocStatusBadge = (status?: string | null, hasFile = false) => {
   switch (status?.toLowerCase()) {
+    case 'pendente':
     case 'entregue':
+      if (!hasFile) break;
       return (
         <span className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-blue-700">
           <Clock size={10} /> Em Análise
@@ -30,9 +25,10 @@ const getDocStatusBadge = (status?: string | null) => {
         </span>
       );
     case 'recusado':
+    case 'rejeitado':
       return (
         <span className="inline-flex items-center gap-1 rounded-full border border-red-100 bg-red-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-red-700">
-          <XCircle size={10} /> Pendente
+          <XCircle size={10} /> Recusado
         </span>
       );
     default:
@@ -56,16 +52,16 @@ const DocumentCard: React.FC<{
         {doc.observacao ? (
           <p className="text-[9px] font-bold text-red-500">{doc.observacao}</p>
         ) : (
-          <p className="text-[9px] text-slate-400">Pendente de entrega</p>
+          <p className="text-[9px] text-slate-400">{doc.arquivoUrl ? 'Arquivo enviado à secretaria' : 'Pendente de entrega'}</p>
         )}
       </div>
-      {getDocStatusBadge(doc.status)}
+      {getDocStatusBadge(doc.status, Boolean(doc.arquivoUrl))}
     </div>
 
     {doc.status !== 'aprovado' && (
       <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-center text-[10px] font-black text-slate-500 transition-all hover:border-blue-500 hover:bg-white hover:text-blue-600">
         <Upload size={14} />
-        <span>{uploading ? 'Enviando...' : doc.status === 'entregue' ? 'Reenviar Arquivo' : 'Escolher Arquivo'}</span>
+        <span>{uploading ? 'Enviando...' : doc.arquivoUrl ? 'Substituir Arquivo' : 'Escolher Arquivo'}</span>
         <input
           type="file"
           accept="image/*,application/pdf"
@@ -79,24 +75,20 @@ const DocumentCard: React.FC<{
       </label>
     )}
 
-    {doc.status === 'aprovado' && doc.arquivoUrl && (
+    {doc.arquivoUrl && (
       <a
         href={doc.arquivoUrl}
         target="_blank"
         rel="noreferrer"
         className="py-2 text-center text-[10px] font-black uppercase text-blue-600 hover:underline"
       >
-        Visualizar Documento Homologado
+        Visualizar arquivo enviado
       </a>
     )}
   </div>
 );
 
 const PerfilDocumentosTab: React.FC<PerfilDocumentosTabProps> = ({ documentos, uploading, onUpload }) => {
-  const docsToRender = documentos.length > 0
-    ? documentos
-    : standardDocuments.map((nome) => ({ nome, status: 'pendente' }));
-
   return (
     <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
       <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
@@ -109,10 +101,15 @@ const PerfilDocumentosTab: React.FC<PerfilDocumentosTabProps> = ({ documentos, u
       </p>
 
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {docsToRender.map((doc, index) => (
+        {documentos.map((doc, index) => (
           <DocumentCard key={doc.id || `${doc.nome}-${index}`} doc={doc} uploading={uploading} onUpload={onUpload} />
         ))}
       </div>
+      {documentos.length === 0 && (
+        <p className="mt-5 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-xs font-medium text-slate-500">
+          O checklist de documentos ainda não foi disponibilizado pela secretaria.
+        </p>
+      )}
     </div>
   );
 };

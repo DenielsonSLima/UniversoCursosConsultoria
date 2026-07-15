@@ -122,6 +122,7 @@ export const createAsaasWebhookHandlers = (
     if (matriculaError) throw matriculaError;
     const course = matricula?.turmas?.cursos;
     if (!course || !isOnlineCourseModality(course.modalidade)) return;
+    const keepDocumentationPending = isTecnicoCourseModality(course.modalidade);
 
     const { data: aluno, error: alunoError } = await admin
       .from("parceiros")
@@ -131,11 +132,13 @@ export const createAsaasWebhookHandlers = (
     if (alunoError) throw alunoError;
     if (!aluno) throw new Error("Pagamento recebido, mas o aluno vinculado não foi encontrado.");
 
-    const { error: enrollmentError } = await admin
-      .from("matriculas")
-      .update({ status: "ATIVO" })
-      .eq("id", matricula.id);
-    if (enrollmentError) throw enrollmentError;
+    if (!keepDocumentationPending) {
+      const { error: enrollmentError } = await admin
+        .from("matriculas")
+        .update({ status: "ATIVO" })
+        .eq("id", matricula.id);
+      if (enrollmentError) throw enrollmentError;
+    }
 
     await upsertOnlineInscription({
       course,
@@ -647,10 +650,13 @@ export const createAsaasWebhookHandlers = (
       await admin.from("parceiros").update({ asaas_customer_id: customer.id }).eq("id", aluno.id);
     }
 
-    const { data: turma, error: turmaError } = await admin.from("turmas")
+    let turmaQuery = admin.from("turmas")
       .select("id, polo_id")
-      .eq("curso_id", course.id)
-      .eq("status", "EM_ANDAMENTO")
+      .eq("curso_id", course.id);
+    turmaQuery = isTecnicoCourseModality(course.modalidade)
+      ? turmaQuery.in("status", ["INSCRICOES_ABERTAS", "EM_ANDAMENTO"])
+      : turmaQuery.eq("status", "EM_ANDAMENTO");
+    const { data: turma, error: turmaError } = await turmaQuery
       .limit(1)
       .maybeSingle();
     if (turmaError) throw turmaError;
@@ -672,7 +678,7 @@ export const createAsaasWebhookHandlers = (
       matricula = data;
     }
 
-    if (isConfirmed) {
+    if (isConfirmed && !isTecnicoCourseModality(course.modalidade)) {
       const { error } = await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
       if (error) throw error;
     }

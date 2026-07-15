@@ -5,9 +5,16 @@ import { toCamel } from '../../gestor/parceiros/utils/parceiro-mappers';
 import { PerfilUpdatePayload } from './perfil.types';
 
 const emptyToNull = (value: string) => value || null;
+const integerToNull = (value: string) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isInteger(parsed) ? parsed : null;
+};
 
 const toEditableAlunoPatch = (payload: PerfilUpdatePayload) => {
   const source = uppercaseAlunoTextFields(payload);
+  const isStudyingHighSchool = source.situacaoEnsinoMedio === 'CURSANDO';
 
   return {
     telefone: emptyToNull(source.telefone),
@@ -32,7 +39,17 @@ const toEditableAlunoPatch = (payload: PerfilUpdatePayload) => {
     nome_pai: emptyToNull(source.nomePai),
     escolaridade_anterior: emptyToNull(source.escolaridadeAnterior),
     instituicao_origem: emptyToNull(source.instituicaoOrigem),
-    ano_conclusao_ensino_medio: emptyToNull(source.anoConclusaoEnsinoMedio),
+    ano_conclusao_ensino_medio: isStudyingHighSchool
+      ? null
+      : emptyToNull(source.anoConclusaoEnsinoMedio),
+    situacao_ensino_medio: emptyToNull(source.situacaoEnsinoMedio),
+    serie_ensino_medio_atual: isStudyingHighSchool
+      ? integerToNull(source.serieEnsinoMedioAtual)
+      : null,
+    escola_ensino_medio: emptyToNull(source.escolaEnsinoMedio),
+    ano_previsto_conclusao_ensino_medio: isStudyingHighSchool
+      ? integerToNull(source.anoPrevistoConclusaoEnsinoMedio)
+      : null,
     responsavel_nome: emptyToNull(source.responsavelNome),
     responsavel_cpf: emptyToNull(source.responsavelCpf),
     responsavel_parentesco: emptyToNull(source.responsavelParentesco),

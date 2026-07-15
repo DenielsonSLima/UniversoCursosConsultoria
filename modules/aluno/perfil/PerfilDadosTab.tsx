@@ -72,7 +72,7 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em]">Inscrição técnica pendente</p>
                   <p className="mt-1 text-xs font-bold leading-relaxed">
-                    Para matricular-se em curso técnico com inscrição online, complete o documento de identificação, nome da mãe e responsável financeiro.
+                    Para matricular-se em curso técnico com inscrição online, complete sua situação no Ensino Médio, a escola, a série atual e o ano de conclusão ou previsão.
                   </p>
                   {form.technicalMissingFields.length > 0 && (
                     <p className="mt-2 text-[11px] font-black">

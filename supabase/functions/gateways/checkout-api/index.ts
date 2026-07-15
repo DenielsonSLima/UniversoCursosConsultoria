@@ -81,6 +81,9 @@ const alunoPortalUrl = (courseId?: string | null) => {
   const publicBaseUrl = resolvePublicBaseUrl() || "https://universocc.com.br";
   const url = new URL("/aluno", publicBaseUrl);
   if (courseId) url.searchParams.set("courseId", courseId);
+  url.searchParams.set("module", "perfil");
+  url.searchParams.set("tab", "documentos");
+  url.searchParams.set("technicalEnrollment", "1");
   url.searchParams.set("checkout", "already-paid");
   return url.toString();
 };
@@ -117,7 +120,16 @@ const toDateString = (value: unknown) => {
   return valueAsString.length >= 10 ? valueAsString.slice(0, 10) : null;
 };
 
-const currentIsoDate = () => new Date().toISOString().slice(0, 10);
+const currentMaceioDate = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Maceio",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+};
 
 const isPaidPayment = (payment: any) =>
   ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
@@ -274,7 +286,7 @@ const getMatriculasTotal = (turma: any) => {
 };
 
 const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
-  const today = currentIsoDate();
+  const today = currentMaceioDate();
   const alunosMatriculados = getMatriculasTotal(turma);
   const vagasTotais = Number(turma?.vagas_totais || 0);
   const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
@@ -330,44 +342,35 @@ const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission =
   };
 };
 
-const normalizeDocumentType = (value: unknown) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-
-const isAcceptedTechnicalDocumentType = (value: unknown) => {
-  const normalized = normalizeDocumentType(value);
-  return [
-    "CARTEIRA NACIONAL DE IDENTIFICACAO",
-    "CIN",
-    "CNI",
-    "CNH",
-    "RG",
-    "RG ANTIGO",
-  ].some((allowed) => normalized === allowed || normalized.includes(allowed));
-};
-
-const missingTechnicalEnrollmentFields = (student: any) => {
+const missingTechnicalEnrollmentFields = (student: any, turma: any) => {
   const missing: string[] = [];
   const hasText = (value: unknown) => String(value || "").trim().length > 0;
-  const hasThirdPartyResponsible = [
-    student?.responsavel_nome,
-    student?.responsavel_cpf,
-    student?.responsavel_telefone,
-    student?.responsavel_parentesco,
-  ].some(hasText);
 
-  if (!hasText(student?.nome_mae)) missing.push("nome da mãe");
-  if (!isAcceptedTechnicalDocumentType(student?.tipo_documento)) missing.push("tipo de documento (CIN, CNH ou RG)");
-  if (!hasText(student?.rg)) missing.push("número do documento");
-  if (student?.responsavel_financeiro !== true) missing.push("responsável financeiro");
-  if (hasThirdPartyResponsible && !hasText(student?.responsavel_nome)) missing.push("nome do responsável financeiro");
-  if (hasThirdPartyResponsible && (!hasText(student?.responsavel_cpf) || !isValidCpf(onlyDigits(student?.responsavel_cpf)))) {
-    missing.push("CPF válido do responsável financeiro");
+  const situacao = String(student?.situacao_ensino_medio || "").trim().toUpperCase();
+  const serie = Number(student?.serie_ensino_medio_atual || 0);
+  const serieMinima = Math.max(1, Number(turma?.serie_minima_ensino_medio || 2));
+
+  if (!hasText(student?.escola_ensino_medio)) missing.push("escola do Ensino Médio");
+
+  if (situacao === "CURSANDO") {
+    if (turma?.aceita_concomitante === false) {
+      missing.push("Ensino Médio concluído (esta turma não aceita matrícula concomitante)");
+    }
+    if (![2, 3].includes(serie) || serie < serieMinima) {
+      missing.push(`série atual do Ensino Médio (mínimo: ${serieMinima}º ano)`);
+    }
+    if (!/^\d{4}$/.test(String(student?.ano_previsto_conclusao_ensino_medio || "").trim())) {
+      missing.push("ano previsto de conclusão do Ensino Médio");
+    }
+  } else if (situacao === "CONCLUIDO") {
+    if (turma?.aceita_subsequente === false) {
+      missing.push("Ensino Médio em andamento (esta turma é apenas concomitante)");
+    }
+    if (!/^\d{4}$/.test(String(student?.ano_conclusao_ensino_medio || "").trim())) {
+      missing.push("ano de conclusão do Ensino Médio");
+    }
+  } else {
+    missing.push("situação do Ensino Médio");
   }
 
   return missing;
@@ -449,6 +452,7 @@ export const handlePaymentCheckout = async (req: Request) => {
     if (!course.publicar_site || course.status !== "ativo") throw new Error("Curso indisponível para matrícula.");
     if (!isOnlineCourseModality(course.modalidade)) throw new Error("Modalidade sem checkout online.");
     const isEadCheckout = isEadCourseModality(course.modalidade);
+    const keepTechnicalDocumentationPending = isTecnicoCourseModality(course.modalidade);
     const hasExplicitPaymentSelection = Boolean(String(requestedPaymentMethod || "").trim());
     let alunoQuery = admin
       .from("parceiros")
@@ -483,19 +487,12 @@ export const handlePaymentCheckout = async (req: Request) => {
         ? isValidCpf(cpfCnpj)
         : true;
     const gatewayDocument = hasValidCpfCnpjForGateway ? cpfCnpj : "";
-    if (isTecnicoCourseModality(course.modalidade)) {
-      const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno);
-      if (missingTechnicalFields.length > 0) {
-        throw new Error(`Antes da matrícula técnica online, complete em Meu Perfil: ${missingTechnicalFields.join(", ")}.`);
-      }
-    }
-
     const existingCourseCheckout = await findExistingCourseCheckout(admin, aluno.id, course.id, {
       ignorePending: hasExplicitPaymentSelection,
     });
     if (existingCourseCheckout?.state === "paid") {
       const existingStatus = normalize(existingCourseCheckout.matricula?.status);
-      if (!["ativo", "concluido", "trancado"].includes(existingStatus)) {
+      if (!keepTechnicalDocumentationPending && !["ativo", "concluido", "trancado"].includes(existingStatus)) {
         await admin
           .from("matriculas")
           .update({ status: "ATIVO" })
@@ -542,10 +539,13 @@ export const handlePaymentCheckout = async (req: Request) => {
         aplicar_desconto_matricula,
         aplicar_multa_juros_matricula,
         gerar_cobrancas_futuras,
+        aceita_concomitante,
+        aceita_subsequente,
+        serie_minima_ensino_medio,
         matriculas(status)
       `)
       .eq("curso_id", course.id)
-      .eq("status", "EM_ANDAMENTO");
+      .in("status", isEadCheckout ? ["EM_ANDAMENTO"] : ["INSCRICOES_ABERTAS", "EM_ANDAMENTO"]);
     if (turmaId) {
       turmasQuery = turmasQuery.eq("id", turmaId);
     }
@@ -563,6 +563,23 @@ export const handlePaymentCheckout = async (req: Request) => {
     const availableSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
     if (!availableSelection.turma) throw new Error(availableSelection.reason || "Não há turma aberta para este curso.");
     const turma = availableSelection.turma;
+    if (isTecnicoCourseModality(course.modalidade)) {
+      const missingTechnicalFields = missingTechnicalEnrollmentFields(aluno, turma);
+      if (missingTechnicalFields.length > 0) {
+        throw new Error(`Antes do pagamento da matrícula técnica, informe: ${missingTechnicalFields.join(", ")}.`);
+      }
+    }
+    const technicalSchoolSnapshot = isTecnicoCourseModality(course.modalidade)
+      ? {
+          situacao_ensino_medio: aluno.situacao_ensino_medio || null,
+          serie_ensino_medio_atual: aluno.serie_ensino_medio_atual || null,
+          escola_ensino_medio: aluno.escola_ensino_medio || null,
+          ano_conclusao_ensino_medio: aluno.ano_conclusao_ensino_medio
+            ? Number(aluno.ano_conclusao_ensino_medio)
+            : null,
+          ano_previsto_conclusao_ensino_medio: aluno.ano_previsto_conclusao_ensino_medio || null,
+        }
+      : {};
     const gerarCobrancaFutura = isEadCheckout
       ? false
       : turma.gerar_cobrancas_futuras === true;
@@ -646,7 +663,9 @@ export const handlePaymentCheckout = async (req: Request) => {
       let gatewayReceivable = existingReceivables?.[0] || null;
 
       if (gatewayReceivable?.status === "PAGO") {
-        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        if (!keepTechnicalDocumentationPending) {
+          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+        }
         return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPaid: true });
       }
 
@@ -840,7 +859,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           description: charge.description,
           dueDate: dataVencimento,
           installments: charge.installmentCount || 1,
-          successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=success` : null,
+          successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?module=perfil&tab=documentos&technicalEnrollment=1&gateway=success` : null,
           failureUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=failure` : null,
           pendingUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=pending` : null,
         });
@@ -889,6 +908,7 @@ export const handlePaymentCheckout = async (req: Request) => {
         status: PENDENTE_INSCRICAO_STATUS,
         forma_pagamento: mapBillingType(gatewayPaymentMethodForCharge),
         erro: null,
+        ...technicalSchoolSnapshot,
         updated_at: new Date().toISOString(),
       };
       const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
@@ -1275,7 +1295,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           .single();
         if (refreshError) throw refreshError;
         existingReceivable = refreshedReceivable;
-        if (paid) {
+        if (paid && !keepTechnicalDocumentationPending) {
           await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
         }
         return refreshedReceivable.asaas_invoice_url || refreshedReceivable.asaas_bank_slip_url || null;
@@ -1299,7 +1319,9 @@ export const handlePaymentCheckout = async (req: Request) => {
     existingReceivable = existingReceivables?.[0] || null;
 
     if (existingReceivable?.status === "PAGO") {
-      await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      if (!keepTechnicalDocumentationPending) {
+        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      }
       return json({ url: existingReceivable.asaas_invoice_url || existingReceivable.asaas_bank_slip_url, alreadyPaid: true });
     }
 
@@ -1373,6 +1395,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           confirmado_em: paid ? new Date().toISOString() : null,
           forma_pagamento: matchedPayment.billingType || null,
           erro: null,
+          ...technicalSchoolSnapshot,
           updated_at: new Date().toISOString(),
         };
         const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
@@ -1389,7 +1412,9 @@ export const handlePaymentCheckout = async (req: Request) => {
         if (inscriptionError) throw inscriptionError;
 
         if (paid) {
-          await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+          if (!keepTechnicalDocumentationPending) {
+            await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+          }
           return json({ url: reconciledReceivable.asaas_invoice_url || reconciledReceivable.asaas_bank_slip_url, alreadyPaid: true });
         }
 
@@ -1464,7 +1489,9 @@ export const handlePaymentCheckout = async (req: Request) => {
 
     if (!receivable) throw new Error("Não foi possível registrar a cobrança interna.");
     if (receivable.status === "PAGO") {
-      await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      if (!keepTechnicalDocumentationPending) {
+        await admin.from("matriculas").update({ status: "ATIVO" }).eq("id", matricula.id);
+      }
       return json({ url: receivable.asaas_invoice_url || receivable.asaas_bank_slip_url, alreadyPaid: true });
     }
 
@@ -1593,6 +1620,7 @@ export const handlePaymentCheckout = async (req: Request) => {
       status: PENDENTE_INSCRICAO_STATUS,
       forma_pagamento: mapBillingType(payment.billingType),
       erro: null,
+      ...technicalSchoolSnapshot,
       updated_at: new Date().toISOString(),
     };
 

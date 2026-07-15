@@ -92,6 +92,14 @@ export const gestaoService = {
       throw new Error('Informe o polo da turma antes de abrir inscrições.');
     }
 
+    if (
+      turma.modalidade === 'TECNICO'
+      && turma.aceitaConcomitante === false
+      && turma.aceitaSubsequente === false
+    ) {
+      throw new Error('A turma técnica deve aceitar ingresso concomitante, subsequente ou ambos.');
+    }
+
     const dbData = {
       codigo: turma.codigo,
       nome: turma.nome,
@@ -103,6 +111,13 @@ export const gestaoService = {
       data_fim_inscricao: turma.dataFimInscricao || null,
       permitir_inscricoes_online: turma.permitirInscricoesOnline ?? false,
       exige_matricula: turma.exigeMatricula === false ? false : true,
+      aceita_concomitante: turma.modalidade === 'TECNICO'
+        ? turma.aceitaConcomitante ?? true
+        : false,
+      aceita_subsequente: turma.modalidade === 'TECNICO'
+        ? turma.aceitaSubsequente ?? true
+        : true,
+      serie_minima_ensino_medio: Number(turma.serieMinimaEnsinoMedio ?? 2),
       qtd_vagas_minima: turma.qtdVagasMinima === null || turma.qtdVagasMinima === undefined
         ? null
         : Number(turma.qtdVagasMinima),
@@ -155,6 +170,9 @@ export const gestaoService = {
       dataFimInscricao: data.data_fim_inscricao || null,
       permitirInscricoesOnline: data.permitir_inscricoes_online ?? false,
       exigeMatricula: data.exige_matricula ?? true,
+      aceitaConcomitante: data.aceita_concomitante ?? false,
+      aceitaSubsequente: data.aceita_subsequente ?? true,
+      serieMinimaEnsinoMedio: Number(data.serie_minima_ensino_medio ?? 2),
       bloquearMatriculasAposCompletarVagas: data.bloquear_matriculas_apos_completar_vagas ?? true,
       qtdVagasMinima: data.qtd_vagas_minima === null || data.qtd_vagas_minima === undefined
         ? undefined
@@ -215,6 +233,9 @@ export const gestaoService = {
       dataFimInscricao?: string | null;
       permitirInscricoesOnline?: boolean;
       exigeMatricula?: boolean;
+      aceitaConcomitante?: boolean;
+      aceitaSubsequente?: boolean;
+      serieMinimaEnsinoMedio?: number;
       qtdVagasMinima?: number;
       frequenciaMinimaPercent?: number;
       mediaMinima?: number;
@@ -226,6 +247,10 @@ export const gestaoService = {
       obsFinanceiraOrigem?: string;
     }
   ): Promise<void> {
+    if (input.aceitaConcomitante === false && input.aceitaSubsequente === false) {
+      throw new Error('A turma técnica deve aceitar ingresso concomitante, subsequente ou ambos.');
+    }
+
     const { error } = await supabase
       .from('turmas')
       .update({
@@ -236,6 +261,9 @@ export const gestaoService = {
         data_fim_inscricao: input.dataFimInscricao || null,
         permitir_inscricoes_online: input.permitirInscricoesOnline === true,
         exige_matricula: input.exigeMatricula === false ? false : true,
+        aceita_concomitante: input.aceitaConcomitante,
+        aceita_subsequente: input.aceitaSubsequente,
+        serie_minima_ensino_medio: input.serieMinimaEnsinoMedio,
         qtd_vagas_minima: input.qtdVagasMinima === null || input.qtdVagasMinima === undefined
           ? 0
           : Number(input.qtdVagasMinima),

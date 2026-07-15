@@ -13,6 +13,7 @@ export interface PublicAlunoSignupData {
   dataNascimento: string;
   password: string;
   acceptedTerms: boolean;
+  redirectPath?: string;
 }
 
 interface FinalizeAlunoFirstAccessData {
@@ -26,6 +27,22 @@ interface FinalizeAlunoFirstAccessData {
 type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password'>;
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
+export const getSafePublicAlunoRedirectPath = (value?: string | null, fallback = '/aluno') => {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+
+  let path = raw;
+  if (!path.startsWith('/')) {
+    try {
+      path = decodeURIComponent(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  return path.startsWith('/') && !path.startsWith('//') ? path : fallback;
+};
+
 const isStrongPassword = (value: string) => (
   value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
@@ -185,6 +202,15 @@ export const alunoPublicAuthService = {
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
     const acceptedTerms = data.acceptedTerms;
+    const requestedRedirectPath = data.redirectPath
+      ? getSafePublicAlunoRedirectPath(data.redirectPath)
+      : null;
+    const postConfirmationPath = requestedRedirectPath
+      ? `/login?${new URLSearchParams({ redirect: requestedRedirectPath }).toString()}`
+      : '/login';
+    const confirmationPath = `/confirmacao-email?${new URLSearchParams({
+      redirect: postConfirmationPath,
+    }).toString()}`;
 
     if (!isValidEmail(email)) {
       throw new Error('Informe um e-mail válido. Ele será usado como login do aluno.');
@@ -219,7 +245,7 @@ export const alunoPublicAuthService = {
       email,
       password: data.password,
       options: {
-        emailRedirectTo: buildAuthRedirectUrl(`/confirmacao-email?redirect=${encodeURIComponent('/login')}`),
+        emailRedirectTo: buildAuthRedirectUrl(confirmationPath),
         data: {
           nome,
           tipo: 'Aluno',

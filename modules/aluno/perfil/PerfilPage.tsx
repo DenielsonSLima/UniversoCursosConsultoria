@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, KeyRound, ShieldCheck, Syringe, User } from 'lucide-react';
 import PerfilDadosTab from './PerfilDadosTab';
@@ -22,12 +22,17 @@ const tabs: Array<{ id: PerfilTabId; label: string; icon: React.ReactNode }> = [
 
 const PerfilPage: React.FC<PerfilPageProps> = ({
   alunoId,
+  initialTab = 'perfil',
   technicalEnrollmentNotice = false,
   onTechnicalEnrollmentNoticeResolved,
 }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
-  const [activeTab, setActiveTab] = useState<PerfilTabId>('perfil');
+  const [activeTab, setActiveTab] = useState<PerfilTabId>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const { data: profile, isLoading: loadingProfile } = useQuery({
     queryKey: alunoPerfilKeys.profile(alunoId),

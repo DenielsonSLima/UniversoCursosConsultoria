@@ -1,5 +1,6 @@
 export interface PerfilPageProps {
   alunoId: string;
+  initialTab?: PerfilTabId;
   technicalEnrollmentNotice?: boolean;
   onTechnicalEnrollmentNoticeResolved?: () => void;
 }
@@ -15,6 +16,8 @@ export interface PerfilDocumento {
   arquivoUrl?: string | null;
   observacao?: string | null;
 }
+
+export type PerfilSituacaoEnsinoMedio = '' | 'CURSANDO' | 'CONCLUIDO';
 
 export interface PerfilUpdatePayload {
   telefone: string;
@@ -40,6 +43,10 @@ export interface PerfilUpdatePayload {
   escolaridadeAnterior: string;
   instituicaoOrigem: string;
   anoConclusaoEnsinoMedio: string;
+  situacaoEnsinoMedio: PerfilSituacaoEnsinoMedio;
+  serieEnsinoMedioAtual: string;
+  escolaEnsinoMedio: string;
+  anoPrevistoConclusaoEnsinoMedio: string;
   responsavelNome: string;
   responsavelCpf: string;
   responsavelParentesco: string;

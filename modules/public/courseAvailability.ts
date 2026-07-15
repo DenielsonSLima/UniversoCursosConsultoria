@@ -5,7 +5,43 @@ type PublicCourseModality = 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
 const toSingle = (value: any) => Array.isArray(value) ? value[0] : value;
 export const PUBLIC_COURSE_COLUMNS = 'id, nome, modalidade, carga_horaria, status, area, descricao, parceiro_instituicao, parceiro_logo_url, imagem_url, duracao_meses, publicar_site, imagem_detalhe_1, imagem_detalhe_2, valor, asaas_payment_link_url';
 const PUBLIC_COURSE_DETAIL_COLUMNS = `${PUBLIC_COURSE_COLUMNS}, ead_config, financeiro_config`;
-const PUBLIC_TURMA_COLUMNS = 'id, curso_id, nome, codigo, turno, data_inicio, vagas_totais, permitir_inscricoes_online, polos(nome, cidade, estado)';
+const PUBLIC_TURMA_COLUMNS = 'id, curso_id, nome, codigo, turno, data_inicio, data_inicio_inscricao, data_fim_inscricao, status, vagas_totais, permitir_inscricoes_online, cursos!inner(modalidade), polos(nome, cidade, estado)';
+
+export const PUBLIC_ENROLLMENT_TURMA_STATUSES = ['INSCRICOES_ABERTAS', 'EM_ANDAMENTO'] as const;
+
+export const getCurrentDateInMaceio = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Maceio',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+export const isEligiblePublicTurmaStatus = (
+  status?: string | null,
+  modalidade?: string | null,
+) => {
+  const normalizedStatus = String(status || '').toUpperCase();
+  const normalizedModalidade = String(modalidade || '').toUpperCase();
+  return normalizedStatus === 'EM_ANDAMENTO'
+    || (normalizedModalidade === 'TECNICO' && normalizedStatus === 'INSCRICOES_ABERTAS');
+};
+
+export const isWithinPublicEnrollmentWindow = (
+  turma: any,
+  today = getCurrentDateInMaceio(),
+) => {
+  const start = turma?.data_inicio_inscricao
+    ? String(turma.data_inicio_inscricao).slice(0, 10)
+    : null;
+  const end = turma?.data_fim_inscricao
+    ? String(turma.data_fim_inscricao).slice(0, 10)
+    : null;
+  return (!start || today >= start) && (!end || today <= end);
+};
 
 export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseModality) => {
   const { data: cursos, error } = await supabase
@@ -24,7 +60,7 @@ export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseM
   const { data: turmas, error: turmasError } = await supabase
     .from('turmas')
     .select(PUBLIC_TURMA_COLUMNS)
-    .eq('status', 'EM_ANDAMENTO')
+    .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
     .eq('permitir_inscricoes_online', true)
     .in('curso_id', courseIds)
     .order('data_inicio', { ascending: true });
@@ -32,7 +68,12 @@ export const fetchPublicCoursesWithOpenTurmas = async (modalidade: PublicCourseM
   if (turmasError) throw turmasError;
 
   const turmasByCourse = new Map<string, any[]>();
-  for (const turma of turmas || []) {
+  const eligibleTurmas = (turmas || []).filter((turma: any) => (
+    isEligiblePublicTurmaStatus(turma?.status, modalidade)
+    && isWithinPublicEnrollmentWindow(turma)
+  ));
+
+  for (const turma of eligibleTurmas) {
     if (!turma?.curso_id) continue;
     turmasByCourse.set(turma.curso_id, [...(turmasByCourse.get(turma.curso_id) || []), turma]);
   }
@@ -65,12 +106,16 @@ export const fetchOpenTurmasForCourse = async (courseId: string) => {
     .from('turmas')
     .select(PUBLIC_TURMA_COLUMNS)
     .eq('curso_id', courseId)
-    .eq('status', 'EM_ANDAMENTO')
+    .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
     .eq('permitir_inscricoes_online', true)
     .order('data_inicio', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []).filter((turma: any) => {
+    const curso = toSingle(turma?.cursos);
+    return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade)
+      && isWithinPublicEnrollmentWindow(turma);
+  });
 };
 
 export const getPublicTurmaPoloOptions = (turmas: any[]) => {

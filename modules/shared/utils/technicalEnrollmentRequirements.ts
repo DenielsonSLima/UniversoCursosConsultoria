@@ -1,5 +1,3 @@
-import { isValidCpf } from './identityValidation';
-
 export interface TechnicalEnrollmentRequirement {
   key: string;
   label: string;
@@ -52,60 +50,46 @@ export const isAcceptedTechnicalDocumentType = (value?: unknown) => {
 
 export const getTechnicalEnrollmentMissingFields = (profile: any): TechnicalEnrollmentRequirement[] => {
   const missing: TechnicalEnrollmentRequirement[] = [];
-  const responsibleName = profile?.responsavelNome ?? profile?.responsavel_nome;
-  const responsibleCpf = profile?.responsavelCpf ?? profile?.responsavel_cpf;
-  const responsiblePhone = profile?.responsavelTelefone ?? profile?.responsavel_telefone;
-  const responsibleKinship = profile?.responsavelParentesco ?? profile?.responsavel_parentesco;
-  const hasThirdPartyResponsible = [responsibleName, responsibleCpf, responsiblePhone, responsibleKinship].some(hasText);
+  const situacao = String(profile?.situacaoEnsinoMedio ?? profile?.situacao_ensino_medio ?? '').toUpperCase();
+  const serie = Number(profile?.serieEnsinoMedioAtual ?? profile?.serie_ensino_medio_atual ?? 0);
 
-  if (!hasText(profile?.nomeMae ?? profile?.nome_mae)) {
+  if (!['CURSANDO', 'CONCLUIDO'].includes(situacao)) {
     missing.push({
-      key: 'nomeMae',
-      label: 'Nome da mãe',
-      description: 'Informe o nome completo da mãe para identificação acadêmica.',
+      key: 'situacaoEnsinoMedio',
+      label: 'Situação do Ensino Médio',
+      description: 'Informe se está cursando o 2º/3º ano ou se já concluiu.',
     });
   }
 
-  if (!isAcceptedTechnicalDocumentType(profile?.tipoDocumento ?? profile?.tipo_documento)) {
+  if (!hasText(profile?.escolaEnsinoMedio ?? profile?.escola_ensino_medio)) {
     missing.push({
-      key: 'tipoDocumento',
-      label: 'Tipo de documento',
-      description: 'Escolha CIN, CNH ou RG como documento de identificação.',
+      key: 'escolaEnsinoMedio',
+      label: 'Escola do Ensino Médio',
+      description: 'Informe a escola atual ou onde concluiu o Ensino Médio.',
     });
   }
 
-  if (!hasText(profile?.rg)) {
-    missing.push({
-      key: 'rg',
-      label: 'Número do documento',
-      description: 'Preencha o número do documento informado.',
-    });
-  }
-
-  if ((profile?.responsavelFinanceiro ?? profile?.responsavel_financeiro) !== true) {
-    missing.push({
-      key: 'responsavelFinanceiro',
-      label: 'Responsável financeiro',
-      description: 'Declare quem assume as cobranças da matrícula técnica.',
-    });
-  }
-
-  if (hasThirdPartyResponsible) {
-    if (!hasText(responsibleName)) {
+  if (situacao === 'CURSANDO') {
+    if (![2, 3].includes(serie)) {
       missing.push({
-        key: 'responsavelNome',
-        label: 'Nome do responsável financeiro',
-        description: 'Informe o nome completo do responsável financeiro.',
+        key: 'serieEnsinoMedioAtual',
+        label: 'Série atual',
+        description: 'Selecione o 2º ou o 3º ano do Ensino Médio.',
       });
     }
-
-    if (!hasText(responsibleCpf) || !isValidCpf(String(responsibleCpf))) {
+    if (!/^\d{4}$/.test(String(profile?.anoPrevisaoConclusaoEnsinoMedio ?? profile?.ano_previsao_conclusao_ensino_medio ?? ''))) {
       missing.push({
-        key: 'responsavelCpf',
-        label: 'CPF do responsável financeiro',
-        description: 'Informe um CPF válido para o responsável financeiro.',
+        key: 'anoPrevisaoConclusaoEnsinoMedio',
+        label: 'Previsão de conclusão',
+        description: 'Informe o ano previsto para concluir o Ensino Médio.',
       });
     }
+  } else if (situacao === 'CONCLUIDO' && !/^\d{4}$/.test(String(profile?.anoConclusaoEnsinoMedio ?? profile?.ano_conclusao_ensino_medio ?? ''))) {
+    missing.push({
+      key: 'anoConclusaoEnsinoMedio',
+      label: 'Ano de conclusão',
+      description: 'Informe o ano em que concluiu o Ensino Médio.',
+    });
   }
 
   return missing;
