@@ -1200,7 +1200,11 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const completedLessonCount = Array.isArray(progress.completedContentIds) ? progress.completedContentIds.length : 0;
   const eadGradeCurricular = buildEadGradeCurricular(selectedCourse);
 
-  const { data: alunoCertificado, isLoading: certificateLoading } = useQuery<CertificadoAcademico | null>({
+  const {
+    data: alunoCertificado,
+    isLoading: certificateLoading,
+    isError: certificateError,
+  } = useQuery<CertificadoAcademico | null>({
     queryKey: ['aluno-certificado-ead', alunoId, selectedCourse?.id],
     enabled: hasAlunoContext && !!selectedCourse?.id && quizPassed,
     queryFn: async () => {
@@ -1225,8 +1229,22 @@ const CursosPage: React.FC<CursosPageProps> = ({
 
       if (error) throw error;
       return (data || null) as unknown as CertificadoAcademico | null;
-    }
+    },
+    refetchInterval: query => query.state.data ? false : 30_000,
   });
+
+  const certificateStatusTitle = certificateError
+    ? 'Situação do certificado indisponível'
+    : alunoCertificado
+      ? 'Certificado EAD disponível'
+      : 'Certificado pendente na Secretaria';
+  const certificateStatusMessage = certificateLoading
+    ? 'Consultando a situação do certificado acadêmico.'
+    : certificateError
+      ? 'Não foi possível consultar o certificado agora. Tente novamente em instantes.'
+      : alunoCertificado
+        ? `Código de validação: ${alunoCertificado.codigo_validacao || 'gerado na emissão'}`
+        : 'Sua conclusão já foi enviada à Secretaria. O documento será liberado após o registro do número, livro e página.';
 
   const { data: certificateTemplates = [] } = useQuery<any[]>({
     queryKey: ['aluno-certificado-modelos'],
@@ -1491,7 +1509,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
                     Você concluiu este curso EAD
                   </h3>
                   <p className="mt-3 text-sm font-bold leading-relaxed text-slate-600">
-                    Seu progresso foi registrado, a matrícula foi marcada como concluída e o certificado acadêmico fica disponível abaixo. Você também pode acessar as aulas sempre que quiser para revisar o conteúdo.
+                    Seu progresso foi registrado e a matrícula foi concluída. O certificado foi enviado à Secretaria e permanece pendente até o registro do número, livro e página. Depois da emissão, o PDF será liberado aqui.
                   </p>
                   <button
                     type="button"
@@ -1535,14 +1553,10 @@ const CursosPage: React.FC<CursosPageProps> = ({
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Certificado</p>
                     <h4 className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">
-                      {alunoCertificado ? 'Certificado EAD disponível' : 'Certificado em emissão'}
+                      {certificateStatusTitle}
                     </h4>
                     <p className="mt-2 text-xs font-bold leading-relaxed text-slate-500">
-                      {certificateLoading
-                        ? 'Consultando o registro do certificado acadêmico.'
-                        : alunoCertificado
-                          ? `Código de validação: ${alunoCertificado.codigo_validacao || 'gerado na emissão'}`
-                          : 'A conclusão foi registrada. Se o certificado ainda não aparecer, aguarde a sincronização e atualize a página.'}
+                      {certificateStatusMessage}
                     </p>
                   </div>
 
@@ -1752,14 +1766,10 @@ const CursosPage: React.FC<CursosPageProps> = ({
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Certificado</p>
                       <h4 className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33]">
-                        {alunoCertificado ? 'Certificado EAD disponível' : 'Certificado em emissão'}
+                        {certificateStatusTitle}
                       </h4>
                       <p className="mt-2 text-xs font-bold leading-relaxed text-slate-500">
-                        {certificateLoading
-                          ? 'Consultando o registro do certificado acadêmico.'
-                          : alunoCertificado
-                            ? `Código de validação: ${alunoCertificado.codigo_validacao || 'gerado na emissão'}`
-                            : 'A conclusão foi registrada. Se o certificado ainda não aparecer, aguarde a sincronização e atualize a página.'}
+                        {certificateStatusMessage}
                       </p>
                     </div>
 

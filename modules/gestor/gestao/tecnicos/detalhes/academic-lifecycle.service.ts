@@ -40,6 +40,8 @@ export interface AcademicClosingPendencies {
   lancamentosDeNotaPendentes: number;
   frequenciasPendentes?: number;
   recuperacoesPendentes?: number;
+  avaliacoesEstagioPendentes?: number;
+  estagiosReprovados?: number;
   podeFechar: boolean;
 }
 

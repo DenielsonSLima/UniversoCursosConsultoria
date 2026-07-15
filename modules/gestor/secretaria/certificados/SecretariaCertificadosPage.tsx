@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Award, BookOpen, CheckCircle2, Eye, Filter, GraduationCap,
   Loader2, MonitorPlay, Printer, Search, Settings2, X, Zap,
@@ -37,21 +37,25 @@ const SecretariaCertificadosPage: React.FC = () => {
   const [turmas, setTurmas] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CertificadoAcademico | null>(null);
   const [preview, setPreview] = useState<CertificadoAcademico | null>(null);
   const [saving, setSaving] = useState(false);
+  const loadRequestId = useRef(0);
   const [form, setForm] = useState({
     certificadoNumero: '', paginaLivro: '', livroRegistro: '', validacaoSistec: '',
     ensinoMedioEstabelecimento: '', ensinoMedioLocalidadeUf: '', ensinoMedioAnoConclusao: '',
   });
 
   const load = async () => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
+    setLoadError(null);
     try {
       const [rows, classes, models] = await Promise.all([
         certificadosService.list({
           modalidade,
-          status: modalidade === 'TECNICO' ? status : undefined,
+          status,
           search,
           turmaId,
           poloId: context.poloId || undefined,
@@ -59,17 +63,23 @@ const SecretariaCertificadosPage: React.FC = () => {
         certificadosService.getTurmas(modalidade, context.poloId || undefined),
         diplomaService.getTemplates(),
       ]);
+      if (requestId !== loadRequestId.current) return;
       setItems(rows);
       setTurmas(classes);
       setTemplates(models);
+    } catch (error) {
+      if (requestId !== loadRequestId.current) return;
+      console.error('[SecretariaCertificados] Erro ao carregar certificados:', error);
+      setItems([]);
+      setLoadError('Não foi possível carregar os certificados. Tente novamente.');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     setTurmaId('todos');
-    if (modalidade !== 'TECNICO') setStatus('FINALIZADO');
+    setStatus('PENDENTE');
   }, [modalidade]);
 
   useEffect(() => { void load(); }, [modalidade, status, turmaId]);
@@ -105,7 +115,11 @@ const SecretariaCertificadosPage: React.FC = () => {
 
   const handleIssue = async () => {
     if (!selected) return;
-    if (selected.modalidade === 'TECNICO' && (!form.certificadoNumero || !form.paginaLivro || !form.livroRegistro)) {
+    if (
+      ['TECNICO', 'EAD'].includes(selected.modalidade)
+      && [form.certificadoNumero, form.paginaLivro, form.livroRegistro]
+        .some(value => !value.trim())
+    ) {
       alert('Preencha número do certificado, página e livro.');
       return;
     }
@@ -147,16 +161,14 @@ const SecretariaCertificadosPage: React.FC = () => {
         })}
       </div>
 
-      {modalidade === 'TECNICO' && (
-        <div className="flex gap-2">
-          {(['PENDENTE', 'FINALIZADO'] as CertificadoStatus[]).map(value => (
-            <button key={value} onClick={() => setStatus(value)}
-              className={`rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider ${status === value ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-500'}`}>
-              {value === 'PENDENTE' ? 'Pendentes' : 'Finalizados'}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex gap-2">
+        {(['PENDENTE', 'FINALIZADO'] as CertificadoStatus[]).map(value => (
+          <button key={value} onClick={() => setStatus(value)}
+            className={`rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider ${status === value ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-500'}`}>
+            {value === 'PENDENTE' ? 'Pendentes' : 'Finalizados'}
+          </button>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_auto_auto_auto]">
         <div className="relative">
@@ -180,6 +192,13 @@ const SecretariaCertificadosPage: React.FC = () => {
 
       {loading ? (
         <div className="py-20 text-center"><Loader2 className="mx-auto animate-spin text-blue-600" size={34} /></div>
+      ) : loadError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
+          <span>{loadError}</span>
+          <button onClick={() => void load()} className="rounded-xl bg-red-700 px-4 py-2 text-[10px] font-black uppercase text-white">
+            Tentar novamente
+          </button>
+        </div>
       ) : Object.keys(grouped).length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white py-20 text-center text-sm font-bold text-slate-400">Nenhum certificado encontrado.</div>
       ) : groupedEntries.map(([group, rows]) => (
@@ -202,8 +221,8 @@ const SecretariaCertificadosPage: React.FC = () => {
                     <td><span className={`rounded-full px-2 py-1 text-[9px] font-black ${item.status === 'FINALIZADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{item.status}</span></td>
                     <td className="p-4 text-right">
                       <div className="inline-flex gap-2">
-                        <button onClick={() => setPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>
                         {item.status === 'PENDENTE' && <button onClick={() => openIssue(item)} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-black uppercase text-white"><Settings2 size={13} /> Preparar</button>}
+                        {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:text-blue-600" title="Pré-visualizar"><Eye size={15} /></button>}
                         {item.status === 'FINALIZADO' && <button onClick={() => setPreview(item)} className="flex items-center gap-1.5 rounded-lg bg-[#001a33] px-3 py-2 text-[10px] font-black uppercase text-white"><Printer size={13} /> 2ª Via</button>}
                       </div>
                     </td>
@@ -219,27 +238,29 @@ const SecretariaCertificadosPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-7 shadow-2xl">
             <div className="mb-6 flex justify-between"><div><h4 className="text-xl font-black uppercase text-[#001a33]">Preparar Certificado</h4><p className="text-sm text-slate-500">{selected.aluno.nome} · {selected.curso.nome}</p></div><button onClick={() => setSelected(null)}><X /></button></div>
-            {selected.modalidade === 'TECNICO' && (
-              <div className="space-y-5">
+            <div className="space-y-5">
+              {selected.modalidade === 'TECNICO' && (
                 <div><h5 className="mb-3 text-xs font-black uppercase tracking-wider text-blue-700">Ensino Médio</h5><div className="grid gap-3 md:grid-cols-2">
                   <input value={form.ensinoMedioEstabelecimento} onChange={e => setForm({...form, ensinoMedioEstabelecimento:e.target.value})} placeholder="Estabelecimento" className="rounded-xl border p-3 text-sm" />
                   <input value={form.ensinoMedioLocalidadeUf} onChange={e => setForm({...form, ensinoMedioLocalidadeUf:e.target.value})} placeholder="Localidade / UF" className="rounded-xl border p-3 text-sm" />
                   <input value={form.ensinoMedioAnoConclusao} onChange={e => setForm({...form, ensinoMedioAnoConclusao:e.target.value})} placeholder="Ano de conclusão" className="rounded-xl border p-3 text-sm" />
                 </div></div>
+              )}
+              {['TECNICO', 'EAD'].includes(selected.modalidade) && (
                 <div><h5 className="mb-3 text-xs font-black uppercase tracking-wider text-blue-700">Registro do verso</h5><div className="grid gap-3 md:grid-cols-2">
                   <input value={form.certificadoNumero} onChange={e => setForm({...form, certificadoNumero:e.target.value})} placeholder="Certificado expedido Nº" className="rounded-xl border p-3 text-sm" />
                   <input value={form.paginaLivro} onChange={e => setForm({...form, paginaLivro:e.target.value})} placeholder="Página" className="rounded-xl border p-3 text-sm" />
                   <input value={form.livroRegistro} onChange={e => setForm({...form, livroRegistro:e.target.value})} placeholder="Livro" className="rounded-xl border p-3 text-sm" />
-                  <input value={form.validacaoSistec} onChange={e => setForm({...form, validacaoSistec:e.target.value})} placeholder="Validação do SISTEC" className="rounded-xl border p-3 text-sm" />
+                  {selected.modalidade === 'TECNICO' && <input value={form.validacaoSistec} onChange={e => setForm({...form, validacaoSistec:e.target.value})} placeholder="Validação do SISTEC" className="rounded-xl border p-3 text-sm" />}
                 </div></div>
-              </div>
-            )}
+              )}
+            </div>
             <div className="mt-7 flex justify-end gap-2"><button onClick={() => setSelected(null)} className="rounded-xl border px-5 py-3 text-xs font-black uppercase">Cancelar</button><button onClick={() => void handleIssue()} disabled={saving} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-black uppercase text-white disabled:opacity-50">{saving ? <Loader2 className="animate-spin" size={15}/> : <CheckCircle2 size={15}/>} Emitir certificado</button></div>
           </div>
         </div>
       )}
 
-      {preview && (
+      {preview?.status === 'FINALIZADO' && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
             <div className="mb-4 flex justify-end gap-2"><button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white"><Printer size={15}/> Imprimir</button><button onClick={() => setPreview(null)} className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button></div>

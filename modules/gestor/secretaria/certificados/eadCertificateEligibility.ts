@@ -23,7 +23,7 @@ export const hasValidEadCertificateCompletion = (
   progress?: any
 ) => {
   if (certificate.modalidade !== 'EAD') return true;
-  if (certificate.status !== 'FINALIZADO' || !certificate.codigo_validacao) return false;
+  if (certificate.status === 'CANCELADO') return false;
   if (!progress) return false;
 
   const config = certificate.curso?.ead_config || {};

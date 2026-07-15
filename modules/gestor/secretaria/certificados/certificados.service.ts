@@ -91,7 +91,8 @@ export const certificadosService = {
       p_ensino_medio_estabelecimento: input.ensinoMedioEstabelecimento || null,
       p_ensino_medio_localidade_uf: input.ensinoMedioLocalidadeUf || null,
       p_ensino_medio_ano_conclusao: input.ensinoMedioAnoConclusao || null,
-      p_emitido_por: sessionStorage.getItem('logged_user_id') || null,
+      // O banco identifica o gestor pelo JWT; não aceite um responsável informado pelo navegador.
+      p_emitido_por: null,
     });
     if (error) throw error;
     return data;
