@@ -124,7 +124,7 @@ export const METHODS: Array<{
   },
 ];
 
-export const PROVIDER_ORDER: GatewayProviderCode[] = ['asaas', 'mercado_pago', 'banese_card'];
+export const PROVIDER_ORDER: GatewayProviderCode[] = ['asaas', 'mercado_pago', 'banco_inter', 'banese_card'];
 
 export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
   label: string;
@@ -176,6 +176,22 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     description: 'Gateway reservado para pagamentos por cartão de crédito.',
     bestFor: 'cartão de crédito',
     icon: WalletCards,
+  },
+  banco_inter: {
+    label: 'Banco Inter',
+    shortLabel: 'Inter',
+    accent: '#ff7a00',
+    softAccent: '#fff3e8',
+    text: '#9a3f00',
+    logoBackground: '#ffffff',
+    sourceUrl: 'https://developers.inter.co/',
+    chip: 'border-orange-200 bg-orange-50 text-orange-700',
+    selected: 'border-orange-500 bg-orange-50',
+    action: 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20',
+    shadow: 'rgba(255, 122, 0, 0.2)',
+    description: 'API oficial do Inter para Pix Cobrança e Boleto com Pix.',
+    bestFor: 'Pix e boleto',
+    icon: Landmark,
   },
   banese_card: {
     label: 'Banese',
@@ -239,6 +255,16 @@ export const requiredFieldsFor = (
     ];
   }
 
+  if (providerCode === 'banco_inter') {
+    const metadata = credential?.metadata || {};
+    return [
+      { label: 'Client ID', configured: credential?.clientIdConfigured === true },
+      { label: 'Client Secret', configured: credential?.clientSecretConfigured === true },
+      { label: 'Certificado mTLS', configured: metadata.interCertificateConfigured === true },
+      { label: 'Chave privada', configured: metadata.interPrivateKeyConfigured === true },
+    ];
+  }
+
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
   const hasFlag = (key: string) => metadata[key] === true;
@@ -259,6 +285,15 @@ export const requiredFieldsForRoute = (
   credential: GatewayCredential | undefined,
   method: GatewayPaymentMethod,
 ) => {
+  if (providerCode === 'banco_inter') {
+    const fields = requiredFieldsFor(providerCode, credential);
+    if (method === 'PIX') {
+      const pixKey = String(credential?.metadata?.interPixKey || '').trim();
+      return [...fields, { label: 'Chave Pix', configured: pixKey.length > 0 }];
+    }
+    return fields;
+  }
+
   if (providerCode !== 'banese_card') return requiredFieldsFor(providerCode, credential);
 
   const metadata = credential?.metadata || {};

@@ -2,6 +2,7 @@
 // Sistema de notificações elegantes para substituir alert() do browser
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -22,12 +23,20 @@ interface ToastNotificationProps {
 }
 
 const ToastNotification: React.FC<ToastNotificationProps> = ({ toasts, onRemove }) => {
-  return (
-    <div className="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+  if (typeof document === 'undefined' || toasts.length === 0) return null;
+
+  return createPortal(
+    <div
+      className="fixed left-3 right-3 top-3 z-[2147483647] flex flex-col gap-3 pointer-events-none sm:left-auto sm:right-6 sm:top-6 sm:w-[min(360px,calc(100vw-3rem))]"
+      role="region"
+      aria-label="Notificações"
+      aria-live="polite"
+    >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -71,6 +80,7 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
 
   return (
     <div
+      role={toast.type === 'error' ? 'alert' : 'status'}
       className={`pointer-events-auto flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl shadow-slate-900/15 ${config.bg} ${config.border} border border-slate-100 max-w-sm w-full animate-slideIn`}
       style={{ animation: 'slideInRight 0.3s ease-out' }}
     >
@@ -105,7 +115,9 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
         {toast.message && <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">{toast.message}</p>}
       </div>
       <button
+        type="button"
         onClick={() => onRemove(toast.id)}
+        aria-label="Fechar notificação"
         className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
       >
         <X size={14} />

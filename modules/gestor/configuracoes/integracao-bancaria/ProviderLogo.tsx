@@ -74,6 +74,32 @@ const BrandWordmark = ({
     );
   }
 
+  if (code === 'banco_inter') {
+    return (
+      <span className={`inline-flex min-w-0 items-center ${scale.gap}`} aria-label="Banco Inter">
+        <span
+          className={`${scale.icon} inline-flex shrink-0 items-center justify-center rounded-[28%] font-black lowercase text-white shadow-sm`}
+          style={{ background: brand.accent }}
+        >
+          <span className={size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-sm' : 'text-[10px]'}>in</span>
+        </span>
+        <span className="min-w-0 leading-none">
+          <span
+            className={`${scale.primary} block truncate font-black lowercase leading-none tracking-tight`}
+            style={{ color: brand.accent }}
+          >
+            inter
+          </span>
+          {size !== 'sm' && (
+            <span className={`${scale.secondary} mt-1 block font-black uppercase tracking-[0.18em] text-slate-500`}>
+              empresas
+            </span>
+          )}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span className={`inline-flex min-w-0 items-center ${scale.gap}`} aria-label="Banese">
       <span className={`${scale.icon} inline-flex shrink-0 items-center justify-center rounded-md bg-white/15`}>
@@ -107,6 +133,8 @@ const ProviderLogo = ({
   const showPngLogo = Boolean(brand.logoUrl && !imageFailed);
   const label = code === 'mercado_pago'
     ? 'Mercado'
+    : code === 'banco_inter'
+      ? 'Inter'
     : code === 'banese_card'
       ? 'Banese'
       : brand.shortLabel;
@@ -118,6 +146,8 @@ const ProviderLogo = ({
         style={{
           background: code === 'banese_card'
             ? 'linear-gradient(135deg, #006b35 0%, #00843d 48%, #0fbf69 100%)'
+            : code === 'banco_inter'
+              ? 'linear-gradient(135deg, #fff7ef 0%, #ffffff 46%, #ffe1c4 100%)'
             : code === 'mercado_pago'
               ? 'linear-gradient(135deg, #dcf7ff 0%, #f3fbff 46%, #fff5a8 100%)'
               : 'linear-gradient(135deg, #eaf2ff 0%, #ffffff 45%, #d9e8ff 100%)',

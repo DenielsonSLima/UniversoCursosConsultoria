@@ -91,9 +91,10 @@ Deno.serve(async (req: Request) => {
         issuerOverview,
       ] =
         await Promise.all([
-          admin.from("payment_gateway_providers").select("*").order("name", {
-            ascending: true,
-          }),
+          admin.from("payment_gateway_providers").select("*").eq(
+            "active",
+            true,
+          ).order("name", { ascending: true }),
           admin.from("payment_gateway_credentials").select("*").order(
             "provider_code",
             { ascending: true },
@@ -140,6 +141,7 @@ Deno.serve(async (req: Request) => {
         webhookUrls: {
           asaas: webhookUrlFor(supabaseUrl, "asaas"),
           mercado_pago: webhookUrlFor(supabaseUrl, "mercado_pago"),
+          banco_inter: webhookUrlFor(supabaseUrl, "banco_inter"),
           banese_card: webhookUrlFor(supabaseUrl, "banese_card"),
         },
       });
@@ -171,6 +173,12 @@ Deno.serve(async (req: Request) => {
           : {};
       const metadataWithSecretFlags = {
         ...metadata,
+        ...(secrets.certificate_pem
+          ? { interCertificateConfigured: true }
+          : {}),
+        ...(secrets.private_key_pem
+          ? { interPrivateKeyConfigured: true }
+          : {}),
         ...(secrets.crt_access_token
           ? { baneseCrtAccessTokenConfigured: true }
           : {}),

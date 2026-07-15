@@ -151,6 +151,12 @@ export const isCredentialConfiguredForProvider = (
       credential.public_key_configured === true &&
       credential.webhook_secret_configured === true;
   }
+  if (providerCode === "banco_inter") {
+    return credential.client_id_configured === true &&
+      credential.client_secret_configured === true &&
+      credential.metadata?.interCertificateConfigured === true &&
+      credential.metadata?.interPrivateKeyConfigured === true;
+  }
   return false;
 };
 
@@ -231,6 +237,62 @@ const testMercadoPago = async (accessToken: string) => {
   return { status: "OK", message: "Conexao validada com sucesso." };
 };
 
+const bancoInterTokenUrl = (environment: Environment) =>
+  environment === "production"
+    ? "https://cdpj.partners.bancointer.com.br/oauth/v2/token"
+    : "https://cdpj-sandbox.partners.uatinter.co/oauth/v2/token";
+
+const DEFAULT_BANCO_INTER_SCOPES =
+  "cob.read cob.write cobv.read cobv.write pix.read webhook.read webhook.write boleto-cobranca.read boleto-cobranca.write";
+
+const testBancoInter = async (
+  clientId: string,
+  clientSecret: string,
+  certificatePem: string,
+  privateKeyPem: string,
+  environment: Environment,
+) => {
+  const client = Deno.createHttpClient({
+    cert: certificatePem,
+    key: privateKeyPem,
+  });
+
+  try {
+    const response = await fetch(bancoInterTokenUrl(environment), {
+      method: "POST",
+      client,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: DEFAULT_BANCO_INTER_SCOPES,
+        grant_type: "client_credentials",
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const detail = String(
+        payload?.error_description || payload?.message || payload?.error || "",
+      ).trim();
+      throw new Error(
+        detail || `O Banco Inter recusou as credenciais (${response.status}).`,
+      );
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!payload?.access_token) {
+      throw new Error("O Banco Inter respondeu sem access token.");
+    }
+    return {
+      status: "OK",
+      message: "OAuth e certificado mTLS validados com sucesso no Banco Inter.",
+    };
+  } finally {
+    client.close();
+  }
+};
+
 export const testProvider = async (
   admin: any,
   providerCode: ProviderCode,
@@ -252,6 +314,32 @@ export const testProvider = async (
       throw new Error("Informe o access token do Mercado Pago.");
     }
     return testMercadoPago(accessToken);
+  }
+
+  if (providerCode === "banco_inter") {
+    const [clientId, clientSecret, certificatePem, privateKeyPem] =
+      await Promise.all([
+        Promise.resolve(providedSecrets.client_id ||
+          getGatewaySecret(admin, providerCode, environment, "client_id")),
+        Promise.resolve(providedSecrets.client_secret ||
+          getGatewaySecret(admin, providerCode, environment, "client_secret")),
+        Promise.resolve(providedSecrets.certificate_pem ||
+          getGatewaySecret(admin, providerCode, environment, "certificate_pem")),
+        Promise.resolve(providedSecrets.private_key_pem ||
+          getGatewaySecret(admin, providerCode, environment, "private_key_pem")),
+      ]);
+    if (!clientId || !clientSecret || !certificatePem || !privateKeyPem) {
+      throw new Error(
+        "Informe Client ID, Client Secret, certificado e chave privada do Banco Inter.",
+      );
+    }
+    return testBancoInter(
+      String(clientId),
+      String(clientSecret),
+      String(certificatePem),
+      String(privateKeyPem),
+      environment,
+    );
   }
 
   const clientId = providedSecrets.client_id ||

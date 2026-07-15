@@ -1,15 +1,18 @@
 import React from 'react';
 import {
+  CheckCircle2,
   Copy,
   FileText,
   Key,
   Landmark,
   Link as LinkIcon,
+  LockKeyhole,
   Loader2,
   PlugZap,
   Save,
   ServerCog,
   ShieldCheck,
+  UploadCloud,
   WalletCards,
 } from 'lucide-react';
 import {
@@ -54,6 +57,76 @@ interface ChavesTokensPanelProps {
   copyWebhookUrl: () => void;
   testConnection: () => void;
 }
+
+const MAX_CREDENTIAL_FILE_SIZE = 64 * 1024;
+
+const SecureCredentialFile: React.FC<{
+  label: string;
+  help: string;
+  accept: string;
+  kind: 'certificate' | 'private-key';
+  fileName: string;
+  configured: boolean;
+  onLoad: (content: string, fileName: string) => void;
+}> = ({ label, help, accept, kind, fileName, configured, onLoad }) => {
+  const [error, setError] = React.useState('');
+  const inputId = React.useId();
+
+  const readFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_CREDENTIAL_FILE_SIZE) {
+      setError('Arquivo maior que 64 KB. Selecione o arquivo PEM original do Inter.');
+      return;
+    }
+
+    const content = (await file.text()).trim();
+    const isValid = kind === 'certificate'
+      ? content.includes('-----BEGIN CERTIFICATE-----') && content.includes('-----END CERTIFICATE-----')
+      : /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/.test(content)
+        && /-----END (?:RSA |EC )?PRIVATE KEY-----/.test(content);
+
+    if (!isValid) {
+      setError(kind === 'certificate'
+        ? 'Certificado inválido. Use o arquivo .crt ou .pem baixado no Inter.'
+        : 'Chave privada inválida. Use o arquivo .key ou .pem baixado no Inter.');
+      return;
+    }
+
+    setError('');
+    onLoad(content, file.name);
+  };
+
+  const ready = Boolean(fileName) || configured;
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      <label
+        htmlFor={inputId}
+        className={`group flex min-h-[112px] cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-all focus-within:ring-2 focus-within:ring-orange-200 ${
+          ready
+            ? 'border-emerald-300 bg-emerald-50/70 hover:border-emerald-400'
+            : 'border-slate-300 bg-slate-50 hover:border-orange-400 hover:bg-orange-50/50'
+        }`}
+      >
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${ready ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-orange-600 shadow-sm'}`}>
+          {ready ? <CheckCircle2 size={22} /> : <UploadCloud size={22} />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-black text-[#001a33]">
+            {fileName || (configured ? 'Arquivo protegido já configurado' : 'Selecionar arquivo')}
+          </span>
+          <span className="mt-1 block text-xs font-semibold leading-relaxed text-slate-500">{help}</span>
+        </span>
+        <LockKeyhole className="shrink-0 text-slate-300 group-hover:text-orange-500" size={18} />
+        <input id={inputId} type="file" accept={accept} onChange={readFile} className="sr-only" />
+      </label>
+      {error && <p role="alert" className="text-xs font-bold text-red-600">{error}</p>}
+    </div>
+  );
+};
 
 const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
   overview,
@@ -122,16 +195,16 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
         title="Chaves, tokens e webhooks"
       />
 
-      {credentialProviderCode === 'banese_card' && (
+      {credentialProviderCode === 'banco_inter' && (
         <div className="grid gap-3 lg:grid-cols-3">
-          <InfoCard icon={Key} title="OAuth Banese" tone="emerald">
-            Peça ao gerente o Client ID e o Client Secret da API de Cobrança para sandbox e produção.
+          <InfoCard icon={Key} title="OAuth do Inter" tone="amber">
+            Use o Client ID e o Client Secret gerados na aplicação Inter correspondente ao ambiente selecionado.
           </InfoCard>
-          <InfoCard icon={FileText} title="Boleto Banese" tone="blue">
-            Solicite o código do convênio de boleto, CPF/CNPJ do beneficiário, carteira e regras de Nosso Número.
+          <InfoCard icon={ShieldCheck} title="Certificado mTLS" tone="emerald">
+            Envie o certificado .crt e a chave privada .key do mesmo ambiente. Os conteúdos serão guardados no Vault.
           </InfoCard>
-          <InfoCard icon={PlugZap} title="Pix Banese" tone="amber">
-            Para SAB Guias, peça convênio Pix, chave Pix, CRT Access Token/certificado e confirme o header Terminal.
+          <InfoCard icon={Landmark} title="Conta corrente opcional" tone="blue">
+            O Inter só exige x-conta-corrente quando a mesma aplicação estiver associada a mais de uma conta.
           </InfoCard>
         </div>
       )}
@@ -234,6 +307,64 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   value={credentialForm.merchantId}
                   onChange={(value) => updateCredentialForm('merchantId', value)}
                 />
+              </>
+            )}
+
+            {credentialProviderCode === 'banco_inter' && (
+              <>
+                <TextInput
+                  icon={Key}
+                  label="Client ID"
+                  value={credentialForm.clientId}
+                  onChange={(value) => updateCredentialForm('clientId', value)}
+                  configured={editCredential?.clientIdConfigured}
+                  type="password"
+                />
+                <TextInput
+                  icon={ShieldCheck}
+                  label="Client Secret"
+                  value={credentialForm.clientSecret}
+                  onChange={(value) => updateCredentialForm('clientSecret', value)}
+                  configured={editCredential?.clientSecretConfigured}
+                  type="password"
+                />
+                <SecureCredentialFile
+                  label="Certificado mTLS"
+                  help="Arquivo .crt ou .pem baixado na aplicação Inter deste ambiente."
+                  accept=".crt,.cer,.pem,application/x-x509-ca-cert,text/plain"
+                  kind="certificate"
+                  fileName={credentialForm.certificateFileName}
+                  configured={editCredential?.metadata?.interCertificateConfigured === true}
+                  onLoad={(content, fileName) => {
+                    updateCredentialForm('certificatePem', content);
+                    updateCredentialForm('certificateFileName', fileName);
+                  }}
+                />
+                <SecureCredentialFile
+                  label="Chave privada"
+                  help="Arquivo .key ou .pem correspondente ao certificado. Nunca será exibido após salvar."
+                  accept=".key,.pem,application/pkcs8,text/plain"
+                  kind="private-key"
+                  fileName={credentialForm.privateKeyFileName}
+                  configured={editCredential?.metadata?.interPrivateKeyConfigured === true}
+                  onLoad={(content, fileName) => {
+                    updateCredentialForm('privateKeyPem', content);
+                    updateCredentialForm('privateKeyFileName', fileName);
+                  }}
+                />
+                <TextInput
+                  icon={Key}
+                  label="Chave Pix recebedora"
+                  value={credentialForm.interPixKey}
+                  onChange={(value) => updateCredentialForm('interPixKey', value)}
+                  configured={Boolean(editCredential?.metadata?.interPixKey)}
+                />
+                <div className="rounded-lg border border-orange-100 bg-orange-50/70 p-4 md:col-span-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-700">Permissões da aplicação no Inter</p>
+                  <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
+                    Habilite Pix Cobrança (leitura e escrita), Cobrança/Boleto com Pix (leitura e escrita) e Webhook. Os escopos são solicitados automaticamente pelo servidor.
+                  </p>
+                </div>
               </>
             )}
 

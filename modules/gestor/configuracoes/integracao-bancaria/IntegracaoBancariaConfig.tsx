@@ -112,6 +112,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
       baneseCarteira: metadataValue(editCredential?.metadata, 'baneseCarteira'),
       baneseAgencia: metadataValue(editCredential?.metadata, 'baneseAgencia'),
       baneseConta: metadataValue(editCredential?.metadata, 'baneseConta'),
+      interPixKey: metadataValue(editCredential?.metadata, 'interPixKey'),
       notes: metadataValue(editCredential?.metadata, 'notes'),
     });
   }, [editCredential?.id, credentialProviderCode, keysEnvironment]);
@@ -127,6 +128,10 @@ const IntegracaoBancariaConfig: React.FC = () => {
       webhookSecret: '',
       webhookToken: '',
       crtAccessToken: '',
+      certificatePem: '',
+      certificateFileName: '',
+      privateKeyPem: '',
+      privateKeyFileName: '',
     }));
   };
 
@@ -135,7 +140,10 @@ const IntegracaoBancariaConfig: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
       clearSensitiveCredentialFields();
-      toast.success('Credenciais salvas', `${credentialProvider?.name || credentialProviderCode} ${environmentLabel(keysEnvironment)} atualizado.`);
+      toast.success(
+        'Credenciais salvas com segurança',
+        `${credentialProvider?.name || credentialProviderCode} · ${environmentLabel(keysEnvironment)}. Os dados sensíveis foram protegidos no cofre.`,
+      );
     },
     onError: (err: any) => toast.error('Erro ao salvar credenciais', err.message),
   });
@@ -207,6 +215,30 @@ const IntegracaoBancariaConfig: React.FC = () => {
       payload.webhookSecret = credentialForm.webhookSecret;
       payload.metadata = {
         merchantId: credentialForm.merchantId,
+        notes: credentialForm.notes,
+      };
+    }
+
+    if (credentialProviderCode === 'banco_inter') {
+      const missing = [
+        !credentialForm.clientId && !editCredential?.clientIdConfigured ? 'Client ID' : '',
+        !credentialForm.clientSecret && !editCredential?.clientSecretConfigured ? 'Client Secret' : '',
+        !credentialForm.certificatePem && editCredential?.metadata?.interCertificateConfigured !== true ? 'certificado mTLS' : '',
+        !credentialForm.privateKeyPem && editCredential?.metadata?.interPrivateKeyConfigured !== true ? 'chave privada' : '',
+      ].filter(Boolean);
+
+      if (missing.length > 0) {
+        toast.error('Dados obrigatórios pendentes', `Informe: ${missing.join(', ')}.`);
+        return;
+      }
+
+      payload.clientId = credentialForm.clientId;
+      payload.clientSecret = credentialForm.clientSecret;
+      payload.certificatePem = credentialForm.certificatePem;
+      payload.privateKeyPem = credentialForm.privateKeyPem;
+      payload.metadata = {
+        interPixKey: credentialForm.interPixKey,
+        interScopes: 'cob.read cob.write cobv.read cobv.write pix.read webhook.read webhook.write boleto-cobranca.read boleto-cobranca.write',
         notes: credentialForm.notes,
       };
     }

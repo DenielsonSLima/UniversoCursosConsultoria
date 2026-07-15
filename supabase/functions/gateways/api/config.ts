@@ -6,7 +6,11 @@ export type Modalidade =
   | "LIVRE"
   | "ESPECIALIZACAO"
   | "OUTROS_CREDITOS";
-export type ProviderCode = "asaas" | "mercado_pago" | "banese_card";
+export type ProviderCode =
+  | "asaas"
+  | "mercado_pago"
+  | "banco_inter"
+  | "banese_card";
 
 export const GESTOR_ACTIONS = new Set([
   "get-overview",
@@ -26,6 +30,7 @@ export const GLOBAL_ACTIONS = new Set([
 export const PROVIDERS: Record<ProviderCode, { supports: PaymentMethod[] }> = {
   asaas: { supports: ["PIX", "BOLETO", "CREDIT_CARD"] },
   mercado_pago: { supports: ["CREDIT_CARD"] },
+  banco_inter: { supports: ["PIX", "BOLETO"] },
   banese_card: { supports: ["PIX", "BOLETO"] },
 };
 
@@ -33,6 +38,11 @@ export const assertProviderAdapterReady = (
   providerCode: ProviderCode,
   paymentMethod: PaymentMethod,
 ) => {
+  if (providerCode === "banco_inter") {
+    throw new Error(
+      "As credenciais do Banco Inter podem ser configuradas e testadas, mas a rota de cobranca so sera liberada apos homologar a emissao e os callbacks.",
+    );
+  }
   if (providerCode !== "banese_card") return;
   if (paymentMethod === "CREDIT_CARD") {
     throw new Error(
@@ -49,7 +59,10 @@ export const normalizeEnvironment = (value: unknown): Environment =>
 
 export const normalizeProviderCode = (value: unknown): ProviderCode => {
   const code = String(value || "").trim().toLowerCase();
-  if (code === "asaas" || code === "mercado_pago" || code === "banese_card") {
+  if (
+    code === "asaas" || code === "mercado_pago" ||
+    code === "banco_inter" || code === "banese_card"
+  ) {
     return code;
   }
   throw new Error("Provedor bancario invalido.");
@@ -108,6 +121,8 @@ export const extractSecretInput = (body: any) => ({
   public_key: String(body.publicKey || "").trim(),
   client_id: String(body.clientId || "").trim(),
   client_secret: String(body.clientSecret || "").trim(),
+  certificate_pem: String(body.certificatePem || "").trim(),
+  private_key_pem: String(body.privateKeyPem || "").trim(),
   crt_access_token: String(body.crtAccessToken || "").trim(),
   webhook_secret: String(body.webhookSecret || "").trim(),
   webhook_token: String(body.webhookToken || "").trim(),
@@ -119,6 +134,8 @@ export const pickMetadata = (value: unknown) => {
   const allowed = [
     "walletId",
     "merchantId",
+    "interPixKey",
+    "interScopes",
     "baneseConvenio",
     "baneseBoletoConvenio",
     "baneseBeneficiarioInscricao",
@@ -147,6 +164,25 @@ export const providerOverviewRow = (provider: any) => {
       metadata: {
         ...(provider?.metadata || {}),
         intended_role: "credit_card",
+      },
+    };
+  }
+  if (provider?.code === "banco_inter") {
+    return {
+      ...provider,
+      name: "Banco Inter",
+      description:
+        "API oficial do Inter Empresas para Pix Cobranca e Boleto com Pix, autenticada por OAuth e certificado mTLS.",
+      supports_pix: true,
+      supports_boleto: true,
+      supports_credit_card: false,
+      metadata: {
+        ...(provider?.metadata || {}),
+        intended_role: "pix_bolepix",
+        account_header_optional: true,
+        checkout_blocked: true,
+        checkout_block_reason:
+          "Aguardando homologacao das credenciais, emissao e callbacks do Banco Inter.",
       },
     };
   }

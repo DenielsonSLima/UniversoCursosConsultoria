@@ -3,7 +3,7 @@ import { supabase } from '../../../../lib/supabase';
 export type GatewayEnvironment = 'sandbox' | 'production';
 export type GatewayPaymentMethod = 'PIX' | 'BOLETO' | 'CREDIT_CARD';
 export type GatewayModalidade = 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'OUTROS_CREDITOS';
-export type GatewayProviderCode = 'asaas' | 'mercado_pago' | 'banese_card';
+export type GatewayProviderCode = 'asaas' | 'mercado_pago' | 'banco_inter' | 'banese_card';
 
 export interface GatewayProvider {
   code: GatewayProviderCode;
@@ -97,6 +97,8 @@ export interface SaveCredentialInput {
   webhookSecret?: string;
   webhookToken?: string;
   crtAccessToken?: string;
+  certificatePem?: string;
+  privateKeyPem?: string;
   webhookUrl?: string;
   metadata?: Record<string, unknown>;
 }

@@ -11,6 +11,11 @@ export interface CredentialFormState {
   webhookSecret: string;
   webhookToken: string;
   crtAccessToken: string;
+  certificatePem: string;
+  certificateFileName: string;
+  privateKeyPem: string;
+  privateKeyFileName: string;
+  interPixKey: string;
   walletId: string;
   merchantId: string;
   baneseConvenio: string;
@@ -33,6 +38,11 @@ export const emptyCredentialForm: CredentialFormState = {
   webhookSecret: '',
   webhookToken: '',
   crtAccessToken: '',
+  certificatePem: '',
+  certificateFileName: '',
+  privateKeyPem: '',
+  privateKeyFileName: '',
+  interPixKey: '',
   walletId: '',
   merchantId: '',
   baneseConvenio: '',
