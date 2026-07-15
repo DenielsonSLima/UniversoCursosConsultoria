@@ -2,6 +2,26 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.2.2-beta.3] - 2026-07-14
+
+### Adicionado
+
+- Conclusões EAD passam a entrar em `Secretaria > Certificações` como pendentes para registro de número, livro e página.
+- Portal do aluno passou a gerar o PDF real da carteirinha estudantil, com frente e verso no formato do cartão.
+- Fechamento de período técnico passou a exibir avaliações de estágio pendentes e reprovações de estágio.
+
+### Corrigido
+
+- Certificado EAD deixou de ser liberado automaticamente ao concluir a prova; o aluno só recebe o PDF após a emissão da Secretaria.
+- Avaliação e reprovação no estágio agora participam do encerramento do período e do resultado final da matrícula.
+- Ações de progresso e prova EAD agora validam o próprio aluno, os itens reais do curso e os pré-requisitos antes da conclusão.
+
+### Segurança
+
+- Alunos não conseguem consultar certificados pendentes nem finalizar certificados por chamada direta.
+- Emissão do certificado valida o gestor e o polo, ignora responsável forjado e reconfirma a conclusão EAD no banco.
+- Emissão, revogação e leitura dos códigos documentais passaram a respeitar aluno, matrícula e escopo de polo no banco.
+
 ## [0.2.1-beta.2] - 2026-07-14
 
 ### Corrigido

@@ -58,7 +58,7 @@ const AcademicPeriodCard: React.FC<AcademicPeriodCardProps> = ({
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-5">
+      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-7">
         {pendingQuery.isLoading ? (
           <div className="col-span-3 flex justify-center py-3"><Loader2 size={18} className="animate-spin text-slate-400" /></div>
         ) : pendingQuery.isError ? (
@@ -78,6 +78,8 @@ const AcademicPeriodCard: React.FC<AcademicPeriodCardProps> = ({
               [pending?.lancamentosDeNotaPendentes ?? 0, 'Notas pendentes'],
               [pending?.frequenciasPendentes ?? 0, 'Freq. pendentes'],
               [pending?.recuperacoesPendentes ?? 0, 'Recuperações'],
+              [pending?.avaliacoesEstagioPendentes ?? 0, 'Estágio pendente'],
+              [pending?.estagiosReprovados ?? 0, 'Estágio reprovado'],
             ].map(([value, label]) => (
               <div key={String(label)} className="rounded-xl bg-slate-50 p-3 text-center">
                 <p className="text-lg font-black text-[#001a33]">{value}</p>

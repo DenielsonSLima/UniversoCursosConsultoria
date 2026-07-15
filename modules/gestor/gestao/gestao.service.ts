@@ -311,10 +311,9 @@ export const gestaoService = {
   },
 
   async finalizarTurma(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('turmas')
-      .update({ status: 'FINALIZADA' })
-      .eq('id', id);
+    const { error } = await supabase.rpc('finalizar_turma_academica', {
+      p_turma_id: id,
+    });
 
     if (error) {
       console.error('Erro ao finalizar turma:', error);

@@ -48,6 +48,7 @@ import { alunoSecretariaKeys, alunoSecretariaService } from './secretaria-aluno.
 import { useAlunoSecretariaData } from './useAlunoSecretariaData';
 import { AlunoSecretariaSolicitacaoTipo } from './secretaria-aluno.types';
 import { useIRPFFiscalData } from './useIRPFFiscalData';
+import { downloadStudentCardPdf } from './student-card-pdf';
 
 interface SecretariaPageProps {
   alunoId: string;
@@ -70,6 +71,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const [selectedIrpfYear, setSelectedIrpfYear] = useState(() => getDefaultIrpfCalendarYear());
   const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [isDownloadingStudentCard, setIsDownloadingStudentCard] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ message, type });
@@ -610,6 +612,24 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     window.print();
   };
 
+  const handleDownloadStudentCard = async () => {
+    if (!cardValidation.data?.code) {
+      showToast('Aguarde o registro do código da carteirinha.', 'warning');
+      return;
+    }
+
+    setIsDownloadingStudentCard(true);
+    try {
+      await downloadStudentCardPdf('print-area', aluno?.nome);
+      showToast('PDF da carteirinha gerado com frente e verso.', 'success');
+    } catch (error) {
+      console.error('[SecretariaAluno] Erro ao gerar carteirinha em PDF:', error);
+      showToast('Não foi possível gerar o PDF da carteirinha agora.', 'error');
+    } finally {
+      setIsDownloadingStudentCard(false);
+    }
+  };
+
   return (
     <div className="space-y-5 text-xs font-sans animate-fadeIn">
 
@@ -866,12 +886,23 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
               </h3>
               <p className="text-slate-500 text-xs font-medium mt-0.5">Frente e verso do seu documento oficial de identificação estudantil.</p>
             </div>
-            <button
-              onClick={() => printRegisteredDocument(cardValidation.data?.code, 'carteirinha')}
-              className="flex items-center gap-2 px-4 py-2 bg-[#001a33] hover:bg-blue-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all shadow-md"
-            >
-              <Download size={13} /> Baixar / Imprimir
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void handleDownloadStudentCard()}
+                disabled={!cardValidation.data?.code || isDownloadingStudentCard}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all shadow-md"
+              >
+                {isDownloadingStudentCard ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                {isDownloadingStudentCard ? 'Gerando PDF' : 'Baixar PDF'}
+              </button>
+              <button
+                onClick={() => printRegisteredDocument(cardValidation.data?.code, 'carteirinha')}
+                disabled={!cardValidation.data?.code}
+                className="flex items-center gap-2 px-4 py-2 bg-[#001a33] hover:bg-blue-600 disabled:bg-slate-300 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all shadow-md"
+              >
+                <Printer size={13} /> Imprimir
+              </button>
+            </div>
           </div>
           <div id="print-area" className="p-8 flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-12">
             <div className="flex flex-col items-center gap-3">

@@ -61,6 +61,11 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   onChangePositions
 }) => {
   // Tamanho padrão CR80: 85.6mm x 54mm (landscape)
+  const requiresRemoteSignature = page === 'verso'
+    && formData.showAssinaturaDiretor !== false
+    && formData.assinaturaOrigem
+    && formData.assinaturaOrigem !== 'manual'
+    && formData.assinaturaOrigem !== 'none';
 
   // Busca assinatura central do Supabase de forma assíncrona (multi-browser safe)
   const [assinaturaUrl, setAssinaturaUrl] = useState<string>(
@@ -68,24 +73,46 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
       ? (formData.assinaturaDiretorPngUrl || '')
       : (assinaturasService.getSignaturesSync()[formData.assinaturaOrigem as keyof ReturnType<typeof assinaturasService.getSignaturesSync>] || '')
   );
+  const [signatureState, setSignatureState] = useState<'loading' | 'ready' | 'error'>(() => (
+    requiresRemoteSignature ? 'loading' : 'ready'
+  ));
 
   useEffect(() => {
-    if (formData.assinaturaOrigem === 'manual') {
+    let active = true;
+    if (page !== 'verso' || formData.showAssinaturaDiretor === false) {
+      setSignatureState('ready');
+    } else if (formData.assinaturaOrigem === 'manual') {
       setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
+      setSignatureState('ready');
     } else if (formData.assinaturaOrigem && formData.assinaturaOrigem !== 'none') {
+      setSignatureState('loading');
       // Busca do Supabase — fonte primária — garante sincronização entre navegadores
       assinaturasService.getSignatures().then((sigs) => {
+        if (!active) return;
         const url = sigs[formData.assinaturaOrigem as keyof typeof sigs] || '';
         setAssinaturaUrl(url);
+        setSignatureState(url ? 'ready' : 'error');
       }).catch(() => {
+        if (!active) return;
         // fallback: tenta sync (pode ser vazio no primeiro acesso)
         const syncSigs = assinaturasService.getSignaturesSync();
-        setAssinaturaUrl(syncSigs[formData.assinaturaOrigem as keyof typeof syncSigs] || '');
+        const url = syncSigs[formData.assinaturaOrigem as keyof typeof syncSigs] || '';
+        setAssinaturaUrl(url);
+        setSignatureState(url ? 'ready' : 'error');
       });
     } else {
       setAssinaturaUrl(formData.assinaturaDiretorPngUrl || '');
+      setSignatureState('ready');
     }
-  }, [formData.assinaturaOrigem, formData.assinaturaDiretorPngUrl]);
+    return () => { active = false; };
+  }, [formData.assinaturaOrigem, formData.assinaturaDiretorPngUrl, formData.showAssinaturaDiretor, page]);
+
+  const renderReadinessProps = {
+    'data-render-ready': signatureState === 'loading' ? 'false' : 'true',
+    'data-render-error': signatureState === 'error'
+      ? 'A assinatura institucional não pôde ser carregada.'
+      : undefined,
+  };
 
   const studentData = aluno || {
     nome: 'ANA CLARA DOS SANTOS E SILVA',
@@ -235,6 +262,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
       <div 
         className="carteirinha-render-root bg-white w-[85.6mm] h-[54mm] shadow-2xl relative rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200 select-none"
         style={containerStyle}
+        {...renderReadinessProps}
       >
         {customBackgroundUrl && (
           <img
@@ -535,6 +563,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     <div 
       className="carteirinha-render-root bg-white w-[85.6mm] h-[54mm] shadow-2xl relative flex flex-col rounded-[2.5mm] overflow-hidden shrink-0 transform-origin-top transition-transform duration-200"
       style={containerStyle}
+      {...renderReadinessProps}
     >
        {customBackgroundUrl && (
          <img

@@ -16,7 +16,7 @@ interface IssueDocumentRpcRow {
 
 export const documentValidationService = {
   async issue(input: IssueDocumentInput): Promise<IssuedDocumentValidation> {
-    const { data, error } = await supabase.rpc('emitir_documento_validacao', {
+    const { data, error } = await supabase.rpc('emitir_documento_validacao_portal', {
       p_documento: input.type,
       p_matricula_id: input.enrollmentId,
       p_periodo_referencia: input.referencePeriod || null,
@@ -44,7 +44,7 @@ export const documentValidationService = {
   },
 
   async revoke(code: string) {
-    const { data, error } = await supabase.rpc('revogar_documento_validacao', {
+    const { data, error } = await supabase.rpc('revogar_documento_validacao_portal', {
       p_codigo: code.trim().toUpperCase(),
     });
     if (error) throw error;

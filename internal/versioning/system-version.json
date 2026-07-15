@@ -1,8 +1,8 @@
 {
-  "version": "0.2.1-beta.2",
+  "version": "0.2.2-beta.3",
   "display": "BETA",
   "stage": "beta",
-  "revision": 2,
+  "revision": 3,
   "releasedAt": "2026-07-14",
-  "summary": "Acesso seguro do professor e acompanhamento de estágio do aluno"
+  "summary": "Encerramento acadêmico, certificados EAD pendentes e carteirinha em PDF"
 }
