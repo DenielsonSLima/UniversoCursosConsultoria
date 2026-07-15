@@ -176,16 +176,17 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
 
       <section className="grid min-w-0 gap-3 lg:grid-cols-3">
         {providers.map((item) => (
-          <ProviderChoiceCard
-            key={item.code}
-            provider={item}
-            selected={routeProviderCode === item.code}
-            active={selectedRoute?.providerCode === item.code}
-            credential={getCredential(item.code, routeEnvironment)}
-            paymentMethod={paymentMethod}
-            environment={routeEnvironment}
-            onClick={() => setRouteProviderCode(item.code)}
-          />
+          <React.Fragment key={item.code}>
+            <ProviderChoiceCard
+              provider={item}
+              selected={routeProviderCode === item.code}
+              active={selectedRoute?.providerCode === item.code}
+              credential={getCredential(item.code, routeEnvironment)}
+              paymentMethod={paymentMethod}
+              environment={routeEnvironment}
+              onClick={() => setRouteProviderCode(item.code)}
+            />
+          </React.Fragment>
         ))}
       </section>
 
@@ -211,7 +212,9 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
 
           <div className="mb-4 grid gap-2">
             {requiredFieldsForRoute(routeProviderCode, routeCredential, paymentMethod).map((field) => (
-              <SecretState key={field.label} label={field.label} configured={field.configured} />
+              <React.Fragment key={field.label}>
+                <SecretState label={field.label} configured={field.configured} />
+              </React.Fragment>
             ))}
           </div>
 
@@ -219,7 +222,7 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
             <div className="mb-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
               <p className="text-xs font-bold leading-relaxed text-amber-700">
-                Banese Card atende apenas Pix e boleto. Cartão de crédito não é aceito; Pix/Boleto seguem bloqueados até homologar payload por cobrança, exibição do retorno bancário e conciliação.
+                Banese atende apenas Pix e boleto. Cartão de crédito não é aceito; Pix/Boleto seguem bloqueados até homologar payload por cobrança, exibição do retorno bancário e conciliação.
               </p>
             </div>
           )}

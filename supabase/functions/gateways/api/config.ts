@@ -1,0 +1,171 @@
+export type Environment = "sandbox" | "production";
+export type PaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
+export type Modalidade =
+  | "EAD"
+  | "TECNICO"
+  | "LIVRE"
+  | "ESPECIALIZACAO"
+  | "OUTROS_CREDITOS";
+export type ProviderCode = "asaas" | "mercado_pago" | "banese_card";
+
+export const GESTOR_ACTIONS = new Set([
+  "get-overview",
+  "save-credential",
+  "save-route",
+  "save-issuer",
+  "test-connection",
+]);
+
+export const GLOBAL_ACTIONS = new Set([
+  "save-credential",
+  "save-route",
+  "save-issuer",
+  "test-connection",
+]);
+
+export const PROVIDERS: Record<ProviderCode, { supports: PaymentMethod[] }> = {
+  asaas: { supports: ["PIX", "BOLETO", "CREDIT_CARD"] },
+  mercado_pago: { supports: ["CREDIT_CARD"] },
+  banese_card: { supports: ["PIX", "BOLETO"] },
+};
+
+export const assertProviderAdapterReady = (
+  providerCode: ProviderCode,
+  paymentMethod: PaymentMethod,
+) => {
+  if (providerCode !== "banese_card") return;
+  if (paymentMethod === "CREDIT_CARD") {
+    throw new Error(
+      "Banese nao aceita cartao de credito neste fluxo. Use Asaas ou Mercado Pago para cartao.",
+    );
+  }
+  throw new Error(
+    "Banese Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
+  );
+};
+
+export const normalizeEnvironment = (value: unknown): Environment =>
+  value === "production" ? "production" : "sandbox";
+
+export const normalizeProviderCode = (value: unknown): ProviderCode => {
+  const code = String(value || "").trim().toLowerCase();
+  if (code === "asaas" || code === "mercado_pago" || code === "banese_card") {
+    return code;
+  }
+  throw new Error("Provedor bancario invalido.");
+};
+
+export const normalizeMethod = (value: unknown): PaymentMethod => {
+  const method = String(value || "").trim().toUpperCase();
+  if (method === "PIX" || method === "BOLETO" || method === "CREDIT_CARD") {
+    return method;
+  }
+  if (method === "CARTAO" || method === "CARTÃO") return "CREDIT_CARD";
+  throw new Error("Forma de pagamento invalida.");
+};
+
+export const normalizeModalidade = (value: unknown): Modalidade => {
+  const modalidade = String(value || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (
+    modalidade === "EAD" ||
+    modalidade === "TECNICO" ||
+    modalidade === "LIVRE" ||
+    modalidade === "ESPECIALIZACAO" ||
+    modalidade === "OUTROS_CREDITOS"
+  ) {
+    return modalidade;
+  }
+  throw new Error("Modalidade invalida.");
+};
+
+export const webhookUrlFor = (
+  supabaseUrl: string,
+  providerCode: ProviderCode,
+) => {
+  if (providerCode === "asaas") {
+    return `${supabaseUrl}/functions/v1/asaas-webhook`;
+  }
+  return `${supabaseUrl}/functions/v1/payment-gateway-webhook/${providerCode}`;
+};
+
+export const credentialWebhookUrlFor = (
+  supabaseUrl: string,
+  providerCode: ProviderCode,
+  environment: Environment,
+) => {
+  const baseUrl = webhookUrlFor(supabaseUrl, providerCode);
+  if (providerCode === "asaas") return baseUrl;
+  return `${baseUrl}?environment=${environment}`;
+};
+
+export const extractSecretInput = (body: any) => ({
+  api_key: String(body.apiKey || "").trim(),
+  access_token: String(body.accessToken || "").trim(),
+  public_key: String(body.publicKey || "").trim(),
+  client_id: String(body.clientId || "").trim(),
+  client_secret: String(body.clientSecret || "").trim(),
+  crt_access_token: String(body.crtAccessToken || "").trim(),
+  webhook_secret: String(body.webhookSecret || "").trim(),
+  webhook_token: String(body.webhookToken || "").trim(),
+});
+
+export const pickMetadata = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const raw = value as Record<string, unknown>;
+  const allowed = [
+    "walletId",
+    "merchantId",
+    "baneseConvenio",
+    "baneseBoletoConvenio",
+    "baneseBeneficiarioInscricao",
+    "banesePixConvenio",
+    "banesePixChave",
+    "baneseCarteira",
+    "baneseAgencia",
+    "baneseConta",
+    "notes",
+  ];
+  return Object.fromEntries(
+    allowed
+      .filter((key) => raw[key] !== undefined)
+      .map((key) => [key, raw[key]]),
+  );
+};
+
+export const providerOverviewRow = (provider: any) => {
+  if (provider?.code === "mercado_pago") {
+    return {
+      ...provider,
+      description: "Gateway reservado para pagamentos por cartao de credito.",
+      supports_pix: false,
+      supports_boleto: false,
+      supports_credit_card: true,
+      metadata: {
+        ...(provider?.metadata || {}),
+        intended_role: "credit_card",
+      },
+    };
+  }
+  if (provider?.code !== "banese_card") return provider;
+  return {
+    ...provider,
+    name: "Banese",
+    description:
+      "Emissor da matriz para Pix e boleto. A ativacao depende da homologacao bancaria.",
+    supports_pix: true,
+    supports_boleto: true,
+    supports_credit_card: false,
+    has_public_api: false,
+    metadata: {
+      ...(provider?.metadata || {}),
+      checkout_blocked: true,
+      intended_role: "pix_boleto",
+      checkout_block_reason:
+        "Aguardando homologacao Banese de payload por cobranca, exibicao do retorno bancario e conciliacao.",
+    },
+  };
+};

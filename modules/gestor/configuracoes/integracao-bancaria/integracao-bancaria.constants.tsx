@@ -173,13 +173,13 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-cyan-500 bg-cyan-50',
     action: 'bg-cyan-600 hover:bg-cyan-700 shadow-cyan-600/20',
     shadow: 'rgba(0, 168, 232, 0.18)',
-    description: 'Carteira e checkout para Pix, boleto e cartão.',
-    bestFor: 'cartão e wallet',
+    description: 'Gateway reservado para pagamentos por cartão de crédito.',
+    bestFor: 'cartão de crédito',
     icon: WalletCards,
   },
   banese_card: {
-    label: 'Banese Card',
-    shortLabel: 'Banese Card',
+    label: 'Banese',
+    shortLabel: 'Banese',
     accent: '#00843d',
     softAccent: '#ecfdf3',
     text: '#006b35',
@@ -190,7 +190,7 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-emerald-500 bg-emerald-50',
     action: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20',
     shadow: 'rgba(0, 132, 61, 0.18)',
-    description: 'Banco Banese Card para Pix/SAB Guias e boleto; cartão de crédito não é suportado.',
+    description: 'Emissor da matriz para Pix/SAB Guias e boleto; ativação depende de homologação.',
     bestFor: 'Pix e boleto',
     icon: Landmark,
   },
@@ -250,7 +250,7 @@ export const requiredFieldsFor = (
     { label: 'Convênio Pix', configured: hasMetadata('banesePixConvenio') },
     { label: 'Chave Pix', configured: hasMetadata('banesePixChave') },
     { label: 'CRT token Pix', configured: hasFlag('baneseCrtAccessTokenConfigured') },
-    { label: 'Homologação Banese Card', configured: false },
+    { label: 'Homologação Banese', configured: false },
   ];
 };
 
@@ -273,7 +273,7 @@ export const requiredFieldsForRoute = (
     return [
       ...baseFields,
       { label: 'Convênio boleto', configured: hasMetadata('baneseBoletoConvenio') || hasMetadata('baneseConvenio') },
-      { label: 'Homologação boleto Banese Card', configured: false },
+      { label: 'Homologação boleto Banese', configured: false },
     ];
   }
 
@@ -283,7 +283,7 @@ export const requiredFieldsForRoute = (
       { label: 'Convênio Pix', configured: hasMetadata('banesePixConvenio') },
       { label: 'Chave Pix', configured: hasMetadata('banesePixChave') },
       { label: 'CRT token Pix', configured: hasFlag('baneseCrtAccessTokenConfigured') },
-      { label: 'Homologação Pix Banese Card', configured: false },
+      { label: 'Homologação Pix Banese', configured: false },
     ];
   }
 

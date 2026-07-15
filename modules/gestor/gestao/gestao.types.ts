@@ -27,6 +27,8 @@ export interface Turma {
   exigeMatricula?: boolean;
   bloquearMatriculasAposCompletarVagas?: boolean;
   qtdVagasMinima?: number;
+  frequenciaMinimaPercent?: number;
+  mediaMinima?: number;
   turno: Turno;
   status: StatusTurma;
   alunosMatriculados: number;

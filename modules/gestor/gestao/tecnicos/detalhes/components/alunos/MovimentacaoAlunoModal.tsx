@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { AcademicMovementType, AcademicStudent } from '../../academic-lifecycle.service';
 
-export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA';
+export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA' | 'RETORNO';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
 
 const movementLabels: Record<AcademicMovementType, string> = {
@@ -35,6 +35,7 @@ interface MovimentacaoAlunoModalProps {
   destinationClasses: any[];
   movementPending: boolean;
   transferPending: boolean;
+  returnPending: boolean;
   destinationError?: boolean;
   destinationRetrying?: boolean;
   onOperationModeChange: (mode: OperationMode) => void;
@@ -63,6 +64,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   destinationClasses,
   movementPending,
   transferPending,
+  returnPending,
   destinationError = false,
   destinationRetrying = false,
   onOperationModeChange,
@@ -80,12 +82,15 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
   const disabled = !reason.trim()
     || movementPending
     || transferPending
+    || returnPending
     || (operationMode === 'TRANSFERENCIA'
       && transferType !== 'EXTERNA_ENVIADA'
       && (!destinationClassId || destinationError || destinationRetrying))
     || (operationMode === 'TRANSFERENCIA'
       && transferType === 'EXTERNA_ENVIADA'
-      && !destinationInstitution.trim());
+      && !destinationInstitution.trim())
+    || (operationMode === 'RETORNO'
+      && (!destinationClassId || destinationError || destinationRetrying));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-sm">
@@ -101,7 +106,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
         </div>
 
         <div className="p-6 space-y-5">
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+          <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl">
             <button
               onClick={() => onOperationModeChange('MOVIMENTACAO')}
               className={`py-2.5 rounded-lg text-xs font-black uppercase ${operationMode === 'MOVIMENTACAO' ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500'}`}
@@ -114,6 +119,13 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
               className={`py-2.5 rounded-lg text-xs font-black uppercase disabled:opacity-40 ${operationMode === 'TRANSFERENCIA' ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}
             >
               Transferência
+            </button>
+            <button
+              onClick={() => onOperationModeChange('RETORNO')}
+              disabled={!['TRANCADO', 'DESISTENTE', 'CANCELADO'].includes(student.status)}
+              className={`py-2.5 rounded-lg text-xs font-black uppercase disabled:opacity-40 ${operationMode === 'RETORNO' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'}`}
+            >
+              Nova turma
             </button>
           </div>
 
@@ -137,7 +149,7 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
                 )}
               </select>
             </div>
-          ) : (
+          ) : operationMode === 'TRANSFERENCIA' ? (
             <>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">Tipo de transferência</label>
@@ -184,6 +196,35 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
                 )
               )}
             </>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800">
+                Cria uma nova matrícula e leva as disciplinas já aprovadas. A matrícula antiga permanece no histórico.
+              </div>
+              {destinationError ? (
+                <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-xs font-bold text-red-700">
+                  <p>Não foi possível carregar as turmas de destino. O retorno foi bloqueado.</p>
+                  <button type="button" onClick={onRetryDestination} disabled={destinationRetrying}
+                    className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase disabled:opacity-50">
+                    <RefreshCw size={12} className={destinationRetrying ? 'animate-spin' : ''} /> Tentar novamente
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={destinationClassId}
+                  onChange={(event) => onDestinationClassChange(event.target.value)}
+                  disabled={destinationRetrying}
+                  className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 disabled:opacity-50"
+                >
+                  <option value="">{destinationRetrying ? 'Carregando turmas...' : 'Selecione a nova turma...'}</option>
+                  {destinationClasses.map((destination: any) => (
+                    <option key={destination.id} value={destination.id}>
+                      {destination.nome} - {destination.polos?.nome || 'Polo não informado'}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           )}
 
           <div>
@@ -224,10 +265,12 @@ const MovimentacaoAlunoModal: React.FC<MovimentacaoAlunoModalProps> = ({
               disabled={disabled}
               className="flex-[1.5] py-3 rounded-xl bg-[#001a33] text-white font-black uppercase text-xs disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              {(movementPending || transferPending)
+              {(movementPending || transferPending || returnPending)
                 ? <Loader2 size={15} className="animate-spin" />
                 : operationMode === 'TRANSFERENCIA'
                   ? <ArrowRightLeft size={15} />
+                  : operationMode === 'RETORNO'
+                    ? <RotateCcw size={15} />
                   : movementType === 'REATIVACAO'
                     ? <RotateCcw size={15} />
                     : movementType === 'CONCLUSAO'

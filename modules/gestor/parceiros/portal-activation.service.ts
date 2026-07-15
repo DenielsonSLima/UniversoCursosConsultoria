@@ -18,6 +18,20 @@ export type PartnerGoogleIdentityStatus = {
   linked_at: string | null;
 };
 
+export type PartnerEmailConfirmationStatusValue =
+  | 'confirmed'
+  | 'pending'
+  | 'no_auth_user'
+  | 'no_email'
+  | 'unknown';
+
+export type PartnerEmailConfirmationStatus = {
+  partnerId: string;
+  status: PartnerEmailConfirmationStatusValue;
+  authUserExists: boolean;
+  emailConfirmed: boolean;
+};
+
 type InviteStudentResult = {
   success: boolean;
   action?: 'invite' | 'recovery';
@@ -33,6 +47,18 @@ type DeletePartnerResult = {
   action?: 'delete-partner';
   partnerDeleted?: boolean;
   authUserDeleted?: boolean;
+  message?: string;
+};
+
+type PartnerEmailStatusesResult = {
+  success: boolean;
+  statuses?: PartnerEmailConfirmationStatus[];
+};
+
+type ConfirmPartnerEmailResult = {
+  success: boolean;
+  userId?: string | null;
+  emailConfirmed: boolean;
   message?: string;
 };
 
@@ -59,6 +85,28 @@ const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise
 };
 
 export const portalActivationService = {
+  async getPartnerEmailStatuses(partnerIds: string[]): Promise<PartnerEmailConfirmationStatus[]> {
+    if (partnerIds.length === 0) return [];
+    const statuses: PartnerEmailConfirmationStatus[] = [];
+
+    for (let index = 0; index < partnerIds.length; index += 500) {
+      const result = await invokeAdminFunction<PartnerEmailStatusesResult>({
+        action: 'list-partner-email-statuses',
+        partnerIds: partnerIds.slice(index, index + 500),
+      });
+      statuses.push(...(result.statuses || []));
+    }
+
+    return statuses;
+  },
+
+  async confirmPartnerEmail(partnerId: string): Promise<ConfirmPartnerEmailResult> {
+    return invokeAdminFunction<ConfirmPartnerEmailResult>({
+      action: 'confirm-partner-email',
+      partnerId,
+    });
+  },
+
   async ensureStudentAccess(payload: InviteStudentPayload): Promise<InviteStudentResult> {
     return invokeAdminFunction<InviteStudentResult>({
       action: 'send-student-invite',

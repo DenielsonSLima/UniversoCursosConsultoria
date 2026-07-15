@@ -126,7 +126,7 @@ const EventModal: React.FC<EventModalProps> = ({
                         )}
                     </div>
                 </div>
-                {!event.id.startsWith('class-') && (
+                {!event.id.startsWith('class-') && !event.id.startsWith('official-') && (
                   <button 
                       onClick={() => onDeleteEvent(event.id)}
                       className="opacity-0 group-hover:opacity-100 p-2 text-slate-350 hover:text-red-500 transition-all"

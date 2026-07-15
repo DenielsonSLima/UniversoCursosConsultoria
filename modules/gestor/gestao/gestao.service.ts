@@ -3,140 +3,9 @@
 import { Turma, TurmasPageFilters, TurmasPageResult } from './gestao.types';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
-
-export type GestaoResumoModalidade = {
-  modalidade: 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO' | 'EAD';
-  label: string;
-  turmasAtivas: number;
-  alunos: number;
-  inscricoesMesAtual: number | null;
-};
-
-export type GestaoResumoKpis = {
-  totalTurmasAtivas: number;
-  totalAlunos: number;
-  totalInscricoesEadMesAtual: number;
-  cards: GestaoResumoModalidade[];
-};
-
-const normalizeStatus = (status?: string | null) =>
-  String(status || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .trim();
-
-const EAD_ACTIVE_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
-
-const mapTurma = (t: any): Turma => {
-  const matriculas = t.matriculas || [];
-  const isEad = t.cursos?.modalidade === 'EAD';
-  const alunosMatriculados = isEad
-    ? matriculas.filter((m: any) => EAD_ACTIVE_STATUSES.has(normalizeStatus(m.status))).length
-    : matriculas.length;
-  const alunosAtivos = isEad
-    ? alunosMatriculados
-    : matriculas.filter((m: any) => m.status?.toUpperCase() === 'ATIVO').length;
-  const alunosInativos = Math.max(0, matriculas.length - alunosAtivos);
-  return {
-    id: t.id,
-    codigo: t.codigo,
-    nome: t.nome,
-    cursoId: t.curso_id,
-    cursoNome: t.cursos?.nome || '',
-    modalidade: t.cursos?.modalidade || 'TECNICO',
-    dataInicioInscricao: t.data_inicio_inscricao || null,
-    dataFimInscricao: t.data_fim_inscricao || null,
-    permitirInscricoesOnline: t.permitir_inscricoes_online ?? false,
-    exigeMatricula: t.exige_matricula ?? true,
-    bloquearMatriculasAposCompletarVagas: t.bloquear_matriculas_apos_completar_vagas ?? true,
-    qtdVagasMinima: t.qtd_vagas_minima === null || t.qtd_vagas_minima === undefined
-      ? undefined
-      : Number(t.qtd_vagas_minima),
-    poloId: t.polo_id,
-    poloNome: t.polos?.nome || '',
-    poloCnpj: t.polos?.cnpj || '',
-    poloCidade: t.polos?.cidade || '',
-    poloEstado: t.polos?.estado || '',
-    dataInicio: t.data_inicio,
-    dataPrevisaoTermino: t.data_previsao_termino,
-    turno: t.turno,
-    status: t.status,
-    alunosMatriculados,
-    alunosAtivos,
-    alunosInativos,
-    vagasTotais: t.vagas_totais,
-    valorMatricula: Number(t.valor_matricula),
-    valorRematricula: Number(t.valor_rematricula),
-    qtdParcelas: Number(t.qtd_parcelas),
-    valorParcela: Number(t.valor_parcela),
-    descontoPontualidade: Number(t.desconto_pontualidade),
-    jurosAtraso: Number(t.juros_atraso),
-    multaAtraso: Number(t.multa_atraso),
-    origemFinanceira: (t.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
-    financeiroHerdado: t.financeiro_herdado ?? false,
-    gerarCobrancasFuturas: t.gerar_cobrancas_futuras ?? false,
-    sincronizarAsaasFuturo: t.sincronizar_asaas_futuro ?? true,
-    obsFinanceiraOrigem: t.obs_financeira_origem || '',
-  };
-};
-
-const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<Turma[]> => {
-  if (turmas.length === 0) return turmas;
-
-  const turmaIds = turmas.map((turma) => turma.id);
-  const cursoIds = Array.from(new Set(turmas.map((turma) => turma.cursoId).filter(Boolean)));
-  const [{ data: configsData, error: configsError }, { data: gradeData, error: gradeError }] = await Promise.all([
-    supabase
-    .from('turmas_disciplinas')
-    .select(`
-      turma_id,
-      disciplina_id,
-      concluida
-    `)
-    .in('turma_id', turmaIds),
-    supabase
-      .from('modulos')
-      .select('id, curso_id, created_at, disciplinas(id, nome, created_at)')
-      .in('curso_id', cursoIds)
-      .order('created_at', { ascending: true }),
-  ]);
-
-  if (configsError || gradeError) {
-    console.error('Erro ao carregar progresso das disciplinas das turmas:', configsError || gradeError);
-    return turmas;
-  }
-
-  const configByTurmaDisciplina = new Map<string, boolean>();
-  (configsData || []).forEach((row: any) => {
-    configByTurmaDisciplina.set(`${row.turma_id}:${row.disciplina_id}`, row.concluida === true);
-  });
-
-  const gradeByCurso = new Map<string, any[]>();
-  (gradeData || []).forEach((modulo: any) => {
-    const rows = gradeByCurso.get(modulo.curso_id) || [];
-    (modulo.disciplinas || []).forEach((disciplina: any) => {
-      rows.push(disciplina);
-    });
-    gradeByCurso.set(modulo.curso_id, rows);
-  });
-
-  return turmas.map((turma) => {
-    const disciplinas = gradeByCurso.get(turma.cursoId) || [];
-    const currentIndex = disciplinas.findIndex((disciplina) => (
-      configByTurmaDisciplina.get(`${turma.id}:${disciplina.id}`) !== true
-    ));
-
-    return {
-      ...turma,
-      totalDisciplinas: disciplinas.length,
-      disciplinaAtual: currentIndex >= 0
-        ? disciplinas[currentIndex]?.nome || 'Disciplina não informada'
-        : undefined,
-      disciplinaAtualOrdem: currentIndex >= 0 ? currentIndex + 1 : undefined,
-    };
-  });
-};
+import { enrichTechnicalAcademicProgress, mapTurma } from './gestao.mappers';
+import { gestaoKpisService } from './gestao-kpis.service';
+export type { GestaoResumoKpis, GestaoResumoModalidade } from './gestao-kpis.service';
 
 export const gestaoService = {
   async getTurmasPage(filters: TurmasPageFilters): Promise<TurmasPageResult> {
@@ -237,6 +106,8 @@ export const gestaoService = {
       qtd_vagas_minima: turma.qtdVagasMinima === null || turma.qtdVagasMinima === undefined
         ? null
         : Number(turma.qtdVagasMinima),
+      frequencia_minima_percent: Number(turma.frequenciaMinimaPercent ?? 75),
+      media_minima: Number(turma.mediaMinima ?? 6),
       bloquear_matriculas_apos_completar_vagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
       turno: turma.turno,
       status: turma.status || 'EM_ANDAMENTO',
@@ -288,6 +159,8 @@ export const gestaoService = {
       qtdVagasMinima: data.qtd_vagas_minima === null || data.qtd_vagas_minima === undefined
         ? undefined
         : Number(data.qtd_vagas_minima),
+      frequenciaMinimaPercent: Number(data.frequencia_minima_percent ?? 75),
+      mediaMinima: Number(data.media_minima ?? 6),
       turno: data.turno,
       status: data.status,
       alunosMatriculados: 0,
@@ -343,6 +216,8 @@ export const gestaoService = {
       permitirInscricoesOnline?: boolean;
       exigeMatricula?: boolean;
       qtdVagasMinima?: number;
+      frequenciaMinimaPercent?: number;
+      mediaMinima?: number;
       bloquearMatriculasAposCompletarVagas?: boolean;
       origemFinanceira?: 'NORMAL' | 'LEGADO';
       financeiroHerdado?: boolean;
@@ -364,6 +239,8 @@ export const gestaoService = {
         qtd_vagas_minima: input.qtdVagasMinima === null || input.qtdVagasMinima === undefined
           ? 0
           : Number(input.qtdVagasMinima),
+        frequencia_minima_percent: Number(input.frequenciaMinimaPercent ?? 75),
+        media_minima: Number(input.mediaMinima ?? 6),
         bloquear_matriculas_apos_completar_vagas: input.bloquearMatriculasAposCompletarVagas ?? true,
         origem_financeira: input.origemFinanceira,
         financeiro_herdado: input.financeiroHerdado,
@@ -470,61 +347,6 @@ export const gestaoService = {
     }
   },
 
-  async getGestaoKpis(poloId?: string): Promise<{ activeTurmas: number; activeMatriculas: number }> {
-    let turmasQuery = supabase
-      .from('turmas')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'EM_ANDAMENTO');
-
-    if (poloId) {
-      turmasQuery = turmasQuery.eq('polo_id', poloId);
-    }
-
-    const { count: activeTurmas, error: turmasError } = await turmasQuery;
-
-    if (turmasError) {
-      console.error('Erro ao contar turmas ativas:', turmasError);
-      throw turmasError;
-    }
-
-    const matriculasQuery = poloId
-      ? supabase
-          .from('matriculas')
-          .select('id, turmas!inner(polo_id)', { count: 'exact', head: true })
-          .eq('status', 'ATIVO')
-          .eq('turmas.polo_id', poloId)
-      : supabase
-          .from('matriculas')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'ATIVO');
-
-    const { count: activeMatriculas, error: matriculasError } = await matriculasQuery;
-
-    if (matriculasError) {
-      console.error('Erro ao contar matrículas ativas:', matriculasError);
-      throw matriculasError;
-    }
-
-    return {
-      activeTurmas: activeTurmas || 0,
-      activeMatriculas: activeMatriculas || 0
-    };
-  },
-
-  async getGestaoResumoKpis(poloId?: string): Promise<GestaoResumoKpis> {
-    const { data, error } = await supabase.rpc('get_gestao_resumo_kpis', {
-      p_polo_id: poloId || null
-    });
-
-    if (error) {
-      console.error('Erro ao buscar resumo de turmas:', error);
-      throw error;
-    }
-
-    if (!data) {
-      throw new Error('O banco não retornou os indicadores de gestão.');
-    }
-
-    return data as any;
-  }
+  getGestaoKpis: gestaoKpisService.getGestaoKpis,
+  getGestaoResumoKpis: gestaoKpisService.getGestaoResumoKpis,
 };

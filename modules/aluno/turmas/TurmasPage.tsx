@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { GraduationCap, ShieldAlert } from 'lucide-react';
-import CursosPage from '../cursos/CursosPage';
 import {
   getStudentCourseAccessKey,
   getStudentPinnedCourseKeys,
@@ -13,6 +12,8 @@ import TurmaDetail from './components/TurmaDetail';
 import { useAlunoTurmasData } from './hooks/useAlunoTurmasData';
 import type { MatriculaAluno, TurmaDetailTab, TurmasPageProps } from './turmas.types';
 import { sanitizeCourseId } from './turmas.utils';
+
+const CursosPage = lazy(() => import('../cursos/CursosPage'));
 
 const getCourseAccessItem = (matricula: MatriculaAluno): StudentCourseAccessItem | null => {
   const turma = matricula.turmas;
@@ -109,23 +110,27 @@ const TurmasPage: React.FC<TurmasPageProps> = ({
 
   if (data.matriculasState.isError) {
     return (
-      <div role="alert" className="flex items-center gap-3 rounded-3xl border border-red-150 bg-red-50 p-8 text-red-700">
+      <div role="alert" className="flex flex-col gap-4 rounded-3xl border border-red-150 bg-red-50 p-5 text-red-700 sm:flex-row sm:items-center sm:p-8">
         <ShieldAlert size={24} />
         <div className="flex-1"><p className="font-bold">Não consegui carregar seus cursos</p><p className="text-xs">Ocorreu uma falha de consulta. Tente novamente em instantes.</p></div>
-        <button type="button" onClick={() => void data.matriculasState.refetch()} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest">Recarregar</button>
+        <button type="button" onClick={() => void data.matriculasState.refetch()} className="min-h-11 w-full rounded-xl border border-red-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest sm:w-auto">Recarregar</button>
       </div>
     );
   }
 
   if (studyCourseId) {
-    return <CursosPage alunoId={alunoId} initialCourseId={studyCourseId} onExitCourse={() => setStudyCourseId(null)} />;
+    return (
+      <Suspense fallback={<div className="flex min-h-[240px] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" /></div>}>
+        <CursosPage alunoId={alunoId} initialCourseId={studyCourseId} onExitCourse={() => setStudyCourseId(null)} />
+      </Suspense>
+    );
   }
 
   return (
-    <div className="animate-fadeIn space-y-6">
-      <div className="mb-6">
-        <h2 className="flex items-center gap-2 text-2xl font-black uppercase tracking-tight text-[#001a33]"><GraduationCap className="text-blue-600" /> Meus Cursos</h2>
-        <p className="text-xs font-medium text-slate-400">Acesse seus cursos matriculados, progresso e certificados</p>
+    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
+      <div className="mb-5 sm:mb-6">
+        <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><GraduationCap className="shrink-0 text-blue-600" size={22} /> Meus Cursos</h2>
+        <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">Acesse suas turmas, acompanhe o progresso e consulte certificados.</p>
       </div>
 
       {selectedMatricula ? (

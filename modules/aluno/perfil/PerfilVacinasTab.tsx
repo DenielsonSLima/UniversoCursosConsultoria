@@ -150,7 +150,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
         )).length;
 
         return (
-          <section key={`${context.cursoId}-${context.matriculaId || 'sem-matricula'}`} className="rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm">
+          <section key={`${context.cursoId}-${context.matriculaId || 'sem-matricula'}`} className="min-w-0 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
@@ -158,7 +158,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-600">Vacinação para estágio</p>
-                  <h3 className="mt-1 text-lg font-black text-[#001a33]">{context.cursoNome}</h3>
+                  <h3 className="mt-1 break-words text-base font-black text-[#001a33] sm:text-lg">{context.cursoNome}</h3>
                   <p className="mt-1 text-xs font-semibold text-slate-500">{context.turmaNome || 'Turma vinculada'}</p>
                 </div>
               </div>
@@ -170,7 +170,7 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
 
             <div className="mt-5 space-y-4">
               {context.config.vacinas.filter((vacina) => vacina.obrigatoria).map((vacina) => (
-                <div key={vacina.codigo} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <div key={vacina.codigo} className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 sm:p-4">
                   <h4 className="text-sm font-black text-[#001a33]">{vacina.nome}</h4>
                   <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
                     {vacina.doses.map((dose) => {
@@ -184,8 +184,8 @@ const PerfilVacinasTab: React.FC<PerfilVacinasTabProps> = ({
                       };
 
                       return (
-                        <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <div className="mb-3 flex items-center justify-between gap-3">
+                        <div key={key} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+                          <div className="mb-3 flex flex-col items-start gap-2 min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between">
                             <p className="text-xs font-black uppercase tracking-widest text-slate-700">{dose.label}</p>
                             {getStatusBadge(registro?.status)}
                           </div>

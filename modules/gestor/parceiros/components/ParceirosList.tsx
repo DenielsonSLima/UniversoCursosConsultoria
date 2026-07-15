@@ -13,13 +13,17 @@ interface ParceirosListProps {
   isLoading: boolean;
   onSelectParceiro?: (parceiro: any) => void;
   onDeleteParceiro?: (parceiro: any) => void;
+  onConfirmEmail?: (parceiro: any) => void;
+  confirmingEmailPartnerId?: string | null;
 }
 
 const ParceirosList: React.FC<ParceirosListProps> = ({ 
   items, 
   isLoading,
   onSelectParceiro,
-  onDeleteParceiro
+  onDeleteParceiro,
+  onConfirmEmail,
+  confirmingEmailPartnerId,
 }) => {
   const [page, setPage] = useState(1);
 
@@ -36,17 +40,22 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
   const renderCard = (item: any) => {
     const handleSelect = () => onSelectParceiro && onSelectParceiro(item);
     const handleDelete = () => onDeleteParceiro && onDeleteParceiro(item);
+    const handleConfirmEmail = () => onConfirmEmail && onConfirmEmail(item);
+    const emailConfirmationProps = {
+      onConfirmEmail: handleConfirmEmail,
+      isConfirmingEmail: confirmingEmailPartnerId === item.id,
+    };
     
     switch (item.tipo) {
       case 'Aluno':
-        return <AlunoCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
+        return <AlunoCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
       case 'Professor':
-        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
+        return <ProfessorCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
       case 'PJ':
-        return <PJCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
+        return <PJCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
       case 'PF':
       default:
-        return <PFCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} />;
+        return <PFCard key={item.id} data={item} onClick={handleSelect} onDelete={handleDelete} {...emailConfirmationProps} />;
     }
   };
 

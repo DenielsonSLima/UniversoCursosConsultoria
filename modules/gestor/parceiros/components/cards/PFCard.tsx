@@ -5,14 +5,17 @@ import { MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleL
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatCpf } from '../../../../../lib/documentFormatters';
+import EmailConfirmationStatus from './EmailConfirmationStatus';
 
 interface PFCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
+  onConfirmEmail?: () => void;
+  isConfirmingEmail?: boolean;
 }
 
-const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete }) => {
+const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -127,9 +130,16 @@ const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete }) => {
           </div>
         )}
         {data.email && (
-          <div className="flex items-center gap-2 text-xs text-slate-600">
-            <Mail size={13} className="text-slate-400 shrink-0" />
-            <span className="truncate font-medium">{data.email}</span>
+          <div className="flex items-start gap-2 text-xs text-slate-600">
+            <Mail size={13} className="mt-0.5 text-slate-400 shrink-0" />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span className="truncate font-medium" title={data.email}>{data.email}</span>
+              <EmailConfirmationStatus
+                status={data.emailConfirmationStatus}
+                isConfirming={isConfirmingEmail}
+                onConfirm={onConfirmEmail}
+              />
+            </div>
           </div>
         )}
         {data.cidade && (

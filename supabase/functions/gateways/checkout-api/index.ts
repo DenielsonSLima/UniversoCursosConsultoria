@@ -175,7 +175,7 @@ const assertRequestedPaymentMethodMatchesCourse = (
 
 const providerLabelFor = (providerCode: string) => {
   if (providerCode === "mercado_pago") return "Mercado Pago";
-  if (providerCode === "banese_card") return "Banese Card";
+  if (providerCode === "banese_card") return "Banese";
   return "Asaas";
 };
 

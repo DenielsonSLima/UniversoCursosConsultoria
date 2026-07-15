@@ -4,7 +4,7 @@ import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 
 const PerfilGoogleTab: React.FC = () => (
   <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.8fr]">
-    <div className="rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm md:p-8">
+    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
       <div className="mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
           <ShieldCheck size={16} />
@@ -14,7 +14,7 @@ const PerfilGoogleTab: React.FC = () => (
       <GoogleIdentityCard tone="blue" />
     </div>
 
-    <div className="rounded-[2.5rem] border border-blue-100 bg-blue-50 p-6">
+    <div className="rounded-3xl border border-blue-100 bg-blue-50 p-4 sm:p-6 md:rounded-[2.5rem]">
       <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Como funciona</h4>
       <p className="mt-3 text-xs font-semibold leading-relaxed text-blue-900">
         Depois de vincular o Google, você pode entrar com e-mail e senha ou usando sua conta Google. Se quiser voltar ao acesso por senha, use a opção de desvincular Google.

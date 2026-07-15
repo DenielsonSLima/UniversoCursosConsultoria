@@ -32,7 +32,7 @@ const PerfilPhotoCard: React.FC<Props> = ({
     )}
 
     <aside className="space-y-4">
-      <div className="rounded-[2.5rem] border border-blue-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-blue-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
             <Camera size={16} />
@@ -41,7 +41,7 @@ const PerfilPhotoCard: React.FC<Props> = ({
         </div>
 
         <div className="mt-5 flex flex-col items-center text-center">
-          <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-[2rem] border border-slate-100 bg-slate-50 text-blue-600 shadow-inner">
+          <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[1.75rem] border border-slate-100 bg-slate-50 text-blue-600 shadow-inner sm:h-36 sm:w-36 sm:rounded-[2rem]">
             {profile?.foto ? (
               <img src={profile.foto} alt="Foto de perfil do aluno" className="h-full w-full object-cover" />
             ) : (
@@ -66,7 +66,7 @@ const PerfilPhotoCard: React.FC<Props> = ({
               </div>
             </div>
           </div>
-          <label className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2">
+          <label className="mt-4 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2">
             <Upload size={14} />
             {uploadingPhoto ? 'Enviando foto...' : (profile?.foto ? 'Alterar foto' : 'Enviar foto')}
             <input

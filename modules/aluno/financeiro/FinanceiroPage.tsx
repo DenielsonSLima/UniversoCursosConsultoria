@@ -2,10 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
-import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap } from 'lucide-react';
+import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap, RotateCcw } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
@@ -32,6 +30,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [endDate, setEndDate] = useState('');
   const [modalityFilter, setModalityFilter] = useState<'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO'>('TODOS');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [statusTab, setStatusTab] = useState<'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS'>('ABERTO');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
@@ -355,6 +354,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width: 639px)');
+    const keepMobileCards = () => {
+      if (mobileQuery.matches) setViewMode('cards');
+    };
+    keepMobileCards();
+    mobileQuery.addEventListener('change', keepMobileCards);
+    return () => mobileQuery.removeEventListener('change', keepMobileCards);
+  }, []);
+
+  useEffect(() => {
     const hasOpenModal = Boolean(selectedReceipt || selectedEadPayment);
     if (!hasOpenModal) return;
 
@@ -540,6 +549,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const getPaidReceiptLabel = (inst: any) =>
     isPaidThroughAsaas(inst) ? 'Comprovante' : 'Recibo Universo';
 
+  const hasAdvancedFilters = Boolean(startDate || endDate || modalityFilter !== 'TODOS');
+  const clearAdvancedFilters = () => {
+    setStartDate('');
+    setEndDate('');
+    setModalityFilter('TODOS');
+  };
+
   const openReceipt = (inst: any) => {
     if (String(inst.status || '').toUpperCase() !== 'PAGO') {
       setNotice('O recibo fica disponível somente para cobranças pagas.');
@@ -576,6 +592,10 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setIsGeneratingReceiptPdf(true);
 
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
@@ -791,49 +811,49 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
       {/* Header Panel */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-            <CreditCard className="text-blue-600" />
-            Financeiro Acadêmico
+      <div className="mb-5 flex items-start justify-between sm:mb-6 sm:items-center">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
+            <CreditCard className="shrink-0 text-blue-600" size={22} />
+            <span>Financeiro</span>
           </h2>
-          <p className="text-xs text-slate-450 font-medium">Gerencie suas mensalidades e comprovantes oficiais</p>
+          <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-slate-500">Acompanhe parcelas, vencimentos e comprovantes em um só lugar.</p>
         </div>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+        <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Pago</p>
             <p className="text-2xl font-black text-emerald-600">{formatCurrency(totalPaid)}</p>
             <p className="text-[10px] text-slate-500 font-medium">Lançamentos compensados</p>
           </div>
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 sm:h-12 sm:w-12">
             <TrendingUp size={22} />
           </div>
         </div>
 
-        <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">A pagar / Aberto</p>
             <p className="text-2xl font-black text-[#001a33]">{formatCurrency(totalPending)}</p>
             <p className="text-[10px] text-slate-500 font-medium">Mensalidades futuras e pendentes</p>
           </div>
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 sm:h-12 sm:w-12">
             <Clock size={22} />
           </div>
         </div>
       </div>
 
       {openSummaryByModality.length > 0 && (
-        <div className="rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Em aberto por tipo</p>
-              <p className="text-xs font-bold text-slate-500">Separação rápida para não misturar EAD com cursos presenciais.</p>
+              <p className="text-xs font-bold leading-relaxed text-slate-500">Valores pendentes organizados por modalidade.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -853,8 +873,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       )}
 
       {/* Filter + List + Views */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 p-6 md:p-8 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
+      <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
+        <div className="mb-5 flex items-center gap-2 sm:mb-6">
           <FileText size={16} className="text-blue-500" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Histórico de Cobranças</h3>
         </div>
@@ -865,8 +885,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-4">
+          <div className="lg:col-span-4">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
               <span className="inline-flex items-center gap-1"><Search size={12} /> Buscar</span>
             </label>
@@ -875,11 +895,22 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por descrição, curso ou status"
-              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </div>
 
-          <div>
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters((current) => !current)}
+            className="flex h-12 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wider text-slate-600 lg:hidden"
+            aria-expanded={showMobileFilters}
+          >
+            <span className="inline-flex items-center gap-2"><Filter size={15} /> Mais filtros</span>
+            <span className="rounded-full bg-blue-50 px-2 py-1 text-[9px] text-blue-700">{hasAdvancedFilters ? 'Ativos' : showMobileFilters ? 'Fechar' : 'Abrir'}</span>
+          </button>
+
+          <div className={`${showMobileFilters ? 'grid' : 'hidden'} grid-cols-1 gap-3 rounded-2xl bg-slate-50 p-3 lg:contents`}>
+          <div className="lg:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
               <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data inicial</span>
             </label>
@@ -887,11 +918,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
             />
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
               <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> Data final</span>
             </label>
@@ -899,18 +930,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
             />
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2 block">
               <span className="inline-flex items-center gap-1"><Filter size={12} /> Tipo</span>
             </label>
             <select
               value={modalityFilter}
               onChange={(e) => setModalityFilter(e.target.value as 'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO')}
-              className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 font-bold text-slate-700"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
             >
               <option value="TODOS">Todos os tipos</option>
               <option value="EAD">EAD</option>
@@ -920,11 +951,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             </select>
           </div>
 
-          <div>
+          <div className="hidden sm:block lg:col-span-2">
             <label className="sr-only">Visualização</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid h-12 grid-cols-2 gap-2">
               <button
+                type="button"
                 title="Visualização em tabela"
+                aria-label="Exibir cobranças em tabela"
                 onClick={() => setViewMode('table')}
                 className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors inline-flex items-center justify-center ${
                   viewMode === 'table'
@@ -935,7 +968,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 <List size={16} />
               </button>
               <button
+                type="button"
                 title="Visualização em cards"
+                aria-label="Exibir cobranças em cartões"
                 onClick={() => setViewMode('cards')}
                 className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors inline-flex items-center justify-center ${
                   viewMode === 'cards'
@@ -947,9 +982,15 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               </button>
             </div>
           </div>
+          {hasAdvancedFilters && (
+            <button type="button" onClick={clearAdvancedFilters} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[10px] font-black uppercase tracking-wider text-slate-600 lg:hidden">
+              <RotateCcw size={13} /> Limpar filtros
+            </button>
+          )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-4 mt-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {[
             { key: 'ABERTO', label: 'Em aberto', count: tabCounts.ABERTO },
             { key: 'ATRASADO', label: 'Atrasado', count: tabCounts.ATRASADO },
@@ -959,7 +1000,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             <button
               key={tab.key}
               onClick={() => setStatusTab(tab.key as 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS')}
-              className={`px-3 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-colors ${
+              className={`min-h-11 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors sm:rounded-full ${
                 statusTab === tab.key
                   ? 'bg-blue-600 text-white shadow'
                   : 'bg-slate-100 text-slate-600 border border-slate-200'
@@ -973,7 +1014,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500 font-bold">
+        <div className="mt-4 flex flex-col gap-1 text-[11px] font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>
             Exibindo <strong className="font-black">{filteredInstallments.length}</strong> cobranças
             {filteredInstallments.length !== installments.length && (

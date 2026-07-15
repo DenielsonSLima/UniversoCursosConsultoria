@@ -50,9 +50,9 @@ const DocumentCard: React.FC<{
   onUpload: React.Dispatch<{ docName: string; file: File }>;
 }> = ({ doc, uploading, onUpload }) => (
   <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-medium">
-    <div className="flex items-start justify-between gap-2">
-      <div className="space-y-0.5">
-        <p className="font-bold text-[#001a33]">{doc.nome}</p>
+    <div className="flex flex-col items-start gap-2 min-[390px]:flex-row min-[390px]:justify-between">
+      <div className="min-w-0 space-y-0.5">
+        <p className="break-words font-bold text-[#001a33]">{doc.nome}</p>
         {doc.observacao ? (
           <p className="text-[9px] font-bold text-red-500">{doc.observacao}</p>
         ) : (
@@ -63,7 +63,7 @@ const DocumentCard: React.FC<{
     </div>
 
     {doc.status !== 'aprovado' && (
-      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2 text-[10px] font-black text-slate-500 transition-all hover:border-blue-500 hover:bg-white hover:text-blue-600">
+      <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-center text-[10px] font-black text-slate-500 transition-all hover:border-blue-500 hover:bg-white hover:text-blue-600">
         <Upload size={14} />
         <span>{uploading ? 'Enviando...' : doc.status === 'entregue' ? 'Reenviar Arquivo' : 'Escolher Arquivo'}</span>
         <input
@@ -98,14 +98,14 @@ const PerfilDocumentosTab: React.FC<PerfilDocumentosTabProps> = ({ documentos, u
     : standardDocuments.map((nome) => ({ nome, status: 'pendente' }));
 
   return (
-    <div className="rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
       <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
         <FileText className="text-blue-600" size={18} />
         <h3 className="text-xs font-bold uppercase tracking-wider text-[#001a33]">Documentação Escolar</h3>
       </div>
 
-      <p className="mt-5 text-[10px] font-medium leading-relaxed text-slate-500">
-        Para homologar sua matrícula definitiva, envie cópias legíveis em formato PDF ou imagem dos seus documentos.
+      <p className="mt-5 text-xs font-medium leading-relaxed text-slate-500">
+        Para concluir sua matrícula, envie cópias legíveis em PDF ou imagem. A secretaria analisará cada arquivo.
       </p>
 
       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

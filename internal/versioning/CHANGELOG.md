@@ -2,6 +2,47 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.3.0-beta.2] - 2026-07-15
+
+### Adicionado
+
+- Frequência mínima e média mínima configuráveis por turma técnica, preservando 75% e nota 6 como padrões.
+- Retorno de aluno cancelado, trancado ou desistente em uma nova turma do mesmo curso, sem apagar a matrícula anterior.
+- Registro de equivalências no recebimento de transferência externa e resumo dos aproveitamentos no histórico do aluno.
+
+### Corrigido
+
+- Transferências deixaram de falhar por leitura da coluna de data do tipo errado de registro acadêmico.
+- Frequência passou a considerar a carga horária de cada aula, evitando que uma falta de quatro horas tenha o mesmo peso de uma falta de uma hora.
+- Transferências internas e retornos agora preservam disciplinas aprovadas e aproveitamentos anteriores, inclusive em continuidades sucessivas.
+- A seleção de turma de destino foi limitada às turmas em andamento do mesmo curso.
+- A guia de transferência pode ser preparada para matrícula ativa ou já transferida.
+
+### Segurança
+
+- Novas operações acadêmicas validam turma, curso, status, aluno e escopo do gestor no banco.
+- Funções auxiliares de cálculo e cópia de créditos permanecem internas, sem execução por usuários anônimos ou autenticados.
+- Regras acadêmicas ficam bloqueadas depois do primeiro lançamento de nota, frequência ou estágio.
+
+## [0.3.0-beta.1] - 2026-07-15
+
+### Adicionado
+
+- Configuração única do polo matriz que atua como emissor e recebedor bancário de todos os polos.
+- Identificação separada do polo de origem e do polo emissor nas cobranças e transações de gateway.
+- Painel de conferência do CNPJ emissor e da quantidade de polos que herdam a configuração da matriz.
+
+### Alterado
+
+- Mercado Pago ficou reservado à futura operação de cartão de crédito.
+- Banese ficou reservado a Pix e boleto, permanecendo bloqueado até a homologação bancária.
+- O nome operacional exibido na integração passou de `Banese Card` para `Banese`, preservando o código interno por compatibilidade.
+
+### Segurança
+
+- Apenas gestor global pode alterar o emissor financeiro, que obrigatoriamente precisa ser um polo matriz ativo.
+- Cada cobrança preserva o emissor aplicado no momento da criação para impedir perda de rastreabilidade após mudanças futuras.
+
 ## [0.2.2-beta.4] - 2026-07-14
 
 ### Corrigido

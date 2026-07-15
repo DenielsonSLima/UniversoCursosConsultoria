@@ -11,8 +11,8 @@ type Props = {
 
 const PerfilAddressSection: React.FC<Props> = ({ profile, editing, form }) => {
   const resolved = form.cepStatus === 'resolved';
-  const editableInputClassName = 'w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white';
-  const readOnlyClassName = 'truncate rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850';
+  const editableInputClassName = 'min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
+  const readOnlyClassName = 'min-w-0 break-words rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850';
 
   return (
     <div className="border-t border-slate-100 pt-4">
@@ -33,7 +33,7 @@ const PerfilAddressSection: React.FC<Props> = ({ profile, editing, form }) => {
                 value={form.cep}
                 onChange={form.handleCepChange}
                 placeholder="00000-000"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 pr-10 font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white"
+                className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 pr-10 font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
               {form.cepStatus === 'loading' && <Loader2 size={15} className="absolute right-3 top-3.5 animate-spin text-blue-500" />}
             </div>
@@ -86,7 +86,7 @@ const PerfilAddressSection: React.FC<Props> = ({ profile, editing, form }) => {
               onChange={form.updateUppercase(form.setCidade)}
               readOnly={resolved}
               autoComplete="address-level2"
-              className={`w-full rounded-xl border p-3 font-bold outline-none transition-all ${resolved ? 'cursor-not-allowed border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 focus:border-blue-500 focus:bg-white'}`}
+              className={`min-h-12 w-full rounded-xl border p-3 font-bold outline-none transition-all ${resolved ? 'cursor-not-allowed border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
             />
           ) : (
             <p className={readOnlyClassName}>{readProfileValue(profile?.cidade)}</p>
@@ -102,7 +102,7 @@ const PerfilAddressSection: React.FC<Props> = ({ profile, editing, form }) => {
               onChange={form.updateUppercase(form.setUf)}
               readOnly={resolved}
               autoComplete="address-level1"
-              className={`w-full rounded-xl border p-3 text-center font-bold outline-none transition-all ${resolved ? 'cursor-not-allowed border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 focus:border-blue-500 focus:bg-white'}`}
+              className={`min-h-12 w-full rounded-xl border p-3 text-center font-bold outline-none transition-all ${resolved ? 'cursor-not-allowed border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100'}`}
             />
           ) : (
             <p className={`${readOnlyClassName} text-center`}>{readProfileValue(profile?.uf)}</p>

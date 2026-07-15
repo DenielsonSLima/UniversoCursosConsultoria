@@ -8,9 +8,9 @@ type Props = {
   form: PerfilDadosForm;
 };
 
-const selectClassName = 'w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white';
+const selectClassName = 'min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100';
 const inputClassName = selectClassName;
-const readOnlyClassName = 'rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850';
+const readOnlyClassName = 'min-w-0 break-words rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850';
 
 const PerfilTechnicalSection: React.FC<Props> = ({ editing, form }) => (
   <div className="border-t border-slate-100 pt-4">

@@ -10,451 +10,35 @@ import {
   isRateLimitExceeded,
   json,
 } from "../../_shared/http.ts";
-
-type Environment = "sandbox" | "production";
-type PaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
-type Modalidade =
-  | "EAD"
-  | "TECNICO"
-  | "LIVRE"
-  | "ESPECIALIZACAO"
-  | "OUTROS_CREDITOS";
-type ProviderCode = "asaas" | "mercado_pago" | "banese_card";
-
-const GESTOR_ACTIONS = new Set([
-  "get-overview",
-  "save-credential",
-  "save-route",
-  "test-connection",
-]);
-
-const GLOBAL_ACTIONS = new Set([
-  "save-credential",
-  "save-route",
-  "test-connection",
-]);
-
-const PROVIDERS: Record<ProviderCode, {
-  supports: PaymentMethod[];
-}> = {
-  asaas: {
-    supports: ["PIX", "BOLETO", "CREDIT_CARD"],
-  },
-  mercado_pago: {
-    supports: ["PIX", "BOLETO", "CREDIT_CARD"],
-  },
-  banese_card: {
-    supports: ["PIX", "BOLETO"],
-  },
-};
-
-const assertProviderAdapterReady = (
-  providerCode: ProviderCode,
-  paymentMethod: PaymentMethod,
-) => {
-  if (providerCode !== "banese_card") return;
-  if (paymentMethod === "CREDIT_CARD") {
-    throw new Error(
-      "Banese Card nao aceita cartao de credito neste fluxo. Use Asaas ou Mercado Pago para cartao.",
-    );
-  }
-  throw new Error(
-    "Banese Card Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
-  );
-};
-
-const normalizeEnvironment = (value: unknown): Environment =>
-  value === "production" ? "production" : "sandbox";
-
-const normalizeProviderCode = (value: unknown): ProviderCode => {
-  const code = String(value || "").trim().toLowerCase();
-  if (code === "asaas" || code === "mercado_pago" || code === "banese_card") {
-    return code;
-  }
-  throw new Error("Provedor bancario invalido.");
-};
-
-const normalizeMethod = (value: unknown): PaymentMethod => {
-  const method = String(value || "").trim().toUpperCase();
-  if (method === "PIX" || method === "BOLETO" || method === "CREDIT_CARD") {
-    return method;
-  }
-  if (method === "CARTAO" || method === "CARTÃO") return "CREDIT_CARD";
-  throw new Error("Forma de pagamento invalida.");
-};
-
-const normalizeModalidade = (value: unknown): Modalidade => {
-  const modalidade = String(value || "")
-    .trim()
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-  if (
-    modalidade === "EAD" ||
-    modalidade === "TECNICO" ||
-    modalidade === "LIVRE" ||
-    modalidade === "ESPECIALIZACAO" ||
-    modalidade === "OUTROS_CREDITOS"
-  ) {
-    return modalidade;
-  }
-  throw new Error("Modalidade invalida.");
-};
-
-const secretName = (
-  providerCode: ProviderCode,
-  environment: Environment,
-  kind: string,
-) => `payment_gateway_${providerCode}_${environment}_${kind}`;
-
-const asaasApiSecretName = (environment: Environment) =>
-  environment === "production"
-    ? "asaas_production_api_key"
-    : "asaas_sandbox_api_key";
-
-const asaasWebhookSecretName = (environment: Environment) =>
-  environment === "production"
-    ? "asaas_production_webhook_token"
-    : "asaas_sandbox_webhook_token";
-
-const asaasBaseUrl = (environment: Environment) =>
-  environment === "production"
-    ? "https://api.asaas.com/v3"
-    : "https://api-sandbox.asaas.com/v3";
-
-const webhookUrlFor = (supabaseUrl: string, providerCode: ProviderCode) => {
-  if (providerCode === "asaas") {
-    return `${supabaseUrl}/functions/v1/asaas-webhook`;
-  }
-  return `${supabaseUrl}/functions/v1/payment-gateway-webhook/${providerCode}`;
-};
-
-const credentialWebhookUrlFor = (
-  supabaseUrl: string,
-  providerCode: ProviderCode,
-  environment: Environment,
-) => {
-  const baseUrl = webhookUrlFor(supabaseUrl, providerCode);
-  if (providerCode === "asaas") return baseUrl;
-  return `${baseUrl}?environment=${environment}`;
-};
-
-const extractSecretInput = (body: any) => ({
-  api_key: String(body.apiKey || "").trim(),
-  access_token: String(body.accessToken || "").trim(),
-  public_key: String(body.publicKey || "").trim(),
-  client_id: String(body.clientId || "").trim(),
-  client_secret: String(body.clientSecret || "").trim(),
-  crt_access_token: String(body.crtAccessToken || "").trim(),
-  webhook_secret: String(body.webhookSecret || "").trim(),
-  webhook_token: String(body.webhookToken || "").trim(),
-});
-
-const pickMetadata = (value: unknown) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const raw = value as Record<string, unknown>;
-  const allowed = [
-    "walletId",
-    "merchantId",
-    "baneseConvenio",
-    "baneseBoletoConvenio",
-    "baneseBeneficiarioInscricao",
-    "banesePixConvenio",
-    "banesePixChave",
-    "baneseCarteira",
-    "baneseAgencia",
-    "baneseConta",
-    "notes",
-  ];
-  return Object.fromEntries(
-    allowed
-      .filter((key) => raw[key] !== undefined)
-      .map((key) => [key, raw[key]]),
-  );
-};
-
-const getCredential = async (
-  admin: any,
-  providerCode: ProviderCode,
-  environment: Environment,
-) => {
-  const { data, error } = await admin
-    .from("payment_gateway_credentials")
-    .select("*")
-    .eq("provider_code", providerCode)
-    .eq("environment", environment)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-};
-
-const getGatewaySecret = async (
-  admin: any,
-  providerCode: ProviderCode,
-  environment: Environment,
-  kind: string,
-) => {
-  const { data, error } = await admin.rpc("payment_gateway_get_secret", {
-    p_secret_name: secretName(providerCode, environment, kind),
-  });
-  if (error) throw error;
-  return data as string | null;
-};
-
-const setGatewaySecret = async (
-  admin: any,
-  providerCode: ProviderCode,
-  environment: Environment,
-  kind: string,
-  value: string,
-) => {
-  const { error } = await admin.rpc("payment_gateway_set_secret", {
-    p_secret_name: secretName(providerCode, environment, kind),
-    p_secret_value: value,
-  });
-  if (error) throw error;
-};
-
-const setAsaasLegacySecret = async (
-  admin: any,
-  environment: Environment,
-  kind: "api_key" | "webhook_token",
-  value: string,
-) => {
-  const name = kind === "api_key"
-    ? asaasApiSecretName(environment)
-    : asaasWebhookSecretName(environment);
-  const { error } = await admin.rpc("asaas_set_secret", {
-    p_secret_name: name,
-    p_secret_value: value,
-  });
-  if (error) throw error;
-  if (environment === "sandbox" && kind === "webhook_token") {
-    const { error: legacyError } = await admin.rpc("asaas_set_secret", {
-      p_secret_name: "asaas_webhook_token",
-      p_secret_value: value,
-    });
-    if (legacyError) throw legacyError;
-  }
-};
-
-const getAsaasLegacySecret = async (
-  admin: any,
-  environment: Environment,
-  kind: "api_key" | "webhook_token",
-) => {
-  const name = kind === "api_key"
-    ? asaasApiSecretName(environment)
-    : asaasWebhookSecretName(environment);
-  const { data, error } = await admin.rpc("asaas_get_secret", {
-    p_secret_name: name,
-  });
-  if (error) throw error;
-  return data as string | null;
-};
-
-const hasAsaasLegacySecret = async (
-  admin: any,
-  environment: Environment,
-  kind: "api_key" | "webhook_token",
-) => {
-  const value = await getAsaasLegacySecret(admin, environment, kind).catch(() =>
-    null
-  );
-  return Boolean(String(value || "").trim());
-};
-
-const mergeAsaasLegacyCredential = async (admin: any, credential: any) => {
-  if (credential?.provider_code !== "asaas") return credential;
-  const environment = normalizeEnvironment(credential.environment);
-  const apiKeyConfigured = credential.api_key_configured === true ||
-    await hasAsaasLegacySecret(admin, environment, "api_key");
-  const webhookSecretConfigured =
-    credential.webhook_secret_configured === true ||
-    await hasAsaasLegacySecret(admin, environment, "webhook_token");
-
-  return {
-    ...credential,
-    configured: apiKeyConfigured && webhookSecretConfigured,
-    api_key_configured: apiKeyConfigured,
-    webhook_secret_configured: webhookSecretConfigured,
-  };
-};
-
-const providerOverviewRow = (provider: any) => {
-  if (provider?.code !== "banese_card") return provider;
-  return {
-    ...provider,
-    name: "Banese Card",
-    description:
-      "Banco Banese Card para Pix/SAB Guias e boleto. Cartao de credito nao e suportado neste fluxo.",
-    supports_pix: true,
-    supports_boleto: true,
-    supports_credit_card: false,
-    has_public_api: false,
-    metadata: {
-      ...(provider?.metadata || {}),
-      checkout_blocked: true,
-      checkout_block_reason:
-        "Aguardando homologacao Banese Card de payload por cobranca, exibicao do retorno bancario e conciliacao.",
-    },
-  };
-};
-
-const isCredentialConfiguredForProvider = (
-  providerCode: ProviderCode,
-  credential: any,
-) => {
-  if (!credential) return false;
-
-  if (providerCode === "asaas") {
-    return credential.api_key_configured === true &&
-      credential.webhook_secret_configured === true;
-  }
-
-  if (providerCode === "mercado_pago") {
-    return credential.access_token_configured === true &&
-      credential.public_key_configured === true &&
-      credential.webhook_secret_configured === true;
-  }
-
-  if (providerCode === "banese_card") return false;
-
-  return false;
-};
-
-const isCredentialConfiguredForRoute = async (
-  admin: any,
-  providerCode: ProviderCode,
-  environment: Environment,
-  paymentMethod: PaymentMethod,
-  credential: any,
-) => {
-  void environment;
-  void paymentMethod;
-  const checkedCredential = providerCode === "asaas" && credential
-    ? await mergeAsaasLegacyCredential(admin, credential)
-    : credential;
-  if (!checkedCredential) return false;
-
-  if (providerCode === "asaas") {
-    return checkedCredential.api_key_configured === true &&
-      checkedCredential.webhook_secret_configured === true;
-  }
-
-  if (providerCode === "mercado_pago") {
-    return checkedCredential.access_token_configured === true &&
-      checkedCredential.public_key_configured === true &&
-      checkedCredential.webhook_secret_configured === true;
-  }
-
-  if (providerCode === "banese_card") return false;
-
-  return false;
-};
-
-const updateAsaasLegacyConfig = async (
-  admin: any,
-  environment: Environment,
-  metadata: Record<string, unknown>,
-  result: { status: string; message: string },
-) => {
-  const { data: config, error: configError } = await admin
-    .from("asaas_config")
-    .select(
-      "id, notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled",
-    )
-    .maybeSingle();
-  if (configError) throw configError;
-
-  const walletId = typeof metadata.walletId === "string"
-    ? metadata.walletId
-    : null;
-  const { error } = await admin.from("asaas_config").upsert({
-    id: config?.id || "a1111111-1111-1111-1111-111111111111",
-    environment,
-    wallet_id: walletId,
-    api_key: null,
-    configured: result.status === "OK",
-    notifications_enabled: config?.notifications_enabled === true,
-    notification_whatsapp_enabled:
-      config?.notification_whatsapp_enabled === true,
-    notification_email_enabled: config?.notification_email_enabled === true,
-    notification_sms_enabled: config?.notification_sms_enabled === true,
-    last_test_at: new Date().toISOString(),
-    last_test_status: result.status,
-    last_test_message: result.message,
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw error;
-};
-
-const testAsaas = async (apiKey: string, environment: Environment) => {
-  const response = await fetch(
-    `${asaasBaseUrl(environment)}/customers?limit=1`,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        access_token: apiKey,
-      },
-    },
-  );
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || "O Asaas recusou a chave informada.");
-  }
-  return { status: "OK", message: "Conexao validada com sucesso." };
-};
-
-const testMercadoPago = async (accessToken: string) => {
-  const response = await fetch("https://api.mercadopago.com/users/me", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || "O Mercado Pago recusou o token informado.");
-  }
-  return { status: "OK", message: "Conexao validada com sucesso." };
-};
-
-const testProvider = async (
-  admin: any,
-  providerCode: ProviderCode,
-  environment: Environment,
-  providedSecrets: Record<string, string> = {},
-) => {
-  if (providerCode === "asaas") {
-    const apiKey = providedSecrets.api_key ||
-      await getGatewaySecret(admin, providerCode, environment, "api_key") ||
-      await getAsaasLegacySecret(admin, environment, "api_key");
-    if (!apiKey) throw new Error("Informe a chave de API do Asaas.");
-    return testAsaas(apiKey, environment);
-  }
-
-  if (providerCode === "mercado_pago") {
-    const accessToken = providedSecrets.access_token ||
-      await getGatewaySecret(admin, providerCode, environment, "access_token");
-    if (!accessToken) {
-      throw new Error("Informe o access token do Mercado Pago.");
-    }
-    return testMercadoPago(accessToken);
-  }
-
-  const clientId = providedSecrets.client_id ||
-    await getGatewaySecret(admin, providerCode, environment, "client_id");
-  const clientSecret = providedSecrets.client_secret ||
-    await getGatewaySecret(admin, providerCode, environment, "client_secret");
-  if (!clientId || !clientSecret) {
-    throw new Error("Informe Client ID e Client Secret do Banese Card.");
-  }
-  return {
-    status: "PENDING_MANUAL",
-    message:
-      "Credenciais armazenadas. Pix/Boleto Banese Card precisam de homologacao manual antes de ativar checkout real.",
-  };
-};
+import {
+  getPaymentIssuerOverview,
+  savePaymentIssuer,
+} from "./issuer.ts";
+import {
+  GLOBAL_ACTIONS,
+  GESTOR_ACTIONS,
+  PROVIDERS,
+  assertProviderAdapterReady,
+  credentialWebhookUrlFor,
+  extractSecretInput,
+  normalizeEnvironment,
+  normalizeMethod,
+  normalizeModalidade,
+  normalizeProviderCode,
+  pickMetadata,
+  providerOverviewRow,
+  webhookUrlFor,
+} from "./config.ts";
+import {
+  getCredential,
+  isCredentialConfiguredForProvider,
+  isCredentialConfiguredForRoute,
+  mergeAsaasLegacyCredential,
+  setAsaasLegacySecret,
+  setGatewaySecret,
+  testProvider,
+  updateAsaasLegacyConfig,
+} from "./credentials.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -499,7 +83,13 @@ Deno.serve(async (req: Request) => {
     if (gestor && GLOBAL_ACTIONS.has(action)) requireGestorGlobal(gestor);
 
     if (action === "get-overview") {
-      const [providersResult, credentialsResult, routesResult, configResult] =
+      const [
+        providersResult,
+        credentialsResult,
+        routesResult,
+        configResult,
+        issuerOverview,
+      ] =
         await Promise.all([
           admin.from("payment_gateway_providers").select("*").order("name", {
             ascending: true,
@@ -514,6 +104,7 @@ Deno.serve(async (req: Request) => {
             ascending: true,
           }),
           admin.from("asaas_config").select("environment").maybeSingle(),
+          getPaymentIssuerOverview(admin),
         ]);
       if (providersResult.error) throw providersResult.error;
       if (credentialsResult.error) throw credentialsResult.error;
@@ -543,12 +134,25 @@ Deno.serve(async (req: Request) => {
         credentials,
         routes: routesResult.data || [],
         activeEnvironment: normalizeEnvironment(configResult.data?.environment),
+        issuerConfig: issuerOverview.config,
+        issuerCandidates: issuerOverview.candidates,
+        activePolosCount: issuerOverview.active_polos_count,
         webhookUrls: {
           asaas: webhookUrlFor(supabaseUrl, "asaas"),
           mercado_pago: webhookUrlFor(supabaseUrl, "mercado_pago"),
           banese_card: webhookUrlFor(supabaseUrl, "banese_card"),
         },
       });
+    }
+
+    if (action === "save-issuer") {
+      if (!gestor) throw new Error("Gestor nao identificado.");
+      const issuerConfig = await savePaymentIssuer(
+        admin,
+        gestor,
+        body.issuerPoloId,
+      );
+      return respondJson({ success: true, issuerConfig });
     }
 
     if (action === "save-credential") {

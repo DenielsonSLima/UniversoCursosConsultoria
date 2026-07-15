@@ -5,6 +5,7 @@ import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json as sendJson } 
 type IncomingPayload = {
   action?: string;
   partnerId?: string;
+  partnerIds?: string[];
   email?: string | null;
   password?: string | null;
   redirectTo?: string;
@@ -22,7 +23,18 @@ type FunctionResponse = {
   message?: string;
   recoveryLink?: string | null;
   user?: Record<string, unknown> | null;
+  statuses?: PartnerEmailStatus[];
+  emailConfirmed?: boolean;
   error?: string;
+};
+
+type PartnerEmailStatusValue = 'confirmed' | 'pending' | 'no_auth_user' | 'no_email';
+
+type PartnerEmailStatus = {
+  partnerId: string;
+  status: PartnerEmailStatusValue;
+  authUserExists: boolean;
+  emailConfirmed: boolean;
 };
 
 const TERMS_VERSION = Deno.env.get('TERMS_VERSION') || '2026-06-25';
@@ -249,7 +261,7 @@ const ensureAuthorizedGestor = async (admin: any, bearer: string | null) => {
 
   const { data: gestor, error: gestorError } = await admin
     .from('usuarios_sistema')
-    .select('id, status, context, polo_ids, permissoes')
+    .select('id, nome, email, status, context, polo_ids, permissoes')
     .eq('email', authData.user.email.toLowerCase())
     .maybeSingle();
 
@@ -291,14 +303,26 @@ const getGestorScope = async (admin: any, gestor: any) => {
 
 const gestorHasModule = (gestor: any, moduleId: string) => {
   const rawPermissions = gestor?.permissoes;
-  if (!rawPermissions || typeof rawPermissions !== 'object') return true;
+  if (!rawPermissions) return true;
+  if (Array.isArray(rawPermissions)) {
+    return rawPermissions.length === 0 || normalizeStringArray(rawPermissions).includes(moduleId);
+  }
+  if (typeof rawPermissions !== 'object') return true;
+
+  const hasExplicitPermissions = ['modules', 'financeiroTabs', 'allPolos', 'tabs']
+    .some((key) => key in rawPermissions);
+  if (!hasExplicitPermissions) return true;
+
   const permissions = normalizePermissionsPayload(rawPermissions);
-  if (permissions.modules.length === 0) return true;
   return permissions.modules.includes(moduleId);
 };
 
 const isPartnerInGestorScope = async (admin: any, gestor: any, partner: any) => {
   const scope = await getGestorScope(admin, gestor);
+  return isPartnerAllowedByScope(scope, partner);
+};
+
+const isPartnerAllowedByScope = (scope: any, partner: any) => {
   if (scope.global) return true;
   if (!scope.poloId) return false;
 
@@ -306,9 +330,32 @@ const isPartnerInGestorScope = async (admin: any, gestor: any, partner: any) => 
   const partnerPoloIds = Array.isArray(partner?.polo_ids) ? partner.polo_ids : [];
   const allowedPoloIds = Array.isArray(scope.allowedPoloIds) ? scope.allowedPoloIds : [];
 
-  return !partnerPoloId
-    || allowedPoloIds.includes(partnerPoloId)
+  return allowedPoloIds.includes(partnerPoloId)
     || partnerPoloIds.some((poloId: string) => allowedPoloIds.includes(poloId));
+};
+
+const listAuthUsersByEmail = async (admin: any, emails: Set<string>) => {
+  const usersByEmail = new Map<string, any>();
+  if (emails.size === 0) return usersByEmail;
+
+  let page = 1;
+  const perPage = 1000;
+
+  while (usersByEmail.size < emails.size) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = data?.users || [];
+    for (const user of users) {
+      const email = normalizeEmail(user.email);
+      if (email && emails.has(email)) usersByEmail.set(email, user);
+    }
+
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return usersByEmail;
 };
 
 const findAuthUserByEmail = async (admin: any, email: string) => {
@@ -316,7 +363,7 @@ const findAuthUserByEmail = async (admin: any, email: string) => {
   let page = 1;
   const perPage = 1000;
 
-  while (page <= 20) {
+  while (true) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
 
@@ -371,7 +418,13 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = String(payload.action || '').trim();
-  if (!['send-student-invite', 'delete-partner', 'upsert-gestor-user'].includes(action)) {
+  if (![
+    'send-student-invite',
+    'delete-partner',
+    'upsert-gestor-user',
+    'list-partner-email-statuses',
+    'confirm-partner-email',
+  ].includes(action)) {
     return json({ success: false, error: 'Ação inválida.' }, 400);
   }
 
@@ -383,6 +436,72 @@ Deno.serve(async (req: Request) => {
   const authorization = await ensureAuthorizedGestor(admin, bearer);
   if (!authorization.authorized) {
     return json({ success: false, error: authorization.error || 'Não autorizado.' }, 401);
+  }
+
+  if (action === 'list-partner-email-statuses') {
+    if (!gestorHasModule(authorization.gestor, 'parceiros')) {
+      return json({ success: false, error: 'Você não tem acesso ao módulo Parceiros.' }, 403);
+    }
+
+    const partnerIds = Array.from(new Set(normalizeStringArray(payload.partnerIds)))
+      .filter(isUuid);
+
+    if (partnerIds.length === 0) {
+      return json({ success: true, action, statuses: [] });
+    }
+
+    if (partnerIds.length > 500) {
+      return json({ success: false, error: 'Consulte no máximo 500 registros por vez.' }, 400);
+    }
+
+    const { data: partners, error: partnersError } = await admin
+      .from('parceiros')
+      .select('id, email, polo_id, polo_ids')
+      .in('id', partnerIds);
+
+    if (partnersError) {
+      return json({ success: false, error: partnersError.message }, 500);
+    }
+
+    const scope = await getGestorScope(admin, authorization.gestor);
+    const allowedPartners = (partners || []).filter((partner: any) =>
+      isPartnerAllowedByScope(scope, partner)
+    );
+    const emails = new Set<string>(
+      allowedPartners.map((partner: any) => normalizeEmail(partner.email)).filter(Boolean),
+    );
+
+    let usersByEmail: Map<string, any>;
+    try {
+      usersByEmail = await listAuthUsersByEmail(admin, emails);
+    } catch (error) {
+      return json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Não foi possível consultar as confirmações de e-mail.',
+      }, 500);
+    }
+
+    const statuses: PartnerEmailStatus[] = allowedPartners.map((partner: any) => {
+      const email = normalizeEmail(partner.email);
+      const authUser = email ? usersByEmail.get(email) : null;
+      const emailConfirmed = Boolean(authUser?.email_confirmed_at || authUser?.confirmed_at);
+      const status: PartnerEmailStatusValue = !email
+        ? 'no_email'
+        : !authUser
+          ? 'no_auth_user'
+          : emailConfirmed
+            ? 'confirmed'
+            : 'pending';
+
+      return {
+        partnerId: partner.id,
+        status,
+        authUserExists: Boolean(authUser),
+        emailConfirmed,
+      };
+    });
+
+    return json({ success: true, action, statuses });
   }
 
   if (action === 'upsert-gestor-user') {
@@ -515,6 +634,111 @@ Deno.serve(async (req: Request) => {
   const canManagePartner = await isPartnerInGestorScope(admin, authorization.gestor, partner);
   if (!canManagePartner) {
     return json({ success: false, error: 'Você não tem permissão para gerenciar este parceiro.' }, 403);
+  }
+
+  if (action === 'confirm-partner-email') {
+    if (!gestorHasModule(authorization.gestor, 'parceiros')) {
+      return json({ success: false, error: 'Você não tem acesso ao módulo Parceiros.' }, 403);
+    }
+
+    const email = normalizeEmail(partner.email);
+    if (!email) {
+      return json({ success: false, error: 'Este cadastro não possui e-mail.' }, 400);
+    }
+
+    let authUser: any;
+    try {
+      authUser = await findAuthUserByEmail(admin, email);
+    } catch (error) {
+      return json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Não foi possível localizar o usuário no Supabase Auth.',
+      }, 500);
+    }
+
+    if (!authUser?.id) {
+      return json({
+        success: false,
+        error: 'Este e-mail ainda não possui usuário de acesso. Envie o convite antes de confirmar.',
+      }, 404);
+    }
+
+    if (authUser.email_confirmed_at || authUser.confirmed_at) {
+      return json({
+        success: true,
+        action,
+        userId: authUser.id,
+        emailConfirmed: true,
+        message: 'Este e-mail já estava confirmado.',
+      });
+    }
+
+    const auditPayload = {
+      actor_id: authorization.gestor.id,
+      actor_nome: authorization.gestor.nome || authorization.gestorEmail,
+      actor_email: authorization.gestorEmail,
+      actor_tipo: 'Gestor',
+      pessoa_id: partner.id,
+      pessoa_nome: partner.nome,
+      pessoa_tipo: partner.tipo,
+      polo_id: partner.polo_id,
+      modulo: 'Parceiros',
+      entidade: 'auth.users',
+      entidade_id: authUser.id,
+      origem: 'Aplicativo',
+      detalhes: { partner_id: partner.id, auth_user_id: authUser.id },
+    };
+
+    const { data: auditEvent, error: auditError } = await admin
+      .from('sistema_eventos')
+      .insert({
+        ...auditPayload,
+        acao: 'Solicitou confirmação manual de e-mail',
+        descricao: `Gestor solicitou a confirmação manual do e-mail de ${partner.nome}.`,
+      })
+      .select('id')
+      .single();
+
+    if (auditError) {
+      return json({
+        success: false,
+        error: 'Não foi possível registrar a auditoria. O e-mail não foi alterado.',
+      }, 500);
+    }
+
+    const { error: confirmError } = await admin.auth.admin.updateUserById(authUser.id, {
+      email_confirm: true,
+    });
+
+    if (confirmError) {
+      await admin.from('sistema_eventos').update({
+        acao: 'Falha ao confirmar e-mail manualmente',
+        descricao: `A confirmação manual do e-mail de ${partner.nome} falhou no serviço de autenticação.`,
+        detalhes: { ...auditPayload.detalhes, erro: confirmError.message },
+      }).eq('id', auditEvent.id);
+      return json({ success: false, error: confirmError.message }, 500);
+    }
+
+    const { error: auditCompletionError } = await admin.from('sistema_eventos').update({
+      acao: 'Confirmou e-mail manualmente',
+      descricao: `E-mail de ${partner.nome} confirmado manualmente pelo gestor.`,
+    }).eq('id', auditEvent.id);
+
+    if (auditCompletionError) {
+      return json({
+        success: false,
+        emailConfirmed: true,
+        error: 'O e-mail foi confirmado, mas não foi possível finalizar o registro de auditoria.',
+      }, 500);
+    }
+
+    return json({
+      success: true,
+      action,
+      userId: authUser.id,
+      emailConfirmed: true,
+      message: 'E-mail confirmado manualmente com sucesso.',
+    });
   }
 
   if (action === 'delete-partner') {

@@ -27,6 +27,7 @@ import {
   formatEnrollmentDate,
   isValidEnrollmentCpf,
 } from './parceiro-aluno-matriculas.utils';
+import EnrollmentContinuitySummary from './EnrollmentContinuitySummary';
 
 interface Props { alunoId: string; }
 const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
@@ -57,7 +58,8 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
             cursos(id, nome, modalidade),
             polos(nome, cidade, estado),
             periodos_letivos(id, nome, ordem, status, data_inicio, data_fim)
-          )
+          ),
+          matricula_aproveitamentos(id, disciplina_id, situacao, media_final, frequencia_percent, disciplinas(nome))
         `)
         .eq('aluno_id', alunoId)
         .order('data_matricula', { ascending: false });
@@ -226,10 +228,13 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const transferMutation = useMutation({
     mutationFn: async () => {
       if (selected.status !== 'ATIVO') {
-        await academicLifecycleService.movimentar({
-          matriculaId: selected.id,
-          tipo: 'REATIVACAO',
-          motivo: `Reativação necessária para transferência: ${reason}`,
+        if (transferType === 'EXTERNA_ENVIADA') {
+          throw new Error('Reative a matrícula antes de enviar uma transferência externa.');
+        }
+        return academicLifecycleService.retornarEmNovaTurma({
+          matriculaOrigemId: selected.id,
+          turmaDestinoId: destinationClassId,
+          motivo: reason,
           observacao: notes,
         });
       }
@@ -304,11 +309,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
                     <h4 className="mt-3 text-lg font-black text-[#001a33]">{turma.cursos?.nome || 'Curso'}</h4>
                     <p className="mt-1 text-xs font-bold text-slate-500">{turma.nome} · {turma.codigo} · {turma.turno}</p>
                     <p className="mt-1 text-[10px] text-slate-400">{turma.polos?.nome} · {turma.polos?.cidade}/{turma.polos?.estado}</p>
-                    {matricula.origem_matricula_id && (
-                      <div className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-[10px] font-bold text-violet-700">
-                        Continuidade de matrícula anterior · disciplinas aprovadas preservadas
-                      </div>
-                    )}
+                    <EnrollmentContinuitySummary enrollment={matricula} />
                   </div>
                   <div className="grid min-w-[300px] grid-cols-2 gap-3">
                     <div className="rounded-2xl bg-slate-50 p-3">

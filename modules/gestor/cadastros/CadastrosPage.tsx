@@ -29,7 +29,7 @@ const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = fa
   ];
 
   const visibleItems = (readOnly
-    ? hubItems.filter(item => ['cadastros-ead', 'cadastros-especializacao', 'cadastros-livres', 'cadastros-superior'].includes(item.id))
+    ? hubItems.filter(item => ['cadastros-especializacao', 'cadastros-livres', 'cadastros-superior'].includes(item.id))
     : hubItems
   ).filter(item => !allowedTabs || allowedTabs.includes(item.id));
 

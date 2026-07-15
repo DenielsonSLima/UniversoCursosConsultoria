@@ -81,7 +81,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
     <div className="space-y-5">
       <div className="grid gap-3 lg:grid-cols-3">
         <InfoCard icon={Key} title="Chave única por banco" tone="blue">
-          Asaas, Mercado Pago e Banese Card ficam cadastrados uma vez por ambiente. A modalidade só escolhe qual banco usar.
+          Asaas, Mercado Pago e Banese ficam cadastrados uma vez por ambiente. A modalidade só escolhe qual banco usar.
         </InfoCard>
         <InfoCard icon={ServerCog} title="Sandbox e produção" tone={keysEnvironment === 'production' ? 'emerald' : 'amber'}>
           Cada ambiente tem tokens próprios, webhook próprio e status próprio para evitar mistura de teste com cobrança real.
@@ -124,13 +124,13 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
 
       {credentialProviderCode === 'banese_card' && (
         <div className="grid gap-3 lg:grid-cols-3">
-          <InfoCard icon={Key} title="OAuth Banese Card" tone="emerald">
+          <InfoCard icon={Key} title="OAuth Banese" tone="emerald">
             Peça ao gerente o Client ID e o Client Secret da API de Cobrança para sandbox e produção.
           </InfoCard>
-          <InfoCard icon={FileText} title="Boleto Banese Card" tone="blue">
+          <InfoCard icon={FileText} title="Boleto Banese" tone="blue">
             Solicite o código do convênio de boleto, CPF/CNPJ do beneficiário, carteira e regras de Nosso Número.
           </InfoCard>
-          <InfoCard icon={PlugZap} title="Pix Banese Card" tone="amber">
+          <InfoCard icon={PlugZap} title="Pix Banese" tone="amber">
             Para SAB Guias, peça convênio Pix, chave Pix, CRT Access Token/certificado e confirme o header Terminal.
           </InfoCard>
         </div>
@@ -139,14 +139,15 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <section className="grid min-w-0 gap-3">
           {providers.map((item) => (
-            <CredentialProviderCard
-              key={item.code}
-              provider={item}
-              credential={getCredential(item.code, keysEnvironment)}
-              selected={credentialProviderCode === item.code}
-              environment={keysEnvironment}
-              onClick={() => setCredentialProviderCode(item.code)}
-            />
+            <React.Fragment key={item.code}>
+              <CredentialProviderCard
+                provider={item}
+                credential={getCredential(item.code, keysEnvironment)}
+                selected={credentialProviderCode === item.code}
+                environment={keysEnvironment}
+                onClick={() => setCredentialProviderCode(item.code)}
+              />
+            </React.Fragment>
           ))}
         </section>
 
@@ -296,7 +297,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 />
                 <TextInput
                   icon={Key}
-                  label="Chave Pix Banese Card"
+                  label="Chave Pix Banese"
                   value={credentialForm.banesePixChave}
                   onChange={(value) => updateCredentialForm('banesePixChave', value)}
                   configured={Boolean(editCredential?.metadata?.banesePixChave)}

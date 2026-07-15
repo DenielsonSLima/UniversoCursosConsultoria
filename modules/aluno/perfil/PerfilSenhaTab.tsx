@@ -65,7 +65,7 @@ const PerfilSenhaTab: React.FC = () => {
   };
 
   return (
-    <div className="rounded-[2.5rem] border border-slate-100 bg-white p-6 shadow-sm md:p-8">
+    <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
       <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
           <Lock size={16} />
@@ -86,13 +86,13 @@ const PerfilSenhaTab: React.FC = () => {
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="Mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número"
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
               required
             />
             <button
               type="button"
               onClick={() => setShowNew((prev) => !prev)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
             >
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -107,13 +107,13 @@ const PerfilSenhaTab: React.FC = () => {
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Repita a nova senha"
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
               required
             />
             <button
               type="button"
               onClick={() => setShowConfirmation((prev) => !prev)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100"
             >
               {showConfirmation ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -144,7 +144,7 @@ const PerfilSenhaTab: React.FC = () => {
         <button
           type="submit"
           disabled={isLoading || !canSubmit}
-          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#001a33] text-xs font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-xs font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60 sm:w-auto"
         >
           {isLoading ? <LoaderCircle size={16} className="h-4 w-4 animate-spin" /> : <CheckCircle size={16} />}
           {isLoading ? 'Salvando...' : 'Salvar nova senha'}

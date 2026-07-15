@@ -45,6 +45,13 @@ export interface AcademicClosingPendencies {
   podeFechar: boolean;
 }
 
+export interface ExternalTransferCredit {
+  disciplinaId: string;
+  mediaFinal?: number | null;
+  frequenciaPercent?: number | null;
+  situacao?: 'APROVEITADO' | 'DISPENSADO' | 'EQUIVALENCIA';
+}
+
 const requireData = <T>(data: T | null, error: any): T => {
   if (error) throw error;
   if (data === null) throw new Error('O banco não retornou o registro solicitado.');
@@ -105,14 +112,34 @@ export const academicLifecycleService = {
   },
 
   async getTurmasDestino(turmaId: string) {
+    const { data: source, error: sourceError } = await supabase
+      .from('turmas')
+      .select('curso_id')
+      .eq('id', turmaId)
+      .single();
+    if (sourceError) throw sourceError;
+
     const { data, error } = await supabase
       .from('turmas')
       .select('id, nome, codigo, polo_id, cursos(nome, modalidade), polos(nome)')
       .neq('id', turmaId)
+      .eq('curso_id', source.curso_id)
       .eq('status', 'EM_ANDAMENTO')
       .order('nome');
     if (error) throw error;
     return (data || []).filter((turma: any) => turma.cursos?.modalidade === 'TECNICO');
+  },
+
+  async getDisciplinasAproveitamento(turmaId: string) {
+    const { data, error } = await supabase
+      .from('turmas_disciplinas')
+      .select('disciplina_id, disciplinas(id, nome, carga_horaria)')
+      .eq('turma_id', turmaId);
+    if (error) throw error;
+    return (data || [])
+      .map((item: any) => item.disciplinas)
+      .filter(Boolean)
+      .sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR'));
   },
 
   async matricularAluno(turmaId: string, alunoId: string) {
@@ -171,6 +198,23 @@ export const academicLifecycleService = {
     return requireData(data, error);
   },
 
+  async retornarEmNovaTurma(input: {
+    matriculaOrigemId: string;
+    turmaDestinoId: string;
+    motivo: string;
+    observacao?: string;
+    dataRetorno?: string;
+  }) {
+    const { data, error } = await supabase.rpc('retornar_matricula_em_nova_turma', {
+      p_matricula_origem_id: input.matriculaOrigemId,
+      p_turma_destino_id: input.turmaDestinoId,
+      p_motivo: input.motivo,
+      p_observacao: input.observacao || null,
+      p_data_retorno: input.dataRetorno || getMaceioIsoDate(),
+    });
+    return requireData(data, error);
+  },
+
   async transferir(input: {
     matriculaId: string;
     tipo: 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -207,8 +251,9 @@ export const academicLifecycleService = {
     motivo: string;
     observacao?: string;
     dataTransferencia?: string;
+    aproveitamentos?: ExternalTransferCredit[];
   }) {
-    const { data, error } = await supabase.rpc('receber_transferencia_externa', {
+    const { data, error } = await supabase.rpc('receber_transferencia_externa_com_aproveitamentos', {
       p_aluno_id: input.alunoId,
       p_turma_destino_id: input.turmaDestinoId,
       p_instituicao_origem: input.instituicaoOrigem,
@@ -216,6 +261,7 @@ export const academicLifecycleService = {
       p_motivo: input.motivo,
       p_observacao: input.observacao || null,
       p_data_transferencia: input.dataTransferencia || getMaceioIsoDate(),
+      p_aproveitamentos: input.aproveitamentos || [],
     });
     return requireData(data, error);
   },

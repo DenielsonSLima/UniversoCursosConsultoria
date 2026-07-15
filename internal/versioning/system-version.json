@@ -1,8 +1,8 @@
 {
-  "version": "0.2.2-beta.4",
+  "version": "0.3.0-beta.2",
   "display": "BETA",
   "stage": "beta",
-  "revision": 4,
-  "releasedAt": "2026-07-14",
-  "summary": "Escopo por empresa e polo em turmas, financeiro, secretaria e relatórios"
+  "revision": 2,
+  "releasedAt": "2026-07-15",
+  "summary": "Ciclo técnico com frequência por horas, transferências, retornos e equivalências auditáveis"
 }

@@ -163,7 +163,11 @@ const OperationModal: React.FC<OperationModalProps> = (props) => {
                   <option value="">Selecione a turma de destino...</option>{destinationClasses.map((item) => <option key={item.id} value={item.id}>{item.cursos?.nome} — {item.nome} — {item.polos?.nome}</option>)}
                 </select>
               )}
-              <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4 text-xs font-semibold text-violet-800">Disciplinas aprovadas serão aproveitadas. Pagamentos anteriores ficam na origem e parcelas futuras seguem para a nova matrícula.</div>
+              <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4 text-xs font-semibold text-violet-800">
+                {selected.status === 'ATIVO'
+                  ? 'Disciplinas aprovadas serão aproveitadas. Pagamentos anteriores ficam na origem e parcelas futuras seguem para a nova matrícula.'
+                  : 'O retorno cria uma nova matrícula e preserva disciplinas aprovadas. Revise o financeiro da nova turma; nenhuma taxa inicial será criada automaticamente.'}
+              </div>
             </>
           )}
           <input value={reason} onChange={(event) => props.onReasonChange(event.target.value)} placeholder="Motivo obrigatório" className="w-full rounded-xl border border-slate-200 p-3.5" />

@@ -2,6 +2,15 @@ export type GatewayEnvironment = "sandbox" | "production";
 export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
 export type GatewayProviderCode = "asaas" | "mercado_pago" | "banese_card";
 
+export type GatewayIssuer = {
+  id: string;
+  companyId: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
+};
+
 export type GatewayChargeInput = {
   admin: any;
   supabaseUrl: string;
@@ -18,6 +27,7 @@ export type GatewayChargeInput = {
   successUrl?: string | null;
   failureUrl?: string | null;
   pendingUrl?: string | null;
+  issuer?: GatewayIssuer | null;
 };
 
 export type GatewayChargeResult = {
@@ -30,7 +40,47 @@ export type GatewayChargeResult = {
   bankSlipUrl: string | null;
   pixPayload: string | null;
   pixEncodedImage: string | null;
+  issuerPoloId: string | null;
   rawPayload: Record<string, unknown>;
+};
+
+const paymentIssuer = async (admin: any): Promise<GatewayIssuer> => {
+  const { data: config, error: configError } = await admin
+    .from("payment_gateway_issuer_config")
+    .select("issuer_polo_id, active, applies_to_all_polos")
+    .eq("id", 1)
+    .maybeSingle();
+  if (configError) throw configError;
+  if (
+    !config?.issuer_polo_id ||
+    config.active !== true ||
+    config.applies_to_all_polos !== true
+  ) {
+    throw new Error("O emissor financeiro global da matriz nao esta configurado.");
+  }
+
+  const { data: issuer, error: issuerError } = await admin
+    .from("polos")
+    .select("id, company_id, nome, cnpj, cidade, estado, status, is_matriz")
+    .eq("id", config.issuer_polo_id)
+    .maybeSingle();
+  if (issuerError) throw issuerError;
+  if (
+    !issuer ||
+    issuer.is_matriz !== true ||
+    String(issuer.status || "").toLowerCase() !== "ativo"
+  ) {
+    throw new Error("O polo matriz emissor nao esta ativo ou deixou de ser matriz.");
+  }
+
+  return {
+    id: issuer.id,
+    companyId: issuer.company_id,
+    name: issuer.nome,
+    cnpj: issuer.cnpj,
+    city: issuer.cidade,
+    state: issuer.estado,
+  };
 };
 
 const providerMetadata = async (
@@ -60,22 +110,29 @@ const providerMetadata = async (
 const withProviderMetadata = async (
   input: GatewayChargeInput,
 ): Promise<GatewayChargeInput> => {
-  if (input.providerCode === "asaas") return input;
-  const metadata = await providerMetadata(
-    input.admin,
-    input.providerCode,
-    input.environment,
-    input.credentialId,
-  );
+  const [metadata, issuer] = await Promise.all([
+    input.providerCode === "asaas"
+      ? Promise.resolve({})
+      : providerMetadata(
+        input.admin,
+        input.providerCode,
+        input.environment,
+        input.credentialId,
+      ),
+    paymentIssuer(input.admin),
+  ]);
   return {
     ...input,
+    issuer,
     receivable: {
       ...(input.receivable || {}),
+      gateway_issuer_polo_id: issuer.id,
       metadata: {
         ...(input.receivable?.metadata || {}),
         ...metadata,
       },
       payment_gateway_metadata: metadata,
+      payment_gateway_issuer: issuer,
     },
   };
 };
@@ -105,9 +162,18 @@ const normalizeAdapterResult = (
     pixEncodedImage: result?.pixEncodedImage ||
       result?.pixEncodedImageBase64 ||
       null,
+    issuerPoloId: null,
     rawPayload: raw,
   };
 };
+
+const withIssuerSnapshot = (
+  result: GatewayChargeResult,
+  issuer?: GatewayIssuer | null,
+): GatewayChargeResult => ({
+  ...result,
+  issuerPoloId: issuer?.id || null,
+});
 
 export const createGatewayCharge = async (
   input: GatewayChargeInput,
@@ -116,33 +182,42 @@ export const createGatewayCharge = async (
   if (hydratedInput.providerCode === "banese_card") {
     if (hydratedInput.paymentMethod === "CREDIT_CARD") {
       throw new Error(
-        "Banese Card nao aceita cartao de credito neste fluxo de checkout.",
+        "Banese nao aceita cartao de credito neste fluxo de checkout.",
       );
     }
     throw new Error(
-      "Checkout Banese Card Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
+      "Checkout Banese Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
     );
   }
 
   if (hydratedInput.paymentMethod === "PIX") {
     const { createPixGatewayCharge } = await import("./pix/index.ts");
     const result = await createPixGatewayCharge(hydratedInput);
-    return normalizeAdapterResult(hydratedInput.providerCode, "PIX", result);
+    return withIssuerSnapshot(
+      normalizeAdapterResult(hydratedInput.providerCode, "PIX", result),
+      hydratedInput.issuer,
+    );
   }
 
   if (hydratedInput.paymentMethod === "BOLETO") {
     const { createBoletoGatewayCharge } = await import("./boleto/index.ts");
     const result = await createBoletoGatewayCharge(hydratedInput);
-    return normalizeAdapterResult(hydratedInput.providerCode, "BOLETO", result);
+    return withIssuerSnapshot(
+      normalizeAdapterResult(hydratedInput.providerCode, "BOLETO", result),
+      hydratedInput.issuer,
+    );
   }
 
   if (hydratedInput.paymentMethod === "CREDIT_CARD") {
     const { createCardGatewayCharge } = await import("./cartao/index.ts");
     const result = await createCardGatewayCharge(hydratedInput);
-    return normalizeAdapterResult(
-      hydratedInput.providerCode,
-      "CREDIT_CARD",
-      result,
+    return withIssuerSnapshot(
+      normalizeAdapterResult(
+        hydratedInput.providerCode,
+        "CREDIT_CARD",
+        result,
+      ),
+      hydratedInput.issuer,
     );
   }
 
@@ -172,6 +247,8 @@ export const persistGatewayTransaction = async (
     provider_code: input.providerCode,
     environment: input.environment,
     payment_method: input.paymentMethod,
+    origin_polo_id: input.receivable?.polo_id || null,
+    issuer_polo_id: input.result.issuerPoloId,
     installments: input.installments || 1,
     remote_payment_id: remotePaymentId,
     remote_customer_id: input.result.remoteCustomerId,
@@ -234,6 +311,7 @@ export const gatewayReceivableUpdate = (
     gateway_provider: input.providerCode,
     gateway_environment: input.environment,
     gateway_payment_method: input.paymentMethod,
+    gateway_issuer_polo_id: input.result.issuerPoloId,
     gateway_installments: input.installments || 1,
     gateway_payment_id: remotePaymentId,
     gateway_customer_id: input.result.remoteCustomerId,

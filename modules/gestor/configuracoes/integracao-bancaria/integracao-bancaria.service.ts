@@ -48,11 +48,40 @@ export interface GatewayRoute {
   notes?: string | null;
 }
 
+export interface GatewayIssuerCandidate {
+  id: string;
+  companyId: string;
+  name: string;
+  cnpj: string;
+  city: string;
+  state: string;
+  status: string;
+  isMatrix: boolean;
+  company?: {
+    id: string;
+    name?: string | null;
+    legalName?: string | null;
+    cnpj?: string | null;
+  } | null;
+}
+
+export interface GatewayIssuerConfig {
+  id: number;
+  issuerPoloId: string;
+  appliesToAllPolos: boolean;
+  active: boolean;
+  updatedAt?: string | null;
+  issuer?: GatewayIssuerCandidate | null;
+}
+
 export interface GatewayOverview {
   providers: GatewayProvider[];
   credentials: GatewayCredential[];
   routes: GatewayRoute[];
   activeEnvironment: GatewayEnvironment;
+  issuerConfig?: GatewayIssuerConfig | null;
+  issuerCandidates: GatewayIssuerCandidate[];
+  activePolosCount: number;
   webhookUrls: Record<GatewayProviderCode, string>;
 }
 
@@ -82,6 +111,10 @@ export interface SaveRouteInput {
   notes?: string | null;
 }
 
+export interface SaveIssuerInput {
+  issuerPoloId: string;
+}
+
 const extractFunctionErrorMessage = async (error: any) => {
   const context = error?.context;
   const canReadJson = context && typeof context.json === 'function';
@@ -89,7 +122,7 @@ const extractFunctionErrorMessage = async (error: any) => {
   return body?.error || body?.message || error?.message || 'Erro ao comunicar com a integração bancária.';
 };
 
-const invoke = async <T>(action: string, payload: Record<string, unknown> = {}): Promise<T> => {
+const invoke = async <T>(action: string, payload: object = {}): Promise<T> => {
   const { data, error } = await supabase.functions.invoke('payment-gateway-api', {
     body: { action, ...payload },
   });
@@ -141,6 +174,37 @@ const mapRoute = (row: any): GatewayRoute => ({
   notes: row.notes,
 });
 
+const mapIssuerCandidate = (row: any): GatewayIssuerCandidate => ({
+  id: row.id,
+  companyId: row.company_id,
+  name: row.nome,
+  cnpj: row.cnpj,
+  city: row.cidade,
+  state: row.estado,
+  status: row.status,
+  isMatrix: row.is_matriz === true,
+  company: row.company
+    ? {
+      id: row.company.id,
+      name: row.company.name,
+      legalName: row.company.legal_name,
+      cnpj: row.company.cnpj,
+    }
+    : null,
+});
+
+const mapIssuerConfig = (row: any): GatewayIssuerConfig | null => {
+  if (!row) return null;
+  return {
+    id: Number(row.id || 1),
+    issuerPoloId: row.issuer_polo_id,
+    appliesToAllPolos: row.applies_to_all_polos === true,
+    active: row.active === true,
+    updatedAt: row.updated_at,
+    issuer: row.issuer ? mapIssuerCandidate(row.issuer) : null,
+  };
+};
+
 export const integracaoBancariaService = {
   async getOverview(): Promise<GatewayOverview> {
     const data = await invoke<any>('get-overview');
@@ -149,6 +213,9 @@ export const integracaoBancariaService = {
       credentials: (data.credentials || []).map(mapCredential),
       routes: (data.routes || []).map(mapRoute),
       activeEnvironment: data.activeEnvironment === 'production' ? 'production' : 'sandbox',
+      issuerConfig: mapIssuerConfig(data.issuerConfig),
+      issuerCandidates: (data.issuerCandidates || []).map(mapIssuerCandidate),
+      activePolosCount: Number(data.activePolosCount || 0),
       webhookUrls: data.webhookUrls || {},
     };
   },
@@ -161,6 +228,13 @@ export const integracaoBancariaService = {
   async saveRoute(input: SaveRouteInput): Promise<GatewayRoute> {
     const data = await invoke<any>('save-route', input);
     return mapRoute(data.route);
+  },
+
+  async saveIssuer(input: SaveIssuerInput): Promise<GatewayIssuerConfig> {
+    const data = await invoke<any>('save-issuer', input);
+    const issuerConfig = mapIssuerConfig(data.issuerConfig);
+    if (!issuerConfig) throw new Error('O emissor financeiro não foi retornado pela API.');
+    return issuerConfig;
   },
 
   async testConnection(input: Pick<SaveCredentialInput, 'providerCode' | 'environment'>): Promise<{

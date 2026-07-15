@@ -171,6 +171,21 @@ export const useParceirosMutations = ({
     onError: (error: any) => toast.error('Erro ao excluir', error?.message || 'Não foi possível remover o registro.')
   });
 
+  const confirmEmailMutation = useMutation({
+    mutationFn: (partner: any) => portalActivationService.confirmPartnerEmail(partner.id),
+    onSuccess: (result, partner) => {
+      invalidatePartners();
+      toast.success(
+        'E-mail confirmado!',
+        result.message || `O e-mail de ${partner.nome} foi confirmado manualmente.`,
+      );
+    },
+    onError: (error: any) => toast.error(
+      'Não foi possível confirmar',
+      error?.message || 'Tente novamente em alguns instantes.',
+    ),
+  });
+
   return {
     saveAlunoMutation,
     saveProfessorMutation,
@@ -178,5 +193,6 @@ export const useParceirosMutations = ({
     savePJMutation,
     enrollAlunoMutation,
     deleteMutation,
+    confirmEmailMutation,
   };
 };

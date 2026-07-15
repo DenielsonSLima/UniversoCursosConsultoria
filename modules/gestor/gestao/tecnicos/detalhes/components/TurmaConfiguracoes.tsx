@@ -6,6 +6,7 @@ import { gestaoService } from '../../../gestao.service';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
+import TechnicalAcademicSettings from '../../../components/forms/TechnicalAcademicSettings';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
@@ -23,6 +24,8 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
     permitirInscricoesOnline: turma.permitirInscricoesOnline ?? false,
     exigeMatricula: turma.exigeMatricula ?? true,
     qtdVagasMinima: turma.qtdVagasMinima ?? 0,
+    frequenciaMinimaPercent: turma.frequenciaMinimaPercent ?? 75,
+    mediaMinima: turma.mediaMinima ?? 6,
     bloquearMatriculasAposCompletarVagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
     origemFinanceira: turma.origemFinanceira || 'NORMAL',
     financeiroHerdado: turma.financeiroHerdado || false,
@@ -215,6 +218,15 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
             />
             Sincronizar futuras cobranças com Asaas
           </label>
+        </div>
+
+        <div className="md:col-span-2">
+          <TechnicalAcademicSettings
+            frequenciaMinimaPercent={form.frequenciaMinimaPercent}
+            mediaMinima={form.mediaMinima}
+            onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+            disabled={turma.status === 'FINALIZADA'}
+          />
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { Turno } from '../../gestao.types';
 import { polosService } from '../../../configuracoes/polos/polos.service';
 import { getInitialTechnicalStatus } from '../../tecnicos/technicalClassDates';
 import TechnicalEnrollmentSettings from './TechnicalEnrollmentSettings';
+import TechnicalAcademicSettings from './TechnicalAcademicSettings';
 
 interface TurmaTecnicoFormProps {
   isOpen: boolean;
@@ -52,6 +53,8 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     bloquearMatriculasAposCompletarVagas: true,
     turno: 'NOTURNO' as Turno,
     vagasTotais: 40,
+    frequenciaMinimaPercent: 75,
+    mediaMinima: 6,
     origemFinanceira: 'NORMAL' as const,
     financeiroHerdado: false,
     gerarCobrancasFuturas: true,
@@ -108,7 +111,6 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
   }, [formData.cursoId, formData.poloId, formData.dataInicio, formData.turno, cursosDisponiveis, polos]);
 
   if (!isOpen) return null;
-
   const selectedPolo = polos.find(p => p.id === formData.poloId);
   const initialStatus = formData.dataInicio
     ? getInitialTechnicalStatus(formData)
@@ -188,7 +190,6 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
           <div className={selectedPoloId ? "space-y-4" : "grid grid-cols-1 md:grid-cols-2 gap-4"}>
              {/* Curso */}
              <div className="space-y-2">
@@ -335,6 +336,12 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
 
           <TechnicalEnrollmentSettings
             value={formData}
+            onChange={(patch) => setFormData((current) => ({ ...current, ...patch }))}
+          />
+
+          <TechnicalAcademicSettings
+            frequenciaMinimaPercent={formData.frequenciaMinimaPercent}
+            mediaMinima={formData.mediaMinima}
             onChange={(patch) => setFormData((current) => ({ ...current, ...patch }))}
           />
 

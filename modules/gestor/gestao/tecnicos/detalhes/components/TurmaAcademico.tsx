@@ -19,6 +19,7 @@ import AcademicPeriodCard from './academic/AcademicPeriodCard';
 import AcademicMovementsSection from './academic/AcademicMovementsSection';
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
+import ReceiveExternalTransferModal, { ExternalCreditDraft } from './academic/ReceiveExternalTransferModal';
 
 interface TurmaAcademicoProps {
   turma: Turma;
@@ -35,6 +36,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const [originInstitution, setOriginInstitution] = useState('');
   const [originCourse, setOriginCourse] = useState('');
   const [transferReason, setTransferReason] = useState('');
+  const [externalCredits, setExternalCredits] = useState<Record<string, ExternalCreditDraft>>({});
 
   const periodsQuery = useQuery({
     queryKey: academicLifecycleKeys.periodos(turma.id),
@@ -62,6 +64,20 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     enabled: showReceiveTransfer,
   });
   const allStudents = allStudentsQuery.data || [];
+  const disciplinesQuery = useQuery({
+    queryKey: [...academicLifecycleKeys.turma(turma.id), 'disciplinas-aproveitamento'],
+    queryFn: () => academicLifecycleService.getDisciplinasAproveitamento(turma.id),
+    enabled: showReceiveTransfer,
+  });
+
+  const closeReceiveTransfer = () => {
+    setShowReceiveTransfer(false);
+    setSelectedStudentId('');
+    setOriginInstitution('');
+    setOriginCourse('');
+    setTransferReason('');
+    setExternalCredits({});
+  };
 
   const invalidate = async () => {
     await Promise.all([
@@ -134,21 +150,28 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
       if (allStudentsQuery.isError || !allStudentsQuery.data) {
         throw new Error('Recarregue a lista de alunos antes de receber a transferência.');
       }
+      if (disciplinesQuery.isError || !disciplinesQuery.data) {
+        throw new Error('Recarregue as disciplinas antes de receber a transferência.');
+      }
       return academicLifecycleService.receberTransferencia({
         alunoId: selectedStudentId,
         turmaDestinoId: turma.id,
         instituicaoOrigem: originInstitution,
         cursoOrigem: originCourse,
         motivo: transferReason,
+        aproveitamentos: (Object.entries(externalCredits) as Array<[string, ExternalCreditDraft]>)
+          .filter(([, credit]) => credit.selected)
+          .map(([disciplinaId, credit]) => ({
+            disciplinaId,
+            mediaFinal: credit.mediaFinal === '' ? null : Number(credit.mediaFinal),
+            frequenciaPercent: credit.frequenciaPercent === '' ? null : Number(credit.frequenciaPercent),
+            situacao: credit.situacao,
+          })),
       });
     },
     onSuccess: async () => {
       await invalidate();
-      setShowReceiveTransfer(false);
-      setSelectedStudentId('');
-      setOriginInstitution('');
-      setOriginCourse('');
-      setTransferReason('');
+      closeReceiveTransfer();
       toast.success('Transferência recebida', 'A matrícula e a origem acadêmica foram registradas.');
     },
     onError: (error: any) => toast.error('Transferência não recebida', error.message),
@@ -323,56 +346,27 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
       )}
 
       {showReceiveTransfer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/55 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden">
-            <div className="p-6 bg-violet-700 text-white flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">Entrada acadêmica</p>
-                <h3 className="font-black text-xl mt-1">Receber transferência externa</h3>
-              </div>
-              <button onClick={() => setShowReceiveTransfer(false)} className="p-2 hover:bg-white/10 rounded-full"><X size={18} /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              {allStudentsQuery.isError ? (
-                <TechnicalDataError title="Alunos não carregados" message="O recebimento foi bloqueado até a lista ser recarregada." retrying={allStudentsQuery.isFetching} onRetry={() => { void allStudentsQuery.refetch(); }} />
-              ) : (
-                <select value={selectedStudentId} onChange={(event) => setSelectedStudentId(event.target.value)} disabled={allStudentsQuery.isLoading} className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500 disabled:opacity-50">
-                  <option value="">{allStudentsQuery.isLoading ? 'Carregando alunos...' : 'Selecione o aluno já cadastrado...'}</option>
-                  {allStudents.map((student: any) => <option key={student.id} value={student.id}>{student.nome} — {student.cpf_cnpj || 'sem CPF'}</option>)}
-                </select>
-              )}
-              <input
-                value={originInstitution}
-                onChange={(event) => setOriginInstitution(event.target.value)}
-                placeholder="Instituição de origem"
-                className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500"
-              />
-              <input
-                value={originCourse}
-                onChange={(event) => setOriginCourse(event.target.value)}
-                placeholder="Curso de origem (opcional)"
-                className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500"
-              />
-              <textarea
-                value={transferReason}
-                onChange={(event) => setTransferReason(event.target.value)}
-                placeholder="Motivo e contexto da transferência"
-                className="w-full min-h-24 p-3.5 border border-slate-200 rounded-xl outline-none focus:border-violet-500 resize-none"
-              />
-              <div className="p-3 rounded-xl bg-amber-50 text-amber-700 text-xs flex gap-2">
-                <AlertTriangle size={16} className="shrink-0" />
-                O aproveitamento detalhado de disciplinas poderá ser ajustado após a reunião de regras acadêmicas.
-              </div>
-              <button
-                onClick={() => receiveTransferMutation.mutate()}
-                disabled={allStudentsQuery.isLoading || allStudentsQuery.isError || !selectedStudentId || !originInstitution.trim() || !transferReason.trim() || receiveTransferMutation.isPending}
-                className="w-full py-3 bg-violet-700 text-white rounded-xl font-black uppercase text-xs disabled:opacity-40"
-              >
-                {receiveTransferMutation.isPending ? 'Registrando...' : 'Registrar recebimento'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReceiveExternalTransferModal
+          students={allStudents}
+          disciplines={disciplinesQuery.data || []}
+          loading={allStudentsQuery.isLoading || disciplinesQuery.isLoading}
+          loadError={allStudentsQuery.isError || disciplinesQuery.isError}
+          retrying={allStudentsQuery.isFetching || disciplinesQuery.isFetching}
+          pending={receiveTransferMutation.isPending}
+          selectedStudentId={selectedStudentId}
+          originInstitution={originInstitution}
+          originCourse={originCourse}
+          reason={transferReason}
+          credits={externalCredits}
+          onStudentChange={setSelectedStudentId}
+          onInstitutionChange={setOriginInstitution}
+          onCourseChange={setOriginCourse}
+          onReasonChange={setTransferReason}
+          onCreditsChange={setExternalCredits}
+          onRetry={() => { void Promise.all([allStudentsQuery.refetch(), disciplinesQuery.refetch()]); }}
+          onClose={closeReceiveTransfer}
+          onConfirm={() => receiveTransferMutation.mutate()}
+        />
       )}
 
       <ToastNotification toasts={toasts} onRemove={removeToast} />

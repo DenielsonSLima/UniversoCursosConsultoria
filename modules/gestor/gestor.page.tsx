@@ -87,7 +87,6 @@ const formatPoloDetails = (polo: any) =>
 
 const POLO_CADASTROS_ALLOWED = new Set([
   'cadastros',
-  'cadastros-ead',
   'cadastros-especializacao',
   'cadastros-livres',
   'cadastros-superior',
@@ -491,6 +490,10 @@ const GestorPage: React.FC = () => {
     { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
   ].filter(subItem => canAccessTab(gestorPermissions, 'cadastros', subItem.id));
 
+  const visibleCadastroSubItems = isMatrizSelected
+    ? cadastroSubItems
+    : cadastroSubItems.filter(item => POLO_CADASTROS_ALLOWED.has(item.id));
+
   const comunicacaoSubItems = [
     { id: 'comunicacao-mensagem', label: 'Mensagem', icon: <MessageSquare size={16} /> },
     { id: 'comunicacao-whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} /> },
@@ -503,9 +506,7 @@ const GestorPage: React.FC = () => {
       id: 'cadastros', 
       label: 'Cadastros', 
       icon: <UserPlus size={20} />,
-      subItems: isMatrizSelected
-        ? cadastroSubItems
-        : cadastroSubItems.filter(item => POLO_CADASTROS_ALLOWED.has(item.id))
+      subItems: visibleCadastroSubItems
     },
     { id: 'gestao', label: 'Gestão', icon: <Briefcase size={20} /> },
     { id: 'secretaria', label: 'Secretaria', icon: <FileText size={20} /> },
@@ -547,16 +548,16 @@ const GestorPage: React.FC = () => {
     }
 
     if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
-      return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={cadastroSubItems.map(item => item.id)} />;
+      return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={visibleCadastroSubItems.map(item => item.id)} />;
     }
 
     switch (activeModule) {
       case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
       case 'calendario': return <CalendarioPage />;
       case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
-      case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={cadastroSubItems.map(item => item.id)} />;
+      case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={visibleCadastroSubItems.map(item => item.id)} />;
       case 'cadastros-checklist': return <ChecklistEstagioPage />;
-      case 'cadastros-ead': return <CursosEadPage readOnly={!isMatrizSelected} />;
+      case 'cadastros-ead': return <CursosEadPage />;
       case 'cadastros-especializacao': return <CursosEspecializacaoPage readOnly={!isMatrizSelected} />;
       case 'cadastros-livres': return <CursosLivresPage readOnly={!isMatrizSelected} />;
       case 'cadastros-tecnicos': return <CursosTecnicosPage />;

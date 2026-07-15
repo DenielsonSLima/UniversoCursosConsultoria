@@ -1,18 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Key,
-  LayoutDashboard,
-  RefreshCw,
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import ChavesTokensPanel from './ChavesTokensPanel';
+import EmissorFinanceiroPanel from './EmissorFinanceiroPanel';
+import IntegracaoBancariaHeader from './IntegracaoBancariaHeader';
 import RotasBancariasPanel from './RotasBancariasPanel';
 import ResumoBancarioPanel from './ResumoBancarioPanel';
 import {
-  ENVIRONMENTS,
-  MODALIDADES,
-  PROVIDER_BRANDS,
   PROVIDER_ORDER,
   environmentLabel,
   methodLabel,
@@ -34,7 +29,6 @@ import {
   MainTab,
   emptyCredentialForm,
 } from './integracao-bancaria.types';
-import { ProviderLogo } from './integracao-bancaria.ui';
 
 const IntegracaoBancariaConfig: React.FC = () => {
   const queryClient = useQueryClient();
@@ -47,6 +41,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const [routeProviderCode, setRouteProviderCode] = useState<GatewayProviderCode>('asaas');
   const [credentialProviderCode, setCredentialProviderCode] = useState<GatewayProviderCode>('asaas');
   const [credentialForm, setCredentialForm] = useState<CredentialFormState>(emptyCredentialForm);
+  const [selectedIssuerId, setSelectedIssuerId] = useState('');
 
   const { data: overview, isLoading, isError, error } = useQuery({
     queryKey: ['integracao_bancaria'],
@@ -83,11 +78,9 @@ const IntegracaoBancariaConfig: React.FC = () => {
     : activeTab === 'resumo'
       ? summaryEnvironment
       : routeEnvironment;
-  const headerContextLabel = activeTab === 'resumo'
-    ? 'Resumo geral'
-    : activeTab === 'parametrizacao'
-      ? 'Parametrização'
-      : modalidadeLabel(modalidade);
+  const headerProviderName = activeTab === 'parametrizacao'
+    ? credentialProvider?.name || credentialProviderCode
+    : routedProvider?.name || routeProvider?.name || routeProviderCode;
 
   useEffect(() => {
     if (selectedRoute?.providerCode) setRouteProviderCode(selectedRoute.providerCode);
@@ -98,6 +91,13 @@ const IntegracaoBancariaConfig: React.FC = () => {
       setRouteEnvironment(overview.activeEnvironment);
     }
   }, [activeTab, overview?.activeEnvironment]);
+
+  useEffect(() => {
+    const issuerId = overview?.issuerConfig?.issuerPoloId
+      || overview?.issuerCandidates?.[0]?.id
+      || '';
+    setSelectedIssuerId(issuerId);
+  }, [overview?.issuerConfig?.issuerPoloId, overview?.issuerCandidates]);
 
   useEffect(() => {
     setCredentialForm({
@@ -147,6 +147,18 @@ const IntegracaoBancariaConfig: React.FC = () => {
       toast.success('Rota atualizada', `${methodLabel(paymentMethod)} ${modalidadeLabel(modalidade)} agora usa ${routeProvider?.name || routeProviderCode}.`);
     },
     onError: (err: any) => toast.error('Erro ao atualizar rota', err.message),
+  });
+
+  const issuerMutation = useMutation({
+    mutationFn: integracaoBancariaService.saveIssuer,
+    onSuccess: (issuerConfig) => {
+      queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
+      toast.success(
+        'Emissor financeiro definido',
+        `${issuerConfig.issuer?.name || 'Matriz'} emitirá as cobranças de todos os polos.`,
+      );
+    },
+    onError: (err: any) => toast.error('Erro ao salvar emissor', err.message),
   });
 
   const testMutation = useMutation({
@@ -277,88 +289,35 @@ const IntegracaoBancariaConfig: React.FC = () => {
     <div className="mx-auto max-w-7xl animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex items-start gap-3">
-          {activeTab === 'resumo' ? (
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-600 shadow-sm">
-              <LayoutDashboard size={22} />
-            </span>
-          ) : (
-            <ProviderLogo code={headerProviderCode} compact />
-          )}
-          <div>
-            <h3 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">Integração Bancária</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${ENVIRONMENTS.find((item) => item.value === activeEnvironment)?.chip}`}>
-                {environmentLabel(activeEnvironment)}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-600">
-                {headerContextLabel}
-              </span>
-              {activeTab === 'resumo' ? (
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700">
-                  Pix · Boleto · Cartão
-                </span>
-              ) : (
-                <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${PROVIDER_BRANDS[headerProviderCode].chip}`}>
-                  {activeTab === 'parametrizacao'
-                    ? credentialProvider?.name || credentialProviderCode
-                    : routedProvider?.name || routeProvider?.name || routeProviderCode}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-5 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-1">
-        <div className="grid min-w-[1080px] grid-cols-7 gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('resumo')}
-            className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-              activeTab === 'resumo' ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
-            }`}
-          >
-            <LayoutDashboard size={15} />
-            Resumo
-          </button>
-          {MODALIDADES.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => {
-                setActiveTab(item.value);
-                setModalidade(item.value);
-              }}
-              className={`inline-flex min-h-[48px] items-center justify-center rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-                activeTab === item.value ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setActiveTab('parametrizacao')}
-            className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md px-4 text-xs font-black uppercase tracking-wider ${
-              activeTab === 'parametrizacao' ? 'bg-white text-[#001a33] shadow-sm' : 'text-slate-500 hover:bg-white'
-            }`}
-          >
-            <Key size={15} />
-            Parametrização
-          </button>
-        </div>
-      </div>
+      <IntegracaoBancariaHeader
+        activeTab={activeTab}
+        modalidade={modalidade}
+        environment={activeEnvironment}
+        providerCode={headerProviderCode}
+        providerName={headerProviderName}
+        onChangeTab={setActiveTab}
+        onChangeModalidade={setModalidade}
+      />
 
       {activeTab === 'resumo' && (
-        <ResumoBancarioPanel
-          overview={overview}
-          providers={providers}
-          routeEnvironment={summaryEnvironment}
-          getCredential={getCredential}
-          onSelectRoute={openRouteFromSummary}
-        />
+        <div className="space-y-5">
+          <EmissorFinanceiroPanel
+            config={overview?.issuerConfig}
+            candidates={overview?.issuerCandidates || []}
+            activePolosCount={overview?.activePolosCount || 0}
+            selectedIssuerId={selectedIssuerId}
+            saving={issuerMutation.isPending}
+            onSelect={setSelectedIssuerId}
+            onSave={() => issuerMutation.mutate({ issuerPoloId: selectedIssuerId })}
+          />
+          <ResumoBancarioPanel
+            overview={overview}
+            providers={providers}
+            routeEnvironment={summaryEnvironment}
+            getCredential={getCredential}
+            onSelectRoute={openRouteFromSummary}
+          />
+        </div>
       )}
 
       {activeTab !== 'parametrizacao' && activeTab !== 'resumo' && (

@@ -41,54 +41,78 @@ export const parceirosService = {
     
     const partners = (data || []).map(toCamel);
     const alunoIds = partners.filter((partner) => partner?.tipo === 'Aluno').map((partner) => partner.id).filter(Boolean);
+    let enrichedPartners = partners;
 
-    if (alunoIds.length === 0) {
-      return partners;
+    if (alunoIds.length > 0) {
+      const { data: matriculas, error: matriculasError } = await supabase
+        .from('matriculas')
+        .select('aluno_id, turma_id, status, turmas(id, curso_id, cursos(id, nome, modalidade))')
+        .in('aluno_id', alunoIds);
+
+      if (matriculasError) {
+        console.error('Erro ao buscar modalidades dos alunos:', matriculasError);
+        throw matriculasError;
+      }
+
+      const alunoCursos = new Map<string, { modalidades: Set<string>; cursos: Set<string>; turmas: Set<string> }>();
+
+      (matriculas || []).forEach((matricula: any) => {
+        const status = String(matricula.status || '').toUpperCase();
+        if (['CANCELADO', 'CANCELADA', 'DESISTENTE'].includes(status)) return;
+
+        const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+        const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
+        if (!matricula.aluno_id || !curso?.modalidade) return;
+
+        const current = alunoCursos.get(matricula.aluno_id) || {
+          modalidades: new Set<string>(),
+          cursos: new Set<string>(),
+          turmas: new Set<string>(),
+        };
+
+        current.modalidades.add(String(curso.modalidade).toUpperCase());
+        if (curso.id) current.cursos.add(curso.id);
+        if (matricula.turma_id) current.turmas.add(matricula.turma_id);
+        alunoCursos.set(matricula.aluno_id, current);
+      });
+
+      enrichedPartners = partners.map((partner) => {
+        const alunoInfo = alunoCursos.get(partner.id);
+        if (!alunoInfo) return partner;
+
+        return {
+          ...partner,
+          modalidadesAluno: Array.from(alunoInfo.modalidades),
+          cursosAlunoIds: Array.from(alunoInfo.cursos),
+          turmasAlunoIds: Array.from(alunoInfo.turmas),
+        };
+      });
     }
 
-    const { data: matriculas, error: matriculasError } = await supabase
-      .from('matriculas')
-      .select('aluno_id, turma_id, status, turmas(id, curso_id, cursos(id, nome, modalidade))')
-      .in('aluno_id', alunoIds);
+    try {
+      const emailStatuses = await portalActivationService.getPartnerEmailStatuses(
+        enrichedPartners.map((partner) => partner.id).filter(Boolean),
+      );
+      const statusByPartnerId = new Map(emailStatuses.map((status) => [status.partnerId, status]));
 
-    if (matriculasError) {
-      console.error('Erro ao buscar modalidades dos alunos:', matriculasError);
-      throw matriculasError;
-    }
-
-    const alunoCursos = new Map<string, { modalidades: Set<string>; cursos: Set<string>; turmas: Set<string> }>();
-
-    (matriculas || []).forEach((matricula: any) => {
-      const status = String(matricula.status || '').toUpperCase();
-      if (['CANCELADO', 'CANCELADA', 'DESISTENTE'].includes(status)) return;
-
-      const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
-      const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-      if (!matricula.aluno_id || !curso?.modalidade) return;
-
-      const current = alunoCursos.get(matricula.aluno_id) || {
-        modalidades: new Set<string>(),
-        cursos: new Set<string>(),
-        turmas: new Set<string>(),
-      };
-
-      current.modalidades.add(String(curso.modalidade).toUpperCase());
-      if (curso.id) current.cursos.add(curso.id);
-      if (matricula.turma_id) current.turmas.add(matricula.turma_id);
-      alunoCursos.set(matricula.aluno_id, current);
-    });
-
-    return partners.map((partner) => {
-      const alunoInfo = alunoCursos.get(partner.id);
-      if (!alunoInfo) return partner;
-
-      return {
+      return enrichedPartners.map((partner) => {
+        const emailStatus = statusByPartnerId.get(partner.id);
+        return emailStatus
+          ? {
+              ...partner,
+              emailConfirmationStatus: emailStatus.status,
+              authUserExists: emailStatus.authUserExists,
+              emailConfirmed: emailStatus.emailConfirmed,
+            }
+          : partner;
+      });
+    } catch (statusError) {
+      console.warn('Não foi possível consultar a confirmação dos e-mails:', statusError);
+      return enrichedPartners.map((partner) => ({
         ...partner,
-        modalidadesAluno: Array.from(alunoInfo.modalidades),
-        cursosAlunoIds: Array.from(alunoInfo.cursos),
-        turmasAlunoIds: Array.from(alunoInfo.turmas),
-      };
-    });
+        emailConfirmationStatus: partner.email ? 'unknown' : 'no_email',
+      }));
+    }
   },
 
   async getById(id: string) {

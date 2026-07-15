@@ -100,6 +100,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     savePJMutation,
     enrollAlunoMutation,
     deleteMutation,
+    confirmEmailMutation,
   } = useParceirosMutations({
     toast,
     createdAlunoNome,
@@ -246,6 +247,8 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
           onRequestScrollTop?.();
         }}
         onDeleteParceiro={setDeletingParceiro}
+        onConfirmEmail={(parceiro) => confirmEmailMutation.mutate(parceiro)}
+        confirmingEmailPartnerId={confirmEmailMutation.isPending ? confirmEmailMutation.variables?.id || null : null}
       />
 
       <ParceirosExportModal

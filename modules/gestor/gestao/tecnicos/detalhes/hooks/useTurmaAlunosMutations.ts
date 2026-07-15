@@ -37,6 +37,13 @@ export interface TransferInput {
   observacao?: string;
 }
 
+export interface ReturnInput {
+  matriculaOrigemId: string;
+  turmaDestinoId: string;
+  motivo: string;
+  observacao?: string;
+}
+
 export const useTurmaAcademicInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
 
@@ -107,6 +114,15 @@ export const useTransferMutation = (
     instituicaoDestino: input.tipo === 'EXTERNA_ENVIADA' ? input.instituicaoDestino : undefined,
     observacao: input.observacao,
   }),
+  onSuccess,
+  onError,
+});
+
+export const useReturnEnrollmentMutation = (
+  onSuccess: MutationSuccess<Awaited<ReturnType<typeof academicLifecycleService.retornarEmNovaTurma>>, ReturnInput>,
+  onError: MutationError<ReturnInput>,
+) => useMutation({
+  mutationFn: (input: ReturnInput) => academicLifecycleService.retornarEmNovaTurma(input),
   onSuccess,
   onError,
 });

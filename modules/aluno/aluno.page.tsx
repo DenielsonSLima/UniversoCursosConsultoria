@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -21,16 +21,22 @@ import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import ConfirmModal from '../shared/components/ConfirmModal';
-// Sub-módulos do Aluno
-import InicioPage from './inicio/InicioPage';
-import TurmasPage from './turmas/TurmasPage';
-import CursosPage from './cursos/CursosPage';
-import FinanceiroPage from './financeiro/FinanceiroPage';
-import BibliotecaPage from './biblioteca/BibliotecaPage';
-import ComunicacaoPage from './comunicacao/ComunicacaoPage';
-import PerfilPage from './perfil/PerfilPage';
-import SecretariaPage from './secretaria/SecretariaPage';
-import CalendarioAlunoPage from './calendario/CalendarioAlunoPage';
+// Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
+const InicioPage = lazy(() => import('./inicio/InicioPage'));
+const TurmasPage = lazy(() => import('./turmas/TurmasPage'));
+const CursosPage = lazy(() => import('./cursos/CursosPage'));
+const FinanceiroPage = lazy(() => import('./financeiro/FinanceiroPage'));
+const BibliotecaPage = lazy(() => import('./biblioteca/BibliotecaPage'));
+const ComunicacaoPage = lazy(() => import('./comunicacao/ComunicacaoPage'));
+const PerfilPage = lazy(() => import('./perfil/PerfilPage'));
+const SecretariaPage = lazy(() => import('./secretaria/SecretariaPage'));
+const CalendarioAlunoPage = lazy(() => import('./calendario/CalendarioAlunoPage'));
+
+const AlunoModuleLoading = () => (
+  <div className="flex min-h-[240px] items-center justify-center" role="status" aria-label="Carregando área do aluno">
+    <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+  </div>
+);
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
@@ -325,7 +331,7 @@ const AlunoPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
+    <div className="flex h-dvh min-w-0 overflow-hidden bg-slate-100 font-sans antialiased">
       
       {/* Sidebar - Desktop Layout */}
       <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
@@ -391,29 +397,45 @@ const AlunoPage: React.FC = () => {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 w-full bg-[#001a33] text-white z-30 px-4 py-3 flex justify-between items-center shadow-lg">
-        <div className="bg-white px-3 py-1 rounded-xl flex items-center justify-center h-8">
-          <img src="/LogoUniverso.png" alt="Universo" className="h-6 object-contain" />
+      <div className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#001a33] px-4 text-white shadow-lg lg:hidden">
+        <div className="flex h-9 w-[118px] items-center justify-center rounded-xl bg-white px-2 shadow-sm">
+          <img src="/LogoUniverso.png" alt="Universo" className="h-7 w-full object-contain" />
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X /> : <Menu />}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-xs font-black text-white shadow-sm">
+            {alunoInitials}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-colors hover:bg-white/10"
+            aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-40 animate-fadeIn" onClick={() => setIsMobileMenuOpen(false)}>
-          <aside className="w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-             <div className="bg-white p-3 rounded-2xl flex items-center justify-center mb-4 mt-12">
-               <img src="/LogoUniverso.png" alt="Universo" className="h-8 object-contain" />
+        <div className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm animate-fadeIn lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+          <aside className="flex h-full w-[86vw] max-w-[320px] flex-col bg-[#001a33] p-4 text-white shadow-2xl" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Menu do portal do aluno">
+             <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+               <div className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-white px-3">
+                 <img src="/LogoUniverso.png" alt="Universo" className="h-9 w-full object-contain" />
+               </div>
+               <button type="button" onClick={() => setIsMobileMenuOpen(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300" aria-label="Fechar menu">
+                 <X size={21} />
+               </button>
              </div>
              
-             <nav className="flex-1 overflow-y-auto space-y-2 mt-4">
+             <nav className="mt-4 flex-1 space-y-1 overflow-y-auto overscroll-contain pb-4">
                {menuItems.map((item) => (
                  <button
                    key={item.id}
                    onClick={() => { setActiveModule(item.id); setIsMobileMenuOpen(false); }}
-                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
+                   className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 py-3 transition-all ${
                      activeModule === item.id ? 'bg-blue-600 font-bold text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white'
                    }`}
                  >
@@ -448,7 +470,7 @@ const AlunoPage: React.FC = () => {
                  </div>
                </div>
                <button 
-                 onClick={handleLogout} 
+                 onClick={() => { setIsMobileMenuOpen(false); void handleLogout(); }}
                  className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider"
                >
                  <LogOut size={18} />
@@ -460,10 +482,10 @@ const AlunoPage: React.FC = () => {
       )}
 
       {/* Main View Area */}
-      <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden pt-16 lg:pt-0">
         
         {/* Portal Header */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+        <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-4 shadow-sm lg:flex">
           <div className="flex items-center gap-3">
              <h2 className="text-lg font-black text-[#001a33] uppercase tracking-tight">
               Portal do Aluno
@@ -483,9 +505,11 @@ const AlunoPage: React.FC = () => {
         </header>
 
         {/* Dynamic page contents wrapper */}
-        <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto bg-slate-50">
+        <div ref={contentScrollRef} className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-slate-50 p-4 pb-8 sm:p-6 lg:p-8">
           
-          {renderContent()}
+          <Suspense fallback={<AlunoModuleLoading />}>
+            {renderContent()}
+          </Suspense>
         </div>
       </main>
 
