@@ -99,12 +99,13 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   useFinanceiroRealtime();
 
   const summaryFilters = useMemo(() => ({
+    poloId: scopedPoloId || undefined,
     search,
     dueStart: startDate,
     dueEnd: endDate,
-  }), [endDate, search, startDate]);
+  }), [endDate, scopedPoloId, search, startDate]);
 
-  const { creditsQuery, summaryQuery } = useOutrosCreditosQueries(summaryFilters);
+  const { creditsQuery, summaryQuery } = useOutrosCreditosQueries(summaryFilters, scopedPoloId);
   const { accountsQuery, polosQuery, partnersQuery } = useFinanceiroSharedQueries();
 
   const credits = creditsQuery.data || [];
@@ -112,11 +113,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   const accounts = accountsQuery.data || [];
   const partners = partnersQuery.data || [];
   const isLoading = creditsQuery.isLoading;
-  const sessionPoloId = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || '';
-  }, []);
-  const effectivePoloId = scopedPoloId || poloId || sessionPoloId || polos[0]?.id || '';
+  const effectivePoloId = scopedPoloId || poloId || '';
   const activePolo = polos.find((polo: any) => polo.id === effectivePoloId);
   const activeAccounts = useMemo(
     () => accounts.filter((account) => account.ativo !== false && (!effectivePoloId || account.poloId === effectivePoloId)),
@@ -298,9 +295,9 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   }, [statusScope, search, startDate, endDate, groupMode]);
 
   useEffect(() => {
-    const nextPoloId = scopedPoloId || sessionPoloId || polos[0]?.id || '';
+    const nextPoloId = scopedPoloId || '';
     if (nextPoloId && poloId !== nextPoloId) setPoloId(nextPoloId);
-  }, [polos, poloId, scopedPoloId, sessionPoloId]);
+  }, [poloId, scopedPoloId]);
 
   useEffect(() => {
     if (mode !== 'LOCAL_PAGO') {

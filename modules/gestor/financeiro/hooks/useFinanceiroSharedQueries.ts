@@ -3,6 +3,7 @@ import { financeiroService } from '../financeiro.service';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
 
 interface FinanceiroSharedQueriesOptions {
+  poloId?: string | null;
   accounts?: boolean;
   polos?: boolean;
   partners?: boolean;
@@ -15,6 +16,7 @@ export function useFinanceiroSharedQueries(options: FinanceiroSharedQueriesOptio
     polos = true,
     partners = true,
     turmas = false,
+    poloId,
   } = options;
 
   const accountsQuery = useQuery({
@@ -39,10 +41,10 @@ export function useFinanceiroSharedQueries(options: FinanceiroSharedQueriesOptio
   });
 
   const turmasQuery = useQuery({
-    queryKey: ['financeiro-shared-turmas'],
-    queryFn: () => financeiroService.getTurmas(),
+    queryKey: ['financeiro-shared-turmas', poloId || 'sem-polo'],
+    queryFn: () => financeiroService.getTurmas(poloId || undefined),
     staleTime: 60_000,
-    enabled: turmas,
+    enabled: turmas && Boolean(poloId),
   });
 
   return {

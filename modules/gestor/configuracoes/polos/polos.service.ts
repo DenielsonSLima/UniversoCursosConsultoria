@@ -74,16 +74,23 @@ export const polosService = {
   },
 
   async create(polo: Omit<Polo, 'id'>): Promise<Polo> {
-    // Buscar a empresa principal
+    // Todo polo operacional pertence à empresa matriz configurada.
     const { data: company, error: compError } = await supabase
       .from('empresas')
       .select('id')
-      .order('created_at', { ascending: true })
+      .eq('tipo', 'Matriz')
+      .eq('ativo', true)
+      .order('id', { ascending: true })
       .limit(1)
       .maybeSingle();
 
     if (compError) {
-      console.error('Erro ao buscar empresa principal para vincular ao polo:', compError);
+      console.error('Erro ao buscar empresa matriz para vincular ao polo:', compError);
+      throw new Error(compError.message);
+    }
+
+    if (!company?.id) {
+      throw new Error('Cadastre e ative a empresa matriz antes de criar um polo.');
     }
 
     const dbPolo = {
@@ -92,7 +99,7 @@ export const polosService = {
       cidade: polo.cidade,
       estado: polo.estado,
       status: polo.status,
-      company_id: company?.id || null,
+      company_id: company.id,
       is_matriz: false,
       endereco: polo.endereco || null,
       numero: polo.numero || null,

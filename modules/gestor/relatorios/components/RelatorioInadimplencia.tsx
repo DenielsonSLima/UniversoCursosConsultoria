@@ -20,31 +20,32 @@ interface DefaultingStudent {
   poloId: string;
 }
 
-const MOCK_INADIMPLENTES: DefaultingStudent[] = [
-  { id: '1', nome: 'Bruno Silva Santos', telefone: '(79) 99888-1122', curso: 'Técnico em Radiologia', dataVencimento: '2026-05-10', diasAtraso: 40, valorDevido: 350.00, poloNome: 'Matriz - Aracaju', poloId: 'matriz-id' },
-  { id: '2', nome: 'Camila Rocha Ramos', telefone: '(79) 99111-2233', curso: 'Técnico em Enfermagem', dataVencimento: '2026-05-20', diasAtraso: 30, valorDevido: 350.00, poloNome: 'Polo Estância', poloId: 'estancia-id' },
-  { id: '3', nome: 'Felipe Guedes Lima', telefone: '(79) 98877-4455', curso: 'Especialização em Tomografia', dataVencimento: '2026-04-15', diasAtraso: 65, valorDevido: 450.00, poloNome: 'Polo Lagarto', poloId: 'lagarto-id' },
-  { id: '4', nome: 'Daniela Vieira Melo', telefone: '(79) 99655-8899', curso: 'Técnico em Radiologia', dataVencimento: '2026-06-05', diasAtraso: 14, valorDevido: 350.00, poloNome: 'Matriz - Aracaju', poloId: 'matriz-id' },
-  { id: '5', nome: 'Gustavo Barbosa Neri', telefone: '(79) 99922-3344', curso: 'Radiologia Odontológica - EAD', dataVencimento: '2026-05-01', diasAtraso: 49, valorDevido: 250.00, poloNome: 'Polo Própria', poloId: 'propria-id' }
-];
-
 const RelatorioInadimplencia: React.FC<RelatorioInadimplenciaProps> = ({ company, polo }) => {
   const [inadimplentesList, setInadimplentesList] = useState<DefaultingStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPoloId, setSelectedPoloId] = useState('todos');
+  const [selectedPoloId, setSelectedPoloId] = useState(polo?.id || 'todos');
   const [minDaysOverdue, setMinDaysOverdue] = useState('0');
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.id]);
+
+  useEffect(() => {
+    setSelectedPoloId(polo?.id || 'todos');
+  }, [polo?.id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setInadimplentesList([]);
+      setLoading(false);
+      return;
+    }
     try {
       const todayStr = new Date().toISOString().split('T')[0];
 
       // Query unpaid receivables past due date
-      const { data: dbReceivables, error } = await supabase
+      let receivablesQuery = supabase
         .from('contas_receber')
         .select(`
           id,
@@ -59,6 +60,8 @@ const RelatorioInadimplencia: React.FC<RelatorioInadimplenciaProps> = ({ company
         `)
         .neq('status', 'PAGO')
         .lt('data_vencimento', todayStr);
+      receivablesQuery = receivablesQuery.eq('polo_id', polo.id);
+      const { data: dbReceivables, error } = await receivablesQuery;
 
       if (error) throw error;
 
@@ -81,14 +84,10 @@ const RelatorioInadimplencia: React.FC<RelatorioInadimplenciaProps> = ({ company
         };
       });
 
-      if (mapped.length === 0) {
-        setInadimplentesList(MOCK_INADIMPLENTES);
-      } else {
-        setInadimplentesList(mapped);
-      }
+      setInadimplentesList(mapped);
     } catch (err) {
       console.error('Erro ao carregar inadimplentes:', err);
-      setInadimplentesList(MOCK_INADIMPLENTES);
+      setInadimplentesList([]);
     } finally {
       setLoading(false);
     }

@@ -20,14 +20,6 @@ interface ClassReportItem {
   alunosAtivos: number;
 }
 
-const MOCK_TURMAS: ClassReportItem[] = [
-  { id: '1', nome: 'Técnico em Radiologia - Turma A', codigo: 'RAD-A-2026', status: 'Ativo', dataInicio: '2026-02-10', dataFim: '2027-12-15', cursoNome: 'Técnico em Radiologia', modalidade: 'TECNICO', alunosAtivos: 28 },
-  { id: '2', nome: 'Técnico em Enfermagem - Turma B', codigo: 'ENF-B-2026', status: 'Ativo', dataInicio: '2026-03-01', dataFim: '2028-03-01', cursoNome: 'Técnico em Enfermagem', modalidade: 'TECNICO', alunosAtivos: 35 },
-  { id: '3', nome: 'Especialização em Tomografia', codigo: 'ESP-TOM-26', status: 'Ativo', dataInicio: '2026-05-15', dataFim: '2026-11-20', cursoNome: 'Especialização em Tomografia Computadorizada', modalidade: 'ESPECIALIZACAO', alunosAtivos: 18 },
-  { id: '4', nome: 'Curso Livre de Atendimento ao Cliente', codigo: 'LIV-ATC-01', status: 'Concluído', dataInicio: '2026-01-10', dataFim: '2026-02-28', cursoNome: 'Atendimento ao Cliente', modalidade: 'LIVRE', alunosAtivos: 15 },
-  { id: '5', nome: 'Radiologia Odontológica - EAD', codigo: 'EAD-RAD-OD', status: 'Ativo', dataInicio: '2026-04-01', dataFim: '2026-10-01', cursoNome: 'Radiologia Odontológica Avançada', modalidade: 'EAD', alunosAtivos: 42 }
-];
-
 const RelatorioTurmas: React.FC<RelatorioTurmasProps> = ({ company, polo }) => {
   const [turmasList, setTurmasList] = useState<ClassReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,12 +29,17 @@ const RelatorioTurmas: React.FC<RelatorioTurmasProps> = ({ company, polo }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setTurmasList([]);
+      setLoading(false);
+      return;
+    }
     try {
-      const { data: dbTurmas, error: turmasErr } = await supabase
+      let turmasQuery = supabase
         .from('turmas')
         .select(`
           id,
@@ -54,12 +51,15 @@ const RelatorioTurmas: React.FC<RelatorioTurmasProps> = ({ company, polo }) => {
           curso_id,
           cursos ( nome, modalidade )
         `);
+      turmasQuery = turmasQuery.eq('polo_id', polo.id);
+      const { data: dbTurmas, error: turmasErr } = await turmasQuery;
       
       if (turmasErr) throw turmasErr;
 
-      const { data: dbMatriculas } = await supabase
-        .from('matriculas')
-        .select('id, status, turma_id');
+      const turmaIds = (dbTurmas || []).map((turma: any) => turma.id);
+      const { data: dbMatriculas } = turmaIds.length
+        ? await supabase.from('matriculas').select('id, status, turma_id').in('turma_id', turmaIds)
+        : { data: [] };
 
       const counts: Record<string, number> = {};
       dbMatriculas?.forEach((m: any) => {
@@ -80,15 +80,10 @@ const RelatorioTurmas: React.FC<RelatorioTurmasProps> = ({ company, polo }) => {
         alunosAtivos: counts[t.id] || 0
       })) || [];
 
-      // Combine with mock if no data exists
-      if (mapped.length === 0) {
-        setTurmasList(MOCK_TURMAS);
-      } else {
-        setTurmasList(mapped);
-      }
+      setTurmasList(mapped);
     } catch (err) {
       console.error('Erro ao buscar turmas:', err);
-      setTurmasList(MOCK_TURMAS);
+      setTurmasList([]);
     } finally {
       setLoading(false);
     }

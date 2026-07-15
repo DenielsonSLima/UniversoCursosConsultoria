@@ -323,8 +323,11 @@ export const financeiroService = {
     }));
   },
 
-  async getReceivablesByModality(modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO'): Promise<ContasReceber[]> {
-    const { data, error } = await supabase
+  async getReceivablesByModality(
+    modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
+    poloId?: string
+  ): Promise<ContasReceber[]> {
+    let query = supabase
       .from('contas_receber')
       .select(`
         *,
@@ -337,8 +340,13 @@ export const financeiroService = {
         )
       `)
       .eq('categoria', 'MENSALIDADE')
-      .eq('turmas.cursos.modalidade', modality)
-      .order('data_vencimento', { ascending: true });
+      .eq('turmas.cursos.modalidade', modality);
+
+    if (poloId && poloId !== 'todos') {
+      query = query.eq('polo_id', poloId);
+    }
+
+    const { data, error } = await query.order('data_vencimento', { ascending: true });
 
     if (error) {
       console.error(`Erro ao buscar recebíveis da modalidade ${modality}:`, error);
@@ -389,8 +397,8 @@ export const financeiroService = {
     }));
   },
 
-  async getTechnicalReceivables(): Promise<ContasReceber[]> {
-    return this.getReceivablesByModality('TECNICO');
+  async getTechnicalReceivables(poloId?: string): Promise<ContasReceber[]> {
+    return this.getReceivablesByModality('TECNICO', poloId);
   },
 
   async getReceivablesModalitySummary(
@@ -434,8 +442,8 @@ export const financeiroService = {
     }
   },
 
-  async getOutrosCreditos(): Promise<ContasReceber[]> {
-    return this.getContasReceber({ categoria: 'OUTROS_CREDITOS' });
+  async getOutrosCreditos(poloId?: string): Promise<ContasReceber[]> {
+    return this.getContasReceber({ categoria: 'OUTROS_CREDITOS', poloId });
   },
 
   async getOutrosCreditosSummary(filters: ReceivablesSummaryFilters = {}): Promise<ReceivablesSummary> {
@@ -813,11 +821,14 @@ export const financeiroService = {
     return data || [];
   },
 
-  async getTurmas(): Promise<any[]> {
-    const { data, error } = await supabase
+  async getTurmas(poloId?: string): Promise<any[]> {
+    let query = supabase
       .from('turmas')
-      .select('id, nome, codigo, polo_id, cursos(modalidade)')
-      .order('nome', { ascending: true });
+      .select('id, nome, codigo, polo_id, cursos(modalidade)');
+    if (poloId && poloId !== 'todos') {
+      query = query.eq('polo_id', poloId);
+    }
+    const { data, error } = await query.order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar turmas no financeiro:', error);
       throw error;

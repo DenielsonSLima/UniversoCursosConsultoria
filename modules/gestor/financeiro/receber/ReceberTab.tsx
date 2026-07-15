@@ -9,7 +9,11 @@ import TecnicoReceberTab from './tecnico/TecnicoReceberTab';
 
 type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico';
 
-const ReceberTab: React.FC = () => {
+interface ReceberTabProps {
+  poloId?: string | null;
+}
+
+const ReceberTab: React.FC<ReceberTabProps> = ({ poloId }) => {
   const [activeCourseTab, setActiveCourseTab] = useState<CourseType>('tecnico');
 
   const subtabs = [
@@ -22,13 +26,13 @@ const ReceberTab: React.FC = () => {
   const renderSubTab = () => {
     switch (activeCourseTab) {
       case 'livres':
-        return <LivresReceberTab />;
+        return <LivresReceberTab poloId={poloId} />;
       case 'especializacao':
-        return <EspecializacaoReceberTab />;
+        return <EspecializacaoReceberTab poloId={poloId} />;
       case 'ead':
-        return <EadReceberTab />;
+        return <EadReceberTab poloId={poloId} />;
       case 'tecnico':
-        return <TecnicoReceberTab />;
+        return <TecnicoReceberTab poloId={poloId} />;
       default:
         return null;
     }

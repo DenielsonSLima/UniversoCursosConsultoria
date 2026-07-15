@@ -127,6 +127,8 @@ export const empresasService = {
     const { data, error } = await supabase
       .from('empresas')
       .select('*')
+      .eq('tipo', 'Matriz')
+      .order('ativo', { ascending: false })
       .order('id', { ascending: true })
       .limit(1)
       .maybeSingle();

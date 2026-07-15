@@ -5,16 +5,21 @@ import {
 } from '../../financeiro.service';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 
-export function useOutrosCreditosQueries(summaryFilters: ReceivablesSummaryFilters) {
+export function useOutrosCreditosQueries(
+  summaryFilters: ReceivablesSummaryFilters,
+  poloId?: string | null
+) {
   const creditsQuery = useQuery({
-    queryKey: financeiroQueryKeys.outrosCreditosList,
-    queryFn: () => financeiroService.getOutrosCreditos(),
+    queryKey: financeiroQueryKeys.outrosCreditosList(poloId),
+    queryFn: () => financeiroService.getOutrosCreditos(poloId || undefined),
+    enabled: Boolean(poloId),
     staleTime: 15_000,
   });
 
   const summaryQuery = useQuery({
     queryKey: financeiroQueryKeys.outrosCreditosSummary(summaryFilters),
     queryFn: () => financeiroService.getOutrosCreditosSummary(summaryFilters),
+    enabled: Boolean(poloId),
     staleTime: 15_000,
   });
 

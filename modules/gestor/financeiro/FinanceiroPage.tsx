@@ -48,13 +48,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
       case 'resumo':
         return <ResumoTab poloId={poloId} />;
       case 'receber':
-        return <ReceberTab />;
+        return <ReceberTab poloId={poloId} />;
       case 'despesas':
-        return <DespesasTab />;
+        return <DespesasTab poloId={poloId} />;
       case 'transferencias':
         return <TransferenciasTab poloId={poloId} />;
       case 'outros-debitos':
-        return <OutrosDebitosTab />;
+        return <OutrosDebitosTab poloId={poloId} />;
       case 'outros-creditos':
         return <OutrosCreditosTab poloId={poloId} />;
       default:

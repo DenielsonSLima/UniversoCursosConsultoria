@@ -100,6 +100,7 @@ const groupModeLabels: Record<GroupMode, string> = {
 };
 
 interface ModalidadeReceberTabProps {
+  poloId?: string | null;
   modality: CourseModality;
   title: string;
   description: string;
@@ -108,6 +109,7 @@ interface ModalidadeReceberTabProps {
 }
 
 export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
+  poloId,
   modality,
   title,
   description,
@@ -137,15 +139,16 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   useFinanceiroRealtime();
 
   const summaryFilters = useMemo(() => ({
+    poloId: poloId || undefined,
     search,
     dueStart,
     dueEnd,
-  }), [dueEnd, dueStart, search]);
+  }), [dueEnd, dueStart, poloId, search]);
 
   const {
     receivablesQuery,
     summaryQuery,
-  } = useModalidadeReceberQueries(modality, summaryFilters);
+  } = useModalidadeReceberQueries(modality, summaryFilters, poloId);
 
   const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
   const receivables = receivablesQuery.data || [];
@@ -536,11 +539,12 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   };
 
   const reportPoloId = useMemo(() => {
+    if (poloId) return poloId;
     const uniquePoloIds = Array.from(new Set(filtered.map((item) => item.poloId).filter(Boolean)));
     if (uniquePoloIds.length === 1) return uniquePoloIds[0];
     if (typeof window === 'undefined') return uniquePoloIds[0];
     return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || uniquePoloIds[0];
-  }, [filtered]);
+  }, [filtered, poloId]);
 
   const reportColumns = useMemo<FinancialReportColumn[]>(() => [
     { label: 'Aluno' },

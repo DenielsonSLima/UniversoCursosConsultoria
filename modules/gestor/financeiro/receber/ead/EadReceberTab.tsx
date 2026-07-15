@@ -2,8 +2,9 @@ import React from 'react';
 import { Laptop } from 'lucide-react';
 import { ModalidadeReceberTab } from '../components/ModalidadeReceberTab';
 
-const EadReceberTab: React.FC = () => (
+const EadReceberTab: React.FC<{ poloId?: string | null }> = ({ poloId }) => (
   <ModalidadeReceberTab
+    poloId={poloId}
     modality="EAD"
     accentLabel="EAD"
     title="Recebíveis EAD"

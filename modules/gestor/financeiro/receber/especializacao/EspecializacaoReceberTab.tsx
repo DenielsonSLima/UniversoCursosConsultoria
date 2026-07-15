@@ -2,8 +2,9 @@ import React from 'react';
 import { GraduationCap } from 'lucide-react';
 import { ModalidadeReceberTab } from '../components/ModalidadeReceberTab';
 
-const EspecializacaoReceberTab: React.FC = () => (
+const EspecializacaoReceberTab: React.FC<{ poloId?: string | null }> = ({ poloId }) => (
   <ModalidadeReceberTab
+    poloId={poloId}
     modality="ESPECIALIZACAO"
     accentLabel="Especialização"
     title="Recebíveis de especialização"
