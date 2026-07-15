@@ -17,14 +17,6 @@ interface CourseReportItem {
   totalAlunos: number;
 }
 
-const MOCK_CURSOS: CourseReportItem[] = [
-  { id: '1', nome: 'Técnico em Radiologia', modalidade: 'TECNICO', cargaHoraria: 1200, totalTurmas: 4, totalAlunos: 98 },
-  { id: '2', nome: 'Técnico em Enfermagem', modalidade: 'TECNICO', cargaHoraria: 1600, totalTurmas: 5, totalAlunos: 124 },
-  { id: '3', nome: 'Especialização em Tomografia Computadorizada', modalidade: 'ESPECIALIZACAO', cargaHoraria: 360, totalTurmas: 2, totalAlunos: 32 },
-  { id: '4', nome: 'Radiologia Odontológica Avançada', modalidade: 'EAD', cargaHoraria: 120, totalTurmas: 3, totalAlunos: 58 },
-  { id: '5', nome: 'Atendimento ao Cliente e Marketing', modalidade: 'LIVRE', cargaHoraria: 40, totalTurmas: 1, totalAlunos: 15 }
-];
-
 const RelatorioCursos: React.FC<RelatorioCursosProps> = ({ company, polo }) => {
   const [cursosList, setCursosList] = useState<CourseReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,10 +24,15 @@ const RelatorioCursos: React.FC<RelatorioCursosProps> = ({ company, polo }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setCursosList([]);
+      setLoading(false);
+      return;
+    }
     try {
       // 1. Fetch courses
       const { data: dbCursos, error: cursosErr } = await supabase
@@ -45,14 +42,17 @@ const RelatorioCursos: React.FC<RelatorioCursosProps> = ({ company, polo }) => {
       if (cursosErr) throw cursosErr;
 
       // 2. Fetch turmas for counting classes per course
-      const { data: dbTurmas } = await supabase
+      let turmasQuery = supabase
         .from('turmas')
         .select('id, curso_id');
+      turmasQuery = turmasQuery.eq('polo_id', polo.id);
+      const { data: dbTurmas } = await turmasQuery;
 
       // 3. Fetch matriculas to count students per course
-      const { data: dbMatriculas } = await supabase
-        .from('matriculas')
-        .select('id, status, turma_id');
+      const turmaIds = (dbTurmas || []).map((turma: any) => turma.id);
+      const { data: dbMatriculas } = turmaIds.length
+        ? await supabase.from('matriculas').select('id, status, turma_id').in('turma_id', turmaIds)
+        : { data: [] };
 
       // Map turma_id to curso_id
       const turmaToCourse: Record<string, string> = {};
@@ -83,14 +83,10 @@ const RelatorioCursos: React.FC<RelatorioCursosProps> = ({ company, polo }) => {
         totalAlunos: courseStudentsCount[c.id] || 0
       })) || [];
 
-      if (mapped.length === 0) {
-        setCursosList(MOCK_CURSOS);
-      } else {
-        setCursosList(mapped);
-      }
+      setCursosList(mapped.filter((curso: CourseReportItem) => curso.totalTurmas > 0));
     } catch (err) {
       console.error('Erro ao carregar dados por curso:', err);
-      setCursosList(MOCK_CURSOS);
+      setCursosList([]);
     } finally {
       setLoading(false);
     }

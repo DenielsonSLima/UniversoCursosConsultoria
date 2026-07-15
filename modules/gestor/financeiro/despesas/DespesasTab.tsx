@@ -7,7 +7,11 @@ import DespesasVariaveisTab from './variaveis/DespesasVariaveisTab';
 
 type ExpenseType = 'fixas' | 'variaveis';
 
-const DespesasTab: React.FC = () => {
+interface DespesasTabProps {
+  poloId?: string | null;
+}
+
+const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
   const [activeExpenseTab, setActiveExpenseTab] = useState<ExpenseType>('fixas');
 
   const subtabs = [
@@ -18,9 +22,9 @@ const DespesasTab: React.FC = () => {
   const renderSubTab = () => {
     switch (activeExpenseTab) {
       case 'fixas':
-        return <DespesasFixasTab />;
+        return <DespesasFixasTab poloId={poloId} />;
       case 'variaveis':
-        return <DespesasVariaveisTab />;
+        return <DespesasVariaveisTab poloId={poloId} />;
       default:
         return null;
     }

@@ -82,7 +82,7 @@ const BaixaModal: React.FC<{
   );
 };
 
-const OutrosDebitosTab: React.FC = () => {
+const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scopedPoloId }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
 
@@ -99,17 +99,13 @@ const OutrosDebitosTab: React.FC = () => {
 
   useDespesasRealtime();
 
-  const { accountsQuery, polosQuery, partnersQuery, turmasQuery } = useFinanceiroSharedQueries({ turmas: true });
+  const { accountsQuery, polosQuery, partnersQuery, turmasQuery } = useFinanceiroSharedQueries({ turmas: true, poloId: scopedPoloId });
   const polos = polosQuery.data || [];
   const contas = accountsQuery.data || [];
   const parceiros = partnersQuery.data || [];
   const turmas = turmasQuery?.data || [];
 
-  const sessionPoloId = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || '';
-  }, []);
-  const poloId = sessionPoloId || polos[0]?.id || '';
+  const poloId = scopedPoloId || '';
 
   const filters = useMemo(() => ({
     tipo: 'OUTRO_DEBITO' as DespesaTipo,

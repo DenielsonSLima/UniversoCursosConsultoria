@@ -565,14 +565,14 @@ const GestorPage: React.FC = () => {
       case 'cadastros-modelos': return <ModelosDocumentosPage />;
       case 'gestao': return (
         <GestaoPage
-          poloId={isMatrizSelected ? undefined : currentPoloId || undefined}
+          poloId={currentPoloId || undefined}
           activePoloId={currentPoloId || undefined}
           isMatriz={isMatrizSelected}
           poloNome={currentPolo?.nome}
           onRequestScrollTop={scrollContentToTop}
         />
       );
-      case 'secretaria': return <SecretariaPage gestorPermissions={gestorPermissions} />;
+      case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={gestorPermissions} />;
       case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={gestorScope.isGlobal} />;
       case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={gestorPermissions.financeiroTabs} />;
       case 'biblioteca': return <BibliotecaPage />;

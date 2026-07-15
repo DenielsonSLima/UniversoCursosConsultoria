@@ -1,8 +1,8 @@
 {
-  "version": "0.2.2-beta.3",
+  "version": "0.2.2-beta.4",
   "display": "BETA",
   "stage": "beta",
-  "revision": 3,
+  "revision": 4,
   "releasedAt": "2026-07-14",
-  "summary": "Encerramento acadêmico, certificados EAD pendentes e carteirinha em PDF"
+  "summary": "Escopo por empresa e polo em turmas, financeiro, secretaria e relatórios"
 }

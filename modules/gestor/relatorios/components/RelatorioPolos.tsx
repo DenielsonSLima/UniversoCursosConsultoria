@@ -19,13 +19,6 @@ interface PoloReportItem {
   faturamentoPendente: number;
 }
 
-const MOCK_POLOS: PoloReportItem[] = [
-  { id: 'matriz-id', nome: 'Matriz - Aracaju', cnpj: '12.345.678/0001-99', cidade: 'Aracaju', uf: 'SE', alunosAtivos: 148, faturamentoRecebido: 45000, faturamentoPendente: 8200 },
-  { id: 'estancia-id', nome: 'Polo Estância', cnpj: '12.345.678/0002-88', cidade: 'Estância', uf: 'SE', alunosAtivos: 76, faturamentoRecebido: 21500, faturamentoPendente: 3400 },
-  { id: 'lagarto-id', nome: 'Polo Lagarto', cnpj: '12.345.678/0003-77', cidade: 'Lagarto', uf: 'SE', alunosAtivos: 92, faturamentoRecebido: 28900, faturamentoPendente: 4100 },
-  { id: 'propria-id', nome: 'Polo Própria', cnpj: '12.345.678/0004-66', cidade: 'Própria', uf: 'SE', alunosAtivos: 51, faturamentoRecebido: 12400, faturamentoPendente: 2100 }
-];
-
 const RelatorioPolos: React.FC<RelatorioPolosProps> = ({ company, polo }) => {
   const [polosList, setPolosList] = useState<PoloReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,33 +26,51 @@ const RelatorioPolos: React.FC<RelatorioPolosProps> = ({ company, polo }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.company_id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.company_id) {
+      setPolosList([]);
+      setLoading(false);
+      return;
+    }
     try {
       // 1. Fetch polos
-      const { data: dbPolos, error: polosErr } = await supabase
+      let polosQuery = supabase
         .from('polos')
-        .select('id, nome, cnpj, cidade, uf');
+        .select('id, nome, cnpj, cidade, estado, company_id')
+        .eq('status', 'ativo');
+      polosQuery = polosQuery.eq('company_id', polo.company_id);
+      const { data: dbPolos, error: polosErr } = await polosQuery;
       
       if (polosErr) throw polosErr;
 
       // 2. Fetch matriculas for counting students
-      const { data: dbMatriculas } = await supabase
-        .from('matriculas')
-        .select('id, status, polo_id');
+      const poloIds = (dbPolos || []).map((item: any) => item.id);
+      const { data: dbMatriculas } = poloIds.length
+        ? await supabase
+          .from('matriculas')
+          .select('id, status, turmas!inner(polo_id)')
+          .in('turmas.polo_id', poloIds)
+        : { data: [] };
 
       // 3. Fetch contas_receber for revenue totals
-      const { data: dbReceivables } = await supabase
-        .from('contas_receber')
-        .select('polo_id, valor, status');
+      const { data: dbReceivables } = poloIds.length
+        ? await supabase
+          .from('contas_receber')
+          .select('polo_id, valor, status')
+          .in('polo_id', poloIds)
+        : { data: [] };
 
       // Aggregate students count
       const studentCounts: Record<string, number> = {};
       dbMatriculas?.forEach((m: any) => {
         if (m.status === 'ATIVO' || m.status === 'ativo' || m.status === 'Matriculado' || m.status === 'CONFIRMADO') {
-          studentCounts[m.polo_id] = (studentCounts[m.polo_id] || 0) + 1;
+          const matriculaPoloId = m.turmas?.polo_id;
+          if (matriculaPoloId) {
+            studentCounts[matriculaPoloId] = (studentCounts[matriculaPoloId] || 0) + 1;
+          }
         }
       });
 
@@ -81,20 +92,16 @@ const RelatorioPolos: React.FC<RelatorioPolosProps> = ({ company, polo }) => {
         nome: p.nome,
         cnpj: p.cnpj || '00.000.000/0000-00',
         cidade: p.cidade || 'Não informada',
-        uf: p.uf || 'SE',
+        uf: p.estado || 'SE',
         alunosAtivos: studentCounts[p.id] || 0,
         faturamentoRecebido: revenueReceived[p.id] || 0,
         faturamentoPendente: revenuePending[p.id] || 0
       })) || [];
 
-      if (mapped.length === 0) {
-        setPolosList(MOCK_POLOS);
-      } else {
-        setPolosList(mapped);
-      }
+      setPolosList(mapped);
     } catch (err) {
       console.error('Erro ao carregar dados por polo:', err);
-      setPolosList(MOCK_POLOS);
+      setPolosList([]);
     } finally {
       setLoading(false);
     }

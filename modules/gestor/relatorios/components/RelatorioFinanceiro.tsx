@@ -18,15 +18,6 @@ interface FinancialTransaction {
   valor: number;
 }
 
-const MOCK_FINANCE: FinancialTransaction[] = [
-  { id: 'rec-1', data: '2026-06-01', tipo: 'RECEITA', descricao: 'Mensalidade Escolar - João Silva', categoria: 'Mensalidade', status: 'PAGO', valor: 350.00 },
-  { id: 'pag-1', data: '2026-06-05', tipo: 'DESPESA', descricao: 'Aluguel do Prédio - Unidade Sede', categoria: 'Infraestrutura', status: 'PAGO', valor: 2500.00 },
-  { id: 'rec-2', data: '2026-06-10', tipo: 'RECEITA', descricao: 'Mensalidade Escolar - Maria Souza', categoria: 'Mensalidade', status: 'PAGO', valor: 350.00 },
-  { id: 'pag-2', data: '2026-06-12', tipo: 'DESPESA', descricao: 'Energia Elétrica Coelba', categoria: 'Utilidades', status: 'PENDENTE', valor: 480.00 },
-  { id: 'rec-3', data: '2026-06-15', tipo: 'RECEITA', descricao: 'Matrícula Curso de Tomografia', categoria: 'Matrícula', status: 'PAGO', valor: 150.00 },
-  { id: 'pag-3', data: '2026-06-20', tipo: 'DESPESA', descricao: 'Honorários de Professores - Maio/2026', categoria: 'Folha Pagamento', status: 'PENDENTE', valor: 4500.00 }
-];
-
 const RelatorioFinanceiro: React.FC<RelatorioFinanceiroProps> = ({ company, polo }) => {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,22 +39,31 @@ const RelatorioFinanceiro: React.FC<RelatorioFinanceiroProps> = ({ company, polo
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
     try {
       // 1. Fetch receivables (Inflows)
-      const { data: dbReceivables, error: recErr } = await supabase
+      let receivablesQuery = supabase
         .from('contas_receber')
         .select('id, data_vencimento, data_pagamento, descricao, categoria, status, valor');
+      receivablesQuery = receivablesQuery.eq('polo_id', polo.id);
+      const { data: dbReceivables, error: recErr } = await receivablesQuery;
 
       if (recErr) throw recErr;
 
       // 2. Fetch payables (Outflows)
-      const { data: dbPayables, error: payErr } = await supabase
+      let payablesQuery = supabase
         .from('contas_pagar')
         .select('id, data_vencimento, data_pagamento, descricao, categoria, status, valor');
+      payablesQuery = payablesQuery.eq('polo_id', polo.id);
+      const { data: dbPayables, error: payErr } = await payablesQuery;
 
       if (payErr) throw payErr;
 
@@ -91,14 +91,10 @@ const RelatorioFinanceiro: React.FC<RelatorioFinanceiroProps> = ({ company, polo
 
       const combined = [...mappedReceivables, ...mappedPayables];
 
-      if (combined.length === 0) {
-        setTransactions(MOCK_FINANCE);
-      } else {
-        setTransactions(combined.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()));
-      }
+      setTransactions(combined.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()));
     } catch (err) {
       console.error('Erro ao carregar dados financeiros:', err);
-      setTransactions(MOCK_FINANCE);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }

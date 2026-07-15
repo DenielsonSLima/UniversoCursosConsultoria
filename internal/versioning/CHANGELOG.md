@@ -2,6 +2,21 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.2.2-beta.4] - 2026-07-14
+
+### Corrigido
+
+- Gestão de turmas, Secretaria e relatórios agora acompanham o polo selecionado no cabeçalho, inclusive ao trocar de polo sem recarregar a página.
+- Contas a receber, despesas, outros créditos, outros débitos e transferências passaram a consultar somente o polo ativo.
+- Relatórios deixaram de combinar polos de empresas diferentes e não usam mais dados fictícios quando uma consulta retorna vazia.
+- Novos polos passam a ser vinculados obrigatoriamente à empresa matriz, e os polos existentes sem empresa foram regularizados.
+
+### Segurança
+
+- Contas bancárias agora respeitam o vínculo do gestor com o polo também em consultas diretas ao banco.
+- Transferências entre contas só ficam visíveis quando o gestor tem acesso simultâneo aos polos de origem e destino.
+- Gestores restritos não recebem autorização para registros sem polo definido.
+
 ## [0.2.2-beta.3] - 2026-07-14
 
 ### Adicionado

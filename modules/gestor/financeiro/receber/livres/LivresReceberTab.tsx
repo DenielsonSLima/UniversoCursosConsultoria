@@ -2,8 +2,9 @@ import React from 'react';
 import { Award } from 'lucide-react';
 import { ModalidadeReceberTab } from '../components/ModalidadeReceberTab';
 
-const LivresReceberTab: React.FC = () => (
+const LivresReceberTab: React.FC<{ poloId?: string | null }> = ({ poloId }) => (
   <ModalidadeReceberTab
+    poloId={poloId}
     modality="LIVRE"
     accentLabel="Cursos Livres"
     title="Recebíveis de cursos livres"

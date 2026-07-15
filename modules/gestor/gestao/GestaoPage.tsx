@@ -35,7 +35,7 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
   }, [activeTab, isDetailView, onRequestScrollTop]);
 
   useEffect(() => {
-    const summaryScope = poloId || 'matriz-global';
+    const summaryScope = poloId || 'sem-polo';
     const invalidateGestaoResumo = () => {
       queryClient.invalidateQueries({ queryKey: ['gestao-resumo-kpis', summaryScope] });
     };

@@ -22,14 +22,6 @@ interface InternshipReportItem {
   status: 'Aprovado' | 'Reprovado' | 'Em Andamento';
 }
 
-const MOCK_ESTAGIOS: InternshipReportItem[] = [
-  { id: 'est-1', alunoNome: 'Mariana Souza Cruz', turmaNome: 'Técnico em Radiologia - Turma A', turmaId: 'turma-a-id', instrutorNome: 'Dr. Ricardo Santos', frequencia: 96.50, notaComportamento: 1.9, notaRegistros: 1.8, notaTecnica: 5.5, notaFinal: 9.2, status: 'Aprovado' },
-  { id: 'est-2', alunoNome: 'Pedro Alves Oliveira', turmaNome: 'Técnico em Radiologia - Turma A', turmaId: 'turma-a-id', instrutorNome: 'Dr. Ricardo Santos', frequencia: 100.00, notaComportamento: 2.0, notaRegistros: 2.0, notaTecnica: 5.8, notaFinal: 9.8, status: 'Aprovado' },
-  { id: 'est-3', alunoNome: 'Ana Costa Nascimento', turmaNome: 'Técnico em Enfermagem - Turma B', turmaId: 'turma-b-id', instrutorNome: 'Enf. Carla Dantas', frequencia: 72.00, notaComportamento: 1.5, notaRegistros: 1.2, notaTecnica: 3.5, notaFinal: 6.2, status: 'Reprovado' }, // Attendance < 75%
-  { id: 'est-4', alunoNome: 'Lucas Mendes Ramos', turmaNome: 'Técnico em Enfermagem - Turma B', turmaId: 'turma-b-id', instrutorNome: 'Enf. Carla Dantas', frequencia: 90.00, notaComportamento: 1.8, notaRegistros: 1.5, notaTecnica: 4.8, notaFinal: 8.1, status: 'Aprovado' },
-  { id: 'est-5', alunoNome: 'Roberta Lima Fonseca', turmaNome: 'Técnico em Radiologia - Turma A', turmaId: 'turma-a-id', instrutorNome: 'Dr. Ricardo Santos', frequencia: 88.00, notaComportamento: 1.7, notaRegistros: 1.4, notaTecnica: 2.5, notaFinal: 5.6, status: 'Reprovado' } // Grade < 6.0
-];
-
 const RelatorioEstagios: React.FC<RelatorioEstagiosProps> = ({ company, polo }) => {
   const [estagiosList, setEstagiosList] = useState<InternshipReportItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,19 +30,29 @@ const RelatorioEstagios: React.FC<RelatorioEstagiosProps> = ({ company, polo }) 
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [polo?.id]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setTurmas([]);
+      setEstagiosList([]);
+      setLoading(false);
+      return;
+    }
     try {
       // 1. Fetch turmas for filter dropdown
-      const { data: dbTurmas } = await supabase
+      let turmasQuery = supabase
         .from('turmas')
         .select('id, nome');
+      turmasQuery = turmasQuery.eq('polo_id', polo.id);
+      const { data: dbTurmas } = await turmasQuery;
       setTurmas(dbTurmas || []);
 
       // 2. Fetch internship evaluations
-      const { data: dbEstagios, error: estErr } = await supabase
+      const turmaIds = (dbTurmas || []).map((turma: any) => turma.id);
+      const { data: dbEstagios, error: estErr } = turmaIds.length
+        ? await supabase
         .from('matriculas_estagios')
         .select(`
           turma_id,
@@ -63,7 +65,9 @@ const RelatorioEstagios: React.FC<RelatorioEstagiosProps> = ({ company, polo }) 
           instrutor_nome,
           turmas ( nome ),
           parceiros ( nome )
-        `);
+        `)
+        .in('turma_id', turmaIds)
+        : { data: [], error: null };
 
       if (estErr) throw estErr;
 
@@ -91,14 +95,10 @@ const RelatorioEstagios: React.FC<RelatorioEstagiosProps> = ({ company, polo }) 
         };
       });
 
-      if (mapped.length === 0) {
-        setEstagiosList(MOCK_ESTAGIOS);
-      } else {
-        setEstagiosList(mapped);
-      }
+      setEstagiosList(mapped);
     } catch (err) {
       console.error('Erro ao carregar estágios:', err);
-      setEstagiosList(MOCK_ESTAGIOS);
+      setEstagiosList([]);
     } finally {
       setLoading(false);
     }

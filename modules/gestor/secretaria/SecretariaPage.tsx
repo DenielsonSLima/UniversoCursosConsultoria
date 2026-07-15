@@ -95,10 +95,11 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
 };
 
 interface SecretariaPageProps {
+  poloId?: string | null;
   gestorPermissions?: any;
 }
 
-const SecretariaPage: React.FC<SecretariaPageProps> = ({ gestorPermissions }) => {
+const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissions }) => {
   const [activeModule, setActiveModule] = useState<string>('dashboard');
 
   const allowedTabsList = useMemo(() => {
@@ -141,7 +142,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ gestorPermissions }) =>
   const renderContent = () => {
     switch (activeModule) {
       case 'alunos':
-        return <SecretariaAlunosPage />;
+        return <SecretariaAlunosPage poloId={poloId} />;
       case 'declaracao-matricula':
         return <SecretariaDeclaracaoMatriculaPage />;
       case 'declaracao-frequencia':

@@ -9,16 +9,20 @@ import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
-const SecretariaAlunosPage: React.FC = () => {
+interface SecretariaAlunosPageProps {
+  poloId?: string | null;
+}
+
+const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAluno, setSelectedAluno] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'geral' | 'financeiro' | 'academico'>('geral');
   const queryClient = useQueryClient();
 
   const { data: filteredAlunos = [], isLoading: isSearching } = useQuery({
-    queryKey: ['secretaria-alunos-search', searchTerm],
+    queryKey: ['secretaria-alunos-search', poloId || 'sem-polo', searchTerm],
     queryFn: async () => {
-      if (!searchTerm) return [];
+      if (!searchTerm || !poloId) return [];
       const { data, error } = await supabase
         .from('parceiros')
         .select('*, polos(nome)')
@@ -34,8 +38,9 @@ const SecretariaAlunosPage: React.FC = () => {
       const { data: matriculasResumo, error: matriculasError } = alunoIds.length
         ? await supabase
           .from('matriculas')
-          .select('id, aluno_id, status, data_matricula, turmas(id, nome, codigo, polo_id, cursos(nome, modalidade))')
+          .select('id, aluno_id, status, data_matricula, turmas!inner(id, nome, codigo, polo_id, cursos(nome, modalidade))')
           .in('aluno_id', alunoIds)
+          .eq('turmas.polo_id', poloId)
           .order('data_matricula', { ascending: false })
         : { data: [], error: null };
 
@@ -61,20 +66,27 @@ const SecretariaAlunosPage: React.FC = () => {
           });
         });
 
-      return (data || []).map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
+      return (data || [])
+        .filter((aluno: any) => {
+          const directScope = aluno.polo_id === poloId
+            || (Array.isArray(aluno.polo_ids) && aluno.polo_ids.includes(poloId));
+          return directScope || summaries.has(aluno.id);
+        })
+        .map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
     },
-    enabled: searchTerm.length >= 2,
+    enabled: searchTerm.length >= 2 && Boolean(poloId),
     refetchOnWindowFocus: false,
   });
 
   const { data: matriculas = [] } = useQuery({
-    queryKey: ['aluno-matriculas', selectedAluno?.id],
+    queryKey: ['aluno-matriculas', poloId || 'sem-polo', selectedAluno?.id],
     queryFn: async () => {
-      if (!selectedAluno?.id) return [];
+      if (!selectedAluno?.id || !poloId) return [];
       const { data, error } = await supabase
         .from('matriculas')
-        .select('*, turmas(*, cursos(*), polos(nome))')
-        .eq('aluno_id', selectedAluno.id);
+        .select('*, turmas!inner(*, cursos(*), polos(nome))')
+        .eq('aluno_id', selectedAluno.id)
+        .eq('turmas.polo_id', poloId);
       
       if (error) {
         console.error('Erro ao buscar matrículas do aluno:', error);
@@ -82,7 +94,7 @@ const SecretariaAlunosPage: React.FC = () => {
       }
       return data || [];
     },
-    enabled: !!selectedAluno?.id,
+    enabled: Boolean(selectedAluno?.id && poloId),
   });
 
   useEffect(() => {

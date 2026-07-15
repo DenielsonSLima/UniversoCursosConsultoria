@@ -18,36 +18,6 @@ interface DREStatement {
   lucroLiquido: number;
 }
 
-const MOCK_DRE_DATA: Record<string, DREStatement> = {
-  '2025': {
-    receitaBruta: 345000.00,
-    impostos: 20700.00, // 6% Simples Nacional
-    receitaLiquida: 324300.00,
-    custosDiretos: 110000.00, // Teacher salaries + teaching materials
-    lucroBruto: 214300.00,
-    despesasAdministrativas: 85000.00, // Rent + admin payroll + utilities
-    lucroLiquido: 129300.00
-  },
-  '2026': {
-    receitaBruta: 485000.00,
-    impostos: 29100.00, // 6%
-    receitaLiquida: 455900.00,
-    custosDiretos: 155000.00,
-    lucroBruto: 300900.00,
-    despesasAdministrativas: 102000.00,
-    lucroLiquido: 198900.00
-  },
-  '2027': {
-    receitaBruta: 560000.00,
-    impostos: 33600.00,
-    receitaLiquida: 526400.00,
-    custosDiretos: 180000.00,
-    lucroBruto: 346400.00,
-    despesasAdministrativas: 112000.00,
-    lucroLiquido: 234400.00
-  }
-};
-
 const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
   const [selectedYear, setSelectedYear] = useState('2026');
   const [dreData, setDreData] = useState<DREStatement | null>(null);
@@ -55,29 +25,38 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedYear]);
+  }, [polo?.id, selectedYear]);
 
   const fetchData = async () => {
     setLoading(true);
+    if (!polo?.id) {
+      setDreData(null);
+      setLoading(false);
+      return;
+    }
     try {
       const yearStart = `${selectedYear}-01-01`;
       const yearEnd = `${selectedYear}-12-31`;
 
       // 1. Get paid receivables of the year
-      const { data: dbReceivables } = await supabase
+      let receivablesQuery = supabase
         .from('contas_receber')
         .select('valor')
         .eq('status', 'PAGO')
         .gte('data_pagamento', yearStart)
         .lte('data_pagamento', yearEnd);
+      receivablesQuery = receivablesQuery.eq('polo_id', polo.id);
+      const { data: dbReceivables } = await receivablesQuery;
 
       // 2. Get payables of the year
-      const { data: dbPayables } = await supabase
+      let payablesQuery = supabase
         .from('contas_pagar')
         .select('valor, categoria')
         .eq('status', 'PAGO')
         .gte('data_pagamento', yearStart)
         .lte('data_pagamento', yearEnd);
+      payablesQuery = payablesQuery.eq('polo_id', polo.id);
+      const { data: dbPayables } = await payablesQuery;
 
       const totalReceived = dbReceivables?.reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0) || 0;
 
@@ -101,9 +80,16 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
       const calculatedGrossProfit = calculatedNetRevenue - directCosts;
       const calculatedNetProfit = calculatedGrossProfit - adminCosts;
 
-      // If no data exists, fall back to mock data
       if (totalReceived === 0 && directCosts === 0 && adminCosts === 0) {
-        setDreData(MOCK_DRE_DATA[selectedYear] || MOCK_DRE_DATA['2026']);
+        setDreData({
+          receitaBruta: 0,
+          impostos: 0,
+          receitaLiquida: 0,
+          custosDiretos: 0,
+          lucroBruto: 0,
+          despesasAdministrativas: 0,
+          lucroLiquido: 0,
+        });
       } else {
         setDreData({
           receitaBruta: totalReceived,
@@ -117,7 +103,7 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
       }
     } catch (err) {
       console.error('Erro ao processar DRE:', err);
-      setDreData(MOCK_DRE_DATA[selectedYear] || MOCK_DRE_DATA['2026']);
+      setDreData(null);
     } finally {
       setLoading(false);
     }

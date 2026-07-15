@@ -101,15 +101,10 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
 
   useFinanceiroRealtime();
 
-  const sessionPoloId = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || '';
-  }, []);
-
   const { accountsQuery, polosQuery } = useFinanceiroSharedQueries({ partners: false });
   const accounts = accountsQuery.data || [];
   const polos = polosQuery.data || [];
-  const activePoloId = poloId || sessionPoloId || polos[0]?.id || '';
+  const activePoloId = poloId || '';
   const activePolo = polos.find((polo: any) => polo.id === activePoloId);
 
   const [form, setForm] = useState<TransferFormState>(() => createEmptyForm(activePoloId));
