@@ -15,7 +15,7 @@ export const DEFAULT_AUTOMATION: Partial<MensageriaConfigData> = {
   waSendMultipleOverdueNotice: true,
   waMultipleOverdueMinInstallments: 2,
   waMultipleOverdueTemplate:
-    'Olá, {{nome_aluno}}. Identificamos {{quantidade_parcelas}} parcelas em aberto no seu cadastro, totalizando {{valor_total_atrasado}}. Queremos ajudar você a regularizar sua situação com tranquilidade. Responda esta mensagem para nossa equipe verificar uma condição especial para deixar tudo em dia. Se você já regularizou, por favor desconsidere esta mensagem.',
+    'Olá, {{nome_aluno}}!\n\nIdentificamos parcelas pendentes em seu cadastro.\n\n*Quantidade:* {{quantidade_parcelas}}\n*Valor total:* {{valor_total_atrasado}}\n*Curso:* {{nome_curso}}\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n\nPara regularizar sua situação, responda a esta mensagem. Nossa equipe verificará as opções disponíveis.\n\nCaso o pagamento já tenha sido realizado, desconsidere este aviso.\n\nEquipe Universo Cursos e Consultoria.',
   waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
   waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
   waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
@@ -38,5 +38,5 @@ export const TEMPLATE_VARIABLES = {
   due: ['{{nome_aluno}}', '{{nome_curso}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{cpf_final}}', '{{link_pagamento}}'],
   receipt: ['{{nome_aluno}}', '{{valor_fatura}}', '{{numero_mensalidade}}', '{{nome_curso}}', '{{cpf_final}}'],
   overdue: ['{{nome_aluno}}', '{{valor_fatura}}', '{{nome_turma}}', '{{cpf_final}}', '{{data_vencimento}}', '{{link_pagamento}}'],
-  multiple: ['{{nome_aluno}}', '{{quantidade_parcelas}}', '{{valor_total_atrasado}}', '{{nome_turma}}', '{{cpf_final}}'],
+  multiple: ['{{nome_aluno}}', '{{quantidade_parcelas}}', '{{valor_total_atrasado}}', '{{nome_curso}}', '{{nome_turma}}', '{{cpf_final}}'],
 };

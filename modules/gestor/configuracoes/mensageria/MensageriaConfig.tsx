@@ -29,7 +29,7 @@ const DEFAULT_WHATSAPP_DRAFT: MensageriaConfigData = {
   waDefaultOverdueTemplate: 'Olá, {{nome_aluno}}!\n\nIdentificamos que a mensalidade no valor de *{{valor_fatura}}* ainda consta como pendente em nosso sistema.\n\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n*Vencimento:* {{data_vencimento}}\n\nPara realizar o pagamento, acesse:\n{{link_pagamento}}\n\nCaso o pagamento já tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.',
   waSendMultipleOverdueNotice: true,
   waMultipleOverdueMinInstallments: 2,
-  waMultipleOverdueTemplate: 'Olá, {{nome_aluno}}. Identificamos {{quantidade_parcelas}} parcelas em aberto no seu cadastro, totalizando {{valor_total_atrasado}}. Queremos ajudar você a regularizar sua situação com tranquilidade. Responda esta mensagem para nossa equipe verificar uma condição especial para deixar tudo em dia. Se você já regularizou, por favor desconsidere esta mensagem.',
+  waMultipleOverdueTemplate: 'Olá, {{nome_aluno}}!\n\nIdentificamos parcelas pendentes em seu cadastro.\n\n*Quantidade:* {{quantidade_parcelas}}\n*Valor total:* {{valor_total_atrasado}}\n*Curso:* {{nome_curso}}\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n\nPara regularizar sua situação, responda a esta mensagem. Nossa equipe verificará as opções disponíveis.\n\nCaso o pagamento já tenha sido realizado, desconsidere este aviso.\n\nEquipe Universo Cursos e Consultoria.',
   waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
   waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
   waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],

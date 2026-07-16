@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
         wa_send_multiple_overdue_notice: body.waSendMultipleOverdueNotice !== false,
         wa_multiple_overdue_min_installments: Math.max(Number(body.waMultipleOverdueMinInstallments || 2), 2),
         wa_multiple_overdue_template: trimOrNull(body.waMultipleOverdueTemplate) ||
-          "Ola, {{nome_aluno}}. Identificamos {{quantidade_parcelas}} parcelas em aberto no seu cadastro, totalizando {{valor_total_atrasado}}. Queremos ajudar voce a regularizar sua situacao com tranquilidade. Responda esta mensagem para nossa equipe verificar uma condicao especial para deixar tudo em dia. Se voce ja regularizou, por favor desconsidere esta mensagem.",
+          "Ola, {{nome_aluno}}!\n\nIdentificamos parcelas pendentes em seu cadastro.\n\n*Quantidade:* {{quantidade_parcelas}}\n*Valor total:* {{valor_total_atrasado}}\n*Curso:* {{nome_curso}}\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n\nPara regularizar sua situacao, responda a esta mensagem. Nossa equipe verificara as opcoes disponiveis.\n\nCaso o pagamento ja tenha sido realizado, desconsidere este aviso.\n\nEquipe Universo Cursos e Consultoria.",
         wa_due_notice_modalities: normalizeModalities(body.waDueNoticeModalities),
         wa_payment_receipt_modalities: normalizeModalities(body.waPaymentReceiptModalities),
         wa_overdue_notice_modalities: normalizeModalities(body.waOverdueNoticeModalities),
