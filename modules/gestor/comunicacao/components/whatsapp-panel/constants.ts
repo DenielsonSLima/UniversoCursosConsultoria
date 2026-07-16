@@ -38,5 +38,5 @@ export const TEMPLATE_VARIABLES = {
   due: ['{{nome_aluno}}', '{{nome_curso}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{cpf_final}}', '{{link_pagamento}}'],
   receipt: ['{{nome_aluno}}', '{{valor_fatura}}', '{{numero_mensalidade}}', '{{nome_curso}}', '{{cpf_final}}'],
   overdue: ['{{nome_aluno}}', '{{valor_fatura}}', '{{nome_turma}}', '{{cpf_final}}', '{{data_vencimento}}', '{{link_pagamento}}'],
-  multiple: ['{{nome_aluno}}', '{{quantidade_parcelas}}', '{{valor_total_atrasado}}'],
+  multiple: ['{{nome_aluno}}', '{{quantidade_parcelas}}', '{{valor_total_atrasado}}', '{{nome_turma}}', '{{cpf_final}}'],
 };
