@@ -66,6 +66,21 @@ export const calendarioService = {
     });
   },
 
+  async updateEventType(id: string, updates: Pick<EventType, 'color'>) {
+    return new Promise<EventType>((resolve, reject) => {
+        setTimeout(() => {
+            const typeIndex = mockTypes.findIndex(type => type.id === id);
+            if (typeIndex < 0) {
+              reject(new Error('Categoria não encontrada.'));
+              return;
+            }
+
+            mockTypes[typeIndex] = { ...mockTypes[typeIndex], ...updates };
+            resolve(mockTypes[typeIndex]);
+        }, 300);
+    });
+  },
+
   async deleteEventType(id: string) {
     return new Promise<void>((resolve) => {
         setTimeout(() => {

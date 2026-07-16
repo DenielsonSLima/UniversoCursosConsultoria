@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { CalendarEvent, EventType } from './calendario.types';
+import type { CalendarEvent, EventType } from './calendario.types';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -8,10 +8,15 @@ const MONTHS = [
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
-interface ExportCalendarPdfOptions {
+export interface AnnualCalendarPdfOptions {
   year: number;
   events: CalendarEvent[];
   eventTypes: EventType[];
+}
+
+export interface AnnualCalendarPdfDocument {
+  blob: Blob;
+  fileName: string;
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
@@ -31,7 +36,7 @@ const formatShortDate = (date: string) => {
 const truncate = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
 
-export const exportAnnualCalendarPdf = ({ year, events, eventTypes }: ExportCalendarPdfOptions) => {
+export const buildAnnualCalendarPdf = ({ year, events, eventTypes }: AnnualCalendarPdfOptions) => {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -104,7 +109,10 @@ export const exportAnnualCalendarPdf = ({ year, events, eventTypes }: ExportCale
       const weekday = position % 7;
       const week = Math.floor(position / 7);
       const cellX = calendarX + weekday * cellWidth;
-      const cellY = calendarY + 2.1 + week * cellHeight;
+      // Mantém uma faixa de respiro entre o cabeçalho dos dias da semana e
+      // a primeira linha de datas. O fundo dos fins de semana começava acima
+      // da data e acabava cobrindo as letras do cabeçalho.
+      const cellY = calendarY + 4.8 + week * cellHeight;
       const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEvents = eventsByDate.get(dateKey) || [];
       const hasHoliday = dayEvents.some(event => event.typeId === 'fer');
@@ -227,6 +235,13 @@ export const exportAnnualCalendarPdf = ({ year, events, eventTypes }: ExportCale
   pdf.text('Datas móveis recalculadas automaticamente para o ano selecionado.', 10, pageHeight - 4.5);
   pdf.text('Página 2 de 2', pageWidth - 10, pageHeight - 4.5, { align: 'right' });
 
-  pdf.save(`calendario-universo-${year}.pdf`);
+  return pdf;
 };
 
+export const createAnnualCalendarPdf = (options: AnnualCalendarPdfOptions): AnnualCalendarPdfDocument => {
+  const pdf = buildAnnualCalendarPdf(options);
+  return {
+    blob: pdf.output('blob'),
+    fileName: `calendario-universo-${options.year}.pdf`,
+  };
+};

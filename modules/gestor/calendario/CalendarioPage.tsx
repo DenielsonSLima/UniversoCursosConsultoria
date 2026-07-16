@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '../../../lib/supabase';
 import { getBrazilianOfficialEvents, OFFICIAL_EVENT_TYPES, toDateKey } from './calendario.official';
-import { exportAnnualCalendarPdf } from './calendario.pdf';
+import { createAnnualCalendarPdf } from './calendario.pdf';
 import { calendarioService } from './calendario.service';
 import type { CalendarEvent, EventType } from './calendario.types';
 import AgendaWorkspace from './components/AgendaWorkspace';
+import CalendarPdfPreviewModal from './components/CalendarPdfPreviewModal';
 import EventModal from './components/EventModal';
 import TypeManagerModal from './components/TypeManagerModal';
 
@@ -25,6 +26,7 @@ const CalendarioPage: React.FC = () => {
   const [turmas, setTurmas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; fileName: string } | null>(null);
 
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
@@ -131,10 +133,14 @@ const CalendarioPage: React.FC = () => {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => () => {
+    if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url);
+  }, [pdfPreview]);
+
   const allEventTypes = useMemo(() => {
     const typeMap = new Map<string, EventType>();
-    eventTypes.forEach(type => typeMap.set(type.id, type));
     OFFICIAL_EVENT_TYPES.forEach(type => typeMap.set(type.id, type));
+    eventTypes.forEach(type => typeMap.set(type.id, type));
     return Array.from(typeMap.values());
   }, [eventTypes]);
 
@@ -226,6 +232,11 @@ const CalendarioPage: React.FC = () => {
     await loadData();
   };
 
+  const handleUpdateTypeColor = async (id: string, color: string) => {
+    await calendarioService.updateEventType(id, { color });
+    await loadData();
+  };
+
   const exportToICS = () => {
     const lines = [
       'BEGIN:VCALENDAR',
@@ -283,11 +294,13 @@ const CalendarioPage: React.FC = () => {
   const exportToPDF = () => {
     setIsExportingPdf(true);
     try {
-      exportAnnualCalendarPdf({
+      const document = createAnnualCalendarPdf({
         year: currentYear,
         events: visibleYearEvents,
         eventTypes: allEventTypes,
       });
+      const url = URL.createObjectURL(document.blob);
+      setPdfPreview({ url, fileName: document.fileName });
     } finally {
       setIsExportingPdf(false);
     }
@@ -349,8 +362,18 @@ const CalendarioPage: React.FC = () => {
         onClose={() => setIsTypeManagerOpen(false)}
         types={eventTypes}
         onAddType={handleAddType}
+        onUpdateTypeColor={handleUpdateTypeColor}
         onDeleteType={handleDeleteType}
       />
+
+      {pdfPreview ? (
+        <CalendarPdfPreviewModal
+          url={pdfPreview.url}
+          fileName={pdfPreview.fileName}
+          year={currentYear}
+          onClose={() => setPdfPreview(null)}
+        />
+      ) : null}
     </>
   );
 };
