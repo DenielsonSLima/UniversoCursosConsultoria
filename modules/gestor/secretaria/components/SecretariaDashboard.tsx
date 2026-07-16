@@ -22,6 +22,8 @@ import {
 
 interface SecretariaDashboardProps {
   onNavigate: (module: string) => void;
+  onPreload?: (module: string) => void;
+  allowedTabs?: string[];
 }
 
 const cards = [
@@ -61,7 +63,7 @@ const colorClasses: Record<string, { soft: string; text: string; hover: string; 
   cyan: { soft: 'bg-cyan-50', text: 'text-cyan-700', hover: 'hover:border-cyan-300', accent: 'bg-cyan-600' },
 };
 
-const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, allowedTabs }) => {
+const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, onPreload, allowedTabs }) => {
   const visibleCards = React.useMemo(() => {
     if (!allowedTabs) return cards;
     return cards.filter(card => allowedTabs.includes(card.id));
@@ -76,6 +78,9 @@ const SecretariaDashboard: React.FC<SecretariaDashboardProps> = ({ onNavigate, a
           <button
             key={card.id}
             onClick={() => onNavigate(card.id)}
+            onMouseEnter={() => onPreload?.(card.id)}
+            onFocus={() => onPreload?.(card.id)}
+            onTouchStart={() => onPreload?.(card.id)}
             className={`group relative flex items-start gap-4 p-5 bg-white rounded-2xl border border-slate-200 shadow-sm text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${palette.hover}`}
           >
             <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${palette.soft} ${palette.text} group-hover:scale-105 transition-transform`}>

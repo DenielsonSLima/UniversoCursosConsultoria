@@ -1,22 +1,29 @@
 // File: modules/gestor/secretaria/carteirinhas/SecretariaCarteirinhasPage.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CreditCard, Users, Search, Printer, Image, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { useQuery } from '@tanstack/react-query';
+import { CreditCard, Users, Search, Printer, Image, ArrowLeft, Loader2, Download, Trash2, X, AlertTriangle } from 'lucide-react';
 import CarteirinhaPreview from '../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
-import { carteirinhaService } from '../../cadastros/modelos-documentos/carteirinha/carteirinha.service';
-import { parceirosService } from '../../parceiros/parceiros.service';
 import { formatMatricula } from '../../../../lib/academicUtils';
-import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
-import { poloInstitutionalService } from '../../../shared/polo-institutional/polo-institutional.service';
 import { onlyDigits } from '../../../../lib/documentFormatters';
 import { Aluno } from './secretaria-carteirinhas.types';
-import { TEMPLATE_DEFAULT, getTechnicalActiveMatricula } from './secretaria-carteirinhas.helpers';
+import { TEMPLATE_DEFAULT } from './secretaria-carteirinhas.helpers';
+import {
+  secretariaCarteirinhasWorkspaceQueryOptions,
+  type CarteirinhaTechnicalClass,
+} from './secretaria-carteirinhas.service';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 
-const SecretariaCarteirinhasPage: React.FC = () => {
+interface SecretariaCarteirinhasPageProps {
+  poloId?: string | null;
+}
+
+const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({ poloId }) => {
+  const activePoloId = (poloId && poloId !== 'todos' ? poloId : null)
+    || window.sessionStorage.getItem('current_polo_id')
+    || window.sessionStorage.getItem('active_polo_id')
+    || '44444444-4444-4444-4444-444444444444';
   const [mode, setMode] = useState<'individual' | 'lote' | 'custom'>('individual');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryCustom, setSearchQueryCustom] = useState('');
@@ -24,8 +31,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
   
   // Real Database Data
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [turmas, setTurmas] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [turmas, setTurmas] = useState<CarteirinhaTechnicalClass[]>([]);
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [templateConfig, setTemplateConfig] = useState<any>(TEMPLATE_DEFAULT);
   
@@ -45,8 +51,8 @@ const SecretariaCarteirinhasPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
   const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
-  const [synced, setSynced] = useState(false);
   const printContentRef = useRef<HTMLDivElement>(null);
+  const workspaceQuery = useQuery(secretariaCarteirinhasWorkspaceQueryOptions(activePoloId));
 
   const matchesAlunoSearch = (aluno: Aluno, term: string) => {
     const normalized = term.trim().toUpperCase();
@@ -58,127 +64,77 @@ const SecretariaCarteirinhasPage: React.FC = () => {
       || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
   };
 
-  // Carrega os alunos e turmas reais do banco de dados (Supabase)
-  const loadAcademicoData = async () => {
-    try {
-      setLoading(true);
-      const allAlunos = await parceirosService.getAll('alunos');
-      const allTurmas = await parceirosService.getTurmasDisponiveis();
-      setTurmas(allTurmas);
-      const institutionalPromises = new Map<string, ReturnType<typeof poloInstitutionalService.getByPoloId>>();
-      const getInstitutionalData = (poloId?: string) => {
-        if (!poloId) return Promise.resolve(null);
-        if (!institutionalPromises.has(poloId)) {
-          institutionalPromises.set(poloId, poloInstitutionalService.getByPoloId(poloId));
-        }
-        return institutionalPromises.get(poloId)!;
-      };
-
-      const mapped = await Promise.all(
-        allAlunos.map(async (p) => {
-          const matriculas = await parceirosService.getMatriculas(p.id);
-          const technicalActiveMatriculas = getTechnicalActiveMatricula(matriculas);
-          const technicalActiveMatricula = technicalActiveMatriculas[0];
-          if (!technicalActiveMatricula) return null;
-
-          const turmaIds = technicalActiveMatriculas
-            .map((matricula) => matricula.turma_id)
-            .filter(Boolean);
-          const poloId = technicalActiveMatricula?.turmas?.polo_id || p.poloId;
-          const institutionalData = await getInstitutionalData(poloId);
-          
-          return {
-            id: p.id,
-            enrollmentId: technicalActiveMatricula.id,
-            nome: p.nome.toUpperCase(),
-            cpf: p.cpf || '',
-            rg: p.rg || '',
-            nascimento: p.dataNascimento || '',
-            matricula: formatMatricula(
-              technicalActiveMatricula.id,
-              technicalActiveMatricula.data_matricula,
-              technicalActiveMatricula.turmas?.polo_id || p.poloId
-            ),
-            curso: technicalActiveMatricula.turmas?.cursos?.nome || 'Curso Geral',
-            turmaNome: technicalActiveMatricula.turmas?.nome || 'Turma não informada',
-            turmaCodigo: technicalActiveMatricula.turmas?.codigo || '',
-            instituicao: 'Universo Cursos e Consultoria',
-            validade: (() => {
-              // Validade calculada com base nos meses do config — configs já carregados via Supabase no useEffect
-              const months = 12; // fallback — será recalculado quando academicosService carregar
-              const d = technicalActiveMatricula?.data_matricula
-                ? new Date(technicalActiveMatricula.data_matricula)
-                : new Date();
-              d.setMonth(d.getMonth() + months);
-              return d.toLocaleDateString('pt-BR');
-            })(),
-            fotoUrl: p.foto || null,
-            tipoDocumento: p.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-            turmaIds,
-            poloRazaoSocial: institutionalData?.razaoSocial,
-            poloCnpj: institutionalData?.cnpj,
-            poloTelefone: institutionalData?.telefone,
-          };
-        })
-      );
-
-      setAlunos(mapped.filter(Boolean) as Aluno[]);
-    } catch (err) {
-      console.error('Erro ao carregar dados acadêmicos do banco:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const initData = async () => {
-      try {
-        // Carrega configs do Supabase — NUNCA localStorage
-        const configs = await academicosService.getConfigs();
+    const workspace = workspaceQuery.data;
+    if (!workspace) return;
 
-        // Atualiza data de validade com base nas configs do Supabase
-        const months = configs.validityMonths ?? 12;
-        const d = new Date();
-        d.setMonth(d.getMonth() + months);
-        setValidadeGeral(d.toISOString().split('T')[0]);
-      } catch (err) {
-        console.error('[SecretariaCarteirinhas] Erro ao carregar config acadêmica:', err);
-      } finally {
-        setSynced(true);
-        loadAcademicoData();
+    const eligibleEnrollments = workspace.enrollments;
+    const institutionalData = workspace.institutionalData;
+    const academicConfigs = workspace.academicConfig || {};
+    const savedTemplate = workspace.template || {};
+
+    const enrollmentIdsByStudent = new Map<string, string[]>();
+    eligibleEnrollments.forEach((enrollment) => {
+      const current = enrollmentIdsByStudent.get(enrollment.alunoId) || [];
+      if (!current.includes(enrollment.turmaId)) current.push(enrollment.turmaId);
+      enrollmentIdsByStudent.set(enrollment.alunoId, current);
+    });
+
+    const primaryEnrollmentByStudent = new Map<string, typeof eligibleEnrollments[number]>();
+    eligibleEnrollments.forEach((enrollment) => {
+      if (!primaryEnrollmentByStudent.has(enrollment.alunoId)) {
+        primaryEnrollmentByStudent.set(enrollment.alunoId, enrollment);
       }
+    });
+
+    const validityMonths = Number(academicConfigs.validityMonths ?? 12);
+    const mapped = Array.from(primaryEnrollmentByStudent.values()).map((enrollment) => {
+      const validityBase = enrollment.dataMatricula ? new Date(enrollment.dataMatricula) : new Date();
+      validityBase.setMonth(validityBase.getMonth() + validityMonths);
+      return {
+        id: enrollment.alunoId,
+        enrollmentId: enrollment.enrollmentId,
+        nome: enrollment.alunoNome.toUpperCase(),
+        cpf: enrollment.cpf,
+        rg: enrollment.rg,
+        nascimento: enrollment.nascimento,
+        matricula: formatMatricula(enrollment.enrollmentId, enrollment.dataMatricula, enrollment.poloId),
+        curso: enrollment.cursoNome,
+        turmaNome: enrollment.turmaNome,
+        turmaCodigo: enrollment.turmaCodigo,
+        instituicao: 'Universo Cursos e Consultoria',
+        validade: validityBase.toLocaleDateString('pt-BR'),
+        fotoUrl: enrollment.fotoUrl,
+        tipoDocumento: enrollment.tipoDocumento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+        turmaIds: enrollmentIdsByStudent.get(enrollment.alunoId) || [enrollment.turmaId],
+        poloRazaoSocial: institutionalData?.razaoSocial,
+        poloCnpj: institutionalData?.cnpj,
+        poloTelefone: institutionalData?.telefone,
+      } satisfies Aluno;
+    });
+
+    const validityDate = new Date();
+    validityDate.setMonth(validityDate.getMonth() + validityMonths);
+    setValidadeGeral(validityDate.toISOString().split('T')[0]);
+
+    const mergedTemplate = {
+      ...TEMPLATE_DEFAULT,
+      ...savedTemplate,
+      startNumber: savedTemplate.startNumber || TEMPLATE_DEFAULT.startNumber,
+      bgFrenteUrl: savedTemplate.bgFrenteUrl || savedTemplate.bgFrente || savedTemplate.bg_frente_url || '',
+      bgVersoUrl: savedTemplate.bgVersoUrl || savedTemplate.bgVerso || savedTemplate.bg_verso_url || '',
+      ocultarDesignPadrao: Boolean(savedTemplate.ocultarDesignPadrao),
     };
-    initData();
-  }, []);
+    if (academicConfigs.carteirinhaPrimaryColor) mergedTemplate.corPrimaria = academicConfigs.carteirinhaPrimaryColor;
+    if (academicConfigs.carteirinhaSecondaryColor) mergedTemplate.corSecundaria = academicConfigs.carteirinhaSecondaryColor;
 
-  // Carrega o template configurado ativamente no editor
-  useEffect(() => {
-    if (!synced) return;
-    const loadTemplate = async () => {
-      try {
-        const savedTemplate = await carteirinhaService.getTemplate();
-        // Busca cores do Supabase — NUNCA localStorage
-        const academicConfigs = await academicosService.getConfigs();
-
-        const mergedTemplate = {
-          ...TEMPLATE_DEFAULT,
-          ...savedTemplate,
-          startNumber: savedTemplate?.startNumber || TEMPLATE_DEFAULT.startNumber,
-          bgFrenteUrl: savedTemplate?.bgFrenteUrl || '',
-          bgVersoUrl: savedTemplate?.bgVersoUrl || '',
-          ocultarDesignPadrao: !!savedTemplate?.ocultarDesignPadrao
-        };
-
-        if (academicConfigs.carteirinhaPrimaryColor) mergedTemplate.corPrimaria = academicConfigs.carteirinhaPrimaryColor;
-        if (academicConfigs.carteirinhaSecondaryColor) mergedTemplate.corSecundaria = academicConfigs.carteirinhaSecondaryColor;
-
-        setTemplateConfig(mergedTemplate);
-      } catch (err) {
-        console.error('Erro ao carregar template do serviço:', err);
-      }
-    };
-    loadTemplate();
-  }, [synced, isPrinting]); // Recarrega ao abrir o visualizador de impressão
+    setTurmas(workspace.classes);
+    setAlunos(mapped);
+    setTemplateConfig(mergedTemplate);
+    setSelectedAluno(null);
+    setCustomSelectedAlunos([]);
+    setSelectedTurmaId('todos');
+  }, [workspaceQuery.data]);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
@@ -360,6 +316,10 @@ const SecretariaCarteirinhasPage: React.FC = () => {
     setIsDownloading(true);
     let restoreImages = () => {};
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       await waitForPrintAssets();
       restoreImages = await inlinePrintImages();
       const pdf = new jsPDF({
@@ -775,11 +735,31 @@ const SecretariaCarteirinhasPage: React.FC = () => {
     });
   };
 
-  if (loading) {
+  if (workspaceQuery.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="animate-spin text-purple-600 mb-4" size={48} />
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Carregando alunos e turmas...</p>
+      </div>
+    );
+  }
+
+  if (workspaceQuery.isError) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-[2rem] border border-rose-100 bg-white p-8 text-center">
+        <AlertTriangle className="text-rose-500" size={40} />
+        <div>
+          <h3 className="font-black uppercase text-[#001a33]">Dados das carteirinhas indisponíveis</h3>
+          <p className="mt-1 text-xs font-medium text-slate-500">Não foi possível carregar os alunos técnicos deste polo.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { void workspaceQuery.refetch(); }}
+          disabled={workspaceQuery.isFetching}
+          className="rounded-xl bg-purple-600 px-4 py-2 text-xs font-black uppercase text-white disabled:opacity-60"
+        >
+          {workspaceQuery.isFetching ? 'Tentando novamente...' : 'Tentar novamente'}
+        </button>
       </div>
     );
   }
@@ -919,7 +899,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                 <Search size={20} />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider">Individual</p>
-                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Busque um aluno e gere uma carteirinha.</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Busque um aluno técnico deste polo.</p>
                 </div>
             </button>
             <button
@@ -929,7 +909,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                 <Users size={20} />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider">Em lote</p>
-                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Gere para uma turma ou todos os alunos.</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Gere por turma técnica ou para todo o polo.</p>
                 </div>
             </button>
             <button
@@ -939,7 +919,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                 <CreditCard size={20} />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider">Personalizado</p>
-                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Monte uma lista mista de alunos.</p>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug">Monte uma lista de alunos técnicos deste polo.</p>
                 </div>
             </button>
           </div>
@@ -1098,7 +1078,7 @@ const SecretariaCarteirinhasPage: React.FC = () => {
                           onChange={(e) => setSelectedTurmaId(e.target.value)}
                           className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-purple-500 cursor-pointer font-bold text-slate-700"
                         >
-                            <option value="todos">Todos os Alunos Cadastrados</option>
+                            <option value="todos">Todos os alunos técnicos deste polo</option>
                             {turmas.map(t => (
                               <option key={t.id} value={t.id}>{t.nome} ({t.codigo})</option>
                             ))}

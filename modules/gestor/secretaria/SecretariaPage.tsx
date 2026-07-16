@@ -1,27 +1,49 @@
 
 // File: modules/gestor/secretaria/SecretariaPage.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, ArrowLeft } from 'lucide-react';
+import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { canAccessTab } from '../access-control';
 import SecretariaDashboard from './components/SecretariaDashboard';
-import SecretariaAlunosPage from './alunos/SecretariaAlunosPage';
-import SecretariaBoletinsPage from './boletins/SecretariaBoletinsPage';
-import SecretariaCarteirinhasPage from './carteirinhas/SecretariaCarteirinhasPage';
-import SecretariaSolicitacoesPage from './solicitacoes/SecretariaSolicitacoesPage';
-import SecretariaDeclaracaoMatriculaPage from './declaracao-matricula/SecretariaDeclaracaoMatriculaPage';
-import SecretariaDeclaracaoFrequenciaPage from './declaracao-frequencia/SecretariaDeclaracaoFrequenciaPage';
-import SecretariaDeclaracaoIrpfPage from './declaracao-irpf/SecretariaDeclaracaoIrpfPage';
-import SecretariaHistoricoEscolarPage from './historico-escolar/SecretariaHistoricoEscolarPage';
-import SecretariaCrachaEstagioPage from './cracha-estagio/SecretariaCrachaEstagioPage';
-import SecretariaRematriculaPage from './rematricula/SecretariaRematriculaPage';
-import SecretariaTermoEstagioPage from './termo-estagio/SecretariaTermoEstagioPage';
-import SecretariaConsultaFinanceiraPage from './consulta-financeira/SecretariaConsultaFinanceiraPage';
-import SecretariaHistoricoEmissoesPage from './historico-emissoes/SecretariaHistoricoEmissoesPage';
-import SecretariaCertificadosPage from './certificados/SecretariaCertificadosPage';
-import SecretariaAtestadoConclusaoPage from './atestado-conclusao/SecretariaAtestadoConclusaoPage';
-import SecretariaDocumentoEmissionPage from './shared/SecretariaDocumentoEmissionPage';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
+import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
+
+const moduleLoaders = {
+  alunos: () => import('./alunos/SecretariaAlunosPage'),
+  boletim: () => import('./boletins/SecretariaBoletinsPage'),
+  carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
+  solicitacoes: () => import('./solicitacoes/SecretariaSolicitacoesPage'),
+  'declaracao-matricula': () => import('./declaracao-matricula/SecretariaDeclaracaoMatriculaPage'),
+  'declaracao-frequencia': () => import('./declaracao-frequencia/SecretariaDeclaracaoFrequenciaPage'),
+  'declaracao-irpf': () => import('./declaracao-irpf/SecretariaDeclaracaoIrpfPage'),
+  'historico-escolar': () => import('./historico-escolar/SecretariaHistoricoEscolarPage'),
+  'cracha-estagio': () => import('./cracha-estagio/SecretariaCrachaEstagioPage'),
+  rematricula: () => import('./rematricula/SecretariaRematriculaPage'),
+  'termo-estagio': () => import('./termo-estagio/SecretariaTermoEstagioPage'),
+  'consulta-financeira': () => import('./consulta-financeira/SecretariaConsultaFinanceiraPage'),
+  'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
+  certificados: () => import('./certificados/SecretariaCertificadosPage'),
+  'atestado-conclusao': () => import('./atestado-conclusao/SecretariaAtestadoConclusaoPage'),
+  documento: () => import('./shared/SecretariaDocumentoEmissionPage'),
+} as const;
+
+const SecretariaAlunosPage = lazy(moduleLoaders.alunos);
+const SecretariaBoletinsPage = lazy(moduleLoaders.boletim);
+const SecretariaCarteirinhasPage = lazy(moduleLoaders.carteirinha);
+const SecretariaSolicitacoesPage = lazy(moduleLoaders.solicitacoes);
+const SecretariaDeclaracaoMatriculaPage = lazy(moduleLoaders['declaracao-matricula']);
+const SecretariaDeclaracaoFrequenciaPage = lazy(moduleLoaders['declaracao-frequencia']);
+const SecretariaDeclaracaoIrpfPage = lazy(moduleLoaders['declaracao-irpf']);
+const SecretariaHistoricoEscolarPage = lazy(moduleLoaders['historico-escolar']);
+const SecretariaCrachaEstagioPage = lazy(moduleLoaders['cracha-estagio']);
+const SecretariaRematriculaPage = lazy(moduleLoaders.rematricula);
+const SecretariaTermoEstagioPage = lazy(moduleLoaders['termo-estagio']);
+const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira']);
+const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
+const SecretariaCertificadosPage = lazy(moduleLoaders.certificados);
+const SecretariaAtestadoConclusaoPage = lazy(moduleLoaders['atestado-conclusao']);
+const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
   alunos: {
@@ -101,6 +123,21 @@ interface SecretariaPageProps {
 
 const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissions }) => {
   const [activeModule, setActiveModule] = useState<string>('dashboard');
+  const queryClient = useQueryClient();
+
+  const preloadModule = (moduleId: string) => {
+    if (moduleId === 'cracha-periodo-eleitoral' || moduleId === 'transferencia') {
+      void moduleLoaders.documento();
+      return;
+    }
+
+    const loader = moduleLoaders[moduleId as keyof typeof moduleLoaders];
+    if (loader) void loader();
+
+    if (moduleId === 'carteirinha' && poloId) {
+      void queryClient.prefetchQuery(secretariaCarteirinhasWorkspaceQueryOptions(poloId));
+    }
+  };
 
   const allowedTabsList = useMemo(() => {
     if (!gestorPermissions) return null;
@@ -168,7 +205,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
       case 'atestado-conclusao':
         return <SecretariaAtestadoConclusaoPage />;
       case 'carteirinha':
-        return <SecretariaCarteirinhasPage />;
+        return <SecretariaCarteirinhasPage poloId={poloId} />;
       case 'solicitacoes':
         return <SecretariaSolicitacoesPage />;
       case 'historico-emissoes':
@@ -176,7 +213,13 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
       case 'certificados':
         return <SecretariaCertificadosPage />;
       default:
-        return <SecretariaDashboard onNavigate={setActiveModule} allowedTabs={allowedTabsList || undefined} />;
+        return (
+          <SecretariaDashboard
+            onNavigate={setActiveModule}
+            onPreload={preloadModule}
+            allowedTabs={allowedTabsList || undefined}
+          />
+        );
     }
   };
 
@@ -209,7 +252,13 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
       </div>
 
       <div className="max-w-7xl mx-auto">
-        {renderContent()}
+        <Suspense fallback={(
+          <div className="flex min-h-[320px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
+            <Loader2 className="animate-spin text-blue-600" size={26} /> Preparando módulo da secretaria...
+          </div>
+        )}>
+          {renderContent()}
+        </Suspense>
       </div>
     </div>
   );
