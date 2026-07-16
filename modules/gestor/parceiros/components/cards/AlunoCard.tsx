@@ -1,7 +1,7 @@
 // File: modules/gestor/parceiros/components/cards/AlunoCard.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, MapPin, Mail, Phone, ChevronRight, MoreVertical, Edit3, Trash2, ToggleLeft, ToggleRight, Users } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../parceiros.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
@@ -32,6 +32,8 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
   const isAtivo = data.status?.toUpperCase() === 'ATIVO';
   const formattedCpf = formatCpf(data.cpf);
   const telefone = data.telefone || data.contato1;
+  const matriculasAluno = Array.isArray(data.matriculasAluno) ? data.matriculasAluno : [];
+  const matriculaAtual = matriculasAluno[0];
 
   const toggleStatusMutation = useMutation({
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'Aluno', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
@@ -168,6 +170,29 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
             </div>
           </div>
         )}
+
+        <div className="pt-2">
+          <div className={`flex items-start gap-2.5 rounded-xl border p-3 ${matriculaAtual ? 'border-blue-100 bg-blue-50/70' : 'border-slate-100 bg-slate-50'}`}>
+            <BookOpen size={14} className={`mt-0.5 shrink-0 ${matriculaAtual ? 'text-blue-600' : 'text-slate-400'}`} />
+            {matriculaAtual ? (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-bold text-slate-800" title={matriculaAtual.cursoNome}>
+                  {matriculaAtual.cursoNome}
+                </p>
+                <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" title={`${matriculaAtual.turmaNome}${matriculaAtual.turmaCodigo ? ` · ${matriculaAtual.turmaCodigo}` : ''}`}>
+                  Turma: {matriculaAtual.turmaNome}{matriculaAtual.turmaCodigo ? ` · ${matriculaAtual.turmaCodigo}` : ''}
+                </p>
+                {matriculasAluno.length > 1 && (
+                  <p className="mt-1 text-[9px] font-bold text-blue-600">
+                    +{matriculasAluno.length - 1} {matriculasAluno.length === 2 ? 'outro vínculo' : 'outros vínculos'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-[10px] font-semibold text-slate-400">Sem curso ou turma vinculados</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Footer */}

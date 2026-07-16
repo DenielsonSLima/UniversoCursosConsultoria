@@ -46,7 +46,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const [notes, setNotes] = useState('');
   const [returnDate, setReturnDate] = useState('');
 
-  const { data: matriculas = [], isLoading } = useQuery<any[]>({
+  const { data: matriculas = [], isLoading, isError, error: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
     queryKey: ['parceiro', alunoId, 'matriculas'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -59,7 +59,9 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
             polos(nome, cidade, estado),
             periodos_letivos(id, nome, ordem, status, data_inicio, data_fim)
           ),
-          matricula_aproveitamentos(id, disciplina_id, situacao, media_final, frequencia_percent, disciplinas(nome))
+          matricula_aproveitamentos!matricula_aproveitamentos_matricula_id_fkey(
+            id, disciplina_id, situacao, media_final, frequencia_percent, disciplinas(nome)
+          )
         `)
         .eq('aluno_id', alunoId)
         .order('data_matricula', { ascending: false });
@@ -291,6 +293,18 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
 
       {isLoading ? (
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-600" /></div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-red-100 bg-red-50 px-5 py-8 text-center">
+          <p className="text-sm font-bold text-red-700">Não foi possível carregar as matrículas.</p>
+          <p className="mt-1 text-xs text-red-500">{matriculasError instanceof Error ? matriculasError.message : 'Tente novamente em instantes.'}</p>
+          <button
+            type="button"
+            onClick={() => { void refetchMatriculas(); }}
+            className="mt-4 rounded-xl bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-700 shadow-sm"
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : (
         <div className="space-y-4">
           {matriculas.map((matricula) => {

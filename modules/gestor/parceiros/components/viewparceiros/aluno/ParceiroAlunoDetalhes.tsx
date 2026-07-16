@@ -42,12 +42,12 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     initialData: alunoInicial,
   });
 
-  const { data: currentEnrollment } = useQuery({
+  const { data: currentEnrollment } = useQuery<any | null>({
     queryKey: ['parceiro', alunoInicial.id, 'matricula-atual'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
-        .select('id, status, data_matricula, turmas(nome)')
+        .select('id, status, data_matricula, turmas(nome, codigo, cursos(nome))')
         .eq('aluno_id', alunoInicial.id)
         .order('data_matricula', { ascending: false });
       if (error) throw error;
@@ -55,6 +55,12 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     },
     staleTime: 15_000,
   });
+  const currentEnrollmentTurma = Array.isArray(currentEnrollment?.turmas)
+    ? currentEnrollment.turmas[0]
+    : currentEnrollment?.turmas;
+  const currentEnrollmentCurso = Array.isArray(currentEnrollmentTurma?.cursos)
+    ? currentEnrollmentTurma.cursos[0]
+    : currentEnrollmentTurma?.cursos;
 
   const updateMutation = useMutation({
     mutationFn: (newData: any) => parceirosService.update(alunoData.id, newData),
@@ -131,7 +137,12 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                       </h2>
                       <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">
                           {currentEnrollment
-                            ? <>Matrícula: {formatMatricula(currentEnrollment.id, currentEnrollment.data_matricula, alunoData.polo_id)} • Vínculo: <span className={currentEnrollment.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{currentEnrollment.status}</span></>
+                            ? <>
+                                Matrícula: {formatMatricula(currentEnrollment.id, currentEnrollment.data_matricula, alunoData.polo_id)} • Vínculo: <span className={currentEnrollment.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{currentEnrollment.status}</span>
+                                <span className="block mt-1 normal-case tracking-normal text-slate-500">
+                                  Curso: {currentEnrollmentCurso?.nome || 'Não informado'} • Turma: {currentEnrollmentTurma?.nome || 'Não informada'}{currentEnrollmentTurma?.codigo ? ` (${currentEnrollmentTurma.codigo})` : ''}
+                                </span>
+                              </>
                             : <>Sem matrícula acadêmica • Cadastro: <span className="text-slate-600">{alunoData.status || 'ATIVO'}</span></>}
                       </p>
                   </div>

@@ -47,7 +47,7 @@ export const parceirosService = {
     if (alunoIds.length > 0) {
       const { data: matriculas, error: matriculasError } = await supabase
         .from('matriculas')
-        .select('aluno_id, turma_id, status, turmas(id, curso_id, cursos(id, nome, modalidade))')
+        .select('aluno_id, turma_id, status, data_matricula, turmas(id, nome, codigo, curso_id, cursos(id, nome, modalidade))')
         .in('aluno_id', alunoIds);
 
       if (matriculasError) {
@@ -55,25 +55,52 @@ export const parceirosService = {
         throw matriculasError;
       }
 
-      const alunoCursos = new Map<string, { modalidades: Set<string>; cursos: Set<string>; turmas: Set<string> }>();
+      const alunoCursos = new Map<string, {
+        modalidades: Set<string>;
+        cursos: Set<string>;
+        turmas: Set<string>;
+        matriculas: Array<{
+          turmaId: string;
+          turmaNome: string;
+          turmaCodigo: string;
+          cursoId: string;
+          cursoNome: string;
+          modalidade: string;
+          status: string;
+          dataMatricula: string | null;
+        }>;
+      }>();
 
       (matriculas || []).forEach((matricula: any) => {
         const status = String(matricula.status || '').toUpperCase();
-        if (['CANCELADO', 'CANCELADA', 'DESISTENTE'].includes(status)) return;
+        const isVinculoAtual = !['CANCELADO', 'CANCELADA', 'DESISTENTE'].includes(status);
 
         const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
         const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-        if (!matricula.aluno_id || !curso?.modalidade) return;
+        if (!matricula.aluno_id || !turma) return;
 
         const current = alunoCursos.get(matricula.aluno_id) || {
           modalidades: new Set<string>(),
           cursos: new Set<string>(),
           turmas: new Set<string>(),
+          matriculas: [],
         };
 
-        current.modalidades.add(String(curso.modalidade).toUpperCase());
-        if (curso.id) current.cursos.add(curso.id);
-        if (matricula.turma_id) current.turmas.add(matricula.turma_id);
+        if (isVinculoAtual) {
+          if (curso?.modalidade) current.modalidades.add(String(curso.modalidade).toUpperCase());
+          if (curso?.id) current.cursos.add(curso.id);
+          if (matricula.turma_id) current.turmas.add(matricula.turma_id);
+        }
+        current.matriculas.push({
+          turmaId: matricula.turma_id || turma.id || '',
+          turmaNome: turma.nome || 'Turma sem nome',
+          turmaCodigo: turma.codigo || '',
+          cursoId: curso?.id || '',
+          cursoNome: curso?.nome || 'Curso não informado',
+          modalidade: curso?.modalidade || '',
+          status,
+          dataMatricula: matricula.data_matricula || null,
+        });
         alunoCursos.set(matricula.aluno_id, current);
       });
 
@@ -86,6 +113,12 @@ export const parceirosService = {
           modalidadesAluno: Array.from(alunoInfo.modalidades),
           cursosAlunoIds: Array.from(alunoInfo.cursos),
           turmasAlunoIds: Array.from(alunoInfo.turmas),
+          matriculasAluno: [...alunoInfo.matriculas].sort((a, b) => {
+            const statusPriority = (item: typeof a) => item.status === 'ATIVO' ? 0 : 1;
+            const priorityDiff = statusPriority(a) - statusPriority(b);
+            if (priorityDiff !== 0) return priorityDiff;
+            return String(b.dataMatricula || '').localeCompare(String(a.dataMatricula || ''));
+          }),
         };
       });
     }

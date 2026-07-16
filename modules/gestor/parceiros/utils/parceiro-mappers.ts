@@ -128,6 +128,7 @@ export function toCamel(s: any) {
     modalidadesAluno: s.modalidadesAluno || [],
     cursosAlunoIds: s.cursosAlunoIds || [],
     turmasAlunoIds: s.turmasAlunoIds || [],
+    matriculasAluno: s.matriculasAluno || [],
     createdAt: s.created_at,
     updatedAt: s.updated_at
   };
