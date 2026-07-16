@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Cake, Check, Clock, MessageSquareText, RefreshCw, Save, Sparkles } from 'lucide-react';
 import {
   BIRTHDAY_MODALITIES,
+  BIRTHDAY_TEMPLATE_VARIABLES,
   BirthdayAgentSettings,
   BirthdayBankStats,
   DEFAULT_BIRTHDAY_SETTINGS,
@@ -34,6 +35,15 @@ const BirthdayAgentPanel: React.FC<BirthdayAgentPanelProps> = ({
 
   const updateDraft = (patch: Partial<BirthdayAgentSettings>) => {
     setDraft((current) => ({ ...current, ...patch }));
+  };
+
+  const appendTemplateVariable = (variable: string) => {
+    const separator = draft.messageTemplate.length === 0
+      ? ''
+      : variable === '{{frase_aniversario}}'
+        ? '\n\n'
+        : draft.messageTemplate.endsWith(' ') ? '' : ' ';
+    updateDraft({ messageTemplate: `${draft.messageTemplate}${separator}${variable}` });
   };
 
   if (loading) {
@@ -181,9 +191,24 @@ const BirthdayAgentPanel: React.FC<BirthdayAgentPanelProps> = ({
                 className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
               />
             </div>
-            <p className="mt-2 text-xs font-bold text-slate-500">
-              Variáveis disponíveis: {'{{nome}}'} e {'{{escola}}'}.
-            </p>
+            <div className="mt-3">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Variáveis disponíveis</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {BIRTHDAY_TEMPLATE_VARIABLES.map((variable) => (
+                  <button
+                    key={variable}
+                    type="button"
+                    onClick={() => appendTemplateVariable(variable)}
+                    className="rounded-lg border border-pink-200 bg-white px-3 py-1.5 text-xs font-bold text-pink-700 transition-colors hover:bg-pink-50"
+                  >
+                    {variable}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                {'{{frase_aniversario}}'} recebe automaticamente uma frase diferente do banco para cada aluno.
+              </p>
+            </div>
           </div>
         </section>
 
