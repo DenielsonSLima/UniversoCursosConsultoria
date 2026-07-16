@@ -4,14 +4,14 @@ export const DEFAULT_AUTOMATION: Partial<MensageriaConfigData> = {
   waDueNoticeDays: 3,
   waSendDueNotice: true,
   waDueNoticeTemplate:
-    'Olá, {{nome_aluno}}. Passando para lembrar que sua parcela de {{valor_fatura}} vence em {{data_vencimento}}. Para facilitar, o pagamento pode ser feito por este link: {{link_pagamento}}. Se você já realizou o pagamento, por favor desconsidere esta mensagem.',
+    'Olá, {{nome_aluno}}!\n\nEste é um lembrete de que sua mensalidade referente ao curso *{{nome_curso}}*, no valor de *{{valor_fatura}}*, vence em *{{data_vencimento}}*.\n\nIdentificação do aluno: CPF final *{{cpf_final}}*.\n\nVocê pode realizar o pagamento pelo link abaixo:\n{{link_pagamento}}\n\nCaso o pagamento já tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.',
   waSendPaymentReceipt: true,
   waPaymentReceiptTemplate:
-    'Olá, {{nome_aluno}}. Confirmamos o recebimento do pagamento de {{valor_fatura}} referente a {{descricao_fatura}}. Obrigado por manter tudo em dia com a Universo Cursos.',
+    'Olá, {{nome_aluno}}!\n\nSeu pagamento no valor de *{{valor_fatura}}*, referente à mensalidade nº *{{numero_mensalidade}}* do curso *{{nome_curso}}*, foi confirmado com sucesso.\n\nIdentificação do aluno: CPF final *{{cpf_final}}*.\n\nAgradecemos pela confiança e por fazer parte da Universo Cursos e Consultoria.\n\nSe precisar de suporte, nossa equipe está à disposição.\n\nEquipe Universo Cursos e Consultoria.',
   waSendOverdueNotice: true,
   waOverdueNoticeDays: 1,
   waDefaultOverdueTemplate:
-    'Olá, {{nome_aluno}}. Verificamos uma parcela de {{valor_fatura}} com vencimento em {{data_vencimento}} ainda em aberto. Para regularizar, você pode usar este link: {{link_pagamento}}. Se o pagamento já foi feito, por favor desconsidere esta mensagem.',
+    'Olá, {{nome_aluno}}!\n\nIdentificamos que a mensalidade no valor de *{{valor_fatura}}* ainda consta como pendente em nosso sistema.\n\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n*Vencimento:* {{data_vencimento}}\n\nPara realizar o pagamento, acesse:\n{{link_pagamento}}\n\nCaso o pagamento já tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.',
   waSendMultipleOverdueNotice: true,
   waMultipleOverdueMinInstallments: 2,
   waMultipleOverdueTemplate:
@@ -35,8 +35,8 @@ export const DEFAULT_MODALITIES = COURSE_MODALITIES
   .map((item) => item.id);
 
 export const TEMPLATE_VARIABLES = {
-  due: ['{{nome_aluno}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{link_pagamento}}'],
-  receipt: ['{{nome_aluno}}', '{{valor_fatura}}', '{{descricao_fatura}}'],
-  overdue: ['{{nome_aluno}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{link_pagamento}}'],
+  due: ['{{nome_aluno}}', '{{nome_curso}}', '{{valor_fatura}}', '{{data_vencimento}}', '{{cpf_final}}', '{{link_pagamento}}'],
+  receipt: ['{{nome_aluno}}', '{{valor_fatura}}', '{{numero_mensalidade}}', '{{nome_curso}}', '{{cpf_final}}'],
+  overdue: ['{{nome_aluno}}', '{{valor_fatura}}', '{{nome_turma}}', '{{cpf_final}}', '{{data_vencimento}}', '{{link_pagamento}}'],
   multiple: ['{{nome_aluno}}', '{{quantidade_parcelas}}', '{{valor_total_atrasado}}'],
 };

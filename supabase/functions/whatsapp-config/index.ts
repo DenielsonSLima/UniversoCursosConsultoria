@@ -117,14 +117,14 @@ Deno.serve(async (req: Request) => {
         wa_due_notice_days: Number(body.waDueNoticeDays || 3),
         wa_send_due_notice: body.waSendDueNotice !== false,
         wa_due_notice_template: trimOrNull(body.waDueNoticeTemplate) ||
-          "Ola, {{nome_aluno}}. Passando para lembrar que sua parcela de {{valor_fatura}} vence em {{data_vencimento}}. Para facilitar, o pagamento pode ser feito por este link: {{link_pagamento}}. Se voce ja realizou o pagamento, por favor desconsidere esta mensagem.",
+          "Ola, {{nome_aluno}}!\n\nEste e um lembrete de que sua mensalidade referente ao curso *{{nome_curso}}*, no valor de *{{valor_fatura}}*, vence em *{{data_vencimento}}*.\n\nIdentificacao do aluno: CPF final *{{cpf_final}}*.\n\nVoce pode realizar o pagamento pelo link abaixo:\n{{link_pagamento}}\n\nCaso o pagamento ja tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.",
         wa_send_payment_receipt: body.waSendPaymentReceipt !== false,
         wa_payment_receipt_template: trimOrNull(body.waPaymentReceiptTemplate) ||
-          "Ola, {{nome_aluno}}. Confirmamos o recebimento do pagamento de {{valor_fatura}} referente a {{descricao_fatura}}. Obrigado por manter tudo em dia com a Universo Cursos.",
+          "Ola, {{nome_aluno}}!\n\nSeu pagamento no valor de *{{valor_fatura}}*, referente a mensalidade n. *{{numero_mensalidade}}* do curso *{{nome_curso}}*, foi confirmado com sucesso.\n\nIdentificacao do aluno: CPF final *{{cpf_final}}*.\n\nAgradecemos pela confianca e por fazer parte da Universo Cursos e Consultoria.\n\nSe precisar de suporte, nossa equipe esta a disposicao.\n\nEquipe Universo Cursos e Consultoria.",
         wa_send_overdue_notice: body.waSendOverdueNotice !== false,
         wa_overdue_notice_days: Number(body.waOverdueNoticeDays || 1),
         wa_default_overdue_template: trimOrNull(body.waDefaultOverdueTemplate) ||
-          "Ola, {{nome_aluno}}. Verificamos uma parcela de {{valor_fatura}} com vencimento em {{data_vencimento}} ainda em aberto. Para regularizar, voce pode usar este link: {{link_pagamento}}. Se o pagamento ja foi feito, por favor desconsidere esta mensagem.",
+          "Ola, {{nome_aluno}}!\n\nIdentificamos que a mensalidade no valor de *{{valor_fatura}}* ainda consta como pendente em nosso sistema.\n\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n*Vencimento:* {{data_vencimento}}\n\nPara realizar o pagamento, acesse:\n{{link_pagamento}}\n\nCaso o pagamento ja tenha sido efetuado, desconsidere esta mensagem.\n\nEquipe Universo Cursos e Consultoria.",
         wa_send_multiple_overdue_notice: body.waSendMultipleOverdueNotice !== false,
         wa_multiple_overdue_min_installments: Math.max(Number(body.waMultipleOverdueMinInstallments || 2), 2),
         wa_multiple_overdue_template: trimOrNull(body.waMultipleOverdueTemplate) ||

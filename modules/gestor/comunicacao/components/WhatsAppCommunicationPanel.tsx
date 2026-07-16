@@ -20,7 +20,7 @@ import OverdueTab from './whatsapp-panel/OverdueTab';
 import StartConversationModal from './whatsapp-panel/StartConversationModal';
 import WhatsAppPanelHeader from './whatsapp-panel/WhatsAppPanelHeader';
 import { AutomationField, AutomationKey, WhatsAppOpsTab } from './whatsapp-panel/types';
-import { applyTemplate, firstPaymentLink, formatDate, formatMoney, groupOverdueReceivables, isOverdue, receivableId } from './whatsapp-panel/utils';
+import { applyTemplate, firstPaymentLink, formatCpfFinal, formatDate, formatMoney, groupOverdueReceivables, isOverdue, receivableId } from './whatsapp-panel/utils';
 
 const automationLabels: Record<AutomationKey, string> = {
   due: 'Aviso de vencimento',
@@ -218,8 +218,14 @@ const WhatsAppCommunicationPanel: React.FC = () => {
 
     return applyTemplate(template, {
       nome_aluno: first?.clienteNome || 'aluno(a)',
+      nome_curso: first?.cursoNome || 'curso não informado',
+      nome_turma: first?.turmaNome || 'turma não informada',
       valor_fatura: formatMoney(first?.valor || total),
+      numero_mensalidade: first?.parcelaNumero
+        ? String(first.parcelaNumero).padStart(2, '0')
+        : 'não informado',
       data_vencimento: formatDate(first?.dataVencimento),
+      cpf_final: formatCpfFinal(first?.clienteCpfCnpj),
       link_pagamento: firstPaymentLink(sorted) || 'solicite o link de pagamento neste atendimento',
       descricao_fatura: first?.descricao || 'parcela',
       quantidade_parcelas: String(sorted.length),

@@ -203,6 +203,12 @@ const AutomationCard: React.FC<AutomationCardProps> = ({
             ))}
           </div>
 
+          {variables.includes('{{cpf_final}}') && (
+            <p className="mt-2 text-[11px] font-medium text-slate-500">
+              Segurança: <span className="font-bold">{'{{cpf_final}}'}</span> representa somente os 4 últimos dígitos do CPF.
+            </p>
+          )}
+
           <div className="mt-4 flex justify-end">
             <button type="button" onClick={() => onSave(automationKey)} disabled={isSaving} className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg bg-[#001a33] px-5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-blue-900 disabled:opacity-50">
               {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}

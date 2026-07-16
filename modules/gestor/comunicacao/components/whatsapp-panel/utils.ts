@@ -34,6 +34,11 @@ export const formatDate = (value?: string) => {
   return `${day}/${month}/${year}`;
 };
 
+export const formatCpfFinal = (value?: string | null) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits.length === 11 ? digits.slice(-4) : 'não informado';
+};
+
 export const isOverdue = (status: string, dueDate: string) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
