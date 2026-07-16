@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Eye,
+  Loader2,
   ShieldAlert,
   XCircle,
 } from 'lucide-react';
@@ -25,6 +26,8 @@ interface TurmaVacinasStudentGroupsProps {
   registrosMap: Map<string, AlunoVacinaRegistro>;
   isUpdating: boolean;
   onUpdateStatus: (id: string, status: VacinaStatus, observacao?: string) => void;
+  onOpenAttachment: (registro: AlunoVacinaRegistro) => Promise<string | null>;
+  onAttachmentError: (error: unknown) => void;
 }
 
 const calculateAge = (birthDate?: string | null) => {
@@ -58,9 +61,32 @@ const TurmaVacinasStudentGroups: React.FC<TurmaVacinasStudentGroupsProps> = ({
   registrosMap,
   isUpdating,
   onUpdateStatus,
+  onOpenAttachment,
+  onAttachmentError,
 }) => {
   const [observacoes, setObservacoes] = useState<Record<string, string>>({});
   const [expandedMatriculaId, setExpandedMatriculaId] = useState<string | null>(null);
+  const [openingAttachmentId, setOpeningAttachmentId] = useState<string | null>(null);
+
+  const openAttachment = async (registro: AlunoVacinaRegistro) => {
+    const previewWindow = window.open('about:blank', '_blank');
+    if (previewWindow) previewWindow.opener = null;
+    setOpeningAttachmentId(registro.id);
+    try {
+      const signedUrl = await onOpenAttachment(registro);
+      if (!signedUrl) throw new Error('O comprovante não possui um arquivo disponível.');
+      if (previewWindow) {
+        previewWindow.location.replace(signedUrl);
+      } else {
+        window.open(signedUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      previewWindow?.close();
+      onAttachmentError(error);
+    } finally {
+      setOpeningAttachmentId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -152,10 +178,16 @@ const TurmaVacinasStudentGroups: React.FC<TurmaVacinasStudentGroupsProps> = ({
                                       <span>Local: <strong className="text-slate-700">{registro?.localAplicacao || '-'}</strong></span>
                                     </div>
                                     <div>
-                                      {registro?.arquivoUrl ? (
-                                        <a href={registro.arquivoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100">
-                                          <Eye size={13} /> Anexo
-                                        </a>
+                                      {registro?.arquivoPath ? (
+                                        <button
+                                          type="button"
+                                          disabled={openingAttachmentId === registro.id}
+                                          onClick={() => { void openAttachment(registro); }}
+                                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                                        >
+                                          {openingAttachmentId === registro.id ? <Loader2 className="animate-spin" size={13} /> : <Eye size={13} />}
+                                          {openingAttachmentId === registro.id ? 'Abrindo' : 'Anexo'}
+                                        </button>
                                       ) : (
                                         <span className="inline-flex rounded-xl border border-dashed border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Sem anexo</span>
                                       )}

@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Clock3,
@@ -18,7 +18,13 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { financeiroService, ContasReceber } from '../../financeiro.service';
+import {
+  financeiroService,
+  ContasReceber,
+  ReceivablesGroupMode,
+  ReceivablesPageFilters,
+  ReceivablesStatusScope,
+} from '../../financeiro.service';
 import { asaasIntegrationService } from '../../../../asaas/asaas.service';
 import { formatMatricula } from '../../../../../lib/academicUtils';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
@@ -81,8 +87,8 @@ const normalizeCurrencyTyping = (value: string) => {
 };
 
 type ViewMode = 'table' | 'cards';
-type GroupMode = 'none' | 'student' | 'class' | 'polo';
-type StatusScope = 'pending' | 'received' | 'canceled' | 'all';
+type GroupMode = ReceivablesGroupMode;
+type StatusScope = ReceivablesStatusScope;
 type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 
 const statusScopeLabels: Record<StatusScope, string> = {
@@ -123,10 +129,14 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [groupMode, setGroupMode] = useState<GroupMode>('student');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [groupPages, setGroupPages] = useState<Record<string, number>>({});
   const [dueStart, setDueStart] = useState('');
   const [dueEnd, setDueEnd] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const groupItemsPageSize = 25;
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [reportReceivables, setReportReceivables] = useState<ContasReceber[] | null>(null);
   const [selected, setSelected] = useState<ContasReceber | null>(null);
   const [accountId, setAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
@@ -136,24 +146,62 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [reversalReason, setReversalReason] = useState('');
   const [recreateAsaas, setRecreateAsaas] = useState(true);
 
-  useFinanceiroRealtime();
+  useFinanceiroRealtime(poloId);
 
-  const summaryFilters = useMemo(() => ({
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
+
+  const pageFilters = useMemo<ReceivablesPageFilters>(() => ({
     poloId: poloId || undefined,
-    search,
+    search: debouncedSearch,
     dueStart,
     dueEnd,
-  }), [dueEnd, dueStart, poloId, search]);
+    statusScope,
+    groupMode,
+    page,
+    pageSize,
+  }), [debouncedSearch, dueEnd, dueStart, groupMode, page, poloId, statusScope]);
 
   const {
     receivablesQuery,
+    groupsQuery,
     summaryQuery,
-  } = useModalidadeReceberQueries(modality, summaryFilters, poloId);
+  } = useModalidadeReceberQueries(modality, pageFilters);
 
   const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
-  const receivables = receivablesQuery.data || [];
+  const receivables = receivablesQuery.data?.rows || [];
+  const groups = groupsQuery.data?.groups || [];
   const accounts = accountsQuery.data || [];
-  const isLoading = receivablesQuery.isLoading;
+  const isLoading = groupMode === 'none' ? receivablesQuery.isLoading : groupsQuery.isLoading;
+  const isPageFetching = groupMode === 'none' ? receivablesQuery.isFetching : groupsQuery.isFetching;
+
+  const groupItemQueries = useQueries({
+    queries: groups.map((group) => {
+      const filters: ReceivablesPageFilters = {
+        ...pageFilters,
+        groupKey: group.key,
+        page: groupPages[group.key] || 1,
+        pageSize: groupItemsPageSize,
+      };
+      return {
+        queryKey: financeiroQueryKeys.receivablesGroupItems(modality, filters),
+        queryFn: () => financeiroService.getReceivablesPageByModality(modality, filters),
+        enabled: expandedGroups.has(group.key),
+        placeholderData: keepPreviousData,
+        staleTime: 5 * 60_000,
+        gcTime: 30 * 60_000,
+      };
+    }),
+  });
+
+  const groupItemsByKey = useMemo(() => {
+    const result = new Map<string, (typeof groupItemQueries)[number]>();
+    groups.forEach((group, index) => result.set(group.key, groupItemQueries[index]));
+    return result;
+  }, [groupItemQueries, groups]);
+
   const paidValueNumber = useMemo(() => parseCurrencyInput(paidValue), [paidValue]);
   const activeSettlementAccounts = useMemo(() => (
     accounts.filter((account) =>
@@ -252,25 +300,6 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     onError: (error: any) => toast.error('Erro ao estornar baixa', error.message || 'Não foi possível desfazer a baixa manual.'),
   });
 
-  const baseFiltered = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('pt-BR');
-    return receivables.filter((item) => {
-      const matchesDueStart = !dueStart || item.dataVencimento >= dueStart;
-      const matchesDueEnd = !dueEnd || item.dataVencimento <= dueEnd;
-      const matchesSearch = !term || [
-        item.clienteNome,
-        item.clienteCpfCnpj,
-        item.descricao,
-        item.turmaNome,
-        item.poloNome,
-        item.poloCnpj,
-        item.poloCidade,
-        item.poloUf,
-      ].some((value) => value?.toLocaleLowerCase('pt-BR').includes(term));
-      return matchesDueStart && matchesDueEnd && matchesSearch;
-    });
-  }, [receivables, search, dueStart, dueEnd]);
-
   const statusCounts = {
     pending: summaryQuery.data?.pendingCount || 0,
     received: summaryQuery.data?.receivedCount || 0,
@@ -278,56 +307,18 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     all: summaryQuery.data?.allCount || 0,
   };
 
-  const kpis = useMemo(() => {
-    const total = baseFiltered.reduce((s, i) => s + i.valor, 0);
-    const recebido = baseFiltered.filter((i) => i.status === 'PAGO').reduce((s, i) => s + (i.valorPago ?? i.valor), 0);
-    const aReceber = baseFiltered.filter((i) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(i.status)).reduce((s, i) => s + i.valor, 0);
-    const vencidos = baseFiltered.filter((i) => i.status === 'VENCIDO').length;
-    return { total, recebido, aReceber, vencidos };
-  }, [baseFiltered]);
+  const kpis = {
+    total: summaryQuery.data?.allValue || 0,
+    recebido: summaryQuery.data?.receivedValue || 0,
+    aReceber: summaryQuery.data?.pendingValue || 0,
+    vencidos: summaryQuery.data?.overdueCount || 0,
+  };
 
-  const filtered = useMemo(() => {
-    if (statusScope === 'received') return baseFiltered.filter((item) => item.status === 'PAGO');
-    if (statusScope === 'pending') return baseFiltered.filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status));
-    if (statusScope === 'canceled') return baseFiltered.filter((item) => item.status === 'CANCELADO');
-    return baseFiltered;
-  }, [baseFiltered, statusScope]);
-
-  const allGroups = useMemo(() => {
-    if (groupMode === 'none') return [];
-
-    const groups = new Map<string, ContasReceber[]>();
-    filtered.forEach((item) => {
-      const key = groupMode === 'student'
-        ? item.clienteId || item.clienteNome || 'Aluno não informado'
-        : groupMode === 'polo'
-          ? item.poloId || item.poloNome || 'Polo não informado'
-          : item.turmaId || item.turmaNome || 'Turma não informada';
-      groups.set(key, [...(groups.get(key) || []), item]);
-    });
-    return Array.from(groups.entries()).map(([key, items]) => ({
-      key,
-      label: groupMode === 'student'
-        ? items[0]?.clienteNome || 'Aluno não informado'
-        : groupMode === 'polo'
-          ? items[0]?.poloNome || 'Polo não informado'
-          : items[0]?.turmaNome || 'Turma não informada',
-      items,
-    }));
-  }, [filtered, groupMode]);
-
-  const totalItems = groupMode === 'none' ? filtered.length : allGroups.length;
+  const totalItems = groupMode === 'none'
+    ? receivablesQuery.data?.totalItems || 0
+    : groupsQuery.data?.totalItems || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const paginated = useMemo(() => {
-    const safePage = Math.min(page, totalPages);
-    return filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-  }, [filtered, page, totalPages]);
-
-  const grouped = useMemo(() => {
-    const safePage = Math.min(page, totalPages);
-    if (groupMode === 'none') return [{ key: 'all', label: 'Todos os recebíveis', items: paginated }];
-    return allGroups.slice((safePage - 1) * pageSize, safePage * pageSize);
-  }, [allGroups, groupMode, page, paginated, totalPages]);
+  const paginated = receivables;
 
   useEffect(() => {
     setPage(1);
@@ -339,7 +330,12 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   useEffect(() => {
     setExpandedGroups(new Set());
-  }, [search, dueStart, dueEnd, statusScope, groupMode, modality]);
+    setGroupPages({});
+  }, [search, dueStart, dueEnd, statusScope, groupMode, modality, page]);
+
+  useEffect(() => {
+    setReportReceivables(null);
+  }, [debouncedSearch, dueStart, dueEnd, statusScope, modality, poloId]);
 
   const closePaymentModal = () => setSelected(null);
   const closeReversalModal = () => {
@@ -511,6 +507,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   };
 
   const toggleGroup = (key: string) => {
+    const willOpen = !expandedGroups.has(key);
     setExpandedGroups((current) => {
       const next = new Set(current);
       if (next.has(key)) {
@@ -520,31 +517,36 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       }
       return next;
     });
+    if (willOpen) {
+      setGroupPages((pages) => ({ ...pages, [key]: pages[key] || 1 }));
+    }
   };
 
-  const getGroupSummary = (items: ContasReceber[]) => {
-    const sortedByDue = [...items].sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
-    const pendingItems = items.filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status));
-    const receivedItems = items.filter((item) => item.status === 'PAGO');
-    const canceledItems = items.filter((item) => item.status === 'CANCELADO');
-    const openItems = sortedByDue.filter((item) => item.status !== 'PAGO' && item.status !== 'CANCELADO');
+  const changeGroupPage = (key: string, nextPage: number) => {
+    setGroupPages((current) => ({ ...current, [key]: Math.max(1, nextPage) }));
+  };
 
-    return {
-      pendingCount: pendingItems.length,
-      receivedCount: receivedItems.length,
-      canceledCount: canceledItems.length,
-      nextDue: openItems[0]?.dataVencimento || sortedByDue[0]?.dataVencimento || '',
-      first: items[0],
-    };
+  const loadReportReceivables = async () => {
+    try {
+      const rows = await financeiroService.getReceivablesExportByModality(modality, {
+        poloId: poloId || undefined,
+        search: search.trim(),
+        dueStart,
+        dueEnd,
+        statusScope,
+      });
+      setReportReceivables(rows);
+    } catch (error: any) {
+      toast.error('Erro ao preparar o extrato', error?.message || 'Não foi possível carregar todos os registros do relatório.');
+      throw error;
+    }
   };
 
   const reportPoloId = useMemo(() => {
-    if (poloId) return poloId;
-    const uniquePoloIds = Array.from(new Set(filtered.map((item) => item.poloId).filter(Boolean)));
-    if (uniquePoloIds.length === 1) return uniquePoloIds[0];
-    if (typeof window === 'undefined') return uniquePoloIds[0];
-    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || uniquePoloIds[0];
-  }, [filtered, poloId]);
+    if (poloId && poloId !== 'todos') return poloId;
+    if (typeof window === 'undefined') return undefined;
+    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || undefined;
+  }, [poloId]);
 
   const reportColumns = useMemo<FinancialReportColumn[]>(() => [
     { label: 'Aluno' },
@@ -555,7 +557,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     { label: 'Valor', align: 'right' },
   ], []);
 
-  const reportRows = useMemo<FinancialReportRow[]>(() => filtered.map((item) => ({
+  const reportRows = useMemo<FinancialReportRow[]>(() => (reportReceivables || []).map((item) => ({
     id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
     cells: [
       <div>
@@ -594,19 +596,30 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         )}
       </div>,
     ],
-  })), [filtered]);
+  })), [reportReceivables]);
 
   const reportTotals = useMemo(() => {
-    const total = filtered.reduce((sum, item) => sum + item.valor, 0);
-    const recebido = filtered
+    const source = reportReceivables || [];
+    const total = source.reduce((sum, item) => sum + item.valor, 0);
+    const recebido = source
       .filter((item) => item.status === 'PAGO')
       .reduce((sum, item) => sum + (item.valorPago ?? item.valor), 0);
-    const aReceber = filtered
+    const aReceber = source
       .filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status))
       .reduce((sum, item) => sum + item.valor, 0);
-    const vencidos = filtered.filter((item) => item.status === 'VENCIDO').length;
+    const vencidos = source.filter((item) => item.status === 'VENCIDO').length;
     return { total, recebido, aReceber, vencidos };
-  }, [filtered]);
+  }, [reportReceivables]);
+
+  const reportExpectedCount = reportReceivables?.length ?? (
+    statusScope === 'pending'
+      ? statusCounts.pending
+      : statusScope === 'received'
+        ? statusCounts.received
+        : statusScope === 'canceled'
+          ? statusCounts.canceled
+          : statusCounts.all
+  );
 
   const reportFilters = useMemo<FinancialReportFilter[]>(() => {
     const filterDate = (value?: string) => value ? formatDate(value) : 'Sem limite';
@@ -616,9 +629,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       { label: 'Busca', value: search.trim() || 'Todos os alunos' },
       { label: 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
       { label: 'Agrupamento', value: groupModeLabels[groupMode] },
-      { label: 'Registros', value: `${filtered.length} cobrança(s)` },
+      { label: 'Registros', value: `${reportExpectedCount} cobrança(s)` },
     ];
-  }, [dueEnd, dueStart, filtered.length, groupMode, search, statusScope, title]);
+  }, [dueEnd, dueStart, groupMode, reportExpectedCount, search, statusScope, title]);
 
   const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
     { label: 'Total previsto', value: formatCurrency(reportTotals.total), tone: 'slate' },
@@ -989,6 +1002,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             summaryCards={reportSummaryCards}
             poloId={reportPoloId}
             tone="emerald"
+            onBeforeOpen={loadReportReceivables}
             disabled={isLoading}
           />
 
@@ -1012,7 +1026,12 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
+      <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
+        {isPageFetching && !isLoading && (
+          <div className="absolute right-5 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase text-emerald-700 shadow-sm">
+            <Loader2 className="animate-spin" size={12} /> Atualizando
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center gap-3 py-20 text-sm font-bold text-slate-500">
             <Loader2 className="animate-spin text-emerald-600" /> Carregando recebíveis...
@@ -1020,20 +1039,54 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         ) : (
           viewMode === 'cards' ? (
             <div className="space-y-5 bg-slate-50/60 p-4">
-              {filtered.length === 0 ? (
+              {totalItems === 0 ? (
                 <div className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</div>
-              ) : grouped.map((group) => (
-                <section key={group.key} className="space-y-3">
-                  {groupMode !== 'none' && (
-                    <div className="flex items-center gap-2 px-1 text-xs font-black uppercase tracking-wider text-slate-500">
-                      <Users size={14} /> {group.label}
-                    </div>
-                  )}
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {group.items.map((item) => <ReceivableCard key={item.id} item={item} />)}
-                  </div>
-                </section>
-              ))}
+              ) : groupMode === 'none' ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {paginated.map((item) => <ReceivableCard key={item.id} item={item} />)}
+                </div>
+              ) : groups.map((group) => {
+                const isExpanded = expandedGroups.has(group.key);
+                const detailQuery = groupItemsByKey.get(group.key);
+                const detailRows = detailQuery?.data?.rows || [];
+                const detailPage = groupPages[group.key] || 1;
+                const detailTotalPages = Math.max(1, Math.ceil(group.itemCount / groupItemsPageSize));
+                return (
+                  <section key={group.key} className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      className="flex w-full items-center justify-between gap-4 text-left"
+                    >
+                      <span className="flex min-w-0 items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600">
+                        {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                        <Users size={14} /> <span className="truncate">{group.label}</span>
+                      </span>
+                      <span className="whitespace-nowrap text-[10px] font-bold text-slate-400">{group.itemCount} cobrança(s)</span>
+                    </button>
+                    {isExpanded && (
+                      <>
+                        {detailQuery?.isLoading ? (
+                          <div className="flex items-center justify-center gap-2 py-8 text-xs font-bold text-slate-400">
+                            <Loader2 className="animate-spin" size={16} /> Carregando cobranças...
+                          </div>
+                        ) : (
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {detailRows.map((item) => <ReceivableCard key={item.id} item={item} />)}
+                          </div>
+                        )}
+                        {detailTotalPages > 1 && (
+                          <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 text-[10px] font-black uppercase text-slate-500">
+                            <button type="button" disabled={detailPage <= 1} onClick={() => changeGroupPage(group.key, detailPage - 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Anterior</button>
+                            <span>{detailPage} / {detailTotalPages}</span>
+                            <button type="button" disabled={detailPage >= detailTotalPages} onClick={() => changeGroupPage(group.key, detailPage + 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Próxima</button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </section>
+                );
+              })}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1053,16 +1106,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
                     ))}
                   </tr>
                 </thead>
-                {filtered.length === 0 ? (
+                {totalItems === 0 ? (
                   <tbody><tr><td colSpan={6} className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</td></tr></tbody>
                 ) : groupMode === 'none' ? (
                   <tbody className="divide-y divide-slate-100">
                     {paginated.map((item, index) => renderReceivableRow(item, index))}
                   </tbody>
-                ) : grouped.map((group) => {
+                ) : groups.map((group) => {
                   const isExpanded = expandedGroups.has(group.key);
-                  const summary = getGroupSummary(group.items);
-                  const first = summary.first;
+                  const detailQuery = groupItemsByKey.get(group.key);
+                  const detailRows = detailQuery?.data?.rows || [];
+                  const detailPage = groupPages[group.key] || 1;
+                  const detailTotalPages = Math.max(1, Math.ceil(group.itemCount / groupItemsPageSize));
+                  const first = group.first;
 
                   return (
                     <tbody key={group.key} className="divide-y divide-slate-100">
@@ -1093,22 +1149,36 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
                             <span className="text-xs font-bold text-slate-600">
                               <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Parcelas</span>
-                              {group.items.length} cobrança(s)
+                              {group.itemCount} cobrança(s)
                             </span>
 
                             <span className="text-xs font-bold text-slate-600">
                               <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Situação</span>
-                              {summary.pendingCount} pend. · {summary.receivedCount} rec. · {summary.canceledCount} canc.
+                              {group.pendingCount} pend. · {group.receivedCount} rec. · {group.canceledCount} canc.
                             </span>
 
                             <span className="text-right text-xs font-bold text-slate-600">
                               <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Próximo vencimento</span>
-                              <span className="text-[10px] text-slate-400">{summary.nextDue ? formatDate(summary.nextDue) : '—'}</span>
+                              <span className="text-[10px] text-slate-400">{group.nextDue ? formatDate(group.nextDue) : '—'}</span>
                             </span>
                           </button>
                         </td>
                       </tr>
-                      {isExpanded && group.items.map((item, index) => renderReceivableRow(item, index, groupMode === 'student'))}
+                      {isExpanded && detailQuery?.isLoading && (
+                        <tr><td colSpan={6} className="py-8 text-center text-xs font-bold text-slate-400"><Loader2 className="mr-2 inline animate-spin" size={14} />Carregando cobranças...</td></tr>
+                      )}
+                      {isExpanded && detailRows.map((item, index) => renderReceivableRow(item, index, groupMode === 'student'))}
+                      {isExpanded && detailTotalPages > 1 && (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-3">
+                            <div className="flex items-center justify-end gap-2 text-[10px] font-black uppercase text-slate-500">
+                              <button type="button" disabled={detailPage <= 1} onClick={() => changeGroupPage(group.key, detailPage - 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Anterior</button>
+                              <span>{detailPage} / {detailTotalPages}</span>
+                              <button type="button" disabled={detailPage >= detailTotalPages} onClick={() => changeGroupPage(group.key, detailPage + 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Próxima</button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   );
                 })}
@@ -1118,12 +1188,12 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         )}
       </div>
 
-      {!isLoading && filtered.length > 0 && (
+      {!isLoading && totalItems > 0 && (
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>
             {groupMode === 'none'
-              ? `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, filtered.length)} de ${filtered.length} cobrança(s)`
-              : `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, allGroups.length)} de ${allGroups.length} grupo(s), ${filtered.length} cobrança(s)`}
+              ? `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalItems)} de ${totalItems} cobrança(s)`
+              : `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalItems)} de ${totalItems} grupo(s), ${groupsQuery.data?.totalReceivables || 0} cobrança(s)`}
           </span>
           <div className="flex items-center gap-2">
             <button

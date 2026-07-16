@@ -59,8 +59,8 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
     setCronograma(buildFinanceiroCronograma(configDb, turma.dataInicio));
   }, [configDb, turma.dataInicio]);
 
-  const calculoConfigQuery = useFinanceiroRulesCalculation(config);
-  const calculoFormQuery = useFinanceiroRulesCalculation(formData, true);
+  const calculoConfigQuery = useFinanceiroRulesCalculation(configDb || config, false, Boolean(configDb));
+  const calculoFormQuery = useFinanceiroRulesCalculation(formData, true, isEditing);
 
   const generateCronograma = () => {
     setCronograma(buildFinanceiroCronograma(formData, turma.dataInicio));

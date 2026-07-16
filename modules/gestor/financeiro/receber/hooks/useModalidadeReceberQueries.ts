@@ -1,31 +1,51 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   financeiroService,
-  ReceivablesSummaryFilters,
+  ReceivablesPageFilters,
 } from '../../financeiro.service';
 import { CourseModality, financeiroQueryKeys } from '../../financeiro.queryKeys';
 
 export function useModalidadeReceberQueries(
   modality: CourseModality,
-  summaryFilters: ReceivablesSummaryFilters,
-  poloId?: string | null
+  filters: ReceivablesPageFilters,
 ) {
+  const isGrouped = filters.groupMode !== 'none';
+  const summaryFilters = {
+    poloId: filters.poloId,
+    search: filters.search,
+    dueStart: filters.dueStart,
+    dueEnd: filters.dueEnd,
+  };
+
   const receivablesQuery = useQuery({
-    queryKey: financeiroQueryKeys.receivablesByModality(modality, poloId),
-    queryFn: () => financeiroService.getReceivablesByModality(modality, poloId || undefined),
-    enabled: Boolean(poloId),
-    staleTime: 15_000,
+    queryKey: financeiroQueryKeys.receivablesPageByModality(modality, filters),
+    queryFn: () => financeiroService.getReceivablesPageByModality(modality, filters),
+    enabled: Boolean(filters.poloId) && !isGrouped,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
+
+  const groupsQuery = useQuery({
+    queryKey: financeiroQueryKeys.receivablesGroupsByModality(modality, filters),
+    queryFn: () => financeiroService.getReceivablesGroupsPageByModality(modality, filters),
+    enabled: Boolean(filters.poloId) && isGrouped,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   });
 
   const summaryQuery = useQuery({
     queryKey: financeiroQueryKeys.receivablesModalitySummary(modality, summaryFilters),
     queryFn: () => financeiroService.getReceivablesModalitySummary(modality, summaryFilters),
-    enabled: Boolean(poloId),
-    staleTime: 15_000,
+    enabled: Boolean(filters.poloId),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   });
 
   return {
     receivablesQuery,
+    groupsQuery,
     summaryQuery,
   };
 }

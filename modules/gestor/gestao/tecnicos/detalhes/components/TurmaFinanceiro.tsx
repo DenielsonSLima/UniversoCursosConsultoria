@@ -5,75 +5,38 @@ import { DollarSign, TrendingDown, TrendingUp, Loader2 } from 'lucide-react';
 import FinanceiroConfig from './financeiro/FinanceiroConfig';
 import FinanceiroAlunosList from './financeiro/FinanceiroAlunosList';
 import { Turma } from '../../../gestao.types';
-import { supabase } from '../../../../../../lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
+import { useTurmaFinanceiroDashboard } from './financeiro/hooks/useFinanceiroAlunos';
 
 interface TurmaFinanceiroProps {
   turma: Turma;
 }
 
 const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
-  const summaryQuery = useQuery({
-    queryKey: ['turma-financeiro', turma.id, 'resumo'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select('valor, valor_pago, status, data_vencimento')
-        .eq('turma_id', turma.id);
-      if (error) throw error;
-
-      const records = data || [];
-      const total = records.reduce((sum, item) => sum + Number(item.valor || 0), 0);
-      const received = records
-        .filter((item) => item.status === 'PAGO')
-        .reduce((sum, item) => sum + Number(item.valor_pago ?? item.valor ?? 0), 0);
-      const overdue = records
-        .filter((item) => item.status === 'VENCIDO' || (item.status === 'PENDENTE' && item.data_vencimento < getMaceioIsoDate()))
-        .reduce((sum, item) => sum + Number(item.valor || 0), 0);
-
-      return {
-        total,
-        received,
-        overdue,
-        overduePercent: total > 0 ? (overdue / total) * 100 : 0,
-      };
-    },
-    staleTime: 10_000,
-  });
-  const summary = summaryQuery.data;
+  const dashboardQuery = useTurmaFinanceiroDashboard(turma.id);
+  const summary = dashboardQuery.data?.summary;
 
   const receitaPrevista = summary?.total || 0;
   const recebido = summary?.received || 0;
   const inadimplencia = summary?.overdue || 0;
   const pendentePercent = summary?.overduePercent || 0;
 
-  if (summaryQuery.isLoading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="animate-spin text-[#001a33]" size={32} />
-        <span className="text-slate-500 font-bold ml-3">Carregando painel financeiro...</span>
-      </div>
-    );
-  }
-
-  if (summaryQuery.isError) {
-    return (
-      <TechnicalDataError
-        title="Resumo financeiro não carregado"
-        message="Os totais foram ocultados para não apresentar receita, recebimentos ou inadimplência como zero por engano."
-        retrying={summaryQuery.isFetching}
-        onRetry={() => { void summaryQuery.refetch(); }}
-      />
-    );
-  }
-
   return (
     <div className=" space-y-8">
-      
-      {/* Resumo Rápido */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {dashboardQuery.isLoading ? (
+        <div className="flex justify-center items-center rounded-2xl border border-slate-100 bg-white py-12">
+          <Loader2 className="animate-spin text-[#001a33]" size={28} />
+          <span className="text-slate-500 font-bold ml-3">Carregando resumo financeiro...</span>
+        </div>
+      ) : dashboardQuery.isError ? (
+        <TechnicalDataError
+          title="Resumo financeiro não carregado"
+          message="Os totais foram ocultados para não apresentar receita, recebimentos ou inadimplência como zero por engano."
+          retrying={dashboardQuery.isFetching}
+          onRetry={() => { void dashboardQuery.refetch(); }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-2 text-emerald-600">
             <div className="p-2 bg-emerald-50 rounded-lg"><TrendingUp size={20} /></div>
@@ -104,13 +67,20 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
           <p className="text-3xl font-black text-[#001a33]">R$ {inadimplencia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-xs text-rose-500 font-bold mt-1">{pendentePercent.toFixed(1)}% do plano lançado</p>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Configurações Financeiras da Turma */}
       <FinanceiroConfig turma={turma} />
 
       {/* Lista de Alunos com Status Financeiro */}
-      <FinanceiroAlunosList turma={turma} />
+      <FinanceiroAlunosList
+        alunos={dashboardQuery.data?.alunos || []}
+        isLoading={dashboardQuery.isLoading}
+        isError={dashboardQuery.isError}
+        isFetching={dashboardQuery.isFetching}
+        onRetry={() => { void dashboardQuery.refetch(); }}
+      />
 
     </div>
   );

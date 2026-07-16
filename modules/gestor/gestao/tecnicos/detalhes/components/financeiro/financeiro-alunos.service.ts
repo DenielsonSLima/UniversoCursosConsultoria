@@ -1,6 +1,5 @@
 import { supabase } from '../../../../../../../lib/supabase';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
-import { getMaceioIsoDate } from '../../../technicalClassDates';
 
 export interface AlunoFinanceiro {
   id: string;
@@ -15,52 +14,48 @@ export interface AlunoFinanceiro {
   cobrancaDescricao?: string;
 }
 
+export interface TurmaFinanceiroDashboard {
+  summary: {
+    total: number;
+    received: number;
+    overdue: number;
+    overduePercent: number;
+  };
+  alunos: AlunoFinanceiro[];
+}
+
 export const financeiroAlunosService = {
-  async getAlunos(turmaId: string): Promise<AlunoFinanceiro[]> {
-    const [
-      { data, error },
-      { data: receivables, error: receivablesError },
-    ] = await Promise.all([
-      supabase
-        .from('matriculas')
-        .select('id, status, data_matricula, parceiros(*)')
-        .eq('turma_id', turmaId),
-      supabase
-        .from('contas_receber')
-        .select('matricula_id, status, data_vencimento, asaas_invoice_url, descricao, valor, tipo_lancamento')
-        .eq('turma_id', turmaId),
-    ]);
+  async getDashboard(turmaId: string): Promise<TurmaFinanceiroDashboard> {
+    const { data, error } = await supabase.rpc('get_turma_financeiro_dashboard_secure', {
+      p_turma_id: turmaId,
+    });
 
     if (error) throw error;
-    if (receivablesError) throw receivablesError;
 
-    return (data || [])
-      .filter((matricula: any) => matricula.parceiros)
-      .map((matricula: any) => {
-        const studentReceivables = (receivables || []).filter((item: any) => item.matricula_id === matricula.id);
-        const hasOverdue = studentReceivables.some((item: any) =>
-          item.status === 'VENCIDO'
-          || (item.status === 'PENDENTE' && item.data_vencimento < getMaceioIsoDate())
-        );
-        const paid = studentReceivables.filter((item: any) => item.status === 'PAGO').length;
-        const matriculaCharge = studentReceivables.find((item: any) => item.tipo_lancamento === 'MATRICULA');
-        const mensalidadeCharge = studentReceivables.find((item: any) => item.tipo_lancamento === 'PARCELA');
-        const nextCharge = studentReceivables
-          .filter((item: any) => ['PENDENTE', 'VENCIDO'].includes(item.status) && item.asaas_invoice_url)
-          .sort((a: any, b: any) => String(a.data_vencimento).localeCompare(String(b.data_vencimento)))[0];
+    const payload: any = Array.isArray(data) ? data[0] : data || {};
+    const summary = payload.summary || {};
+    const total = Number(summary.total || 0);
+    const overdue = Number(summary.overdue || 0);
 
-        return {
-          id: matricula.id,
-          nome: matricula.parceiros.nome,
-          matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.parceiros.polo_id),
-          valorMatricula: Number(matriculaCharge?.valor || 0),
-          valorMensalidade: Number(mensalidadeCharge?.valor || 0),
-          status: hasOverdue ? 'inadimplente' : 'em_dia',
-          parcelasPagas: paid,
-          totalParcelas: studentReceivables.length,
-          cobrancaUrl: nextCharge?.asaas_invoice_url,
-          cobrancaDescricao: nextCharge?.descricao,
-        } as AlunoFinanceiro;
-      });
+    return {
+      summary: {
+        total,
+        received: Number(summary.received || 0),
+        overdue,
+        overduePercent: total > 0 ? (overdue / total) * 100 : 0,
+      },
+      alunos: (payload.students || []).map((student: any) => ({
+        id: student.id,
+        nome: student.nome || 'Aluno',
+        matricula: formatMatricula(student.id, student.data_matricula, student.polo_id),
+        valorMatricula: Number(student.valor_matricula || 0),
+        valorMensalidade: Number(student.valor_mensalidade || 0),
+        status: student.status || 'em_dia',
+        parcelasPagas: Number(student.parcelas_pagas || 0),
+        totalParcelas: Number(student.total_parcelas || 0),
+        cobrancaUrl: student.cobranca_url || undefined,
+        cobrancaDescricao: student.cobranca_descricao || undefined,
+      })),
+    };
   },
 };

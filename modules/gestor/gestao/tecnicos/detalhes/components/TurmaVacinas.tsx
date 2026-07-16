@@ -23,6 +23,7 @@ const TurmaVacinas: React.FC<TurmaVacinasProps> = ({ turma }) => {
     studentRows,
     studentGroups,
     statusMutation,
+    getArquivoUrl,
   } = useTurmaVacinas(turma, {
     onStatusSuccess: () => toast.success('Vacina atualizada', 'O status da dose foi salvo com sucesso.'),
     onStatusError: (error: any) => {
@@ -105,6 +106,11 @@ const TurmaVacinas: React.FC<TurmaVacinasProps> = ({ turma }) => {
         registrosMap={registrosMap}
         isUpdating={statusMutation.isPending}
         onUpdateStatus={(id, status, observacao) => statusMutation.mutate({ id, status, observacao })}
+        onOpenAttachment={getArquivoUrl}
+        onAttachmentError={(error: any) => toast.error(
+          'Comprovante não aberto',
+          error?.message || 'Não foi possível gerar o acesso temporário ao anexo.',
+        )}
       />
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

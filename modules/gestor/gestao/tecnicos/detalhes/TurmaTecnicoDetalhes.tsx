@@ -2,6 +2,7 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
@@ -15,6 +16,9 @@ import TurmaFinanceiro from './components/TurmaFinanceiro';
 import TurmaVacinas from './components/TurmaVacinas';
 import AtividadesExtraClasse from './components/AtividadesExtraClasse';
 import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
+import { turmaFinanceiroDashboardQueryOptions } from './components/financeiro/hooks/useFinanceiroAlunos';
+import { financeiroConfigQueryOptions } from './components/financeiro/hooks/useFinanceiroConfig';
+import { turmaVacinasQueryOptions } from './components/vacinas/useTurmaVacinas';
 
 interface TurmaTecnicoDetalhesProps {
   turma: Turma;
@@ -23,6 +27,7 @@ interface TurmaTecnicoDetalhesProps {
 
 const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBack }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+  const queryClient = useQueryClient();
 
   useTurmaTecnicoRealtime(turma.id);
 
@@ -42,6 +47,16 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
     { id: 'academico', label: 'Ciclo Acadêmico', icon: <GraduationCap size={18} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
   ];
+
+  const prefetchTab = (tabId: string) => {
+    if (tabId === 'financeiro') {
+      void queryClient.prefetchQuery(turmaFinanceiroDashboardQueryOptions(turma.id));
+      void queryClient.prefetchQuery(financeiroConfigQueryOptions(turma.id));
+    }
+    if (tabId === 'vacinas') {
+      void queryClient.prefetchQuery(turmaVacinasQueryOptions(turma));
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -110,6 +125,9 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                onMouseEnter={() => prefetchTab(tab.id)}
+                onFocus={() => prefetchTab(tab.id)}
+                onTouchStart={() => prefetchTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                   activeTab === tab.id 
                     ? 'bg-[#001a33] text-white shadow-lg shadow-blue-900/20' 

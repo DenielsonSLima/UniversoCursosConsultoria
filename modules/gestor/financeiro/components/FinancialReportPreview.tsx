@@ -52,6 +52,7 @@ interface FinancialReportExportButtonProps extends Omit<FinancialReportPreviewMo
   buttonLabel?: string;
   buttonClassName?: string;
   disabled?: boolean;
+  onBeforeOpen?: () => Promise<void>;
 }
 
 const toneStyles: Record<FinancialReportTone, { button: string; text: string; bg: string; border: string }> = {
@@ -430,23 +431,38 @@ const FinancialReportExportButton: React.FC<FinancialReportExportButtonProps> = 
   buttonLabel = 'Extrato PDF',
   buttonClassName = '',
   disabled,
+  onBeforeOpen,
   tone = 'slate',
   ...modalProps
 }) => {
   const [open, setOpen] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const toneStyle = toneStyles[tone];
+
+  const handleOpen = async () => {
+    if (preparing) return;
+    try {
+      setPreparing(true);
+      await onBeforeOpen?.();
+      setOpen(true);
+    } catch {
+      // A tela chamadora apresenta a mensagem específica de erro.
+    } finally {
+      setPreparing(false);
+    }
+  };
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        disabled={disabled}
+        onClick={handleOpen}
+        disabled={disabled || preparing}
         className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneStyle.button} ${buttonClassName}`}
         title="Abrir preview do extrato em PDF"
       >
-        <FileText size={14} />
-        {buttonLabel}
+        {preparing ? <Loader2 className="animate-spin" size={14} /> : <FileText size={14} />}
+        {preparing ? 'Preparando...' : buttonLabel}
       </button>
       {open && (
         <FinancialReportPreviewModal

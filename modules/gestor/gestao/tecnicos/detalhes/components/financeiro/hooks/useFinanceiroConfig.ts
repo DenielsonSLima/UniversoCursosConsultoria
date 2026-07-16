@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleKeys } from '../../../academic-lifecycle.keys';
 import { gestaoService } from '../../../../../gestao.service';
 import {
@@ -24,18 +24,24 @@ export const financeiroConfigKeys = {
   ] as const,
 };
 
-export const useFinanceiroConfig = (turmaId: string) => useQuery({
+export const financeiroConfigQueryOptions = (turmaId: string) => queryOptions({
   queryKey: financeiroConfigKeys.turma(turmaId),
   queryFn: () => financeiroConfigService.getConfig(turmaId),
 });
 
+export const useFinanceiroConfig = (turmaId: string) => useQuery(
+  financeiroConfigQueryOptions(turmaId),
+);
+
 export const useFinanceiroRulesCalculation = (
   config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>,
   form = false,
+  enabled = true,
 ) => useQuery({
   queryKey: form ? financeiroConfigKeys.calculoForm(config) : financeiroConfigKeys.calculo(config),
   queryFn: () => financeiroConfigService.calculateRules(config),
   staleTime: Infinity,
+  enabled,
 });
 
 export const useSaveFinanceiroConfigMutation = (

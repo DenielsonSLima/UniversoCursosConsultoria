@@ -1,4 +1,8 @@
-import { ReceivablesSummaryFilters, TransferenciasFilters } from './financeiro.service';
+import {
+  ReceivablesPageFilters,
+  ReceivablesSummaryFilters,
+  TransferenciasFilters,
+} from './financeiro.service';
 
 export type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 
@@ -7,6 +11,12 @@ export const financeiroQueryKeys = {
   receivablesRoot: ['financeiro', 'receivables'] as const,
   receivablesByModality: (modality: CourseModality, poloId?: string | null) =>
     ['financeiro', 'receivables', 'modality', modality, poloId || 'sem-polo'] as const,
+  receivablesPageByModality: (modality: CourseModality, filters: ReceivablesPageFilters) =>
+    ['financeiro', 'receivables', 'modality-page', modality, filters] as const,
+  receivablesGroupsByModality: (modality: CourseModality, filters: ReceivablesPageFilters) =>
+    ['financeiro', 'receivables', 'modality-groups', modality, filters] as const,
+  receivablesGroupItems: (modality: CourseModality, filters: ReceivablesPageFilters) =>
+    ['financeiro', 'receivables', 'modality-group-items', modality, filters] as const,
   receivablesModalitySummary: (modality: CourseModality, filters: ReceivablesSummaryFilters) =>
     ['financeiro', 'receivables', 'modality-summary', modality, filters] as const,
   outrosCreditosRoot: ['financeiro', 'outros-creditos'] as const,

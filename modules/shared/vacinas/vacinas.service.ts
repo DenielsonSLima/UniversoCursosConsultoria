@@ -54,6 +54,8 @@ const hydrateRegistros = async (rows: any[]): Promise<AlunoVacinaRegistro[]> => 
   rows.map(async (row) => toRegistro(row, await getSignedArquivoUrl(row.arquivo_url))),
 );
 
+const mapRegistros = (rows: any[]): AlunoVacinaRegistro[] => rows.map((row) => toRegistro(row));
+
 const validateVacinaFile = (file: File) => {
   const extension = VACINA_FILE_EXTENSIONS[file.type];
   if (!extension) {
@@ -72,6 +74,8 @@ export const alunoVacinasKeys = {
 
 export const alunoVacinasService = {
   hydrateRegistros,
+  mapRegistros,
+  getArquivoUrl: getSignedArquivoUrl,
 
   async getCursoContexts(alunoId: string): Promise<AlunoVacinaCursoContext[]> {
     const { data, error } = await supabase
@@ -221,6 +225,6 @@ export const alunoVacinasService = {
       .single();
 
     if (error) throw error;
-    return (await hydrateRegistros([data]))[0];
+    return toRegistro(data);
   },
 };

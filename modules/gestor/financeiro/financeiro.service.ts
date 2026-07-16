@@ -158,6 +158,8 @@ export interface ReceivablesSummary {
   pendingValue: number;
   receivedValue: number;
   canceledValue: number;
+  overdueCount: number;
+  overdueValue: number;
   allValue: number;
 }
 
@@ -168,15 +170,97 @@ export interface ReceivablesSummaryFilters {
   dueEnd?: string;
 }
 
+export type ReceivablesStatusScope = 'pending' | 'received' | 'canceled' | 'all';
+export type ReceivablesGroupMode = 'none' | 'student' | 'class' | 'polo';
+
+export interface ReceivablesPageFilters extends ReceivablesSummaryFilters {
+  statusScope: ReceivablesStatusScope;
+  groupMode: ReceivablesGroupMode;
+  page: number;
+  pageSize: number;
+  groupKey?: string;
+}
+
+export interface ReceivablesPage {
+  rows: ContasReceber[];
+  totalItems: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ReceivablesGroupSummary {
+  key: string;
+  label: string;
+  itemCount: number;
+  pendingCount: number;
+  receivedCount: number;
+  canceledCount: number;
+  nextDue: string;
+  first: ContasReceber;
+}
+
+export interface ReceivablesGroupsPage {
+  groups: ReceivablesGroupSummary[];
+  totalItems: number;
+  totalReceivables: number;
+  page: number;
+  pageSize: number;
+}
+
 const mapReceivablesSummary = (row: any = {}): ReceivablesSummary => ({
   pendingCount: Number(row.pending_count || 0),
   receivedCount: Number(row.received_count || 0),
   canceledCount: Number(row.canceled_count || 0),
+  overdueCount: Number(row.overdue_count || 0),
   allCount: Number(row.all_count || 0),
   pendingValue: Number(row.pending_value || 0),
   receivedValue: Number(row.received_value || 0),
   canceledValue: Number(row.canceled_value || 0),
+  overdueValue: Number(row.overdue_value || 0),
   allValue: Number(row.all_value || 0),
+});
+
+const mapReceivableRpcRow = (row: any): ContasReceber => ({
+  id: row.id,
+  poloId: row.polo_id,
+  poloNome: row.polo_nome || '',
+  poloCnpj: row.polo_cnpj || '',
+  poloCidade: row.polo_cidade || '',
+  poloUf: row.polo_uf || '',
+  descricao: row.descricao,
+  valor: Number(row.valor || 0),
+  dataVencimento: row.data_vencimento,
+  dataPagamento: row.data_pagamento || undefined,
+  valorPago: row.valor_pago === null || row.valor_pago === undefined ? undefined : Number(row.valor_pago),
+  status: row.status,
+  categoria: row.categoria,
+  clienteId: row.cliente_id || undefined,
+  clienteNome: row.cliente_nome || 'Aluno',
+  clienteCpfCnpj: row.cliente_cpf_cnpj || '',
+  clienteTelefone: row.cliente_telefone || '',
+  matriculaId: row.matricula_id || undefined,
+  turmaId: row.turma_id || undefined,
+  turmaNome: row.turma_nome || '',
+  cursoNome: row.curso_nome || '',
+  cursoModalidade: row.curso_modalidade || '',
+  formaPagamento: row.forma_pagamento || undefined,
+  origemPagamento: row.origem_pagamento || undefined,
+  contaBancariaId: row.conta_bancaria_id || undefined,
+  nossoNumeroAsaas: row.nosso_numero_asaas || undefined,
+  asaasPaymentId: row.asaas_payment_id || undefined,
+  asaasPaymentLinkId: row.asaas_payment_link_id || undefined,
+  asaasInvoiceUrl: row.asaas_invoice_url || undefined,
+  asaasBankSlipUrl: row.asaas_bank_slip_url || undefined,
+  asaasInstallmentId: row.asaas_installment_id || undefined,
+  asaasTransactionReceiptUrl: row.asaas_transaction_receipt_url || undefined,
+  asaasStatus: row.asaas_status || undefined,
+  asaasLastError: row.asaas_last_error || undefined,
+  taxa: row.taxa === null || row.taxa === undefined ? undefined : Number(row.taxa),
+  valorLiquido: row.valor_liquido === null || row.valor_liquido === undefined ? undefined : Number(row.valor_liquido),
+  createdAt: row.created_at || undefined,
+  tipoLancamento: row.tipo_lancamento || undefined,
+  parcelaNumero: row.parcela_numero === null || row.parcela_numero === undefined ? undefined : Number(row.parcela_numero),
+  origemCronogramaId: row.origem_cronograma_id || undefined,
 });
 
 export const financeiroService = {
@@ -401,11 +485,105 @@ export const financeiroService = {
     return this.getReceivablesByModality('TECNICO', poloId);
   },
 
+  async getReceivablesPageByModality(
+    modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
+    filters: ReceivablesPageFilters,
+  ): Promise<ReceivablesPage> {
+    const { data, error } = await supabase.rpc('get_receivables_modality_page_secure', {
+      p_modality: modality,
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_due_start: filters.dueStart || null,
+      p_due_end: filters.dueEnd || null,
+      p_status_scope: filters.statusScope,
+      p_group_mode: filters.groupMode,
+      p_group_key: filters.groupKey || null,
+      p_page: filters.page,
+      p_page_size: filters.pageSize,
+    });
+
+    if (error) {
+      console.error(`Erro ao buscar página de recebíveis da modalidade ${modality}:`, error);
+      throw error;
+    }
+
+    const payload: any = Array.isArray(data) ? data[0] : data || {};
+    return {
+      rows: (payload.rows || []).map(mapReceivableRpcRow),
+      totalItems: Number(payload.total_items || 0),
+      page: Number(payload.page || filters.page),
+      pageSize: Number(payload.page_size || filters.pageSize),
+    };
+  },
+
+  async getReceivablesGroupsPageByModality(
+    modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
+    filters: ReceivablesPageFilters,
+  ): Promise<ReceivablesGroupsPage> {
+    const { data, error } = await supabase.rpc('get_receivables_modality_groups_page_secure', {
+      p_modality: modality,
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_due_start: filters.dueStart || null,
+      p_due_end: filters.dueEnd || null,
+      p_status_scope: filters.statusScope,
+      p_group_mode: filters.groupMode,
+      p_page: filters.page,
+      p_page_size: filters.pageSize,
+    });
+
+    if (error) {
+      console.error(`Erro ao buscar grupos de recebíveis da modalidade ${modality}:`, error);
+      throw error;
+    }
+
+    const payload: any = Array.isArray(data) ? data[0] : data || {};
+    return {
+      groups: (payload.groups || []).map((group: any) => ({
+        key: String(group.key),
+        label: group.label || 'Não informado',
+        itemCount: Number(group.item_count || 0),
+        pendingCount: Number(group.pending_count || 0),
+        receivedCount: Number(group.received_count || 0),
+        canceledCount: Number(group.canceled_count || 0),
+        nextDue: group.next_due || '',
+        first: mapReceivableRpcRow(group.first_row || {}),
+      })),
+      totalItems: Number(payload.total_items || 0),
+      totalReceivables: Number(payload.total_receivables || 0),
+      page: Number(payload.page || filters.page),
+      pageSize: Number(payload.page_size || filters.pageSize),
+    };
+  },
+
+  async getReceivablesExportByModality(
+    modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
+    filters: Omit<ReceivablesPageFilters, 'page' | 'pageSize' | 'groupMode' | 'groupKey'>,
+  ): Promise<ContasReceber[]> {
+    const rows: ContasReceber[] = [];
+    const pageSize = 500;
+    let page = 1;
+
+    while (true) {
+      const result = await this.getReceivablesPageByModality(modality, {
+        ...filters,
+        groupMode: 'none',
+        page,
+        pageSize,
+      });
+      rows.push(...result.rows);
+      if (rows.length >= result.totalItems) break;
+      page += 1;
+    }
+
+    return rows;
+  },
+
   async getReceivablesModalitySummary(
     modality: 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO',
     filters: ReceivablesSummaryFilters = {}
   ): Promise<ReceivablesSummary> {
-    const { data, error } = await supabase.rpc('get_receivables_modality_summary', {
+    const { data, error } = await supabase.rpc('get_receivables_modality_summary_v2_secure', {
       p_modality: modality,
       p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
       p_search: filters.search?.trim() || null,
@@ -418,7 +596,8 @@ export const financeiroService = {
       throw error;
     }
 
-    return mapReceivablesSummary(data?.[0]);
+    const payload = Array.isArray(data) ? data[0] : data;
+    return mapReceivablesSummary(payload);
   },
 
   async createReceivable(cr: Omit<ContasReceber, 'id'>): Promise<void> {
