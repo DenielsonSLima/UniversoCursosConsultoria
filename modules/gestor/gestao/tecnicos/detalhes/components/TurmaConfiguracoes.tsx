@@ -8,6 +8,7 @@ import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
 import TechnicalAcademicSettings from '../../../components/forms/TechnicalAcademicSettings';
 import TechnicalEnrollmentSettings from '../../../components/forms/TechnicalEnrollmentSettings';
+import { gestaoQueryKeys } from '../../../gestao.query-keys';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
@@ -42,7 +43,8 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turma.id) }),
-        queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
         invalidateSiteTickerQueries(queryClient),
       ]);
       toast.success('Turma atualizada', 'As informações foram salvas no Supabase.');
@@ -51,7 +53,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
   });
 
   return (
-    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm animate-fadeIn">
+    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm ">
       <div className="flex items-start gap-3 border-b border-slate-100 pb-5 mb-6">
         <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><ShieldCheck size={19} /></div>
         <div>

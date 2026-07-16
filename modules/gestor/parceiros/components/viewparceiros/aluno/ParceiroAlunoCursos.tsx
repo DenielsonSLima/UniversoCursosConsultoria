@@ -55,7 +55,7 @@ const ParceiroAlunoCursos: React.FC<Props> = ({ alunoId }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 ">
       <div className="border-b border-slate-100 pb-5">
         <div className="flex items-center gap-2 text-blue-600">
           <BookOpen size={20} />

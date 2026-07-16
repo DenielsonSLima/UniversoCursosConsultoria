@@ -49,21 +49,24 @@ export const parceirosMatriculasService = {
   async getTurmasDisponiveis(poloId?: string) {
     let query = supabase
       .from('turmas')
-      .select('*, cursos(*), polos(nome,cidade,estado)')
+      .select('id, codigo, nome, polo_id, turno, vagas_totais, cursos(nome, modalidade), polos(nome,cidade,estado)')
       .eq('status', 'EM_ANDAMENTO');
     if (poloId && poloId !== 'todos') query = query.eq('polo_id', poloId);
     const { data, error } = await query.order('nome', { ascending: true });
     if (error) throw error;
-    return (data || []).map((turma) => ({
-      id: turma.id,
-      codigo: turma.codigo,
-      nome: turma.nome,
-      cursoNome: turma.cursos?.nome,
-      modalidade: turma.cursos?.modalidade,
-      poloId: turma.polo_id,
-      poloNome: formatPoloNome(turma.polos, turma.polo_id),
-      turno: turma.turno,
-      vagasTotais: turma.vagas_totais,
-    }));
+    return (data || []).map((turma) => {
+      const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
+      return {
+        id: turma.id,
+        codigo: turma.codigo,
+        nome: turma.nome,
+        cursoNome: curso?.nome,
+        modalidade: curso?.modalidade,
+        poloId: turma.polo_id,
+        poloNome: formatPoloNome(turma.polos, turma.polo_id),
+        turno: turma.turno,
+        vagasTotais: turma.vagas_totais,
+      };
+    });
   },
 };

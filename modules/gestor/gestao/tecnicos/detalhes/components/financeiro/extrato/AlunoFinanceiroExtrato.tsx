@@ -116,7 +116,7 @@ const AlunoFinanceiroExtrato: React.FC<AlunoFinanceiroExtratoProps> = ({ matricu
   }
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className=" space-y-6">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <button
         onClick={onBack}

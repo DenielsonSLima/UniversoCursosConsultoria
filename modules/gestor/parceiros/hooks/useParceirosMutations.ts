@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../parceiros.service';
-import { parceirosQueryKeys } from './useParceirosQueries';
+import { parceirosQueryKeys } from '../parceiros.query-keys';
 import { portalActivationService } from '../portal-activation.service';
 import { TERMS_VERSION } from '../../../shared/constants/terms';
 import { buildAuthRedirectUrl } from '../../../../lib/app-url';
@@ -33,7 +33,6 @@ export const useParceirosMutations = ({
 
   const invalidatePartners = () => {
     queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all });
-    queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.kpis });
   };
 
   const saveAlunoMutation = useMutation({

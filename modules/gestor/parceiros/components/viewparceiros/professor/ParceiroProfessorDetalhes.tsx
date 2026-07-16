@@ -30,7 +30,6 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
     onSuccess: (updated) => {
       queryClient.setQueryData(['parceiro', professorData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       toast.success('Professor atualizado', `${updated.nome || professorData.nome} teve os dados salvos com sucesso.`, {
         avatarUrl: updated.foto || professorData.foto,
         avatarName: updated.nome || professorData.nome,
@@ -122,7 +121,7 @@ const ParceiroProfessorDetalhes: React.FC<ParceiroProfessorDetalhesProps> = ({ p
       </div>
 
       {/* Conteúdo */}
-      <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] animate-fadeIn">
+      <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] ">
         {activeTab === 'dados' && (
             <ParceiroProfessorDados
               data={professorData}

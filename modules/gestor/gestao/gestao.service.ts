@@ -2,60 +2,102 @@
 
 import { Turma, TurmasPageFilters, TurmasPageResult } from './gestao.types';
 import { supabase } from '../../../lib/supabase';
-import { textMatchesSearch } from '../../../lib/search';
 import { enrichTechnicalAcademicProgress, mapTurma } from './gestao.mappers';
 import { gestaoKpisService } from './gestao-kpis.service';
 export type { GestaoResumoKpis, GestaoResumoModalidade } from './gestao-kpis.service';
+
+const TURMA_PAGE_SELECT = `
+  id, codigo, nome, curso_id, polo_id, data_inicio, data_previsao_termino,
+  data_inicio_inscricao, data_fim_inscricao, permitir_inscricoes_online,
+  exige_matricula, aceita_concomitante, aceita_subsequente,
+  serie_minima_ensino_medio, bloquear_matriculas_apos_completar_vagas,
+  qtd_vagas_minima, frequencia_minima_percent, media_minima, turno, status,
+  vagas_totais, valor_matricula, valor_rematricula, qtd_parcelas,
+  valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso,
+  origem_financeira, financeiro_herdado, gerar_cobrancas_futuras,
+  sincronizar_asaas_futuro, obs_financeira_origem,
+  cursos!inner(nome, modalidade),
+  polos(nome, cnpj, cidade, estado),
+  matriculas(status)
+`;
 
 export const gestaoService = {
   async getTurmasPage(filters: TurmasPageFilters): Promise<TurmasPageResult> {
     const from = (filters.page - 1) * filters.pageSize;
     const to = from + filters.pageSize - 1;
     const sortBy = filters.sortBy || 'NOME_ASC';
-    const hasSearch = Boolean(filters.search?.trim());
-    let query = supabase
-      .from('turmas')
-      .select('*, cursos!inner(*), polos(nome, cnpj, cidade, estado), matriculas(status)', { count: 'exact' })
-      .eq('cursos.modalidade', filters.modalidade)
-      .eq('status', filters.status);
+    const searchTerm = filters.search?.trim().replace(/[,%()]/g, ' ') || '';
+    const hasSearch = Boolean(searchTerm);
 
-    if (filters.poloId) query = query.eq('polo_id', filters.poloId);
-    if (filters.dataInicial) query = query.gte('data_inicio', filters.dataInicial);
-    if (filters.dataFinal) query = query.lte('data_inicio', filters.dataFinal);
+    const applyFilters = (baseQuery: any) => {
+      let scopedQuery = baseQuery.eq('cursos.modalidade', filters.modalidade);
+      scopedQuery = filters.modalidade === 'TECNICO' && filters.status === 'INSCRICOES_ABERTAS'
+        ? scopedQuery.in('status', ['PLANEJADA', 'INSCRICOES_ABERTAS'])
+        : scopedQuery.eq('status', filters.status);
+      if (filters.poloId) scopedQuery = scopedQuery.eq('polo_id', filters.poloId);
+      if (filters.dataInicial) scopedQuery = scopedQuery.gte('data_inicio', filters.dataInicial);
+      if (filters.dataFinal) scopedQuery = scopedQuery.lte('data_inicio', filters.dataFinal);
+      if (hasSearch) scopedQuery = scopedQuery.or(`nome.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`);
+      return scopedQuery;
+    };
+
+    if (sortBy === 'ALUNOS_DESC') {
+      let rankingQuery = applyFilters(
+        supabase
+          .from('turmas')
+          .select('id, nome, cursos!inner(modalidade), matriculas(count)', { count: 'exact' }),
+      );
+      if (filters.modalidade === 'EAD') {
+        rankingQuery = rankingQuery.in('matriculas.status', ['ATIVO', 'CONCLUIDO']);
+      }
+      rankingQuery = rankingQuery.range(0, 9999);
+      const { data: rankingData, count, error: rankingError } = await rankingQuery;
+      if (rankingError) throw rankingError;
+
+      const rankedIds = (rankingData || [])
+        .map((row: any) => ({
+          id: row.id,
+          nome: row.nome || '',
+          alunos: Number(row.matriculas?.[0]?.count || 0),
+        }))
+        .sort((a: any, b: any) => b.alunos - a.alunos || a.nome.localeCompare(b.nome, 'pt-BR'))
+        .slice(from, to + 1)
+        .map((row: any) => row.id);
+
+      if (rankedIds.length === 0) return { data: [], total: count || 0 };
+
+      const { data: pageData, error: pageError } = await supabase
+        .from('turmas')
+        .select(TURMA_PAGE_SELECT)
+        .in('id', rankedIds);
+      if (pageError) throw pageError;
+
+      const order = new Map<string, number>(
+        rankedIds.map((id: string, index: number): [string, number] => [id, index]),
+      );
+      const mapped = (pageData || [])
+        .map(mapTurma)
+        .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      const enriched = filters.modalidade === 'TECNICO'
+        ? await enrichTechnicalAcademicProgress(mapped)
+        : mapped;
+      return { data: enriched, total: count || 0 };
+    }
+
+    let query = applyFilters(
+      supabase.from('turmas').select(TURMA_PAGE_SELECT, { count: 'exact' }),
+    );
 
     if (sortBy === 'NOME_ASC') {
-      query = query.order('nome', { ascending: true }).range(hasSearch ? 0 : from, hasSearch ? 9999 : to);
+      query = query.order('nome', { ascending: true }).range(from, to);
     } else if (sortBy === 'NOME_DESC') {
-      query = query.order('nome', { ascending: false }).range(hasSearch ? 0 : from, hasSearch ? 9999 : to);
-    } else {
-      query = query.range(0, 9999);
+      query = query.order('nome', { ascending: false }).range(from, to);
     }
 
     const { data, count, error } = await query;
     if (error) throw error;
 
-    let mapped = (data || []).map(mapTurma);
-    if (hasSearch) {
-      mapped = mapped.filter((turma) =>
-        textMatchesSearch(filters.search || '', [
-          turma.nome,
-          turma.codigo,
-          turma.cursoNome,
-          turma.poloNome,
-          turma.poloCidade,
-          turma.poloEstado,
-        ])
-      );
-    }
-
-    const filteredTotal = hasSearch || sortBy === 'ALUNOS_DESC' ? mapped.length : count || 0;
-    if (sortBy === 'ALUNOS_DESC') {
-      mapped = mapped
-        .sort((a, b) => b.alunosMatriculados - a.alunosMatriculados || a.nome.localeCompare(b.nome, 'pt-BR'))
-        .slice(from, to + 1);
-    } else if (hasSearch) {
-      mapped = mapped.slice(from, to + 1);
-    }
+    const mapped = (data || []).map(mapTurma);
 
     const enriched = filters.modalidade === 'TECNICO'
       ? await enrichTechnicalAcademicProgress(mapped)
@@ -63,7 +105,7 @@ export const gestaoService = {
 
     return {
       data: enriched,
-      total: filteredTotal,
+      total: count || 0,
     };
   },
 

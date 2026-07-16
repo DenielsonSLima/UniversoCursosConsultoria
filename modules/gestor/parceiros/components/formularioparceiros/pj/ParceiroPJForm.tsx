@@ -203,7 +203,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
   const sectionTitleCls = 'text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2 mb-4 flex items-center gap-2';
 
   return (
-    <div className="animate-fadeIn max-h-[85vh] overflow-y-auto px-1 pr-3">
+    <div className=" max-h-[85vh] overflow-y-auto px-1 pr-3">
       {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
@@ -256,7 +256,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
                 </button>
               </div>
               {cnpjError && (
-                <p className="text-[11px] font-bold text-red-500 mt-1 ml-0.5 flex items-center gap-1 animate-fadeIn">
+                <p className="text-[11px] font-bold text-red-500 mt-1 ml-0.5 flex items-center gap-1 ">
                   <AlertCircle size={10} />
                   {cnpjError}
                 </p>

@@ -101,7 +101,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <div className="mb-6">
         <h3 className="text-lg font-bold text-[#001a33] mb-1">Diários de Classe</h3>
         <p className="text-slate-500 text-xs">Gerencie a frequência, notas e conteúdos programáticos das disciplinas.</p>
@@ -118,7 +118,7 @@ const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
           {modulos.map((modulo) => {
             if (modulo.disciplinas.length === 0) return null;
             return (
-              <div key={modulo.id} className="animate-fadeIn">
+              <div key={modulo.id} className="">
                 <div className="flex items-center gap-3 mb-5 px-2">
                   <div className="p-2 bg-slate-200/50 text-slate-500 rounded-lg">
                     <Layers size={16} />

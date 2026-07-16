@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/
 import { AcademicMovementType, academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAsaasService } from '../asaas';
+import { gestaoQueryKeys } from '../../../gestao.query-keys';
 
 type MutationSuccess<TData, TVariables> = NonNullable<UseMutationOptions<TData, Error, TVariables>['onSuccess']>;
 type MutationError<TVariables> = NonNullable<UseMutationOptions<unknown, Error, TVariables>['onError']>;
@@ -12,6 +13,9 @@ export interface EnrollInput {
   valorMatricula: number;
   valorParcela: number;
   valorRematricula: number;
+  descontoPontualidade: number;
+  jurosAtraso: number;
+  multaAtraso: number;
   dataVencimentoMatricula: string;
   diaVencimento: number;
   financeiro_herdado?: boolean;
@@ -50,7 +54,8 @@ export const useTurmaAcademicInvalidation = (turmaId: string) => {
   return useCallback(async (extraTurmaId?: string) => {
     const invalidations = [
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
-      queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
       queryClient.invalidateQueries({ queryKey: ['diario-alunos', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['turma-financeiro', turmaId] }),
       queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),

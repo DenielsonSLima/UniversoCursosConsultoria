@@ -11,6 +11,9 @@ export interface MatricularAlunoComCobrancaInput {
   valorMatricula: number;
   valorParcela: number;
   valorRematricula: number;
+  descontoPontualidade?: number;
+  jurosAtraso?: number;
+  multaAtraso?: number;
   dataVencimentoMatricula: string;
   diaVencimento: number;
 }
@@ -37,6 +40,9 @@ export const turmaAsaasService = {
       valorMatricula: input.valorMatricula,
       valorParcela: input.valorParcela,
       valorRematricula: input.valorRematricula,
+      descontoPontualidade: input.descontoPontualidade,
+      jurosAtraso: input.jurosAtraso,
+      multaAtraso: input.multaAtraso,
       dataVencimentoMatricula: input.dataVencimentoMatricula,
       diaVencimento: input.diaVencimento,
     });

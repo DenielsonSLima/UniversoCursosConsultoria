@@ -9,7 +9,7 @@ interface ParceiroSelectionModalProps {
 }
 
 const ParceiroSelectionModal: React.FC<ParceiroSelectionModalProps> = ({ onSelect, onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001a33]/60 backdrop-blur-sm animate-fadeIn">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001a33]/60 backdrop-blur-sm ">
     <div className="relative bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl border border-slate-100">
       <button
         onClick={onClose}

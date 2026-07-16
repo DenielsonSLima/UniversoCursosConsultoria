@@ -67,7 +67,7 @@ const EstagioEvaluationPanel: React.FC<EstagioEvaluationPanelProps> = ({
   onFrequenciaChange,
   onPerfilAlunoChange,
 }) => (
-  <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8 animate-fadeIn">
+  <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-8 ">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
       <div className="flex items-center gap-4">
         <button

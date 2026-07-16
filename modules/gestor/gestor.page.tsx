@@ -68,6 +68,7 @@ import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
 import { loginService } from '../login/login.service';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
+import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -284,6 +285,11 @@ const GestorPage: React.FC = () => {
   const scopedPoloId = gestorScope.isGlobal
     ? currentPoloId
     : currentPoloId || gestorScope.activePoloId;
+  useGestorOperationalRealtime({
+    enabled: Boolean(profile) && !isAuthLoading,
+    poloId: scopedPoloId,
+    includeGlobalPartners: gestorScope.isGlobal,
+  });
   const canOpenModule = useCallback((moduleId: string) => {
     const rootModule = moduleId.startsWith('cadastros-')
       ? 'cadastros'

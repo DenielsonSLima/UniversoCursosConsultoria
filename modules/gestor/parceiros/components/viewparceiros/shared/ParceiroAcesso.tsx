@@ -57,7 +57,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({ parceiroId, email, tipo
   })();
   
   return (
-    <div className="space-y-8 animate-fadeIn max-w-3xl">
+    <div className="space-y-8  max-w-3xl">
       <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
             <KeyRound size={24} />

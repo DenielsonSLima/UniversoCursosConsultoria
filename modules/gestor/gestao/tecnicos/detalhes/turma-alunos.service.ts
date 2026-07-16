@@ -15,12 +15,26 @@ export interface AvailableStudent {
   responsavel_telefone?: string | null;
   responsavel_email?: string | null;
   responsavel_financeiro?: boolean | null;
+  situacao_ensino_medio?: string | null;
+  serie_ensino_medio_atual?: number | null;
+  escola_ensino_medio?: string | null;
+  ano_conclusao_ensino_medio?: number | string | null;
+  ano_previsto_conclusao_ensino_medio?: number | null;
 }
 
 export interface TurmaFinanceiroMatriculaConfig {
   valorMatricula: number;
   valorRematricula: number;
   valorParcela: number;
+  descontoPontualidade: number;
+  jurosAtraso: number;
+  multaAtraso: number;
+  aplicarDescontoMatricula: boolean;
+  aplicarMultaJurosMatricula: boolean;
+  aplicarDescontoMensalidade: boolean;
+  aplicarMultaJurosMensalidade: boolean;
+  aplicarDescontoRematricula: boolean;
+  aplicarMultaJurosRematricula: boolean;
   diaVencimento: number;
   qtdParcelas: number;
   origemFinanceira: 'LEGADO' | 'NORMAL';
@@ -89,7 +103,7 @@ export const turmaAlunosService = {
 
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro')
+      .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro, situacao_ensino_medio, serie_ensino_medio_atual, escola_ensino_medio, ano_conclusao_ensino_medio, ano_previsto_conclusao_ensino_medio')
       .eq('tipo', 'Aluno')
       .eq('status', 'ATIVO')
       .or(searchFilters.join(','))
@@ -103,7 +117,7 @@ export const turmaAlunosService = {
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('valor_matricula, valor_rematricula, valor_parcela, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
+      .select('valor_matricula, valor_rematricula, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
       .eq('id', turmaId)
       .single();
 
@@ -113,6 +127,15 @@ export const turmaAlunosService = {
       valorMatricula: Number(data.valor_matricula || 0),
       valorRematricula: Number(data.valor_rematricula || 0),
       valorParcela: Number(data.valor_parcela || 0),
+      descontoPontualidade: Number(data.desconto_pontualidade || 0),
+      jurosAtraso: Number(data.juros_atraso || 0),
+      multaAtraso: Number(data.multa_atraso || 0),
+      aplicarDescontoMatricula: data.aplicar_desconto_matricula === true,
+      aplicarMultaJurosMatricula: data.aplicar_multa_juros_matricula !== false,
+      aplicarDescontoMensalidade: data.aplicar_desconto_mensalidade !== false,
+      aplicarMultaJurosMensalidade: data.aplicar_multa_juros_mensalidade !== false,
+      aplicarDescontoRematricula: data.aplicar_desconto_rematricula !== false,
+      aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula !== false,
       diaVencimento: Number(data.dia_vencimento_padrao || 10),
       qtdParcelas: Number(data.qtd_parcelas || 11),
       origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),

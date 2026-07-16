@@ -228,7 +228,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   }
 
   return (
-    <div className="animate-fadeIn max-w-[1400px] mx-auto">
+    <div className=" max-w-[1400px] mx-auto">
       <DiarioClasseHeader
         disciplina={disciplina}
         moduloNome={moduloNome}

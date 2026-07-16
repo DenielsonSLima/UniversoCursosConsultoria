@@ -29,7 +29,7 @@ const EstagioStudentsPanel: React.FC<EstagioStudentsPanelProps> = ({
   showVaccineDetails = true,
   onStartEvaluation,
 }) => (
-  <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 animate-fadeIn">
+  <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-slate-100 ">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-100 pb-6">
       <div className="flex items-center gap-4">
         <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl">

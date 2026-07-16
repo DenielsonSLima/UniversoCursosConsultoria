@@ -61,7 +61,6 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     onSuccess: (updated) => {
       queryClient.setQueryData(['parceiro', alunoData.id], updated);
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
       toast.success('Aluno atualizado', `${updated.nome || alunoData.nome} teve os dados salvos com sucesso.`, {
         avatarUrl: updated.foto || alunoData.foto,
         avatarName: updated.nome || alunoData.nome,
@@ -171,7 +170,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
       </div>
 
       {/* Conteúdo com Animação Isolada */}
-      <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] animate-fadeIn">
+      <div className="max-w-5xl mx-auto bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[600px] ">
         {activeTab === 'dados' && (
             <ParceiroAlunoDados 
                 aluno={alunoData} 

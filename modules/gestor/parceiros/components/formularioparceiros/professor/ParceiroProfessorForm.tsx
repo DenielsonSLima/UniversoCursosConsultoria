@@ -10,6 +10,7 @@ import {
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
+import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 
 interface ParceiroProfessorFormProps {
   onCancel?: () => void;
@@ -81,6 +82,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
     cpf: '',
     dataNascimento: '',
     sexo: '',
+    racaCor: '',
     rg: '',
     orgaoEmissor: '',
 
@@ -203,7 +205,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
   const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
@@ -250,7 +252,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
       <form onSubmit={handleSubmit}>
         {/* ══════════════ STEP 1: DADOS PESSOAIS ══════════════ */}
         {currentStep === 1 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-purple-600 border-b border-slate-100 pb-2 mb-5">
               <User size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Identificação</h4>
@@ -406,6 +408,14 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
                 </select>
               </div>
 
+              <div>
+                <label className={labelCls}>Raça/Cor</label>
+                <select name="racaCor" value={formData.racaCor} onChange={handleChange} className={inputCls}>
+                  <option value="">Selecione...</option>
+                  {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </div>
+
               <div className="md:col-span-2">
                 <label className={labelCls}>RG</label>
                 <input type="text" name="rg" value={formData.rg} onChange={handleChange}
@@ -423,7 +433,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
         {/* ══════════════ STEP 2: FORMAÇÃO ══════════════ */}
         {currentStep === 2 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-indigo-600 border-b border-slate-100 pb-2 mb-5">
               <GraduationCap size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Formação Acadêmica & Registro Profissional</h4>
@@ -506,7 +516,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
         {/* ══════════════ STEP 3: FINANCEIRO ══════════════ */}
         {currentStep === 3 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-emerald-600 border-b border-slate-100 pb-2 mb-5">
               <DollarSign size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Tipo de Vínculo & Dados para Pagamento</h4>
@@ -594,7 +604,7 @@ const ParceiroProfessorForm: React.FC<ParceiroProfessorFormProps> = ({ onCancel,
 
         {/* ══════════════ STEP 4: ENDEREÇO & CONTATO ══════════════ */}
         {currentStep === 4 && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 ">
             <div className="flex items-center gap-2 text-violet-600 border-b border-slate-100 pb-2 mb-5">
               <MapPin size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>

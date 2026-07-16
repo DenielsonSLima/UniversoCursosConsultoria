@@ -132,7 +132,7 @@ const ParceiroDocumentosPage: React.FC = () => {
   const alunosRegulares = totalAlunos - alunosComPendencias;
 
   return (
-    <div className="animate-fadeIn pb-12">
+    <div className=" pb-12">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
         <div>
@@ -304,7 +304,7 @@ const ParceiroDocumentosPage: React.FC = () => {
 
                   {/* Expanded Checklist */}
                   {isExpanded && (
-                    <div className="bg-slate-50/50 p-8 border-t border-slate-100 animate-fadeIn space-y-6">
+                    <div className="bg-slate-50/50 p-8 border-t border-slate-100  space-y-6">
                       <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
                         <h5 className="text-xs font-black text-[#001a33] uppercase tracking-wider">Documentos Obrigatórios</h5>
                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Histórico de envio de arquivos</span>

@@ -252,7 +252,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                 checked={isExtraClasse}
                 onChange={(event) => onExtraClasseChange(event.target.checked)}
               />
-              <ClipboardCheck size={14} /> Extra-classe
+              <ClipboardCheck size={14} /> {isExtraClasse ? 'Extra-classe ativa' : 'Marcar extra-classe'}
             </label>
             <input
               type="text"

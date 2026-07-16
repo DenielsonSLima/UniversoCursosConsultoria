@@ -539,7 +539,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   };
 
   return (
-    <div className="animate-fadeIn min-h-screen pb-20">
+    <div className=" min-h-screen pb-20">
       <div className="-mx-8 -mt-8 mb-8 border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">

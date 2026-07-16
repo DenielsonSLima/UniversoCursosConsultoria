@@ -83,6 +83,11 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               nome
             )
           ),
+          matriculas!left(
+            desconto_pontualidade_individual,
+            juros_atraso_individual,
+            multa_atraso_individual
+          ),
           parceiros!left(nome, cpf_cnpj)
         `)
         .eq('cliente_id', alunoId)
@@ -207,11 +212,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const getFinancePolicy = (inst: any, modality: string) => {
     const turma = getInstallmentTurma(inst) || {};
+    const matricula = Array.isArray(inst.matriculas) ? inst.matriculas[0] : inst.matriculas;
     const type = String(inst.tipo_lancamento || '').toUpperCase();
     const description = String(inst.descricao || '').toLowerCase();
-    const discount = toNumber(turma.desconto_pontualidade, 0);
-    const interestPercent = toNumber(turma.juros_atraso, 0);
-    const lateFee = toNumber(turma.multa_atraso, 0);
+    const discount = toNumber(matricula?.desconto_pontualidade_individual ?? turma.desconto_pontualidade, 0);
+    const interestPercent = toNumber(matricula?.juros_atraso_individual ?? turma.juros_atraso, 0);
+    const lateFee = toNumber(matricula?.multa_atraso_individual ?? turma.multa_atraso, 0);
 
     const isMatricula = type === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula');
     const isRematricula = type === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula');

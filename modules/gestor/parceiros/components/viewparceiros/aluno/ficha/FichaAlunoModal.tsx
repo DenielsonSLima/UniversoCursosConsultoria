@@ -162,7 +162,7 @@ const FichaAlunoModal: React.FC<FichaAlunoModalProps> = ({ aluno, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm ">
       {/* Container principal do modal */}
       <div className="bg-slate-100 w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slideUp">
         

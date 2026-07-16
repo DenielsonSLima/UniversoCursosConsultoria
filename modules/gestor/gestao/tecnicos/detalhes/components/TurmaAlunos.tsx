@@ -36,11 +36,14 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
   const [showMatricularModal, setShowMatricularModal] = useState(false);
   const [pendingEnrollment, setPendingEnrollment] = useState<any>(null);
-  const [enrollmentStep, setEnrollmentStep] = useState<EnrollmentStep>('PREVIEW');
+  const [enrollmentStep, setEnrollmentStep] = useState<EnrollmentStep>('MATRICULA');
   const [enrollmentFinance, setEnrollmentFinance] = useState<EnrollmentFinance>({
     valorMatricula: turma.valorMatricula || 0,
     valorParcela: turma.valorParcela || 0,
     valorRematricula: turma.valorRematricula || 0,
+    descontoPontualidade: turma.descontoPontualidade || 0,
+    jurosAtraso: turma.jurosAtraso || 0,
+    multaAtraso: turma.multaAtraso || 0,
     dataVencimentoMatricula: getMaceioIsoDate(),
     diaVencimento: 10,
   });
@@ -94,7 +97,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       await invalidateAcademicData();
       setShowMatricularModal(false);
       setPendingEnrollment(null);
-      setEnrollmentStep('PREVIEW');
+      setEnrollmentStep('MATRICULA');
       setSearchTerm('');
     if (result.asaasSynced) {
       toast.success(
@@ -150,6 +153,9 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         valorMatricula: defaults.valorMatricula,
         valorParcela: defaults.valorParcela,
         valorRematricula: defaults.valorRematricula,
+        descontoPontualidade: defaults.descontoPontualidade,
+        jurosAtraso: defaults.jurosAtraso,
+        multaAtraso: defaults.multaAtraso,
         dataVencimentoMatricula: getMaceioIsoDate(),
         diaVencimento: defaults.diaVencimento,
       });
@@ -159,13 +165,13 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         gerar_cobranca_futura: defaults.gerarCobrancasFuturas ?? null,
         sincronizar_asaas: defaults.sincronizarAsaasFuturo ?? true,
       });
-      setEnrollmentStep('PREVIEW');
+      setEnrollmentStep('MATRICULA');
       setPendingEnrollment(student);
     };
 
   const closeEnrollmentConfirmation = () => {
     setPendingEnrollment(null);
-    setEnrollmentStep('PREVIEW');
+    setEnrollmentStep('MATRICULA');
   };
   const updateEnrollmentFinance = (field: keyof typeof enrollmentFinance, value: string) => {
     setEnrollmentFinance((current) => ({
@@ -191,6 +197,25 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     }
     if (enrollmentFlags.gerar_cobranca_futura && enrollmentFinance.valorParcela <= 0) {
       toast.error('Valor obrigatório', 'Informe o valor da mensalidade para gerar cobranças futuras.');
+      return;
+    }
+    if (enrollmentFinance.jurosAtraso < 0 || enrollmentFinance.jurosAtraso > 100) {
+      toast.error('Juros inválidos', 'Informe juros mensais entre 0% e 100%.');
+      return;
+    }
+    const descontoInvalido = (
+      (turmaFinanceiroConfig.aplicarDescontoMatricula
+        && enrollmentFinance.valorMatricula > 0
+        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorMatricula)
+      || (turmaFinanceiroConfig.aplicarDescontoMensalidade
+        && enrollmentFinance.valorParcela > 0
+        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorParcela)
+      || (turmaFinanceiroConfig.aplicarDescontoRematricula
+        && enrollmentFinance.valorRematricula > 0
+        && enrollmentFinance.descontoPontualidade >= enrollmentFinance.valorRematricula)
+    );
+    if (enrollmentFinance.descontoPontualidade > 0 && descontoInvalido) {
+      toast.error('Desconto inválido', 'O desconto deve ser menor que cada cobrança em que ele será aplicado.');
       return;
     }
     enrollMutation.mutate({
@@ -277,7 +302,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <TurmaAlunosHeader totalStudents={students.length} onEnroll={openEnrollmentSearch} canEnroll={canEnroll} />
 
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">

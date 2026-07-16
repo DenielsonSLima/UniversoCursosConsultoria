@@ -9,7 +9,7 @@ interface ContactStepProps extends AlunoFormStepProps {
 }
 
 const ParceiroAlunoFormStepContact: React.FC<ContactStepProps> = ({ formData, onCepBlur, onChange }) => (
-  <div className="space-y-6 animate-fadeIn">
+  <div className="space-y-6 ">
     <div className={sectionHeaderCls('violet')}>
       <MapPin size={16} />
       <h4 className="text-xs font-black uppercase tracking-wider">Endereço Completo</h4>

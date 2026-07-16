@@ -14,6 +14,11 @@ const normalize = (value: unknown) => String(value || "").toUpperCase();
 const RECEIVABLE_SELECT = `
   *,
   parceiros(*),
+  matriculas(
+    desconto_pontualidade_individual,
+    juros_atraso_individual,
+    multa_atraso_individual
+  ),
   turmas(
     id,
     nome,
@@ -113,10 +118,17 @@ export const createTecnicoInstallmentService = (
   const buildInstallmentPayload = (customerId: string, receivables: any[]) => {
     const first = receivables[0];
     const turma = one(first?.turmas);
+    const matricula = one(first?.matriculas);
     const value = roundMoney(toNumber(first?.valor));
-    const discountValue = roundMoney(toNumber(turma?.desconto_pontualidade));
-    const interestPercent = toNumber(turma?.juros_atraso);
-    const fineValue = roundMoney(toNumber(turma?.multa_atraso));
+    const discountValue = roundMoney(toNumber(
+      matricula?.desconto_pontualidade_individual ?? turma?.desconto_pontualidade
+    ));
+    const interestPercent = toNumber(
+      matricula?.juros_atraso_individual ?? turma?.juros_atraso
+    );
+    const fineValue = roundMoney(toNumber(
+      matricula?.multa_atraso_individual ?? turma?.multa_atraso
+    ));
     const discountEnabled = turma?.aplicar_desconto_mensalidade !== false;
     const penaltyEnabled = turma?.aplicar_multa_juros_mensalidade !== false;
     const discountApplies = discountEnabled && discountValue > 0 && discountValue < value;

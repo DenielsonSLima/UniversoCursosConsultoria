@@ -14,7 +14,7 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm ">
       <div className={`bg-white rounded-3xl shadow-xl w-full flex flex-col overflow-hidden transition-all duration-300 ${activeView === 'preview-pdf' ? 'max-w-4xl h-[85vh]' : 'max-w-md'}`}>
         
         {/* Header */}
@@ -30,7 +30,7 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
         {/* Content */}
         <div className="flex-1 p-6 overflow-y-auto">
           {activeView === 'opcoes' ? (
-            <div className="space-y-4 animate-fadeIn">
+            <div className="space-y-4 ">
               <p className="text-sm font-medium text-slate-500 mb-6">
                 Escolha o formato desejado para exportar a lista de parceiros baseada nos filtros atuais.
               </p>
@@ -64,7 +64,7 @@ const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({ isOpen, onC
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col animate-fadeIn">
+            <div className="h-full flex flex-col ">
               <div className="bg-slate-200 flex-1 rounded-2xl overflow-y-auto border border-slate-300 p-4 shadow-inner">
                   <div className="bg-white mx-auto shadow-md min-h-[900px] w-full max-w-[750px] p-10 relative print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 flex flex-col" id="print-area">
                      <PdfTemplate filtrosAtuais={filtrosAtuais} />

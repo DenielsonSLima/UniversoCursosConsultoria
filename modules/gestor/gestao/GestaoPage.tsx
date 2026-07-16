@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { BarChart3, Briefcase, Award, MonitorPlay, Zap } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
 import GestaoResumo from './resumo/GestaoResumo';
 import GestaoTecnicos from './tecnicos/GestaoTecnicos';
 import GestaoLivres from './livres/GestaoLivres';
@@ -21,7 +19,6 @@ interface GestaoPageProps {
 const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop }) => {
   const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!isMatriz && activeTab === 'ead') {
@@ -34,25 +31,6 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
     onRequestScrollTop?.();
   }, [activeTab, isDetailView, onRequestScrollTop]);
 
-  useEffect(() => {
-    const summaryScope = poloId || 'sem-polo';
-    const invalidateGestaoResumo = () => {
-      queryClient.invalidateQueries({ queryKey: ['gestao-resumo-kpis', summaryScope] });
-    };
-
-    const channel = supabase
-      .channel('gestao-kpis-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'turmas' }, invalidateGestaoResumo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matriculas' }, invalidateGestaoResumo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_online' }, invalidateGestaoResumo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cursos' }, invalidateGestaoResumo)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [poloId, queryClient]);
-
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={18} /> },
     { id: 'tecnicos', label: 'Técnicos', icon: <Briefcase size={18} /> },
@@ -62,7 +40,7 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
   ] as const;
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn">
+    <div className="max-w-7xl mx-auto">
       {/* Navegação Geral do Módulo - Oculta apenas se estiver em Detalhes */}
       {!isDetailView && (
         <div className="mb-8">

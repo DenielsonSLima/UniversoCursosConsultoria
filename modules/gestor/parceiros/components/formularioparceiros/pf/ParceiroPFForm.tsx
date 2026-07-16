@@ -146,7 +146,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
   const labelCls = 'block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5 ml-0.5';
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
@@ -193,7 +193,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
       <form onSubmit={handleSubmit}>
         {/* ══════════════ STEP 1: DADOS PESSOAIS ══════════════ */}
         {currentStep === 1 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-amber-600 border-b border-slate-100 pb-2 mb-5">
               <User size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Contato</h4>
@@ -260,7 +260,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
 
         {/* ══════════════ STEP 2: ENDEREÇO ══════════════ */}
         {currentStep === 2 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-amber-600 border-b border-slate-100 pb-2 mb-5">
               <MapPin size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Endereço</h4>
@@ -316,7 +316,7 @@ const ParceiroPFForm: React.FC<ParceiroPFFormProps> = ({ onCancel, onSave }) => 
 
         {/* ══════════════ STEP 3: SERVIÇO & PAGAMENTO ══════════════ */}
         {currentStep === 3 && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-5 ">
             <div className="flex items-center gap-2 text-amber-600 border-b border-slate-100 pb-2 mb-5">
               <Briefcase size={16} />
               <h4 className="text-xs font-black uppercase tracking-wider">Tipo de Serviço & Dados para Pagamento</h4>

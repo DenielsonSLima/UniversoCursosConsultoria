@@ -9,6 +9,7 @@ export interface AlunoFormData {
   cpf: string;
   dataNascimento: string;
   sexo: string;
+  racaCor: string;
   estadoCivil: string;
   nacionalidade: string;
   naturalidade: string;
@@ -19,6 +20,12 @@ export interface AlunoFormData {
   orgaoEmissor: string;
   rgUfEmissao: string;
   rgDataEmissao: string;
+  certidaoTipo: string;
+  certidaoModelo: string;
+  certidaoMatricula: string;
+  certidaoTermo: string;
+  certidaoLivro: string;
+  certidaoFolha: string;
   tituloEleitor: string;
   reservista: string;
   nomeMae: string;
@@ -32,6 +39,10 @@ export interface AlunoFormData {
   escolaridadeAnterior: string;
   instituicaoOrigem: string;
   anoConclusaoEnsinoMedio: string;
+  situacaoEnsinoMedio: string;
+  serieEnsinoMedioAtual: string;
+  escolaEnsinoMedio: string;
+  anoPrevisaoConclusaoEnsinoMedio: string;
   cep: string;
   endereco: string;
   numero: string;

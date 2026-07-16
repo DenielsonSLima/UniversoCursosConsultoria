@@ -146,7 +146,7 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
   };
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className=" space-y-6">
       <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] tracking-tight uppercase">Checklist de Documentação</h3>

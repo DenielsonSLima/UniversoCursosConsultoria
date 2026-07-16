@@ -10,6 +10,7 @@ import {
   sectionHeaderCls,
 } from './parceiro-aluno-form.constants';
 import type { AlunoFormStepProps, PoloOption } from './parceiro-aluno-form.types';
+import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 
 interface PersonalStepProps extends AlunoFormStepProps {
   polos: PoloOption[];
@@ -26,7 +27,7 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
   onPhotoUpload,
   onRemovePhoto,
 }) => (
-  <div className="space-y-5 animate-fadeIn">
+  <div className="space-y-5 ">
     <div className={sectionHeaderCls('blue')}>
       <User size={16} />
       <h4 className="text-xs font-black uppercase tracking-wider">Dados Pessoais & Vínculo</h4>
@@ -123,6 +124,14 @@ const ParceiroAlunoFormStepPersonal: React.FC<PersonalStepProps> = ({
           <option value="FEMININO">FEMININO</option>
           <option value="NÃO-BINÁRIO">NÃO-BINÁRIO</option>
           <option value="PREFIRO NÃO INFORMAR">PREFIRO NÃO INFORMAR</option>
+        </select>
+      </div>
+
+      <div>
+        <label className={LABEL_CLS}>Raça/Cor</label>
+        <select name="racaCor" value={formData.racaCor} onChange={onChange} className={INPUT_CLS}>
+          <option value="">Selecione...</option>
+          {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
       </div>
 

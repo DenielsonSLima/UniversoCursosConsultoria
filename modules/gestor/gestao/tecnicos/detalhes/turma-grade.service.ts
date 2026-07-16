@@ -249,7 +249,7 @@ export const turmaGradeService = {
         perguntas,
         carga_horaria_compensacao: input.horas,
         prazo_entrega: input.prazoEntrega || null,
-        status: 'PUBLICADA',
+        status: input.status || 'PUBLICADA',
         criado_por_tipo: input.criadoPorTipo || 'GESTOR',
         criado_por_id: input.criadoPorId || null,
       })
@@ -269,11 +269,13 @@ export const turmaGradeService = {
   },
 
   async removeAula(aulaId: string) {
-    const { error } = await supabase
-      .from('aulas_turma')
-      .delete()
-      .eq('id', aulaId);
+    const { data, error } = await supabase.rpc('remove_turma_aula_planejada', {
+      p_aula_id: aulaId,
+    });
 
     if (error) throw error;
+    if (data !== true) {
+      throw new Error('A aula não foi encontrada ou já havia sido removida.');
+    }
   },
 };

@@ -7,6 +7,24 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const pendingKeys = new Map<string, readonly unknown[]>();
+    const scheduleRefresh = (...queryKeys: (readonly unknown[])[]) => (payload: any) => {
+      const row = Object.keys(payload.new || {}).length > 0 ? payload.new : payload.old;
+      if (row?.disciplina_id && row.disciplina_id !== disciplinaId) return;
+      queryKeys.forEach((queryKey) => {
+        pendingKeys.set(JSON.stringify(queryKey), queryKey);
+        void queryClient.invalidateQueries({ queryKey, refetchType: 'none' });
+      });
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        pendingKeys.forEach((queryKey) => {
+          void queryClient.refetchQueries({ queryKey, exact: true, type: 'active', stale: true });
+        });
+        pendingKeys.clear();
+      }, 250);
+    };
+
     const channel = supabase
       .channel(`diario-${turmaId}-${disciplinaId}`)
       .on(
@@ -17,10 +35,10 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           table: 'diario_frequencia',
           filter: `turma_id=eq.${turmaId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: diarioClasseKeys.frequencia(turmaId, disciplinaId) });
-          queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) });
-        },
+        scheduleRefresh(
+          diarioClasseKeys.frequencia(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
       )
       .on(
         'postgres_changes',
@@ -30,9 +48,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           table: 'diario_notas',
           filter: `turma_id=eq.${turmaId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) });
-        },
+        scheduleRefresh(diarioClasseKeys.resultados(turmaId, disciplinaId)),
       )
       .on(
         'postgres_changes',
@@ -42,9 +58,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           table: 'diario_praticas',
           filter: `turma_id=eq.${turmaId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) });
-        },
+        scheduleRefresh(diarioClasseKeys.praticas(turmaId, disciplinaId)),
       )
       .on(
         'postgres_changes',
@@ -54,13 +68,12 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           table: 'diario_observacoes',
           filter: `turma_id=eq.${turmaId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: diarioClasseKeys.observacoes(turmaId, disciplinaId) });
-        },
+        scheduleRefresh(diarioClasseKeys.observacoes(turmaId, disciplinaId)),
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [turmaId, disciplinaId, queryClient]);

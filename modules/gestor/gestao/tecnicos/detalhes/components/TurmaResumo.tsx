@@ -89,7 +89,7 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 ">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {cards.map((card) => {
           const Icon = card.icon;

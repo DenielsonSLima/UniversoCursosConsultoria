@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Edit2, Camera, Loader2, User } from 'lucide-react';
 import { parceirosService } from '../../../parceiros.service';
 import { formatCpf } from '../../../../../../lib/documentFormatters';
+import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 
 interface ParceiroProfessorDadosProps {
   data: any;
@@ -82,7 +83,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
   );
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       {/* Dados Pessoais */}
       <section className="mb-12">
         <div className="flex justify-between items-center mb-6">
@@ -164,6 +165,13 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">Telefone</label>
                     <input type="text" name="telefone" value={formData.telefone || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
                 </div>
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Raça/Cor</label>
+                    <select name="racaCor" value={formData.racaCor || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none">
+                      <option value="">Selecione...</option>
+                      {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                </div>
                  <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail</label>
                     <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-500 outline-none" />
@@ -175,6 +183,7 @@ const ParceiroProfessorDados: React.FC<ParceiroProfessorDadosProps> = ({ data, o
                 <DisplayField label="Nome Social" value={formData.nomeSocial || formData.nome} />
                 <DisplayField label="CPF" value={formatCpf(formData.cpf)} />
                 <DisplayField label="Telefone" value={formData.telefone} />
+                <DisplayField label="Raça/Cor" value={formData.racaCor} />
                 <DisplayField label="E-mail" value={formData.email} />
               </div>
             )}

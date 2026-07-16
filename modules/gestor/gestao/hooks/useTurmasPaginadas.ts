@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 import { gestaoService } from '../gestao.service';
 import { StatusTurma, Turma, TurmasSortBy } from '../gestao.types';
 
@@ -10,47 +12,49 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
   const [dataInicial, setDataInicial] = useState('');
   const [dataFinal, setDataFinal] = useState('');
   const [sortBy, setSortBy] = useState<TurmasSortBy>('NOME_ASC');
-  const [applied, setApplied] = useState({ dataInicial: '', dataFinal: '' });
-  const [page, setPage] = useState(1);
-  const [turmas, setTurmas] = useState<Turma[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [applied, setApplied] = useState({ search: '', dataInicial: '', dataFinal: '' });
+  const scopeKey = `${modalidade}:${poloId || 'todos'}`;
+  const [pageState, setPageState] = useState({ scopeKey, page: 1 });
+  const page = pageState.scopeKey === scopeKey ? pageState.page : 1;
+  const setPage = (next: number) => setPageState({ scopeKey, page: next });
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await gestaoService.getTurmasPage({
-        modalidade, poloId, status, sortBy, page, pageSize: PAGE_SIZE, search, ...applied,
-      });
-      setTurmas(result.data);
-      setTotal(result.total);
-    } catch (rawError) {
-      const nextError = rawError instanceof Error ? rawError : new Error('Não foi possível carregar as turmas.');
-      setTurmas([]);
-      setTotal(0);
-      setError(nextError);
-      throw nextError;
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filters = useMemo(() => ({
+    modalidade,
+    poloId,
+    status,
+    sortBy,
+    page,
+    pageSize: PAGE_SIZE,
+    ...applied,
+  }), [applied, modalidade, page, poloId, sortBy, status]);
 
-  useEffect(() => { void load().catch(() => undefined); }, [modalidade, poloId, status, sortBy, page, search, applied]);
-  useEffect(() => { setPage(1); }, [modalidade, poloId]);
+  const query = useQuery({
+    queryKey: gestaoQueryKeys.classPage(filters),
+    queryFn: () => gestaoService.getTurmasPage(filters),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60_000,
+    placeholderData: keepPreviousData,
+  });
 
   const changeStatus = (next: StatusTurma) => { setStatus(next); setPage(1); };
   const changeSortBy = (next: TurmasSortBy) => { setSortBy(next); setPage(1); };
-  const changeSearch = (next: string) => { setSearch(next); setPage(1); };
+  const changeSearch = (next: string) => { setSearch(next); };
   const applyFilters = () => {
     setPage(1);
-    setApplied({ dataInicial, dataFinal });
+    setApplied({ search: search.trim(), dataInicial, dataFinal });
+  };
+
+  const reload = async () => {
+    const result = await query.refetch({ throwOnError: true });
+    return result.data;
   };
 
   return {
-    turmas, total, loading, error, page, pageSize: PAGE_SIZE, status, sortBy,
+    turmas: query.data?.data || [], total: query.data?.total || 0,
+    loading: query.isPending, refreshing: query.isFetching && !query.isPending,
+    error: query.error instanceof Error ? query.error : null,
+    page, pageSize: PAGE_SIZE, status, sortBy,
     search, dataInicial, dataFinal, setSearch: changeSearch, setDataInicial, setDataFinal,
-    setPage, changeStatus, changeSortBy, applyFilters, reload: load,
+    setPage, changeStatus, changeSortBy, applyFilters, reload,
   };
 };

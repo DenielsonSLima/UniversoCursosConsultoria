@@ -30,3 +30,6 @@ dist-ssr
 supabase/.temp
 .vercel
 .env*.local
+
+# Exportações administrativas com dados pessoais de alunos
+2024:2025/

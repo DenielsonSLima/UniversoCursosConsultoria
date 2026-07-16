@@ -273,7 +273,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   };
 
   return (
-    <div className="space-y-7 animate-fadeIn">
+    <div className="space-y-7 ">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
       <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>

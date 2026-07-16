@@ -70,7 +70,7 @@ const TurmaVacinas: React.FC<TurmaVacinasProps> = ({ turma }) => {
   const totalPendentes = Math.max(0, studentRows.length - totalLiberados);
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 ">
       <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">

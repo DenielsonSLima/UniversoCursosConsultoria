@@ -101,6 +101,14 @@
           -moz-osx-font-smoothing: grayscale;
           text-rendering: geometricPrecision;
         }
+
+        /* Agenda: preserva a fonte do portal, com rasterização mais nítida em telas Safari/WebKit. */
+        #root .agenda-typography,
+        #root .agenda-typography * {
+          -webkit-font-smoothing: auto;
+          -moz-osx-font-smoothing: auto;
+          text-rendering: optimizeLegibility;
+        }
         .animate-fadeIn {
             animation: fadeIn 0.3s ease-in-out;
         }

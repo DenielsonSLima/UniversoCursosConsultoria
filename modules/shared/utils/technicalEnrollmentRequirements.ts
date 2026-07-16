@@ -77,7 +77,13 @@ export const getTechnicalEnrollmentMissingFields = (profile: any): TechnicalEnro
         description: 'Selecione o 2º ou o 3º ano do Ensino Médio.',
       });
     }
-    if (!/^\d{4}$/.test(String(profile?.anoPrevisaoConclusaoEnsinoMedio ?? profile?.ano_previsao_conclusao_ensino_medio ?? ''))) {
+    if (!/^\d{4}$/.test(String(
+      profile?.anoPrevisaoConclusaoEnsinoMedio
+      ?? profile?.anoPrevistoConclusaoEnsinoMedio
+      ?? profile?.ano_previsao_conclusao_ensino_medio
+      ?? profile?.ano_previsto_conclusao_ensino_medio
+      ?? '',
+    ))) {
       missing.push({
         key: 'anoPrevisaoConclusaoEnsinoMedio',
         label: 'Previsão de conclusão',

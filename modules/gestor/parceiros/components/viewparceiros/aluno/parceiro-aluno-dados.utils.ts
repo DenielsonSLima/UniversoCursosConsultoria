@@ -1,6 +1,7 @@
 import { formatPhone, onlyDigits } from '../../../../../../lib/documentFormatters';
 import { TECHNICAL_DOCUMENT_TYPE_OPTIONS } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
+import { normalizeCertidaoMatricula } from '../../../utils/certidao-civil';
 
 export const DEFAULT_DOCUMENT_TYPE = 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO';
 
@@ -74,17 +75,36 @@ export const formatPhoneDisplay = (value?: string | null) => (value ? formatPhon
 export const normalizeAlunoFormData = (data: any) => {
   const normalized = uppercaseAlunoTextFields(data || {});
   const telefone = maskPhone(normalized.telefone || normalized.contato1);
+  const situacaoEnsinoMedio = normalized.situacaoEnsinoMedio
+    || (normalized.escolaridadeAnterior === 'CURSANDO ENSINO MÉDIO' ? 'CURSANDO' : '')
+    || (normalized.escolaridadeAnterior === 'ENSINO MÉDIO COMPLETO' ? 'CONCLUIDO' : '');
   return {
     ...normalized,
     cpf: maskCpf(normalized.cpf || normalized.cpf_cnpj),
     cep: maskCep(normalized.cep),
     dataNascimento: maskDate(normalized.dataNascimento),
+    racaCor: normalized.racaCor || '',
     rgDataEmissao: maskDate(normalized.rgDataEmissao),
     tipoDocumento: normalizeDocumentType(normalized.tipoDocumento),
+    certidaoTipo: normalized.certidaoTipo || '',
+    certidaoModelo: normalized.certidaoModelo || '',
+    certidaoMatricula: normalizeCertidaoMatricula(normalized.certidaoMatricula),
+    certidaoTermo: normalized.certidaoTermo || '',
+    certidaoLivro: normalized.certidaoLivro || '',
+    certidaoFolha: normalized.certidaoFolha || '',
     telefone,
     contato1: telefone || maskPhone(normalized.contato1),
     contato2: maskPhone(normalized.contato2),
     responsavelCpf: maskCpf(normalized.responsavelCpf),
     responsavelTelefone: maskPhone(normalized.responsavelTelefone),
+    situacaoEnsinoMedio,
+    serieEnsinoMedioAtual: String(normalized.serieEnsinoMedioAtual || ''),
+    escolaEnsinoMedio: normalized.escolaEnsinoMedio || normalized.instituicaoOrigem || '',
+    anoConclusaoEnsinoMedio: String(normalized.anoConclusaoEnsinoMedio || ''),
+    anoPrevisaoConclusaoEnsinoMedio: String(
+      normalized.anoPrevisaoConclusaoEnsinoMedio
+      ?? normalized.anoPrevistoConclusaoEnsinoMedio
+      ?? '',
+    ),
   };
 };

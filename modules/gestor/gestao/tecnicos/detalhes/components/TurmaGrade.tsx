@@ -113,7 +113,11 @@ const TurmaGrade = ({
       setNewAulaHoras((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaData((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaExtraClasse((current) => ({ ...current, [input.disciplinaId]: false }));
-      toast.success('Atividade criada', 'A atividade extra-classe foi liberada para os alunos na aba Atividades.');
+      if (input.status === 'RASCUNHO') {
+        toast.success('Rascunho salvo', 'A atividade extra-classe poderá ser publicada quando a turma estiver em andamento.');
+      } else {
+        toast.success('Atividade criada', 'A atividade extra-classe foi liberada para os alunos na aba Atividades.');
+      }
     },
     (error) => {
       console.error('Erro ao adicionar atividade extra-classe:', error);
@@ -129,7 +133,10 @@ const TurmaGrade = ({
   );
   const removeAulaMutation = useRemoveTurmaAulaMutation(
     turma.id,
-    () => setAulaParaExcluir(null),
+    () => {
+      setAulaParaExcluir(null);
+      toast.success('Aula excluída', 'A aula e seus lançamentos associados foram removidos.');
+    },
     (error) => {
       console.error('Erro ao remover aula:', error);
       toast.error('Aula não excluída', 'Não consegui remover esta aula do planejamento. Tente novamente.');
@@ -219,6 +226,8 @@ const TurmaGrade = ({
     }
 
     if (newAulaExtraClasse[disciplinaId]) {
+      const turmaStatus = String(turma.status || '').toUpperCase();
+      const isPreparacao = turmaStatus === 'PLANEJADA' || turmaStatus === 'INSCRICOES_ABERTAS';
       await addAtividadeExtraClasseMutation.mutateAsync({
         disciplinaId,
         titulo,
@@ -226,6 +235,7 @@ const TurmaGrade = ({
         prazoEntrega: dataStr,
         texto: `Desenvolva uma resposta sobre o tema "${titulo}". Registre sua entrega no portal do aluno.`,
         criadoPorTipo: 'GESTOR',
+        status: isPreparacao ? 'RASCUNHO' : 'PUBLICADA',
       });
       return;
     }
@@ -257,7 +267,7 @@ const TurmaGrade = ({
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 ">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-bold text-[#001a33]">Grade Curricular & Corpo Docente</h3>
         <span className="text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-medium">
@@ -337,6 +347,7 @@ const TurmaGrade = ({
         <TurmaGradeDeleteAulaDialog
           onCancel={() => setAulaParaExcluir(null)}
           onConfirm={() => removeAulaMutation.mutate(aulaParaExcluir.aulaId)}
+          isDeleting={removeAulaMutation.isPending}
         />
       )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />

@@ -85,7 +85,7 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({ turma }) =>
   }
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
+    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden ">
       
       {/* Header da Lista */}
       <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">

@@ -20,6 +20,7 @@ import AcademicMovementsSection from './academic/AcademicMovementsSection';
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
 import ReceiveExternalTransferModal, { ExternalCreditDraft } from './academic/ReceiveExternalTransferModal';
+import { gestaoQueryKeys } from '../../../gestao.query-keys';
 
 interface TurmaAcademicoProps {
   turma: Turma;
@@ -82,7 +83,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turma.id) }),
-      queryClient.invalidateQueries({ queryKey: ['gestao-kpis'] }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
     ]);
   };
 
@@ -195,7 +197,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const canReceiveTransfer = turma.status === 'EM_ANDAMENTO';
 
   return (
-    <div className="space-y-7 animate-fadeIn">
+    <div className="space-y-7 ">
       <div className="rounded-[2rem] bg-[#001a33] p-6 text-white relative overflow-hidden">
         <div className="absolute inset-y-0 right-0 w-72 bg-blue-500/10 blur-3xl rounded-full" />
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-5">

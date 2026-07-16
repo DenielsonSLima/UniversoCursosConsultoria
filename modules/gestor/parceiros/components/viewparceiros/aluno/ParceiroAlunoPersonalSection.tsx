@@ -2,6 +2,7 @@ import type React from 'react';
 import { Camera, Loader2, User } from 'lucide-react';
 
 import { formatCpf } from '../../../../../../lib/documentFormatters';
+import { RACA_COR_OPTIONS } from '../../../utils/parceiros.constants';
 import ParceiroAlunoDisplayField from './ParceiroAlunoDisplayField';
 
 interface PersonalSectionProps {
@@ -97,6 +98,13 @@ const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
               </select>
             </div>
             <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Raça/Cor</label>
+              <select name="racaCor" value={formData.racaCor || ''} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none">
+                <option value="">Selecione...</option>
+                {RACA_COR_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase ml-1">Status Acadêmico</label>
               <select name="status" value={formData.status || 'ATIVO'} onChange={onChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold">
                 <option value="ATIVO">ATIVO</option>
@@ -114,6 +122,7 @@ const ParceiroAlunoPersonalSection: React.FC<PersonalSectionProps> = ({
             <ParceiroAlunoDisplayField label="CPF" value={formatCpf(formData.cpf)} />
             <ParceiroAlunoDisplayField label="Data de Nascimento" value={formData.dataNascimento} />
             <ParceiroAlunoDisplayField label="Sexo" value={formData.sexo} />
+            <ParceiroAlunoDisplayField label="Raça/Cor" value={formData.racaCor} />
             <ParceiroAlunoDisplayField label="Status Acadêmico" value={formData.status || 'ATIVO'} />
           </>
         )}

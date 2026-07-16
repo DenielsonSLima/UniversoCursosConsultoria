@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, MonitorPlay, Archive, Activity } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
@@ -10,27 +10,26 @@ import { useTurmasPaginadas } from '../hooks/useTurmasPaginadas';
 import { Turma } from '../gestao.types';
 import TurmaEadDetalhes from './detalhes/TurmaEadDetalhes';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
+import { useGestaoCursos } from '../hooks/useGestaoCursos';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 
 interface GestaoEadProps {
   onToggleDetails?: (isOpen: boolean) => void;
 }
 
 const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
-  const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]); // Mock temporário
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const queryClient = useQueryClient();
 
   const list = useTurmasPaginadas('EAD');
-
-  useEffect(() => {
-    gestaoService.getCursosByModalidade('EAD').then(setCursosDisponiveis);
-  }, []);
+  const cursosQuery = useGestaoCursos('EAD');
+  const cursosDisponiveis = cursosQuery.data || [];
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
     await invalidateSiteTickerQueries(queryClient);
-    await list.reload();
+    await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('EAD') });
   };
 
   const openTurma = (turma: Turma) => {
@@ -48,7 +47,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-purple-50/50 p-6 rounded-[2.5rem] border border-purple-100">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl shadow-sm">
@@ -62,7 +61,8 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/20"
+          disabled={cursosQuery.isPending || cursosQuery.isError}
+          className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
         </button>

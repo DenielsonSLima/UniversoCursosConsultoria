@@ -38,7 +38,7 @@ const AtividadesExtraClasse: React.FC<AtividadesExtraClasseProps> = (props) => {
   const rascunhosCount = atividades.filter((atividade) => atividade.status === 'RASCUNHO').length;
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 ">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h3 className="text-lg font-black text-[#001a33]">Atividades Extra-classe</h3>

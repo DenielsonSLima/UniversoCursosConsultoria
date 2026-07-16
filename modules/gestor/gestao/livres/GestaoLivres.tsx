@@ -11,6 +11,8 @@ import TurmasFilters from '../components/TurmasFilters';
 import { useGestaoLivresTurmas } from './hooks/useGestaoLivresTurmas';
 import ConfirmModal from '../../components/ConfirmModal';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
+import { useGestaoCursos } from '../hooks/useGestaoCursos';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 
 interface GestaoLivresProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -19,7 +21,6 @@ interface GestaoLivresProps {
 }
 
 const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
-  const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -27,17 +28,18 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
   const queryClient = useQueryClient();
 
   const list = useGestaoLivresTurmas(poloId);
+  const cursosQuery = useGestaoCursos('LIVRE');
+  const cursosDisponiveis = cursosQuery.data || [];
 
   useEffect(() => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
-    gestaoService.getCursosByModalidade('LIVRE').then(setCursosDisponiveis);
-  }, [poloId]);
+  }, [onToggleDetails, poloId]);
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
     await invalidateSiteTickerQueries(queryClient);
-    await list.reload();
+    await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('LIVRE') });
   };
 
   const handleSelectTurma = (turma: Turma) => {
@@ -56,7 +58,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
       await invalidateSiteTickerQueries(queryClient);
-      await list.reload();
+      await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('LIVRE') });
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');
     } finally {
@@ -75,7 +77,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-amber-50/50 p-6 rounded-[2.5rem] border border-amber-100">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl shadow-sm">
@@ -89,7 +91,8 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-amber-500 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-amber-600 transition-colors shadow-lg shadow-amber-900/20"
+          disabled={cursosQuery.isPending || cursosQuery.isError}
+          className="flex items-center gap-2 bg-amber-500 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-amber-600 transition-colors shadow-lg shadow-amber-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
         </button>

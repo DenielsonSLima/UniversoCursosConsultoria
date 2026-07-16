@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Briefcase, Archive, Activity, CalendarClock, Megaphone } from 'lucide-react';
+import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
@@ -15,6 +15,8 @@ import ConfirmModal from '../../components/ConfirmModal';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import TechnicalDataError from './detalhes/components/TechnicalDataError';
+import { useGestaoCursos } from '../hooks/useGestaoCursos';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -23,7 +25,6 @@ interface GestaoTecnicosProps {
 }
 
 const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
-  const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -32,34 +33,26 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const queryClient = useQueryClient();
 
   const list = useTurmasPaginadas('TECNICO', poloId);
+  const cursosQuery = useGestaoCursos('TECNICO');
+  const cursosDisponiveis = cursosQuery.data || [];
 
   useEffect(() => {
-    let isMounted = true;
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
-    gestaoService
-      .getCursosByModalidade('TECNICO')
-      .then((cursos) => {
-        if (isMounted) setCursosDisponiveis(cursos);
-      })
-      .catch((error: any) => {
-        console.error('Erro ao carregar cursos técnicos:', error);
-        if (isMounted) {
-          setCursosDisponiveis([]);
-          toast.error('Cursos não carregados', error?.message || 'Não foi possível carregar os cursos técnicos.');
-        }
-      });
+  }, [onToggleDetails, poloId]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [poloId, toast]);
+  useEffect(() => {
+    if (!cursosQuery.error) return;
+    const error = cursosQuery.error as Error;
+    console.error('Erro ao carregar cursos técnicos:', error);
+    toast.error('Cursos não carregados', error.message || 'Não foi possível carregar os cursos técnicos.');
+  }, [cursosQuery.error, toast]);
 
   const handleCreate = async (data: any) => {
     const turma = await gestaoService.createTurma(data);
     await invalidateSiteTickerQueries(queryClient);
     try {
-      await list.reload();
+      await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') });
     } catch (error: any) {
       console.error('Turma criada, mas a lista não recarregou:', error);
       toast.error('Lista não atualizada', error?.message || 'A turma foi criada, mas a lista não recarregou automaticamente.');
@@ -75,9 +68,6 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   const handleCloseDetails = () => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
-    void list.reload().catch((error: any) => {
-      toast.error('Lista não atualizada', error?.message || 'Atualize a página para conferir a fase da turma.');
-    });
   };
 
   const handleDeleteTurma = async () => {
@@ -86,7 +76,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
       await invalidateSiteTickerQueries(queryClient);
-      await list.reload();
+      await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') });
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');
     } finally {
@@ -106,7 +96,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       {/* Sub-Header Específico */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-emerald-50/50 p-6 rounded-[2.5rem] border border-emerald-100">
         <div className="flex items-center gap-4">
@@ -119,10 +109,10 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
           </div>
         </div>
         
-        <button 
-          onClick={() => { if (!list.error) setIsModalOpen(true); }}
-          disabled={Boolean(list.error)}
-          title={list.error ? 'Recarregue a lista antes de criar uma turma.' : 'Abrir nova turma'}
+        <button
+          onClick={() => { if (!list.error && !cursosQuery.isError) setIsModalOpen(true); }}
+          disabled={Boolean(list.error || cursosQuery.isError || cursosQuery.isPending)}
+          title={list.error || cursosQuery.isError ? 'Recarregue os dados antes de criar uma turma.' : 'Abrir nova turma'}
           className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
@@ -132,14 +122,14 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       {/* Abas Internas */}
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
         <button
-          onClick={() => list.changeStatus('PLANEJADA')}
+          onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            list.status === 'PLANEJADA'
-              ? 'text-indigo-600 border-b-2 border-indigo-600'
-              : 'text-slate-400 hover:text-slate-600'
+            list.status === 'EM_ANDAMENTO'
+            ? 'text-emerald-600 border-b-2 border-emerald-600'
+            : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          <CalendarClock size={14} /> Planejadas
+          <Activity size={14} /> Em Andamento
         </button>
         <button
           onClick={() => list.changeStatus('INSCRICOES_ABERTAS')}
@@ -151,21 +141,11 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         >
           <Megaphone size={14} /> Inscrições
         </button>
-        <button 
-          onClick={() => list.changeStatus('EM_ANDAMENTO')}
-          className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            list.status === 'EM_ANDAMENTO'
-            ? 'text-emerald-600 border-b-2 border-emerald-600' 
-            : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          <Activity size={14} /> Em Andamento
-        </button>
-        <button 
+        <button
           onClick={() => list.changeStatus('FINALIZADA')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
             list.status === 'FINALIZADA'
-            ? 'text-slate-800 border-b-2 border-slate-800' 
+            ? 'text-slate-800 border-b-2 border-slate-800'
             : 'text-slate-400 hover:text-slate-600'
           }`}
         >

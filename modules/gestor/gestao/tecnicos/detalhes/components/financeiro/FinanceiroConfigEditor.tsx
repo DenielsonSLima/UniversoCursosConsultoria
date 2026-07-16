@@ -50,7 +50,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
   };
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 mb-8 animate-fadeIn">
+    <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 mb-8 ">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
           <Settings size={20} className="text-blue-600" /> Configurar Plano de Pagamento

@@ -25,7 +25,6 @@ import DeleteParceiroModal from './components/DeleteParceiroModal';
 import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilters';
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
-import { useParceirosRealtime } from './hooks/useParceirosRealtime';
 
 type FormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null;
 
@@ -66,9 +65,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     loadingTurmas,
     turmasError,
     reloadTurmas,
-    invalidateParceiros,
   } = useParceirosQueries({ poloId, includeGlobal });
-  useParceirosRealtime(invalidateParceiros);
   const {
     searchTerm,
     statusFilter,
@@ -153,7 +150,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   }
 
   return (
-    <div className="animate-fadeIn pb-12">
+    <div className="pb-12">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">

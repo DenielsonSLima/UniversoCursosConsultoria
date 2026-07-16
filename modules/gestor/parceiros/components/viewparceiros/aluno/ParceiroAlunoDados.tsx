@@ -5,6 +5,11 @@ import { onlyDigits } from '../../../../../../lib/documentFormatters';
 import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
 import { lookupBrazilianCep } from '../../../../../shared/utils/brazilianCep';
 import { parceirosService } from '../../../parceiros.service';
+import {
+  hasCertidaoCivilData,
+  normalizeCertidaoMatricula,
+  validateCertidaoCivil,
+} from '../../../utils/certidao-civil';
 import ParceiroAlunoAddressSection, { type CepStatus } from './ParceiroAlunoAddressSection';
 import ParceiroAlunoDetailsSections from './ParceiroAlunoDetailsSections';
 import ParceiroAlunoPersonalSection from './ParceiroAlunoPersonalSection';
@@ -121,6 +126,10 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
     if (name === 'telefone' || name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
     if (name === 'dataNascimento' || name === 'rgDataEmissao') finalValue = maskDate(finalValue);
     if (name === 'tipoDocumento') finalValue = normalizeDocumentType(finalValue);
+    if (name === 'certidaoMatricula') finalValue = normalizeCertidaoMatricula(finalValue);
+    if (name === 'anoConclusaoEnsinoMedio' || name === 'anoPrevisaoConclusaoEnsinoMedio') {
+      finalValue = value.replace(/\D/g, '').slice(0, 4);
+    }
 
     setFormData((previous: any) => {
       const next = { ...previous, [name]: finalValue };
@@ -128,11 +137,42 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
         next.telefone = finalValue;
         next.contato1 = finalValue;
       }
+      if (name === 'situacaoEnsinoMedio') {
+        if (finalValue === 'CURSANDO') {
+          next.anoConclusaoEnsinoMedio = '';
+        } else if (finalValue === 'CONCLUIDO') {
+          next.serieEnsinoMedioAtual = '';
+          next.anoPrevisaoConclusaoEnsinoMedio = '';
+        } else {
+          next.serieEnsinoMedioAtual = '';
+          next.anoConclusaoEnsinoMedio = '';
+          next.anoPrevisaoConclusaoEnsinoMedio = '';
+        }
+      }
+      if (name === 'certidaoModelo') {
+        if (finalValue === 'NOVO') {
+          next.certidaoTermo = '';
+          next.certidaoLivro = '';
+          next.certidaoFolha = '';
+        } else if (finalValue === 'ANTIGO') {
+          next.certidaoMatricula = '';
+        }
+      }
+      if (name === 'certidaoTipo' && next.certidaoModelo === 'NOVO') {
+        next.certidaoMatricula = '';
+      }
       return next;
     });
   };
 
   const handleSave = () => {
+    if (hasCertidaoCivilData(formData)) {
+      const certidaoError = validateCertidaoCivil(formData);
+      if (certidaoError) {
+        alert(certidaoError);
+        return;
+      }
+    }
     const nextData = normalizeAlunoFormData(formData);
     setFormData(nextData);
     onChange(nextData);
@@ -146,7 +186,7 @@ const ParceiroAlunoDados: React.FC<ParceiroAlunoDadosProps> = ({
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn relative">
+    <div className="space-y-8  relative">
       {pendingPhotoFile && (
         <ProfilePhotoAdjustModal
           file={pendingPhotoFile}

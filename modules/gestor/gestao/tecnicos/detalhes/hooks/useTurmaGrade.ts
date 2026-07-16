@@ -8,6 +8,7 @@ import {
   TurmaDisciplinaConfig,
   TurmaProfessorOption,
 } from '../turma-grade.types';
+import { gestaoQueryKeys } from '../../../gestao.query-keys';
 
 const useTurmaGradeInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
@@ -16,6 +17,7 @@ const useTurmaGradeInvalidation = (turmaId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
     ]);
   }, [queryClient, turmaId]);
 };

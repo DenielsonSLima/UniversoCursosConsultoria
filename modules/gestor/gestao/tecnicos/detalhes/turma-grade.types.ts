@@ -53,4 +53,5 @@ export interface TurmaAtividadeExtraClasseInput {
   perguntas?: { pergunta: string }[];
   criadoPorTipo?: 'GESTOR' | 'PROFESSOR';
   criadoPorId?: string | null;
+  status?: 'RASCUNHO' | 'PUBLICADA';
 }

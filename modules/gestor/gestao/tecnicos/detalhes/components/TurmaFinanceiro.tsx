@@ -70,7 +70,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
   }
 
   return (
-    <div className="animate-fadeIn space-y-8">
+    <div className=" space-y-8">
       
       {/* Resumo Rápido */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

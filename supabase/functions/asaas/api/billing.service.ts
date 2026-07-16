@@ -117,10 +117,25 @@ export const createAsaasBillingService = (
       : { data: null, error: null };
     if (turmaError) throw turmaError;
 
+    const { data: matricula, error: matriculaError } = receivable.matricula_id
+      ? await admin
+        .from("matriculas")
+        .select("desconto_pontualidade_individual, juros_atraso_individual, multa_atraso_individual")
+        .eq("id", receivable.matricula_id)
+        .maybeSingle()
+      : { data: null, error: null };
+    if (matriculaError) throw matriculaError;
+
     const value = roundMoney(Number(receivable.valor || 0));
-    const discountValue = roundMoney(Number(turma?.desconto_pontualidade || 0));
-    const interestPercent = Number(turma?.juros_atraso || 0);
-    const fineValue = roundMoney(Number(turma?.multa_atraso || 0));
+    const discountValue = roundMoney(Number(
+      matricula?.desconto_pontualidade_individual ?? turma?.desconto_pontualidade ?? 0
+    ));
+    const interestPercent = Number(
+      matricula?.juros_atraso_individual ?? turma?.juros_atraso ?? 0
+    );
+    const fineValue = roundMoney(Number(
+      matricula?.multa_atraso_individual ?? turma?.multa_atraso ?? 0
+    ));
     const launchType = String(receivable.tipo_lancamento || "").toUpperCase();
     const discountEnabled = launchType === "MATRICULA"
       ? turma?.aplicar_desconto_matricula === true

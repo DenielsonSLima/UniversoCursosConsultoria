@@ -484,7 +484,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   }
 
   return (
-    <div className="space-y-8 animate-fadeIn text-xs font-sans">
+    <div className="space-y-8  text-xs font-sans">
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
         <div>
@@ -576,7 +576,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
       {/* BOLETIM MODAL */}
       {isBoletimOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm ">
           <div className="bg-white rounded-[2.5rem] w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-slideUp">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <div className="flex items-center gap-2">
@@ -688,7 +688,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
       {/* DECLARAÇÃO DE CURSANDO MODAL */}
       {isDeclaracaoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm ">
           <div className="bg-white rounded-[2.5rem] w-full max-w-[858px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-slideUp">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
               <div className="flex items-center gap-2">
@@ -741,7 +741,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                 </div>
 
                 {/* 3. Corpo do Texto */}
-                <div className="relative z-20 mb-20 text-justify leading-loose text-lg text-black animate-fadeIn" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                <div className="relative z-20 mb-20 text-justify leading-loose text-lg text-black " style={{ fontFamily: '"Times New Roman", Times, serif' }}>
                   <div dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(templateData?.textContent || ''))} />
                 </div>
 
@@ -816,7 +816,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
       {/* DECLARAÇÃO DE IRPF MODAL */}
       {isIRPFOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm ">
           <div className="bg-white rounded-[2.5rem] w-full max-w-[858px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-slideUp">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
               <div className="flex items-center gap-2">
@@ -907,7 +907,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                 </div>
 
                 {/* 3. Corpo do Texto */}
-                <div className="relative z-20 mb-20 text-justify leading-loose text-base text-black animate-fadeIn" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                <div className="relative z-20 mb-20 text-justify leading-loose text-base text-black " style={{ fontFamily: '"Times New Roman", Times, serif' }}>
                   <div dangerouslySetInnerHTML={sanitizedHtml(replaceVariables(irpfTemplateData?.textContent || ''))} />
                 </div>
 
@@ -983,7 +983,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
 
       {/* ANALYSIS MODAL FOR ADMIN */}
       {selectedSolicitacao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm ">
           <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl relative overflow-hidden animate-slideUp">
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <div>
@@ -1039,7 +1039,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4 animate-fadeIn">
+                  <div className="space-y-4 ">
                     {actionType === 'deferir' ? (
                       <div className="space-y-3">
                         <div className="space-y-1">

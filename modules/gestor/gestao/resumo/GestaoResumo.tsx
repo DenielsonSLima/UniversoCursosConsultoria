@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { type GestaoResumoModalidade, gestaoService } from '../gestao.service';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 
 interface GestaoResumoProps {
   poloId?: string;
@@ -150,11 +151,11 @@ const ModalidadeCard: React.FC<{ card: GestaoResumoModalidade }> = ({ card }) =>
 };
 
 const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
-  const queryKey = ['gestao-resumo-kpis', poloId || 'matriz-global'];
   const { data, isLoading, isError } = useQuery({
-    queryKey,
+    queryKey: gestaoQueryKeys.summary(poloId),
     queryFn: () => gestaoService.getGestaoResumoKpis(poloId),
-    staleTime: 30_000,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 30 * 60_000,
   });
 
   if (isLoading) {
@@ -177,7 +178,7 @@ const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
   const cards = buildCards(data, !poloId);
 
   return (
-    <div className="animate-fadeIn space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Resumo operacional</p>

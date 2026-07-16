@@ -35,7 +35,6 @@ const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete, onConfirmEmail
     mutationFn: () => parceirosService.update(data.id, { ...data, tipo: 'PF', status: isAtivo ? 'INATIVO' : 'ATIVO' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['parceiros'] });
-      queryClient.invalidateQueries({ queryKey: ['parceiros_kpis'] });
     },
   });
 
@@ -76,7 +75,7 @@ const PFCard: React.FC<PFCardProps> = ({ data, onClick, onDelete, onConfirmEmail
             <MoreVertical size={15} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-8 w-44 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-900/10 z-50 overflow-hidden animate-fadeIn">
+            <div className="absolute right-0 top-8 w-44 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-900/10 z-50 overflow-hidden ">
               <button
                 onClick={() => { setMenuOpen(false); onClick?.(); }}
                 className="flex items-center gap-2.5 w-full px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"

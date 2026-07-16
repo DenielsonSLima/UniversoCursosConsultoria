@@ -99,7 +99,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
   }
 
   return (
-    <div className="min-h-screen pb-20 animate-fadeIn">
+    <div className="min-h-screen pb-20 ">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       {/* Header */}
@@ -194,7 +194,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
 
         {/* ══════════ ABA: DADOS PESSOAIS ══════════ */}
         {activeTab === 'dados' && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 ">
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-2 text-slate-700 border-b border-slate-100 pb-3 mb-6">
                 <User size={16} />
@@ -317,7 +317,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
 
         {/* ══════════ ABA: SERVIÇO & PAGAMENTO ══════════ */}
         {activeTab === 'servico' && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-6 ">
             <div className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-2 text-slate-700 border-b border-slate-100 pb-3 mb-6">
                 <Briefcase size={16} />
@@ -407,7 +407,7 @@ const ParceiroPFDetalhes: React.FC<ParceiroPFDetalhesProps> = ({ pfInicial, onBa
 
       {/* Modal Exclusão */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm ">
           <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-5 border border-red-100">

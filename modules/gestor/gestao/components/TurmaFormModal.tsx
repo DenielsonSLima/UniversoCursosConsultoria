@@ -48,7 +48,7 @@ const TurmaFormModal: React.FC<TurmaFormModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
       
-      <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl animate-fadeIn border border-slate-100">
+      <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl  border border-slate-100">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Turma - {modalidade}</h3>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">

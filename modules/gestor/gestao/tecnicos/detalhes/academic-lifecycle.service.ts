@@ -161,15 +161,21 @@ export const academicLifecycleService = {
     dataVencimentoMatricula: string;
     valorParcela: number;
     valorRematricula: number;
+    descontoPontualidade?: number;
+    jurosAtraso?: number;
+    multaAtraso?: number;
     diaVencimento: number;
   }) {
-    const { data, error } = await supabase.rpc('matricular_aluno_turma_financeiro', {
+    const { data, error } = await supabase.rpc('matricular_aluno_turma_financeiro_individual', {
       p_aluno_id: input.alunoId,
       p_turma_id: input.turmaId,
       p_valor_matricula: input.valorMatricula,
       p_data_vencimento_matricula: input.dataVencimentoMatricula,
       p_valor_parcela: input.valorParcela,
       p_valor_rematricula: input.valorRematricula,
+      p_desconto_pontualidade: input.descontoPontualidade ?? null,
+      p_juros_atraso: input.jurosAtraso ?? null,
+      p_multa_atraso: input.multaAtraso ?? null,
       p_dia_vencimento: input.diaVencimento,
       p_financeiro_herdado: input.financeiro_herdado ?? false,
       p_gerar_cobranca_inicial: input.gerar_cobranca_inicial ?? true,

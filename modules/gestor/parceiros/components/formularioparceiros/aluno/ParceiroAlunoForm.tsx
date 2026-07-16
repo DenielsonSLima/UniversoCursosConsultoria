@@ -11,6 +11,7 @@ import {
 } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { parceirosService } from '../../../parceiros.service';
 import { uppercaseAlunoTextFields } from '../../../utils/aluno-formatters';
+import { normalizeCertidaoMatricula, validateCertidaoCivil } from '../../../utils/certidao-civil';
 import ParceiroAlunoFormStepContact from './ParceiroAlunoFormStepContact';
 import ParceiroAlunoFormStepDocuments from './ParceiroAlunoFormStepDocuments';
 import ParceiroAlunoFormStepEducation from './ParceiroAlunoFormStepEducation';
@@ -94,8 +95,39 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       if (name === 'cep') finalValue = maskCEP(finalValue);
       if (name === 'contato1' || name === 'contato2' || name === 'responsavelTelefone') finalValue = maskPhone(finalValue);
       if (name === 'rgDataEmissao' || name === 'dataNascimento') finalValue = maskDate(finalValue);
+      if (name === 'certidaoMatricula') finalValue = normalizeCertidaoMatricula(finalValue);
+      if (name === 'anoConclusaoEnsinoMedio' || name === 'anoPrevisaoConclusaoEnsinoMedio') {
+        finalValue = value.replace(/\D/g, '').slice(0, 4);
+      }
     }
-    setFormData((previous) => ({ ...previous, [name]: finalValue }));
+    setFormData((previous) => {
+      const next = { ...previous, [name]: finalValue };
+      if (name === 'situacaoEnsinoMedio') {
+        if (finalValue === 'CURSANDO') {
+          next.anoConclusaoEnsinoMedio = '';
+        } else if (finalValue === 'CONCLUIDO') {
+          next.serieEnsinoMedioAtual = '';
+          next.anoPrevisaoConclusaoEnsinoMedio = '';
+        } else {
+          next.serieEnsinoMedioAtual = '';
+          next.anoConclusaoEnsinoMedio = '';
+          next.anoPrevisaoConclusaoEnsinoMedio = '';
+        }
+      }
+      if (name === 'certidaoModelo') {
+        if (finalValue === 'NOVO') {
+          next.certidaoTermo = '';
+          next.certidaoLivro = '';
+          next.certidaoFolha = '';
+        } else if (finalValue === 'ANTIGO') {
+          next.certidaoMatricula = '';
+        }
+      }
+      if (name === 'certidaoTipo' && next.certidaoModelo === 'NOVO') {
+        next.certidaoMatricula = '';
+      }
+      return next;
+    });
   };
 
   const handleCepBlur = async () => {
@@ -131,10 +163,15 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   const stepValid = () => {
     if (currentStep === 1) return formData.nomeCompleto.trim() !== '' && isValidCpf(formData.cpf) && formData.dataNascimento.length === 10;
-    if (currentStep === 2) return isAcceptedTechnicalDocumentType(formData.tipoDocumento) && formData.rg.trim() !== '';
+    if (currentStep === 2) {
+      return isAcceptedTechnicalDocumentType(formData.tipoDocumento)
+        && formData.rg.trim() !== ''
+        && validateCertidaoCivil(formData) === null;
+    }
     if (currentStep === 3) return getTechnicalEnrollmentMissingFields(formData)
       .filter((field) => ['nomeMae', 'responsavelFinanceiro', 'responsavelNome', 'responsavelCpf'].includes(field.key))
       .length === 0;
+    if (currentStep === 4) return getTechnicalEnrollmentMissingFields(formData).length === 0;
     if (currentStep === 5) return isValidEmail(formData.email) && formData.contato1.length >= 14;
     return true;
   };
@@ -142,8 +179,12 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
   const handleNext = () => {
     if (!stepValid()) {
       if (currentStep === 1) alert('Informe nome, CPF válido e data de nascimento para avançar.');
-      if (currentStep === 2) alert('Informe um documento de identificação aceito para curso técnico: CIN, CNH ou RG, com o número do documento.');
+      if (currentStep === 2) {
+        const certidaoError = validateCertidaoCivil(formData);
+        alert(certidaoError || 'Informe um documento de identificação aceito para curso técnico: CIN, CNH ou RG, com o número do documento.');
+      }
       if (currentStep === 3) alert('Informe nome da mãe e declare o responsável financeiro antes de avançar.');
+      if (currentStep === 4) alert(`Complete os dados do Ensino Médio: ${getTechnicalEnrollmentMissingFields(formData).map((item) => item.label).join(', ')}.`);
       if (currentStep === 5) alert('Informe e-mail válido e telefone para concluir.');
       return;
     }
@@ -172,6 +213,11 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       alert('Telefone/WhatsApp do aluno é obrigatório.');
       return;
     }
+    const certidaoError = validateCertidaoCivil(formData);
+    if (certidaoError) {
+      alert(certidaoError);
+      return;
+    }
     const missingTechnicalFields = getTechnicalEnrollmentMissingFields(formData);
     if (missingTechnicalFields.length > 0) {
       alert(`Complete os dados obrigatórios para curso técnico: ${missingTechnicalFields.map((item) => item.label).join(', ')}.`);
@@ -195,7 +241,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
   };
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Aluno</h3>
@@ -297,7 +343,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
       </form>
 
       {showMatriculaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm ">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative border border-slate-100">
             <button type="button" onClick={() => setShowMatriculaModal(false)}
               className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-500 transition-colors">

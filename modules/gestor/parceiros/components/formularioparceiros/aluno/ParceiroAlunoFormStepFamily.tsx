@@ -9,7 +9,7 @@ interface FamilyStepProps extends AlunoFormStepProps {
 }
 
 const ParceiroAlunoFormStepFamily: React.FC<FamilyStepProps> = ({ formData, isMinor, onChange }) => (
-  <div className="space-y-5 animate-fadeIn">
+  <div className="space-y-5 ">
     <div className={sectionHeaderCls('rose')}>
       <Heart size={16} />
       <h4 className="text-xs font-black uppercase tracking-wider">Filiação</h4>

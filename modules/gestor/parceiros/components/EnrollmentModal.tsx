@@ -22,7 +22,7 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({
   onSelectTurma,
   onConfirm,
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001a33]/60 backdrop-blur-sm animate-fadeIn">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#001a33]/60 backdrop-blur-sm ">
     <div className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl relative border border-slate-100">
       <button
         onClick={onClose}

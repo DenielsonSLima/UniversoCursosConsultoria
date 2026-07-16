@@ -11,6 +11,8 @@ import TurmasFilters from '../components/TurmasFilters';
 import { useGestaoEspecializacaoTurmas } from './hooks/useGestaoEspecializacaoTurmas';
 import ConfirmModal from '../../components/ConfirmModal';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
+import { useGestaoCursos } from '../hooks/useGestaoCursos';
+import { gestaoQueryKeys } from '../gestao.query-keys';
 
 interface GestaoEspecializacaoProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -19,7 +21,6 @@ interface GestaoEspecializacaoProps {
 }
 
 const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
-  const [cursosDisponiveis, setCursosDisponiveis] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -27,17 +28,18 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
   const queryClient = useQueryClient();
 
   const list = useGestaoEspecializacaoTurmas(poloId);
+  const cursosQuery = useGestaoCursos('ESPECIALIZACAO');
+  const cursosDisponiveis = cursosQuery.data || [];
 
   useEffect(() => {
     setSelectedTurma(null);
     if (onToggleDetails) onToggleDetails(false);
-    gestaoService.getCursosByModalidade('ESPECIALIZACAO').then(setCursosDisponiveis);
-  }, [poloId]);
+  }, [onToggleDetails, poloId]);
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
     await invalidateSiteTickerQueries(queryClient);
-    await list.reload();
+    await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('ESPECIALIZACAO') });
   };
 
   const handleSelectTurma = (turma: Turma) => {
@@ -56,7 +58,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
       await invalidateSiteTickerQueries(queryClient);
-      await list.reload();
+      await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('ESPECIALIZACAO') });
     } catch (error: any) {
       window.alert(error?.message || 'Nao foi possivel excluir a turma.');
     } finally {
@@ -75,7 +77,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
   }
 
   return (
-    <div className="animate-fadeIn">
+    <div className="">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-rose-50/50 p-6 rounded-[2.5rem] border border-rose-100">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl shadow-sm">
@@ -89,7 +91,8 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-rose-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-rose-700 transition-colors shadow-lg shadow-rose-900/20"
+          disabled={cursosQuery.isPending || cursosQuery.isError}
+          className="flex items-center gap-2 bg-rose-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-rose-700 transition-colors shadow-lg shadow-rose-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
         </button>

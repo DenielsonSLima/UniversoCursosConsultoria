@@ -160,7 +160,7 @@ const ParceiroAlunoVacinas: React.FC<ParceiroAlunoVacinasProps> = ({ alunoId }) 
   }
 
   return (
-    <div className="animate-fadeIn space-y-6">
+    <div className=" space-y-6">
       <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Vacinas do aluno</h3>

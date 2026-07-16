@@ -47,7 +47,7 @@ const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack }
   };
 
   return (
-    <div className="animate-fadeIn min-h-screen pb-20">
+    <div className=" min-h-screen pb-20">
       
       {/* Header Normal */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 shadow-sm -mx-8 -mt-8 mb-8">
