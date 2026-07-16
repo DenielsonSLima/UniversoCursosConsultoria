@@ -30,7 +30,7 @@ export interface BirthdayBankStats {
 }
 
 export const DEFAULT_BIRTHDAY_TEMPLATE =
-  '🎉 Bom dia, {{nome_aluno}}!\n\nHoje é um dia muito especial! A equipe da Universo Cursos e Consultoria deseja a você um feliz aniversário.\n\nQue este novo ciclo seja repleto de saúde, paz, felicidade, conquistas e muito sucesso em sua caminhada.\n\nAproveite bastante o seu dia. Parabéns! 🎂🎈\n\n{{frase_aniversario}}';
+  '🎉 Bom dia, {{nome_aluno}}!\n\nHoje é um dia muito especial! A equipe da Universo Cursos e Consultoria deseja a você um feliz aniversário.\n\nQue este novo ciclo seja repleto de saúde, paz, felicidade, conquistas e muito sucesso em sua caminhada.\n\nAproveite bastante o seu dia. Parabéns! 🎂🎈\n\nUma reflexão para o seu novo ciclo:\n\n{{frase_aniversario}}';
 
 export const BIRTHDAY_TEMPLATE_VARIABLES = [
   '{{nome_aluno}}',

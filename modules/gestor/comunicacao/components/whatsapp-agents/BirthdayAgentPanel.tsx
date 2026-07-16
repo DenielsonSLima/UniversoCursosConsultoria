@@ -181,7 +181,7 @@ const BirthdayAgentPanel: React.FC<BirthdayAgentPanelProps> = ({
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Frase motivacional no final</p>
                 <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                  O Supabase escolhe uma frase diferente do banco para variar a mensagem.
+                  O Supabase escolhe uma reflexão motivacional diferente do banco para cada aluno.
                 </p>
               </div>
               <input
@@ -206,7 +206,7 @@ const BirthdayAgentPanel: React.FC<BirthdayAgentPanelProps> = ({
                 ))}
               </div>
               <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-                {'{{frase_aniversario}}'} recebe automaticamente uma frase diferente do banco para cada aluno.
+                {'{{frase_aniversario}}'} recebe automaticamente uma reflexão sobre o novo ciclo de cada aluno.
               </p>
             </div>
           </div>

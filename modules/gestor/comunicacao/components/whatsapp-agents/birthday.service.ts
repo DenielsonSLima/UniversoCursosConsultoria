@@ -91,7 +91,7 @@ export const birthdayAgentService = {
       quoteCount: quoteCount || 0,
       samples: (data || []).map((row: any) => ({
         id: Number(row.id),
-        content: `"${row.quote_text}" - ${row.author}`,
+        content: `“${row.quote_text}”`,
       })),
     };
   },
