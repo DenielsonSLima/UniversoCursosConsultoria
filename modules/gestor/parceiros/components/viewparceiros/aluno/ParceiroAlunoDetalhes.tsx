@@ -47,7 +47,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
-        .select('id, status, data_matricula, turmas(nome, codigo, cursos(nome))')
+        .select('id, status, data_matricula, turmas(nome, cursos(nome))')
         .eq('aluno_id', alunoInicial.id)
         .order('data_matricula', { ascending: false });
       if (error) throw error;
@@ -140,7 +140,7 @@ const ParceiroAlunoDetalhes: React.FC<ParceiroAlunoDetalhesProps> = ({ alunoInic
                             ? <>
                                 Matrícula: {formatMatricula(currentEnrollment.id, currentEnrollment.data_matricula, alunoData.polo_id)} • Vínculo: <span className={currentEnrollment.status === 'ATIVO' ? 'text-emerald-600' : 'text-amber-600'}>{currentEnrollment.status}</span>
                                 <span className="block mt-1 normal-case tracking-normal text-slate-500">
-                                  Curso: {currentEnrollmentCurso?.nome || 'Não informado'} • Turma: {currentEnrollmentTurma?.nome || 'Não informada'}{currentEnrollmentTurma?.codigo ? ` (${currentEnrollmentTurma.codigo})` : ''}
+                                  Curso: {currentEnrollmentCurso?.nome || 'Não informado'} • Turma: {currentEnrollmentTurma?.nome || 'Não informada'}
                                 </span>
                               </>
                             : <>Sem matrícula acadêmica • Cadastro: <span className="text-slate-600">{alunoData.status || 'ATIVO'}</span></>}

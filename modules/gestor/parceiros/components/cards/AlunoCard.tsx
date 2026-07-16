@@ -179,8 +179,8 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
                 <p className="truncate text-[11px] font-bold text-slate-800" title={matriculaAtual.cursoNome}>
                   {matriculaAtual.cursoNome}
                 </p>
-                <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" title={`${matriculaAtual.turmaNome}${matriculaAtual.turmaCodigo ? ` · ${matriculaAtual.turmaCodigo}` : ''}`}>
-                  Turma: {matriculaAtual.turmaNome}{matriculaAtual.turmaCodigo ? ` · ${matriculaAtual.turmaCodigo}` : ''}
+                <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500" title={matriculaAtual.turmaNome}>
+                  Turma: {matriculaAtual.turmaNome}
                 </p>
                 {matriculasAluno.length > 1 && (
                   <p className="mt-1 text-[9px] font-bold text-blue-600">

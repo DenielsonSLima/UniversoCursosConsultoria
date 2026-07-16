@@ -321,7 +321,9 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
                       <span className="text-[10px] font-bold text-slate-400">{formatMatricula(matricula.id, matricula.data_matricula, turma.polo_id)}</span>
                     </div>
                     <h4 className="mt-3 text-lg font-black text-[#001a33]">{turma.cursos?.nome || 'Curso'}</h4>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{turma.nome} · {turma.codigo} · {turma.turno}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Turma: {turma.nome || 'Não informada'}{turma.turno ? ` · Turno: ${turma.turno}` : ''}
+                    </p>
                     <p className="mt-1 text-[10px] text-slate-400">{turma.polos?.nome} · {turma.polos?.cidade}/{turma.polos?.estado}</p>
                     <EnrollmentContinuitySummary enrollment={matricula} />
                   </div>

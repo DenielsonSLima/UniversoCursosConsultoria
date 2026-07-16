@@ -47,7 +47,7 @@ export const parceirosService = {
     if (alunoIds.length > 0) {
       const { data: matriculas, error: matriculasError } = await supabase
         .from('matriculas')
-        .select('aluno_id, turma_id, status, data_matricula, turmas(id, nome, codigo, curso_id, cursos(id, nome, modalidade))')
+        .select('aluno_id, turma_id, status, data_matricula, turmas(id, nome, curso_id, cursos(id, nome, modalidade))')
         .in('aluno_id', alunoIds);
 
       if (matriculasError) {
@@ -62,7 +62,6 @@ export const parceirosService = {
         matriculas: Array<{
           turmaId: string;
           turmaNome: string;
-          turmaCodigo: string;
           cursoId: string;
           cursoNome: string;
           modalidade: string;
@@ -94,7 +93,6 @@ export const parceirosService = {
         current.matriculas.push({
           turmaId: matricula.turma_id || turma.id || '',
           turmaNome: turma.nome || 'Turma sem nome',
-          turmaCodigo: turma.codigo || '',
           cursoId: curso?.id || '',
           cursoNome: curso?.nome || 'Curso não informado',
           modalidade: curso?.modalidade || '',
