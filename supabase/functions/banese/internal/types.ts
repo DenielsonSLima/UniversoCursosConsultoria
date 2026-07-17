@@ -47,6 +47,10 @@ export type BaneseBoletoDocumentInput = {
   processingDate: string;
   dueDate: string;
   amount: number;
+  installment?: {
+    current: number;
+    total: number;
+  } | null;
   beneficiary: BaneseDocumentParty & {
     agency: string;
     account: string;
@@ -111,6 +115,24 @@ const assertIsoDate = (value: unknown, field: string) => {
     throw new Error(`${field} nao representa uma data de calendario valida.`);
   }
   return normalized;
+};
+
+const normalizeInstallment = (
+  value: BaneseBoletoDocumentInput["installment"],
+) => {
+  if (!value) return null;
+  const current = Number(value.current);
+  const total = Number(value.total);
+  if (
+    !Number.isInteger(current) || current <= 0 ||
+    !Number.isInteger(total) || total <= 0 ||
+    current > total
+  ) {
+    throw new Error(
+      "Parcela do documento Banese deve informar posicao e total validos.",
+    );
+  }
+  return { current, total };
 };
 
 const normalizeAddress = (
@@ -221,6 +243,7 @@ export const normalizeBaneseBoletoDocument = (
     ),
     dueDate,
     amount: Number(amount.toFixed(2)),
+    installment: normalizeInstallment(input.installment),
     beneficiary: {
       ...input.beneficiary,
       name: assertText(input.beneficiary?.name, "Nome do beneficiario", 80),

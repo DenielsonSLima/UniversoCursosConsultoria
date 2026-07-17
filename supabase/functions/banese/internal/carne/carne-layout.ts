@@ -16,12 +16,62 @@ import {
   BANESE_PDF_COLORS as COLORS,
   type BaneseDocumentBox as Box,
   type BaneseDocumentFonts as Fonts,
+  banesePartyAddress as partyAddress,
   drawBaneseBarcode as drawBarcode,
   drawBaneseBox as drawBox,
   drawBaneseImageContain as drawImageContain,
   drawBaneseText as drawText,
 } from "../pdf/primitives.ts";
 import { presentBaneseFinancialTerms } from "../pdf/financial-terms.ts";
+
+export const baneseCarnetPartyDetails = (
+  party: BaneseBoletoDocumentInput["payer"],
+) =>
+  `${party.name} - ${formatBaneseDocumentId(party.document)}\n${
+    partyAddress(party)
+  }`;
+
+export const baneseCarnetReceiptPartyDetails = (
+  party: BaneseBoletoDocumentInput["payer"],
+  documentLabel: "CPF" | "CNPJ",
+) =>
+  `${party.name}\n${documentLabel}: ${formatBaneseDocumentId(party.document)}`;
+
+const splitBaneseCarnetReceiptName = (name: string) => {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 4) return [name.trim()];
+  let splitAt = 1;
+  let smallestDifference = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < words.length; index += 1) {
+    const left = words.slice(0, index).join(" ").length;
+    const right = words.slice(index).join(" ").length;
+    const difference = Math.abs(left - right);
+    if (difference < smallestDifference) {
+      smallestDifference = difference;
+      splitAt = index;
+    }
+  }
+  return [
+    words.slice(0, splitAt).join(" "),
+    words.slice(splitAt).join(" "),
+  ];
+};
+
+export const baneseCarnetReceiptInstitutionDetails = (
+  party: BaneseBoletoDocumentInput["beneficiary"],
+) =>
+  [
+    ...splitBaneseCarnetReceiptName(party.name),
+    `CNPJ: ${formatBaneseDocumentId(party.document)}`,
+  ].join("\n");
+
+export const baneseCarnetInstallmentDocument = (
+  documentNumber: string,
+  installment: BaneseBoletoDocumentInput["installment"],
+) =>
+  installment
+    ? `${documentNumber}   ${installment.current}/${installment.total}`
+    : documentNumber;
 
 export const drawBaneseCarnetSlip = async (
   page: PDFPage,
@@ -76,6 +126,7 @@ export const drawBaneseCarnetSlip = async (
     top: number,
     height: number,
     bold = false,
+    valueSize = 6.5,
   ) => {
     drawBox(
       page,
@@ -83,47 +134,96 @@ export const drawBaneseCarnetSlip = async (
       { x: box.x + 6, y: top - height, width: stubWidth - 12, height },
       label,
       value,
-      { valueSize: 6.5, bold },
+      { valueSize, bold },
     );
     return top - height;
   };
   let stubTop = box.y + box.height - 49;
   stubTop = stubField(
     "Parcela / Documento",
-    input.documentNumber,
+    baneseCarnetInstallmentDocument(input.documentNumber, input.installment),
     stubTop,
-    28,
+    24,
     true,
   );
-  stubTop = stubField(
+  const innerX = box.x + 6;
+  const innerWidth = stubWidth - 12;
+  const dueWidth = innerWidth * 0.48;
+  const dueValueHeight = 28;
+  drawBox(
+    page,
+    fonts,
+    {
+      x: innerX,
+      y: stubTop - dueValueHeight,
+      width: dueWidth,
+      height: dueValueHeight,
+    },
     "Vencimento",
     formatBaneseDocumentDate(input.dueDate),
-    stubTop,
-    28,
-    true,
+    { valueSize: 5.8, bold: true },
   );
-  stubTop = stubField(
-    "Valor do documento",
+  drawBox(
+    page,
+    fonts,
+    {
+      x: innerX + dueWidth,
+      y: stubTop - dueValueHeight,
+      width: innerWidth - dueWidth,
+      height: dueValueHeight,
+    },
+    "Valor",
     `R$ ${formatBaneseDocumentAmount(input.amount)}`,
-    stubTop,
-    28,
-    true,
+    { valueSize: 5.8, bold: true },
   );
-  stubTop = stubField("Nosso Número", input.ourNumber, stubTop, 27, true);
+  stubTop -= dueValueHeight;
+  stubTop = stubField("Nosso Número", input.ourNumber, stubTop, 23, true);
   stubTop = stubField(
-    "Agência / Conta",
-    `${input.beneficiary.agency} / ${input.beneficiary.account}`,
+    "Pagador / CPF",
+    baneseCarnetReceiptPartyDetails(input.payer, "CPF"),
     stubTop,
-    27,
+    31,
+    false,
+    5.7,
   );
-  if (stubTop - box.y > 51) {
-    stubField(
-      "Pagador",
-      input.payer.name,
-      stubTop,
-      Math.min(38, stubTop - box.y - 25),
-    );
-  }
+  stubTop = stubField(
+    "Instituição / CNPJ",
+    baneseCarnetReceiptInstitutionDetails(input.beneficiary),
+    stubTop,
+    38,
+    false,
+    4.9,
+  );
+  const receiptBottom = input.environment === "sandbox"
+    ? box.y + 22
+    : box.y + 5;
+  const receiptHeight = stubTop - receiptBottom;
+  drawBox(
+    page,
+    fonts,
+    {
+      x: innerX,
+      y: receiptBottom,
+      width: innerWidth,
+      height: receiptHeight,
+    },
+    "Recebido em caixa",
+    "",
+  );
+  page.drawLine({
+    start: { x: innerX + 10, y: receiptBottom + 13 },
+    end: { x: innerX + innerWidth - 10, y: receiptBottom + 13 },
+    thickness: 0.35,
+    color: COLORS.gray,
+  });
+  drawText(
+    page,
+    fonts,
+    "Assinatura e carimbo",
+    innerX + 17,
+    receiptBottom + 5,
+    { size: 4.8, color: COLORS.gray },
+  );
   if (input.environment === "sandbox") {
     page.drawRectangle({
       x: box.x + 5,
@@ -163,7 +263,7 @@ export const drawBaneseCarnetSlip = async (
     height: headerHeight,
   }, assets);
   const contentTop = box.y + box.height - headerHeight;
-  const rowHeight = 29;
+  const rowHeight = 34;
   const leftWidth = bodyWidth * 0.72;
   drawBox(
     page,
@@ -175,10 +275,8 @@ export const drawBaneseCarnetSlip = async (
       height: rowHeight,
     },
     "Beneficiário",
-    `${input.beneficiary.name} - ${
-      formatBaneseDocumentId(input.beneficiary.document)
-    }`,
-    { bold: true, valueSize: 7 },
+    baneseCarnetPartyDetails(input.beneficiary),
+    { bold: true, valueSize: 6.2 },
   );
   drawBox(
     page,
@@ -203,8 +301,8 @@ export const drawBaneseCarnetSlip = async (
       height: rowHeight,
     },
     "Pagador",
-    `${input.payer.name} - ${formatBaneseDocumentId(input.payer.document)}`,
-    { valueSize: 7 },
+    baneseCarnetPartyDetails(input.payer),
+    { valueSize: 6.2 },
   );
   drawBox(
     page,
@@ -229,7 +327,7 @@ export const drawBaneseCarnetSlip = async (
       height: rowHeight,
     },
     "Número do documento",
-    input.documentNumber,
+    baneseCarnetInstallmentDocument(input.documentNumber, input.installment),
     { valueSize: 7 },
   );
   drawBox(
@@ -260,7 +358,7 @@ export const drawBaneseCarnetSlip = async (
   );
   const bankAreaY = box.y + 4;
   const pixQr = await embedPixQr(pdf, input);
-  const middleY = bankAreaY + 62;
+  const middleY = bankAreaY + 47;
   const middleTop = contentTop - rowHeight * 3;
   const middleHeight = Math.max(58, middleTop - middleY);
   const pixWidth = Math.min(118, Math.max(92, bodyWidth * 0.29));
@@ -305,14 +403,14 @@ export const drawBaneseCarnetSlip = async (
   const instructions = input.instructions?.length
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
-  instructions.slice(0, 3).forEach((instruction, index) => {
+  instructions.slice(0, 2).forEach((instruction, index) => {
     drawText(
       page,
       fonts,
       instruction,
       bodyX + 7,
-      termsY - 21 - index * 9,
-      { size: 6, maxWidth: bodyWidth - pixWidth - 14 },
+      termsY - 17 - index * 8,
+      { size: 5.6, maxWidth: bodyWidth - pixWidth - 14 },
     );
   });
   drawPixPanel(page, fonts, input, pixQr, {
@@ -323,13 +421,8 @@ export const drawBaneseCarnetSlip = async (
   });
   drawBarcode(page, input.barcode, {
     x: bodyX,
-    y: bankAreaY + 21,
+    y: bankAreaY + 6,
     width: bodyWidth,
     height: 39,
-  });
-  drawText(page, fonts, input.barcode, bodyX + 6, bankAreaY + 7, {
-    size: 6,
-    bold: true,
-    maxWidth: bodyWidth - 12,
   });
 };

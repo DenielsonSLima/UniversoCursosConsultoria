@@ -67,6 +67,12 @@ export const buildBaneseCarnetDocumentInputs = (
 ): BaneseBoletoDocumentInput[] => {
   const metadata = asRecord(rawMetadata);
   const beneficiary = beneficiaryIdentity(issuer, metadata);
+  const installmentNumbers = rows
+    .map((row) => Number(row.parcela_numero))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  const installmentTotal = installmentNumbers.length > 0
+    ? Math.max(...installmentNumbers)
+    : rows.length;
 
   return rows.map((row) => {
     const environment = text(row.gateway_environment).toLowerCase() ===
@@ -93,6 +99,12 @@ export const buildBaneseCarnetDocumentInputs = (
       processingDate: issueDate,
       dueDate,
       amount,
+      installment: Number.isInteger(installment) && installment > 0
+        ? {
+          current: installment,
+          total: Math.max(installment, installmentTotal),
+        }
+        : null,
       beneficiary: {
         ...beneficiary,
         address: addressFrom(issuer),

@@ -8,6 +8,12 @@ import {
   buildBanesePixImageFixture,
   buildBanesePixPayloadFixture,
 } from "../testing/pix-fixture.ts";
+import {
+  baneseCarnetInstallmentDocument,
+  baneseCarnetPartyDetails,
+  baneseCarnetReceiptInstitutionDetails,
+  baneseCarnetReceiptPartyDetails,
+} from "./carne-layout.ts";
 import { buildBaneseCarnetPdf } from "./carne-pdf.ts";
 
 const items = (count: number) =>
@@ -18,6 +24,42 @@ const items = (count: number) =>
         String(1 + (index % 28)).padStart(2, "0")
       }`,
     ));
+
+Deno.test("inclui enderecos do beneficiario e do pagador no carne Banese", () => {
+  const beneficiary = baneseCarnetPartyDetails(
+    BANESE_DOCUMENT_FIXTURE.beneficiary,
+  );
+  const payer = baneseCarnetPartyDetails(BANESE_DOCUMENT_FIXTURE.payer);
+
+  assert.match(
+    beneficiary,
+    /RUA C, S\/N - CENTRO - JAPOATA\/SE - CEP 49950-000/,
+  );
+  assert.match(
+    payer,
+    /RUA DE TESTE, 100 - CENTRO - ARACAJU\/SE - CEP 49000-000/,
+  );
+});
+
+Deno.test("inclui CPF e CNPJ no recibo lateral do carne Banese", () => {
+  assert.equal(
+    baneseCarnetReceiptPartyDetails(BANESE_DOCUMENT_FIXTURE.payer, "CPF"),
+    "PAGADOR DE HOMOLOGAÇÃO\nCPF: 857.423.550-04",
+  );
+  assert.equal(
+    baneseCarnetReceiptInstitutionDetails(
+      BANESE_DOCUMENT_FIXTURE.beneficiary,
+    ),
+    "UNIVERSO CURSOS E\nCONSULTORIA LTDA\nCNPJ: 13.278.137/0001-54",
+  );
+});
+
+Deno.test("inclui parcela atual e total no recibo lateral do carne Banese", () => {
+  assert.equal(
+    baneseCarnetInstallmentDocument("PARC-02", { current: 2, total: 12 }),
+    "PARC-02   2/12",
+  );
+});
 
 for (const [count, expectedPages] of [[3, 1], [4, 2], [10, 4]]) {
   Deno.test(`gera carne Banese com ${count} boleto(s) em ${expectedPages} pagina(s)`, async () => {
