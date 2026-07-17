@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Shield, Mail, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Shield, Mail, RefreshCw, Edit3 } from 'lucide-react';
 import UserFormAdd from './UserFormAdd';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
 import { buildGestorPermissionsPayload, normalizeFinanceiroTabs, normalizeGestorModules } from '../../../access-control';
 import { usuariosKeys } from '../usuarios.keys';
 import { useUsuariosByContextQuery } from '../hooks/useUsuariosConfigQueries';
-import { useCreateUsuarioMutation } from '../hooks/useUsuariosMutations';
-import { NovoUsuarioFormData, UsuarioSistemaInput } from '../usuarios.types';
+import { useCreateUsuarioMutation, useUpdateUsuarioMutation } from '../hooks/useUsuariosMutations';
+import { NovoUsuarioFormData, UsuarioSistema, UsuarioSistemaInput } from '../usuarios.types';
 
 interface UsersListProps {
   contextId: string; // 'global' ou ID da empresa
@@ -20,6 +20,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [editingUser, setEditingUser] = useState<UsuarioSistema | null>(null);
 
   const { data: users = [], isLoading, isError, error } = useUsuariosByContextQuery(contextId);
 
@@ -43,23 +44,29 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   }, [contextId, queryClient]);
 
   const createUserMutation = useCreateUsuarioMutation(contextId, () => {
-      setIsAddingUser(false);
-      alert('Usuário cadastrado com sucesso!');
+    setIsAddingUser(false);
+    alert('Usuário cadastrado com sucesso!');
   });
 
-  const handleSaveUser = async (newUser: NovoUsuarioFormData) => {
+  const updateUserMutation = useUpdateUsuarioMutation(contextId, () => {
+    setEditingUser(null);
+    alert('Usuário atualizado com sucesso!');
+  });
+
+  const buildPayload = (newUser: NovoUsuarioFormData): UsuarioSistemaInput => {
     const modules = normalizeGestorModules(newUser.permissoes);
     const financeiroTabs = normalizeFinanceiroTabs(newUser.financeiroAbas);
     const isFinanceiro = modules.includes('financeiro') || modules.includes('caixa');
     const isGestor = modules.includes('configuracoes') || modules.includes('relatorios');
     const perfil = isGestor ? 'Gestor' : isFinanceiro ? 'Financeiro' : 'Operacional';
+
     const permissions = buildGestorPermissionsPayload({
       modules,
       financeiroTabs,
       allPolos: newUser.todosPolos,
     });
-    
-    const payload: UsuarioSistemaInput = {
+
+    return {
       nome: `${newUser.nome} ${newUser.sobrenome}`.trim(),
       email: newUser.email,
       senha: newUser.senha,
@@ -70,8 +77,21 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       context: contextId,
       polo_ids: newUser.todosPolos ? [] : newUser.polosAcesso,
       permissoes: permissions,
-      perfil_acesso_id: newUser.perfil_acesso_id
+      perfil_acesso_id: newUser.perfil_acesso_id,
     };
+  };
+
+  const handleSaveUser = async (newUser: NovoUsuarioFormData) => {
+    const payload = buildPayload(newUser);
+    if (editingUser?.id) {
+      updateUserMutation.mutate(
+        { id: editingUser.id, user: payload },
+        {
+          onError: (err: any) => alert(`Erro ao atualizar usuário: ${err.message}`),
+        },
+      );
+      return;
+    }
 
     createUserMutation.mutate(payload, {
       onError: (err: any) => alert(`Erro ao cadastrar usuário: ${err.message}`),
@@ -83,12 +103,22 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isAddingUser) {
+  const handleCloseForm = () => {
+    setIsAddingUser(false);
+    setEditingUser(null);
+  };
+
+  const handleEditUser = (user: UsuarioSistema) => {
+    setEditingUser(user);
+  };
+
+  if (isAddingUser || editingUser) {
     return (
       <UserFormAdd 
         contextId={contextId}
+        initialUser={editingUser || undefined}
         onSave={handleSaveUser} 
-        onCancel={() => setIsAddingUser(false)} 
+        onCancel={handleCloseForm} 
       />
     );
   }
@@ -182,6 +212,11 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
                   <Mail size={12} />
                   <span className="truncate max-w-[150px]">{user.email}</span>
                 </div>
+                {user.perfil_nome && (
+                  <p className="mt-3 text-[11px] text-slate-500">
+                    Perfil: {user.perfil_nome}
+                  </p>
+                )}
               </div>
 
               {/* Badges e Status */}
@@ -221,6 +256,13 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
                   </p>
                 </div>
               </div>
+
+              <button
+                onClick={() => handleEditUser(user)}
+                className="mt-4 w-full rounded-xl bg-[#001a33] text-white text-xs uppercase tracking-wider py-2.5 font-bold inline-flex items-center justify-center gap-2 hover:bg-blue-900 transition-colors shadow-md"
+              >
+                <Edit3 size={14} /> Editar
+              </button>
             </div>
           ))}
         </div>

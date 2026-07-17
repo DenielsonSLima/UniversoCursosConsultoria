@@ -10,8 +10,9 @@ export interface UsuarioSistema {
   status: 'Ativo' | 'Inativo';
   context: string;
   polo_ids?: string[];
-  permissoes?: GestorPermissions;
+  permissoes: GestorPermissions;
   perfil_acesso_id?: string | null;
+  perfil_nome?: string | null;
   created_at?: string;
 }
 

@@ -12,15 +12,17 @@ import {
   FINANCEIRO_TAB_IDS,
   GESTOR_MODULE_IDS,
   GestorModuleId,
+  normalizeGestorPermissions,
 } from '../../../access-control';
 import { useUsuariosPolosQuery } from '../hooks/useUsuariosConfigQueries';
-import { NovoUsuarioFormData } from '../usuarios.types';
+import { NovoUsuarioFormData, UsuarioSistema } from '../usuarios.types';
 import { perfisAcessoService, PerfilAcesso } from '../../perfis-acesso/perfis-acesso.service';
 
 interface UserFormAddProps {
   contextId: string;
   onSave: (data: NovoUsuarioFormData) => void;
   onCancel: () => void;
+  initialUser?: UsuarioSistema;
 }
 
 const MODULES = [
@@ -47,7 +49,40 @@ const FINANCEIRO_TABS = [
   { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
 ] satisfies { id: typeof FINANCEIRO_TAB_IDS[number]; label: string; icon: React.ReactNode }[];
 
-const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }) => {
+const splitFullName = (fullName: string) => {
+  const parts = String(fullName || '').trim().split(/\s+/);
+  const nome = parts.shift() || '';
+  return { nome, sobrenome: parts.join(' ') };
+};
+
+const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
+  if (!user?.permissoes) {
+    return {
+      permissoes: ['inicio'] as string[],
+      financeiroAbas: [],
+    };
+  }
+
+  const permissions = normalizeGestorPermissions(user.permissoes, {
+    fallbackFullAccess: false,
+  });
+  const financeiroAbas = permissions.financeiroTabs.length > 0
+    ? permissions.financeiroTabs
+    : permissions.modules.includes('financeiro')
+      ? DEFAULT_FINANCEIRO_TABS
+      : [];
+  return {
+    permissoes: permissions.modules.length > 0 ? permissions.modules : ['inicio'],
+    financeiroAbas,
+  };
+};
+
+const UserFormAdd: React.FC<UserFormAddProps> = ({
+  contextId,
+  onSave,
+  onCancel,
+  initialUser,
+}) => {
   const { data: companies = [] } = useUsuariosPolosQuery();
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
   
@@ -69,6 +104,8 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
 
   const [passwordStrength, setPasswordStrength] = useState(0);
 
+  const isEditing = Boolean(initialUser?.id);
+
   useEffect(() => {
     if (contextId !== 'global') {
       setFormData(prev => ({
@@ -80,6 +117,35 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       }));
     }
   }, [contextId]);
+
+  useEffect(() => {
+    if (!initialUser) return;
+    const { nome, sobrenome } = splitFullName(initialUser.nome || '');
+    const permissions = buildPermissionsFromUser(initialUser);
+    const isGlobal = contextId === 'global';
+    const hasAllPolos = isGlobal ? Boolean(initialUser.permissoes?.allPolos) : false;
+
+    setFormData(prev => ({
+      ...prev,
+      nome,
+      sobrenome,
+      cpf: initialUser.cpf || '',
+      dataNascimento: '',
+      telefone: initialUser.telefone || '',
+      email: initialUser.email || '',
+      senha: '',
+      confirmarSenha: '',
+      todosPolos: hasAllPolos,
+      polosAcesso: initialUser.polo_ids && initialUser.polo_ids.length > 0
+        ? initialUser.polo_ids
+        : contextId === 'global'
+          ? []
+          : [contextId],
+      permissoes: permissions.permissoes,
+      financeiroAbas: permissions.financeiroAbas,
+      perfil_acesso_id: initialUser.perfil_acesso_id || null,
+    }));
+  }, [contextId, initialUser]);
 
   useEffect(() => {
     const fetchPerfis = async () => {
@@ -186,7 +252,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       alert('Informe um CPF válido para o usuário.');
       return;
     }
-    if (!formData.dataNascimento) {
+    if (!isEditing && !formData.dataNascimento) {
       alert('Informe a data de nascimento do usuário.');
       return;
     }
@@ -198,8 +264,18 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       alert('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
       return;
     }
-    if (formData.senha !== formData.confirmarSenha) {
-      alert("As senhas não coincidem!");
+    if (formData.senha || formData.confirmarSenha) {
+      if (!formData.senha || formData.senha.length < 6) {
+        alert('A senha precisa ter ao menos 6 caracteres.');
+        return;
+      }
+      if (formData.senha !== formData.confirmarSenha) {
+        alert('As senhas não coincidem!');
+        return;
+      }
+    }
+    if (!isEditing && !formData.senha) {
+      alert('Informe a senha inicial do usuário.');
       return;
     }
     if (!formData.todosPolos && formData.polosAcesso.length === 0) {
@@ -237,8 +313,14 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <div>
-          <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Usuário</h3>
-          <p className="text-slate-500 text-sm">Preencha as informações para conceder acesso ao sistema.</p>
+          <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">
+            {isEditing ? 'Editar Usuário' : 'Novo Usuário'}
+          </h3>
+          <p className="text-slate-500 text-sm">
+            {isEditing
+              ? 'Ajuste os acessos e módulos para este usuário.'
+              : 'Preencha as informações para conceder acesso ao sistema.'}
+          </p>
         </div>
         <button onClick={onCancel} className="p-2 rounded-full hover:bg-slate-200 text-slate-400 hover:text-red-500 transition-colors">
           <X size={20} />
@@ -282,7 +364,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase ml-1">Data de Nascimento</label>
               <input 
-                type="date" name="dataNascimento" value={formData.dataNascimento} onChange={handleChange} required
+                type="date" name="dataNascimento" value={formData.dataNascimento}
+                onChange={handleChange}
+                required={!isEditing}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
               />
             </div>
@@ -320,12 +404,17 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Senha</label>
-              <div className="relative">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Senha</label>
+                {isEditing && (
+                  <p className="text-[10px] text-slate-400 -mt-1">
+                    Opcional para editar. Preencha para trocar a senha.
+                  </p>
+                )}
+                <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
-                  type="password" name="senha" value={formData.senha} onChange={handleChange} required
+                  type="password" name="senha" value={formData.senha} onChange={handleChange}
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
                   placeholder="••••••••"
                 />
@@ -346,7 +435,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
-                  type="password" name="confirmarSenha" value={formData.confirmarSenha} onChange={handleChange} required
+                  type="password" name="confirmarSenha" value={formData.confirmarSenha} onChange={handleChange}
                   className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl text-[#001a33] outline-none transition-all ${
                     formData.confirmarSenha && formData.senha !== formData.confirmarSenha 
                     ? 'border-red-300 focus:border-red-500' 
@@ -551,7 +640,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({ contextId, onSave, onCancel }
           className="px-8 py-4 rounded-xl bg-[#001a33] text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-900 shadow-lg shadow-blue-900/20 flex items-center gap-2"
         >
           <Save size={18} />
-          Salvar Usuário
+          {isEditing ? 'Atualizar Usuário' : 'Salvar Usuário'}
         </button>
       </div>
     </div>

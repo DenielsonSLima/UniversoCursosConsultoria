@@ -173,10 +173,19 @@ const normalizePermissionsPayload = (value: unknown) => {
     ? value as Record<string, unknown>
     : {};
 
+  const tabsRecord = permissions.tabs && typeof permissions.tabs === 'object' && !Array.isArray(permissions.tabs)
+    ? permissions.tabs as Record<string, unknown>
+    : {};
+  const tabs: Record<string, string[]> = {};
+  for (const [key, valueTabs] of Object.entries(tabsRecord)) {
+    tabs[key] = normalizeStringArray(valueTabs);
+  }
+
   return {
     modules: normalizeStringArray(permissions.modules),
     financeiroTabs: normalizeStringArray(permissions.financeiroTabs),
     allPolos: typeof permissions.allPolos === 'boolean' ? permissions.allPolos : false,
+    tabs: Object.keys(tabs).length > 0 ? tabs : undefined,
   };
 };
 
@@ -512,8 +521,12 @@ Deno.serve(async (req: Request) => {
     const email = normalizeEmail(incomingUser.email as string | null);
     const password = String(payload.password || '').trim();
     const permissions = normalizePermissionsPayload(incomingUser.permissoes);
+    const perfilAcessoId = typeof incomingUser.perfil_acesso_id === 'string' && incomingUser.perfil_acesso_id.trim().length > 0
+      ? incomingUser.perfil_acesso_id
+      : null;
     const allPolos = permissions.allPolos;
     const poloIds = allPolos ? [] : normalizeStringArray(incomingUser.polo_ids);
+    const hasPerfilAcesso = Boolean(perfilAcessoId);
 
     if (!email) {
       return json({ success: false, error: 'E-mail do usuário é obrigatório.' }, 400);
@@ -527,11 +540,15 @@ Deno.serve(async (req: Request) => {
       return json({ success: false, error: 'Selecione ao menos um polo para o usuário.' }, 400);
     }
 
-    if (permissions.modules.length === 0) {
+    if (!hasPerfilAcesso && permissions.modules.length === 0) {
       return json({ success: false, error: 'Selecione ao menos um módulo para o usuário.' }, 400);
     }
 
-    if (permissions.modules.includes('financeiro') && permissions.financeiroTabs.length === 0) {
+    if (
+      !hasPerfilAcesso &&
+      permissions.modules.includes('financeiro') &&
+      permissions.financeiroTabs.length === 0
+    ) {
       return json({ success: false, error: 'Selecione ao menos uma aba financeira.' }, 400);
     }
 
@@ -585,6 +602,7 @@ Deno.serve(async (req: Request) => {
       context: String(incomingUser.context || 'global').trim(),
       polo_ids: poloIds,
       permissoes: permissions,
+      perfil_acesso_id: perfilAcessoId,
     };
 
     if (!userPayload.nome) {
@@ -594,7 +612,7 @@ Deno.serve(async (req: Request) => {
     const { data: savedUser, error: saveUserError } = await admin
       .from('usuarios_sistema')
       .upsert(userPayload, { onConflict: 'email' })
-      .select('id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, created_at')
+      .select('id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, created_at')
       .single();
 
     if (saveUserError) {

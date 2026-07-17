@@ -7,7 +7,15 @@ import { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 
 export type { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 
-const USER_SELECT = 'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, created_at';
+const USER_SELECT =
+  'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, ' +
+  'permissoes, perfil_acesso_id, perfis_acesso(nome), created_at';
+
+const resolvePerfilNome = (value: unknown) => {
+  if (!value) return null;
+  if (Array.isArray(value)) return value[0]?.nome || null;
+  return value.nome || null;
+};
 
 const normalizeUser = (row: any): UsuarioSistema => ({
   id: row.id,
@@ -21,6 +29,8 @@ const normalizeUser = (row: any): UsuarioSistema => ({
   polo_ids: Array.isArray(row.polo_ids) ? row.polo_ids : [],
   permissoes: normalizeGestorPermissions(row.permissoes),
   created_at: row.created_at,
+  perfil_acesso_id: row.perfil_acesso_id || null,
+  perfil_nome: resolvePerfilNome(row.perfis_acesso),
 });
 
 const normalizeUsers = (rows: any[] | null): UsuarioSistema[] => (rows || []).map(normalizeUser);
