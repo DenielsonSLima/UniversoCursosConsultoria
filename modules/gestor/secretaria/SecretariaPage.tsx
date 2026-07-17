@@ -111,8 +111,8 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Auditoria dos documentos emitidos pela secretaria.',
   },
   'consulta-financeira': {
-    title: 'Financeiro do Aluno',
-    description: 'Consulte parcelas, monte lotes e gere carnês administrativos com referência ao Asaas.',
+    title: 'Recebimentos',
+    description: 'Pesquise qualquer pessoa, consulte dívidas em aberto e registre baixas manuais.',
   },
 };
 
@@ -166,6 +166,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
       'atestado-conclusao': 'declaracoes',
       'historico-escolar': 'historico',
       'historico-emissoes': 'historico',
+      'consulta-financeira': 'recebimentos',
     };
 
     return Object.keys(secretariaModuleHeaders).filter(id => {

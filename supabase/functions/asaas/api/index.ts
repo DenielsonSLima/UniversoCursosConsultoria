@@ -4,7 +4,7 @@ import { createAsaasBillingService } from "./billing.service.ts";
 import { createAsaasCarnetService } from "./carnet.service.ts";
 import { createAsaasOnlineService } from "./online.service.ts";
 import { callAsaas } from "./asaas-http.ts";
-import { requireFinanceWriteAccess, requireGestorAtivo, requireGestorGlobal, requireGestorForPolo } from "./authz.ts";
+import { requireFinanceWriteAccess, requireGestorAtivo, requireGestorGlobal, requireGestorForPolo, requireReceivablesSettlementAccess } from "./authz.ts";
 import type { Environment } from "./shared.ts";
 import { reconcileBaneseReceivable } from "../../gateways/api/banese.ts";
 import { cancelBaneseReceivableBeforeManualSettlement } from "../../gateways/api/banese-cancellation.ts";
@@ -51,7 +51,6 @@ const FINANCE_WRITE_ACTIONS = new Set([
   "refresh-receivable-status",
   "cancel-receivable",
   "generate-official-carnet",
-  "manual-settlement",
   "reverse-manual-settlement",
 ]);
 
@@ -88,6 +87,9 @@ Deno.serve(async (req: Request) => {
     }
     if (gestor && FINANCE_WRITE_ACTIONS.has(action)) {
       requireFinanceWriteAccess(gestor);
+    }
+    if (gestor && action === "manual-settlement") {
+      requireReceivablesSettlementAccess(gestor);
     }
 
     const getConfig = async () => {

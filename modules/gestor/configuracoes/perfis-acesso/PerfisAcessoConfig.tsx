@@ -55,7 +55,8 @@ const SECRETARIA_TABS = [
   { id: 'solicitacoes', label: 'Solicitações' },
   { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
   { id: 'declaracoes', label: 'Declaração de Matrícula' },
-  { id: 'historico', label: 'Histórico de Emissões' }
+  { id: 'historico', label: 'Histórico de Emissões' },
+  { id: 'recebimentos', label: 'Recebimentos / Baixa' }
 ];
 
 const PerfisAcessoConfig: React.FC = () => {

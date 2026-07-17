@@ -64,6 +64,15 @@ export interface SecretariaFinanceiraRecebivel {
   asaasTransactionReceiptUrl?: string;
 }
 
+export interface SecretariaRecebimentoConta {
+  id: string;
+  banco: string;
+  titular: string;
+  agencia: string;
+  conta: string;
+  poloId?: string;
+}
+
 const normalizeSearchTerm = (term: string) =>
   term.trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ');
 
@@ -258,7 +267,27 @@ export const secretariaFinanceiraService = {
     return (data || [])
       .map(mapRecebivel)
       .filter((item) => isRecebivelInPolo(item, poloId))
-      .filter(isTecnicoCarnetCandidate);
+      .filter((item) => ['PENDENTE', 'VENCIDO'].includes(item.status));
+  },
+
+  async getContasParaRecebimento(poloId: string): Promise<SecretariaRecebimentoConta[]> {
+    const { data, error } = await supabase
+      .from('contas_bancarias')
+      .select('id, banco, titular, agencia, conta, polo_id, ativo')
+      .eq('ativo', true)
+      .order('banco', { ascending: true });
+
+    if (error) throw error;
+    return (data || [])
+      .filter((conta: any) => !poloId || !conta.polo_id || conta.polo_id === poloId)
+      .map((conta: any) => ({
+        id: conta.id,
+        banco: conta.banco || 'Conta bancária',
+        titular: conta.titular || '',
+        agencia: conta.agencia || '',
+        conta: conta.conta || '',
+        poloId: conta.polo_id || undefined,
+      }));
   },
 
   async getRecebiveisByTurma(turmaId: string): Promise<SecretariaFinanceiraRecebivel[]> {
