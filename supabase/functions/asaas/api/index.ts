@@ -6,6 +6,8 @@ import { createAsaasOnlineService } from "./online.service.ts";
 import { callAsaas } from "./asaas-http.ts";
 import { requireFinanceWriteAccess, requireGestorAtivo, requireGestorGlobal, requireGestorForPolo } from "./authz.ts";
 import type { Environment } from "./shared.ts";
+import { reconcileBaneseReceivable } from "../../gateways/api/banese.ts";
+import { cancelBaneseReceivableBeforeManualSettlement } from "../../gateways/api/banese-cancellation.ts";
 import {
   UUID_RE,
   apiSecretName,
@@ -45,6 +47,8 @@ const GLOBAL_CONFIG_ACTIONS = new Set([
 
 const FINANCE_WRITE_ACTIONS = new Set([
   "reconcile-online-payment",
+  "sync-receivable",
+  "refresh-receivable-status",
   "cancel-receivable",
   "generate-official-carnet",
   "manual-settlement",
@@ -557,7 +561,6 @@ Deno.serve(async (req: Request) => {
       if (!UUID_RE.test(receivableId)) {
         throw new Error("Cobrança inválida para atualização.");
       }
-      const runtime = await getRuntimeForMovement();
       const { data: receivable, error } = await admin
         .from("contas_receber")
         .select("*")
@@ -565,6 +568,17 @@ Deno.serve(async (req: Request) => {
         .single();
       if (error) throw error;
       if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
+      if (receivable.gateway_provider === "banese_card") {
+        const reconciliation = await reconcileBaneseReceivable(
+          admin,
+          receivableId,
+        );
+        return respondJson({
+          success: true,
+          receivable: reconciliation.receivable,
+        });
+      }
+      const runtime = await getRuntimeForMovement();
       const refreshed = await refreshReceivableStatus(runtime, receivable);
       return respondJson({ success: true, receivable: refreshed });
     }
@@ -620,6 +634,16 @@ Deno.serve(async (req: Request) => {
       let settlementRuntime: Awaited<ReturnType<typeof getRuntime>> | null = null;
       let asaasCanceled = false;
       let asaasPaymentLinkCanceled = false;
+      let baneseCanceled = false;
+      let canceledGatewayPaymentId: string | null = null;
+      if (receivable.gateway_provider === "banese_card") {
+        const cancellation = await cancelBaneseReceivableBeforeManualSettlement(
+          admin,
+          receivable,
+        );
+        baneseCanceled = true;
+        canceledGatewayPaymentId = cancellation.remotePaymentId;
+      }
       if (receivable.asaas_payment_id && !["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
         settlementRuntime = await getRuntimeForMovement();
         const remotePaymentResponse = await fetch(`${settlementRuntime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
@@ -699,6 +723,13 @@ Deno.serve(async (req: Request) => {
           asaas_invoice_url: null,
           asaas_bank_slip_url: null,
           asaas_transaction_receipt_url: null,
+          ...(baneseCanceled
+            ? {
+              gateway_status: "CANCELED",
+              gateway_synced_at: new Date().toISOString(),
+              gateway_last_error: null,
+            }
+            : {}),
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivableId)
@@ -746,6 +777,10 @@ Deno.serve(async (req: Request) => {
         asaasCanceled,
         asaasPaymentLinkCanceled,
         asaasPaymentId: receivable.asaas_payment_id || null,
+        baneseCanceled,
+        gatewayCanceled: baneseCanceled || asaasCanceled || asaasPaymentLinkCanceled,
+        gatewayProvider: receivable.gateway_provider || (receivable.asaas_payment_id ? "asaas" : null),
+        gatewayPaymentId: canceledGatewayPaymentId || receivable.asaas_payment_id || null,
         futureSyncWarning,
       });
     }
@@ -771,7 +806,14 @@ Deno.serve(async (req: Request) => {
       }
 
       const oldAsaasPaymentId = receivable.asaas_payment_id || null;
+      const oldGatewayPaymentId = receivable.gateway_payment_id || null;
+      const isBanese = receivable.gateway_provider === "banese_card";
       const shouldRecreateAsaas = Boolean(recreateAsaas && receivable.cliente_id && oldAsaasPaymentId);
+      const shouldRecreateBanese = Boolean(
+        recreateAsaas && receivable.cliente_id && isBanese && oldGatewayPaymentId,
+      );
+      const clearCanceledBanese = isBanese && Boolean(oldGatewayPaymentId);
+      const shouldRecreateGateway = shouldRecreateAsaas || shouldRecreateBanese;
 
       const { data: reverted, error: updateError } = await admin
         .from("contas_receber")
@@ -780,8 +822,10 @@ Deno.serve(async (req: Request) => {
           conta_bancaria_id: null,
           valor_pago: null,
           data_pagamento: null,
-          forma_pagamento: null,
-          origem_pagamento: shouldRecreateAsaas ? "ASAAS" : "LOCAL",
+          forma_pagamento: clearCanceledBanese ? "BOLETO" : null,
+          origem_pagamento: shouldRecreateAsaas
+            ? "ASAAS"
+            : shouldRecreateBanese ? "BANESE" : "LOCAL",
           asaas_payment_id: shouldRecreateAsaas ? null : oldAsaasPaymentId,
           nosso_numero_asaas: shouldRecreateAsaas ? null : receivable.nosso_numero_asaas,
           asaas_invoice_url: shouldRecreateAsaas ? null : receivable.asaas_invoice_url,
@@ -793,6 +837,26 @@ Deno.serve(async (req: Request) => {
           asaas_last_error: oldAsaasPaymentId
             ? `Baixa manual estornada. Cobrança Asaas anterior: ${oldAsaasPaymentId}. ${body.reason ? `Motivo: ${String(body.reason).slice(0, 180)}` : ""}`
             : body.reason ? `Baixa manual estornada. Motivo: ${String(body.reason).slice(0, 180)}` : null,
+          ...(clearCanceledBanese
+            ? {
+              gateway_payment_id: null,
+              gateway_payment_link_id: null,
+              gateway_invoice_url: null,
+              gateway_bank_slip_url: null,
+              gateway_pix_payload: null,
+              gateway_pix_encoded_image: null,
+              gateway_boleto_linha_digitavel: null,
+              gateway_boleto_codigo_barras: null,
+              gateway_boleto_nosso_numero: null,
+              gateway_boleto_issued_at: null,
+              gateway_financial_terms: null,
+              gateway_financial_terms_confirmed_at: null,
+              gateway_transaction_receipt_url: null,
+              gateway_status: null,
+              gateway_synced_at: null,
+              gateway_last_error: `Baixa manual estornada. Titulo Banese anterior: ${oldGatewayPaymentId}. ${body.reason ? `Motivo: ${String(body.reason).slice(0, 180)}` : ""}`,
+            }
+            : {}),
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivableId)
@@ -800,7 +864,7 @@ Deno.serve(async (req: Request) => {
         .single();
       if (updateError) throw updateError;
 
-      const finalReceivable = shouldRecreateAsaas
+      const finalReceivable = shouldRecreateGateway
         ? await syncReceivable(await getRuntimeForMovement(), reverted.id)
         : reverted;
 
@@ -808,6 +872,9 @@ Deno.serve(async (req: Request) => {
         success: true,
         receivable: finalReceivable,
         asaasRecreated: shouldRecreateAsaas,
+        baneseRecreated: shouldRecreateBanese,
+        gatewayRecreated: shouldRecreateGateway,
+        gatewayProvider: shouldRecreateBanese ? "banese_card" : shouldRecreateAsaas ? "asaas" : null,
       });
     }
 

@@ -18,6 +18,7 @@ export const GESTOR_ACTIONS = new Set([
   "save-route",
   "save-issuer",
   "test-connection",
+  "reconcile-banese-receivable",
 ]);
 
 export const GLOBAL_ACTIONS = new Set([
@@ -25,13 +26,14 @@ export const GLOBAL_ACTIONS = new Set([
   "save-route",
   "save-issuer",
   "test-connection",
+  "reconcile-banese-receivable",
 ]);
 
 export const PROVIDERS: Record<ProviderCode, { supports: PaymentMethod[] }> = {
   asaas: { supports: ["PIX", "BOLETO", "CREDIT_CARD"] },
   mercado_pago: { supports: ["CREDIT_CARD"] },
   banco_inter: { supports: ["PIX", "BOLETO"] },
-  banese_card: { supports: ["PIX", "BOLETO"] },
+  banese_card: { supports: ["BOLETO"] },
 };
 
 export const assertProviderAdapterReady = (
@@ -49,9 +51,6 @@ export const assertProviderAdapterReady = (
       "Banese nao aceita cartao de credito neste fluxo. Use Asaas ou Mercado Pago para cartao.",
     );
   }
-  throw new Error(
-    "Banese Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
-  );
 };
 
 export const normalizeEnvironment = (value: unknown): Environment =>
@@ -138,12 +137,18 @@ export const pickMetadata = (value: unknown) => {
     "interScopes",
     "baneseConvenio",
     "baneseBoletoConvenio",
+    "baneseBeneficiarioNome",
     "baneseBeneficiarioInscricao",
+    "baneseCodigoBeneficiario",
     "banesePixConvenio",
     "banesePixChave",
     "baneseCarteira",
     "baneseAgencia",
     "baneseConta",
+    "baneseContaDisplay",
+    "baneseCodigoEspecie",
+    "quantidadeDiasBaixaDevolucao",
+    "banesePixHomologacaoDisponivel",
     "notes",
   ];
   return Object.fromEntries(
@@ -152,6 +157,24 @@ export const pickMetadata = (value: unknown) => {
       .map((key) => [key, raw[key]]),
   );
 };
+
+export const BANESE_FIXED_METADATA = Object.freeze({
+  baneseBeneficiarioNome: "UNIVERSO CURSOS E CONSULTORIA LTDA",
+  baneseBeneficiarioInscricao: "13.278.137/0001-54",
+  baneseAgencia: "033",
+  baneseConta: "03/100649-0",
+  baneseContaDisplay: "03/100649-0",
+  baneseCodigoBeneficiario: "03/100649-0",
+  baneseConvenio: "15528",
+  baneseBoletoConvenio: "15528",
+});
+
+export const enforceProviderFixedMetadata = (
+  providerCode: ProviderCode,
+  metadata: Record<string, unknown>,
+) => providerCode === "banese_card"
+  ? { ...metadata, ...BANESE_FIXED_METADATA }
+  : metadata;
 
 export const providerOverviewRow = (provider: any) => {
   if (provider?.code === "mercado_pago") {
@@ -191,17 +214,18 @@ export const providerOverviewRow = (provider: any) => {
     ...provider,
     name: "Banese",
     description:
-      "Emissor da matriz para Pix e boleto. A ativacao depende da homologacao bancaria.",
-    supports_pix: true,
+      "Boleto em homologacao; o Banese ativara o BolePix no mesmo titulo em producao.",
+    supports_pix: false,
     supports_boleto: true,
     supports_credit_card: false,
-    has_public_api: false,
+    has_public_api: true,
     metadata: {
       ...(provider?.metadata || {}),
-      checkout_blocked: true,
-      intended_role: "pix_boleto",
-      checkout_block_reason:
-        "Aguardando homologacao Banese de payload por cobranca, exibicao do retorno bancario e conciliacao.",
+      checkout_blocked: false,
+      intended_role: "bolepix_boleto",
+      homologation_only: true,
+      pix_homologation_note:
+        "Homologacao devolve apenas linha e barras; em producao o QR BolePix vira parte do boleto, sem rota Pix separada.",
     },
   };
 };

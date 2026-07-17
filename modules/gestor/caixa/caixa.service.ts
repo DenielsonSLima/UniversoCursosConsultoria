@@ -1,7 +1,7 @@
 // File: modules/gestor/caixa/caixa.service.ts
 
 import { supabase } from '../../../lib/supabase';
-import { financeiroService } from '../financeiro/financeiro.service';
+import { queryOptions } from '@tanstack/react-query';
 
 export interface CaixaDashboardData {
   saldoTotalContas: number;
@@ -39,154 +39,60 @@ export const PRINCIPAL_POLO_ID = '44444444-4444-4444-4444-444444444444';
 
 export const caixaService = {
   async getCaixaDashboardData(poloId?: string): Promise<CaixaDashboardData> {
-    const isFiltered = poloId && poloId !== 'todos';
-
-    // 1. Saldos Individuais e Total de Contas Bancárias
-    const contasBancarias = await financeiroService.getContasBancariasSaldos();
-    let mappedSaldos = contasBancarias.map(cb => ({
-      id: cb.id || '',
-      banco: cb.banco,
-      agencia: cb.agencia,
-      conta: cb.conta,
-      saldoAtual: cb.saldoAtual || 0,
-      poloNome: cb.poloNome || 'Polo Geral',
-      poloId: cb.poloId || ''
-    }));
-
-    // Filtrar contas bancárias
-    if (isFiltered) {
-      if (poloId === PRINCIPAL_POLO_ID) {
-        mappedSaldos = mappedSaldos.filter(s => s.poloId === PRINCIPAL_POLO_ID || !s.poloId);
-      } else {
-        mappedSaldos = mappedSaldos.filter(s => s.poloId === poloId);
-      }
-    }
-    const saldoTotalContas = mappedSaldos.reduce((acc, curr) => acc + curr.saldoAtual, 0);
-
-    // 2. Contas a Receber (Categorizadas)
-    let queryRec = supabase
-      .from('contas_receber')
-      .select('categoria, valor, status, data_vencimento, polo_id')
-      .in('status', ['PENDENTE', 'VENCIDO']);
-
-    if (isFiltered) {
-      if (poloId === PRINCIPAL_POLO_ID) {
-        queryRec = queryRec.or(`polo_id.eq.${PRINCIPAL_POLO_ID},polo_id.is.null`);
-      } else {
-        queryRec = queryRec.eq('polo_id', poloId);
-      }
-    }
-
-    const { data: recData, error: recError } = await queryRec;
-    if (recError) {
-      console.error('Erro ao buscar contas a receber no Caixa:', recError);
-      throw recError;
-    }
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    let totalReceber = 0;
-    const receberMap: { [key: string]: number } = {
-      MENSALIDADE: 0,
-      OUTROS_CREDITOS: 0,
-      ADIANTAMENTO_TOMADO: 0
-    };
-
-    let mensalidadesAtrasoCount = 0;
-    let mensalidadesAtrasoValor = 0;
-
-    (recData || []).forEach((row: any) => {
-      const valor = Number(row.valor || 0);
-      const cat = row.categoria || 'OUTROS_CREDITOS';
-      
-      totalReceber += valor;
-      if (receberMap[cat] !== undefined) {
-        receberMap[cat] += valor;
-      } else {
-        receberMap[cat] = valor;
-      }
-
-      // Mensalidade em Atraso
-      if (cat === 'MENSALIDADE') {
-        const isOverdue = row.status === 'VENCIDO' || (row.status === 'PENDENTE' && row.data_vencimento < todayStr);
-        if (isOverdue) {
-          mensalidadesAtrasoCount += 1;
-          mensalidadesAtrasoValor += valor;
-        }
-      }
+    const { data, error } = await supabase.rpc('get_caixa_dashboard_secure', {
+      p_polo_id: poloId && poloId !== 'todos' ? poloId : null,
     });
 
-    const receberPorTipo = Object.keys(receberMap).map(key => ({
-      categoria: key,
-      valor: receberMap[key]
-    }));
-
-    // 3. Contas a Pagar (Categorizadas)
-    let queryPag = supabase
-      .from('contas_pagar')
-      .select('categoria, valor, status, polo_id')
-      .in('status', ['PENDENTE', 'VENCIDO']);
-
-    if (isFiltered) {
-      if (poloId === PRINCIPAL_POLO_ID) {
-        queryPag = queryPag.or(`polo_id.eq.${PRINCIPAL_POLO_ID},polo_id.is.null`);
-      } else {
-        queryPag = queryPag.eq('polo_id', poloId);
-      }
+    if (error) {
+      console.error('Erro ao buscar o painel agregado do Caixa:', error);
+      throw error;
     }
 
-    const { data: pagData, error: pagError } = await queryPag;
-    if (pagError) {
-      console.error('Erro ao buscar contas a pagar no Caixa:', pagError);
-      throw pagError;
-    }
-
-    let totalPagar = 0;
-    const pagarMap: { [key: string]: number } = {
-      DESPESA_VARIAVEL: 0,
-      DESPESA_ADMINISTRATIVA: 0,
-      OUTRAS_DESPESAS: 0,
-      ADIANTAMENTO_CEDIDO: 0
-    };
-
-    (pagData || []).forEach((row: any) => {
-      const valor = Number(row.valor || 0);
-      const cat = row.categoria || 'OUTRAS_DESPESAS';
-      
-      totalPagar += valor;
-      if (pagarMap[cat] !== undefined) {
-        pagarMap[cat] += valor;
-      } else {
-        pagarMap[cat] = valor;
-      }
-    });
-
-    const pagarPorTipo = Object.keys(pagarMap).map(key => ({
-      categoria: key,
-      valor: pagarMap[key]
-    }));
-
-    // 4. Fluxo Consolidado dos Últimos 3 Meses
-    const fluxoMensalRaw = await financeiroService.getFluxoConsolidado3Meses(
-      isFiltered ? poloId : undefined
-    );
-    const fluxo3Meses = fluxoMensalRaw.map(f => ({
-      mesNome: `${f.mesNome}/${f.ano}`,
-      creditos: f.creditos,
-      debitos: f.debitos
-    }));
+    const payload: any = Array.isArray(data) ? data[0] : data || {};
 
     return {
-      saldoTotalContas,
-      saldosIndividuais: mappedSaldos,
-      totalReceber,
-      receberPorTipo,
-      totalPagar,
-      pagarPorTipo,
+      saldoTotalContas: Number(payload.saldo_total_contas || 0),
+      saldosIndividuais: (payload.saldos_individuais || []).map((account: any) => ({
+        id: account.id,
+        banco: account.banco || '',
+        agencia: account.agencia || '',
+        conta: account.conta || '',
+        saldoAtual: Number(account.saldo_atual || 0),
+        poloNome: account.polo_nome || 'Polo Geral',
+        poloId: account.polo_id || '',
+      })),
+      totalReceber: Number(payload.total_receber || 0),
+      receberPorTipo: (payload.receber_por_tipo || []).map((item: any) => ({
+        categoria: item.categoria,
+        valor: Number(item.valor || 0),
+      })),
+      totalPagar: Number(payload.total_pagar || 0),
+      pagarPorTipo: (payload.pagar_por_tipo || []).map((item: any) => ({
+        categoria: item.categoria,
+        valor: Number(item.valor || 0),
+      })),
       mensalidadesEmAtraso: {
-        quantidade: mensalidadesAtrasoCount,
-        valorTotal: mensalidadesAtrasoValor
+        quantidade: Number(payload.mensalidades_em_atraso?.quantidade || 0),
+        valorTotal: Number(payload.mensalidades_em_atraso?.valor_total || 0),
       },
-      fluxo3Meses
+      fluxo3Meses: (payload.fluxo_3_meses || []).map((month: any) => ({
+        mesNome: `${month.mes_nome}/${month.ano}`,
+        creditos: Number(month.creditos || 0),
+        debitos: Number(month.debitos || 0),
+      })),
     };
   }
 };
+
+export const caixaQueryKeys = {
+  root: ['caixa'] as const,
+  dashboards: ['caixa', 'dashboard'] as const,
+  dashboard: (poloId?: string | null) => ['caixa', 'dashboard', poloId || 'todos'] as const,
+};
+
+export const caixaDashboardQueryOptions = (poloId?: string | null) => queryOptions({
+  queryKey: caixaQueryKeys.dashboard(poloId),
+  queryFn: () => caixaService.getCaixaDashboardData(poloId || undefined),
+  staleTime: 5 * 60_000,
+  gcTime: 30 * 60_000,
+});

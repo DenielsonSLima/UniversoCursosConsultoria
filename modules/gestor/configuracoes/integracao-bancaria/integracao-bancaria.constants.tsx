@@ -126,6 +126,15 @@ export const METHODS: Array<{
 
 export const PROVIDER_ORDER: GatewayProviderCode[] = ['asaas', 'mercado_pago', 'banco_inter', 'banese_card'];
 
+export const BANESE_FIXED_BANKING_DATA = Object.freeze({
+  beneficiaryName: 'UNIVERSO CURSOS E CONSULTORIA LTDA',
+  beneficiaryDocument: '13.278.137/0001-54',
+  agency: '033',
+  account: '03/100649-0',
+  beneficiaryCode: '03/100649-0',
+  agreement: '15528',
+});
+
 export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
   label: string;
   shortLabel: string;
@@ -206,8 +215,8 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-emerald-500 bg-emerald-50',
     action: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20',
     shadow: 'rgba(0, 132, 61, 0.18)',
-    description: 'Emissor da matriz para Pix/SAB Guias e boleto; ativação depende de homologação.',
-    bestFor: 'Pix e boleto',
+    description: 'Boleto em homologação; o Banese ativará o BolePix no mesmo título em produção.',
+    bestFor: 'boleto com Pix em produção',
     icon: Landmark,
   },
 };
@@ -267,16 +276,15 @@ export const requiredFieldsFor = (
 
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
-  const hasFlag = (key: string) => metadata[key] === true;
 
   return [
     { label: 'Client ID', configured: credential?.clientIdConfigured === true },
     { label: 'Client secret', configured: credential?.clientSecretConfigured === true },
     { label: 'Convênio boleto', configured: hasMetadata('baneseBoletoConvenio') || hasMetadata('baneseConvenio') },
-    { label: 'Convênio Pix', configured: hasMetadata('banesePixConvenio') },
-    { label: 'Chave Pix', configured: hasMetadata('banesePixChave') },
-    { label: 'CRT token Pix', configured: hasFlag('baneseCrtAccessTokenConfigured') },
-    { label: 'Homologação Banese', configured: false },
+    { label: 'Agência boleto', configured: hasMetadata('baneseAgencia') },
+    { label: 'Conta beneficiária', configured: hasMetadata('baneseConta') || hasMetadata('baneseContaDisplay') },
+    { label: 'Código beneficiário', configured: hasMetadata('baneseCodigoBeneficiario') },
+    { label: 'OAuth homologado', configured: credential?.lastTestStatus === 'OK' },
   ];
 };
 
@@ -298,7 +306,6 @@ export const requiredFieldsForRoute = (
 
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
-  const hasFlag = (key: string) => metadata[key] === true;
   const baseFields = [
     { label: 'Client ID', configured: credential?.clientIdConfigured === true },
     { label: 'Client secret', configured: credential?.clientSecretConfigured === true },
@@ -308,17 +315,16 @@ export const requiredFieldsForRoute = (
     return [
       ...baseFields,
       { label: 'Convênio boleto', configured: hasMetadata('baneseBoletoConvenio') || hasMetadata('baneseConvenio') },
-      { label: 'Homologação boleto Banese', configured: false },
+      { label: 'Agência boleto', configured: hasMetadata('baneseAgencia') },
+      { label: 'Conta beneficiária', configured: hasMetadata('baneseConta') || hasMetadata('baneseContaDisplay') },
+      { label: 'Código beneficiário', configured: hasMetadata('baneseCodigoBeneficiario') },
+      { label: 'OAuth homologado', configured: credential?.lastTestStatus === 'OK' },
     ];
   }
 
   if (method === 'PIX') {
     return [
-      ...baseFields,
-      { label: 'Convênio Pix', configured: hasMetadata('banesePixConvenio') },
-      { label: 'Chave Pix', configured: hasMetadata('banesePixChave') },
-      { label: 'CRT token Pix', configured: hasFlag('baneseCrtAccessTokenConfigured') },
-      { label: 'Homologação Pix Banese', configured: false },
+      { label: 'BolePix usa a rota BOLETO', configured: false },
     ];
   }
 

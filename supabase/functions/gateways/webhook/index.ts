@@ -17,6 +17,15 @@ class WebhookAuthError extends Error {
   }
 }
 
+class WebhookUnsupportedError extends Error {
+  statusCode = 501;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "WebhookUnsupportedError";
+  }
+}
+
 const normalizeEnvironment = (value: unknown): GatewayEnvironment =>
   value === "sandbox" ? "sandbox" : "production";
 
@@ -46,12 +55,12 @@ const normalizeRemotePaymentId = (...values: unknown[]) => {
 
 const resolveEventId = (payload: any, req: Request) =>
   String(
-    payload?.id
-    || payload?.event_id
-    || payload?.data?.id
-    || payload?.payment?.id
-    || req.headers.get("x-request-id")
-    || crypto.randomUUID()
+    payload?.id ||
+      payload?.event_id ||
+      payload?.data?.id ||
+      payload?.payment?.id ||
+      req.headers.get("x-request-id") ||
+      crypto.randomUUID(),
   );
 
 const resolveEventType = (payload: any, req: Request) => {
@@ -124,7 +133,8 @@ const getWebhookSecret = async (
   environment: GatewayEnvironment,
 ) => {
   const { data, error } = await admin.rpc("payment_gateway_get_secret", {
-    p_secret_name: `payment_gateway_${providerCode}_${environment}_webhook_secret`,
+    p_secret_name:
+      `payment_gateway_${providerCode}_${environment}_webhook_secret`,
   });
   if (error) throw error;
   return String(data || "").trim();
@@ -171,20 +181,34 @@ const assertWebhookSignature = async (
 ) => {
   if (providerCode === "mercado_pago") {
     await assertMercadoPagoSignature(admin, req, environment);
+    return;
+  }
+  if (providerCode === "banese_card") {
+    throw new WebhookUnsupportedError(
+      "Webhook Banese ainda nao foi habilitado com autenticacao oficial; use conciliacao ativa do boleto.",
+    );
   }
 };
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
 
-  if (isRateLimitExceeded(`payment-gateway-webhook:${getClientIp(req)}`, 240, 60000)) {
+  if (
+    isRateLimitExceeded(
+      `payment-gateway-webhook:${getClientIp(req)}`,
+      240,
+      60000,
+    )
+  ) {
     return new Response(JSON.stringify({ error: "rate_limited" }), {
       status: 429,
       headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
     });
   }
 
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeadersForRequest });
+  }
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "method_not_allowed" }), {
       status: 405,
@@ -201,7 +225,9 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     const providerCode = providerFromPath(req);
-    const environment = normalizeEnvironment(url.searchParams.get("environment"));
+    const environment = normalizeEnvironment(
+      url.searchParams.get("environment"),
+    );
     await assertWebhookSignature(admin, req, providerCode, environment);
 
     const payload = await req.json().catch(() => ({}));
@@ -269,10 +295,21 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("Erro no webhook bancario:", error);
-    const status = error instanceof WebhookAuthError ? error.statusCode : 400;
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "internal_error" }), {
-      status,
-      headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
-    });
+    const status = error instanceof WebhookAuthError ||
+        error instanceof WebhookUnsupportedError
+      ? error.statusCode
+      : 400;
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "internal_error",
+      }),
+      {
+        status,
+        headers: {
+          ...corsHeadersForRequest,
+          "Content-Type": "application/json",
+        },
+      },
+    );
   }
 });

@@ -42,6 +42,7 @@ export interface ContasReceber {
   turmaId?: string;
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
   origemPagamento?: string;
+  gatewayProvider?: string;
   contaBancariaId?: string;
   nossoNumeroAsaas?: string;
   asaasPaymentId?: string;
@@ -245,6 +246,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   cursoModalidade: row.curso_modalidade || '',
   formaPagamento: row.forma_pagamento || undefined,
   origemPagamento: row.origem_pagamento || undefined,
+  gatewayProvider: row.gateway_provider || undefined,
   contaBancariaId: row.conta_bancaria_id || undefined,
   nossoNumeroAsaas: row.nosso_numero_asaas || undefined,
   asaasPaymentId: row.asaas_payment_id || undefined,
@@ -388,6 +390,7 @@ export const financeiroService = {
       cursoModalidade: cr.turmas?.cursos?.modalidade || '',
       formaPagamento: cr.forma_pagamento,
       origemPagamento: cr.origem_pagamento,
+      gatewayProvider: cr.gateway_provider,
       contaBancariaId: cr.conta_bancaria_id,
       nossoNumeroAsaas: cr.nosso_numero_asaas,
       asaasPaymentId: cr.asaas_payment_id || cr.gateway_payment_id,
@@ -462,6 +465,7 @@ export const financeiroService = {
       cursoModalidade: cr.turmas?.cursos?.modalidade || '',
       formaPagamento: cr.forma_pagamento,
       origemPagamento: cr.origem_pagamento,
+      gatewayProvider: cr.gateway_provider,
       contaBancariaId: cr.conta_bancaria_id,
       nossoNumeroAsaas: cr.nosso_numero_asaas,
       asaasPaymentId: cr.asaas_payment_id || cr.gateway_payment_id,
@@ -713,6 +717,7 @@ export const financeiroService = {
         clienteCpfCnpj: synced.parceiros?.cpf_cnpj || '',
         formaPagamento: synced.forma_pagamento,
         origemPagamento: synced.origem_pagamento,
+        gatewayProvider: synced.gateway_provider,
         contaBancariaId: synced.conta_bancaria_id,
         nossoNumeroAsaas: synced.nosso_numero_asaas,
         asaasPaymentId: synced.asaas_payment_id || synced.gateway_payment_id,
@@ -746,6 +751,7 @@ export const financeiroService = {
       clienteCpfCnpj: data.parceiros?.cpf_cnpj || '',
       formaPagamento: data.forma_pagamento,
       origemPagamento: data.origem_pagamento,
+      gatewayProvider: data.gateway_provider,
       contaBancariaId: data.conta_bancaria_id,
       nossoNumeroAsaas: data.nosso_numero_asaas,
       asaasPaymentId: data.asaas_payment_id || data.gateway_payment_id,
@@ -768,7 +774,17 @@ export const financeiroService = {
       dataPagamento: string;
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     }
-  ): Promise<{ success: boolean; asaasCanceled?: boolean; asaasPaymentLinkCanceled?: boolean; asaasPaymentId?: string; futureSyncWarning?: string | null }> {
+  ): Promise<{
+    success: boolean;
+    asaasCanceled?: boolean;
+    asaasPaymentLinkCanceled?: boolean;
+    asaasPaymentId?: string;
+    baneseCanceled?: boolean;
+    gatewayCanceled?: boolean;
+    gatewayProvider?: string | null;
+    gatewayPaymentId?: string | null;
+    futureSyncWarning?: string | null;
+  }> {
     return asaasIntegrationService.settleInPerson(id, params);
   },
 
@@ -778,7 +794,14 @@ export const financeiroService = {
       recreateAsaas?: boolean;
       reason?: string;
     } = {}
-  ): Promise<{ success: boolean; receivable: any; asaasRecreated?: boolean }> {
+  ): Promise<{
+    success: boolean;
+    receivable: any;
+    asaasRecreated?: boolean;
+    baneseRecreated?: boolean;
+    gatewayRecreated?: boolean;
+    gatewayProvider?: string | null;
+  }> {
     return asaasIntegrationService.reverseInPersonSettlement(id, params);
   },
 

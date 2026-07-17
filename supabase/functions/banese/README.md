@@ -6,13 +6,40 @@ business flow.
 
 ## Modules
 
-- `core`: shared Banese runtime, HTTP, credentials, status mapping and error normalization.
+- `core`: shared Banese runtime, HTTP, credentials, status mapping and error
+  normalization.
+- `internal`: geradores proprios e modulares de boleto/carne em PDF.
 
-Checkout dispatch, route selection and webhook entrypoints live in
-`../gateways`. Banese real checkout remains blocked in `../gateways/router.ts`
-and in `../gateways/api/index.ts` until Pix/Boleto are homologated end to end,
-including payload generation per charge, display of the bank return, and
-conciliation.
+Checkout dispatch and route selection live in `../gateways`. Boleto is enabled
+only in sandbox for the July/2026 homologation. The adapter allocates a unique
+`NossoNumero`, stores the bank-returned digitable line/barcode and opens the
+authenticated student finance page. Production routes remain unchanged.
+
+The bank confirmed on 2026-07-16 that agreement `15528` returns only the
+digitable line and barcode in homologation. In production, BolePix will be
+activated on the same boleto and the boleto API will also return its Pix QR.
+Do not create a second Pix charge, simulate these values or fall back silently
+to another provider.
+
+Discount, fine and interest are sent in the registered title and are never
+derived only for display. After `POST`, the adapter immediately reads the title
+back and persists an immutable `gateway_financial_terms` snapshot only when the
+bank response matches the request. Existing pending sandbox titles may be
+repaired idempotently with `PUT` to the same `NossoNumero`, followed by another
+read; production repair remains blocked until homologation is formally closed.
+
+Banese also confirmed that a payment webhook exists, but explicitly recommended
+active boleto queries as the primary and more stable reconciliation mechanism.
+The webhook route stays fail-closed until Banese provides its authentication,
+payload, retry and event identity contract. The current reconciliation only
+settles locally after status code `3` is accompanied by complete effective
+payment details with matching amount and a valid payment date; this conservative
+rule protects against temporarily inconsistent bank responses. The amount
+check uses the bank-confirmed discount, fine and interest for the effective
+payment date, including cent rounding, rather than requiring the nominal value.
+An isolated
+worker claims up to ten stale titles with `SKIP LOCKED` and polls the bank every
+five minutes; its request is authenticated with a random Vault secret.
 
 ## Boundary
 
@@ -37,10 +64,19 @@ technical reference; the official API contract is the Banese PDF/manual.
 - Main creation endpoint: `POST /convenios/{id_convenio}/boletos`.
 - `NossoNumero` is mandatory: 8 digits plus the check digit, unique per convenio.
 - The API returns `NumeroCodigoBarras` and `NumeroLinhaDigitavel`, not a hosted
-  checkout URL. The checkout flow must not be enabled until the student-facing
-  boleto display/download and payment polling are implemented.
+  checkout URL. The student portal renders both values in an authenticated
+  boleto view and the gestor API can reconcile a receivable by polling Banese.
+- The bank requires a homologation mass of 10 future-dated boletos with varied
+  values above R$ 10.00 before production release.
 
-### Pix / SAB Guias
+### Pix / SAB Guias reference
+
+The PDF found outside the official homologation package describes a separate
+SAB Guias integration. According to Banese's direct answer, this separate flow
+is not required to add BolePix to agreement `15528`: production activation is
+performed by the bank and the boleto creation response will include the QR.
+Keep the notes below only as technical reference; do not call these endpoints
+for the current boleto flow without an explicit new contract from Banese.
 
 - REST/JSON with OAuth `client_credentials` and certificate/CRT access token step.
 - Sandbox base URL: `https://apipix-h.banese.b.br/guias/v1`.
@@ -53,7 +89,8 @@ technical reference; the official API contract is the Banese PDF/manual.
   this value; it must come from the homologated Banese/SAB Guias layout.
 - The creation response returns `brCodeEMV` for Pix copy-paste and `base64` for
   the QR image. Query responses may return `dsUrl` and `qrCode`.
-- Webhook endpoint: `/manutencao/webhook/{chave}`.
+- The manual mentions `/manutencao/webhook/{chave}`, but it is not treated as
+  the confirmed webhook contract of the boleto API.
 - Required `Terminal` header according to the available manual:
   - Sandbox: `99000090054`.
   - Production: `99000090049`.

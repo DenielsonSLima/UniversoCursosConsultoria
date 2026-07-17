@@ -1168,11 +1168,11 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
 
       {/* 2ª Via / Reprint Visualizer Modal */}
       {isPreviewOpen && selectedEmission && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" id="reprint-modal">
-          <div className="bg-white rounded-3xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp">
+        <div className="fixed inset-0 z-[130] flex bg-slate-900/60 backdrop-blur-sm animate-fadeIn" id="reprint-modal">
+          <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white shadow-2xl animate-slideUp">
             
             {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
               <div>
                 <h4 className="font-black text-[#001a33] text-sm uppercase tracking-wide">
                   Segunda Via de Documento
@@ -1181,7 +1181,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
                   Visualização do Código: {selectedEmission.codigo}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleDownloadPdf}
                   disabled={isDownloading}
@@ -1214,7 +1214,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
             </div>
 
             {/* Modal Body / Document Preview Area */}
-            <div className="flex-1 bg-slate-100 p-8 overflow-y-auto flex justify-center custom-scrollbar">
+            <div className="flex min-h-0 flex-1 justify-center overflow-y-auto bg-slate-100 p-3 custom-scrollbar sm:p-6 lg:p-8">
               <div ref={printContentRef} className="print-content-container">
                 {isLoadingPreview && (
                   <div className="w-[210mm] h-[297mm] max-w-full bg-white flex flex-col items-center justify-center text-slate-400">

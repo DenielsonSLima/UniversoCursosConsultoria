@@ -4,6 +4,7 @@ import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-
 import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
 import { isPortalScheduleBlocked } from './portal-schedule';
 import { isActivePortalStatus } from './portal-status';
+import { PORTAL_LAST_ACTIVITY_STORAGE_KEY } from '../shared/hooks/inactivity-policy';
 
 export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
 
@@ -124,6 +125,11 @@ export const savePortalSession = (profile: PortalAuthProfile) => {
   sessionStorage.setItem('logged_user_name', profile.nome);
   sessionStorage.setItem('logged_user_email', profile.email);
   sessionStorage.setItem('logged_user_tipo', profile.tipo);
+  try {
+    localStorage.setItem(PORTAL_LAST_ACTIVITY_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // A sessão continua funcional com o relógio de inatividade em memória.
+  }
 
   const activePoloId =
     profile.activePoloId ||
@@ -145,6 +151,11 @@ export const clearPortalSession = () => {
   sessionStorage.removeItem('logged_user_tipo');
   sessionStorage.removeItem('active_polo_id');
   sessionStorage.removeItem('current_polo_id');
+  try {
+    localStorage.removeItem(PORTAL_LAST_ACTIVITY_STORAGE_KEY);
+  } catch {
+    // O redirecionamento de logout não pode depender da disponibilidade do storage.
+  }
 };
 
 export const getGestorAccessScope = (profile?: PortalAuthProfile | null): GestorAccessScope => {

@@ -33,3 +33,15 @@ supabase/.temp
 
 # Exportações administrativas com dados pessoais de alunos
 2024:2025/
+
+# Documentos bancários recebidos e artefatos de QA (podem conter dados pessoais)
+/banese homologacao/*
+!/banese homologacao/retornos/
+/banese homologacao/retornos/*
+!/banese homologacao/retornos/2026-07-16-bolepix-webhook-e-conciliacao.md
+/tmp/
+
+# Boletos de homologação com dados pessoais (entrega local, nunca versionar)
+/output/pdf/banese-homologacao-*.pdf
+/output/pdf/banese/boletos/*.pdf
+/output/pdf/banese/carne/*.pdf

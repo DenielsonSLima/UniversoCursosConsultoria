@@ -12,10 +12,12 @@ import {
 } from "../core/modality.ts";
 
 type CallAsaas = (path: string, init?: RequestInit) => Promise<any>;
+type GatewayEnvironment = "sandbox" | "production";
 
 export const createAsaasWebhookHandlers = (
   admin: any,
   callAsaas: CallAsaas,
+  environment: GatewayEnvironment,
 ) => {
   const isUnsafeCallbackHost = (hostname: string) => {
     const host = hostname.toLowerCase();
@@ -294,7 +296,9 @@ export const createAsaasWebhookHandlers = (
   };
 
   const getReceivableSyncDecision = async (item: any) => {
-    if (!item.matricula_id) return { allowed: true, reason: null as string | null };
+    if (!item.matricula_id) {
+      return { allowed: true, reason: null as string | null, modalidade: null as string | null };
+    }
 
     const { data: matricula, error } = await admin
       .from("matriculas")
@@ -308,38 +312,87 @@ export const createAsaasWebhookHandlers = (
           origem_financeira,
           financeiro_herdado,
           gerar_cobrancas_futuras,
-          sincronizar_asaas_futuro
+          sincronizar_asaas_futuro,
+          cursos(modalidade)
         )
       `)
       .eq("id", item.matricula_id)
       .maybeSingle();
     if (error) throw error;
-    if (!matricula) return { allowed: true, reason: null as string | null };
+    if (!matricula) {
+      return { allowed: true, reason: null as string | null, modalidade: null as string | null };
+    }
 
     const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+    const modalidade = String(turma?.cursos?.modalidade || "").toUpperCase() || null;
     const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
     const financeiroHerdado = matricula.financeiro_herdado === true
       || turma?.financeiro_herdado === true
       || origem === "LEGADO";
     const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
     if (syncEnabled === false) {
-      return { allowed: false, reason: "Sincronização Asaas desativada na matrícula/turma." };
+      return { allowed: false, reason: "Sincronização Asaas desativada na matrícula/turma.", modalidade };
     }
 
     const launchType = String(item.tipo_lancamento || "").toUpperCase();
     if (launchType === "MATRICULA") {
       const gerarInicial = matricula.gerar_cobranca_inicial ?? !financeiroHerdado;
       if (gerarInicial === false) {
-        return { allowed: false, reason: "Cobrança inicial bloqueada por regra de financeiro legado." };
+        return { allowed: false, reason: "Cobrança inicial bloqueada por regra de financeiro legado.", modalidade };
       }
     } else {
       const gerarFutura = matricula.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
       if (gerarFutura === false) {
-        return { allowed: false, reason: "Cobranças futuras desativadas na matrícula/turma." };
+        return { allowed: false, reason: "Cobranças futuras desativadas na matrícula/turma.", modalidade };
       }
     }
 
-    return { allowed: true, reason: null as string | null };
+    return { allowed: true, reason: null as string | null, modalidade };
+  };
+
+  const gatewayMethodForReceivable = (formaPagamento: unknown) => {
+    const normalized = String(formaPagamento || "").toUpperCase();
+    if (normalized.includes("PIX")) return "PIX";
+    if (normalized.includes("BOLETO")) return "BOLETO";
+    if (normalized.includes("CART")) return "CREDIT_CARD";
+    return null;
+  };
+
+  const shouldBlockLegacyAsaasSync = async (
+    item: any,
+    modalidade: string | null,
+  ) => {
+    const paymentMethod = gatewayMethodForReceivable(item.forma_pagamento);
+    if (
+      !modalidade || !paymentMethod ||
+      !["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO"].includes(modalidade)
+    ) return false;
+
+    const { data: route, error } = await admin
+      .from("payment_gateway_routes")
+      .select("provider_code, enabled")
+      .eq("modalidade", modalidade)
+      .eq("payment_method", paymentMethod)
+      .eq("environment", environment)
+      .maybeSingle();
+    if (error) throw error;
+    if (!route || (route.provider_code === "asaas" && route.enabled === true)) {
+      return false;
+    }
+
+    const reason = route.enabled === false
+      ? `Rota ${paymentMethod} de ${modalidade} está desativada em ${environment}; a geração Asaas foi bloqueada.`
+      : `Rota ${paymentMethod} de ${modalidade} está configurada para ${route.provider_code}; sincronize a cobrança pelo gateway selecionado.`;
+    const { error: updateError } = await admin.from("contas_receber").update({
+      gateway_provider: route.provider_code,
+      gateway_environment: environment,
+      gateway_payment_method: paymentMethod,
+      gateway_last_error: reason,
+      asaas_last_error: reason,
+      updated_at: new Date().toISOString(),
+    }).eq("id", item.id);
+    if (updateError) throw updateError;
+    return true;
   };
 
   const syncReceivable = async (item: any) => {
@@ -356,6 +409,8 @@ export const createAsaasWebhookHandlers = (
       if (error) throw error;
       return;
     }
+
+    if (await shouldBlockLegacyAsaasSync(item, syncDecision.modalidade)) return;
 
     if (String(item.asaas_status || "").toUpperCase() === "CREATING") {
       const recovered = await recoverReceivablePayment(item);

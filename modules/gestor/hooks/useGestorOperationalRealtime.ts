@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { gestaoQueryKeys } from '../gestao/gestao.query-keys';
 import { parceirosQueryKeys } from '../parceiros/parceiros.query-keys';
+import { secretariaCarteirinhasKeys } from '../secretaria/carteirinhas/secretaria-carteirinhas.service';
 
 interface OperationalRealtimeScope {
   enabled: boolean;
@@ -51,6 +52,7 @@ export const useGestorOperationalRealtime = ({
     let refreshGestao = false;
     let refreshParceiros = false;
     let refreshPartnerClasses = false;
+    let refreshSecretaria = false;
     let disposed = false;
     let scopeTurmasReady = !poloId;
     const scopedTurmaIds = new Set<string>();
@@ -94,7 +96,15 @@ export const useGestorOperationalRealtime = ({
 
     const markParceirosChanged = (changedId?: string) => {
       refreshParceiros = true;
+      refreshSecretaria = true;
       void queryClient.invalidateQueries({ queryKey: parceirosQueryKeys.all, refetchType: 'none' });
+      if (poloId) {
+        void queryClient.invalidateQueries({
+          queryKey: secretariaCarteirinhasKeys.workspace(poloId),
+          exact: true,
+          refetchType: 'none',
+        });
+      }
       if (changedId) {
         changedPartnerIds.add(changedId);
         void queryClient.invalidateQueries({
@@ -108,10 +118,18 @@ export const useGestorOperationalRealtime = ({
 
     const markPartnerClassesChanged = () => {
       refreshPartnerClasses = true;
+      refreshSecretaria = true;
       void queryClient.invalidateQueries({
         queryKey: parceirosQueryKeys.availableClasses,
         refetchType: 'none',
       });
+      if (poloId) {
+        void queryClient.invalidateQueries({
+          queryKey: secretariaCarteirinhasKeys.workspace(poloId),
+          exact: true,
+          refetchType: 'none',
+        });
+      }
       scheduleActiveRefresh();
     };
 
@@ -139,9 +157,18 @@ export const useGestorOperationalRealtime = ({
             stale: true,
           });
         }
+        if (refreshSecretaria && poloId) {
+          void queryClient.refetchQueries({
+            queryKey: secretariaCarteirinhasKeys.workspace(poloId),
+            exact: true,
+            type: 'active',
+            stale: true,
+          });
+        }
         refreshGestao = false;
         refreshParceiros = false;
         refreshPartnerClasses = false;
+        refreshSecretaria = false;
         changedPartnerIds.clear();
       }, 400);
     }
@@ -254,6 +281,17 @@ export const useGestorOperationalRealtime = ({
         markGestaoChanged(true);
         markParceirosChanged();
         markPartnerClassesChanged();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos_templates' }, () => {
+        refreshSecretaria = true;
+        if (poloId) {
+          void queryClient.invalidateQueries({
+            queryKey: secretariaCarteirinhasKeys.workspace(poloId),
+            exact: true,
+            refetchType: 'none',
+          });
+        }
+        scheduleActiveRefresh();
       })
       .on(
         'postgres_changes',

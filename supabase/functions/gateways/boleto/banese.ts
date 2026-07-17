@@ -12,4 +12,7 @@ export const createBaneseBoletoCharge = (input: GatewayChargeInput) =>
     description: input.description,
     amount: input.amount,
     dueDate: input.dueDate,
+    successUrl: input.successUrl,
+    pendingUrl: input.pendingUrl,
+    financialTerms: input.financialTerms,
   });

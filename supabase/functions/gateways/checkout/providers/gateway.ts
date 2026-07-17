@@ -5,7 +5,14 @@ import {
   type GatewayProviderCode,
   gatewayReceivableUpdate,
   persistGatewayTransaction,
+  repairGatewayTransactionFromReceivable,
 } from "../../router.ts";
+import { resolveBaneseReceivableFinancialTerms } from "../../api/banese-financial-terms.ts";
+import {
+  assertGatewayTitleCanBeReset,
+  boletoIssuedAtAfterReset,
+  isRemoteTitleNonPayable,
+} from "../remote-title-guard.ts";
 import type { EadCheckoutContext } from "../types.ts";
 import {
   documentForGateway,
@@ -16,102 +23,13 @@ import {
   providerLabelFor,
   publicBaseUrl,
 } from "../utils.ts";
-
-const EAD_PAYMENT_RECIPIENT = {
-  name: "Universo Cursos e Consultoria",
-  document: "13.278.137/0001-54",
-};
-
-const firstHttpUrl = (value: unknown) => {
-  const candidate = String(value || "").trim();
-  return /^https?:\/\//i.test(candidate) ? candidate : null;
-};
-
-const clearPreviousGatewayFields = (message: string) => ({
-  asaas_payment_id: null,
-  asaas_payment_link_id: null,
-  nosso_numero_asaas: null,
-  asaas_invoice_url: null,
-  asaas_bank_slip_url: null,
-  asaas_installment_id: null,
-  asaas_transaction_receipt_url: null,
-  asaas_status: null,
-  asaas_synced_at: null,
-  asaas_last_error: message,
-  gateway_payment_id: null,
-  gateway_customer_id: null,
-  gateway_payment_link_id: null,
-  gateway_installment_id: null,
-  gateway_installments: null,
-  gateway_invoice_url: null,
-  gateway_bank_slip_url: null,
-  gateway_pix_payload: null,
-  gateway_pix_encoded_image: null,
-  gateway_transaction_receipt_url: null,
-  gateway_status: null,
-  gateway_last_error: null,
-  gateway_synced_at: null,
-});
-
-const shouldReuseReceivable = (
-  receivable: any,
-  context: EadCheckoutContext,
-  providerCode: GatewayProviderCode,
-) => {
-  if (
-    !receivable ||
-    receivable.gateway_provider !== providerCode ||
-    receivable.gateway_payment_method !== context.charge.method ||
-    receivable.gateway_environment !== context.environment ||
-    Number(receivable.gateway_installments || 1) !== context.charge.installmentCount ||
-    !gatewayPrimaryUrl(receivable)
-  ) {
-    return false;
-  }
-
-  if (providerCode === "mercado_pago" && context.charge.method === "PIX") {
-    return Boolean(receivable.gateway_pix_payload || receivable.gateway_pix_encoded_image);
-  }
-
-  return true;
-};
-
-const paymentResponseFromReceivable = (
-  receivable: any,
-  context: EadCheckoutContext,
-  providerCode: GatewayProviderCode,
-) => {
-  const invoiceUrl = receivable?.gateway_invoice_url ||
-    (providerCode === "asaas" ? receivable?.asaas_invoice_url : null);
-  const bankSlipUrl = receivable?.gateway_bank_slip_url ||
-    (providerCode === "asaas" ? receivable?.asaas_bank_slip_url : null);
-  const paymentId = receivable?.gateway_payment_id ||
-    receivable?.gateway_payment_link_id ||
-    (providerCode === "asaas"
-      ? receivable?.asaas_payment_id || receivable?.asaas_payment_link_id
-      : null);
-
-  return {
-    id: paymentId || null,
-    provider: providerCode,
-    method: context.charge.method,
-    installments: context.charge.installmentCount,
-    status: receivable?.gateway_status || receivable?.asaas_status || null,
-    value: context.charge.value,
-    courseName: context.course.nome,
-    recipient: EAD_PAYMENT_RECIPIENT,
-    dueDate: context.charge.dueDate,
-    invoiceUrl,
-    bankSlipUrl,
-    pixQrCode: receivable?.gateway_pix_payload ||
-        receivable?.gateway_pix_encoded_image
-      ? {
-        payload: receivable?.gateway_pix_payload || null,
-        encodedImage: receivable?.gateway_pix_encoded_image || null,
-      }
-      : null,
-  };
-};
+import {
+  clearPreviousGatewayFields,
+  EAD_PAYMENT_RECIPIENT,
+  firstHttpUrl,
+  paymentResponseFromReceivable,
+  shouldReuseReceivable,
+} from "./gateway-view.ts";
 
 const markRemotePaymentCreated = (error: unknown) => {
   if (error && typeof error === "object") {
@@ -219,6 +137,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   if (
     shouldReuseReceivable(receivable, context, providerCode)
   ) {
+    await repairGatewayTransactionFromReceivable(context.admin, receivable);
     const url = gatewayOnlyPrimaryUrl(receivable) ||
       gatewayPrimaryUrl(receivable);
     return {
@@ -241,6 +160,44 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   const switchMessage = `Cobranca anterior substituida por ${
     providerLabelFor(providerCode)
   } conforme rota bancaria.`;
+  const resetGatewayFields = clearPreviousGatewayFields(switchMessage);
+  const sameBaneseCharge = Boolean(
+    receivable?.gateway_provider === "banese_card" &&
+      providerCode === "banese_card" &&
+      receivable?.gateway_environment === context.environment &&
+      receivable?.gateway_payment_method === "BOLETO" &&
+      context.charge.method === "BOLETO" &&
+      Number(receivable?.gateway_installments || 1) ===
+        context.charge.installmentCount &&
+      Math.round(Number(receivable?.valor || 0) * 100) ===
+        Math.round(Number(context.charge.value || 0) * 100) &&
+      String(receivable?.data_vencimento || "").slice(0, 10) ===
+        String(context.charge.dueDate || "").slice(0, 10) &&
+      !isRemoteTitleNonPayable(receivable)
+  );
+  const preserveReservedBaneseNumber = Boolean(
+    sameBaneseCharge &&
+      receivable?.gateway_boleto_nosso_numero,
+  );
+  assertGatewayTitleCanBeReset(receivable, {
+    allowBaneseRecovery: preserveReservedBaneseNumber,
+  });
+  if (preserveReservedBaneseNumber) {
+    resetGatewayFields.gateway_boleto_linha_digitavel =
+      receivable.gateway_boleto_linha_digitavel || null;
+    resetGatewayFields.gateway_boleto_codigo_barras =
+      receivable.gateway_boleto_codigo_barras || null;
+    resetGatewayFields.gateway_boleto_nosso_numero =
+      receivable.gateway_boleto_nosso_numero;
+    resetGatewayFields.gateway_boleto_issued_at = boletoIssuedAtAfterReset(
+      receivable,
+      true,
+    );
+    resetGatewayFields.gateway_financial_terms =
+      receivable.gateway_financial_terms || null;
+    resetGatewayFields.gateway_financial_terms_confirmed_at =
+      receivable.gateway_financial_terms_confirmed_at || null;
+  }
   const receivablePayload = {
     polo_id: context.turma.polo_id,
     descricao: context.charge.description,
@@ -255,7 +212,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     tipo_lancamento: "MATRICULA",
     origem_cronograma_id: "matricula",
     origem_pagamento: "GATEWAY_EAD",
-    ...clearPreviousGatewayFields(switchMessage),
+    ...resetGatewayFields,
     gateway_provider: providerCode,
     gateway_environment: context.environment,
     gateway_payment_method: context.charge.method,
@@ -311,6 +268,10 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       .eq("id", receivable.id)
       .maybeSingle();
     if (shouldReuseReceivable(currentReceivable, context, providerCode)) {
+      await repairGatewayTransactionFromReceivable(
+        context.admin,
+        currentReceivable,
+      );
       const url = gatewayOnlyPrimaryUrl(currentReceivable) ||
         gatewayPrimaryUrl(currentReceivable);
       return {
@@ -337,6 +298,13 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   let gatewayResult: any;
   try {
     const baseUrl = publicBaseUrl();
+    const financialTerms = providerCode === "banese_card" &&
+        context.charge.method === "BOLETO"
+      ? await resolveBaneseReceivableFinancialTerms(
+        context.admin,
+        lockedReceivable,
+      )
+      : null;
     gatewayResult = await createGatewayCharge({
       admin: context.admin,
       supabaseUrl: context.supabaseUrl,
@@ -352,10 +320,12 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         cpfCnpj: documentForGateway(context.aluno.cpf_cnpj),
         phone: context.aluno.telefone,
         address: context.aluno.endereco,
+        number: context.aluno.numero,
+        complement: context.aluno.complemento,
         postalCode: context.aluno.cep,
         district: context.aluno.bairro,
         city: context.aluno.cidade,
-        state: context.aluno.estado,
+        state: context.aluno.uf ?? context.aluno.estado,
       },
       amount: context.charge.value,
       description: context.charge.description,
@@ -364,6 +334,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
       successUrl: `${baseUrl}/aluno?gateway=success`,
       failureUrl: `${baseUrl}/aluno?gateway=failure`,
       pendingUrl: `${baseUrl}/aluno?gateway=pending`,
+      financialTerms,
     });
   } catch (error) {
     await context.admin.from("contas_receber").update({
@@ -448,6 +419,9 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         dueDate: context.charge.dueDate,
         invoiceUrl: updatedReceivable.gateway_invoice_url,
         bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
+        bankSlipDigitableLine: updatedReceivable.gateway_boleto_linha_digitavel,
+        bankSlipBarcode: updatedReceivable.gateway_boleto_codigo_barras,
+        bankSlipOurNumber: updatedReceivable.gateway_boleto_nosso_numero,
         pixQrCode,
       },
     },

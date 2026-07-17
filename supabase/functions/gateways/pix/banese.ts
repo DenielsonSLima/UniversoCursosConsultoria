@@ -12,4 +12,6 @@ export const createBanesePixCharge = (input: GatewayChargeInput) =>
     description: input.description,
     amount: input.amount,
     dueDate: input.dueDate,
+    successUrl: input.successUrl,
+    pendingUrl: input.pendingUrl,
   });

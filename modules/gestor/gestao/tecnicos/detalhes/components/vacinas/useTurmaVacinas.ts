@@ -92,9 +92,8 @@ export const useTurmaVacinas = (
   callbacks: UseTurmaVacinasCallbacks = {},
 ) => {
   const queryClient = useQueryClient();
-  const queryOptionsConfig = useMemo(() => turmaVacinasQueryOptions(turma), [turma.cursoId, turma.id]);
-  const queryKey = queryOptionsConfig.queryKey;
-  const query = useQuery(queryOptionsConfig);
+  const queryKey = turmaVacinasKeys.turma(turma.id, turma.cursoId);
+  const query = useQuery(turmaVacinasQueryOptions(turma));
 
   useEffect(() => {
     if (!turma.id) return;

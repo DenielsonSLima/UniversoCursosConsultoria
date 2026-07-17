@@ -3,6 +3,7 @@ import { QueryKey, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { despesasQueryKeys } from '../despesas/despesas.queryKeys';
+import { caixaQueryKeys } from '../../caixa/caixa.service';
 
 const REALTIME_DEBOUNCE_MS = 500;
 
@@ -34,6 +35,13 @@ export function useFinanceiroRealtime(poloId?: string | null) {
 
     const flush = () => {
       refreshTimer = undefined;
+
+      if (receivablesChanged || accountsChanged || transfersChanged || expensesChanged) {
+        void queryClient.invalidateQueries({
+          queryKey: caixaQueryKeys.dashboards,
+          refetchType: 'none',
+        });
+      }
 
       if (receivablesChanged) {
         void queryClient.invalidateQueries({

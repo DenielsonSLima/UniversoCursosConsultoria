@@ -20,7 +20,9 @@ export interface CredentialFormState {
   merchantId: string;
   baneseConvenio: string;
   baneseBoletoConvenio: string;
+  baneseBeneficiarioNome: string;
   baneseBeneficiarioInscricao: string;
+  baneseCodigoBeneficiario: string;
   banesePixConvenio: string;
   banesePixChave: string;
   baneseCarteira: string;
@@ -47,7 +49,9 @@ export const emptyCredentialForm: CredentialFormState = {
   merchantId: '',
   baneseConvenio: '',
   baneseBoletoConvenio: '',
+  baneseBeneficiarioNome: '',
   baneseBeneficiarioInscricao: '',
+  baneseCodigoBeneficiario: '',
   banesePixConvenio: '',
   banesePixChave: '',
   baneseCarteira: '',

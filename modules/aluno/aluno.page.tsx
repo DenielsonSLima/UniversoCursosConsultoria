@@ -20,6 +20,7 @@ import { clearPortalSession, getPortalProfile, getPortalSessionFromStorage, Port
 import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
+import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import type { PerfilTabId } from './perfil/perfil.types';
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
@@ -41,6 +42,7 @@ const AlunoModuleLoading = () => (
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
+  const executeLogout = usePortalLogout({ loginPath: '/login' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const storedProfile = getPortalSessionFromStorage();
   const initialAlunoProfile = storedProfile?.tipo === 'Aluno' ? storedProfile : null;
@@ -237,12 +239,6 @@ const AlunoPage: React.FC = () => {
       supabase.removeChannel(badgeChannel);
     };
   }, [alunoId, profile?.id]);
-
-  const executeLogout = async () => {
-    await loginService.logout().catch(() => undefined);
-    clearPortalSession();
-    navigate('/login');
-  };
 
   useInactivityLogout({
     isEnabled: !!profile && !isAuthLoading,

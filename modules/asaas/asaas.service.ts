@@ -22,6 +22,11 @@ const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> =
   return invokeFunction<T>('asaas-api', { action, ...payload });
 };
 
+export interface CheckoutPaymentSelection {
+  method: 'PIX' | 'BOLETO' | 'CREDIT_CARD';
+  installments?: number;
+}
+
 export const asaasIntegrationService = {
   async testConnection() {
     return invokeAdmin<{ success: boolean }>('test-connection');
@@ -79,6 +84,10 @@ export const asaasIntegrationService = {
       asaasCanceled?: boolean;
       asaasPaymentLinkCanceled?: boolean;
       asaasPaymentId?: string;
+      baneseCanceled?: boolean;
+      gatewayCanceled?: boolean;
+      gatewayProvider?: string | null;
+      gatewayPaymentId?: string | null;
       futureSyncWarning?: string | null;
     }>('manual-settlement', { receivableId, ...params });
   },
@@ -90,7 +99,14 @@ export const asaasIntegrationService = {
       reason?: string;
     } = {},
   ) {
-    return invokeAdmin<{ success: boolean; receivable: any; asaasRecreated?: boolean }>('reverse-manual-settlement', {
+    return invokeAdmin<{
+      success: boolean;
+      receivable: any;
+      asaasRecreated?: boolean;
+      baneseRecreated?: boolean;
+      gatewayRecreated?: boolean;
+      gatewayProvider?: string | null;
+    }>('reverse-manual-settlement', {
       receivableId,
       ...params,
     });
@@ -106,7 +122,7 @@ export const asaasIntegrationService = {
     courseId: string,
     alunoId: string,
     turmaId?: string | null,
-    eadPayment?: { method?: string; installments?: number },
+    paymentSelection?: CheckoutPaymentSelection,
   ): Promise<{
     url: string;
     alreadyPaid?: boolean;
@@ -141,9 +157,11 @@ export const asaasIntegrationService = {
       courseId,
       alunoId,
       turmaId,
-      method: eadPayment?.method,
-      eadPaymentMethod: eadPayment?.method,
-      eadInstallments: eadPayment?.installments,
+      method: paymentSelection?.method,
+      paymentMethod: paymentSelection?.method,
+      installments: paymentSelection?.installments,
+      eadPaymentMethod: paymentSelection?.method,
+      eadInstallments: paymentSelection?.installments,
     };
 
     let result: {

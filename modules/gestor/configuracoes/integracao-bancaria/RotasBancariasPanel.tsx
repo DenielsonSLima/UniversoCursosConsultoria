@@ -222,7 +222,7 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
             <div className="mb-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
               <p className="text-xs font-bold leading-relaxed text-amber-700">
-                Banese atende apenas Pix e boleto. Cartão de crédito não é aceito; Pix/Boleto seguem bloqueados até homologar payload por cobrança, exibição do retorno bancário e conciliação.
+                Na homologação, o Banese devolve somente linha digitável e código de barras. Em produção, o banco ativará o Pix dentro do mesmo boleto; por isso o BolePix usa a rota BOLETO e não exige uma rota Pix separada. Cartão não é suportado neste fluxo.
               </p>
             </div>
           )}

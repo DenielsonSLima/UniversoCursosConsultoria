@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { 
   DollarSign, TrendingUp, TrendingDown, Landmark, AlertTriangle, Activity, Info
 } from 'lucide-react';
-import { caixaService, PRINCIPAL_POLO_ID } from './caixa.service';
+import { caixaDashboardQueryOptions, PRINCIPAL_POLO_ID } from './caixa.service';
+import { useCaixaRealtime } from './useCaixaRealtime';
 import { financeiroService } from '../financeiro/financeiro.service';
 
 interface CaixaPageProps {
@@ -21,7 +22,9 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
   // Fetch Polos list
   const { data: polos = [] } = useQuery({
     queryKey: ['caixa-polos-list'],
-    queryFn: financeiroService.getPolos
+    queryFn: financeiroService.getPolos,
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
   });
 
   useEffect(() => {
@@ -33,10 +36,12 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
     return polos.filter((polo: any) => polo.id === poloId);
   }, [isGlobal, poloId, polos]);
 
+  useCaixaRealtime(selectedPolo);
+
   // Fetch dashboard data reactively based on selectedPolo
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['caixa-dashboard-data', selectedPolo],
-    queryFn: () => caixaService.getCaixaDashboardData(selectedPolo)
+    ...caixaDashboardQueryOptions(selectedPolo),
+    enabled: Boolean(selectedPolo),
   });
 
   const formatCurrency = (value: number) => {

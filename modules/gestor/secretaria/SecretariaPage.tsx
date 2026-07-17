@@ -1,7 +1,7 @@
 
 // File: modules/gestor/secretaria/SecretariaPage.tsx
 
-import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { canAccessTab } from '../access-control';
@@ -122,8 +122,24 @@ interface SecretariaPageProps {
 }
 
 const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissions }) => {
+  const pageRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState<string>('dashboard');
   const queryClient = useQueryClient();
+
+  useLayoutEffect(() => {
+    let scrollParent = pageRef.current?.parentElement || null;
+
+    while (scrollParent) {
+      const { overflowY } = window.getComputedStyle(scrollParent);
+      if (overflowY === 'auto' || overflowY === 'scroll') {
+        scrollParent.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        return;
+      }
+      scrollParent = scrollParent.parentElement;
+    }
+
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [activeModule]);
 
   const preloadModule = (moduleId: string) => {
     if (moduleId === 'cracha-periodo-eleitoral' || moduleId === 'transferencia') {
@@ -225,7 +241,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
 
 
   return (
-    <div className="animate-fadeIn min-h-screen pb-10">
+    <div ref={pageRef} className="animate-fadeIn min-h-screen pb-10">
       {/* Header Geral da Secretaria */}
       <div className="mb-8 flex items-center gap-4">
         {!isDashboard && (

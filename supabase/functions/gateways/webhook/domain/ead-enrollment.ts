@@ -1,6 +1,22 @@
 import type { GatewayWebhookContext } from "../types.ts";
 
-export const activateEadEnrollment = async (
+const AUTOMATIC_ENROLLMENT_MODALITIES = new Set([
+  "EAD",
+  "LIVRE",
+  "ESPECIALIZACAO",
+]);
+
+const normalizeModality = (value: unknown) =>
+  String(value || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+export const isAutomaticEnrollmentActivationModality = (value: unknown) =>
+  AUTOMATIC_ENROLLMENT_MODALITIES.has(normalizeModality(value));
+
+export const activateEnrollmentAfterPayment = async (
   context: GatewayWebhookContext,
   receivable: any,
 ) => {
@@ -22,7 +38,8 @@ export const activateEadEnrollment = async (
   const course = Array.isArray(turma?.cursos)
     ? turma?.cursos?.[0]
     : turma?.cursos;
-  if (String(course?.modalidade || "").toUpperCase() !== "EAD") return;
+  // TECNICO fica deliberadamente fora: a ativacao depende da analise documental.
+  if (!isAutomaticEnrollmentActivationModality(course?.modalidade)) return;
 
   const { error: updateError } = await context.admin
     .from("matriculas")
@@ -31,7 +48,7 @@ export const activateEadEnrollment = async (
   if (updateError) throw updateError;
 };
 
-export const syncEadOnlineInscription = async (
+export const syncOnlineInscriptionPayment = async (
   context: GatewayWebhookContext,
   input: {
     receivable: any;
@@ -70,3 +87,9 @@ export const syncEadOnlineInscription = async (
     .eq("gateway_provider", input.gatewayProvider);
   if (error) throw error;
 };
+
+/** @deprecated Use activateEnrollmentAfterPayment. */
+export const activateEadEnrollment = activateEnrollmentAfterPayment;
+
+/** @deprecated Use syncOnlineInscriptionPayment. */
+export const syncEadOnlineInscription = syncOnlineInscriptionPayment;

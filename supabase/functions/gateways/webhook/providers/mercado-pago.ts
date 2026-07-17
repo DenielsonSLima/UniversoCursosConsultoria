@@ -1,6 +1,6 @@
 import {
-  activateEadEnrollment,
-  syncEadOnlineInscription,
+  activateEnrollmentAfterPayment,
+  syncOnlineInscriptionPayment,
 } from "../domain/ead-enrollment.ts";
 import type { GatewayWebhookContext } from "../types.ts";
 import { fetchMercadoPagoResource } from "./mercado-pago/client.ts";
@@ -9,7 +9,10 @@ import {
   methodForMercadoPago,
   statusForMercadoPago,
 } from "./mercado-pago/mappers.ts";
-import { pixPayloadFor, transactionUrlFor } from "./mercado-pago/normalizers.ts";
+import {
+  pixPayloadFor,
+  transactionUrlFor,
+} from "./mercado-pago/normalizers.ts";
 import {
   findMercadoPagoReceivable,
   updateMercadoPagoReceivable,
@@ -25,7 +28,9 @@ import { syncMercadoPagoTransaction } from "./mercado-pago/transactions.ts";
 export const processMercadoPagoWebhook = async (
   context: GatewayWebhookContext,
 ) => {
-  const paymentId = normalizeRemotePaymentId(firstString(context.remotePaymentId));
+  const paymentId = normalizeRemotePaymentId(
+    firstString(context.remotePaymentId),
+  );
   if (!paymentId) {
     return { processed: true, ignored: true, reason: "missing_payment_id" };
   }
@@ -62,7 +67,7 @@ export const processMercadoPagoWebhook = async (
     paymentMethod,
   });
 
-  await syncEadOnlineInscription(context, {
+  await syncOnlineInscriptionPayment(context, {
     receivable,
     gatewayProvider: MERCADO_PAGO_WEBHOOK_PROVIDER_CODE,
     environment: context.environment,
@@ -78,7 +83,7 @@ export const processMercadoPagoWebhook = async (
     pendingStatus: PENDENTE_INSCRICAO_STATUS,
   });
   if (localStatus === "PAGO") {
-    await activateEadEnrollment(context, receivable);
+    await activateEnrollmentAfterPayment(context, receivable);
   }
 
   return {

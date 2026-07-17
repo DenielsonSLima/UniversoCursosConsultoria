@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Loader2, Save, ShieldCheck } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
@@ -9,6 +9,7 @@ import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.ke
 import TechnicalAcademicSettings from '../../../components/forms/TechnicalAcademicSettings';
 import TechnicalEnrollmentSettings from '../../../components/forms/TechnicalEnrollmentSettings';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
+import { academicLifecycleService } from '../academic-lifecycle.service';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
@@ -17,6 +18,7 @@ interface TurmaConfiguracoesProps {
 const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
+  const [currentStatus, setCurrentStatus] = useState(turma.status);
   const [form, setForm] = useState({
     nome: turma.nome,
     dataInicio: turma.dataInicio || '',
@@ -38,6 +40,10 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
     sincronizarAsaasFuturo: turma.sincronizarAsaasFuturo ?? true,
   });
 
+  useEffect(() => {
+    setCurrentStatus(turma.status);
+  }, [turma.status]);
+
   const saveMutation = useMutation({
     mutationFn: () => gestaoService.updateTurmaBasic(turma.id, form),
     onSuccess: async () => {
@@ -50,6 +56,22 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
       toast.success('Turma atualizada', 'As informações foram salvas no Supabase.');
     },
     onError: (error: any) => toast.error('Erro ao salvar', error.message),
+  });
+
+  const closeOnlineEnrollmentsMutation = useMutation({
+    mutationFn: () => academicLifecycleService.alterarStatusTurma(turma.id, 'PLANEJADA'),
+    onSuccess: async () => {
+      setCurrentStatus('PLANEJADA');
+      setForm((current) => ({ ...current, permitirInscricoesOnline: false }));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turma.id) }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+        invalidateSiteTickerQueries(queryClient),
+      ]);
+      toast.success('Inscrições fechadas', 'A turma voltou ao planejamento e saiu do site e do portal do aluno.');
+    },
+    onError: (error: any) => toast.error('Inscrições não fechadas', error.message),
   });
 
   return (
@@ -84,7 +106,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase">Situação</label>
           <input
-            value={turma.status.replace('_', ' ')}
+            value={currentStatus.replace('_', ' ')}
             readOnly
             className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
           />
@@ -112,6 +134,9 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
           <TechnicalEnrollmentSettings
             value={form}
             onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+            onlineEnrollmentLocked={currentStatus === 'INSCRICOES_ABERTAS'}
+            onCloseOnlineEnrollments={() => closeOnlineEnrollmentsMutation.mutate()}
+            isClosingOnlineEnrollments={closeOnlineEnrollmentsMutation.isPending || saveMutation.isPending}
           />
         </div>
 
@@ -155,14 +180,14 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
             frequenciaMinimaPercent={form.frequenciaMinimaPercent}
             mediaMinima={form.mediaMinima}
             onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
-            disabled={turma.status === 'FINALIZADA'}
+            disabled={currentStatus === 'FINALIZADA'}
           />
         </div>
       </div>
 
       <button
         onClick={() => saveMutation.mutate()}
-        disabled={!form.nome.trim() || saveMutation.isPending}
+        disabled={!form.nome.trim() || saveMutation.isPending || closeOnlineEnrollmentsMutation.isPending}
         className="flex items-center justify-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-emerald-900 transition-colors disabled:opacity-40"
       >
         {saveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

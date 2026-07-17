@@ -303,7 +303,7 @@ export const academicLifecycleService = {
 
   async alterarStatusTurma(
     turmaId: string,
-    status: 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO',
+    status: 'PLANEJADA' | 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO',
   ) {
     const { data, error } = await supabase.rpc('alterar_status_turma_tecnica', {
       p_turma_id: turmaId,

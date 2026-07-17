@@ -6,6 +6,7 @@ import { loginService } from '../login/login.service';
 import { clearPortalSession, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
+import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 import ConfirmModal from '../shared/components/ConfirmModal';
 
 // Sub-módulos do Professor
@@ -21,6 +22,7 @@ import ProfessorShell, { ProfessorPolo } from './components/ProfessorShell';
 const ProfessorPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const executeLogout = usePortalLogout({ loginPath: '/sistema/login' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const storedProfile = getPortalSessionFromStorage();
   const initialProfessorProfile = storedProfile?.tipo === 'Professor' ? storedProfile : null;
@@ -133,17 +135,6 @@ const ProfessorPage: React.FC = () => {
     setIsPoloSelectorOpen(false);
     // Invalidate related queries
     queryClient.invalidateQueries();
-  };
-
-  const executeLogout = async () => {
-    await loginService.logout();
-    sessionStorage.removeItem('logged_user_id');
-    sessionStorage.removeItem('logged_user_name');
-    sessionStorage.removeItem('logged_user_email');
-    sessionStorage.removeItem('logged_user_tipo');
-    clearPortalSession();
-    sessionStorage.removeItem('active_polo_id');
-    navigate('/sistema/login');
   };
 
   useInactivityLogout({

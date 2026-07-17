@@ -370,6 +370,12 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
 
             {credentialProviderCode === 'banese_card' && (
               <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 md:col-span-2">
+                  <p className="text-xs font-black uppercase tracking-wider text-amber-800">Homologação Banese</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-700">
+                    Client ID, Client Secret, convênio e dados da conta habilitam o boleto no Sandbox. O Banese confirmou que o BolePix será acrescentado pela própria API de boletos em produção, sem convênio Pix/SAB, chave Pix ou CRT separados.
+                  </p>
+                </div>
                 <TextInput
                   icon={Key}
                   label="Client ID"
@@ -387,22 +393,6 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   type="password"
                 />
                 <TextInput
-                  icon={LinkIcon}
-                  label="Webhook secret Pix"
-                  value={credentialForm.webhookSecret}
-                  onChange={(value) => updateCredentialForm('webhookSecret', value)}
-                  configured={editCredential?.webhookSecretConfigured}
-                  type="password"
-                />
-                <TextInput
-                  icon={ShieldCheck}
-                  label="CRT Access Token Pix"
-                  value={credentialForm.crtAccessToken}
-                  onChange={(value) => updateCredentialForm('crtAccessToken', value)}
-                  configured={editCredential?.metadata?.baneseCrtAccessTokenConfigured === true}
-                  type="password"
-                />
-                <TextInput
                   icon={Landmark}
                   label="Convênio boleto"
                   value={credentialForm.baneseBoletoConvenio || credentialForm.baneseConvenio}
@@ -411,6 +401,15 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                     updateCredentialForm('baneseConvenio', value);
                   }}
                   configured={Boolean(editCredential?.metadata?.baneseBoletoConvenio || editCredential?.metadata?.baneseConvenio)}
+                  readOnly
+                />
+                <TextInput
+                  icon={FileText}
+                  label="Beneficiário"
+                  value={credentialForm.baneseBeneficiarioNome}
+                  onChange={(value) => updateCredentialForm('baneseBeneficiarioNome', value)}
+                  configured
+                  readOnly
                 />
                 <TextInput
                   icon={FileText}
@@ -418,20 +417,15 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   value={credentialForm.baneseBeneficiarioInscricao}
                   onChange={(value) => updateCredentialForm('baneseBeneficiarioInscricao', value)}
                   configured={Boolean(editCredential?.metadata?.baneseBeneficiarioInscricao)}
+                  readOnly
                 />
                 <TextInput
-                  icon={Landmark}
-                  label="Convênio Pix/SAB Guias"
-                  value={credentialForm.banesePixConvenio}
-                  onChange={(value) => updateCredentialForm('banesePixConvenio', value)}
-                  configured={Boolean(editCredential?.metadata?.banesePixConvenio)}
-                />
-                <TextInput
-                  icon={Key}
-                  label="Chave Pix Banese"
-                  value={credentialForm.banesePixChave}
-                  onChange={(value) => updateCredentialForm('banesePixChave', value)}
-                  configured={Boolean(editCredential?.metadata?.banesePixChave)}
+                  icon={FileText}
+                  label="Código beneficiário"
+                  value={credentialForm.baneseCodigoBeneficiario}
+                  onChange={(value) => updateCredentialForm('baneseCodigoBeneficiario', value)}
+                  configured
+                  readOnly
                 />
                 <TextInput
                   icon={FileText}
@@ -444,12 +438,16 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   label="Agência"
                   value={credentialForm.baneseAgencia}
                   onChange={(value) => updateCredentialForm('baneseAgencia', value)}
+                  configured
+                  readOnly
                 />
                 <TextInput
                   icon={Landmark}
                   label="Conta"
                   value={credentialForm.baneseConta}
                   onChange={(value) => updateCredentialForm('baneseConta', value)}
+                  configured
+                  readOnly
                 />
               </>
             )}
@@ -482,6 +480,11 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 Copiar
               </button>
             </div>
+            {credentialProviderCode === 'banese_card' ? (
+              <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
+                O Banese confirmou a existência do webhook, mas ainda não enviou autenticação, payload e política de repetição. A URL fica reservada; a consulta da API é a confirmação principal.
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">

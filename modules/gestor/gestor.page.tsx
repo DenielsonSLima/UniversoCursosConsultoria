@@ -1,7 +1,7 @@
 
 // File: modules/gestor/gestor.page.tsx
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, 
   Handshake, 
@@ -40,14 +40,13 @@ import { supabase } from '../../lib/supabase';
 import { clearPortalSession, getGestorAccessScope, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
+import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 
 // Importação dos Submódulos
 import DashboardPage from './dashboard/DashboardPage';
 import ParceirosPage from './parceiros/ParceirosPage';
 import CadastrosPage from './cadastros/CadastrosPage';
 import GestaoPage from './gestao/GestaoPage';
-import SecretariaPage from './secretaria/SecretariaPage';
-import CaixaPage from './caixa/CaixaPage';
 import FinanceiroPage from './financeiro/FinanceiroPage';
 import BibliotecaPage from './biblioteca/BibliotecaPage';
 import CalendarioPage from './calendario/CalendarioPage';
@@ -69,6 +68,12 @@ import { loginService } from '../login/login.service';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
 import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
+import { caixaDashboardQueryOptions } from './caixa/caixa.service';
+
+const loadSecretariaPage = () => import('./secretaria/SecretariaPage');
+const loadCaixaPage = () => import('./caixa/CaixaPage');
+const SecretariaPage = lazy(loadSecretariaPage);
+const CaixaPage = lazy(loadCaixaPage);
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -113,6 +118,7 @@ const GestorPage: React.FC = () => {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const executeLogout = usePortalLogout({ loginPath: '/sistema/login' });
   const [profile, setProfile] = useState<PortalAuthProfile | null>(initialGestorProfile);
   const [isAuthLoading, setIsAuthLoading] = useState(!initialGestorProfile);
   // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
@@ -285,6 +291,18 @@ const GestorPage: React.FC = () => {
   const scopedPoloId = gestorScope.isGlobal
     ? currentPoloId
     : currentPoloId || gestorScope.activePoloId;
+  const preloadModule = useCallback((moduleId: string) => {
+    if (moduleId === 'secretaria') {
+      void loadSecretariaPage();
+    }
+    if (moduleId === 'caixa') {
+      void loadCaixaPage();
+      const dashboardPoloId = scopedPoloId || (gestorScope.isGlobal ? 'todos' : null);
+      if (dashboardPoloId) {
+        void queryClient.prefetchQuery(caixaDashboardQueryOptions(dashboardPoloId));
+      }
+    }
+  }, [gestorScope.isGlobal, queryClient, scopedPoloId]);
   useGestorOperationalRealtime({
     enabled: Boolean(profile) && !isAuthLoading,
     poloId: scopedPoloId,
@@ -340,12 +358,6 @@ const GestorPage: React.FC = () => {
       setActiveModule(firstAllowedModule);
     }
   }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
-
-  const executeLogout = async () => {
-    await loginService.logout();
-    clearPortalSession();
-    navigate('/sistema/login');
-  };
 
   useInactivityLogout({
     isEnabled: !!profile && !isAuthLoading,
@@ -658,7 +670,10 @@ const GestorPage: React.FC = () => {
             <div 
               key={item.id} 
               className="space-y-0.5 relative"
-              onMouseEnter={() => item.subItems && setMenuHovered(item.id, true)}
+              onMouseEnter={() => {
+                preloadModule(item.id);
+                if (item.subItems) setMenuHovered(item.id, true);
+              }}
               onMouseLeave={() => item.subItems && setMenuHovered(item.id, false)}
             >
               <button
@@ -666,6 +681,8 @@ const GestorPage: React.FC = () => {
                   if (item.subItems) toggleMenu(item.id);
                   else setActiveModule(item.id);
                 }}
+                onFocus={() => preloadModule(item.id)}
+                onTouchStart={() => preloadModule(item.id)}
                 className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 group ${
                   activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-semibold' 
@@ -772,6 +789,8 @@ const GestorPage: React.FC = () => {
                       if (item.subItems) toggleMenu(item.id);
                       else { setActiveModule(item.id); setIsMobileMenuOpen(false); }
                     }}
+                    onFocus={() => preloadModule(item.id)}
+                    onTouchStart={() => preloadModule(item.id)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${
                       activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
                         ? 'bg-blue-600 font-bold'
@@ -997,7 +1016,13 @@ const GestorPage: React.FC = () => {
         </header>
 
         <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto">
-          {renderContent()}
+          <Suspense fallback={(
+            <div className="flex min-h-[420px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
+              <Clock className="animate-pulse text-blue-600" size={24} /> Preparando módulo...
+            </div>
+          )}>
+            {renderContent()}
+          </Suspense>
         </div>
       </main>
 

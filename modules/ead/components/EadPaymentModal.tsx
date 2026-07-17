@@ -19,7 +19,10 @@ export interface EadPaymentPanelData {
     displayValue?: string | null;
     dueDate?: string | null;
     invoiceUrl?: string | null;
-    bankSlipUrl?: string | null;
+      bankSlipUrl?: string | null;
+      bankSlipDigitableLine?: string | null;
+      bankSlipBarcode?: string | null;
+      bankSlipOurNumber?: string | null;
     courseName?: string | null;
     recipient?: {
       name?: string | null;

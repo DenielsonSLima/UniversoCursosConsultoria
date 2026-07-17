@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap, RotateCcw } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
@@ -11,6 +12,11 @@ import {
   invalidateAlunoEadPaymentQueries,
   useEadPaymentConfirmationWatcher,
 } from '../../ead/hooks/useEadPaymentConfirmationWatcher';
+import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
+import BanesePaymentStatePage from './banese/BanesePaymentStatePage';
+import useBanesePaymentDetails from './banese/hooks/useBanesePaymentDetails';
+
+const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
 interface FinanceiroPageProps {
   alunoId: string;
@@ -18,6 +24,9 @@ interface FinanceiroPageProps {
 
 const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openedBaneseFromFinanceiroRef = useRef(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [selectedEadPayment, setSelectedEadPayment] = useState<any | null>(null);
   const [eadPaymentMethod, setEadPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX');
@@ -55,13 +64,45 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   });
 
   // Fetch actual contas_receber from Supabase
-  const { data: dbRecords = [], isLoading } = useQuery<any[]>({
+  const {
+    data: dbRecords = [],
+    isLoading,
+    isError: isFinanceiroError,
+    refetch: refetchFinanceiro,
+  } = useQuery<any[]>({
     queryKey: ['aluno-financeiro', alunoId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_receber')
         .select(`
-          *,
+          id,
+          cliente_id,
+          matricula_id,
+          turma_id,
+          descricao,
+          categoria,
+          tipo_lancamento,
+          parcela_numero,
+          valor,
+          valor_pago,
+          data_vencimento,
+          data_pagamento,
+          status,
+          forma_pagamento,
+          origem_pagamento,
+          asaas_invoice_url,
+          asaas_status,
+          asaas_transaction_receipt_url,
+          gateway_provider,
+          gateway_environment,
+          gateway_payment_method,
+          gateway_payment_id,
+          gateway_status,
+          gateway_bank_slip_url,
+          gateway_invoice_url,
+          gateway_boleto_linha_digitavel,
+          gateway_boleto_codigo_barras,
+          gateway_boleto_nosso_numero,
           turmas!left(
             id,
             curso_id,
@@ -95,7 +136,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
@@ -248,6 +291,23 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const status = String(inst.status || '').toUpperCase();
     const baseValue = toNumber(inst.valor, 0);
     const paidValue = toNumber(inst.valor_pago, baseValue);
+    if (hasRegisteredBaneseBoleto(inst)) {
+      return {
+        baseValue,
+        paidValue,
+        punctualDiscount: 0,
+        totalUntilDue: baseValue,
+        interestPercent: 0,
+        interestValue: 0,
+        lateFeeValue: 0,
+        totalWithLate: baseValue,
+        highlightValue: status === 'PAGO' ? paidValue : baseValue,
+        highlightLabel: status === 'PAGO' ? 'Valor pago' : 'Valor do boleto',
+        hasDiscount: false,
+        hasLateCharge: false,
+        canLateCharge: false,
+      };
+    }
     const policy = getFinancePolicy(inst, modality);
     const punctualDiscount = status === 'PAGO' ? 0 : Math.min(baseValue, Math.max(0, policy.discount));
     const totalUntilDue = roundMoney(Math.max(0, baseValue - punctualDiscount));
@@ -272,7 +332,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     };
   };
 
-  const installmentRows = installments.map((inst) => {
+  const toInstallmentRow = (inst: any) => {
     const modality = getInstallmentModality(inst);
     const turma = getInstallmentTurma(inst);
     const dueDate = parseDate(inst.data_vencimento);
@@ -291,7 +351,90 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       modalityAccent: getModalityAccent(modality),
       isOverdue
     };
+  };
+  const allInstallmentRows = dbRecords.map(toInstallmentRow);
+  const installmentRows = allInstallmentRows.filter((record) => (
+    !hiddenStatuses.includes(String(record.status || '').toUpperCase())
+  ));
+
+  const selectedBanesePaymentId = searchParams.get('banesePayment') || searchParams.get('baneseBoleto');
+  const selectedBanesePaymentSummary = selectedBanesePaymentId
+    ? allInstallmentRows.find((record) => record.id === selectedBanesePaymentId && hasRegisteredBaneseBoleto(record)) || null
+    : null;
+  const {
+    data: banesePaymentDetails = [],
+    isLoading: isBanesePaymentLoading,
+    isError: isBanesePaymentError,
+    refetch: refetchBanesePayment,
+  } = useBanesePaymentDetails({
+    alunoId,
+    paymentId: selectedBanesePaymentId,
+    summary: selectedBanesePaymentSummary,
   });
+  const banesePaymentRows = selectedBanesePaymentSummary
+    ? banesePaymentDetails.flatMap((detail) => {
+      const summary = allInstallmentRows.find((record) => (
+        record.id === detail.id && hasRegisteredBaneseBoleto(record)
+      ));
+      const sameBankTitle = summary
+        && String(summary.gateway_boleto_linha_digitavel || '').replace(/\D/g, '')
+          === String(detail.gateway_boleto_linha_digitavel || '').replace(/\D/g, '')
+        && String(summary.gateway_boleto_codigo_barras || '').replace(/\D/g, '')
+          === String(detail.gateway_boleto_codigo_barras || '').replace(/\D/g, '');
+      if (!summary || !sameBankTitle) return [];
+      return [toInstallmentRow({
+        ...detail,
+        status: summary.status,
+        gateway_status: summary.gateway_status,
+        valor_pago: summary.valor_pago,
+        data_pagamento: summary.data_pagamento,
+      })];
+    })
+    : [];
+  const selectedBanesePayment = selectedBanesePaymentId
+    ? banesePaymentRows.find((record) => record.id === selectedBanesePaymentId && hasRegisteredBaneseBoleto(record)) || null
+    : null;
+
+  const openBanesePayment = React.useCallback((record: any) => {
+    if (!hasRegisteredBaneseBoleto(record)) return;
+    openedBaneseFromFinanceiroRef.current = true;
+    const next = new URLSearchParams(window.location.search);
+    next.set('module', 'financeiro');
+    next.set('banesePayment', record.id);
+    next.delete('baneseBoleto');
+    setSearchParams(next);
+  }, [setSearchParams]);
+
+  const closeBanesePayment = React.useCallback(() => {
+    if (openedBaneseFromFinanceiroRef.current) {
+      openedBaneseFromFinanceiroRef.current = false;
+      navigate(-1);
+      return;
+    }
+    const next = new URLSearchParams(window.location.search);
+    next.delete('banesePayment');
+    next.delete('baneseBoleto');
+    next.set('module', 'financeiro');
+    setSearchParams(next, { replace: true });
+  }, [navigate, setSearchParams]);
+
+  useEffect(() => {
+    const legacyId = searchParams.get('baneseBoleto');
+    if (!legacyId || searchParams.get('banesePayment')) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('baneseBoleto');
+    next.set('banesePayment', legacyId);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const refreshBanesePayment = React.useCallback(async () => {
+    const financeiroResult = await refetchFinanceiro();
+    if (financeiroResult.error) throw financeiroResult.error;
+    if (selectedBanesePaymentSummary) {
+      const detailResult = await refetchBanesePayment();
+      if (detailResult.error) throw detailResult.error;
+    }
+  }, [refetchBanesePayment, refetchFinanceiro, selectedBanesePaymentSummary]);
 
   const filteredBySearchDateModality = installmentRows.filter((inst) => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -739,8 +882,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
   const renderActions = (inst: any) => {
     const status = String(inst.status || '').toUpperCase();
+    const isBaneseBoleto = hasRegisteredBaneseBoleto(inst);
 
     if (['PENDENTE', 'VENCIDO'].includes(status) || inst.isOverdue) {
+      if (isBaneseBoleto) {
+        return (
+          <button
+            onClick={() => openBanesePayment(inst)}
+            className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 transition-colors hover:bg-emerald-100"
+          >
+            <FileText size={12} /> {getBanesePaymentActionLabel(inst)}
+          </button>
+        );
+      }
       if (inst.modalidade === 'EAD') {
         return (
           <div className="flex justify-start gap-2">
@@ -807,6 +961,30 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       </span>
     );
   };
+
+  if (selectedBanesePaymentId) {
+    if (isLoading || (selectedBanesePaymentSummary && isBanesePaymentLoading)) {
+      return <BanesePaymentStatePage state="loading" onBack={closeBanesePayment} />;
+    }
+    if (isFinanceiroError || isBanesePaymentError) {
+      return (
+        <BanesePaymentStatePage
+          state="error"
+          onBack={closeBanesePayment}
+          onRetry={refreshBanesePayment}
+        />
+      );
+    }
+    if (!selectedBanesePayment) {
+      return (
+        <BanesePaymentStatePage
+          state="not-found"
+          onBack={closeBanesePayment}
+          onRetry={refreshBanesePayment}
+        />
+      );
+    }
+  }
 
   if (isLoading) {
     return (
@@ -1195,6 +1373,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                         onCopyLink={copyPaymentLink}
                         onOpenReceipt={openReceipt}
                         onPayNow={openEadPaymentChoice}
+                        onOpenBanesePayment={openBanesePayment}
                       />
                     ))}
                   </div>
@@ -1334,6 +1513,24 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           panel={eadPaymentPanel}
           onClose={() => setEadPaymentPanel(null)}
         />
+      )}
+
+      {selectedBanesePayment && (
+        <React.Suspense fallback={(
+          <div className="fixed inset-0 z-[99999] grid place-items-center bg-[#001a33] text-white">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-emerald-300" />
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em]">Preparando cobrança Banese</p>
+            </div>
+          </div>
+        )}>
+          <BanesePaymentPage
+            installment={selectedBanesePayment}
+            installments={banesePaymentRows}
+            onBack={closeBanesePayment}
+            onRefresh={refreshBanesePayment}
+          />
+        </React.Suspense>
       )}
 
       {/* Recibo Modal Overlay */}

@@ -157,20 +157,49 @@ export const isCredentialConfiguredForProvider = (
       credential.metadata?.interCertificateConfigured === true &&
       credential.metadata?.interPrivateKeyConfigured === true;
   }
+  if (providerCode === "banese_card") {
+    return credential.client_id_configured === true &&
+      credential.client_secret_configured === true;
+  }
   return false;
 };
 
 export const isCredentialConfiguredForRoute = async (
   admin: any,
   providerCode: ProviderCode,
-  _environment: Environment,
-  _paymentMethod: PaymentMethod,
+  environment: Environment,
+  paymentMethod: PaymentMethod,
   credential: any,
 ) => {
   const checkedCredential = providerCode === "asaas" && credential
     ? await mergeAsaasLegacyCredential(admin, credential)
     : credential;
-  return isCredentialConfiguredForProvider(providerCode, checkedCredential);
+  const configured = isCredentialConfiguredForProvider(
+    providerCode,
+    checkedCredential,
+  );
+  if (!configured || providerCode !== "banese_card") return configured;
+  if (paymentMethod === "BOLETO") {
+    return Boolean(
+      credential?.metadata?.baneseBoletoConvenio ||
+        credential?.metadata?.baneseConvenio,
+    ) && Boolean(credential?.metadata?.baneseAgencia);
+  }
+  if (paymentMethod === "PIX") {
+    const crtAccessToken = await getGatewaySecret(
+      admin,
+      providerCode,
+      environment,
+      "crt_access_token",
+    );
+    return Boolean(
+      crtAccessToken &&
+        credential?.metadata?.banesePixConvenio &&
+        credential?.metadata?.banesePixChave &&
+        credential?.metadata?.banesePixHomologacaoDisponivel === true,
+    );
+  }
+  return false;
 };
 
 export const updateAsaasLegacyConfig = async (
@@ -235,6 +264,45 @@ const testMercadoPago = async (accessToken: string) => {
     throw new Error(text || "O Mercado Pago recusou o token informado.");
   }
   return { status: "OK", message: "Conexao validada com sucesso." };
+};
+
+const baneseTokenUrl = (environment: Environment) =>
+  environment === "production"
+    ? "https://webapi.banese.b.br/autenticacao/oauth/v1/token"
+    : "https://sandbox.banese.b.br/autenticacao/oauth/v1/token";
+
+const testBaneseBoleto = async (
+  clientId: string,
+  clientSecret: string,
+  environment: Environment,
+) => {
+  const response = await fetch(baneseTokenUrl(environment), {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      scope: "boletos",
+    }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = String(
+      payload?.error_description || payload?.message || payload?.error || "",
+    ).trim();
+    throw new Error(
+      detail || `O Banese recusou as credenciais (${response.status}).`,
+    );
+  }
+  if (!payload?.access_token) {
+    throw new Error("O Banese respondeu sem access token.");
+  }
+  return {
+    status: "OK",
+    message: "OAuth de boletos validado com sucesso no sandbox Banese.",
+  };
 };
 
 const bancoInterTokenUrl = (environment: Environment) =>
@@ -349,9 +417,9 @@ export const testProvider = async (
   if (!clientId || !clientSecret) {
     throw new Error("Informe Client ID e Client Secret do Banese.");
   }
-  return {
-    status: "PENDING_MANUAL",
-    message:
-      "Credenciais armazenadas. Pix/Boleto Banese precisam de homologacao manual antes de ativar checkout real.",
-  };
+  return testBaneseBoleto(
+    String(clientId),
+    String(clientSecret),
+    environment,
+  );
 };

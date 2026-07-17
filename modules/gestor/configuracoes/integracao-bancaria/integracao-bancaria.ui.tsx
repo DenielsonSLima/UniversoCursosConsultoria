@@ -109,6 +109,7 @@ export const TextInput = ({
   onChange,
   configured,
   type = 'text',
+  readOnly = false,
 }: {
   icon: React.ElementType;
   label: string;
@@ -116,6 +117,7 @@ export const TextInput = ({
   onChange: (value: string) => void;
   configured?: boolean;
   type?: 'text' | 'password';
+  readOnly?: boolean;
 }) => (
   <label className="space-y-2">
     <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500">
@@ -126,14 +128,23 @@ export const TextInput = ({
           {configured ? 'cadastrado' : 'vazio'}
         </span>
       )}
+      {readOnly && (
+        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] text-slate-600">
+          fixo Universo
+        </span>
+      )}
     </span>
     <input
       type={type}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      readOnly={readOnly}
+      aria-readonly={readOnly}
       placeholder={configured ? 'xxxxxxxxxxxx' : ''}
       className={`h-11 w-full rounded-md border px-3 font-mono text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white ${
-        configured ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-white'
+        readOnly
+          ? 'cursor-default border-slate-200 bg-slate-100 text-slate-600'
+          : configured ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-white'
       }`}
     />
   </label>

@@ -26,10 +26,17 @@ import {
   gatewayPrimaryUrl,
   gatewayReceivableUpdate,
   persistGatewayTransaction as persistProviderGatewayTransaction,
+  repairGatewayTransactionFromReceivable,
   type GatewayPaymentMethod,
   type GatewayProviderCode,
 } from "../router.ts";
 import { normalizeProviderCode } from "../checkout/utils.ts";
+import {
+  assertGatewayTitleCanBeReset,
+  boletoIssuedAtAfterReset,
+  isRemoteTitleNonPayable,
+} from "../checkout/remote-title-guard.ts";
+import { baneseFinancialTermsFromCharge } from "../api/banese-financial-terms.ts";
 
 const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
@@ -200,18 +207,83 @@ const asaasBaseUrl = (environment: string) =>
 const tryCancelLegacyAsaasPayment = async (
   admin: any,
   environment: string,
-  paymentId?: string | null,
+  receivable: any,
 ) => {
-  if (!paymentId) return;
-  try {
-    const { data: apiKey, error } = await admin.rpc("asaas_get_secret", {
-      p_secret_name: asaasApiSecretName(environment),
+  const paymentId = receivable?.asaas_payment_id ||
+    (receivable?.gateway_provider === "asaas" ? receivable?.gateway_payment_id : null);
+  const paymentLinkId = receivable?.asaas_payment_link_id ||
+    (receivable?.gateway_provider === "asaas" ? receivable?.gateway_payment_link_id : null);
+  if (!paymentId && !paymentLinkId) return;
+
+  const { data: apiKey, error } = await admin.rpc("asaas_get_secret", {
+    p_secret_name: asaasApiSecretName(environment),
+  });
+  if (error || !apiKey) {
+    throw new Error(
+      "Nao foi possivel autenticar no Asaas para cancelar a cobranca anterior. Nenhum novo titulo foi criado.",
+    );
+  }
+
+  if (paymentId) {
+    const paymentUrl = `${asaasBaseUrl(environment)}/payments/${paymentId}`;
+    const currentResponse = await fetch(paymentUrl, {
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Universo-Cursos-Aluno",
+        access_token: apiKey,
+      },
     });
-    if (error || !apiKey) {
-      console.warn("Nao foi possivel ler chave Asaas para cancelar cobranca substituida:", error);
-      return;
+    const current = currentResponse.status === 404
+      ? null
+      : await currentResponse.json().catch(() => null);
+    if (!currentResponse.ok && currentResponse.status !== 404) {
+      throw new Error(
+        `Nao foi possivel consultar a cobranca anterior no Asaas (${currentResponse.status}). Nenhum novo titulo foi criado.`,
+      );
     }
-    const response = await fetch(`${asaasBaseUrl(environment)}/payments/${paymentId}`, {
+    const currentStatus = String(current?.status || "").toUpperCase();
+    if (["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(currentStatus)) {
+      throw new Error(
+        "O Asaas ja confirmou o pagamento da cobranca anterior. Atualize a conciliacao antes de tentar novo checkout.",
+      );
+    }
+    if (currentResponse.status !== 404 && currentStatus !== "DELETED") {
+      const response = await fetch(paymentUrl, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "Universo-Cursos-Aluno",
+          access_token: apiKey,
+        },
+      });
+      if (!response.ok && response.status !== 404) {
+        throw new Error(
+          `Nao foi possivel cancelar a cobranca anterior no Asaas (${response.status}). Nenhum novo titulo foi criado.`,
+        );
+      }
+    }
+    const confirmation = await fetch(paymentUrl, {
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Universo-Cursos-Aluno",
+        access_token: apiKey,
+      },
+    });
+    const confirmationPayload = confirmation.status === 404
+      ? null
+      : await confirmation.json().catch(() => null);
+    if (
+      confirmation.status !== 404 &&
+      (!confirmation.ok || String(confirmationPayload?.status || "").toUpperCase() !== "DELETED")
+    ) {
+      throw new Error(
+        "O Asaas nao confirmou o cancelamento da cobranca anterior. Nenhum novo titulo foi criado.",
+      );
+    }
+  }
+
+  if (paymentLinkId) {
+    const response = await fetch(`${asaasBaseUrl(environment)}/paymentLinks/${paymentLinkId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -220,10 +292,10 @@ const tryCancelLegacyAsaasPayment = async (
       },
     });
     if (!response.ok && response.status !== 404) {
-      console.warn("Nao foi possivel cancelar cobranca Asaas substituida:", response.status, await response.text());
+      throw new Error(
+        `Nao foi possivel cancelar o link anterior no Asaas (${response.status}). Nenhum novo titulo foi criado.`,
+      );
     }
-  } catch (error) {
-    console.warn("Falha ao cancelar cobranca Asaas substituida:", error);
   }
 };
 
@@ -675,6 +747,9 @@ export const handlePaymentCheckout = async (req: Request) => {
         && gatewayReceivable.gateway_payment_method === gatewayPaymentMethodForCharge
         && gatewayReceivable.gateway_environment === environment
         && Number(gatewayReceivable.gateway_installments || 1) === Number(charge.installmentCount || 1)
+        && Math.round(Number(gatewayReceivable.valor || 0) * 100) === Math.round(Number(charge.value || 0) * 100)
+        && String(gatewayReceivable.data_vencimento || "").slice(0, 10) === String(dataVencimento || "").slice(0, 10)
+        && !isRemoteTitleNonPayable(gatewayReceivable)
         && (
           providerCode !== "mercado_pago" ||
           gatewayPaymentMethodForCharge !== "PIX" ||
@@ -682,9 +757,22 @@ export const handlePaymentCheckout = async (req: Request) => {
         )
         && resolveCheckoutUrl(gatewayReceivable)
       ) {
+        await repairGatewayTransactionFromReceivable(admin, gatewayReceivable);
         return json({ url: resolveCheckoutUrl(gatewayReceivable), alreadyPending: true });
       }
 
+      const preserveReservedBaneseNumber = Boolean(
+        gatewayReceivable?.gateway_provider === "banese_card" &&
+          providerCode === "banese_card" &&
+          gatewayReceivable?.gateway_environment === environment &&
+          gatewayReceivable?.gateway_payment_method === "BOLETO" &&
+          gatewayPaymentMethodForCharge === "BOLETO" &&
+          Number(gatewayReceivable?.gateway_installments || 1) === Number(charge.installmentCount || 1) &&
+          Math.round(Number(gatewayReceivable?.valor || 0) * 100) === Math.round(Number(charge.value || 0) * 100) &&
+          String(gatewayReceivable?.data_vencimento || "").slice(0, 10) === String(dataVencimento || "").slice(0, 10) &&
+          !isRemoteTitleNonPayable(gatewayReceivable) &&
+          gatewayReceivable?.gateway_boleto_nosso_numero,
+      );
       const staleGatewayFields = gatewayReceivable?.id
         ? {
           gateway_payment_id: null,
@@ -695,6 +783,25 @@ export const handlePaymentCheckout = async (req: Request) => {
           gateway_bank_slip_url: null,
           gateway_pix_payload: null,
           gateway_pix_encoded_image: null,
+          gateway_boleto_linha_digitavel: preserveReservedBaneseNumber
+            ? gatewayReceivable.gateway_boleto_linha_digitavel || null
+            : null,
+          gateway_boleto_codigo_barras: preserveReservedBaneseNumber
+            ? gatewayReceivable.gateway_boleto_codigo_barras || null
+            : null,
+          gateway_boleto_nosso_numero: preserveReservedBaneseNumber
+            ? gatewayReceivable.gateway_boleto_nosso_numero
+            : null,
+          gateway_boleto_issued_at: boletoIssuedAtAfterReset(
+            gatewayReceivable,
+            preserveReservedBaneseNumber,
+          ),
+          gateway_financial_terms: preserveReservedBaneseNumber
+            ? gatewayReceivable.gateway_financial_terms || null
+            : null,
+          gateway_financial_terms_confirmed_at: preserveReservedBaneseNumber
+            ? gatewayReceivable.gateway_financial_terms_confirmed_at || null
+            : null,
           gateway_transaction_receipt_url: null,
           gateway_synced_at: null,
         }
@@ -705,7 +812,7 @@ export const handlePaymentCheckout = async (req: Request) => {
         && gatewayReceivable.gateway_provider === "asaas"
         && (gatewayReceivable.asaas_payment_id || gatewayReceivable.asaas_payment_link_id)
       ) {
-        await tryCancelLegacyAsaasPayment(admin, environment, gatewayReceivable.asaas_payment_id);
+        await tryCancelLegacyAsaasPayment(admin, environment, gatewayReceivable);
         const switchMessage = `Cobrança Asaas anterior substituída por ${providerLabelFor(providerCode)} conforme a rota da integração bancária.`;
         const { data: clearedReceivable, error: clearReceivableError } = await admin
           .from("contas_receber")
@@ -731,6 +838,12 @@ export const handlePaymentCheckout = async (req: Request) => {
             gateway_bank_slip_url: null,
             gateway_pix_payload: null,
             gateway_pix_encoded_image: null,
+            gateway_boleto_linha_digitavel: null,
+            gateway_boleto_codigo_barras: null,
+            gateway_boleto_nosso_numero: null,
+            gateway_boleto_issued_at: null,
+            gateway_financial_terms: null,
+            gateway_financial_terms_confirmed_at: null,
             gateway_transaction_receipt_url: null,
             gateway_status: null,
             gateway_last_error: switchMessage,
@@ -744,6 +857,10 @@ export const handlePaymentCheckout = async (req: Request) => {
         if (clearReceivableError) throw clearReceivableError;
         gatewayReceivable = clearedReceivable || gatewayReceivable;
       }
+
+      assertGatewayTitleCanBeReset(gatewayReceivable, {
+        allowBaneseRecovery: preserveReservedBaneseNumber,
+      });
 
       const receivablePayload: any = {
         polo_id: turma.polo_id,
@@ -827,6 +944,10 @@ export const handlePaymentCheckout = async (req: Request) => {
             Boolean(currentReceivable?.gateway_pix_payload || currentReceivable?.gateway_pix_encoded_image)
           )
         ) {
+          await repairGatewayTransactionFromReceivable(
+            admin,
+            currentReceivable,
+          );
           return json({ url: currentUrl, alreadyPending: true });
         }
         throw new Error("A cobrança já está sendo preparada. Aguarde alguns instantes e tente novamente.");
@@ -835,6 +956,16 @@ export const handlePaymentCheckout = async (req: Request) => {
       let gatewayResult: any;
       try {
         const publicBaseUrl = resolvePublicBaseUrl();
+        const financialTerms = providerCode === "banese_card" &&
+            gatewayPaymentMethodForCharge === "BOLETO"
+          ? baneseFinancialTermsFromCharge({
+            amount: charge.value,
+            dueDate: dataVencimento,
+            discount: charge.discount,
+            interest: charge.interest,
+            fine: charge.fine,
+          })
+          : null;
         gatewayResult = await createGatewayCharge({
           admin,
           supabaseUrl,
@@ -850,10 +981,12 @@ export const handlePaymentCheckout = async (req: Request) => {
             document: gatewayDocument,
             phone: aluno.telefone,
             address: aluno.endereco,
+            number: aluno.numero,
+            complement: aluno.complemento,
             postalCode: aluno.cep,
             district: aluno.bairro,
             city: aluno.cidade,
-            state: aluno.estado,
+            state: aluno.uf ?? aluno.estado,
           },
           amount: Number(charge.value || 0),
           description: charge.description,
@@ -862,6 +995,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           successUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?module=perfil&tab=documentos&technicalEnrollment=1&gateway=success` : null,
           failureUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=failure` : null,
           pendingUrl: publicBaseUrl ? `${publicBaseUrl}/aluno?gateway=pending` : null,
+          financialTerms,
         });
         paymentCreated = true;
       } catch (gatewayError) {
@@ -887,7 +1021,7 @@ export const handlePaymentCheckout = async (req: Request) => {
         .single();
       if (updateGatewayError) throw updateGatewayError;
 
-      const inscricaoPayload = {
+      const inscricaoPayload: any = {
         curso_id: course.id,
         turma_id: turma.id,
         aluno_id: aluno.id,
@@ -947,6 +1081,10 @@ export const handlePaymentCheckout = async (req: Request) => {
           value: Number(charge.value || 0),
           invoiceUrl: updatedReceivable.gateway_invoice_url,
           bankSlipUrl: updatedReceivable.gateway_bank_slip_url,
+          bankSlipDigitableLine:
+            updatedReceivable.gateway_boleto_linha_digitavel,
+          bankSlipBarcode: updatedReceivable.gateway_boleto_codigo_barras,
+          bankSlipOurNumber: updatedReceivable.gateway_boleto_nosso_numero,
           pixQrCode: gatewayResult.pixPayload || gatewayResult.pixEncodedImage
             ? { payload: gatewayResult.pixPayload, encodedImage: gatewayResult.pixEncodedImage }
             : null,
@@ -1377,7 +1515,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           .single();
         if (reconcileError) throw reconcileError;
 
-        const inscriptionPayload = {
+        const inscriptionPayload: any = {
           curso_id: course.id,
           turma_id: turma.id,
           aluno_id: aluno.id,
@@ -1599,7 +1737,7 @@ export const handlePaymentCheckout = async (req: Request) => {
     if (updateReceivableError) throw updateReceivableError;
     await persistGatewayTransaction(payment, updatedReceivable);
 
-    const inscricaoPayload = {
+    const inscricaoPayload: any = {
       curso_id: course.id,
       turma_id: turma.id,
       aluno_id: aluno.id,
@@ -1646,8 +1784,12 @@ export const handlePaymentCheckout = async (req: Request) => {
     return json({ url: updatedReceivable.asaas_invoice_url || payment.invoiceUrl });
   } catch (error) {
     const errorMessage = normalizeErrorMessage(error);
+    const remotePaymentMayExist = Boolean(
+      error && typeof error === "object" &&
+        (error as Record<string, unknown>).remotePaymentCreated === true,
+    );
     console.error("Erro ao gerar checkout público:", error);
-    if (!paymentCreated && checkoutReceivableId) {
+    if (!paymentCreated && !remotePaymentMayExist && checkoutReceivableId) {
       try {
         await admin
           .from("contas_receber")
@@ -1656,12 +1798,13 @@ export const handlePaymentCheckout = async (req: Request) => {
           .is("asaas_payment_id", null)
           .is("asaas_invoice_url", null)
           .is("asaas_payment_link_id", null)
+          .is("gateway_boleto_nosso_numero", null)
           .neq("status", "PAGO");
       } catch (cleanupError) {
         console.warn("Não foi possível limpar cobrança local falha:", cleanupError);
       }
     }
-    if (!paymentCreated && checkoutMatriculaId) {
+    if (!paymentCreated && !remotePaymentMayExist && checkoutMatriculaId) {
       try {
         await admin
           .from("matriculas")

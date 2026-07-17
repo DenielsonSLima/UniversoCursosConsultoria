@@ -10,23 +10,21 @@ import {
   isRateLimitExceeded,
   json,
 } from "../../_shared/http.ts";
+import { getPaymentIssuerOverview, savePaymentIssuer } from "./issuer.ts";
 import {
-  getPaymentIssuerOverview,
-  savePaymentIssuer,
-} from "./issuer.ts";
-import {
-  GLOBAL_ACTIONS,
-  GESTOR_ACTIONS,
-  PROVIDERS,
   assertProviderAdapterReady,
   credentialWebhookUrlFor,
+  enforceProviderFixedMetadata,
   extractSecretInput,
+  GESTOR_ACTIONS,
+  GLOBAL_ACTIONS,
   normalizeEnvironment,
   normalizeMethod,
   normalizeModalidade,
   normalizeProviderCode,
   pickMetadata,
   providerOverviewRow,
+  PROVIDERS,
   webhookUrlFor,
 } from "./config.ts";
 import {
@@ -39,6 +37,7 @@ import {
   testProvider,
   updateAsaasLegacyConfig,
 } from "./credentials.ts";
+import { reconcileBaneseReceivable } from "./banese.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -89,24 +88,23 @@ Deno.serve(async (req: Request) => {
         routesResult,
         configResult,
         issuerOverview,
-      ] =
-        await Promise.all([
-          admin.from("payment_gateway_providers").select("*").eq(
-            "active",
-            true,
-          ).order("name", { ascending: true }),
-          admin.from("payment_gateway_credentials").select("*").order(
-            "provider_code",
-            { ascending: true },
-          ).order("environment", { ascending: true }),
-          admin.from("payment_gateway_routes").select("*").order("modalidade", {
-            ascending: true,
-          }).order("payment_method", { ascending: true }).order("environment", {
-            ascending: true,
-          }),
-          admin.from("asaas_config").select("environment").maybeSingle(),
-          getPaymentIssuerOverview(admin),
-        ]);
+      ] = await Promise.all([
+        admin.from("payment_gateway_providers").select("*").eq(
+          "active",
+          true,
+        ).order("name", { ascending: true }),
+        admin.from("payment_gateway_credentials").select("*").order(
+          "provider_code",
+          { ascending: true },
+        ).order("environment", { ascending: true }),
+        admin.from("payment_gateway_routes").select("*").order("modalidade", {
+          ascending: true,
+        }).order("payment_method", { ascending: true }).order("environment", {
+          ascending: true,
+        }),
+        admin.from("asaas_config").select("environment").maybeSingle(),
+        getPaymentIssuerOverview(admin),
+      ]);
       if (providersResult.error) throw providersResult.error;
       if (credentialsResult.error) throw credentialsResult.error;
       if (routesResult.error) throw routesResult.error;
@@ -160,7 +158,10 @@ Deno.serve(async (req: Request) => {
     if (action === "save-credential") {
       const providerCode = normalizeProviderCode(body.providerCode);
       const environment = normalizeEnvironment(body.environment);
-      const metadata = pickMetadata(body.metadata);
+      const metadata = enforceProviderFixedMetadata(
+        providerCode,
+        pickMetadata(body.metadata),
+      );
       const current = await getCredential(admin, providerCode, environment);
       const checkedCurrent = current
         ? await mergeAsaasLegacyCredential(admin, current)
@@ -176,9 +177,7 @@ Deno.serve(async (req: Request) => {
         ...(secrets.certificate_pem
           ? { interCertificateConfigured: true }
           : {}),
-        ...(secrets.private_key_pem
-          ? { interPrivateKeyConfigured: true }
-          : {}),
+        ...(secrets.private_key_pem ? { interPrivateKeyConfigured: true } : {}),
         ...(secrets.crt_access_token
           ? { baneseCrtAccessTokenConfigured: true }
           : {}),
@@ -211,6 +210,9 @@ Deno.serve(async (req: Request) => {
       const nextMetadata = {
         ...currentMetadata,
         ...metadataWithSecretFlags,
+        ...(providerCode === "banese_card"
+          ? enforceProviderFixedMetadata(providerCode, {})
+          : {}),
       };
       const configured = isCredentialConfiguredForProvider(providerCode, {
         ...nextFlags,
@@ -281,6 +283,23 @@ Deno.serve(async (req: Request) => {
       const modalidade = normalizeModalidade(body.modalidade);
       const paymentMethod = normalizeMethod(body.paymentMethod);
       const routeEnabled = body.enabled !== false;
+
+      if (
+        routeEnabled && providerCode === "banese_card" &&
+        environment !== "sandbox"
+      ) {
+        throw new Error(
+          "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
+        );
+      }
+      if (
+        routeEnabled && providerCode === "banese_card" &&
+        paymentMethod === "PIX"
+      ) {
+        throw new Error(
+          "Pix Banese nao pode ser ativado: o banco informou que o servico de homologacao esta indisponivel e a liberacao ocorrera somente em producao.",
+        );
+      }
 
       if (routeEnabled) {
         assertProviderAdapterReady(providerCode, paymentMethod);
@@ -377,6 +396,12 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
       }
       return respondJson({ success: true, ...result });
+    }
+
+    if (action === "reconcile-banese-receivable") {
+      return respondJson(
+        await reconcileBaneseReceivable(admin, body.receivableId),
+      );
     }
 
     return respondJson({ error: "Acao nao reconhecida." }, 400);

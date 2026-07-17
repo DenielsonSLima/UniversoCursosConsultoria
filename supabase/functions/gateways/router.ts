@@ -1,3 +1,5 @@
+import type { BaneseFinancialTermsInput } from "../banese/internal/financial-terms.ts";
+
 export type GatewayEnvironment = "sandbox" | "production";
 export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
 export type GatewayProviderCode = "asaas" | "mercado_pago" | "banese_card";
@@ -28,6 +30,7 @@ export type GatewayChargeInput = {
   failureUrl?: string | null;
   pendingUrl?: string | null;
   issuer?: GatewayIssuer | null;
+  financialTerms?: BaneseFinancialTermsInput | null;
 };
 
 export type GatewayChargeResult = {
@@ -40,7 +43,11 @@ export type GatewayChargeResult = {
   bankSlipUrl: string | null;
   pixPayload: string | null;
   pixEncodedImage: string | null;
+  bankSlipDigitableLine: string | null;
+  bankSlipBarcode: string | null;
+  bankSlipOurNumber: string | null;
   issuerPoloId: string | null;
+  financialTerms: Record<string, unknown> | null;
   rawPayload: Record<string, unknown>;
 };
 
@@ -162,7 +169,14 @@ const normalizeAdapterResult = (
     pixEncodedImage: result?.pixEncodedImage ||
       result?.pixEncodedImageBase64 ||
       null,
+    bankSlipDigitableLine: result?.bankSlipDigitableLine || null,
+    bankSlipBarcode: result?.bankSlipBarcode || null,
+    bankSlipOurNumber: result?.bankSlipOurNumber || null,
     issuerPoloId: null,
+    financialTerms: result?.financialTerms &&
+        typeof result.financialTerms === "object"
+      ? result.financialTerms
+      : null,
     rawPayload: raw,
   };
 };
@@ -180,14 +194,16 @@ export const createGatewayCharge = async (
 ): Promise<GatewayChargeResult> => {
   const hydratedInput = await withProviderMetadata(input);
   if (hydratedInput.providerCode === "banese_card") {
+    if (hydratedInput.environment !== "sandbox") {
+      throw new Error(
+        "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
+      );
+    }
     if (hydratedInput.paymentMethod === "CREDIT_CARD") {
       throw new Error(
         "Banese nao aceita cartao de credito neste fluxo de checkout.",
       );
     }
-    throw new Error(
-      "Checkout Banese Pix/Boleto esta bloqueado ate homologar payload por cobranca, exibicao do retorno bancario e conciliacao.",
-    );
   }
 
   if (hydratedInput.paymentMethod === "PIX") {
@@ -236,6 +252,7 @@ export const persistGatewayTransaction = async (
     installments?: number | null;
     result: GatewayChargeResult;
   },
+  options: { insertOnly?: boolean } = {},
 ) => {
   const remotePaymentId = input.result.remotePaymentId ||
     input.result.remotePaymentLinkId;
@@ -262,6 +279,9 @@ export const persistGatewayTransaction = async (
     bank_slip_url: input.result.bankSlipUrl,
     pix_payload: input.result.pixPayload,
     pix_encoded_image: input.result.pixEncodedImage,
+    bank_slip_digitable_line: input.result.bankSlipDigitableLine,
+    bank_slip_barcode: input.result.bankSlipBarcode,
+    bank_slip_our_number: input.result.bankSlipOurNumber,
     transaction_receipt_url: null,
     raw_payload: input.result.rawPayload || {},
     last_error: null,
@@ -271,28 +291,118 @@ export const persistGatewayTransaction = async (
 
   const { data: existing, error: existingError } = await admin
     .from("payment_gateway_transactions")
-    .select("id")
+    .select("id, raw_payload")
     .eq("provider_code", input.providerCode)
     .eq("environment", input.environment)
     .eq("remote_payment_id", remotePaymentId)
     .maybeSingle();
   if (existingError) {
-    console.warn(
-      "Nao foi possivel consultar transacao gateway:",
-      existingError,
+    throw new Error(
+      `Nao foi possivel consultar a auditoria da transacao bancaria: ${existingError.message || existingError}`,
     );
-    return;
   }
+  if (existing?.id && options.insertOnly) return;
 
+  const writePayload = existing?.id
+    ? {
+      ...payload,
+      raw_payload: {
+        ...(existing.raw_payload && typeof existing.raw_payload === "object"
+          ? existing.raw_payload
+          : {}),
+        ...payload.raw_payload,
+      },
+    }
+    : payload;
   const result = existing?.id
-    ? await admin.from("payment_gateway_transactions").update(payload).eq(
+    ? await admin.from("payment_gateway_transactions").update(writePayload).eq(
       "id",
       existing.id,
     )
-    : await admin.from("payment_gateway_transactions").insert(payload);
+    : await admin.from("payment_gateway_transactions").insert(writePayload);
   if (result.error) {
-    console.warn("Nao foi possivel persistir transacao gateway:", result.error);
+    throw new Error(
+      `Cobranca criada, mas a auditoria da transacao bancaria falhou: ${result.error.message || result.error}`,
+    );
   }
+};
+
+export const gatewayTransactionInputFromReceivable = (receivable: any) => {
+  const providerCode = String(receivable?.gateway_provider || "");
+  const environment = String(receivable?.gateway_environment || "");
+  const paymentMethod = String(receivable?.gateway_payment_method || "");
+  const remotePaymentId = receivable?.gateway_payment_id ||
+    receivable?.gateway_payment_link_id ||
+    receivable?.gateway_boleto_nosso_numero || null;
+  if (
+    !["asaas", "mercado_pago", "banese_card"].includes(providerCode) ||
+    !["sandbox", "production"].includes(environment) ||
+    !["PIX", "BOLETO", "CREDIT_CARD"].includes(paymentMethod) ||
+    !remotePaymentId
+  ) {
+    return null;
+  }
+
+  return {
+    receivable,
+    providerCode: providerCode as GatewayProviderCode,
+    environment: environment as GatewayEnvironment,
+    paymentMethod: paymentMethod as GatewayPaymentMethod,
+    amount: Number(receivable.valor || 0),
+    installments: Number(receivable.gateway_installments || 1),
+    result: {
+      providerCode: providerCode as GatewayProviderCode,
+      remotePaymentId: String(remotePaymentId),
+      remotePaymentLinkId: receivable.gateway_payment_link_id || null,
+      remoteCustomerId: receivable.gateway_customer_id || null,
+      remoteStatus: receivable.gateway_status || null,
+      invoiceUrl: receivable.gateway_invoice_url || null,
+      bankSlipUrl: receivable.gateway_bank_slip_url || null,
+      pixPayload: receivable.gateway_pix_payload || null,
+      pixEncodedImage: receivable.gateway_pix_encoded_image || null,
+      bankSlipDigitableLine: receivable.gateway_boleto_linha_digitavel || null,
+      bankSlipBarcode: receivable.gateway_boleto_codigo_barras || null,
+      bankSlipOurNumber: receivable.gateway_boleto_nosso_numero || null,
+      issuerPoloId: receivable.gateway_issuer_polo_id || null,
+      financialTerms: receivable.gateway_financial_terms &&
+          typeof receivable.gateway_financial_terms === "object"
+        ? receivable.gateway_financial_terms
+        : null,
+      rawPayload: { repairedFromReceivable: true },
+    } satisfies GatewayChargeResult,
+  };
+};
+
+export const repairGatewayTransactionFromReceivable = async (
+  admin: any,
+  receivable: any,
+) => {
+  const input = gatewayTransactionInputFromReceivable(receivable);
+  if (!input) return false;
+
+  const remotePaymentId = input.result.remotePaymentId ||
+    input.result.remotePaymentLinkId;
+  const findExistingTransaction = () =>
+    admin
+      .from("payment_gateway_transactions")
+      .select("id")
+      .eq("provider_code", input.providerCode)
+      .eq("environment", input.environment)
+      .eq("remote_payment_id", remotePaymentId)
+      .maybeSingle();
+
+  try {
+    await persistGatewayTransaction(admin, input, { insertOnly: true });
+  } catch (error) {
+    // Outra requisicao pode ter reparado a mesma transacao entre a consulta e
+    // a insercao. Nesse caso, a restricao unica confirma que o objetivo foi
+    // atingido e evita transformar uma corrida inocua em falha de checkout.
+    const { data: concurrentRepair, error: concurrentLookupError } =
+      await findExistingTransaction();
+    if (!concurrentLookupError && concurrentRepair?.id) return true;
+    throw error;
+  }
+  return true;
 };
 
 export const gatewayReceivableUpdate = (
@@ -305,6 +415,7 @@ export const gatewayReceivableUpdate = (
   },
 ) => {
   const raw = input.result.rawPayload || {};
+  const syncedAt = new Date().toISOString();
   const remotePaymentId = input.result.remotePaymentId ||
     input.result.remotePaymentLinkId;
   const update: Record<string, unknown> = {
@@ -322,10 +433,17 @@ export const gatewayReceivableUpdate = (
     gateway_bank_slip_url: input.result.bankSlipUrl,
     gateway_pix_payload: input.result.pixPayload,
     gateway_pix_encoded_image: input.result.pixEncodedImage,
+    gateway_boleto_linha_digitavel: input.result.bankSlipDigitableLine,
+    gateway_boleto_codigo_barras: input.result.bankSlipBarcode,
+    gateway_boleto_nosso_numero: input.result.bankSlipOurNumber,
+    gateway_financial_terms: input.result.financialTerms,
+    gateway_financial_terms_confirmed_at: input.result.financialTerms
+      ? syncedAt
+      : null,
     gateway_transaction_receipt_url:
       (raw as any)?.transactionReceiptUrl || null,
     gateway_status: input.result.remoteStatus,
-    gateway_synced_at: new Date().toISOString(),
+    gateway_synced_at: syncedAt,
     gateway_last_error: null,
     updated_at: new Date().toISOString(),
   };

@@ -28,6 +28,7 @@ import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { useTransferenciasQueries } from './hooks/useTransferenciasQueries';
+import { caixaQueryKeys } from '../../caixa/caixa.service';
 
 type PeriodScope = 'current_month' | 'all';
 
@@ -193,7 +194,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.transferenciasRoot }),
       queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
       queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-      queryClient.invalidateQueries({ queryKey: ['caixa-dashboard-data'] }),
+      queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
     ]);
   };
 

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
+import { Plus, Briefcase, Archive, Activity, CalendarRange, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
@@ -77,8 +77,9 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
       await invalidateSiteTickerQueries(queryClient);
       await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') });
+      toast.success('Turma excluída', `${deleteTarget.codigo} foi removida com segurança.`);
     } catch (error: any) {
-      window.alert(error?.message || 'Nao foi possivel excluir a turma.');
+      toast.error('Turma não excluída', error?.message || 'Não foi possível excluir a turma.');
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -121,6 +122,16 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
 
       {/* Abas Internas */}
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
+        <button
+          onClick={() => list.changeStatus('PLANEJADA')}
+          className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            list.status === 'PLANEJADA'
+              ? 'text-indigo-600 border-b-2 border-indigo-600'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <CalendarRange size={14} /> Planejadas
+        </button>
         <button
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -201,7 +212,7 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteTurma}
         title="Excluir turma"
-        message={`Esta acao apaga a turma ${deleteTarget?.codigo || ''} e remove matriculas, cobrancas, documentos de validacao e vinculos ligados a ela. O banco so bloqueia se a turma ja comecou ou tiver diario, notas, estagio, certificado, fechamento ou movimentacao academica.`}
+        message={`Esta ação apaga definitivamente a turma ${deleteTarget?.codigo || ''} e remove matrículas, inscrições e cobranças pendentes pré-início. O banco continuará bloqueando turmas iniciadas, pagamentos confirmados, atividades e histórico acadêmico.`}
         confirmText={isDeleting ? 'Excluindo...' : 'Excluir'}
         cancelText="Voltar"
         variant="danger"

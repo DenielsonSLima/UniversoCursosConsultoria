@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Loader2,
   Megaphone,
+  MegaphoneOff,
   PlayCircle,
   X,
 } from 'lucide-react';
@@ -118,17 +119,18 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   });
 
   const changeClassStatusMutation = useMutation({
-    mutationFn: (status: 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO') => (
+    mutationFn: (status: 'PLANEJADA' | 'INSCRICOES_ABERTAS' | 'EM_ANDAMENTO') => (
       academicLifecycleService.alterarStatusTurma(turma.id, status)
     ),
     onSuccess: async (_data, status) => {
       await invalidate();
-      toast.success(
-        status === 'EM_ANDAMENTO' ? 'Turma iniciada' : 'Inscrições abertas',
-        status === 'EM_ANDAMENTO'
-          ? 'O primeiro período foi aberto e o acesso acadêmico dos alunos foi liberado.'
-          : 'A matrícula administrativa está disponível, mas o conteúdo acadêmico continua bloqueado.',
-      );
+      if (status === 'PLANEJADA') {
+        toast.success('Inscrições fechadas', 'A turma voltou ao planejamento e a inscrição online foi desativada.');
+      } else if (status === 'EM_ANDAMENTO') {
+        toast.success('Turma iniciada', 'O primeiro período foi aberto e o acesso acadêmico dos alunos foi liberado.');
+      } else {
+        toast.success('Inscrições abertas', 'A matrícula administrativa está disponível, mas o conteúdo acadêmico continua bloqueado.');
+      }
       onTurmaFinalizada?.();
     },
     onError: (error: any) => toast.error('Fase não alterada', error.message),
@@ -247,6 +249,15 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
                   className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3 text-[10px] font-black uppercase text-amber-700 disabled:opacity-40"
                 >
                   <Megaphone size={15} /> Abrir inscrições
+                </button>
+              )}
+              {turma.status === 'INSCRICOES_ABERTAS' && (
+                <button
+                  onClick={() => changeClassStatusMutation.mutate('PLANEJADA')}
+                  disabled={changeClassStatusMutation.isPending}
+                  className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3 text-[10px] font-black uppercase text-amber-700 disabled:opacity-40"
+                >
+                  <MegaphoneOff size={15} /> Fechar inscrições
                 </button>
               )}
               <button

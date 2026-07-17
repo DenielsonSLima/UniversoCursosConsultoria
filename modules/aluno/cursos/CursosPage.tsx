@@ -3,7 +3,10 @@ import { createPortal } from 'react-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { textMatchesSearch } from '../../../lib/search';
-import { paymentCheckoutService } from '../../asaas/asaas.service';
+import {
+  paymentCheckoutService,
+  type CheckoutPaymentSelection,
+} from '../../asaas/asaas.service';
 import {
   defaultEadCheckoutMethod,
   formatEadCheckoutMoney,
@@ -11,6 +14,7 @@ import {
 } from './eadCheckoutOptions';
 import type { EadCheckoutPaymentMethod } from './eadCheckoutOptions';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
+import EadVideoPlayer from './EadVideoPlayer';
 import {
   invalidateAlunoEadPaymentQueries,
   useEadPaymentConfirmationWatcher,
@@ -755,16 +759,16 @@ const CursosPage: React.FC<CursosPageProps> = ({
       turmaId,
       checkoutWindow,
       sameTab,
-      eadPayment,
+      paymentSelection,
     }: {
       course: any;
       turmaId?: string | null;
       checkoutWindow: Window | null;
       sameTab?: boolean;
-      eadPayment?: { method: EadCheckoutPaymentMethod; installments: number };
+      paymentSelection?: CheckoutPaymentSelection;
     }) => {
       if (!alunoId) throw new Error('Aluno não identificado para iniciar a compra.');
-      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, eadPayment);
+      const result = await paymentCheckoutService.getPublicCheckout(course.id, alunoId, turmaId, paymentSelection);
       if (!result?.url || typeof result.url !== 'string') {
         throw new Error('A resposta do checkout não retornou um link válido.');
       }
@@ -853,7 +857,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const startCheckout = (
     course: any,
     turma?: any | null,
-    eadPayment?: { method: EadCheckoutPaymentMethod; installments: number },
+    paymentSelection?: CheckoutPaymentSelection,
   ) => {
     const isEadCheckout = String(course?.modalidade || '').toUpperCase() === 'EAD';
     const isTechnicalCheckout = String(course?.modalidade || '').toUpperCase() === 'TECNICO';
@@ -877,7 +881,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
       turmaId: turma?.id || null,
       checkoutWindow,
       sameTab: isEadCheckout,
-      eadPayment,
+      paymentSelection,
     });
   };
 
@@ -1702,13 +1706,10 @@ const CursosPage: React.FC<CursosPageProps> = ({
                   <div className="bg-white xl:col-span-8">
                     {mainVideoUrl ? (
                       <div className="aspect-video overflow-hidden bg-white">
-                        <iframe
-                          src={getEmbedUrl(mainVideoUrl)}
+                        <EadVideoPlayer
+                          key={`${selectedCourse.id}-${mainVideoUrl}`}
+                          embedUrl={getEmbedUrl(mainVideoUrl)}
                           title={`Vídeo principal - ${selectedCourse.nome}`}
-                          className="h-full w-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; web-share"
-                          allowFullScreen
-                          referrerPolicy="strict-origin-when-cross-origin"
                         />
                       </div>
                     ) : (
@@ -2304,7 +2305,10 @@ const CursosPage: React.FC<CursosPageProps> = ({
                 onClick={() => {
                   const review = checkoutReview;
                   setCheckoutReview(null);
-                  startCheckout(review.course, review.turma);
+                  startCheckout(review.course, review.turma, {
+                    method: 'BOLETO',
+                    installments: 1,
+                  });
                 }}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
               >

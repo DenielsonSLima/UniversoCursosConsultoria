@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
     );
     if (!apiKey) throw new Error(`Chave do ambiente ${environment} não configurada.`);
     const callAsaas = createCallAsaas({ apiKey, environment, baseUrl: baseUrlFor(environment) });
-    const handlers = createAsaasWebhookHandlers(admin, callAsaas);
+    const handlers = createAsaasWebhookHandlers(admin, callAsaas, environment);
 
     const webhookEvent = await registerWebhookEvent(admin, {
       eventId,

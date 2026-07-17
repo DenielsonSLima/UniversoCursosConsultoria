@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, CircleDollarSign, Clock, Copy, ExternalLink, GraduationCap, Percent, ReceiptText } from 'lucide-react';
+import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
 
 interface FinanceiroCardItemProps {
   installment: any;
@@ -11,6 +12,7 @@ interface FinanceiroCardItemProps {
   onCopyLink: (url: string) => void;
   onOpenReceipt: (installment: any) => void;
   onPayNow?: (installment: any) => void;
+  onOpenBanesePayment?: (installment: any) => void;
 }
 
 const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
@@ -23,6 +25,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
   onCopyLink,
   onOpenReceipt,
   onPayNow,
+  onOpenBanesePayment,
 }) => {
   const paymentLabel = [
     installment.turmaNome,
@@ -64,8 +67,22 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
 
   const renderActions = () => {
     const status = String(installment.status || '').toUpperCase();
+    const isBaneseBoleto = hasRegisteredBaneseBoleto(installment);
+    const paymentUrl = installment.gateway_bank_slip_url
+      || installment.gateway_invoice_url
+      || installment.asaas_invoice_url;
 
     if (['PENDENTE', 'VENCIDO'].includes(status) || installment.isOverdue) {
+      if (isBaneseBoleto && onOpenBanesePayment) {
+        return (
+          <button
+            onClick={() => onOpenBanesePayment(installment)}
+            className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider shadow-lg transition-colors ${accent.action}`}
+          >
+            <ExternalLink size={13} /> {getBanesePaymentActionLabel(installment)}
+          </button>
+        );
+      }
       if (installment.modalidade === 'EAD' && onPayNow) {
         return (
           <div className="space-y-2">
@@ -76,9 +93,9 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
               <ExternalLink size={13} />
               Pagar agora
             </button>
-            {installment.asaas_invoice_url && (
+            {paymentUrl && (
               <button
-                onClick={() => onCopyLink(installment.asaas_invoice_url)}
+                onClick={() => onCopyLink(paymentUrl)}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-200"
               >
                 <Copy size={13} />
@@ -89,11 +106,11 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
         );
       }
 
-      if (installment.asaas_invoice_url) {
+      if (paymentUrl) {
         return (
           <div className="space-y-2">
             <a
-              href={installment.asaas_invoice_url}
+              href={paymentUrl}
               target="_blank"
               rel="noreferrer"
               className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider shadow-lg transition-colors ${accent.action}`}
@@ -102,7 +119,7 @@ const FinanceiroCardItem: React.FC<FinanceiroCardItemProps> = ({
               Pagar agora
             </a>
             <button
-              onClick={() => onCopyLink(installment.asaas_invoice_url)}
+              onClick={() => onCopyLink(paymentUrl)}
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-200"
             >
               <Copy size={13} />

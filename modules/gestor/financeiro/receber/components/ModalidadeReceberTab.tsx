@@ -33,6 +33,9 @@ import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
 import { printReciboDespesa } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import { copyTextToClipboard } from '../../../../../lib/clipboard';
+import type { BanesePaymentRecord } from '../../../../aluno/financeiro/banese/banese-payment.types';
+import { gestorBanesePaymentService } from '../banese/gestor-banese-payment.service';
 import FinancialReportExportButton, {
   FinancialReportColumn,
   FinancialReportFilter,
@@ -40,6 +43,8 @@ import FinancialReportExportButton, {
   FinancialReportStatusBadge,
   FinancialReportSummaryCard,
 } from '../../components/FinancialReportPreview';
+
+const BanesePaymentPage = React.lazy(() => import('../../../../aluno/financeiro/banese/BanesePaymentPage'));
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -105,6 +110,75 @@ const groupModeLabels: Record<GroupMode, string> = {
   polo: 'Por polo',
 };
 
+const paymentGatewayLabels: Record<string, string> = {
+  asaas: 'Asaas',
+  banese: 'Banese',
+  banese_card: 'Banese',
+  mercado_pago: 'Mercado Pago',
+  banco_inter: 'Banco Inter',
+  inter: 'Banco Inter',
+  gateway: 'Gateway bancário',
+};
+
+const paymentGatewayCode = (item: ContasReceber): string | null => {
+  const explicitProvider = String(item.gatewayProvider || '').trim().toLowerCase();
+  if (explicitProvider) return explicitProvider;
+
+  const origin = String(item.origemPagamento || '').trim().toUpperCase();
+  if (origin.includes('BANESE')) return 'banese_card';
+  if (origin.includes('MERCADO_PAGO') || origin.includes('MERCADO PAGO')) return 'mercado_pago';
+  if (origin.includes('BANCO_INTER') || origin === 'INTER') return 'banco_inter';
+  if (origin.includes('ASAAS')) return 'asaas';
+  if (origin.startsWith('GATEWAY')) return 'gateway';
+
+  // Compatibilidade com cobranças Asaas anteriores à coluna gateway_provider.
+  if (item.asaasPaymentId) return 'asaas';
+  return null;
+};
+
+const paymentGatewayLabel = (item: ContasReceber) => {
+  const providerCode = paymentGatewayCode(item);
+  if (!providerCode) return 'Integração bancária';
+  if (paymentGatewayLabels[providerCode]) return paymentGatewayLabels[providerCode];
+
+  return providerCode
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+};
+
+const paymentGatewayStatusLabel = (item: ContasReceber) => {
+  const normalized = String(item.asaasStatus || '').toUpperCase();
+  if (!normalized) return 'Não sincronizado';
+
+  const providerLabel = paymentGatewayLabel(item);
+  const providerReference = providerLabel === 'Gateway bancário' || providerLabel === 'Integração bancária'
+    ? providerLabel.toLowerCase()
+    : providerLabel;
+  const labels: Record<string, string> = {
+    PENDING: `Pendente no ${providerReference}`,
+    CONFIRMED: `Confirmado no ${providerReference}`,
+    RECEIVED: `Recebido no ${providerReference}`,
+    OVERDUE: `Vencido no ${providerReference}`,
+    DELETED: `Cancelado no ${providerReference}`,
+    CANCELED: `Cancelado no ${providerReference}`,
+    REFUNDED: `Estornado no ${providerReference}`,
+    REFUND_REQUESTED: 'Estorno solicitado',
+    AWAITING_RISK_ANALYSIS: `Em análise no ${providerReference}`,
+  };
+  return labels[normalized] || normalized;
+};
+
+const paymentGatewayStatusClass = (status?: string) => {
+  const normalized = String(status || '').toUpperCase();
+  if (['CONFIRMED', 'RECEIVED'].includes(normalized)) return 'text-emerald-600';
+  if (['DELETED', 'CANCELED'].includes(normalized)) return 'text-rose-600';
+  if (normalized === 'PENDING') return 'text-blue-600';
+  if (normalized === 'OVERDUE') return 'text-amber-600';
+  return 'text-slate-400';
+};
+
 interface ModalidadeReceberTabProps {
   poloId?: string | null;
   modality: CourseModality;
@@ -145,6 +219,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [reversalItem, setReversalItem] = useState<ContasReceber | null>(null);
   const [reversalReason, setReversalReason] = useState('');
   const [recreateAsaas, setRecreateAsaas] = useState(true);
+  const [banesePaymentRecords, setBanesePaymentRecords] = useState<BanesePaymentRecord[]>([]);
+  const [selectedBanesePaymentId, setSelectedBanesePaymentId] = useState<string | null>(null);
 
   useFinanceiroRealtime(poloId);
 
@@ -219,10 +295,6 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     }),
     onSuccess: async (result) => {
       const paidReceivable = selected;
-      const shouldCancelAsaas = Boolean(
-        paidReceivable?.asaasPaymentId &&
-        !['RECEIVED', 'CONFIRMED'].includes((paidReceivable.asaasStatus || '').toUpperCase())
-      );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
@@ -238,10 +310,10 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         'Recebimento confirmado',
         result.futureSyncWarning
           ? `Baixa registrada. Atenção na sincronização futura: ${result.futureSyncWarning}`
-          : result.asaasCanceled || shouldCancelAsaas
-          ? `Baixa manual registrada e cobrança ${result.asaasPaymentId || paidReceivable?.asaasPaymentId || ''} cancelada no Asaas.`
+          : result.gatewayCanceled
+          ? `Baixa manual registrada e título ${result.gatewayPaymentId || paidReceivable?.asaasPaymentId || ''} cancelado no ${paymentGatewayLabel(paidReceivable!)}.`
           : paidReceivable?.asaasPaymentId
-            ? 'Baixa manual registrada. A cobrança Asaas já estava confirmada/recebida ou não exigia cancelamento.'
+            ? `Baixa manual registrada. A cobrança no ${paymentGatewayLabel(paidReceivable)} já estava confirmada/recebida ou não exigia cancelamento.`
             : 'Baixa manual registrada na conta selecionada.',
       );
       setSelected(null);
@@ -252,7 +324,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const syncMutation = useMutation({
     mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-    onError: (error: any) => console.error('Não foi possível enviar a cobrança ao Asaas:', error),
+    onError: (error: any) => console.error('Não foi possível enviar a cobrança ao banco configurado:', error),
   });
 
   const refreshMutation = useMutation({
@@ -267,7 +339,19 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           : Promise.resolve(),
       ]);
     },
-    onError: (error: any) => console.error('Não foi possível atualizar status no Asaas:', error),
+    onError: (error: any) => console.error('Não foi possível atualizar o status bancário:', error),
+  });
+
+  const baneseDetailsMutation = useMutation({
+    mutationFn: (receivableId: string) => gestorBanesePaymentService.getPaymentDetails(receivableId),
+    onSuccess: (records, receivableId) => {
+      setBanesePaymentRecords(records);
+      setSelectedBanesePaymentId(receivableId);
+    },
+    onError: (error: any) => toast.error(
+      'Cobrança Banese indisponível',
+      error?.message || 'Não foi possível carregar os dados bancários desta cobrança.',
+    ),
   });
 
   const reversalMutation = useMutation({
@@ -289,8 +373,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       ]);
       toast.success(
         'Baixa manual estornada',
-        result.asaasRecreated
-          ? 'O recebível voltou para pendente e uma nova cobrança Asaas foi gerada.'
+        result.gatewayRecreated
+          ? `O recebível voltou para pendente e uma nova cobrança ${paymentGatewayLabel(reversalItem!)} foi gerada.`
           : 'O recebível voltou para pendente para nova conferência.',
       );
       setReversalItem(null);
@@ -379,9 +463,12 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const paymentOriginLabel = (item: ContasReceber) => {
     if (item.origemPagamento === 'PRESENCIAL') {
-      return item.asaasStatus === 'DELETED' ? 'Manual, Asaas cancelado' : 'Manual';
+      return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
+        ? `Manual, cobrança ${paymentGatewayLabel(item)} cancelada`
+        : 'Manual';
     }
-    if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId) return 'Asaas';
+    if (paymentGatewayCode(item)) return paymentGatewayLabel(item);
+    if (item.origemPagamento === 'LOCAL') return 'Local';
     return item.status === 'PAGO' ? 'Manual' : 'Aguardando';
   };
 
@@ -390,57 +477,55 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     if (item.formaPagamento === 'BOLETO') return 'Boleto';
     if (item.formaPagamento === 'PIX') return 'Pix';
     if (item.formaPagamento === 'DINHEIRO') return 'Dinheiro';
-    return item.asaasPaymentId ? 'Link Asaas' : 'Não definido';
+    return item.asaasPaymentId ? `Link ${paymentGatewayLabel(item)}` : 'Não definido';
   };
 
-  const normalizeAsaasFee = (item: ContasReceber) => {
+  const normalizeGatewayFee = (item: ContasReceber) => {
     if (item.taxa !== undefined) return item.taxa;
-    const hasAsaasCharge = Boolean(
-      item.asaasPaymentId
-      || item.asaasPaymentLinkId
-      || String(item.origemPagamento || '').toUpperCase().startsWith('ASAAS')
-    );
+    const hasAsaasCharge = paymentGatewayCode(item) === 'asaas';
     if (!hasAsaasCharge) return 0;
     if (item.formaPagamento === 'PIX' || item.formaPagamento === 'BOLETO') return 1.99;
     if (item.formaPagamento === 'CARTAO') return Number((0.49 + item.valor * 0.0299).toFixed(2));
     return 0;
   };
 
-  const normalizeAsaasNet = (item: ContasReceber) => {
+  const normalizeGatewayNet = (item: ContasReceber) => {
     if (item.valorLiquido !== undefined) return item.valorLiquido;
     const gross = item.valor || 0;
-    return Math.max(0, Number((gross - normalizeAsaasFee(item)).toFixed(2)));
+    return Math.max(0, Number((gross - normalizeGatewayFee(item)).toFixed(2)));
   };
 
   const copyInvoiceUrl = async (item: ContasReceber) => {
-    if (!item.asaasInvoiceUrl) return;
-    await navigator.clipboard.writeText(item.asaasInvoiceUrl);
-    toast.success('Link copiado', 'O link da cobrança foi copiado para envio ao aluno.');
+    const url = item.asaasInvoiceUrl || item.asaasBankSlipUrl;
+    if (!url) return;
+    if (await copyTextToClipboard(url)) {
+      toast.success('Link copiado', 'O link da cobrança foi copiado para envio ao aluno.');
+      return;
+    }
+    toast.error('Não foi possível copiar', 'Seu navegador bloqueou a cópia automática deste link.');
   };
 
-  const asaasStatusLabel = (status?: string) => {
-    const normalized = (status || '').toUpperCase();
-    if (!normalized) return 'Não sincronizado';
-    const labels: Record<string, string> = {
-      PENDING: 'Pendente no Asaas',
-      CONFIRMED: 'Confirmado no Asaas',
-      RECEIVED: 'Recebido no Asaas',
-      OVERDUE: 'Vencido no Asaas',
-      DELETED: 'Cancelado no Asaas',
-      REFUNDED: 'Estornado no Asaas',
-      REFUND_REQUESTED: 'Estorno solicitado',
-      AWAITING_RISK_ANALYSIS: 'Em análise no Asaas',
-    };
-    return labels[normalized] || normalized;
+  const openCharge = (item: ContasReceber) => {
+    if (paymentGatewayCode(item) === 'banese_card') {
+      if (!item.id) return;
+      baneseDetailsMutation.mutate(item.id);
+      return;
+    }
+
+    const url = item.asaasBankSlipUrl || item.asaasInvoiceUrl;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const asaasStatusClass = (status?: string) => {
-    const normalized = (status || '').toUpperCase();
-    if (['CONFIRMED', 'RECEIVED'].includes(normalized)) return 'text-emerald-600';
-    if (normalized === 'DELETED') return 'text-rose-600';
-    if (normalized === 'PENDING') return 'text-blue-600';
-    if (normalized === 'OVERDUE') return 'text-amber-600';
-    return 'text-slate-400';
+  const closeBanesePayment = () => {
+    setSelectedBanesePaymentId(null);
+    setBanesePaymentRecords([]);
+  };
+
+  const refreshBanesePayment = async () => {
+    if (!selectedBanesePaymentId) return;
+    await refreshMutation.mutateAsync(selectedBanesePaymentId);
+    const records = await gestorBanesePaymentService.getPaymentDetails(selectedBanesePaymentId);
+    setBanesePaymentRecords(records);
   };
 
   const canReverseManualSettlement = (item: ContasReceber) =>
@@ -571,7 +656,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
         </p>
         {item.asaasInvoiceUrl && item.status !== 'PAGO' && (
-          <p className="mt-0.5 font-bold text-blue-600">Cobrança Asaas vinculada</p>
+          <p className="mt-0.5 font-bold text-blue-600">Cobrança {paymentGatewayLabel(item)} vinculada</p>
         )}
       </div>,
       <div>
@@ -589,8 +674,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       <FinancialReportStatusBadge status={item.status} />,
       <div>
         <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 text-[9px] font-bold text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
-        <p className="text-[9px] font-bold text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
+        <p className="mt-1 text-[9px] font-bold text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
+        <p className="text-[9px] font-bold text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
         {item.valorPago !== undefined && (
           <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">Rec.: {formatCurrency(item.valorPago)}</p>
         )}
@@ -715,7 +800,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         >
           Receber
         </button>
-        {item.asaasInvoiceUrl ? (
+        {item.asaasInvoiceUrl || item.asaasBankSlipUrl ? (
           <>
             <button
               type="button"
@@ -725,21 +810,24 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             >
               <Copy size={12} /> Link
             </button>
-            <a
-              href={item.asaasInvoiceUrl}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => openCharge(item)}
+              disabled={baneseDetailsMutation.isPending && baneseDetailsMutation.variables === item.id}
               className="flex items-center justify-center gap-1 rounded-xl border border-blue-200 px-2 py-2 text-[10px] font-black uppercase text-blue-600"
-              title="Abrir cobrança"
+              title={paymentGatewayCode(item) === 'banese_card' ? 'Abrir boleto Banese no portal de gestão' : 'Abrir cobrança'}
             >
-              <ExternalLink size={12} /> Abrir
-            </a>
+              {baneseDetailsMutation.isPending && baneseDetailsMutation.variables === item.id
+                ? <Loader2 className="animate-spin" size={12} />
+                : <ExternalLink size={12} />}
+              Abrir
+            </button>
             <button
               type="button"
               onClick={() => refreshMutation.mutate(item.id!)}
               disabled={refreshMutation.isPending}
               className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
-              title="Consultar status atual no Asaas"
+              title="Consultar status atual no banco configurado"
             >
               <RefreshCw className={refreshMutation.isPending ? 'animate-spin' : ''} size={12} /> Atualizar
             </button>
@@ -751,7 +839,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
           >
             <RefreshCw className={syncMutation.isPending ? 'animate-spin' : ''} size={12} />
-            Enviar ao Asaas
+            Enviar ao banco
           </button>
         )}
       </div>
@@ -789,7 +877,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
             {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
           </p>
           <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">
-            Asaas: <span className={asaasStatusClass(item.asaasStatus)}>{asaasStatusLabel(item.asaasStatus)}</span>
+            {paymentGatewayLabel(item)}:{' '}
+            <span className={paymentGatewayStatusClass(item.asaasStatus)}>{paymentGatewayStatusLabel(item)}</span>
           </p>
         </div>
       </td>
@@ -807,9 +896,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
           <StatusBadge item={item} />
           <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
           <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
-          {item.asaasStatus === 'DELETED' && (
+          {['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase()) && (
             <p className="text-[10px] font-bold text-rose-600">
-              Cobrança cancelada/excluída no Asaas após baixa manual.
+              Cobrança cancelada/excluída no {paymentGatewayLabel(item)} após baixa manual.
             </p>
           )}
           <p className="text-[10px] font-bold text-slate-400">
@@ -824,8 +913,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
       </td>
       <td className="px-5 py-5">
         <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 whitespace-nowrap text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
-        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
+        <p className="mt-1 whitespace-nowrap text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
+        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
         {item.valorPago !== undefined && (
           <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
             Rec.: {formatCurrency(item.valorPago)}
@@ -857,8 +946,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         <div>
           <p className="text-[9px] font-black uppercase text-slate-400">Valor</p>
           <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-          <p className="mt-1 text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeAsaasFee(item))}</p>
-          <p className="text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeAsaasNet(item))}</p>
+          <p className="mt-1 text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
+          <p className="text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
         </div>
       </div>
       <div className="mt-4 border-t border-slate-100 pt-3">
@@ -877,6 +966,22 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      {selectedBanesePaymentId && banesePaymentRecords.length ? (
+        <React.Suspense fallback={(
+          <div className="fixed inset-0 z-[99999] grid place-items-center bg-[#f2f5f7] text-[#001a33]">
+            <div className="flex items-center gap-3 text-sm font-black uppercase tracking-wider">
+              <Loader2 className="animate-spin" size={20} /> Carregando cobrança Banese
+            </div>
+          </div>
+        )}>
+          <BanesePaymentPage
+            installment={banesePaymentRecords.find((record) => record.id === selectedBanesePaymentId) || banesePaymentRecords[0]}
+            installments={banesePaymentRecords}
+            onBack={closeBanesePayment}
+            onRefresh={refreshBanesePayment}
+          />
+        </React.Suspense>
+      ) : null}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-emerald-600">
@@ -1341,7 +1446,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
               <p>Essa ação desfaz somente a baixa lançada manualmente no sistema.</p>
               <p>O recebível volta para pendente, os dados de pagamento local são limpos e ele volta para conferência.</p>
               {reversalItem.asaasPaymentId && (
-                <p>Como a cobrança anterior do Asaas foi cancelada/excluída, o sistema não reativa o mesmo ID. Ele gera uma nova cobrança com novo link.</p>
+                <p>Como o título anterior no {paymentGatewayLabel(reversalItem)} foi cancelado, o sistema não reativa o mesmo ID. Ele gera um novo título bancário.</p>
               )}
             </div>
 
@@ -1354,9 +1459,9 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
                   className="mt-1 h-4 w-4 accent-emerald-600"
                 />
                 <span>
-                  <span className="block text-xs font-black uppercase tracking-wider text-[#001a33]">Gerar nova cobrança Asaas</span>
+                  <span className="block text-xs font-black uppercase tracking-wider text-[#001a33]">Gerar nova cobrança {paymentGatewayLabel(reversalItem)}</span>
                   <span className="mt-1 block text-xs font-medium text-slate-500">
-                    Recomendado quando a baixa manual cancelou a cobrança original no Asaas.
+                    Recomendado quando a baixa manual cancelou o título original no banco.
                   </span>
                 </span>
               </label>

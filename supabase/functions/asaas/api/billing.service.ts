@@ -17,9 +17,11 @@ import {
   gatewayPrimaryUrl,
   gatewayReceivableUpdate,
   persistGatewayTransaction as persistProviderGatewayTransaction,
+  repairGatewayTransactionFromReceivable,
   type GatewayPaymentMethod,
   type GatewayProviderCode,
 } from "../../gateways/router.ts";
+import { resolveBaneseReceivableFinancialTerms } from "../../gateways/api/banese-financial-terms.ts";
 
 export const createAsaasBillingService = (
   admin: any,
@@ -506,6 +508,7 @@ export const createAsaasBillingService = (
       && receivable.gateway_payment_method === route.paymentMethod
       && gatewayPrimaryUrl(receivable)
     ) {
+      await repairGatewayTransactionFromReceivable(admin, receivable);
       return receivable;
     }
 
@@ -545,12 +548,22 @@ export const createAsaasBillingService = (
         .eq("id", receivable.id)
         .single();
       if (currentError) throw currentError;
-      if (gatewayPrimaryUrl(currentReceivable)) return currentReceivable;
+      if (gatewayPrimaryUrl(currentReceivable)) {
+        await repairGatewayTransactionFromReceivable(admin, currentReceivable);
+        return currentReceivable;
+      }
       throw new Error("A cobrança já está sendo sincronizada com o gateway. Aguarde alguns instantes e atualize.");
     }
 
     let gatewayResult: any;
     try {
+      const financialTerms = route.providerCode === "banese_card" &&
+          route.paymentMethod === "BOLETO"
+        ? await resolveBaneseReceivableFinancialTerms(
+          admin,
+          lockedReceivable,
+        )
+        : null;
       gatewayResult = await createGatewayCharge({
         admin,
         supabaseUrl: Deno.env.get("SUPABASE_URL") || "",
@@ -567,10 +580,12 @@ export const createAsaasBillingService = (
           cpfCnpj: parceiro?.cpf_cnpj || null,
           phone: parceiro?.telefone || null,
           endereco: parceiro?.endereco || null,
+          numero: parceiro?.numero || null,
+          complemento: parceiro?.complemento || null,
           cep: parceiro?.cep || null,
           bairro: parceiro?.bairro || null,
           cidade: parceiro?.cidade || null,
-          uf: parceiro?.estado || null,
+          uf: parceiro?.uf || null,
         },
         amount: Number(lockedReceivable.valor || 0),
         description: String(lockedReceivable.descricao || "Cobrança Universo Cursos"),
@@ -578,6 +593,7 @@ export const createAsaasBillingService = (
         successUrl: callbackSuccessUrl(),
         failureUrl: callbackSuccessUrl(),
         pendingUrl: callbackSuccessUrl(),
+        financialTerms,
       });
     } catch (error) {
       await admin.from("contas_receber").update({
@@ -714,9 +730,7 @@ export const createAsaasBillingService = (
       );
     }
     if (providerCode !== "asaas") {
-      throw new Error(
-        `A rota Boleto de TECNICO em ${runtime.environment === "production" ? "producao" : "sandbox"} esta configurada para ${providerLabelFor(providerCode)}. A geracao automatica de parcelas tecnicas ainda executa apenas o adapter Asaas.`,
-      );
+      return syncFutureInstallmentsIndividually(runtime, matriculaId);
     }
 
     const tecnicoInstallments = createTecnicoInstallmentService(

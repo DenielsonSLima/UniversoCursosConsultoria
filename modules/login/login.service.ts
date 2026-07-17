@@ -170,7 +170,14 @@ export const loginService = {
     clearPortalSession();
 
     const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (error) throw error;
+    if (!error) return;
+
+    // Se a revogação global falhar por rede, ainda removemos o token deste
+    // navegador para impedir que um F5 restaure uma sessão já encerrada na UI.
+    const { error: localError } = await supabase.auth.signOut({ scope: 'local' });
+    if (localError) throw error;
+
+    console.warn('Sessão encerrada localmente; não foi possível revogar as outras sessões.', error);
   },
 
   async loginWithGoogle(redirectPath = '/sistema/login') {
