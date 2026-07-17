@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Briefcase, Archive, Activity, CalendarRange, Megaphone } from 'lucide-react';
+import { Plus, Briefcase, Archive, Activity, Megaphone } from 'lucide-react';
 import TurmaCard from '../components/TurmaCard';
 import TurmaTecnicoForm from '../components/forms/TurmaTecnicoForm';
 import TurmaTecnicoDetalhes from './detalhes/TurmaTecnicoDetalhes';
@@ -122,16 +122,6 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
 
       {/* Abas Internas */}
       <div className="flex gap-4 mb-6 border-b border-slate-100 pb-1 overflow-x-auto">
-        <button
-          onClick={() => list.changeStatus('PLANEJADA')}
-          className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
-            list.status === 'PLANEJADA'
-              ? 'text-indigo-600 border-b-2 border-indigo-600'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          <CalendarRange size={14} /> Planejadas
-        </button>
         <button
           onClick={() => list.changeStatus('EM_ANDAMENTO')}
           className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
