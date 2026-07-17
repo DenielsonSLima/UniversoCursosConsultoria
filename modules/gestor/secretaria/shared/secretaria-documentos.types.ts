@@ -26,6 +26,7 @@ export interface SecretariaDocumentoDefinition {
   activeOnly?: boolean;
   activeEnrollmentOnly?: boolean;
   activeTurmaOnly?: boolean;
+  internshipOnly?: boolean;
   completedOnly?: boolean;
   enrollmentStatuses?: string[];
   allowBatch?: boolean;

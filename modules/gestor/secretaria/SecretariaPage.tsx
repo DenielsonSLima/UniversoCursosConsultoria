@@ -83,8 +83,8 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Identificação para atividades supervisionadas.',
   },
   'cracha-periodo-eleitoral': {
-    title: 'Crachá Período Eleitoral',
-    description: 'Identificação temporária liberada por janela eleitoral.',
+    title: 'SES',
+    description: 'Crachá por hospital, liberado após a entrada do aluno no estágio.',
   },
   'termo-estagio': {
     title: 'Termo de Estágio',

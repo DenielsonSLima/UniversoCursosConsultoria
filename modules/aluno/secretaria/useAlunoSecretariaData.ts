@@ -14,6 +14,7 @@ import {
 } from './secretaria-aluno.service';
 import {
   AlunoSecretariaEligibility,
+  AlunoSecretariaEstagio,
   AlunoSecretariaMatricula,
 } from './secretaria-aluno.types';
 import { useAlunoSecretariaRealtime } from './useAlunoSecretariaRealtime';
@@ -43,6 +44,13 @@ export const useAlunoSecretariaData = (alunoId: string) => {
     staleTime: 30_000,
   });
 
+  const estagiosQuery = useQuery<AlunoSecretariaEstagio[]>({
+    queryKey: alunoSecretariaKeys.estagios(alunoId),
+    queryFn: () => alunoSecretariaService.getEstagios(alunoId),
+    enabled: !!alunoId,
+    staleTime: 30_000,
+  });
+
   const prazosQuery = useQuery<Record<string, PrazoConfig>>({
     queryKey: alunoSecretariaKeys.prazos(),
     queryFn: alunoSecretariaService.getPrazos,
@@ -52,8 +60,8 @@ export const useAlunoSecretariaData = (alunoId: string) => {
 
   const matriculas = matriculasQuery.data || [];
   const eligibility: AlunoSecretariaEligibility = useMemo(
-    () => buildAlunoSecretariaEligibility(matriculas),
-    [matriculas]
+    () => buildAlunoSecretariaEligibility(matriculas, estagiosQuery.data || []),
+    [matriculas, estagiosQuery.data]
   );
 
   return {
@@ -62,8 +70,8 @@ export const useAlunoSecretariaData = (alunoId: string) => {
     solicitacoes: solicitacoesQuery.data || [],
     prazos: prazosQuery.data || DEFAULT_PRAZOS,
     eligibility,
-    isLoading: alunoQuery.isLoading || matriculasQuery.isLoading,
-    isError: alunoQuery.isError || matriculasQuery.isError,
-    error: alunoQuery.error || matriculasQuery.error,
+    isLoading: alunoQuery.isLoading || matriculasQuery.isLoading || estagiosQuery.isLoading,
+    isError: alunoQuery.isError || matriculasQuery.isError || estagiosQuery.isError,
+    error: alunoQuery.error || matriculasQuery.error || estagiosQuery.error,
   };
 };

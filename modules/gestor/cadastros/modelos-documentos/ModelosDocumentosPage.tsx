@@ -41,7 +41,7 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
     { id: 'ficha-cadastral', title: 'Ficha Cadastral do Aluno', desc: 'Ficha impressa do cadastro com dados, marca d’água e assinaturas.', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
-    { id: 'cracha-periodo-eleitoral', title: 'Crachá Período Eleitoral', desc: 'Modelo padrão sem QR Code, liberado por data inicial e final.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
+    { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Modelos de crachá por hospital, liberados após a entrada no estágio.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
     { id: 'declaracao-frequencia', title: 'Declaração de Frequência', desc: 'Comprovante de frequência acadêmica regular.', icon: <BadgeCheck size={24} />, color: 'bg-sky-600' },
     { id: 'transferencia', title: 'Modelo de Transferência', desc: 'Documentação para trâmite externo.', icon: <ArrowRightLeft size={24} />, color: 'bg-orange-500' },

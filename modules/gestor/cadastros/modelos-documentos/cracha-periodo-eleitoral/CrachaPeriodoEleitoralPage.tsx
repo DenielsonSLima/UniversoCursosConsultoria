@@ -6,8 +6,11 @@ import {
   AlertTriangle,
   Bold,
   CheckCircle2,
+  Copy,
   Italic,
+  Image as ImageIcon,
   LayoutTemplate,
+  Layers3,
   Loader2,
   Minus,
   Plus,
@@ -24,8 +27,9 @@ import {
 import { supabase } from '../../../../../lib/supabase';
 import {
   crachaPeriodoEleitoralService,
+  CrachaSesCatalog,
+  DEFAULT_CRACHA_SES_CATALOG,
   DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE,
-  formatCrachaEleitoralDate,
   getDefaultCrachaPeriodoEleitoralFields,
   isCrachaEleitoralTemplateAvailable,
 } from './cracha-periodo-eleitoral.service';
@@ -52,17 +56,17 @@ const getSafeUniqueId = () => {
 
 const CrachaPeriodoEleitoralPage: React.FC = () => {
   const [formData, setFormData] = useState<any>(DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE);
+  const [catalog, setCatalog] = useState<CrachaSesCatalog>(DEFAULT_CRACHA_SES_CATALOG);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'config' | 'frente' | 'verso'>('config');
+  const [activeTab, setActiveTab] = useState<'modelos' | 'config' | 'frente' | 'verso'>('modelos');
   const [previewMode, setPreviewMode] = useState<'frente' | 'verso' | 'ambos'>('ambos');
   const [zoomLevel, setZoomLevel] = useState(90);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   const availableNow = useMemo(() => isCrachaEleitoralTemplateAvailable(formData), [formData]);
-  const hasConfiguredPeriod = Boolean(formData.disponivelInicio && formData.disponivelFim);
   const selectedField = useMemo(
     () => (formData.fields || []).find((field: any) => field.id === selectedFieldId),
     [formData.fields, selectedFieldId]
@@ -76,8 +80,10 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
   useEffect(() => {
     const loadTemplate = async () => {
       setIsLoading(true);
-      const template = await crachaPeriodoEleitoralService.getTemplate();
-      setFormData(template || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE);
+      const savedCatalog = await crachaPeriodoEleitoralService.getCatalog();
+      const activeModel = savedCatalog.models.find((model) => model.id === savedCatalog.activeModelId) || savedCatalog.models[0];
+      setCatalog(savedCatalog);
+      setFormData(activeModel || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE);
       setIsLoading(false);
     };
 
@@ -119,7 +125,7 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
       setFormData((prev: any) => ({ ...prev, [fieldName]: urlData.publicUrl }));
       showToast('Imagem de fundo salva com sucesso.', 'success');
     } catch (error: any) {
-      console.error('Erro ao enviar imagem do crachá eleitoral:', error);
+      console.error('Erro ao enviar imagem do crachá SES:', error);
       showToast(error?.message || 'Erro ao enviar imagem de fundo.', 'error');
     } finally {
       setIsUploading(false);
@@ -244,34 +250,102 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
     }, 'Forma adicionada.');
   };
 
+  const handleAddPhoto = () => {
+    const id = `foto-${getSafeUniqueId()}`;
+    addField({
+      id,
+      type: 'photo',
+      value: '{{ALUNO_FOTO}}',
+      x: 8,
+      y: 23,
+      width: 25,
+      height: 46,
+      page: 'frente',
+      style: { borderRadius: '6px', borderColor: formData.corBorda || '#0b58a8', borderWidth: '2px', objectFit: 'cover' },
+    }, 'Foto do aluno adicionada.');
+    setActiveTab('frente');
+  };
+
   const handleResetDefaultFields = () => {
     setFormData((prev: any) => ({ ...prev, fields: getDefaultCrachaPeriodoEleitoralFields() }));
     setSelectedFieldId(null);
-    showToast('Layout padrão do crachá eleitoral restaurado.', 'success');
+    showToast('Layout padrão do SES restaurado.', 'success');
   };
 
   const handleSave = async () => {
-    if (!formData.disponivelInicio || !formData.disponivelFim) {
-      showToast('Informe a data inicial e a data final de disponibilidade.', 'warning');
-      return;
-    }
-
-    if (formData.disponivelInicio > formData.disponivelFim) {
-      showToast('A data inicial não pode ser maior que a data final.', 'warning');
-      return;
-    }
-
     setIsSaving(true);
-    const saved = await crachaPeriodoEleitoralService.saveTemplate(formData);
+    const nextModels = catalog.models.some((model) => model.id === formData.id)
+      ? catalog.models.map((model) => (model.id === formData.id ? formData : model))
+      : [...catalog.models, formData];
+    const nextCatalog = { ...catalog, models: nextModels };
+    const saved = await crachaPeriodoEleitoralService.saveCatalog(nextCatalog);
+    if (saved) setCatalog(nextCatalog);
     setIsSaving(false);
-    showToast(saved ? 'Modelo de crachá período eleitoral salvo.' : 'Erro ao salvar o modelo.', saved ? 'success' : 'error');
+    showToast(saved ? 'Modelo SES salvo.' : 'Erro ao salvar o modelo.', saved ? 'success' : 'error');
+  };
+
+  const handleSelectModel = (model: any) => {
+    setFormData(model);
+    setSelectedFieldId(null);
+    setActiveTab('config');
+  };
+
+  const handleNewModel = (source?: any) => {
+    const id = `ses-${getSafeUniqueId()}`;
+    const base = source || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE;
+    const model = {
+      ...base,
+      id,
+      nome: source ? `${source.nome} — Cópia` : 'Novo modelo SES',
+      fields: (base.fields || getDefaultCrachaPeriodoEleitoralFields()).map((field: any) => ({
+        ...field,
+        style: { ...(field.style || {}) },
+      })),
+    };
+    setCatalog((current) => ({ ...current, models: [...current.models, model] }));
+    setFormData(model);
+    setActiveTab('config');
+    showToast(source ? 'Modelo duplicado. Ajuste e salve.' : 'Novo modelo criado. Ajuste e salve.', 'success');
+  };
+
+  const handleSetActiveModel = async (modelId: string) => {
+    const nextCatalog = {
+      ...catalog,
+      activeModelId: modelId,
+      models: catalog.models.map((model) => (model.id === formData.id ? formData : model)),
+    };
+    setIsSaving(true);
+    const saved = await crachaPeriodoEleitoralService.saveCatalog(nextCatalog);
+    setIsSaving(false);
+    if (saved) {
+      setCatalog(nextCatalog);
+      showToast('Modelo ativo do SES atualizado.', 'success');
+    } else showToast('Erro ao selecionar o modelo ativo.', 'error');
+  };
+
+  const handleDeleteModel = async (modelId: string) => {
+    if (catalog.models.length <= 1) {
+      showToast('Mantenha ao menos um modelo SES.', 'warning');
+      return;
+    }
+    const models = catalog.models.filter((model) => model.id !== modelId);
+    const activeModelId = catalog.activeModelId === modelId ? models[0].id : catalog.activeModelId;
+    const nextCatalog = { ...catalog, activeModelId, models };
+    const saved = await crachaPeriodoEleitoralService.saveCatalog(nextCatalog);
+    if (!saved) {
+      showToast('Erro ao excluir o modelo.', 'error');
+      return;
+    }
+    setCatalog(nextCatalog);
+    if (formData.id === modelId) setFormData(models.find((model) => model.id === activeModelId) || models[0]);
+    showToast('Modelo removido.', 'success');
   };
 
   useEffect(() => {
     if (activeTab === 'frente') setPreviewMode('frente');
     else if (activeTab === 'verso' && formData.hasVerso !== false) setPreviewMode('verso');
     else setPreviewMode(formData.hasVerso === false ? 'frente' : 'ambos');
-    if (activeTab === 'config') setSelectedFieldId(null);
+    if (activeTab === 'config' || activeTab === 'modelos') setSelectedFieldId(null);
   }, [activeTab, formData.hasVerso]);
 
   const handleZoomOut = () => setZoomLevel((current) => Math.max(50, current - 10));
@@ -302,11 +376,12 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
           {isUploading ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Upload size={18} />}
         </label>
       </div>
-      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Recomendado: imagem horizontal na proporção do crachá eleitoral.</p>
+      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Recomendado: imagem horizontal na proporção do crachá SES.</p>
     </div>
   );
 
   const getFieldDescription = (field: any) => {
+    if (field.type === 'photo') return 'Foto do aluno';
     if (field.type === 'boxText') return `Caixa: ${String(field.value || '').slice(0, 24)}`;
     if (field.type === 'line') return 'Linha';
     if (field.type === 'rect') return 'Forma';
@@ -315,6 +390,7 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
   };
 
   const renderElementIcon = (type: string) => {
+    if (type === 'photo') return <ImageIcon size={14} className="text-slate-400 shrink-0" />;
     if (type === 'boxText') return <Square size={14} className="text-slate-400 shrink-0" />;
     if (type === 'line') return <Minus size={14} className="text-slate-400 shrink-0" />;
     if (type === 'rect') return <Square size={14} className="text-slate-400 shrink-0" />;
@@ -351,6 +427,11 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
           <button type="button" onClick={handleAddShape} className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-bold text-slate-700 transition-colors">
             <Square size={14} /> Forma
           </button>
+          {page === 'frente' && (
+            <button type="button" onClick={handleAddPhoto} className="col-span-2 flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-bold text-slate-700 transition-colors">
+              <ImageIcon size={14} /> Foto do aluno
+            </button>
+          )}
         </div>
       </div>
 
@@ -393,7 +474,7 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
     return (
       <div className="rounded-[2rem] border border-slate-200 bg-white p-10 text-center text-slate-400">
         <Loader2 className="mx-auto mb-3 animate-spin text-blue-600" />
-        <p className="text-xs font-black uppercase tracking-widest">Carregando modelo do crachá eleitoral...</p>
+        <p className="text-xs font-black uppercase tracking-widest">Carregando modelos SES...</p>
       </div>
     );
   }
@@ -404,10 +485,10 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
             <LayoutTemplate size={24} className="text-blue-600" />
-            Editar Crachá Período Eleitoral
+            Crachá SES
           </h3>
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
-            Personalize o layout, configure frente e verso e defina a janela de liberação
+            Salve variações por hospital ou período e escolha qual modelo ficará em uso
           </p>
         </div>
         <button
@@ -427,12 +508,10 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
               {availableNow ? <CheckCircle2 size={20} className="mt-0.5 shrink-0" /> : <AlertTriangle size={20} className="mt-0.5 shrink-0" />}
               <div>
                 <p className="text-xs font-black uppercase tracking-widest">
-                  {availableNow ? 'Disponível agora' : 'Fora do período de liberação'}
+                  {availableNow ? 'Modelo habilitado' : 'Modelo desativado'}
                 </p>
                 <p className="mt-1 text-xs font-semibold leading-relaxed">
-                  {hasConfiguredPeriod
-                    ? `Período configurado: ${formatCrachaEleitoralDate(formData.disponivelInicio)} até ${formatCrachaEleitoralDate(formData.disponivelFim)}.`
-                    : 'Configure data inicial e data final para liberar este crachá na secretaria e no portal do aluno.'}
+                  O aluno só poderá acessar ou emitir este crachá depois que houver registro de entrada no estágio.
                 </p>
               </div>
             </div>
@@ -440,14 +519,15 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
 
           <div className="p-1 rounded-xl flex gap-1 bg-slate-100">
             {[
+              ['modelos', 'Modelos'],
               ['config', 'Config'],
               ['frente', 'Frente'],
               ['verso', 'Verso'],
             ].map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => setActiveTab(id as 'config' | 'frente' | 'verso')}
-                className={`flex-1 py-2 px-4 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                onClick={() => setActiveTab(id as 'modelos' | 'config' | 'frente' | 'verso')}
+                className={`flex-1 py-2 px-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${activeTab === id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {label}
               </button>
@@ -455,22 +535,54 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6 max-h-[60vh] xl:max-h-[68vh]">
+            {activeTab === 'modelos' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => handleNewModel()} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700">
+                    <Plus size={14} /> Novo modelo
+                  </button>
+                  <button type="button" onClick={() => handleNewModel(formData)} className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-blue-200 hover:text-blue-600">
+                    <Copy size={14} /> Duplicar
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {catalog.models.map((model) => {
+                    const isActive = catalog.activeModelId === model.id;
+                    const isSelected = formData.id === model.id;
+                    return (
+                      <article key={model.id} className={`overflow-hidden rounded-2xl border ${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'} bg-white`}>
+                        <div className="flex min-h-24">
+                          <div className="w-24 shrink-0 bg-slate-100 bg-cover bg-center" style={model.bgFrenteUrl ? { backgroundImage: `url(${model.bgFrenteUrl})` } : undefined}>
+                            {!model.bgFrenteUrl && <div className="flex h-full items-center justify-center text-slate-300"><Layers3 size={28} /></div>}
+                          </div>
+                          <div className="min-w-0 flex-1 p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-black uppercase text-[#001a33]">{model.nome}</p>
+                                <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{model.hospitalNome || model.orgaoTitulo || 'Hospital não informado'}</p>
+                              </div>
+                              {isActive && <span className="rounded-full bg-emerald-100 px-2 py-1 text-[8px] font-black uppercase text-emerald-700">Em uso</span>}
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              <button type="button" onClick={() => handleSelectModel(model)} className="rounded-lg bg-slate-100 px-2 py-1.5 text-[8px] font-black uppercase text-slate-700 hover:bg-blue-50 hover:text-blue-600">Editar</button>
+                              {!isActive && <button type="button" onClick={() => handleSetActiveModel(model.id)} className="rounded-lg bg-emerald-50 px-2 py-1.5 text-[8px] font-black uppercase text-emerald-700 hover:bg-emerald-100">Usar modelo</button>}
+                              <button type="button" onClick={() => handleDeleteModel(model.id)} className="rounded-lg bg-red-50 px-2 py-1.5 text-[8px] font-black uppercase text-red-600 hover:bg-red-100">Excluir</button>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'config' && (
               <div className="space-y-5 animate-fadeIn">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Modelo <span className="text-red-500">*</span></label>
                   <input name="nome" value={formData.nome || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Data Inicial</label>
-                    <input type="date" name="disponivelInicio" value={formData.disponivelInicio || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Data Final</label>
-                    <input type="date" name="disponivelFim" value={formData.disponivelFim || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all" />
-                  </div>
                 </div>
 
                 <div>
@@ -482,8 +594,8 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Órgão / Cabeçalho</label>
-                  <input name="orgaoTitulo" value={formData.orgaoTitulo || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Hospital</label>
+                  <input name="hospitalNome" value={formData.hospitalNome || formData.orgaoTitulo || ''} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all" />
                 </div>
 
                 <div>
@@ -662,7 +774,7 @@ const CrachaPeriodoEleitoralPage: React.FC = () => {
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 resize-y custom-scrollbar min-h-[62px]"
                       />
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CURSO}}', '{{INSTITUICAO_ENSINO}}', '{{CATEGORIA_PROFISSIONAL}}', '{{VALIDADE}}'].map((variable) => (
+                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CURSO}}', '{{HOSPITAL_NOME}}', '{{INSTITUICAO_ENSINO}}', '{{CATEGORIA_PROFISSIONAL}}', '{{VALIDADE}}'].map((variable) => (
                           <button
                             key={variable}
                             type="button"

@@ -1,5 +1,6 @@
 import {
   AlunoSecretariaEligibility,
+  AlunoSecretariaEstagio,
   AlunoSecretariaMatricula,
   AlunoSecretariaSolicitacaoTipo,
 } from './secretaria-aluno.types';
@@ -54,11 +55,18 @@ export const isAlunoSecretariaHistoricalTechnical = (matricula?: AlunoSecretaria
   TECHNICAL_HISTORY_STATUSES.has(normalizeAlunoSecretariaText(matricula?.status));
 
 export const buildAlunoSecretariaEligibility = (
-  matriculas: AlunoSecretariaMatricula[]
+  matriculas: AlunoSecretariaMatricula[],
+  estagios: AlunoSecretariaEstagio[] = []
 ): AlunoSecretariaEligibility => {
   const sorted = [...(matriculas || [])];
   const activeAny = sorted.find(isAlunoSecretariaActiveEnrollment) || null;
   const activeTechnical = sorted.find(isAlunoSecretariaActiveTechnical) || null;
+  const internshipTurmaIds = new Set((estagios || []).map((estagio) => estagio.turma_id));
+  const activeInternshipEnrollment = sorted.find((matricula) => (
+    isAlunoSecretariaActiveTechnical(matricula)
+    && !!matricula.turma_id
+    && internshipTurmaIds.has(matricula.turma_id)
+  )) || null;
   const historicalTechnical = sorted.find(isAlunoSecretariaHistoricalTechnical) || null;
   const onlineEnrollments = sorted.filter(isAlunoSecretariaOnline);
   const declarationEnrollment = activeTechnical || activeAny;
@@ -68,7 +76,7 @@ export const buildAlunoSecretariaEligibility = (
 
   const canEmitStudentCard = Boolean(activeTechnical);
   const canEmitInternshipBadge = Boolean(activeTechnical);
-  const canEmitElectionBadge = Boolean(activeAny);
+  const canEmitElectionBadge = Boolean(activeInternshipEnrollment);
   const canEmitBulletin = Boolean(activeTechnical);
   const canEmitEnrollmentDeclaration = Boolean(declarationEnrollment);
   const canEmitIrpf = Boolean(historicalTechnical);
@@ -94,6 +102,7 @@ export const buildAlunoSecretariaEligibility = (
     hasAnyTechnicalEnrollment,
     hasActiveTechnicalEnrollment: Boolean(activeTechnical),
     hasHistoricalTechnicalEnrollment: Boolean(historicalTechnical),
+    hasActiveInternship: Boolean(activeInternshipEnrollment),
     canEmitStudentCard,
     canEmitInternshipBadge,
     canEmitElectionBadge,
@@ -105,7 +114,7 @@ export const buildAlunoSecretariaEligibility = (
     canRequestTransfer,
     primaryEnrollment,
     technicalIdentityEnrollment: activeTechnical,
-    electionBadgeEnrollment: activeAny,
+    electionBadgeEnrollment: activeInternshipEnrollment,
     bulletinEnrollment: activeTechnical,
     declarationEnrollment,
     irpfEnrollment: historicalTechnical,

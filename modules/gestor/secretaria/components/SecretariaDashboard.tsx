@@ -36,7 +36,7 @@ const cards = [
   { id: 'historico-escolar', title: 'Histórico Escolar', desc: 'Percurso curricular e resultados acadêmicos.', icon: ScrollText, color: 'slate' },
   { id: 'carteirinha', title: 'Carteirinha Estudantil', desc: 'Identificação estudantil com QR Code.', icon: CreditCard, color: 'purple' },
   { id: 'cracha-estagio', title: 'Crachá de Estágio', desc: 'Identificação para atividades supervisionadas.', icon: FileCheck2, color: 'rose' },
-  { id: 'cracha-periodo-eleitoral', title: 'Crachá Período Eleitoral', desc: 'Modelo temporário sem QR Code liberado por data.', icon: Vote, color: 'cyan' },
+  { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Crachá do aluno liberado após a entrada no estágio.', icon: Vote, color: 'cyan' },
   { id: 'termo-estagio', title: 'Termo de Estágio', desc: 'Termo de compromisso individual ou em lote.', icon: BriefcaseBusiness, color: 'teal' },
   { id: 'rematricula', title: 'Rematrícula', desc: 'Preparação do processo por aluno ou turma.', icon: RefreshCcw, color: 'violet' },
   { id: 'consulta-financeira', title: 'Financeiro do Aluno', desc: 'Consulta inicial de contratos, parcelas e movimentações.', icon: CircleDollarSign, color: 'cyan' },

@@ -25,11 +25,19 @@ export interface AlunoSecretariaMatricula {
   } | null;
 }
 
+export interface AlunoSecretariaEstagio {
+  aluno_id: string;
+  turma_id: string;
+  disciplina_id: string;
+  created_at?: string | null;
+}
+
 export interface AlunoSecretariaEligibility {
   hasOnlineOnlyAccess: boolean;
   hasAnyTechnicalEnrollment: boolean;
   hasActiveTechnicalEnrollment: boolean;
   hasHistoricalTechnicalEnrollment: boolean;
+  hasActiveInternship: boolean;
   canEmitStudentCard: boolean;
   canEmitInternshipBadge: boolean;
   canEmitElectionBadge: boolean;

@@ -14,6 +14,13 @@ export const useAlunoSecretariaRealtime = (
       .channel(`aluno_secretaria_realtime_${alunoId}`)
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'matriculas_estagios', filter: `aluno_id=eq.${alunoId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: alunoSecretariaKeys.estagios(alunoId) });
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'matriculas', filter: `aluno_id=eq.${alunoId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: alunoSecretariaKeys.matriculas(alunoId) });

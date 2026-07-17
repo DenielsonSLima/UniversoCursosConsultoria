@@ -6,6 +6,7 @@ export const alunoSecretariaKeys = {
   aluno: (alunoId: string) => [...alunoSecretariaKeys.all, alunoId] as const,
   profile: (alunoId: string) => [...alunoSecretariaKeys.aluno(alunoId), 'profile'] as const,
   matriculas: (alunoId: string) => [...alunoSecretariaKeys.aluno(alunoId), 'matriculas'] as const,
+  estagios: (alunoId: string) => [...alunoSecretariaKeys.aluno(alunoId), 'estagios'] as const,
   solicitacoes: (alunoId: string) => [...alunoSecretariaKeys.aluno(alunoId), 'solicitacoes'] as const,
   prazos: () => [...alunoSecretariaKeys.all, 'prazos'] as const,
 };
@@ -28,6 +29,16 @@ export const alunoSecretariaService = {
       .select('*, turmas(*, cursos(*), polos(nome))')
       .eq('aluno_id', alunoId)
       .order('data_matricula', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getEstagios(alunoId: string) {
+    const { data, error } = await supabase
+      .from('matriculas_estagios')
+      .select('aluno_id, turma_id, disciplina_id, created_at')
+      .eq('aluno_id', alunoId);
 
     if (error) throw error;
     return data || [];

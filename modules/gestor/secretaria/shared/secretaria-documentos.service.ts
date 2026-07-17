@@ -107,7 +107,8 @@ export const secretariaDocumentosService = {
     completedOnly = false,
     activeEnrollmentOnly = false,
     activeTurmaOnly = false,
-    enrollmentStatuses: string[] = []
+    enrollmentStatuses: string[] = [],
+    internshipOnly = false
   ): Promise<SecretariaMatriculaResumo[]> {
     let query = supabase
       .from('matriculas')
@@ -124,7 +125,20 @@ export const secretariaDocumentosService = {
     const { data, error } = await query.order('data_matricula', { ascending: false });
     if (error) throw error;
 
-    return (data || []).map((matricula: any) => ({
+    let eligibleRows = data || [];
+    if (internshipOnly && eligibleRows.length) {
+      const turmaIds = [...new Set(eligibleRows.map((matricula: any) => matricula.turma_id).filter(Boolean))];
+      const { data: estagios, error: estagiosError } = await supabase
+        .from('matriculas_estagios')
+        .select('aluno_id, turma_id')
+        .eq('aluno_id', alunoId)
+        .in('turma_id', turmaIds);
+      if (estagiosError) throw estagiosError;
+      const turmasComEstagio = new Set((estagios || []).map((estagio: any) => estagio.turma_id));
+      eligibleRows = eligibleRows.filter((matricula: any) => turmasComEstagio.has(matricula.turma_id));
+    }
+
+    return eligibleRows.map((matricula: any) => ({
       id: matricula.id,
       status: matricula.status,
       dataMatricula: matricula.data_matricula || null,
@@ -140,7 +154,8 @@ export const secretariaDocumentosService = {
   async getTurmas(
     poloId: string,
     technicalOnly: boolean,
-    activeTurmaOnly = false
+    activeTurmaOnly = false,
+    internshipOnly = false
   ): Promise<SecretariaTurmaResumo[]> {
     let query = supabase
       .from('turmas')
@@ -154,9 +169,27 @@ export const secretariaDocumentosService = {
     const { data, error } = await query;
     if (error) throw error;
 
-    const turmas = data || [];
+    let turmas = data || [];
+    const internshipCounts = new Map<string, number>();
+    if (internshipOnly && turmas.length) {
+      const { data: estagios, error: estagiosError } = await supabase
+        .from('matriculas_estagios')
+        .select('turma_id, aluno_id')
+        .in('turma_id', turmas.map((turma: any) => turma.id));
+      if (estagiosError) throw estagiosError;
+      const turmaIds = new Set((estagios || []).map((estagio: any) => estagio.turma_id));
+      const alunosPorTurma = new Map<string, Set<string>>();
+      (estagios || []).forEach((estagio: any) => {
+        const alunos = alunosPorTurma.get(estagio.turma_id) || new Set<string>();
+        alunos.add(estagio.aluno_id);
+        alunosPorTurma.set(estagio.turma_id, alunos);
+      });
+      alunosPorTurma.forEach((alunos, turmaId) => internshipCounts.set(turmaId, alunos.size));
+      turmas = turmas.filter((turma: any) => turmaIds.has(turma.id));
+    }
     const counts = await Promise.all(
       turmas.map(async (turma: any) => {
+        if (internshipOnly) return internshipCounts.get(turma.id) || 0;
         const { count, error: countError } = await supabase
           .from('matriculas')
           .select('id', { count: 'exact', head: true })
@@ -191,6 +224,7 @@ export const secretariaDocumentosService = {
     activeTurmaOnly?: boolean;
     completedOnly?: boolean;
     enrollmentStatuses?: string[];
+    internshipOnly?: boolean;
     referencePeriod?: string;
   }) {
     let query = supabase
@@ -213,15 +247,28 @@ export const secretariaDocumentosService = {
     if (input.enrollmentStatuses?.length) query = query.in('status', input.enrollmentStatuses);
     if (input.completedOnly) query = query.eq('status', 'CONCLUIDO');
 
-    const { data: matriculas, error: matriculasError } = await query;
+    const { data: matriculasData, error: matriculasError } = await query;
     if (matriculasError) throw matriculasError;
-    if (!matriculas?.length) throw new Error('Nenhuma matrícula elegível para emissão.');
+    let matriculas = matriculasData || [];
+    if (input.internshipOnly && matriculas.length) {
+      const turmaIds = [...new Set(matriculas.map((matricula: any) => matricula.turma_id).filter(Boolean))];
+      const alunoIds = [...new Set(matriculas.map((matricula: any) => matricula.aluno_id).filter(Boolean))];
+      const { data: estagios, error: estagiosError } = await supabase
+        .from('matriculas_estagios')
+        .select('aluno_id, turma_id')
+        .in('turma_id', turmaIds)
+        .in('aluno_id', alunoIds);
+      if (estagiosError) throw estagiosError;
+      const eligibleKeys = new Set((estagios || []).map((estagio: any) => `${estagio.aluno_id}:${estagio.turma_id}`));
+      matriculas = matriculas.filter((matricula: any) => eligibleKeys.has(`${matricula.aluno_id}:${matricula.turma_id}`));
+    }
+    if (!matriculas.length) throw new Error('Nenhum aluno com entrada no estágio foi localizado para emissão do SES.');
 
     const shouldIssueValidation = input.documento !== 'cracha_periodo_eleitoral';
     if (!shouldIssueValidation) {
       const template = await crachaPeriodoEleitoralService.getTemplate();
       if (!isCrachaEleitoralTemplateAvailable(template)) {
-        throw new Error('O crachá período eleitoral está fora da janela de disponibilidade configurada.');
+        throw new Error('O modelo SES ativo está desabilitado.');
       }
     }
 

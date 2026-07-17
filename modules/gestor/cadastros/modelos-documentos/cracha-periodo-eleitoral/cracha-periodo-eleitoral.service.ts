@@ -2,6 +2,17 @@ import { supabase } from '../../../../../lib/supabase';
 
 export const getDefaultCrachaPeriodoEleitoralFields = () => [
   {
+    id: 'frente_foto',
+    type: 'photo',
+    value: '{{ALUNO_FOTO}}',
+    x: 8,
+    y: 23,
+    width: 25,
+    height: 46,
+    page: 'frente',
+    style: { borderRadius: '6px', borderColor: '#0b58a8', borderWidth: '2px', objectFit: 'cover' },
+  },
+  {
     id: 'frente_orgao',
     type: 'text',
     value: '{{ORGAO_TITULO}}',
@@ -253,12 +264,13 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
 ];
 
 export const DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE = {
-  id: 'cracha_periodo_eleitoral',
-  nome: 'Crachá Período Eleitoral',
+  id: 'ses-padrao',
+  nome: 'SES — Modelo Padrão',
   status: 'ativo',
   disponivelInicio: '',
   disponivelFim: '',
   hasVerso: true,
+  hospitalNome: 'Hospital de Urgência de Sergipe - HUSE',
   orgaoTitulo: 'Hospital de Urgência de Sergipe - HUSE',
   tituloPrincipal: 'ESTÁGIO\nCURRICULAR',
   instituicaoEnsinoPadrao: 'Universo Cursos e Consultoria',
@@ -272,6 +284,18 @@ export const DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE = {
   bgVersoUrl: '',
   ocultarDesignPadrao: false,
   fields: getDefaultCrachaPeriodoEleitoralFields(),
+};
+
+export interface CrachaSesCatalog {
+  schemaVersion: 2;
+  activeModelId: string;
+  models: any[];
+}
+
+export const DEFAULT_CRACHA_SES_CATALOG: CrachaSesCatalog = {
+  schemaVersion: 2,
+  activeModelId: DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.id,
+  models: [DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE],
 };
 
 const parseLocalDate = (value?: string | null, endOfDay = false) => {
@@ -288,10 +312,10 @@ export const formatCrachaEleitoralDate = (value?: string | null) => {
 
 export const isCrachaEleitoralTemplateAvailable = (template: any, now = new Date()) => {
   if (!template || template.status !== 'ativo') return false;
-  const start = parseLocalDate(template.disponivelInicio);
-  const end = parseLocalDate(template.disponivelFim, true);
-  if (!start || !end) return false;
-  return now >= start && now <= end;
+  // A liberação do SES é determinada pelo vínculo do aluno em matriculas_estagios.
+  // As datas antigas ficam apenas como metadados opcionais para compatibilidade.
+  void now;
+  return true;
 };
 
 const normalizeTemplate = (template: Record<string, any> | null) => {
@@ -300,19 +324,46 @@ const normalizeTemplate = (template: Record<string, any> | null) => {
   const normalized = {
     ...DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE,
     ...template,
+    nome: template.nome === 'Crachá Período Eleitoral'
+      ? DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.nome
+      : (template.nome || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.nome),
     bgFrenteUrl: template.bgFrenteUrl || template.bgFrente || template.bg_frente_url || '',
     bgVersoUrl: template.bgVersoUrl || template.bgVerso || template.bg_verso_url || '',
+    hospitalNome: template.hospitalNome || template.orgaoTitulo || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.hospitalNome,
+    orgaoTitulo: template.hospitalNome || template.orgaoTitulo || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.hospitalNome,
   };
 
   if (!Array.isArray(normalized.fields) || normalized.fields.length === 0) {
     normalized.fields = getDefaultCrachaPeriodoEleitoralFields();
+  } else if (!normalized.fields.some((field: any) => field.type === 'photo')) {
+    const defaultPhoto = getDefaultCrachaPeriodoEleitoralFields().find((field) => field.type === 'photo');
+    normalized.fields = defaultPhoto ? [defaultPhoto, ...normalized.fields] : normalized.fields;
   }
 
   return normalized;
 };
 
+const normalizeCatalog = (content: Record<string, any> | null): CrachaSesCatalog => {
+  if (content?.schemaVersion === 2 && Array.isArray(content.models)) {
+    const models = content.models.map((model: any) => normalizeTemplate(model)).filter(Boolean);
+    const safeModels = models.length ? models : [normalizeTemplate(DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE)];
+    const requestedActiveId = String(content.activeModelId || '');
+    const activeModelId = safeModels.some((model: any) => model.id === requestedActiveId)
+      ? requestedActiveId
+      : safeModels[0].id;
+    return { schemaVersion: 2, activeModelId, models: safeModels } as CrachaSesCatalog;
+  }
+
+  const legacyTemplate = normalizeTemplate(content) || normalizeTemplate(DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE);
+  return {
+    schemaVersion: 2,
+    activeModelId: legacyTemplate.id || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE.id,
+    models: [legacyTemplate],
+  };
+};
+
 export const crachaPeriodoEleitoralService = {
-  async getTemplate() {
+  async getCatalog(): Promise<CrachaSesCatalog> {
     try {
       const { data, error } = await supabase
         .from('documentos_templates')
@@ -320,19 +371,22 @@ export const crachaPeriodoEleitoralService = {
         .eq('id', 'cracha_periodo_eleitoral')
         .maybeSingle();
 
-      if (!error && data?.conteudo) {
-        return normalizeTemplate(data.conteudo);
-      }
+      if (error) throw error;
+      return normalizeCatalog((data?.conteudo as Record<string, any> | null) || null);
     } catch (e) {
-      console.error('[crachaPeriodoEleitoralService] Erro ao buscar template:', e);
+      console.error('[crachaPeriodoEleitoralService] Erro ao buscar catálogo SES:', e);
+      return normalizeCatalog(null);
     }
-
-    return DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE;
   },
 
-  async saveTemplate(data: any) {
+  async getTemplate() {
+    const catalog = await this.getCatalog();
+    return catalog.models.find((model) => model.id === catalog.activeModelId) || catalog.models[0];
+  },
+
+  async saveCatalog(catalog: CrachaSesCatalog) {
     try {
-      const normalized = normalizeTemplate(data) || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE;
+      const normalized = normalizeCatalog(catalog as unknown as Record<string, any>);
       const { error } = await supabase
         .from('documentos_templates')
         .upsert({
@@ -340,9 +394,22 @@ export const crachaPeriodoEleitoralService = {
           conteudo: normalized,
           updated_at: new Date().toISOString(),
         });
-
       if (error) throw error;
       return true;
+    } catch (e) {
+      console.error('[crachaPeriodoEleitoralService] Erro ao salvar catálogo SES:', e);
+      return false;
+    }
+  },
+
+  async saveTemplate(data: any) {
+    try {
+      const normalized = normalizeTemplate(data) || DEFAULT_CRACHA_PERIODO_ELEITORAL_TEMPLATE;
+      const catalog = await this.getCatalog();
+      const models = catalog.models.some((model) => model.id === normalized.id)
+        ? catalog.models.map((model) => (model.id === normalized.id ? normalized : model))
+        : [...catalog.models, normalized];
+      return this.saveCatalog({ ...catalog, activeModelId: normalized.id, models });
     } catch (e) {
       console.error('[crachaPeriodoEleitoralService] Erro ao salvar template:', e);
       return false;

@@ -34,7 +34,6 @@ import { carteirinhaService } from '../../gestor/cadastros/modelos-documentos/ca
 import { crachaService } from '../../gestor/cadastros/modelos-documentos/cracha/cracha.service';
 import {
   crachaPeriodoEleitoralService,
-  formatCrachaEleitoralDate,
   isCrachaEleitoralTemplateAvailable,
 } from '../../gestor/cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import {
@@ -585,6 +584,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     polo: electionBadgeMatricula?.turmas?.polos?.nome || activeMatricula?.turmas?.polos?.nome || 'Polo Principal',
     instituicaoEnsino: crachaEleitoralFormData?.instituicaoEnsinoPadrao || cardInstitutionalData?.poloNome || 'UNIVERSO CURSOS E CONSULTORIA',
     instrutor: crachaEleitoralFormData?.instrutorPadrao,
+    fotoUrl: aluno?.foto_url || null,
   };
 
   const handleOpenIRPF = () => {
@@ -693,7 +693,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
               >
-                <BadgeCheck size={13} /> Crachá Período Eleitoral
+                <BadgeCheck size={13} /> SES
               </button>
             )}
           </>
@@ -965,16 +965,16 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
         </div>
       )}
 
-      {/* ══════════════ CRACHÁ PERÍODO ELEITORAL TAB ══════════════ */}
+      {/* ══════════════ CRACHÁ SES TAB ══════════════ */}
       {docTab === 'cracha-eleitoral' && crachaEleitoralFormData && isElectionBadgeAvailable && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fadeIn">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
             <div>
               <h3 className="font-black text-[#001a33] text-sm uppercase tracking-tight flex items-center gap-2">
-                <BadgeCheck size={15} className="text-cyan-600" /> Crachá Período Eleitoral
+                <BadgeCheck size={15} className="text-cyan-600" /> Crachá SES
               </h3>
               <p className="text-slate-500 text-xs font-medium mt-0.5">
-                Disponível até {formatCrachaEleitoralDate(crachaEleitoralFormData.disponivelFim)}. Este modelo não possui QR Code.
+                Liberado após o registro de entrada no estágio. Este modelo não possui QR Code.
               </p>
             </div>
             <button
@@ -1000,7 +1000,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
           </div>
           <div className="px-6 pb-5 text-center">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-              Crachá Período Eleitoral · Universo Cursos e Consultoria
+              Crachá SES · Universo Cursos e Consultoria
             </p>
           </div>
         </div>

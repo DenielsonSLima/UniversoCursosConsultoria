@@ -17,6 +17,7 @@ interface CrachaPeriodoEleitoralPreviewProps {
     categoriaProfissional?: string;
     instrutor?: string;
     validade?: string;
+    fotoUrl?: string | null;
   };
   isEditable?: boolean;
   selectedFieldId?: string | null;
@@ -48,7 +49,8 @@ const CrachaPeriodoEleitoralPreview: React.FC<CrachaPeriodoEleitoralPreviewProps
     ALUNO_CURSO: aluno?.curso || 'TÉC. ENFERMAGEM',
     ALUNO_POLO: aluno?.polo || 'POLO PRINCIPAL',
     DATA_FIM_DISPONIBILIDADE: validadePeriodo || '31/12/2019',
-    ORGAO_TITULO: formData?.orgaoTitulo || 'Hospital de Urgência de Sergipe - HUSE',
+    HOSPITAL_NOME: formData?.hospitalNome || formData?.orgaoTitulo || 'Hospital de Urgência de Sergipe - HUSE',
+    ORGAO_TITULO: formData?.hospitalNome || formData?.orgaoTitulo || 'Hospital de Urgência de Sergipe - HUSE',
     TITULO_PRINCIPAL: formData?.tituloPrincipal || 'ESTÁGIO\nCURRICULAR',
   };
   const instituicaoEnsino = aluno?.instituicaoEnsino || formData?.instituicaoEnsinoPadrao || 'Universidade Federal de Sergipe';
@@ -251,6 +253,49 @@ const CrachaPeriodoEleitoralPreview: React.FC<CrachaPeriodoEleitoralPreviewProps
                 }}
                 className={`${hoverOutlineStyle} transition-all`}
               />
+            );
+          }
+
+          if (field.type === 'photo') {
+            const initials = String(aluno?.nome || 'Aluno')
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0])
+              .join('')
+              .toUpperCase();
+            return (
+              <div
+                key={field.id}
+                style={{
+                  ...commonStyle,
+                  width: `${field.width || 25}%`,
+                  height: `${field.height || 46}%`,
+                  overflow: 'hidden',
+                  borderRadius: field.style?.borderRadius || '6px',
+                  border: `${field.style?.borderWidth || '2px'} solid ${field.style?.borderColor || corPrimaria}`,
+                  backgroundColor: '#e2e8f0',
+                }}
+                onMouseDown={(event) => handleDragStart(event, field.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditable) onSelectField?.(field.id);
+                }}
+                className={`${hoverOutlineStyle} transition-all`}
+              >
+                {aluno?.fotoUrl ? (
+                  <img
+                    src={aluno.fotoUrl}
+                    alt={`Foto de ${aluno.nome || 'aluno'}`}
+                    className="h-full w-full"
+                    style={{ objectFit: field.style?.objectFit || 'cover' }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-2xl font-black text-slate-400">
+                    {initials}
+                  </div>
+                )}
+              </div>
             );
           }
 

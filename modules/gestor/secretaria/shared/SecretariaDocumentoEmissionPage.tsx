@@ -100,7 +100,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         !!definition.completedOnly,
         activeEnrollmentOnly,
         activeTurmaOnly,
-        enrollmentStatuses
+        enrollmentStatuses,
+        !!definition.internshipOnly
       ),
     enabled: !!selectedAluno,
     staleTime: 60_000,
@@ -117,7 +118,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
       secretariaDocumentosService.getTurmas(
         context.poloId,
         !!definition.technicalOnly,
-        activeTurmaOnly
+        activeTurmaOnly,
+        !!definition.internshipOnly
       ),
     enabled: mode === 'lote',
     staleTime: 60_000,
@@ -191,6 +193,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         activeTurmaOnly,
         completedOnly: !!definition.completedOnly,
         enrollmentStatuses,
+        internshipOnly: !!definition.internshipOnly,
         referencePeriod: isIrpfAnnual ? String(selectedReferenceYear) : undefined,
       }),
     onSuccess: () => {
@@ -353,7 +356,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             ))}
           </div>
           <div className="text-center text-[8px] text-slate-400 font-bold uppercase tracking-widest border-t border-slate-100 pt-2 flex justify-between print:hidden">
-            <span>Crachás Período Eleitoral #{loteIndex + 1} — frente e verso lado a lado</span>
+            <span>Crachás SES #{loteIndex + 1} — frente e verso lado a lado</span>
             <span>A4 paisagem</span>
           </div>
         </div>
@@ -374,7 +377,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             </button>
             <div>
               <h3 className="text-sm font-black uppercase tracking-widest text-white">
-                Impressão A4 do {isCrachaPeriodoEleitoral ? 'Crachá Período Eleitoral' : 'Crachá'}
+                Impressão A4 do {isCrachaPeriodoEleitoral ? 'Crachá SES' : 'Crachá'}
               </h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                 {isCrachaPeriodoEleitoral
@@ -691,9 +694,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
               </div>
               {isCrachaPeriodoEleitoral && !isCrachaEleitoralAvailable && (
                 <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
-                  <p className="text-[10px] font-black uppercase tracking-widest">Crachá fora do período eleitoral</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest">Modelo SES desativado</p>
                   <p className="mt-1 text-xs font-semibold leading-relaxed">
-                    Configure uma data inicial e final ativa em Cadastros, Modelos de Documentos, Crachá Período Eleitoral.
+                    Ative um modelo em Cadastros, Modelos de Documentos, SES.
                   </p>
                 </div>
               )}
