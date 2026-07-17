@@ -206,17 +206,15 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
               {/* Info Principal */}
               <div className="text-center mb-6 w-full">
                 <h3 className="font-bold text-[#001a33] text-lg mb-1 truncate px-2" title={user.nome}>
-                    {user.nome}
+                  {user.nome}
                 </h3>
                 <div className="flex items-center justify-center gap-1.5 text-slate-400 text-xs font-medium bg-slate-50 py-1 px-3 rounded-full w-fit mx-auto border border-slate-100">
                   <Mail size={12} />
                   <span className="truncate max-w-[150px]">{user.email}</span>
                 </div>
-                {user.perfil_nome && (
-                  <p className="mt-3 text-[11px] text-slate-500">
-                    Perfil: {user.perfil_nome}
-                  </p>
-                )}
+                <p className="mt-3 text-[11px] text-slate-500">
+                  Perfil de Acesso: {user.perfil_nome || 'Não vinculado (permissões individuais)'}
+                </p>
               </div>
 
               {/* Badges e Status */}

@@ -106,6 +106,8 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const isEditing = Boolean(initialUser?.id);
 
+  const selectedPerfil = perfis.find(p => p.id === formData.perfil_acesso_id);
+
   useEffect(() => {
     if (contextId !== 'global') {
       setFormData(prev => ({
@@ -537,9 +539,17 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
               ))}
             </select>
             {formData.perfil_acesso_id && (
-              <p className="text-[11px] text-blue-600 font-semibold mt-1">
-                ✓ As permissões e restrições de horário serão gerenciadas automaticamente pelo perfil selecionado.
-              </p>
+              <div className="mt-1 space-y-1 text-[11px] text-blue-600 font-semibold">
+                <p>✓ As permissões e restrições de horário serão gerenciadas automaticamente pelo perfil selecionado.</p>
+                <p>
+                  Perfil ativo: {selectedPerfil?.nome || 'Carregando perfil'}
+                  {selectedPerfil ? (
+                    <span className="text-slate-500 font-medium ml-1">
+                      ({selectedPerfil.permissoes?.modules?.length || 0} módulo(s), horário {selectedPerfil.restricao_horario?.ativo ? 'bloqueado' : 'liberado'})
+                    </span>
+                  ) : null}
+                </p>
+              </div>
             )}
           </div>
 
