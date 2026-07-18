@@ -22,6 +22,8 @@ import { getMaceioIsoDate } from '../../technicalClassDates';
 import TechnicalDataError from './TechnicalDataError';
 import ReceiveExternalTransferModal, { ExternalCreditDraft } from './academic/ReceiveExternalTransferModal';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
+import { invalidateSiteTickerQueries } from '../../../../../public/siteTicker.keys';
+import { invalidateTechnicalLandingQueries } from '../../../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
 
 interface TurmaAcademicoProps {
   turma: Turma;
@@ -86,6 +88,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turma.id) }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+      invalidateSiteTickerQueries(queryClient),
+      invalidateTechnicalLandingQueries(queryClient),
     ]);
   };
 

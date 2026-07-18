@@ -8,7 +8,7 @@ export type { GestaoResumoKpis, GestaoResumoModalidade } from './gestao-kpis.ser
 
 const TURMA_PAGE_SELECT = `
   id, codigo, nome, curso_id, polo_id, data_inicio, data_previsao_termino,
-  data_inicio_inscricao, data_fim_inscricao, permitir_inscricoes_online,
+  data_inicio_inscricao, data_fim_inscricao, publicar_no_site, permitir_inscricoes_online,
   exige_matricula, aceita_concomitante, aceita_subsequente,
   serie_minima_ensino_medio, bloquear_matriculas_apos_completar_vagas,
   qtd_vagas_minima, frequencia_minima_percent, media_minima, turno, status,
@@ -151,6 +151,7 @@ export const gestaoService = {
       data_previsao_termino: turma.dataPrevisaoTermino || null,
       data_inicio_inscricao: turma.dataInicioInscricao || null,
       data_fim_inscricao: turma.dataFimInscricao || null,
+      publicar_no_site: turma.publicarNoSite ?? false,
       permitir_inscricoes_online: turma.permitirInscricoesOnline ?? false,
       exige_matricula: turma.exigeMatricula === false ? false : true,
       aceita_concomitante: turma.modalidade === 'TECNICO'
@@ -210,6 +211,7 @@ export const gestaoService = {
       dataPrevisaoTermino: data.data_previsao_termino,
       dataInicioInscricao: data.data_inicio_inscricao || null,
       dataFimInscricao: data.data_fim_inscricao || null,
+      publicarNoSite: data.publicar_no_site ?? false,
       permitirInscricoesOnline: data.permitir_inscricoes_online ?? false,
       exigeMatricula: data.exige_matricula ?? true,
       aceitaConcomitante: data.aceita_concomitante ?? false,
@@ -273,6 +275,7 @@ export const gestaoService = {
       dataPrevisaoTermino: string | null;
       dataInicioInscricao?: string | null;
       dataFimInscricao?: string | null;
+      publicarNoSite?: boolean;
       permitirInscricoesOnline?: boolean;
       exigeMatricula?: boolean;
       aceitaConcomitante?: boolean;
@@ -301,6 +304,7 @@ export const gestaoService = {
         data_previsao_termino: input.dataPrevisaoTermino || null,
         data_inicio_inscricao: input.dataInicioInscricao || null,
         data_fim_inscricao: input.dataFimInscricao || null,
+        publicar_no_site: input.publicarNoSite === true,
         permitir_inscricoes_online: input.permitirInscricoesOnline === true,
         exige_matricula: input.exigeMatricula === false ? false : true,
         aceita_concomitante: input.aceitaConcomitante,

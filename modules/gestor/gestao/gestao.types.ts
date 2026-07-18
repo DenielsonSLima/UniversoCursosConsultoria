@@ -23,6 +23,7 @@ export interface Turma {
   dataPrevisaoTermino: string;
   dataInicioInscricao?: string;
   dataFimInscricao?: string;
+  publicarNoSite?: boolean;
   permitirInscricoesOnline?: boolean;
   exigeMatricula?: boolean;
   aceitaConcomitante?: boolean;

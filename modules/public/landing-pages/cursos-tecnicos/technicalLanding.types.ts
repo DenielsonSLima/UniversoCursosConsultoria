@@ -60,6 +60,7 @@ export interface TechnicalLandingClass {
   totalSeats: number;
   occupiedSeats: number;
   availableSeats: number;
+  onlineEnrollmentAvailable: boolean;
   enrollmentFee: number;
   installments: number;
   installmentValue: number;

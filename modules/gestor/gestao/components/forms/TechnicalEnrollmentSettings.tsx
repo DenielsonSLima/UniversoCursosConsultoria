@@ -1,7 +1,8 @@
 import React from 'react';
-import { CalendarClock, GraduationCap, Loader2, MegaphoneOff, MonitorPlay, School, Settings, Users2 } from 'lucide-react';
+import { CalendarClock, Eye, GraduationCap, Loader2, MegaphoneOff, MonitorPlay, School, Settings, Users2 } from 'lucide-react';
 
 export interface TechnicalEnrollmentSettingsValue {
+  publicarNoSite?: boolean;
   permitirInscricoesOnline: boolean;
   dataInicioInscricao: string;
   dataFimInscricao: string;
@@ -32,26 +33,55 @@ const TechnicalEnrollmentSettings: React.FC<TechnicalEnrollmentSettingsProps> = 
   const aceitaSubsequente = value.aceitaSubsequente ?? true;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-    <label className="flex items-start gap-3 text-xs font-bold uppercase text-emerald-700">
-      <input type="checkbox" checked={value.permitirInscricoesOnline}
-        disabled={onlineEnrollmentLocked || isClosingOnlineEnrollments}
-        onChange={(event) => onChange({ permitirInscricoesOnline: event.target.checked })}
-        className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50" />
-      <span>
-        <span className="flex items-center gap-2 text-[#001a33]">
-          <MonitorPlay size={14} className="text-emerald-600" /> Permitir inscrições online
+    <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Divulgação e matrícula</p>
+      <p className="mt-1 text-xs font-medium text-slate-500">
+        A visibilidade da landing page e a inscrição online são controles independentes.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label className={`flex items-start gap-3 rounded-xl border p-4 transition ${value.publicarNoSite ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+        <input
+          type="checkbox"
+          checked={value.publicarNoSite === true}
+          onChange={(event) => onChange({ publicarNoSite: event.target.checked })}
+          className="mt-0.5 h-4 w-4 rounded border-blue-300 text-blue-600"
+        />
+        <span>
+          <span className="flex items-center gap-2 text-xs font-bold uppercase text-[#001a33]">
+            <Eye size={14} className="text-blue-600" /> Exibir esta turma no site
+          </span>
+          <span className="mt-1 block text-[10px] font-semibold leading-relaxed text-slate-500">
+            Publica a landing page e permite anunciar a turma, mesmo com matrícula somente presencial.
+          </span>
         </span>
-        <span className="mt-1 block text-[10px] font-bold normal-case leading-relaxed text-emerald-700/70">
-          Mostra o botão de matrícula no portal do aluno e no site para esta turma.
+      </label>
+
+      <label className={`flex items-start gap-3 rounded-xl border p-4 transition ${value.permitirInscricoesOnline ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+        <input
+          type="checkbox"
+          checked={value.permitirInscricoesOnline}
+          disabled={onlineEnrollmentLocked || isClosingOnlineEnrollments}
+          onChange={(event) => onChange({ permitirInscricoesOnline: event.target.checked })}
+          className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <span>
+          <span className="flex items-center gap-2 text-xs font-bold uppercase text-[#001a33]">
+            <MonitorPlay size={14} className="text-emerald-600" /> Permitir inscrições online
+          </span>
+          <span className="mt-1 block text-[10px] font-semibold leading-relaxed text-slate-500">
+            Libera cadastro e pagamento online no site e no portal do aluno.
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+    </div>
 
     {onlineEnrollmentLocked && (
       <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800 md:flex-row md:items-center md:justify-between">
         <p className="text-[11px] font-semibold leading-relaxed">
-          A turma está com inscrições abertas. Feche essa fase para voltar ao planejamento e desligar o cadastro online com segurança.
+          A turma está com inscrições abertas. Feche essa fase para desligar o cadastro online. A landing page seguirá a opção “Exibir esta turma no site”.
         </p>
         {onCloseOnlineEnrollments && (
           <button

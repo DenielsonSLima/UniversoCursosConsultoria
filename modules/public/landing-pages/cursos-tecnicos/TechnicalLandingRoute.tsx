@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { getTechnicalLandingComponent } from './technicalLanding.registry';
 import { technicalLandingService } from './technicalLanding.service';
+import { technicalLandingKeys } from './technicalLanding.keys';
 import type { TechnicalEnrollmentPayload } from './technicalLanding.types';
 import { useTechnicalEnrollmentController } from './useTechnicalEnrollmentController';
 
@@ -39,9 +40,11 @@ const TechnicalLandingRoute: React.FC<TechnicalLandingRouteProps> = ({
   const internalEnrollment = useTechnicalEnrollmentController();
   const returnPath = `${location.pathname}${location.search}`;
   const query = useQuery({
-    queryKey: ['technical-public-landing', turmaId],
-    queryFn: () => technicalLandingService.getOpenClass(turmaId || ''),
+    queryKey: technicalLandingKeys.detail(turmaId),
+    queryFn: () => technicalLandingService.getPublishedClass(turmaId || ''),
     enabled: Boolean(turmaId),
+    staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 
   if (query.isLoading) return <><Header /><LoadingState /><Footer /></>;

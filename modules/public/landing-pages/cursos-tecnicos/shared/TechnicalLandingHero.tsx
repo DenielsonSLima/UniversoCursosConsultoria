@@ -9,7 +9,7 @@ interface TechnicalLandingHeroProps {
 }
 
 const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, config }) => {
-  const soldOut = data.turma.totalSeats > 0 && data.turma.availableSeats <= 0;
+  const onlineEnrollmentAvailable = data.turma.onlineEnrollmentAvailable;
 
   return (
   <section className="relative overflow-hidden bg-gradient-to-br from-[#001a33] via-[#003c78] to-blue-600 text-white">
@@ -52,20 +52,16 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
             </div>
           </div>
           <p className="mt-6 text-xs font-semibold leading-relaxed text-blue-50/75">
-            Inscrições até {formatLandingDate(data.turma.enrollmentEndDate)}. O envio dos documentos ocorre no portal após o pagamento.
+            {onlineEnrollmentAvailable
+              ? `Inscrições online até ${formatLandingDate(data.turma.enrollmentEndDate)}. O envio dos documentos ocorre no portal após o pagamento.`
+              : 'A landing page permanece disponível para consulta. A matrícula desta turma é realizada diretamente com a unidade.'}
           </p>
-          {soldOut ? (
-            <span className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white/15 px-5 py-4 text-xs font-black uppercase tracking-widest text-white/70">
-              Vagas esgotadas
-            </span>
-          ) : (
-            <a
-              href="#inscricao-tecnica"
-              className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-blue-800 transition hover:-translate-y-0.5"
-            >
-              Quero me inscrever
-            </a>
-          )}
+          <a
+            href="#inscricao-tecnica"
+            className="mt-6 flex w-full items-center justify-center rounded-2xl bg-white px-5 py-4 text-xs font-black uppercase tracking-widest text-blue-800 transition hover:-translate-y-0.5"
+          >
+            {onlineEnrollmentAvailable ? 'Quero me inscrever' : 'Ver atendimento presencial'}
+          </a>
         </div>
       </div>
     </div>

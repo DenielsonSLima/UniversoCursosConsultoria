@@ -6,8 +6,7 @@ import {
   DEFAULT_SITE_TICKER_CONFIG,
   SITE_PUBLIC_TICKER_CONFIG_ID,
   SitePublicTickerConfig,
-  SiteTickerModality,
-  SiteTickerPhraseCategory,
+  type SiteTickerModality,
 } from '../../../public/siteTicker.service';
 import { invalidateSiteTickerQueries, siteTickerKeys } from '../../../public/siteTicker.keys';
 import {
@@ -16,49 +15,13 @@ import {
   isWithinPublicEnrollmentWindow,
 } from '../../../public/courseAvailability';
 import { sitePublicoConfigService } from './site-publico.service';
-
-type SiteTickerCursoOption = {
-  id: string;
-  nome: string;
-  modalidade: SiteTickerModality;
-};
-
-type SiteTickerPoloOption = {
-  nome?: string | null;
-  cidade?: string | null;
-  estado?: string | null;
-};
-
-type SiteTickerTurmaOption = {
-  id: string;
-  nome: string;
-  curso_id: string;
-  status: string;
-  data_inicio_inscricao?: string | null;
-  data_fim_inscricao?: string | null;
-  cursos?: SiteTickerCursoOption | SiteTickerCursoOption[] | null;
-  polos?: SiteTickerPoloOption | SiteTickerPoloOption[] | null;
-};
-
-type SiteTickerFraseOption = {
-  id: string;
-  texto: string;
-  categoria: SiteTickerPhraseCategory;
-  ordem: number | null;
-};
-
-const MODALIDADES: { value: SiteTickerModality; label: string }[] = [
-  { value: 'EAD', label: 'EAD' },
-  { value: 'TECNICO', label: 'Técnico' },
-  { value: 'LIVRE', label: 'Livre' },
-  { value: 'ESPECIALIZACAO', label: 'Especialização' },
-];
-
-const FRASE_CATEGORIAS: { value: SiteTickerPhraseCategory; label: string; desc: string }[] = [
-  { value: 'all', label: 'Mistas', desc: 'Motivacionais e reflexão' },
-  { value: 'motivacional', label: 'Motivacionais', desc: 'Energia para começar o dia' },
-  { value: 'reflexao', label: 'Reflexão', desc: 'Mensagens mais contemplativas' },
-];
+import {
+  SITE_TICKER_MODALIDADES,
+  SITE_TICKER_PHRASE_CATEGORIES,
+  type SiteTickerCursoOption,
+  type SiteTickerFraseOption,
+  type SiteTickerTurmaOption,
+} from './site-publico.options';
 
 const SitePublicoConfig: React.FC = () => {
   const queryClient = useQueryClient();
@@ -95,9 +58,9 @@ const SitePublicoConfig: React.FC = () => {
     queryFn: async () => {
       let query = supabase
         .from('turmas')
-        .select('id, nome, curso_id, status, data_inicio_inscricao, data_fim_inscricao, cursos!inner(nome, modalidade), polos(nome, cidade, estado)')
-        .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
-        .eq('permitir_inscricoes_online', true)
+        .select('id, nome, curso_id, status, data_inicio_inscricao, data_fim_inscricao, publicar_no_site, permitir_inscricoes_online, cursos!inner(nome, modalidade), polos(nome, cidade, estado)')
+        .in('status', ['PLANEJADA', ...PUBLIC_ENROLLMENT_TURMA_STATUSES])
+        .or('publicar_no_site.eq.true,permitir_inscricoes_online.eq.true')
         .in('cursos.modalidade', config.modalidades.filter((item) => item !== 'EAD'))
         .order('nome', { ascending: true });
 
@@ -107,7 +70,9 @@ const SitePublicoConfig: React.FC = () => {
       if (error) throw error;
       return (data || []).filter((turma: any) => {
         const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+        if (curso?.modalidade === 'TECNICO') return turma?.publicar_no_site === true;
         return isEligiblePublicTurmaStatus(turma?.status, curso?.modalidade)
+          && turma?.permitir_inscricoes_online === true
           && isWithinPublicEnrollmentWindow(turma);
       }) as SiteTickerTurmaOption[];
     },
@@ -323,7 +288,7 @@ const SitePublicoConfig: React.FC = () => {
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">Tipo de frase automática</p>
             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-              {FRASE_CATEGORIAS.map((item) => (
+              {SITE_TICKER_PHRASE_CATEGORIES.map((item) => (
                 <button
                   key={item.value}
                   type="button"
@@ -356,7 +321,7 @@ const SitePublicoConfig: React.FC = () => {
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-slate-400">Modalidades anunciadas</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {MODALIDADES.map((item) => (
+              {SITE_TICKER_MODALIDADES.map((item) => (
                 <button
                   key={item.value}
                   type="button"

@@ -28,6 +28,7 @@ export const mapTurma = (t: any): Turma => {
     modalidade: t.cursos?.modalidade || 'TECNICO',
     dataInicioInscricao: t.data_inicio_inscricao || null,
     dataFimInscricao: t.data_fim_inscricao || null,
+    publicarNoSite: t.publicar_no_site ?? false,
     permitirInscricoesOnline: t.permitir_inscricoes_online ?? false,
     exigeMatricula: t.exige_matricula ?? true,
     aceitaConcomitante: t.aceita_concomitante ?? false,

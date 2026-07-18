@@ -4,6 +4,7 @@ import { ArrowRight, CalendarDays, Clock3, GraduationCap, MapPin, Users } from '
 import { Link } from 'react-router-dom';
 import { buildTechnicalLandingPath } from '../technicalLanding.routes';
 import { technicalLandingService } from '../technicalLanding.service';
+import { technicalLandingKeys } from '../technicalLanding.keys';
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'A definir';
@@ -14,8 +15,8 @@ const titleCase = (value: string) => value.toLocaleLowerCase('pt-BR').replace(/(
 
 const OpenTechnicalEnrollmentsSection: React.FC = () => {
   const query = useQuery({
-    queryKey: ['public-open-technical-classes', 3],
-    queryFn: () => technicalLandingService.listOpenClasses(3),
+    queryKey: technicalLandingKeys.list(3),
+    queryFn: () => technicalLandingService.listPublishedClasses(3),
     staleTime: 60_000,
   });
 
@@ -33,10 +34,10 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
               <GraduationCap size={15} /> Formação profissional
             </div>
             <h2 className="mt-5 text-3xl font-black tracking-tight text-[#001a33] md:text-5xl">
-              Matrículas técnicas <span className="text-blue-600">abertas</span>
+              Turmas técnicas <span className="text-blue-600">em destaque</span>
             </h2>
             <p className="mt-4 max-w-xl text-sm font-semibold leading-relaxed text-slate-600 md:text-base">
-              Escolha uma turma, confira datas e documentos e continue a matrícula online sem perder sua seleção.
+              Conheça as próximas turmas e escolha entre matrícula online ou atendimento presencial, conforme a disponibilidade.
             </p>
           </div>
           <Link
@@ -54,7 +55,7 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {(query.data || []).map((item) => {
-              const soldOut = item.turma.totalSeats > 0 && item.turma.availableSeats <= 0;
+              const onlineEnrollmentAvailable = item.turma.onlineEnrollmentAvailable;
               return (
                 <article key={item.turma.id} className="group flex min-h-[21rem] flex-col overflow-hidden rounded-[2rem] border border-white bg-white shadow-[0_18px_50px_rgba(15,45,80,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,45,80,0.14)]">
                   <div className="relative h-36 overflow-hidden bg-[#002b5c]">
@@ -62,7 +63,7 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
                       <img src={item.course.imageUrl} alt="" className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-105" loading="lazy" />
                     ) : null}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#001a33] via-[#001a33]/25 to-transparent" />
-                    <span className={`absolute right-4 top-4 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${soldOut ? 'bg-amber-100 text-amber-800' : 'bg-emerald-400 text-emerald-950'}`}>
+                    <span className={`absolute right-4 top-4 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${onlineEnrollmentAvailable ? 'bg-emerald-400 text-emerald-950' : 'bg-blue-100 text-blue-800'}`}>
                       {item.turma.availabilityLabel}
                     </span>
                     <p className="absolute bottom-4 left-5 right-5 text-lg font-black text-white">{item.course.name}</p>
@@ -78,10 +79,9 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
 
                     <Link
                       to={buildTechnicalLandingPath(item.course.name, item.turma.id)}
-                      className={`mt-6 flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[10px] font-black uppercase tracking-widest transition ${soldOut ? 'pointer-events-none bg-slate-100 text-slate-400' : 'bg-[#001a33] text-white hover:bg-blue-700'}`}
-                      aria-disabled={soldOut}
+                      className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700"
                     >
-                      {soldOut ? 'Turma lotada' : 'Ver turma e inscrever-se'} <ArrowRight size={15} />
+                      {onlineEnrollmentAvailable ? 'Ver turma e inscrever-se' : 'Ver turma e atendimento'} <ArrowRight size={15} />
                     </Link>
                   </div>
                 </article>

@@ -141,11 +141,13 @@ export const siteTickerService = {
           data_inicio_inscricao,
           data_fim_inscricao,
           status,
+          publicar_no_site,
+          permitir_inscricoes_online,
           cursos!inner(id, nome, modalidade, status, publicar_site),
           polos(nome, cidade, estado)
         `)
-        .in('status', [...PUBLIC_ENROLLMENT_TURMA_STATUSES])
-        .eq('permitir_inscricoes_online', true)
+        .in('status', ['PLANEJADA', ...PUBLIC_ENROLLMENT_TURMA_STATUSES])
+        .or('publicar_no_site.eq.true,permitir_inscricoes_online.eq.true')
         .eq('cursos.status', 'ativo')
         .eq('cursos.publicar_site', true)
         .in('cursos.modalidade', nonEadModalities)
@@ -159,13 +161,18 @@ export const siteTickerService = {
 
       for (const turma of (data || []).filter((item: any) => {
         const curso = Array.isArray(item?.cursos) ? item.cursos[0] : item?.cursos;
+        if (curso?.modalidade === 'TECNICO') return item?.publicar_no_site === true;
         return isEligiblePublicTurmaStatus(item?.status, curso?.modalidade)
+          && item?.permitir_inscricoes_online === true
           && isWithinPublicEnrollmentWindow(item);
       })) {
         const curso = Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos;
         const polo = getPoloLabel(turma);
         const start = config.showStartDate && turma.data_inicio ? ` • Início ${formatDate(turma.data_inicio)}` : '';
-        const text = `Turma aberta: ${curso?.nome || turma.nome}${config.showPolo && polo ? ` • ${polo}` : ''}${start}`;
+        const onlineOpen = turma.permitir_inscricoes_online === true
+          && isEligiblePublicTurmaStatus(turma.status, curso?.modalidade)
+          && isWithinPublicEnrollmentWindow(turma);
+        const text = `${onlineOpen ? 'Inscrições abertas' : 'Turma disponível'}: ${curso?.nome || turma.nome}${config.showPolo && polo ? ` • ${polo}` : ''}${start}`;
         items.push({
           text,
           href: curso?.modalidade === 'TECNICO'

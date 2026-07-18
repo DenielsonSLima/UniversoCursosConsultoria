@@ -17,6 +17,7 @@ import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import TechnicalDataError from './detalhes/components/TechnicalDataError';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
+import { invalidateTechnicalLandingQueries } from '../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
 
 interface GestaoTecnicosProps {
   onToggleDetails?: React.Dispatch<boolean>;
@@ -50,7 +51,10 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
 
   const handleCreate = async (data: any) => {
     const turma = await gestaoService.createTurma(data);
-    await invalidateSiteTickerQueries(queryClient);
+    await Promise.all([
+      invalidateSiteTickerQueries(queryClient),
+      invalidateTechnicalLandingQueries(queryClient),
+    ]);
     try {
       await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') });
     } catch (error: any) {
@@ -75,7 +79,10 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
     try {
       setIsDeleting(true);
       await gestaoService.deleteTurmaNaoIniciada(deleteTarget.id);
-      await invalidateSiteTickerQueries(queryClient);
+      await Promise.all([
+        invalidateSiteTickerQueries(queryClient),
+        invalidateTechnicalLandingQueries(queryClient),
+      ]);
       await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') });
       toast.success('Turma excluída', `${deleteTarget.codigo} foi removida com segurança.`);
     } catch (error: any) {

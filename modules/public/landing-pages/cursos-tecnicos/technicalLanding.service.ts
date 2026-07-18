@@ -43,6 +43,7 @@ const mapTurma = (row: any): TechnicalLandingClass => ({
   totalSeats: Number(row.vagas_totais || 0),
   occupiedSeats: Number(row.vagas_ocupadas || 0),
   availableSeats: Number(row.vagas_disponiveis || 0),
+  onlineEnrollmentAvailable: row.inscricoes_online_disponiveis === true,
   enrollmentFee: Number(row.valor_matricula || 0),
   installments: Number(row.qtd_parcelas || 0),
   installmentValue: Number(row.valor_parcela || 0),
@@ -94,7 +95,7 @@ const attachCoursePaymentConfig = async (rows: any[]) => {
 };
 
 export const technicalLandingService = {
-  async listOpenClasses(limit = 3): Promise<TechnicalLandingData[]> {
+  async listPublishedClasses(limit = 3): Promise<TechnicalLandingData[]> {
     const { data, error } = await supabase.rpc('list_public_technical_classes', {
       p_limit: Math.max(1, Math.min(3, limit)),
       p_turma_id: null,
@@ -104,7 +105,7 @@ export const technicalLandingService = {
     return rows.map(mapLandingData);
   },
 
-  async getOpenClass(turmaId: string): Promise<TechnicalLandingData> {
+  async getPublishedClass(turmaId: string): Promise<TechnicalLandingData> {
     const { data, error } = await supabase.rpc('list_public_technical_classes', {
       p_limit: 1,
       p_turma_id: turmaId,
@@ -113,7 +114,7 @@ export const technicalLandingService = {
     if (error) throw error;
     const rows = await attachCoursePaymentConfig(Array.isArray(data) ? data : []);
     const row = rows[0] || null;
-    if (!row) throw new Error('Turma técnica não encontrada ou indisponível para inscrição.');
+    if (!row) throw new Error('Turma técnica não encontrada ou não publicada no site.');
 
     return mapLandingData(row);
   },

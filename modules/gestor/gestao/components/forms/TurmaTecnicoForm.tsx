@@ -47,6 +47,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     dataPrevisaoTermino: '',
     dataInicioInscricao: '',
     dataFimInscricao: '',
+    publicarNoSite: false,
     permitirInscricoesOnline: false,
     exigeMatricula: true,
     qtdVagasMinima: 0,

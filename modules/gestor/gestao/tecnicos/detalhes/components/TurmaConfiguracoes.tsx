@@ -10,6 +10,7 @@ import TechnicalAcademicSettings from '../../../components/forms/TechnicalAcadem
 import TechnicalEnrollmentSettings from '../../../components/forms/TechnicalEnrollmentSettings';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
 import { academicLifecycleService } from '../academic-lifecycle.service';
+import { invalidateTechnicalLandingQueries } from '../../../../../public/landing-pages/cursos-tecnicos/technicalLanding.keys';
 
 interface TurmaConfiguracoesProps {
   turma: Turma;
@@ -25,6 +26,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
     dataPrevisaoTermino: turma.dataPrevisaoTermino || '',
     dataInicioInscricao: turma.dataInicioInscricao || '',
     dataFimInscricao: turma.dataFimInscricao || '',
+    publicarNoSite: turma.publicarNoSite ?? false,
     permitirInscricoesOnline: turma.permitirInscricoesOnline ?? false,
     exigeMatricula: turma.exigeMatricula ?? true,
     aceitaConcomitante: turma.aceitaConcomitante ?? true,
@@ -52,6 +54,7 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
         queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
         queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
         invalidateSiteTickerQueries(queryClient),
+        invalidateTechnicalLandingQueries(queryClient),
       ]);
       toast.success('Turma atualizada', 'As informações foram salvas no Supabase.');
     },
@@ -68,8 +71,14 @@ const TurmaConfiguracoes: React.FC<TurmaConfiguracoesProps> = ({ turma }) => {
         queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.summaries() }),
         queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
         invalidateSiteTickerQueries(queryClient),
+        invalidateTechnicalLandingQueries(queryClient),
       ]);
-      toast.success('Inscrições fechadas', 'A turma voltou ao planejamento e saiu do site e do portal do aluno.');
+      toast.success(
+        'Inscrições online fechadas',
+        form.publicarNoSite
+          ? 'A turma voltou ao planejamento, mas a landing page continua visível para atendimento presencial.'
+          : 'A turma voltou ao planejamento e o cadastro online foi desativado.',
+      );
     },
     onError: (error: any) => toast.error('Inscrições não fechadas', error.message),
   });
