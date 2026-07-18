@@ -1,46 +1,62 @@
 
 // File: App.tsx
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Páginas Públicas (sempre disponíveis)
-import PublicPage from './modules/public/public.page';
-import FaqPage from './modules/public/faq/FaqPage';
-import ContactPage from './modules/public/contact/ContactPage';
-import PrivacyPage from './modules/public/privacy/PrivacyPage';
-import TermsPage from './modules/public/terms/TermsPage';
-import CookiesPage from './modules/public/cookies/CookiesPage';
-import EnsinoSuperiorPublicPage from './modules/public/ensino-superior/EnsinoSuperiorPublicPage';
-import CursosTecnicosPublicPage from './modules/public/cursos-tecnicos/CursosTecnicosPublicPage';
-import CursoTecnicoDetailPage from './modules/public/cursos-tecnicos/CursoTecnicoDetailPage';
-import CursosLivresPublicPage from './modules/public/cursos-livres/CursosLivresPublicPage';
-import CursoLivreDetailPage from './modules/public/cursos-livres/CursoLivreDetailPage';
-import EspecializacaoPublicPage from './modules/public/especializacao/EspecializacaoPublicPage';
-import EspecializacaoDetailPage from './modules/public/especializacao/EspecializacaoDetailPage';
 import SeoManager from './modules/public/components/SeoManager';
-import EadPublicPage from './modules/public/ead/EadPublicPage';
-import EadDetailPage from './modules/public/ead/EadDetailPage';
-import AlunoLoginPublicPage from './modules/public/login/AlunoLoginPublicPage';
-import AlunoEmailConfirmationPage from './modules/public/login/AlunoEmailConfirmationPage';
-import ValidatorPage from './modules/public/validator/ValidatorPage';
-import PasswordRecoveryPage from './modules/login/PasswordRecoveryPage';
-import AlunoFirstAccessPage from './modules/public/login/AlunoFirstAccessPage';
-
-// Páginas do Sistema Interno
-import LoginPage from './modules/login/LoginPage';
-import GestorPage from './modules/gestor/gestor.page';
-import ProfessorPage from './modules/professor/professor.page';
-import AlunoPage from './modules/aluno/aluno.page';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
-import TechnicalLandingRoute from './modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute';
+import AccessCheckingScreen from './modules/shared/components/AccessCheckingScreen';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
+
+const PublicPage = lazy(() => import('./modules/public/public.page'));
+const FaqPage = lazy(() => import('./modules/public/faq/FaqPage'));
+const ContactPage = lazy(() => import('./modules/public/contact/ContactPage'));
+const PrivacyPage = lazy(() => import('./modules/public/privacy/PrivacyPage'));
+const TermsPage = lazy(() => import('./modules/public/terms/TermsPage'));
+const CookiesPage = lazy(() => import('./modules/public/cookies/CookiesPage'));
+const EnsinoSuperiorPublicPage = lazy(() => import('./modules/public/ensino-superior/EnsinoSuperiorPublicPage'));
+const CursosTecnicosPublicPage = lazy(() => import('./modules/public/cursos-tecnicos/CursosTecnicosPublicPage'));
+const CursoTecnicoDetailPage = lazy(() => import('./modules/public/cursos-tecnicos/CursoTecnicoDetailPage'));
+const CursosLivresPublicPage = lazy(() => import('./modules/public/cursos-livres/CursosLivresPublicPage'));
+const CursoLivreDetailPage = lazy(() => import('./modules/public/cursos-livres/CursoLivreDetailPage'));
+const EspecializacaoPublicPage = lazy(() => import('./modules/public/especializacao/EspecializacaoPublicPage'));
+const EspecializacaoDetailPage = lazy(() => import('./modules/public/especializacao/EspecializacaoDetailPage'));
+const EadPublicPage = lazy(() => import('./modules/public/ead/EadPublicPage'));
+const EadDetailPage = lazy(() => import('./modules/public/ead/EadDetailPage'));
+const AlunoLoginPublicPage = lazy(() => import('./modules/public/login/AlunoLoginPublicPage'));
+const AlunoEmailConfirmationPage = lazy(() => import('./modules/public/login/AlunoEmailConfirmationPage'));
+const AlunoFirstAccessPage = lazy(() => import('./modules/public/login/AlunoFirstAccessPage'));
+const ValidatorPage = lazy(() => import('./modules/public/validator/ValidatorPage'));
+const PasswordRecoveryPage = lazy(() => import('./modules/login/PasswordRecoveryPage'));
+const LoginPage = lazy(() => import('./modules/login/LoginPage'));
+const GestorPage = lazy(() => import('./modules/gestor/gestor.page'));
+const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
+const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
+const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
+
+const RouteLoadingScreen = () => {
+  const pathname = window.location.pathname;
+  if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
+  if (pathname.startsWith('/professor')) return <AccessCheckingScreen portal="Professor" />;
+  if (pathname.startsWith('/aluno')) return <AccessCheckingScreen portal="Aluno" />;
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex flex-col items-center gap-5 rounded-3xl border border-slate-200 bg-white px-10 py-8 shadow-xl">
+        <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-14 w-48 object-contain" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" aria-label="Carregando página" />
+      </div>
+    </main>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <SeoManager />
-      <Routes>
+      <Suspense fallback={<RouteLoadingScreen />}>
+        <Routes>
 
         {/* ── Rotas Públicas (sempre disponíveis) ── */}
         <Route path="/" element={<PublicPage />} />
@@ -92,7 +108,8 @@ const App: React.FC = () => {
         {/* Redireciona qualquer rota não encontrada para a home */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };

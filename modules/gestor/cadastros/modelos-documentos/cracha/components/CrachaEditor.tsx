@@ -1,22 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
-  ArrowLeft, 
-  Save, 
-  LayoutTemplate, 
-  ZoomOut, 
-  ZoomIn, 
   Upload, 
   Loader2, 
-  Trash2, 
   Plus, 
-  Sliders, 
-  Bold, 
-  Italic, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  CheckCircle2, 
-  AlertCircle,
   QrCode,
   User,
   Type,
@@ -24,7 +10,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../../../../lib/supabase';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
-import CrachaPreview from './CrachaPreview';
+import CrachaFieldEditorPanel from './CrachaFieldEditorPanel';
+import CrachaEditorHeader from './CrachaEditorHeader';
+import CrachaEditorToast, { CrachaEditorToastState } from './CrachaEditorToast';
+import CrachaPreviewWorkspace from './CrachaPreviewWorkspace';
+import { getCrachaUploadExtension, initializeCrachaModel } from './cracha-editor.model';
 
 interface CrachaEditorProps {
   modelo: any;
@@ -32,284 +22,20 @@ interface CrachaEditorProps {
   onCancel: () => void;
 }
 
-// Coordenadas padrão iniciais em porcentagem (%) para o crachá vertical
-const posicoesPadrao: Record<string, { x: number; y: number }> = {
-  foto: { x: 27.5, y: 14 },
-  nome: { x: 3.7, y: 47.0 },
-  cargo: { x: 3.7, y: 53.0 },
-  matricula: { x: 5.5, y: 60.0 },
-  cpf: { x: 5.5, y: 66.2 },
-  curso: { x: 5.5, y: 72.4 },
-  qrcode: { x: 62.0, y: 60.0 }
-};
-
-const frontInfoFieldValues: Record<string, string> = {
-  matricula: 'MATRÍCULA\n{{ALUNO_MATRICULA}}',
-  cpf: 'CPF\n{{ALUNO_CPF}}',
-  curso: 'CURSO\n{{ALUNO_CURSO}}'
-};
-
-const normalizeFrontInfoField = (field: any) => {
-  const normalizedId = field.id === 'polo' ? 'curso' : field.id;
-  const normalizedValue = frontInfoFieldValues[normalizedId];
-
-  if (!normalizedValue) return field;
-
-  return {
-    ...field,
-    id: normalizedId,
-    value: normalizedValue,
-    style: {
-      ...(field.style || {}),
-      lineHeight: field.style?.lineHeight || '1.12',
-      fontWeight: field.style?.fontWeight || 'bold'
-    }
-  };
-};
-
 const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<any>(modelo || {
-    id: 'cracha',
-    nome: 'Crachá de Estágio',
-    cargoPadrao: 'ESTAGIÁRIO',
-    status: 'ativo',
-    startNumber: 1000,
-    hasVerso: true,
-    corPrimaria: '#0f172a',
-    corSecundaria: '#10b981',
-    textoFrente: 'ESTAGIÁRIO',
-    textoVerso: 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
-    bgFrenteUrl: '',
-    bgVersoUrl: '',
-    ocultarDesignPadrao: false,
-    corTexto: '#1e293b',
-    tamanhoFonteNome: 8.5,
-    tamanhoFonteDados: 6.8,
-    fotoWidth: 45.0,
-    fotoHeight: 28.5,
-    fields: []
-  });
+  const [formData, setFormData] = useState<any>(() => initializeCrachaModel(modelo));
 
   const [activeTab, setActiveTab] = useState<'config' | 'frente' | 'verso'>('config');
   const [previewMode, setPreviewMode] = useState<'frente' | 'verso' | 'ambos'>('ambos');
   const [zoomLevel, setZoomLevel] = useState(120);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<CrachaEditorToastState | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
-
-  // Novos campos padrão do verso (v2)
-  const getNewVersoFields = () => [
-    {
-      id: 'verso_qrcode',
-      type: 'qrcode',
-      value: 'QR_VALIDADOR_CRACHA',
-      x: 27.0,
-      y: 10.0,
-      width: 46,
-      height: 26,
-      page: 'verso'
-    },
-    {
-      id: 'verso_nome',
-      type: 'text',
-      value: '{{ALUNO_NOME}}',
-      x: 3.7,
-      y: 38.0,
-      width: 92.6,
-      page: 'verso',
-      style: { fontSize: '6px', fontWeight: 'bold', color: '#1e293b', textAlign: 'center' }
-    },
-    {
-      id: 'verso_matricula',
-      type: 'text',
-      value: 'MATRÍCULA: {{ALUNO_MATRICULA}}',
-      x: 3.7,
-      y: 43.0,
-      width: 92.6,
-      page: 'verso',
-      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
-    },
-    {
-      id: 'verso_cpf',
-      type: 'text',
-      value: 'CPF: {{ALUNO_CPF}}',
-      x: 3.7,
-      y: 47.0,
-      width: 92.6,
-      page: 'verso',
-      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
-    },
-    {
-      id: 'verso_curso',
-      type: 'text',
-      value: 'CURSO: {{ALUNO_CURSO}}',
-      x: 3.7,
-      y: 51.0,
-      width: 92.6,
-      page: 'verso',
-      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569', textAlign: 'center' }
-    },
-    {
-      id: 'verso_url_validador',
-      type: 'text',
-      value: 'www.universocc.com.br/validador',
-      x: 3.7,
-      y: 55.5,
-      width: 92.6,
-      page: 'verso',
-      style: { fontSize: '4.5px', fontWeight: 'bold', color: '#dc2626', textAlign: 'center' }
-    },
-    {
-      id: 'instrucoes',
-      type: 'text',
-      value: formData.textoVerso || 'INSTRUÇÕES DE USO:\n1. Este crachá é de uso pessoal, intransferível e obrigatório nas dependências da instituição e no local do estágio.\n2. Mantenha-o sempre visível.\n3. Em caso de perda, comunique imediatamente a Universo Cursos e Consultoria.',
-      x: 5.0,
-      y: 60.0,
-      width: 90.0,
-      page: 'verso',
-      style: { fontSize: '4.2px', fontWeight: 'normal', color: '#64748b', textAlign: 'left' }
-    },
-    {
-      id: 'emissao_label',
-      type: 'text',
-      value: 'EMISSÃO',
-      x: 5.0,
-      y: 86.0,
-      page: 'verso',
-      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
-    },
-    {
-      id: 'emissao_valor',
-      type: 'text',
-      value: '{{DATA_HOJE}}',
-      x: 5.0,
-      y: 89.0,
-      page: 'verso',
-      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
-    },
-    {
-      id: 'validade_label',
-      type: 'text',
-      value: 'VALIDADE',
-      x: 55.0,
-      y: 86.0,
-      page: 'verso',
-      style: { fontSize: '3.5px', fontWeight: 'bold', color: '#94a3b8' }
-    },
-    {
-      id: 'validade_valor',
-      type: 'text',
-      value: '{{DATA_VALIDADE}}',
-      x: 55.0,
-      y: 89.0,
-      page: 'verso',
-      style: { fontSize: '5px', fontWeight: 'bold', color: '#475569' }
-    }
-  ];
-
-  // Migração/inicialização automática de templates antigos para o novo array de fields
-  useEffect(() => {
-    if (!formData.fields || !Array.isArray(formData.fields) || formData.fields.length === 0) {
-      // Caso 1: Template sem fields — inicializa tudo do zero
-      const pos = formData.posicoes || posicoesPadrao;
-      const initialFields = [
-        {
-          id: 'foto',
-          type: 'foto',
-          value: '{{ALUNO_FOTO}}',
-          x: pos.foto?.x ?? 27.5,
-          y: pos.foto?.y ?? 14,
-          width: formData.fotoWidth || 45,
-          height: formData.fotoHeight || 28.5,
-          page: 'frente'
-        },
-        {
-          id: 'nome',
-          type: 'text',
-          value: '{{ALUNO_NOME}}',
-          x: pos.nome?.x ?? 3.7,
-          y: pos.nome?.y ?? 47.0,
-          page: 'frente',
-          style: { fontWeight: 'bold', fontSize: `${formData.tamanhoFonteNome || 8.5}px`, textAlign: 'center', color: formData.corTexto || '#1e293b' }
-        },
-        {
-          id: 'cargo',
-          type: 'text',
-          value: formData.textoFrente || formData.cargoPadrao || 'ESTAGIÁRIO',
-          x: pos.cargo?.x ?? 3.7,
-          y: pos.cargo?.y ?? 53.0,
-          page: 'frente',
-          style: { fontWeight: 'bold', fontSize: `${formData.tamanhoFonteDados || 7.5}px`, textAlign: 'center', color: formData.corSecundaria || '#10b981' }
-        },
-        {
-          id: 'matricula',
-          type: 'text',
-          value: frontInfoFieldValues.matricula,
-          x: pos.matricula?.x ?? 5.5,
-          y: pos.matricula?.y ?? 60.0,
-          page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
-        },
-        {
-          id: 'cpf',
-          type: 'text',
-          value: frontInfoFieldValues.cpf,
-          x: pos.cpf?.x ?? 5.5,
-          y: pos.cpf?.y ?? 66.2,
-          page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
-        },
-        {
-          id: 'curso',
-          type: 'text',
-          value: frontInfoFieldValues.curso,
-          x: pos.curso?.x ?? pos.polo?.x ?? 5.5,
-          y: pos.curso?.y ?? pos.polo?.y ?? 72.4,
-          page: 'frente',
-          style: { fontSize: `${formData.tamanhoFonteDados || 6.8}px`, lineHeight: '1.12', fontWeight: 'bold', color: formData.corTexto || '#1e293b' }
-        },
-        {
-          id: 'qrcode',
-          type: 'qrcode',
-          value: 'QR_VALIDADOR_CRACHA',
-          x: pos.qrcode?.x ?? 62.0,
-          y: pos.qrcode?.y ?? 60.0,
-          width: 22,
-          height: 14,
-          page: 'frente'
-        },
-        ...getNewVersoFields()
-      ];
-
-      setFormData((prev: any) => ({ ...prev, fields: initialFields }));
-    } else {
-      // Caso 2: Template já tem fields salvos — migrar verso antigo para novo layout
-      const oldVersoIds = ['admissao_label', 'admissao_valor', 'assinatura_linha', 'assinatura_cargo', 'assinatura_instituicao'];
-      const hasOldVerso = formData.fields.some((f: any) => oldVersoIds.includes(f.id));
-      const hasNewVerso = formData.fields.some((f: any) => f.id === 'verso_qrcode');
-
-      const normalizedFields = formData.fields.map(normalizeFrontInfoField);
-
-      if (hasOldVerso && !hasNewVerso) {
-        // Remove todos os campos do verso antigo e insere os novos
-        const frenteFields = normalizedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
-        const migratedFields = [...frenteFields, ...getNewVersoFields()];
-        setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
-      } else if (!hasNewVerso) {
-        // Template salvo sem os novos campos do verso — adicionar
-        const frenteFields = normalizedFields.filter((f: any) => (f.page || 'frente') !== 'verso');
-        const migratedFields = [...frenteFields, ...getNewVersoFields()];
-        setFormData((prev: any) => ({ ...prev, fields: migratedFields }));
-      } else if (normalizedFields.some((field: any, index: number) => field !== formData.fields[index])) {
-        setFormData((prev: any) => ({ ...prev, fields: normalizedFields }));
-      }
-    }
-  }, []);
 
   useEffect(() => {
     if (activeTab === 'frente') setPreviewMode('frente');
@@ -329,17 +55,6 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
     }
   };
 
-  const getUploadExtension = (file: File) => {
-    const extensionFromName = file.name.split('.').pop()?.toLowerCase();
-    if (extensionFromName && ['png', 'jpg', 'jpeg', 'webp'].includes(extensionFromName)) {
-      return extensionFromName === 'jpeg' ? 'jpg' : extensionFromName;
-    }
-
-    if (file.type === 'image/png') return 'png';
-    if (file.type === 'image/webp') return 'webp';
-    return 'jpg';
-  };
-
   // Upload Imagem de Fundo (Storage Supabase)
   const handleUploadBg = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'bgFrenteUrl' | 'bgVersoUrl') => {
     const file = e.target.files?.[0];
@@ -349,7 +64,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
     try {
       const side = fieldName === 'bgFrenteUrl' ? 'frente' : 'verso';
       const uniqueId = crypto.randomUUID?.() || `${Date.now()}`;
-      const filePath = `templates/cracha-${side}-${uniqueId}.${getUploadExtension(file)}`;
+      const filePath = `templates/cracha-${side}-${uniqueId}.${getCrachaUploadExtension(file)}`;
 
       const { data, error } = await supabase.storage
         .from('documentos')
@@ -465,32 +180,7 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
 
   return (
     <div className="bg-white rounded-[2.5rem] p-4 lg:p-8 border border-slate-200 shadow-sm animate-fadeIn flex flex-col min-h-[calc(100vh-10rem)]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-6 border-b border-slate-100 gap-4">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={onCancel}
-            className="p-3 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-              <LayoutTemplate size={24} className="text-blue-600" />
-              Editar Crachá de Estágio
-            </h3>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
-              Personalize o layout, posicione e edite os elementos do crachá
-            </p>
-          </div>
-        </div>
-        <button 
-          onClick={() => onSave(formData)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20 w-full sm:w-auto justify-center"
-        >
-          <Save size={16} /> Salvar Alterações
-        </button>
-      </div>
+      <CrachaEditorHeader onCancel={onCancel} onSave={() => onSave(formData)} />
 
       <div className="flex flex-col xl:flex-row gap-8 flex-1">
         
@@ -770,320 +460,34 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
             )}
           </div>
 
-          {/* Adjust Selected Element Panel */}
-          {selectedField && (
-            <div className="border-t border-slate-200 pt-4 flex flex-col gap-3 shrink-0 animate-fadeIn bg-white">
-              <div className="flex justify-between items-center mb-1">
-                <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-                  <Sliders size={14} className="text-blue-600" /> Ajustar Elemento
-                </h4>
-                <button 
-                  onClick={() => setSelectedFieldId(null)}
-                  className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase"
-                >
-                  Fechar
-                </button>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col gap-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-                
-                {/* Coordinates Sliders */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                      <span>Posição X</span>
-                      <span className="font-mono">{selectedField.x}%</span>
-                    </label>
-                    <input 
-                      type="range" 
-                      min="-10" 
-                      max="100" 
-                      step="0.5"
-                      value={selectedField.x}
-                      onChange={(e) => updateSelectedField({ x: parseFloat(e.target.value) })}
-                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                      <span>Posição Y</span>
-                      <span className="font-mono">{selectedField.y}%</span>
-                    </label>
-                    <input 
-                      type="range" 
-                      min="-10" 
-                      max="100" 
-                      step="0.5"
-                      value={selectedField.y}
-                      onChange={(e) => updateSelectedField({ y: parseFloat(e.target.value) })}
-                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                </div>
-
-                {/* Width & Height Sliders */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                      <span>Largura</span>
-                      <span className="font-mono">{selectedField.width || 30}%</span>
-                    </label>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="100" 
-                      step="0.5"
-                      value={selectedField.width || 30}
-                      onChange={(e) => updateSelectedField({ width: parseFloat(e.target.value) })}
-                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                  </div>
-                  {(selectedField.type === 'foto' || selectedField.type === 'qrcode' || selectedField.type === 'image') && (
-                    <div>
-                      <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                        <span>Altura</span>
-                        <span className="font-mono">{selectedField.height || 15}%</span>
-                      </label>
-                      <input 
-                        type="range" 
-                        min="3" 
-                        max="100" 
-                        step="0.5"
-                        value={selectedField.height || 15}
-                        onChange={(e) => updateSelectedField({ height: parseFloat(e.target.value) })}
-                        className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Page Placement selection */}
-                <div>
-                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Página do Elemento</label>
-                  <select 
-                    value={selectedField.page || 'frente'} 
-                    onChange={(e) => updateSelectedField({ page: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 outline-none"
-                  >
-                    <option value="frente">Frente</option>
-                    {formData.hasVerso && <option value="verso">Verso</option>}
-                  </select>
-                </div>
-
-                {/* Text specific adjustments */}
-                {selectedField.type === 'text' && (
-                  <div className="space-y-3 pt-2 border-t border-slate-200">
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Conteúdo do Texto</label>
-                      <textarea
-                        value={selectedField.value}
-                        onChange={(e) => updateSelectedField({ value: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none focus:border-blue-500 resize-y custom-scrollbar min-h-[60px]"
-                      />
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {['{{ALUNO_NOME}}', '{{ALUNO_MATRICULA}}', '{{ALUNO_CPF}}', '{{ALUNO_CURSO}}', '{{DATA_HOJE}}', '{{DATA_VALIDADE}}'].map((v) => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => updateSelectedField({ value: selectedField.value + ' ' + v })}
-                            className="text-[7.5px] font-mono font-bold bg-slate-200 hover:bg-slate-300 text-slate-600 px-1 py-0.5 rounded"
-                          >
-                            {v}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
-                          <span>Tam. Fonte</span>
-                          <span className="font-mono">{selectedField.style?.fontSize || '8px'}</span>
-                        </label>
-                        <input 
-                          type="range" 
-                          min="4" 
-                          max="24" 
-                          step="0.2"
-                          value={parseFloat(selectedField.style?.fontSize) || 8}
-                          onChange={(e) => updateSelectedFieldStyle({ fontSize: `${e.target.value}px` })}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Cor Texto</label>
-                        <input 
-                          type="color" 
-                          value={selectedField.style?.color || '#1e293b'}
-                          onChange={(e) => updateSelectedFieldStyle({ color: e.target.value })}
-                          className="w-full h-7 bg-white border border-slate-200 rounded cursor-pointer p-0.5"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Font styling and Alignments buttons */}
-                    <div className="flex gap-2">
-                      <div className="flex rounded-lg bg-white border border-slate-200 p-0.5 overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => updateSelectedFieldStyle({ fontWeight: selectedField.style?.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                          className={`p-1.5 rounded transition-colors ${selectedField.style?.fontWeight === 'bold' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-                        >
-                          <Bold size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateSelectedFieldStyle({ fontStyle: selectedField.style?.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                          className={`p-1.5 rounded transition-colors ${selectedField.style?.fontStyle === 'italic' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-                        >
-                          <Italic size={12} />
-                        </button>
-                      </div>
-
-                      <div className="flex rounded-lg bg-white border border-slate-200 p-0.5 overflow-hidden">
-                        {(['left', 'center', 'right'] as const).map((align) => {
-                          const Icon = align === 'left' ? AlignLeft : align === 'center' ? AlignCenter : AlignRight;
-                          const isActive = (selectedField.style?.textAlign || 'center') === align;
-                          return (
-                            <button
-                              key={align}
-                              type="button"
-                              onClick={() => updateSelectedFieldStyle({ textAlign: align })}
-                              className={`p-1.5 rounded transition-colors ${isActive ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
-                            >
-                              <Icon size={12} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Blend modes for image/signatures */}
-                {selectedField.type === 'image' && (
-                  <div className="pt-2 border-t border-slate-200">
-                    <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Modo de Mesclagem</label>
-                    <select
-                      value={selectedField.style?.mixBlendMode || 'multiply'}
-                      onChange={(e) => updateSelectedFieldStyle({ mixBlendMode: e.target.value })}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 outline-none"
-                    >
-                      <option value="normal">Normal (Sem transparência)</option>
-                      <option value="multiply">Multiplicar (Fundo transparente)</option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Delete button */}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveField(selectedField.id)}
-                  className="w-full mt-2 flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-600 py-2 border border-red-200 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-colors"
-                >
-                  <Trash2 size={12} /> Remover Elemento
-                </button>
-
-              </div>
-            </div>
-          )}
+          {selectedField ? (
+            <CrachaFieldEditorPanel
+              field={selectedField}
+              hasBack={formData.hasVerso}
+              onClose={() => setSelectedFieldId(null)}
+              onRemove={handleRemoveField}
+              onUpdate={updateSelectedField}
+              onUpdateStyle={updateSelectedFieldStyle}
+            />
+          ) : null}
 
         </div>
 
-        {/* Live Preview Area (Right) */}
-        <div className="flex-1 bg-slate-200 rounded-2xl overflow-hidden flex flex-col relative border border-slate-300">
-          <div className="bg-slate-850 bg-[#0d1527] text-white p-3 flex justify-between items-center text-xs font-bold uppercase shadow-md z-10 shrink-0">
-            <span className="tracking-widest hidden sm:inline text-slate-350">Visualização Prévia (CR80 Vertical)</span>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg">
-                <button onClick={handleZoomOut} className="p-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded">
-                  <ZoomOut size={14} />
-                </button>
-                <span className="text-[10px] w-8 text-center">{zoomLevel}%</span>
-                <button onClick={handleZoomIn} className="p-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded">
-                  <ZoomIn size={14} />
-                </button>
-              </div>
-              
-              <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg">
-                <button 
-                  onClick={() => setPreviewMode('frente')}
-                  className={`px-3 py-1 rounded text-[10px] font-black transition-colors ${previewMode === 'frente' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
-                >
-                  FRENTE
-                </button>
-                {formData.hasVerso && (
-                  <button 
-                    onClick={() => setPreviewMode('verso')}
-                    className={`px-3 py-1 rounded text-[10px] font-black transition-colors ${previewMode === 'verso' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
-                  >
-                    VERSO
-                  </button>
-                )}
-                {formData.hasVerso && (
-                  <button 
-                    onClick={() => setPreviewMode('ambos')}
-                    className={`px-3 py-1 rounded text-[10px] font-black transition-colors ${previewMode === 'ambos' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}
-                  >
-                    AMBOS
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-auto custom-scrollbar p-8 bg-slate-200 flex flex-col sm:flex-row items-start justify-start gap-8 min-h-0 select-none">
-             {(previewMode === 'frente' || previewMode === 'ambos') && (
-               <div className="flex flex-col items-center gap-2 mx-auto">
-                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Frente</span>
-                 <CrachaPreview 
-                   formData={formData} 
-                   page="frente" 
-                   zoomLevel={zoomLevel} 
-                   isEditable={true}
-                   selectedFieldId={selectedFieldId}
-                   onSelectField={setSelectedFieldId}
-                   onChangePositions={(updatedFields) => setFormData({ ...formData, fields: updatedFields })}
-                 />
-               </div>
-             )}
-             {(previewMode === 'verso' || previewMode === 'ambos') && formData.hasVerso && (
-               <div className="flex flex-col items-center gap-2 mx-auto">
-                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Verso</span>
-                 <CrachaPreview 
-                   formData={formData} 
-                   page="verso" 
-                   zoomLevel={zoomLevel} 
-                   isEditable={true}
-                   selectedFieldId={selectedFieldId}
-                   onSelectField={setSelectedFieldId}
-                   onChangePositions={(updatedFields) => setFormData({ ...formData, fields: updatedFields })}
-                 />
-               </div>
-             )}
-          </div>
-        </div>
+        <CrachaPreviewWorkspace
+          formData={formData}
+          previewMode={previewMode}
+          selectedFieldId={selectedFieldId}
+          zoomLevel={zoomLevel}
+          onFieldsChange={(fields) => setFormData((previous: any) => ({ ...previous, fields }))}
+          onPreviewModeChange={setPreviewMode}
+          onSelectField={setSelectedFieldId}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+        />
 
       </div>
 
-      {/* Elegant Toast Notifications */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-[99999] animate-fadeIn">
-          <div className={`flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 ${
-            toast.type === 'success' 
-            ? 'bg-emerald-500/95 border-emerald-400 text-white' 
-            : toast.type === 'error'
-              ? 'bg-red-500/95 border-red-400 text-white'
-              : 'bg-amber-500/95 border-amber-400 text-white'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-            <span className="text-xs font-black uppercase tracking-wider">{toast.message}</span>
-          </div>
-        </div>
-      )}
+      {toast ? <CrachaEditorToast toast={toast} /> : null}
     </div>
   );
 };

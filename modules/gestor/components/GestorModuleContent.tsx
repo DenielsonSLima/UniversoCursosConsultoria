@@ -1,29 +1,30 @@
-import React, { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Lock, Settings } from 'lucide-react';
-import { PortalAuthProfile } from '../../login/portal-session';
-import { canAccessTab, GestorPermissions } from '../access-control';
-import BibliotecaPage from '../biblioteca/BibliotecaPage';
-import CadastrosPage from '../cadastros/CadastrosPage';
-import ChecklistEstagioPage from '../cadastros/checklist-estagio/ChecklistEstagioPage';
-import CursosEadPage from '../cadastros/cursos-ead/CursosEadPage';
-import CursosEspecializacaoPage from '../cadastros/cursos-especializacao/CursosEspecializacaoPage';
-import CursosLivresPage from '../cadastros/cursos-livres/CursosLivresPage';
-import CursosTecnicosPage from '../cadastros/cursos-tecnicos/CursosTecnicosPage';
-import EnsinoSuperiorPage from '../cadastros/ensino-superior/EnsinoSuperiorPage';
-import FichaMatriculaPage from '../cadastros/ficha-matricula/FichaMatriculaPage';
-import ModelosDocumentosPage from '../cadastros/modelos-documentos/ModelosDocumentosPage';
-import CalendarioPage from '../calendario/CalendarioPage';
-import ComunicacaoPage from '../comunicacao/ComunicacaoPage';
-import ConfiguracoesPage from '../configuracoes/ConfiguracoesPage';
-import DashboardPage from '../dashboard/DashboardPage';
-import FinanceiroPage from '../financeiro/FinanceiroPage';
-import GestaoPage from '../gestao/GestaoPage';
+import type { PortalAuthProfile } from '../../login/portal-session';
+import { canAccessTab } from '../access-control';
+import type { GestorPermissions } from '../access-control';
 import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
-import ParceirosPage from '../parceiros/ParceirosPage';
-import RelatoriosPage from '../relatorios/RelatoriosPage';
 
 export const loadSecretariaPage = () => import('../secretaria/SecretariaPage');
 export const loadCaixaPage = () => import('../caixa/CaixaPage');
+const BibliotecaPage = lazy(() => import('../biblioteca/BibliotecaPage'));
+const CadastrosPage = lazy(() => import('../cadastros/CadastrosPage'));
+const ChecklistEstagioPage = lazy(() => import('../cadastros/checklist-estagio/ChecklistEstagioPage'));
+const CursosEadPage = lazy(() => import('../cadastros/cursos-ead/CursosEadPage'));
+const CursosEspecializacaoPage = lazy(() => import('../cadastros/cursos-especializacao/CursosEspecializacaoPage'));
+const CursosLivresPage = lazy(() => import('../cadastros/cursos-livres/CursosLivresPage'));
+const CursosTecnicosPage = lazy(() => import('../cadastros/cursos-tecnicos/CursosTecnicosPage'));
+const EnsinoSuperiorPage = lazy(() => import('../cadastros/ensino-superior/EnsinoSuperiorPage'));
+const FichaMatriculaPage = lazy(() => import('../cadastros/ficha-matricula/FichaMatriculaPage'));
+const ModelosDocumentosPage = lazy(() => import('../cadastros/modelos-documentos/ModelosDocumentosPage'));
+const CalendarioPage = lazy(() => import('../calendario/CalendarioPage'));
+const ComunicacaoPage = lazy(() => import('../comunicacao/ComunicacaoPage'));
+const ConfiguracoesPage = lazy(() => import('../configuracoes/ConfiguracoesPage'));
+const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
+const FinanceiroPage = lazy(() => import('../financeiro/FinanceiroPage'));
+const GestaoPage = lazy(() => import('../gestao/GestaoPage'));
+const ParceirosPage = lazy(() => import('../parceiros/ParceirosPage'));
+const RelatoriosPage = lazy(() => import('../relatorios/RelatoriosPage'));
 const SecretariaPage = lazy(loadSecretariaPage);
 const CaixaPage = lazy(loadCaixaPage);
 
@@ -50,7 +51,16 @@ const AccessDenied = () => (
   </div>
 );
 
-const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
+const ModuleLoading = () => (
+  <div role="status" aria-label="Carregando módulo" className="flex min-h-[420px] items-center justify-center rounded-[2rem] border border-slate-100 bg-white shadow-sm">
+    <div className="flex flex-col items-center gap-3 text-slate-500">
+      <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Carregando módulo</span>
+    </div>
+  </div>
+);
+
+const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   activeModule,
   canOpenModule,
   isMatrizSelected,
@@ -104,5 +114,11 @@ const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
       return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
   }
 };
+
+const GestorModuleContent: React.FC<GestorModuleContentProps> = (props) => (
+  <Suspense fallback={<ModuleLoading />}>
+    <GestorModuleContentView {...props} />
+  </Suspense>
+);
 
 export default GestorModuleContent;
