@@ -37,7 +37,7 @@ export const parseBRLPrice = (valStr: string): number | null => {
 };
 
 export const MIN_EAD_PROVA_QUESTOES = 10;
-export const DEFAULT_EAD_RETRY_HOURS = 1;
+export const DEFAULT_EAD_RETRY_HOURS = 3;
 export const EAD_IMAGE_BUCKET = 'documentos';
 export const STORAGE_BASE_PATH = 'cursos/ead';
 
