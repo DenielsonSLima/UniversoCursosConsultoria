@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { relatoriosService, RelatorioMatriculaAcademicaItem, RelatorioModalidade, RelatorioTurmaOption } from '../relatorios.service';
 import {
   A4ReportShell,
@@ -58,54 +59,54 @@ const academicStatuses = ['todos', 'ATIVO', 'CONCLUIDO', 'TRANCADO', 'CANCELADO'
 const isCursando = (status: string) => ['ATIVO', 'CONFIRMADO', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO'].includes(String(status).toUpperCase());
 const isFinalizado = (status: string) => String(status).toUpperCase() === 'CONCLUIDO';
 
+const relatoriosAcademicosKeys = {
+  turmas: (modalidade: RelatorioModalidade, poloId?: string) =>
+    ['relatorios', 'turmas-academicas', modalidade, poloId || 'todos'] as const,
+  matriculas: (filters: {
+    modalidade: RelatorioModalidade;
+    turmaId: string;
+    poloId?: string;
+    status?: string;
+  }) => ['relatorios', 'matriculas-academicas', filters] as const,
+};
+
 const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ company, polo, modo }) => {
   const config = modeConfig[modo];
-  const [items, setItems] = useState<RelatorioMatriculaAcademicaItem[]>([]);
-  const [turmas, setTurmas] = useState<RelatorioTurmaOption[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modalidade, setModalidade] = useState<RelatorioModalidade>('todos');
   const [turmaId, setTurmaId] = useState('todos');
   const [status, setStatus] = useState(config.defaultStatus);
 
   const poloId = polo?.id;
+  const reportFilters = {
+    modalidade,
+    turmaId,
+    poloId,
+    status: status === 'todos' ? undefined : status,
+  };
+  const turmasQuery = useQuery<RelatorioTurmaOption[]>({
+    queryKey: relatoriosAcademicosKeys.turmas(modalidade, poloId),
+    queryFn: () => relatoriosService.getTurmasOptions(modalidade, poloId),
+    staleTime: 5 * 60_000,
+  });
+  const matriculasQuery = useQuery<RelatorioMatriculaAcademicaItem[]>({
+    queryKey: relatoriosAcademicosKeys.matriculas(reportFilters),
+    queryFn: () => relatoriosService.getMatriculasAcademicas(reportFilters),
+    staleTime: 30_000,
+  });
+  const turmas = turmasQuery.data || [];
+  const items = matriculasQuery.data || [];
+  const loading = matriculasQuery.isLoading || turmasQuery.isLoading;
+  const hasQueryError = matriculasQuery.isError || turmasQuery.isError;
 
   useEffect(() => {
     setStatus(config.defaultStatus);
   }, [config.defaultStatus, modo]);
 
   useEffect(() => {
-    let mounted = true;
-    relatoriosService.getTurmasOptions(modalidade, poloId)
-      .then((rows) => {
-        if (!mounted) return;
-        setTurmas(rows);
-        if (turmaId !== 'todos' && !rows.some(row => row.id === turmaId)) setTurmaId('todos');
-      })
-      .catch((err) => console.error('Erro ao carregar turmas do relatório acadêmico:', err));
-    return () => { mounted = false; };
-  }, [modalidade, poloId, turmaId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [modalidade, turmaId, status, poloId]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const rows = await relatoriosService.getMatriculasAcademicas({
-        modalidade,
-        turmaId,
-        poloId,
-        status: status === 'todos' ? undefined : status,
-      });
-      setItems(rows);
-    } catch (error) {
-      console.error('Erro ao carregar relatório acadêmico:', error);
-      setItems([]);
-    } finally {
-      setLoading(false);
+    if (turmaId !== 'todos' && turmasQuery.isSuccess && !turmas.some(row => row.id === turmaId)) {
+      setTurmaId('todos');
     }
-  };
+  }, [turmaId, turmas, turmasQuery.isSuccess]);
 
   const filteredItems = useMemo(() => {
     if (modo === 'cursando') return items.filter(item => isCursando(item.status));
@@ -128,6 +129,21 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
   }, [filteredItems]);
 
   const renderTable = () => {
+    if (hasQueryError) {
+      return (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-8 text-center">
+          <p className="text-sm font-bold text-red-700">Não foi possível carregar o relatório acadêmico.</p>
+          <button
+            type="button"
+            onClick={() => void Promise.all([matriculasQuery.refetch(), turmasQuery.refetch()])}
+            className="mt-3 rounded-lg bg-red-700 px-4 py-2 text-[10px] font-black uppercase text-white"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+
     if (filteredItems.length === 0) return <EmptyReportState />;
 
     if (modo === 'matricula-inicial') {

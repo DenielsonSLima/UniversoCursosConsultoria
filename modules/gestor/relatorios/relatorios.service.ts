@@ -182,9 +182,17 @@ export const relatoriosService = {
     let query = supabase
       .from('matriculas')
       .select(`
-        *,
-        parceiros!inner(*),
-        turmas!inner(*, cursos!inner(*), polos(*))
+        id, aluno_id, turma_id, status, data_matricula,
+        parceiros!inner(
+          nome, cpf_cnpj, rg, telefone, email, data_nascimento, sexo,
+          endereco, numero, bairro, cidade, uf, pcd, pcd_tipo
+        ),
+        turmas!inner(
+          id, nome, codigo, status, data_inicio, data_previsao_termino,
+          polo_id, curso_id, turno,
+          cursos!inner(nome, modalidade, carga_horaria),
+          polos(nome, cidade)
+        )
       `)
       .order('data_matricula', { ascending: false });
 
@@ -202,12 +210,11 @@ export const relatoriosService = {
     if (matriculaIds.length) {
       const { data: certificados, error: certError } = await supabase
         .from('certificados_academicos')
-        .select('matricula_id, status, codigo_validacao, data_emissao')
+        .select('matricula_id, status, codigo_validacao, data_conclusao, emitido_em')
         .in('matricula_id', matriculaIds);
 
-      if (!certError) {
-        certificadosByMatricula = new Map((certificados || []).map((cert: any) => [cert.matricula_id, cert]));
-      }
+      if (certError) throw certError;
+      certificadosByMatricula = new Map((certificados || []).map((cert: any) => [cert.matricula_id, cert]));
     }
 
     return (data || []).map((row: any) => {
@@ -234,7 +241,7 @@ export const relatoriosService = {
         pcdTipo: aluno.pcd_tipo,
         status: row.status || 'ATIVO',
         dataMatricula: normalizeDate(row.data_matricula),
-        dataConclusao: normalizeDate(row.data_conclusao || row.concluido_em || row.updated_at),
+        dataConclusao: normalizeDate(certificado?.data_conclusao),
         cursoNome: curso.nome || 'Curso',
         modalidade: curso.modalidade || 'OUTRO',
         cargaHoraria: Number(curso.carga_horaria || 0),
@@ -243,11 +250,11 @@ export const relatoriosService = {
         turmaCodigo: turma.codigo || '',
         turmaStatus: turma.status || '',
         dataInicio: normalizeDate(turma.data_inicio),
-        dataFim: normalizeDate(turma.data_fim || turma.data_previsao_termino),
+        dataFim: normalizeDate(turma.data_previsao_termino),
         poloNome: polo.nome || polo.cidade || 'Matriz',
         certificadoStatus: certificado?.status || null,
         certificadoCodigo: certificado?.codigo_validacao || null,
-        certificadoEmissao: normalizeDate(certificado?.data_emissao),
+        certificadoEmissao: normalizeDate(certificado?.emitido_em),
       };
     });
   },

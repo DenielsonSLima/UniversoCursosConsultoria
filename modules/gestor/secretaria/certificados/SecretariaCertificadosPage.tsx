@@ -1,12 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Award, BookOpen, CheckCircle2, Eye, Filter, GraduationCap,
   Loader2, MonitorPlay, Printer, Search, Settings2, X, Zap,
 } from 'lucide-react';
-import { diplomaService } from '../../cadastros/modelos-documentos/diploma/diploma.service';
 import { getSecretariaContext } from '../shared/secretaria-documentos.service';
 import CertificadoPreview from './components/CertificadoPreview';
-import { certificadosService } from './certificados.service';
+import {
+  useCertificadosQuery,
+  useCertificadoTemplatesQuery,
+  useCertificadoTurmasQuery,
+  useFinalizarCertificadoMutation,
+} from './certificados.queries';
 import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
 
 const MODALIDADES = [
@@ -33,60 +37,47 @@ const SecretariaCertificadosPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [turmaId, setTurmaId] = useState('todos');
   const [groupBy, setGroupBy] = useState<'nenhum' | 'polo' | 'turma'>('turma');
-  const [items, setItems] = useState<CertificadoAcademico[]>([]);
-  const [turmas, setTurmas] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CertificadoAcademico | null>(null);
   const [preview, setPreview] = useState<CertificadoAcademico | null>(null);
-  const [saving, setSaving] = useState(false);
-  const loadRequestId = useRef(0);
   const [form, setForm] = useState({
     certificadoNumero: '', paginaLivro: '', livroRegistro: '', validacaoSistec: '',
     ensinoMedioEstabelecimento: '', ensinoMedioLocalidadeUf: '', ensinoMedioAnoConclusao: '',
   });
 
-  const load = async () => {
-    const requestId = ++loadRequestId.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [rows, classes, models] = await Promise.all([
-        certificadosService.list({
-          modalidade,
-          status,
-          search,
-          turmaId,
-          poloId: context.poloId || undefined,
-        }),
-        certificadosService.getTurmas(modalidade, context.poloId || undefined),
-        diplomaService.getTemplates(),
-      ]);
-      if (requestId !== loadRequestId.current) return;
-      setItems(rows);
-      setTurmas(classes);
-      setTemplates(models);
-    } catch (error) {
-      if (requestId !== loadRequestId.current) return;
-      console.error('[SecretariaCertificados] Erro ao carregar certificados:', error);
-      setItems([]);
-      setLoadError('Não foi possível carregar os certificados. Tente novamente.');
-    } finally {
-      if (requestId === loadRequestId.current) setLoading(false);
-    }
+  const poloId = context.poloId || undefined;
+  const certificadosQuery = useCertificadosQuery({ modalidade, status, turmaId, poloId });
+  const turmasQuery = useCertificadoTurmasQuery(modalidade, poloId);
+  const templatesQuery = useCertificadoTemplatesQuery();
+  const finalizarMutation = useFinalizarCertificadoMutation();
+  const items = certificadosQuery.data || [];
+  const turmas = turmasQuery.data || [];
+  const templates = templatesQuery.data || [];
+  const loading = certificadosQuery.isLoading || turmasQuery.isLoading || templatesQuery.isLoading;
+  const hasLoadError = certificadosQuery.isError || turmasQuery.isError || templatesQuery.isError;
+
+  const reload = async () => {
+    await Promise.all([
+      certificadosQuery.refetch(),
+      turmasQuery.refetch(),
+      templatesQuery.refetch(),
+    ]);
   };
 
   useEffect(() => {
     setTurmaId('todos');
     setStatus('PENDENTE');
+    setSelected(null);
+    setPreview(null);
   }, [modalidade]);
 
-  useEffect(() => { void load(); }, [modalidade, status, turmaId]);
-
   const grouped = useMemo<Record<string, CertificadoAcademico[]>>(() => {
-    const filtered = search.trim()
-      ? items.filter(item => item.aluno.nome.toLowerCase().includes(search.toLowerCase()) || item.aluno.cpf_cnpj.includes(search))
+    const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR');
+    const filtered = normalizedSearch
+      ? items.filter(item => (
+          item.aluno?.nome?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+          || item.aluno?.cpf_cnpj?.includes(normalizedSearch)
+          || item.codigo_validacao?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+        ))
       : items;
     return filtered.reduce<Record<string, CertificadoAcademico[]>>((acc, item) => {
       const key = groupBy === 'polo'
@@ -123,19 +114,16 @@ const SecretariaCertificadosPage: React.FC = () => {
       alert('Preencha número do certificado, página e livro.');
       return;
     }
-    setSaving(true);
     try {
-      await certificadosService.finalizar(selected.id, form);
+      await finalizarMutation.mutateAsync({ id: selected.id, input: form });
       setSelected(null);
-      await load();
     } catch (error: any) {
       alert(`Erro ao emitir certificado: ${error.message}`);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const modelo = templates.find(item => item.tipoCurso === templateType[modalidade]);
+  const previewModalidade = preview?.modalidade || modalidade;
+  const modelo = templates.find(item => item.tipoCurso === templateType[previewModalidade]);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -173,7 +161,7 @@ const SecretariaCertificadosPage: React.FC = () => {
       <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_auto_auto_auto]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && void load()}
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar aluno ou CPF..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold outline-none focus:border-blue-500" />
         </div>
         <select value={turmaId} onChange={e => setTurmaId(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">
@@ -185,17 +173,17 @@ const SecretariaCertificadosPage: React.FC = () => {
           <option value="polo">Agrupar por polo</option>
           <option value="nenhum">Sem agrupamento</option>
         </select>
-        <button onClick={() => void load()} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase text-white">
+        <button onClick={() => void reload()} className="flex items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase text-white">
           <Filter size={14} /> Filtrar
         </button>
       </div>
 
       {loading ? (
         <div className="py-20 text-center"><Loader2 className="mx-auto animate-spin text-blue-600" size={34} /></div>
-      ) : loadError ? (
+      ) : hasLoadError ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
-          <span>{loadError}</span>
-          <button onClick={() => void load()} className="rounded-xl bg-red-700 px-4 py-2 text-[10px] font-black uppercase text-white">
+          <span>Não foi possível carregar os certificados. Tente novamente.</span>
+          <button onClick={() => void reload()} className="rounded-xl bg-red-700 px-4 py-2 text-[10px] font-black uppercase text-white">
             Tentar novamente
           </button>
         </div>
@@ -255,7 +243,7 @@ const SecretariaCertificadosPage: React.FC = () => {
                 </div></div>
               )}
             </div>
-            <div className="mt-7 flex justify-end gap-2"><button onClick={() => setSelected(null)} className="rounded-xl border px-5 py-3 text-xs font-black uppercase">Cancelar</button><button onClick={() => void handleIssue()} disabled={saving} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-black uppercase text-white disabled:opacity-50">{saving ? <Loader2 className="animate-spin" size={15}/> : <CheckCircle2 size={15}/>} Emitir certificado</button></div>
+            <div className="mt-7 flex justify-end gap-2"><button onClick={() => setSelected(null)} className="rounded-xl border px-5 py-3 text-xs font-black uppercase">Cancelar</button><button onClick={() => void handleIssue()} disabled={finalizarMutation.isPending} className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-black uppercase text-white disabled:opacity-50">{finalizarMutation.isPending ? <Loader2 className="animate-spin" size={15}/> : <CheckCircle2 size={15}/>} Emitir certificado</button></div>
           </div>
         </div>
       )}

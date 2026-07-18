@@ -163,7 +163,7 @@ export const parceirosService = {
   },
 
   async create(data: any) {
-    validateAlunoProfessorIdentity(data);
+    validateAlunoProfessorIdentity(data, { requireAlunoCpf: true });
     if (data?.tipo === 'Aluno') {
       const existingAluno = await this.findAlunoParaVinculo(data.cpf || data.cpf_cnpj || data.email);
       if (existingAluno) return existingAluno;
