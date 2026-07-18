@@ -1,9 +1,28 @@
 const ACCESS_STATUSES = new Set(["ATIVO", "TRANCADO", "CONCLUIDO"]);
-const PENDING_STATUSES = new Set(["PENDENTE", "AGUARDANDO_PAGAMENTO", "AGUARDANDO_CONFIRMACAO"]);
+const PENDING_STATUSES = new Set([
+  "PENDENTE",
+  "AGUARDANDO_PAGAMENTO",
+  "AGUARDANDO_CONFIRMACAO",
+]);
 const CLOSED_STATUSES = new Set(["CANCELADO", "DESISTENTE", "TRANSFERIDO"]);
-const PAID_GATEWAY_STATUSES = new Set(["RECEIVED", "CONFIRMED", "APPROVED", "PAID"]);
-const CANCELED_GATEWAY_STATUSES = new Set(["DELETED", "REFUNDED", "CANCELLED", "CANCELED", "CANCELLED_BY_USER"]);
-const OPEN_RECEIVABLE_STATUSES = new Set(["PENDENTE", "VENCIDO", "AGUARDANDO_CONFIRMACAO"]);
+const PAID_GATEWAY_STATUSES = new Set([
+  "RECEIVED",
+  "CONFIRMED",
+  "APPROVED",
+  "PAID",
+]);
+const CANCELED_GATEWAY_STATUSES = new Set([
+  "DELETED",
+  "REFUNDED",
+  "CANCELLED",
+  "CANCELED",
+  "CANCELLED_BY_USER",
+]);
+const OPEN_RECEIVABLE_STATUSES = new Set([
+  "PENDENTE",
+  "VENCIDO",
+  "AGUARDANDO_CONFIRMACAO",
+]);
 
 export type ExistingCourseCheckoutState = "paid" | "pending";
 
@@ -19,7 +38,8 @@ export interface FindExistingCourseCheckoutOptions {
   ignorePending?: boolean;
 }
 
-const normalizeStatus = (status: unknown) => String(status || "").trim().toUpperCase();
+const normalizeStatus = (status: unknown) =>
+  String(status || "").trim().toUpperCase();
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 const firstHttpUrl = (...values: unknown[]) => {
@@ -59,7 +79,8 @@ const isReusablePendingReceivable = (receivable: any) => {
   ) {
     return false;
   }
-  return OPEN_RECEIVABLE_STATUSES.has(status) && Boolean(getPaymentUrl(receivable));
+  return OPEN_RECEIVABLE_STATUSES.has(status) &&
+    Boolean(getPaymentUrl(receivable));
 };
 
 const isReceivablePastDue = (receivable: any) => {
@@ -73,8 +94,10 @@ const getMatriculaTurma = (matricula: any) =>
 const isEadMatricula = (matricula: any) =>
   normalizeStatus(getMatriculaTurma(matricula)?.cursos?.modalidade) === "EAD";
 
-const chooseReceivable = (receivables: any[], matcher: (receivable: any) => boolean) =>
-  receivables.find(matcher) || null;
+const chooseReceivable = (
+  receivables: any[],
+  matcher: (receivable: any) => boolean,
+) => receivables.find(matcher) || null;
 
 export const findExistingCourseCheckout = async (
   admin: any,
@@ -97,7 +120,9 @@ export const findExistingCourseCheckout = async (
   if (matriculasError) throw matriculasError;
   if (!matriculas?.length) return null;
 
-  const matriculaIds = matriculas.map((matricula: any) => matricula.id).filter(Boolean);
+  const matriculaIds = matriculas.map((matricula: any) => matricula.id).filter(
+    Boolean,
+  );
   const receivablesByMatricula = new Map<string, any[]>();
   if (matriculaIds.length > 0) {
     const { data: receivables, error: receivablesError } = await admin
@@ -154,7 +179,9 @@ export const findExistingCourseCheckout = async (
       return {
         state: "paid",
         matricula,
-        turma: Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas,
+        turma: Array.isArray(matricula.turmas)
+          ? matricula.turmas[0]
+          : matricula.turmas,
         receivable,
         url: getPaymentUrl(receivable),
       };
@@ -167,11 +194,15 @@ export const findExistingCourseCheckout = async (
       if (CLOSED_STATUSES.has(matriculaStatus)) continue;
       const receivables = receivablesByMatricula.get(matricula.id) || [];
       const isEad = isEadMatricula(matricula);
-      const pendingReceivable = chooseReceivable(receivables, (receivable) =>
-        isReusablePendingReceivable(receivable) && (!isEad || !isReceivablePastDue(receivable))
+      const pendingReceivable = chooseReceivable(
+        receivables,
+        (receivable) =>
+          isReusablePendingReceivable(receivable) &&
+          (!isEad || !isReceivablePastDue(receivable)),
       );
-      const hasFreshPendingMatricula = PENDING_STATUSES.has(matriculaStatus)
-        && (!isEad || receivables.length === 0 || receivables.some((receivable) => !isReceivablePastDue(receivable)));
+      const hasFreshPendingMatricula = PENDING_STATUSES.has(matriculaStatus) &&
+        (!isEad || receivables.length === 0 ||
+          receivables.some((receivable) => !isReceivablePastDue(receivable)));
       if (hasFreshPendingMatricula || pendingReceivable) {
         const receivable = pendingReceivable || receivables[0] || null;
         return {
