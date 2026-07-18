@@ -1,79 +1,26 @@
 
 // File: modules/gestor/gestor.page.tsx
 
-import React, { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import {
-  LayoutDashboard, 
-  Handshake, 
-  UserPlus, 
-  Briefcase, 
-  FileText, 
-  ShoppingCart, 
-  TrendingUp, 
-  BookOpen, 
-  BarChart, 
-  Settings, 
-  LogOut,
-  Menu,
-  X,
-  Search,
-  ChevronRight,
-  ChevronDown,
-  User,
-  CreditCard,
-  CalendarDays,
-  ClipboardCheck,
-  FileCode,
-  MonitorPlay,
-  Zap,
-  Award,
-  FileSignature,
-  Building,
-  MessageSquare,
-  MessageCircle,
-  Lock,
-  Clock
-} from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { CreditCard, Handshake, Search, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { clearPortalSession, getGestorAccessScope, getPortalProfile, getPortalSessionFromStorage, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { isPortalScheduleBlocked } from '../login/portal-schedule';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 
-// Importação dos Submódulos
-import DashboardPage from './dashboard/DashboardPage';
-import ParceirosPage from './parceiros/ParceirosPage';
-import CadastrosPage from './cadastros/CadastrosPage';
-import GestaoPage from './gestao/GestaoPage';
-import FinanceiroPage from './financeiro/FinanceiroPage';
-import BibliotecaPage from './biblioteca/BibliotecaPage';
-import CalendarioPage from './calendario/CalendarioPage';
-import RelatoriosPage from './relatorios/RelatoriosPage';
-import ConfiguracoesPage from './configuracoes/ConfiguracoesPage';
-import ComunicacaoPage from './comunicacao/ComunicacaoPage';
-
-// Importação dos Novos Submódulos de Cadastros
-import ModelosDocumentosPage from './cadastros/modelos-documentos/ModelosDocumentosPage';
-import CursosEadPage from './cadastros/cursos-ead/CursosEadPage';
-import CursosTecnicosPage from './cadastros/cursos-tecnicos/CursosTecnicosPage';
-import CursosLivresPage from './cadastros/cursos-livres/CursosLivresPage';
-import EnsinoSuperiorPage from './cadastros/ensino-superior/EnsinoSuperiorPage';
-import CursosEspecializacaoPage from './cadastros/cursos-especializacao/CursosEspecializacaoPage';
-import ChecklistEstagioPage from './cadastros/checklist-estagio/ChecklistEstagioPage';
-import FichaMatriculaPage from './cadastros/ficha-matricula/FichaMatriculaPage';
-
 import { loginService } from '../login/login.service';
-import ConfirmModal from '../shared/components/ConfirmModal';
 import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
 import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
 import { caixaDashboardQueryOptions } from './caixa/caixa.service';
-
-const loadSecretariaPage = () => import('./secretaria/SecretariaPage');
-const loadCaixaPage = () => import('./caixa/CaixaPage');
-const SecretariaPage = lazy(loadSecretariaPage);
-const CaixaPage = lazy(loadCaixaPage);
+import GestorPortalShell from './components/GestorPortalShell';
+import { NoAccessScreen, ScheduleBlockedScreen } from './components/GestorAccessStates';
+import { usePendingCommunicationCount } from './hooks/usePendingCommunicationCount';
+import GestorModuleContent, { loadCaixaPage, loadSecretariaPage } from './components/GestorModuleContent';
+import { buildGestorNavigation, GESTOR_MODULE_ORDER, POLO_CADASTROS_ALLOWED } from './gestor-navigation';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -85,23 +32,8 @@ const MOCK_SEARCH_DATA = [
   { id: 7, type: 'partner', title: 'Prefeitura de Japoatã', subtitle: 'Convênio Ativo', module: 'parceiros' },
 ];
 
-const formatPoloLocation = (polo: any) =>
-  [polo.cidade, polo.estado].filter(Boolean).join(' - ');
-
-const formatPoloDetails = (polo: any) =>
-  [polo.cnpj, formatPoloLocation(polo)].filter(Boolean).join(' • ');
-
-const POLO_CADASTROS_ALLOWED = new Set([
-  'cadastros',
-  'cadastros-especializacao',
-  'cadastros-livres',
-  'cadastros-superior',
-]);
-
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const storedProfile = getPortalSessionFromStorage();
-  const initialGestorProfile = storedProfile?.tipo === 'Gestor' ? storedProfile : null;
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
@@ -112,15 +44,15 @@ const GestorPage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<typeof MOCK_SEARCH_DATA>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // ─── Badge de chamados pendentes ───────────────────────────────────────────
-  const [pendingChatsCount, setPendingChatsCount] = useState(0);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const executeLogout = usePortalLogout({ loginPath: '/sistema/login' });
-  const [profile, setProfile] = useState<PortalAuthProfile | null>(initialGestorProfile);
-  const [isAuthLoading, setIsAuthLoading] = useState(!initialGestorProfile);
+  // Nunca use dados do storage como autorização. O portal permanece coberto pela
+  // tela de verificação até perfil, módulos, polos e agenda virem do servidor.
+  const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(() =>
     sessionStorage.getItem('current_polo_id') ||
@@ -129,6 +61,16 @@ const GestorPage: React.FC = () => {
   );
 
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  const gestorPermissions = useMemo(
+    () => profile?.gestorPermissions || normalizeGestorPermissions(null, { fallbackFullAccess: false }),
+    [profile],
+  );
+  const isScheduleBlocked = Boolean(
+    profile && isPortalScheduleBlocked(profile.restricao_horario, currentDateTime),
+  );
+  const canUsePortal = Boolean(profile) && !isAuthLoading && !isScheduleBlocked;
+  const canUseCommunication = canUsePortal && canAccessGestorModule(gestorPermissions, 'comunicacao');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -162,10 +104,12 @@ const GestorPage: React.FC = () => {
         .order('nome', { ascending: true });
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: canUsePortal,
   });
 
   useEffect(() => {
+    if (!canUsePortal) return;
     const channel = supabase
       .channel('header_polos_realtime')
       .on(
@@ -181,57 +125,10 @@ const GestorPage: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [canUsePortal, queryClient]);
 
-  // ─── Carregar contagem inicial de chamados não lidos (mensagens de aluno/professor com lida = false) ───
-  useEffect(() => {
-    const fetchPending = async () => {
-      try {
-        const { data } = await supabase
-          .from('comunicacao_mensagens')
-          .select('chat_id')
-          .eq('lida', false)
-          .in('remetente_tipo', ['aluno', 'professor']);
-        const uniqueChatIds = new Set(data?.map(m => m.chat_id) || []);
-        setPendingChatsCount(uniqueChatIds.size);
-      } catch (err) {
-        console.error('Erro ao buscar contagem de chamados pendentes:', err);
-      }
-    };
-    fetchPending();
-  }, []);
+  const pendingChatsCount = usePendingCommunicationCount(canUseCommunication);
 
-  // ─── Realtime: manter badge de chamados não lidos atualizado em tempo real ───
-  useEffect(() => {
-    const fetchPending = async () => {
-      try {
-        const { data } = await supabase
-          .from('comunicacao_mensagens')
-          .select('chat_id')
-          .eq('lida', false)
-          .in('remetente_tipo', ['aluno', 'professor']);
-        const uniqueChatIds = new Set(data?.map(m => m.chat_id) || []);
-        setPendingChatsCount(uniqueChatIds.size);
-      } catch (err) {
-        console.error('Erro ao buscar contagem de chamados pendentes (realtime):', err);
-      }
-    };
-
-    const badgeChannel = supabase
-      .channel('sidebar_pending_badge')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comunicacao_mensagens' },
-        () => {
-          fetchPending();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(badgeChannel);
-    };
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -274,11 +171,51 @@ const GestorPage: React.FC = () => {
     };
   }, [navigate]);
 
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    let cancelled = false;
+    const revalidateAccess = async () => {
+      setIsAuthLoading(true);
+      try {
+        const refreshed = await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] });
+        if (cancelled) return;
+        if (!refreshed) {
+          await executeLogout();
+          return;
+        }
+        setProfile(refreshed);
+      } catch {
+        if (!cancelled) await executeLogout();
+      } finally {
+        if (!cancelled) setIsAuthLoading(false);
+      }
+    };
+
+    const channel = supabase
+      .channel(`gestor_access_${profile.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'usuarios_sistema', filter: `id=eq.${profile.id}` },
+        () => { void revalidateAccess(); },
+      );
+
+    if (profile.perfil_acesso_id) {
+      channel.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'perfis_acesso', filter: `id=eq.${profile.perfil_acesso_id}` },
+        () => { void revalidateAccess(); },
+      );
+    }
+
+    channel.subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [executeLogout, profile?.id, profile?.perfil_acesso_id]);
+
   const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
-  const gestorPermissions = useMemo(
-    () => profile?.gestorPermissions || normalizeGestorPermissions(null),
-    [profile],
-  );
   const visiblePolos = useMemo(
     () => gestorScope.isGlobal
       ? activePolos
@@ -304,7 +241,7 @@ const GestorPage: React.FC = () => {
     }
   }, [gestorScope.isGlobal, queryClient, scopedPoloId]);
   useGestorOperationalRealtime({
-    enabled: Boolean(profile) && !isAuthLoading,
+    enabled: canUsePortal,
     poloId: scopedPoloId,
     includeGlobalPartners: gestorScope.isGlobal,
   });
@@ -315,6 +252,19 @@ const GestorPage: React.FC = () => {
         ? 'comunicacao'
         : moduleId;
     if (!canAccessGestorModule(gestorPermissions, rootModule)) return false;
+    if (moduleId.startsWith('cadastros-') && !canAccessTab(gestorPermissions, 'cadastros', moduleId)) {
+      return false;
+    }
+    if (moduleId.startsWith('comunicacao-') && !canAccessTab(gestorPermissions, 'comunicacao', moduleId)) {
+      return false;
+    }
+    if (
+      moduleId === 'comunicacao'
+      && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-mensagem')
+      && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-whatsapp')
+    ) {
+      return false;
+    }
     if (rootModule === 'configuracoes' && !isMatrizSelected) return false;
     if (!isMatrizSelected && moduleId.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(moduleId)) {
       return false;
@@ -322,20 +272,7 @@ const GestorPage: React.FC = () => {
     return true;
   }, [gestorPermissions, isMatrizSelected]);
   const firstAllowedModule = useMemo(
-    () => [
-      'inicio',
-      'parceiros',
-      'cadastros',
-      'gestao',
-      'secretaria',
-      'caixa',
-      'financeiro',
-      'biblioteca',
-      'calendario',
-      'comunicacao',
-      'relatorios',
-      'configuracoes',
-    ].find(canOpenModule) || 'inicio',
+    () => GESTOR_MODULE_ORDER.find(canOpenModule) || null,
     [canOpenModule],
   );
 
@@ -354,7 +291,7 @@ const GestorPage: React.FC = () => {
 
   useEffect(() => {
     if (isAuthLoading || !profile) return;
-    if (!canOpenModule(activeModule)) {
+    if (!canOpenModule(activeModule) && firstAllowedModule) {
       setActiveModule(firstAllowedModule);
     }
   }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
@@ -410,41 +347,20 @@ const GestorPage: React.FC = () => {
     return <AccessCheckingScreen portal="Gestor" />;
   }
 
-  if (profile.isBlockedSchedule) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans p-6 text-white">
-        <div className="bg-slate-800/80 border border-slate-700/50 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-2xl shadow-blue-900/10 text-center max-w-md w-full relative overflow-hidden flex flex-col items-center">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-8 -mt-8"></div>
-          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-6">
-            <Clock size={32} />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Acesso Fora do Expediente</h2>
-          <p className="text-slate-400 text-sm leading-relaxed mb-6">
-            Olá, <span className="text-white font-semibold">{profile.nome}</span>. Seu perfil possui restrição de dias e horários para uso do sistema.
-          </p>
+  if (isScheduleBlocked) {
+    return <ScheduleBlockedScreen profile={profile} onLogout={executeLogout} />;
+  }
 
-          <div className="bg-slate-900/50 border border-slate-700/30 rounded-2xl p-4 w-full text-left space-y-2 mb-8">
-            <p className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider">Regras de Horário</p>
-            <p className="text-xs text-slate-300 font-medium leading-relaxed">
-              <strong>Dias permitidos:</strong> {profile.restricao_horario?.dias.map(d => {
-                const map: Record<number, string> = {1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb', 0: 'Dom'};
-                return map[d] || '';
-              }).join(', ')}
-            </p>
-            <p className="text-xs text-slate-300 font-medium">
-              <strong>Horário:</strong> das {profile.restricao_horario?.horario_inicio} às {profile.restricao_horario?.horario_fim}
-            </p>
-          </div>
+  if (isLoadingPolos) {
+    return <AccessCheckingScreen portal="Gestor" />;
+  }
 
-          <button
-            onClick={executeLogout}
-            className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-purple-600/20 hover:shadow-xl transition-all"
-          >
-            Sair do Sistema
-          </button>
-        </div>
-      </div>
-    );
+  if (visiblePolos.length === 0) {
+    return <NoAccessScreen kind="units" onLogout={executeLogout} />;
+  }
+
+  if (!firstAllowedModule) {
+    return <NoAccessScreen kind="modules" onLogout={executeLogout} />;
   }
 
   const handlePoloChange = (poloId: string) => {
@@ -497,149 +413,29 @@ const GestorPage: React.FC = () => {
     setIsSearchFocused(false);
   };
 
-  const cadastroSubItems = [
-    { id: 'cadastros-checklist', label: 'Check List Estágio', icon: <ClipboardCheck size={16} /> },
-    { id: 'cadastros-ead', label: 'Cursos EAD', icon: <MonitorPlay size={16} /> },
-    { id: 'cadastros-especializacao', label: 'Cursos Especialização', icon: <Award size={16} /> },
-    { id: 'cadastros-livres', label: 'Cursos Livres', icon: <Zap size={16} /> },
-    { id: 'cadastros-tecnicos', label: 'Cursos Técnicos', icon: <Briefcase size={16} /> },
-    { id: 'cadastros-superior', label: 'Ensino Superior', icon: <Building size={16} /> },
-    { id: 'cadastros-ficha', label: 'Ficha Matrícula', icon: <FileSignature size={16} /> },
-    { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
-  ].filter(subItem => canAccessTab(gestorPermissions, 'cadastros', subItem.id));
+  const { visibleCadastroSubItems, visibleMenuItems } = buildGestorNavigation({
+    permissions: gestorPermissions,
+    isMatrizSelected,
+    pendingChatsCount,
+    canOpenModule,
+  });
 
-  const visibleCadastroSubItems = isMatrizSelected
-    ? cadastroSubItems
-    : cadastroSubItems.filter(item => POLO_CADASTROS_ALLOWED.has(item.id));
-
-  const comunicacaoSubItems = [
-    { id: 'comunicacao-mensagem', label: 'Mensagem', icon: <MessageSquare size={16} /> },
-    { id: 'comunicacao-whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} /> },
-  ];
-
-  const menuItems = [
-    { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
-    { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={20} /> },
-    { 
-      id: 'cadastros', 
-      label: 'Cadastros', 
-      icon: <UserPlus size={20} />,
-      subItems: visibleCadastroSubItems
-    },
-    { id: 'gestao', label: 'Gestão', icon: <Briefcase size={20} /> },
-    { id: 'secretaria', label: 'Secretaria', icon: <FileText size={20} /> },
-    { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={20} /> },
-    { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={20} /> },
-    { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={20} /> },
-    { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={20} /> },
-    {
-      id: 'comunicacao',
-      label: 'Comunicação',
-      icon: <MessageSquare size={20} />,
-      badge: pendingChatsCount,
-      subItems: comunicacaoSubItems,
-    },
-    { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={20} /> },
-    { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
-  ];
-
-  const visibleMenuItems = (isMatrizSelected
-    ? menuItems
-    : menuItems.filter(item => item.id !== 'configuracoes'))
-    .filter(item => canOpenModule(item.id));
-
-  const renderAccessDenied = () => (
-    <div className="animate-fadeIn rounded-[2rem] border border-rose-100 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
-        <Lock size={26} />
-      </div>
-      <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Acesso negado</h2>
-      <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
-        Seu usuário não possui permissão para acessar este módulo.
-      </p>
-    </div>
+  const renderContent = () => (
+    <GestorModuleContent
+      activeModule={activeModule}
+      canOpenModule={canOpenModule}
+      isMatrizSelected={isMatrizSelected}
+      allowedCadastroTabs={visibleCadastroSubItems.map(item => item.id)}
+      setActiveModule={setActiveModule}
+      currentPoloId={currentPoloId}
+      scopedPoloId={scopedPoloId}
+      isGlobal={gestorScope.isGlobal}
+      currentPoloName={currentPolo?.nome}
+      onRequestScrollTop={scrollContentToTop}
+      permissions={gestorPermissions}
+      profile={profile}
+    />
   );
-
-  const renderContent = () => {
-    if (!canOpenModule(activeModule)) {
-      return renderAccessDenied();
-    }
-
-    if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
-      return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={visibleCadastroSubItems.map(item => item.id)} />;
-    }
-
-    switch (activeModule) {
-      case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
-      case 'calendario': return <CalendarioPage />;
-      case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={gestorScope.isGlobal} onRequestScrollTop={scrollContentToTop} />;
-      case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={visibleCadastroSubItems.map(item => item.id)} />;
-      case 'cadastros-checklist': return <ChecklistEstagioPage />;
-      case 'cadastros-ead': return <CursosEadPage />;
-      case 'cadastros-especializacao': return <CursosEspecializacaoPage readOnly={!isMatrizSelected} />;
-      case 'cadastros-livres': return <CursosLivresPage readOnly={!isMatrizSelected} />;
-      case 'cadastros-tecnicos': return <CursosTecnicosPage />;
-      case 'cadastros-superior': return <EnsinoSuperiorPage readOnly={!isMatrizSelected} />;
-      case 'cadastros-ficha': return <FichaMatriculaPage />;
-      case 'cadastros-modelos': return <ModelosDocumentosPage />;
-      case 'gestao': return (
-        <GestaoPage
-          poloId={currentPoloId || undefined}
-          activePoloId={currentPoloId || undefined}
-          isMatriz={isMatrizSelected}
-          poloNome={currentPolo?.nome}
-          onRequestScrollTop={scrollContentToTop}
-        />
-      );
-      case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={gestorPermissions} />;
-      case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={gestorScope.isGlobal} />;
-      case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={gestorPermissions.financeiroTabs} />;
-      case 'biblioteca': return <BibliotecaPage />;
-      case 'comunicacao':
-      case 'comunicacao-mensagem': return <ComunicacaoPage gestorProfile={profile} channel="mensagem" />;
-      case 'comunicacao-whatsapp': return <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
-      case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
-      case 'configuracoes':
-        if (!isMatrizSelected) {
-          return (
-            <div className="animate-fadeIn rounded-[2rem] border border-amber-100 bg-white p-10 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
-                <Settings size={26} />
-              </div>
-              <h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Configurações disponíveis apenas na matriz</h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
-                Troque para o polo matriz no seletor superior para alterar integrações, tokens e regras globais do sistema.
-              </p>
-            </div>
-          );
-        }
-        return <ConfiguracoesPage />;
-      
-      default: 
-        if (activeModule.startsWith('cadastros-')) {
-          const sub = activeModule.split('-')[1];
-          return (
-            <div className="animate-fadeIn">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">
-                  Gerenciamento de {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                </h2>
-                <button onClick={() => setActiveModule('cadastros')} className="text-xs font-bold text-blue-600 hover:underline uppercase tracking-widest">
-                  Ver todos os cadastros
-                </button>
-              </div>
-              <div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-                 <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Settings className="animate-spin-slow" />
-                 </div>
-                 <p className="text-slate-500 font-medium">O módulo de {sub} está sendo preparado para você.</p>
-              </div>
-            </div>
-          );
-        }
-        return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
-    }
-  };
 
   const getResultIcon = (type: string) => {
     switch (type) {
@@ -652,391 +448,41 @@ const GestorPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
-      
-      <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
-        <div className="px-5 py-4 border-b border-white/10">
-          <div className="bg-white h-[70px] px-4 py-2.5 rounded-2xl shadow-md flex items-center justify-center">
-            <img 
-              src="/LogoUniverso.png" 
-              alt="Universo Cursos e Consultoria" 
-              className="h-12 w-full max-w-[190px] object-contain" 
-            />
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5 custom-scrollbar">
-          {visibleMenuItems.map((item) => (
-            <div 
-              key={item.id} 
-              className="space-y-0.5 relative"
-              onMouseEnter={() => {
-                preloadModule(item.id);
-                if (item.subItems) setMenuHovered(item.id, true);
-              }}
-              onMouseLeave={() => item.subItems && setMenuHovered(item.id, false)}
-            >
-              <button
-                onClick={() => {
-                  if (item.subItems) toggleMenu(item.id);
-                  else setActiveModule(item.id);
-                }}
-                onFocus={() => preloadModule(item.id)}
-                onTouchStart={() => preloadModule(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 group ${
-                  activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50 font-semibold' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white font-normal'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`relative ${(activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))) ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
-                    {item.icon}
-                    {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 shadow-md animate-pulse">
-                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm">{item.label}</span>
-                </div>
-                {item.subItems && (
-                  <div className="transition-transform duration-300">
-                    {isDesktopMenuExpanded(item.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  </div>
-                )}
-                {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                  <span className="text-[9px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-4 flex items-center justify-center px-1">
-                    {(item as any).badge > 99 ? '99+' : (item as any).badge}
-                  </span>
-                )}
-              </button>
-
-              {item.subItems && (
-                <div className={`grid transition-all duration-300 ease-in-out ${
-                  isDesktopMenuExpanded(item.id) ? 'grid-rows-[1fr] opacity-100 mt-0.5' : 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
-                }`}>
-                  <div className="overflow-hidden pl-6 space-y-0.5">
-                    {item.subItems.map(sub => (
-                      <button
-                        key={sub.id}
-                        onClick={() => setActiveModule(sub.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-1.5 rounded-lg text-xs transition-all ${
-                          activeModule === sub.id 
-                            ? 'text-blue-400 bg-white/5 font-semibold' 
-                            : 'text-slate-500 hover:text-white hover:bg-white/5 font-normal'
-                        }`}
-                      >
-                        {sub.icon}
-                        <span>{sub.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-white/10 mt-auto">
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-md flex-shrink-0">
-                {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate leading-tight">
-                  {profile?.nome || 'Administrador'}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate mt-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Online
-                </p>
-              </div>
-            </div>
-            <button 
-              onClick={handleLogout} 
-              title="Sair"
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-200"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 w-full bg-[#001a33] text-white z-30 px-4 py-2 flex justify-between items-center shadow-lg">
-        <div className="bg-white px-3 py-1 rounded-xl flex items-center justify-center">
-          <img src="/LogoUniverso.png" alt="Universo" className="h-6 object-contain" />
-        </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileMenuOpen(false)}>
-          <aside className="w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col" onClick={e => e.stopPropagation()}>
-             <div className="bg-white p-3 rounded-2xl flex items-center justify-center mb-4 mt-12">
-               <img src="/LogoUniverso.png" alt="Universo" className="h-8 object-contain" />
-             </div>
-             <nav className="flex-1 overflow-y-auto space-y-2">
-              {visibleMenuItems.map((item) => (
-                <div key={item.id}>
-                  <button
-                    onClick={() => {
-                      if (item.subItems) toggleMenu(item.id);
-                      else { setActiveModule(item.id); setIsMobileMenuOpen(false); }
-                    }}
-                    onFocus={() => preloadModule(item.id)}
-                    onTouchStart={() => preloadModule(item.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${
-                      activeModule === item.id || (item.subItems && activeModule.startsWith(item.id))
-                        ? 'bg-blue-600 font-bold'
-                        : 'text-slate-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        {item.icon}
-                        {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                          <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5">
-                            {(item as any).badge > 99 ? '99+' : (item as any).badge}
-                          </span>
-                        )}
-                      </div>
-                      {item.label}
-                    </div>
-                    {item.subItems && (expandedMenus.has(item.id) ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-                    {'badge' in item && (item as any).badge > 0 && activeModule !== item.id && (
-                      <span className="text-[8px] font-black bg-red-500 text-white rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
-                      </span>
-                    )}
-                  </button>
-
-                  {item.subItems && expandedMenus.has(item.id) && (
-                    <div className="pl-6 space-y-1 mt-1">
-                      {item.subItems.map(sub => (
-                        <button
-                          key={sub.id}
-                          onClick={() => { setActiveModule(sub.id); setIsMobileMenuOpen(false); }}
-                          className={`w-full text-left px-4 py-2 rounded-lg text-xs ${
-                            activeModule === sub.id ? 'text-blue-400' : 'text-slate-500'
-                          }`}
-                        >
-                          {sub.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </nav>
-          </aside>
-        </div>
-      )}
-
-      <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
-        <header className="sticky top-0 z-10 flex min-h-[84px] items-center justify-between border-b border-slate-200 bg-white px-8 py-3 shadow-sm">
-          <div className="flex items-center gap-4">
-             <h2 className="text-xl font-bold text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-              <span className="hidden sm:inline">
-                Portal de Gestão
-              </span>
-            </h2>
-          </div>
-
-          <div className="flex-1 max-w-lg mx-4 relative">
-            <div className={`flex items-center bg-slate-100 rounded-xl px-4 py-2.5 border transition-all ${isSearchFocused ? 'border-blue-500 ring-2 ring-blue-100 bg-white' : 'border-transparent'}`}>
-              <Search size={18} className="text-slate-400 mr-3" />
-              <input 
-                type="text"
-                placeholder="Pesquisar..."
-                className="bg-transparent border-none outline-none w-full text-sm text-slate-700 placeholder-slate-400 font-medium"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-              />
-            </div>
-
-            {searchQuery && (
-              <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-fadeIn">
-                <div className="p-3">
-                  {searchResults.length > 0 ? (
-                    <div className="space-y-1">
-                      {searchResults.map((result) => (
-                        <button key={result.id} onClick={() => handleSearchResultClick(result.module)} className="w-full flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-colors text-left group">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-white transition-colors">
-                              {getResultIcon(result.type)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-[#001a33]">{result.title}</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wide">{result.subtitle}</p>
-                            </div>
-                          </div>
-                          <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500" />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6"><p className="text-sm text-slate-500">Nenhum resultado.</p></div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-6">
-            
-            <div className="relative hidden h-12 w-[23rem] md:block">
-              {isLoadingPolos || !currentPolo ? (
-                <div className="flex h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
-                  <div className="h-7 w-7 flex-shrink-0 rounded-lg bg-slate-100 animate-pulse" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="h-2.5 w-4/5 rounded-full bg-slate-200/80" />
-                    <div className="h-2 w-3/5 rounded-full bg-slate-200/70" />
-                  </div>
-                </div>
-              ) : (
-              <div
-                className="h-12 w-full"
-                onBlur={event => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setIsPoloSelectorOpen(false);
-                  }
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setIsPoloSelectorOpen(open => !open)}
-                  aria-haspopup="listbox"
-                  aria-expanded={isPoloSelectorOpen}
-                  disabled={visiblePolos.length <= 1}
-                  className="flex h-12 w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 text-left transition-all hover:bg-slate-50 hover:border-slate-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/10 disabled:cursor-default disabled:hover:bg-white disabled:hover:border-slate-200 shadow-sm"
-                >
-                  <Building size={16} className="text-blue-600 flex-shrink-0" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-xs font-bold text-slate-800 tracking-tight">
-                        {currentPolo?.nome}
-                      </span>
-                      <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
-                        currentPolo?.is_matriz
-                          ? 'bg-blue-50 text-blue-600 border border-blue-200/50'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}>
-                        {currentPolo?.is_matriz ? 'Matriz' : 'Polo'}
-                      </span>
-                    </span>
-                    <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
-                      {formatPoloDetails(currentPolo)}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    className={`text-slate-400 flex-shrink-0 transition-transform ${visiblePolos.length <= 1 ? 'opacity-0' : ''} ${
-                      isPoloSelectorOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {isPoloSelectorOpen && (
-                  <div
-                    role="listbox"
-                    className="absolute top-full right-0 z-50 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xl shadow-slate-900/15 animate-fadeIn"
-                  >
-                    {visiblePolos.map(polo => {
-                      const isSelected = polo.id === currentPoloId;
-
-                      return (
-                        <button
-                          key={polo.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          onClick={() => handlePoloChange(polo.id)}
-                          className={`w-full rounded-xl px-3 py-2.5 text-left transition-colors ${
-                            isSelected
-                              ? 'bg-blue-50/60 text-blue-900'
-                              : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="flex items-center gap-3">
-                            <span
-                              className={`h-2 w-2 flex-shrink-0 rounded-full ${
-                                isSelected ? 'bg-blue-600' : 'bg-slate-300'
-                              }`}
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="flex min-w-0 items-center gap-2">
-                                <span className={`truncate text-xs tracking-tight ${isSelected ? 'font-bold text-blue-900' : 'font-semibold text-slate-700'}`}>
-                                  {polo.nome}
-                                </span>
-                                <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
-                                  polo.is_matriz
-                                    ? 'bg-blue-100/50 text-blue-700'
-                                    : 'bg-slate-200/50 text-slate-600'
-                                }`}>
-                                  {polo.is_matriz ? 'Matriz' : 'Polo'}
-                                </span>
-                              </span>
-                              <span className="block truncate text-[10px] text-slate-500 mt-0.5 font-normal">
-                                {formatPoloDetails(polo)}
-                              </span>
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
-
-            <div className="w-px h-8 bg-slate-200 hidden sm:block"></div>
-
-            <div className="flex items-center gap-2.5 pl-4 hidden sm:flex text-left">
-              <CalendarDays size={18} className="text-amber-500 flex-shrink-0" />
-              <div className="flex flex-col justify-center">
-                <span className="text-xs font-bold text-slate-800 leading-tight">
-                  {formattedDate}
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">
-                  {formattedDayOfWeek}
-                </span>
-              </div>
-            </div>
-            
-          </div>
-        </header>
-
-        <div ref={contentScrollRef} className="p-8 flex-1 overflow-auto">
-          <Suspense fallback={(
-            <div className="flex min-h-[420px] items-center justify-center gap-3 text-xs font-black uppercase tracking-widest text-slate-500">
-              <Clock className="animate-pulse text-blue-600" size={24} /> Preparando módulo...
-            </div>
-          )}>
-            {renderContent()}
-          </Suspense>
-        </div>
-      </main>
-
-      <ConfirmModal
-        isOpen={isLogoutConfirmOpen}
-        title="Confirmação"
-        message="Deseja realmente sair?"
-        confirmText="Sair"
-        cancelText="Cancelar"
-        variant="danger"
-        onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={executeLogout}
-      />
-    </div>
+    <GestorPortalShell
+      profile={profile}
+      visibleMenuItems={visibleMenuItems}
+      activeModule={activeModule}
+      setActiveModule={setActiveModule}
+      isMobileMenuOpen={isMobileMenuOpen}
+      setIsMobileMenuOpen={setIsMobileMenuOpen}
+      expandedMenus={expandedMenus}
+      toggleMenu={toggleMenu}
+      setMenuHovered={setMenuHovered}
+      isDesktopMenuExpanded={isDesktopMenuExpanded}
+      preloadModule={preloadModule}
+      handleLogout={handleLogout}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      searchResults={searchResults}
+      isSearchFocused={isSearchFocused}
+      setIsSearchFocused={setIsSearchFocused}
+      handleSearchResultClick={handleSearchResultClick}
+      getResultIcon={getResultIcon}
+      isLoadingPolos={isLoadingPolos}
+      currentPolo={currentPolo}
+      visiblePolos={visiblePolos}
+      currentPoloId={currentPoloId}
+      isPoloSelectorOpen={isPoloSelectorOpen}
+      setIsPoloSelectorOpen={setIsPoloSelectorOpen}
+      handlePoloChange={handlePoloChange}
+      formattedDate={formattedDate}
+      formattedDayOfWeek={formattedDayOfWeek}
+      contentScrollRef={contentScrollRef}
+      renderContent={renderContent}
+      isLogoutConfirmOpen={isLogoutConfirmOpen}
+      setIsLogoutConfirmOpen={setIsLogoutConfirmOpen}
+      executeLogout={executeLogout}
+    />
   );
 };
 

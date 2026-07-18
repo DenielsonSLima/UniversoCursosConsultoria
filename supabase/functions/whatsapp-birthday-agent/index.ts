@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { bearerTokenFromRequest, requireGestorAtivo } from "../_shared/authz.ts";
+import { bearerTokenFromRequest, requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
 
@@ -47,7 +47,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     const bearer = bearerTokenFromRequest(req);
-    if (bearer !== serviceRoleKey) await requireGestorAtivo(req, admin);
+    if (bearer !== serviceRoleKey) {
+      const gestor = await requireGestorAtivo(req, admin);
+      requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
+    }
 
     const body = await req.json().catch(() => ({}));
     const targetDate = parseDate(body.targetDate);

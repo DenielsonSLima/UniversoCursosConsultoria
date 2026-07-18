@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { onlyDigits } from '../shared/utils/identityValidation';
 import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
 import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
-import { isPortalScheduleBlocked } from './portal-schedule';
+import { isPortalScheduleBlocked, PortalScheduleRestriction } from './portal-schedule';
 import { isActivePortalStatus } from './portal-status';
 import { PORTAL_LAST_ACTIVITY_STORAGE_KEY } from '../shared/hooks/inactivity-policy';
 
@@ -22,13 +22,9 @@ export interface PortalAuthProfile {
   acceptedTermsVersion?: string | null;
   requiresPasswordReset?: boolean;
   perfil_acesso_id?: string | null;
+  personalizar_permissoes?: boolean;
   isBlockedSchedule?: boolean;
-  restricao_horario?: {
-    dias: number[];
-    horario_inicio: string;
-    horario_fim: string;
-    ativo: boolean;
-  } | null;
+  restricao_horario?: PortalScheduleRestriction | null;
 }
 
 export interface PortalProfileOptions {
@@ -114,7 +110,7 @@ export const getPortalSessionFromStorage = (): PortalAuthProfile | null => {
     tipo,
     activePoloId: sessionStorage.getItem('active_polo_id') || null,
     poloIds: [],
-    gestorPermissions: normalizeGestorPermissions(null),
+    gestorPermissions: normalizeGestorPermissions(null, { fallbackFullAccess: false }),
     status: 'ATIVO',
     context: null,
   };
@@ -168,12 +164,13 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
   }
 
   const context = (profile.context || '').trim();
-  const permissions = profile.gestorPermissions || normalizeGestorPermissions(null);
+  const permissions = profile.gestorPermissions || normalizeGestorPermissions(null, {
+    fallbackFullAccess: false,
+  });
   const explicitPoloIds = normalizeStringArray(profile.poloIds);
   const contextPoloIds = context && context !== 'global' ? [context] : [];
   const allowedPoloIds = explicitPoloIds.length > 0 ? explicitPoloIds : contextPoloIds;
-  const legacyGlobal = !context || context === 'global' || context === MATRIZ_POLO_ID;
-  const isGlobal = permissions.allPolos || (legacyGlobal && allowedPoloIds.length === 0);
+  const isGlobal = permissions.allPolos && allowedPoloIds.length === 0;
   const activePoloId = isGlobal ? (profile.activePoloId || null) : allowedPoloIds[0] || null;
 
   return {
@@ -235,11 +232,24 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     ? gestorRows.perfis_acesso[0] 
     : gestorRows.perfis_acesso;
 
-  const rawPermissions = perfilAcesso ? perfilAcesso.permissoes : gestorRows.permissoes;
-  const permissions = normalizeGestorPermissions(rawPermissions);
+  const personalizarPermissoes = Boolean(gestorRows.personalizar_permissoes);
+  const userPermissions = normalizeGestorPermissions(gestorRows.permissoes, {
+    fallbackFullAccess: false,
+  });
+  const profilePermissions = normalizeGestorPermissions(perfilAcesso?.permissoes, {
+    fallbackFullAccess: false,
+  });
+  const permissionsSource = perfilAcesso && !personalizarPermissoes
+    ? profilePermissions
+    : userPermissions;
+  // O perfil define módulos/abas. O alcance de polos continua sempre individual.
+  const permissions: GestorPermissions = {
+    ...permissionsSource,
+    allPolos: userPermissions.allPolos,
+  };
   const explicitPoloIds = normalizeStringArray(gestorRows.polo_ids);
 
-  const restricao = perfilAcesso?.restricao_horario;
+  const restricao = gestorRows.restricao_horario ?? perfilAcesso?.restricao_horario ?? null;
   const isBlocked = isPortalScheduleBlocked(restricao);
 
   return {
@@ -253,6 +263,7 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     gestorPermissions: permissions,
     status: gestorRows.status || null,
     perfil_acesso_id: gestorRows.perfil_acesso_id || null,
+    personalizar_permissoes: personalizarPermissoes,
     isBlockedSchedule: isBlocked,
     restricao_horario: restricao || null,
   };
@@ -291,7 +302,7 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   const { data: gestorRows, error: gestorError } = await supabase
     .from('usuarios_sistema')
-    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, perfis_acesso(permissoes, restricao_horario)')
+    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)')
     .ilike('email', email)
     .limit(1)
     .maybeSingle();

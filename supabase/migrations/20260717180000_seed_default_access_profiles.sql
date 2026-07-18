@@ -1,9 +1,21 @@
+CREATE TABLE IF NOT EXISTS public.perfis_acesso (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome text NOT NULL UNIQUE,
+  descricao text,
+  permissoes jsonb NOT NULL DEFAULT '{"modules":[],"tabs":{},"allPolos":false}'::jsonb,
+  restricao_horario jsonb NOT NULL DEFAULT '{"dias":[1,2,3,4,5],"horario_inicio":"08:00","horario_fim":"18:00","ativo":false}'::jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.usuarios_sistema
+  ADD COLUMN IF NOT EXISTS perfil_acesso_id uuid REFERENCES public.perfis_acesso(id) ON DELETE SET NULL;
+
 INSERT INTO public.perfis_acesso (nome, descricao, permissoes, restricao_horario)
 VALUES
   (
     'Perfil Gestor',
     'Acesso completo aos módulos operacionais do gestor.',
-    '{"modules":["inicio","parceiros","cadastros","gestao","secretaria","caixa","financeiro","biblioteca","calendario","comunicacao","relatorios","configuracoes"],"financeiroTabs":["resumo","receber","despesas","transferencias","outros-debitos","outros-creditos"],"tabs":{"cadastros":["cadastros-checklist","cadastros-ead","cadastros-especializacao","cadastros-livres","cadastros-tecnicos","cadastros-superior","cadastros-ficha","cadastros-modelos"],"secretaria":["solicitacoes","carteirinhas","declaracoes","historico","recebimentos"]},"allPolos":true}',
+    '{"modules":["inicio","parceiros","cadastros","gestao","secretaria","caixa","financeiro","biblioteca","calendario","comunicacao","relatorios","configuracoes"],"financeiroTabs":["resumo","receber","despesas","transferencias","outros-debitos","outros-creditos"],"tabs":{"cadastros":["cadastros-checklist","cadastros-ead","cadastros-especializacao","cadastros-livres","cadastros-tecnicos","cadastros-superior","cadastros-ficha","cadastros-modelos"],"secretaria":["solicitacoes","carteirinhas","declaracoes","historico","recebimentos"],"comunicacao":["comunicacao-mensagem","comunicacao-whatsapp"]},"allPolos":true}',
     '{"dias":[1,2,3,4,5],"horario_inicio":"08:00","horario_fim":"18:00","ativo":false}'
   ),
   (

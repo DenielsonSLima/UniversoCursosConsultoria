@@ -86,7 +86,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_nome',
-    type: 'boxText',
+    type: 'text',
     value: '{{ALUNO_NOME}}',
     x: 6,
     y: 11,
@@ -107,7 +107,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_instituicao',
-    type: 'boxText',
+    type: 'text',
     value: '{{INSTITUICAO_ENSINO}}',
     x: 6,
     y: 23,
@@ -128,7 +128,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_categoria',
-    type: 'boxText',
+    type: 'text',
     value: '{{CATEGORIA_PROFISSIONAL}}',
     x: 6,
     y: 35.5,
@@ -149,7 +149,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_matricula',
-    type: 'boxText',
+    type: 'text',
     value: '{{ALUNO_MATRICULA}}',
     x: 52,
     y: 35.5,
@@ -170,7 +170,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_instrutor',
-    type: 'boxText',
+    type: 'text',
     value: '{{INSTRUTOR}}',
     x: 6,
     y: 48,
@@ -191,7 +191,7 @@ export const getDefaultCrachaPeriodoEleitoralFields = () => [
   },
   {
     id: 'verso_validade',
-    type: 'boxText',
+    type: 'text',
     value: '{{VALIDADE}}',
     x: 52,
     y: 48,
@@ -335,9 +335,34 @@ const normalizeTemplate = (template: Record<string, any> | null) => {
 
   if (!Array.isArray(normalized.fields) || normalized.fields.length === 0) {
     normalized.fields = getDefaultCrachaPeriodoEleitoralFields();
-  } else if (!normalized.fields.some((field: any) => field.type === 'photo')) {
-    const defaultPhoto = getDefaultCrachaPeriodoEleitoralFields().find((field) => field.type === 'photo');
-    normalized.fields = defaultPhoto ? [defaultPhoto, ...normalized.fields] : normalized.fields;
+  } else {
+    const versoTextFieldIds = new Set([
+      'verso_nome',
+      'verso_instituicao',
+      'verso_categoria',
+      'verso_matricula',
+      'verso_instrutor',
+      'verso_validade',
+    ]);
+
+    normalized.fields = normalized.fields.map((field: any) => (
+      field?.page === 'verso' && versoTextFieldIds.has(field.id)
+        ? {
+            ...field,
+            type: 'text',
+            style: {
+              ...(field.style || {}),
+              backgroundColor: 'transparent',
+              borderColor: 'transparent',
+            },
+          }
+        : field
+    ));
+
+    if (!normalized.fields.some((field: any) => field.type === 'photo')) {
+      const defaultPhoto = getDefaultCrachaPeriodoEleitoralFields().find((field) => field.type === 'photo');
+      normalized.fields = defaultPhoto ? [defaultPhoto, ...normalized.fields] : normalized.fields;
+    }
   }
 
   return normalized;

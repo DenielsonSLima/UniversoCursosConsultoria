@@ -147,7 +147,7 @@ export const canAccessTab = (
   }
 
   if (!permissions.tabs || !permissions.tabs[moduleId]) {
-    return true;
+    return moduleId !== 'cadastros' && moduleId !== 'secretaria' && moduleId !== 'comunicacao';
   }
 
   return permissions.tabs[moduleId].includes(tabId);

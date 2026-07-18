@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo, requireGestorGlobal } from "../_shared/authz.ts";
+import { requireGestorAtivo, requireGestorGlobal, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 
 type BusinessProfile = {
@@ -172,6 +172,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const gestor = await requireGestorAtivo(req, admin);
+    requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
     requireGestorGlobal(gestor);
 
     const body = await req.json();

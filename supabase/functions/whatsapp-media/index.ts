@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo } from "../_shared/authz.ts";
+import { requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, normalizeWhatsAppPhone, phoneBelongsToAluno, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
 
@@ -85,6 +85,7 @@ const uploadMedia = async (
 
 const sendMedia = async (admin: any, req: Request, body: any) => {
   const gestor = await requireGestorAtivo(req, admin);
+  requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
   const context = await getContext(admin);
   const kind = trim(body.kind) as MediaKind;
   if (!allowedKinds.has(kind)) throw new Error("Tipo de midia invalido.");
@@ -222,7 +223,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const admin = createAdmin();
-    await requireGestorAtivo(req, admin);
+    const gestor = await requireGestorAtivo(req, admin);
+    requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
     const body = await req.json();
     const action = trim(body.action);
     if (action === "send") return respondJson(await sendMedia(admin, req, body));

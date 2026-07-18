@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   requireGestorAtivo,
   requireGestorGlobal,
+  requireGestorModule,
 } from "../../_shared/authz.ts";
 import {
   buildCorsHeaders,
@@ -79,6 +80,7 @@ Deno.serve(async (req: Request) => {
     const gestor = GESTOR_ACTIONS.has(action)
       ? await requireGestorAtivo(req, admin)
       : null;
+    if (gestor && !gestor.modules.includes("configuracoes")) requireGestorModule(gestor, "financeiro");
     if (gestor && GLOBAL_ACTIONS.has(action)) requireGestorGlobal(gestor);
 
     if (action === "get-overview") {

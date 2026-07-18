@@ -9,29 +9,40 @@ export type { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 
 const USER_SELECT =
   'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, ' +
-  'permissoes, perfil_acesso_id, perfis_acesso(nome), created_at';
+  'permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, ' +
+  'perfis_acesso(nome, permissoes, restricao_horario), created_at';
 
 const resolvePerfilNome = (value: unknown) => {
   if (!value) return null;
-  if (Array.isArray(value)) return value[0]?.nome || null;
-  return value.nome || null;
+  if (Array.isArray(value)) return (value[0] as { nome?: string } | undefined)?.nome || null;
+  return (value as { nome?: string }).nome || null;
 };
 
-const normalizeUser = (row: any): UsuarioSistema => ({
-  id: row.id,
-  nome: row.nome,
-  email: row.email,
-  cpf: row.cpf || undefined,
-  telefone: row.telefone || undefined,
-  perfil: row.perfil,
-  status: row.status,
-  context: row.context,
-  polo_ids: Array.isArray(row.polo_ids) ? row.polo_ids : [],
-  permissoes: normalizeGestorPermissions(row.permissoes),
-  created_at: row.created_at,
-  perfil_acesso_id: row.perfil_acesso_id || null,
-  perfil_nome: resolvePerfilNome(row.perfis_acesso),
-});
+const normalizeUser = (row: any): UsuarioSistema => {
+  const profile = Array.isArray(row.perfis_acesso) ? row.perfis_acesso[0] : row.perfis_acesso;
+  const userPermissions = normalizeGestorPermissions(row.permissoes, { fallbackFullAccess: false });
+  const inheritedPermissions = normalizeGestorPermissions(profile?.permissoes, { fallbackFullAccess: false });
+  const source = profile && !row.personalizar_permissoes ? inheritedPermissions : userPermissions;
+
+  return {
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    cpf: row.cpf || undefined,
+    telefone: row.telefone || undefined,
+    perfil: row.perfil,
+    status: row.status,
+    context: row.context,
+    polo_ids: Array.isArray(row.polo_ids) ? row.polo_ids : [],
+    permissoes: { ...source, allPolos: userPermissions.allPolos },
+    created_at: row.created_at,
+    perfil_acesso_id: row.perfil_acesso_id || null,
+    perfil_nome: resolvePerfilNome(row.perfis_acesso),
+    personalizar_permissoes: Boolean(row.personalizar_permissoes),
+    // Mantém somente a regra individual; null significa herdar a agenda do perfil.
+    restricao_horario: row.restricao_horario || null,
+  };
+};
 
 const normalizeUsers = (rows: any[] | null): UsuarioSistema[] => (rows || []).map(normalizeUser);
 

@@ -1,4 +1,5 @@
 import { GestorPermissions } from '../../access-control';
+import { PortalScheduleRestriction } from '../../../login/portal-schedule';
 
 export interface UsuarioSistema {
   id?: string;
@@ -13,6 +14,8 @@ export interface UsuarioSistema {
   permissoes: GestorPermissions;
   perfil_acesso_id?: string | null;
   perfil_nome?: string | null;
+  personalizar_permissoes?: boolean;
+  restricao_horario?: PortalScheduleRestriction | null;
   created_at?: string;
 }
 
@@ -28,6 +31,8 @@ export interface UsuarioSistemaInput {
   polo_ids: string[];
   permissoes: GestorPermissions;
   perfil_acesso_id?: string | null;
+  personalizar_permissoes?: boolean;
+  restricao_horario?: PortalScheduleRestriction | null;
 }
 
 export interface NovoUsuarioFormData {
@@ -43,5 +48,12 @@ export interface NovoUsuarioFormData {
   polosAcesso: string[];
   permissoes: string[];
   financeiroAbas: string[];
+  abasModulos: Record<string, string[]>;
   perfil_acesso_id?: string | null;
+  personalizarPermissoes: boolean;
+  personalizarHorario: boolean;
+  horarioAtivo: boolean;
+  diasHorario: number[];
+  horarioInicio: string;
+  horarioFim: string;
 }

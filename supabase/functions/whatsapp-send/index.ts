@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo } from "../_shared/authz.ts";
+import { requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
 import {
   buildCorsHeaders,
   getClientIp,
@@ -47,6 +47,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const gestor = await requireGestorAtivo(req, admin);
+    requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
 
     const body = await req.json();
     const alunoId = String(body.alunoId || "").trim();

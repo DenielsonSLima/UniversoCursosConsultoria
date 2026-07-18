@@ -1,15 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Save, X, User, Shield, Lock, Mail, Phone, Building2, Check, AlertTriangle, 
-  LayoutDashboard, Handshake, UserPlus, Briefcase, FileText, ShoppingCart, 
-  TrendingUp, TrendingDown, BookOpen, BarChart, Settings, CalendarDays, MessageSquare,
-  ArrowRightLeft, Layers
-} from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
 import {
   DEFAULT_FINANCEIRO_TABS,
-  FINANCEIRO_TAB_IDS,
   GESTOR_MODULE_IDS,
   GestorModuleId,
   normalizeGestorPermissions,
@@ -17,6 +11,9 @@ import {
 import { useUsuariosPolosQuery } from '../hooks/useUsuariosConfigQueries';
 import { NovoUsuarioFormData, UsuarioSistema } from '../usuarios.types';
 import { perfisAcessoService, PerfilAcesso } from '../../perfis-acesso/perfis-acesso.service';
+import UserAccessSections from './UserAccessSections';
+import UserIdentitySections from './UserIdentitySections';
+import { USER_FORM_MODULE_TABS } from './user-access-options';
 
 interface UserFormAddProps {
   contextId: string;
@@ -24,30 +21,6 @@ interface UserFormAddProps {
   onCancel: () => void;
   initialUser?: UsuarioSistema;
 }
-
-const MODULES = [
-  { id: 'inicio', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={18} /> },
-  { id: 'cadastros', label: 'Cadastros', icon: <UserPlus size={18} /> },
-  { id: 'gestao', label: 'Gestão', icon: <Briefcase size={18} /> },
-  { id: 'secretaria', label: 'Secretaria', icon: <FileText size={18} /> },
-  { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={18} /> },
-  { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={18} /> },
-  { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={18} /> },
-  { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={18} /> },
-  { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={18} /> },
-  { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={18} /> },
-  { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-] satisfies { id: GestorModuleId; label: string; icon: React.ReactNode }[];
-
-const FINANCEIRO_TABS = [
-  { id: 'resumo', label: 'Resumo', icon: <Layers size={16} /> },
-  { id: 'receber', label: 'Contas a Receber', icon: <TrendingUp size={16} /> },
-  { id: 'despesas', label: 'Despesas', icon: <TrendingDown size={16} /> },
-  { id: 'transferencias', label: 'Transferências', icon: <ArrowRightLeft size={16} /> },
-  { id: 'outros-debitos', label: 'Outros Débitos', icon: <TrendingDown size={16} /> },
-  { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
-] satisfies { id: typeof FINANCEIRO_TAB_IDS[number]; label: string; icon: React.ReactNode }[];
 
 const splitFullName = (fullName: string) => {
   const parts = String(fullName || '').trim().split(/\s+/);
@@ -60,6 +33,7 @@ const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
     return {
       permissoes: ['inicio'] as string[],
       financeiroAbas: [],
+      abasModulos: {},
     };
   }
 
@@ -74,6 +48,7 @@ const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
   return {
     permissoes: permissions.modules.length > 0 ? permissions.modules : ['inicio'],
     financeiroAbas,
+    abasModulos: permissions.tabs || {},
   };
 };
 
@@ -99,7 +74,14 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     polosAcesso: contextId === 'global' ? [] : [contextId],
     permissoes: ['inicio'],
     financeiroAbas: [],
-    perfil_acesso_id: null
+    abasModulos: {},
+    perfil_acesso_id: null,
+    personalizarPermissoes: false,
+    personalizarHorario: true,
+    horarioAtivo: false,
+    diasHorario: [1, 2, 3, 4, 5, 6],
+    horarioInicio: '08:00',
+    horarioFim: '18:00',
   });
 
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -145,7 +127,14 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
           : [contextId],
       permissoes: permissions.permissoes,
       financeiroAbas: permissions.financeiroAbas,
+      abasModulos: permissions.abasModulos,
       perfil_acesso_id: initialUser.perfil_acesso_id || null,
+      personalizarPermissoes: Boolean(initialUser.personalizar_permissoes),
+      personalizarHorario: Boolean(initialUser.restricao_horario) || !initialUser.perfil_acesso_id,
+      horarioAtivo: Boolean(initialUser.restricao_horario?.ativo),
+      diasHorario: initialUser.restricao_horario?.dias || [1, 2, 3, 4, 5, 6],
+      horarioInicio: initialUser.restricao_horario?.horario_inicio || '08:00',
+      horarioFim: initialUser.restricao_horario?.horario_fim || '18:00',
     }));
   }, [contextId, initialUser]);
 
@@ -212,24 +201,32 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     setFormData(prev => {
       const current = prev.permissoes;
       if (current.includes(id)) {
+        const nextTabs = { ...prev.abasModulos };
+        delete nextTabs[id];
         return {
           ...prev,
           permissoes: current.filter(p => p !== id),
           financeiroAbas: id === 'financeiro' ? [] : prev.financeiroAbas,
+          abasModulos: nextTabs,
         };
       }
 
+      const availableTabs = USER_FORM_MODULE_TABS[id] || [];
       return {
         ...prev,
         permissoes: [...current, id],
         financeiroAbas: id === 'financeiro' && prev.financeiroAbas.length === 0
           ? DEFAULT_FINANCEIRO_TABS
           : prev.financeiroAbas,
+        abasModulos: availableTabs.length > 0
+          ? { ...prev.abasModulos, [id]: availableTabs.map(tab => tab.id) }
+          : prev.abasModulos,
       };
     });
   };
 
   const toggleTodosPolos = () => {
+    if (contextId !== 'global') return;
     setFormData(prev => ({
       ...prev,
       todosPolos: !prev.todosPolos,
@@ -246,6 +243,30 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
       return { ...prev, financeiroAbas: [...current, id] };
     });
+  };
+
+  const toggleModuleTab = (moduleId: string, tabId: string) => {
+    setFormData(prev => {
+      const current = prev.abasModulos[moduleId] || [];
+      return {
+        ...prev,
+        abasModulos: {
+          ...prev.abasModulos,
+          [moduleId]: current.includes(tabId)
+            ? current.filter(id => id !== tabId)
+            : [...current, tabId],
+        },
+      };
+    });
+  };
+
+  const toggleScheduleDay = (day: number) => {
+    setFormData(prev => ({
+      ...prev,
+      diasHorario: prev.diasHorario.includes(day)
+        ? prev.diasHorario.filter(current => current !== day)
+        : [...prev.diasHorario, day].sort((a, b) => a - b),
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -284,7 +305,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       alert('Selecione ao menos um polo para este usuário.');
       return;
     }
-    if (!formData.perfil_acesso_id) {
+    if (!formData.perfil_acesso_id || formData.personalizarPermissoes) {
       if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
         alert('Selecione ao menos um módulo para este usuário.');
         return;
@@ -293,20 +314,22 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         alert('Selecione ao menos uma aba do módulo financeiro.');
         return;
       }
+      for (const moduleId of ['cadastros', 'secretaria', 'comunicacao']) {
+        if (formData.permissoes.includes(moduleId) && (formData.abasModulos[moduleId] || []).length === 0) {
+          alert(`Selecione ao menos uma aba do módulo ${moduleId}.`);
+          return;
+        }
+      }
+    }
+    if (formData.personalizarHorario && formData.horarioAtivo && formData.diasHorario.length === 0) {
+      alert('Selecione ao menos um dia permitido para o horário individual.');
+      return;
+    }
+    if (formData.personalizarHorario && formData.horarioAtivo && formData.horarioInicio === formData.horarioFim) {
+      alert('O início e o fim do horário individual não podem ser iguais.');
+      return;
     }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
-  };
-
-  const getStrengthColor = () => {
-    if (passwordStrength <= 2) return 'bg-red-500';
-    if (passwordStrength <= 3) return 'bg-yellow-500';
-    return 'bg-emerald-500';
-  };
-
-  const getStrengthLabel = () => {
-    if (passwordStrength <= 2) return 'Fraca';
-    if (passwordStrength <= 3) return 'Média';
-    return 'Forte';
   };
 
   return (
@@ -330,310 +353,26 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        
-        {/* Seção 1: Dados Pessoais */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-6 text-blue-600">
-            <User size={20} />
-            <h4 className="text-sm font-black uppercase tracking-wider">Dados Pessoais</h4>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Nome</label>
-              <input 
-                type="text" name="nome" value={formData.nome} onChange={handleChange} required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all"
-                placeholder="Primeiro nome"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Sobrenome</label>
-              <input 
-                type="text" name="sobrenome" value={formData.sobrenome} onChange={handleChange} required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all"
-                placeholder="Sobrenome completo"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">CPF</label>
-              <input 
-                type="text" name="cpf" value={formData.cpf} onChange={handleChange} maxLength={14} required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-mono focus:border-blue-500 outline-none transition-all"
-                placeholder="000.000.000-00"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Data de Nascimento</label>
-              <input 
-                type="date" name="dataNascimento" value={formData.dataNascimento}
-                onChange={handleChange}
-                required={!isEditing}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="tel" name="telefone" value={formData.telefone} onChange={handleChange} maxLength={15} required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Seção 2: Contato e Segurança */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-6 text-blue-600 border-t border-slate-100 pt-8">
-            <Shield size={20} />
-            <h4 className="text-sm font-black uppercase tracking-wider">Acesso e Segurança</h4>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">E-mail Corporativo (Login - somente gestor altera)</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="email" name="email" value={formData.email} onChange={handleChange} required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-                  placeholder="usuario@universo.com"
-                />
-              </div>
-            </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Senha</label>
-                {isEditing && (
-                  <p className="text-[10px] text-slate-400 -mt-1">
-                    Opcional para editar. Preencha para trocar a senha.
-                  </p>
-                )}
-                <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="password" name="senha" value={formData.senha} onChange={handleChange}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-              {/* Medidor de Força */}
-              {formData.senha && (
-                <div className="flex items-center gap-2 mt-2 px-1">
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-300 ${getStrengthColor()}`} style={{ width: `${(passwordStrength / 5) * 100}%` }}></div>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase text-slate-500">{getStrengthLabel()}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Confirmar Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="password" name="confirmarSenha" value={formData.confirmarSenha} onChange={handleChange}
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl text-[#001a33] outline-none transition-all ${
-                    formData.confirmarSenha && formData.senha !== formData.confirmarSenha 
-                    ? 'border-red-300 focus:border-red-500' 
-                    : 'border-slate-200 focus:border-blue-500'
-                  }`}
-                  placeholder="••••••••"
-                />
-              </div>
-              {formData.confirmarSenha && formData.senha !== formData.confirmarSenha && (
-                <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">As senhas não conferem</p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Seção 3: Polos de Acesso */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-6 text-blue-600 border-t border-slate-100 pt-8">
-            <Building2 size={20} />
-            <h4 className="text-sm font-black uppercase tracking-wider">Unidades Permitidas</h4>
-          </div>
-
-          <button
-            type="button"
-            onClick={toggleTodosPolos}
-            className={`mb-4 flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all ${
-              formData.todosPolos
-                ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-sm'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'
-            }`}
-          >
-            <span>
-              <span className="block text-xs font-black uppercase tracking-widest">Todos os polos</span>
-              <span className="mt-1 block text-[11px] font-semibold text-slate-500">Acesso liberado para todas as unidades ativas.</span>
-            </span>
-            {formData.todosPolos && (
-              <span className="rounded-full bg-blue-500 p-1 text-white">
-                <Check size={12} />
-              </span>
-            )}
-          </button>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {companies.map(company => (
-              <div 
-                key={company.id}
-                onClick={() => togglePolo(company.id)}
-                className={`rounded-xl border p-4 flex items-center justify-between transition-all duration-200 ${
-                  formData.todosPolos
-                    ? 'cursor-not-allowed bg-slate-50 border-slate-100 opacity-60'
-                    : 'cursor-pointer'
-                } ${
-                  formData.polosAcesso.includes(company.id)
-                    ? 'bg-blue-50 border-blue-500 shadow-sm'
-                    : 'bg-white border-slate-200 hover:border-blue-200'
-                }`}
-              >
-                <div>
-                  <p className={`text-xs font-black uppercase tracking-tight ${formData.polosAcesso.includes(company.id) ? 'text-blue-800' : 'text-slate-700'}`}>
-                    {company.nomeFantasia}
-                  </p>
-                  <p className="text-[10px] text-slate-500">{company.cidade}/{company.uf}</p>
-                </div>
-                {formData.polosAcesso.includes(company.id) && (
-                  <div className="bg-blue-500 text-white p-1 rounded-full">
-                    <Check size={12} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Seção 4: Permissões de Módulo */}
-        <section className="mb-6">
-          <div className="flex items-center gap-2 mb-6 text-blue-600 border-t border-slate-100 pt-8">
-            <Lock size={20} />
-            <h4 className="text-sm font-black uppercase tracking-wider">Permissões e Acessos</h4>
-          </div>
-
-          {/* Vínculo de Perfil de Acesso */}
-          <div className="mb-8 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1">Perfil de Acesso</label>
-            <select
-              name="perfil_acesso_id"
-              value={formData.perfil_acesso_id || ''}
-              onChange={e => {
-                const val = e.target.value;
-                setFormData(prev => ({
-                  ...prev,
-                  perfil_acesso_id: val || null
-                }));
-              }}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all text-sm"
-            >
-              <option value="">Personalizado (Definir permissões manuais abaixo)</option>
-              {perfis.map(p => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
-            {formData.perfil_acesso_id && (
-              <div className="mt-1 space-y-1 text-[11px] text-blue-600 font-semibold">
-                <p>✓ As permissões e restrições de horário serão gerenciadas automaticamente pelo perfil selecionado.</p>
-                <p>
-                  Perfil ativo: {selectedPerfil?.nome || 'Carregando perfil'}
-                  {selectedPerfil ? (
-                    <span className="text-slate-500 font-medium ml-1">
-                      ({selectedPerfil.permissoes?.modules?.length || 0} módulo(s), horário {selectedPerfil.restricao_horario?.ativo ? 'bloqueado' : 'liberado'})
-                    </span>
-                  ) : null}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {formData.perfil_acesso_id ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center text-slate-500 font-semibold text-sm">
-              Permissões individuais desabilitadas porque este usuário está associado a um Perfil de Acesso.
-            </div>
-          ) : (
-            <>
-              <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 mb-6 flex gap-3">
-                 <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
-                 <div>
-                   <p className="text-xs font-bold text-yellow-800 uppercase mb-1">Atenção</p>
-                   <p className="text-xs text-yellow-700 leading-relaxed">
-                     O usuário só conseguirá acessar os módulos selecionados abaixo. Caso tente acessar uma área não permitida, o sistema exibirá uma mensagem de "Acesso Negado".
-                   </p>
-                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {MODULES.map(module => (
-                  <div 
-                    key={module.id}
-                    onClick={() => togglePermission(module.id)}
-                    className={`cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center text-center gap-2 transition-all duration-200 h-32 ${
-                      formData.permissoes.includes(module.id)
-                        ? 'bg-[#001a33] border-[#001a33] text-white shadow-lg'
-                        : 'bg-white border-slate-200 hover:border-slate-300 text-slate-400 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className={`${formData.permissoes.includes(module.id) ? 'text-blue-400' : 'text-slate-300'}`}>
-                      {module.icon}
-                    </div>
-                    <p className="text-xs font-bold uppercase tracking-widest">
-                      {module.label}
-                    </p>
-                    {formData.permissoes.includes(module.id) && (
-                       <span className="text-[9px] bg-blue-500/20 text-blue-200 px-2 py-0.5 rounded-full font-medium">
-                         Liberado
-                       </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {formData.permissoes.includes('financeiro') && (
-                <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                  <div className="mb-4 flex items-center gap-2 text-emerald-700">
-                    <TrendingUp size={18} />
-                    <h5 className="text-xs font-black uppercase tracking-widest">Abas do Financeiro</h5>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {FINANCEIRO_TABS.map(tab => (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => toggleFinanceiroTab(tab.id)}
-                        className={`flex min-h-16 items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                          formData.financeiroAbas.includes(tab.id)
-                            ? 'border-emerald-500 bg-white text-emerald-800 shadow-sm'
-                            : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className={formData.financeiroAbas.includes(tab.id) ? 'text-emerald-600' : 'text-slate-300'}>
-                            {tab.icon}
-                          </span>
-                          <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
-                        </span>
-                        {formData.financeiroAbas.includes(tab.id) && (
-                          <span className="rounded-full bg-emerald-500 p-1 text-white">
-                            <Check size={11} />
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
+        <UserIdentitySections
+          formData={formData}
+          isEditing={isEditing}
+          contextId={contextId}
+          companies={companies}
+          passwordStrength={passwordStrength}
+          onChange={handleChange}
+          onToggleAllPolos={toggleTodosPolos}
+          onTogglePolo={togglePolo}
+        />
+        <UserAccessSections
+          formData={formData}
+          perfis={perfis}
+          selectedPerfil={selectedPerfil}
+          setFormData={setFormData}
+          onTogglePermission={togglePermission}
+          onToggleFinanceiroTab={toggleFinanceiroTab}
+          onToggleModuleTab={toggleModuleTab}
+          onToggleScheduleDay={toggleScheduleDay}
+        />
       </form>
 
       {/* Footer Actions */}

@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   requireGestorAtivo,
   requireGestorGlobal,
+  requireGestorTab,
 } from "../_shared/authz.ts";
 import {
   buildCorsHeaders,
@@ -62,6 +63,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const gestor = await requireGestorAtivo(req, admin);
+    requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
     requireGestorGlobal(gestor);
 
     const body = await req.json();

@@ -64,6 +64,7 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       modules,
       financeiroTabs,
       allPolos: newUser.todosPolos,
+      tabs: newUser.abasModulos,
     });
 
     return {
@@ -73,11 +74,20 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
       cpf: newUser.cpf,
       telefone: newUser.telefone,
       perfil,
-      status: 'Ativo',
+      status: editingUser?.status || 'Ativo',
       context: contextId,
       polo_ids: newUser.todosPolos ? [] : newUser.polosAcesso,
       permissoes: permissions,
       perfil_acesso_id: newUser.perfil_acesso_id,
+      personalizar_permissoes: Boolean(newUser.perfil_acesso_id && newUser.personalizarPermissoes),
+      restricao_horario: newUser.personalizarHorario
+        ? {
+            ativo: newUser.horarioAtivo,
+            dias: newUser.diasHorario,
+            horario_inicio: newUser.horarioInicio,
+            horario_fim: newUser.horarioFim,
+          }
+        : null,
     };
   };
 

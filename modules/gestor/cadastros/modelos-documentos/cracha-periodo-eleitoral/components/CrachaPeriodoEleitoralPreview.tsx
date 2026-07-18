@@ -299,6 +299,39 @@ const CrachaPeriodoEleitoralPreview: React.FC<CrachaPeriodoEleitoralPreviewProps
             );
           }
 
+          if (field.type === 'image') {
+            const imageBlendMode = field.style?.mixBlendMode || 'multiply';
+            return (
+              <div
+                key={field.id}
+                style={{
+                  ...commonStyle,
+                  width: `${field.width || 32}%`,
+                  height: `${field.height || 8}%`,
+                  mixBlendMode: imageBlendMode,
+                  opacity: field.style?.opacity ?? 1,
+                }}
+                onMouseDown={(event) => handleDragStart(event, field.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (isEditable) onSelectField?.(field.id);
+                }}
+                className={`${hoverOutlineStyle} transition-all`}
+              >
+                <img
+                  src={field.value}
+                  alt={field.label || 'Assinatura'}
+                  draggable={false}
+                  className="h-full w-full"
+                  style={{
+                    objectFit: field.style?.objectFit || 'contain',
+                    opacity: 1,
+                  }}
+                />
+              </div>
+            );
+          }
+
           const resolvedText = replaceVars(field.value, data);
           const style = field.style || {};
           const baseTextStyle: React.CSSProperties = {
@@ -314,6 +347,15 @@ const CrachaPeriodoEleitoralPreview: React.FC<CrachaPeriodoEleitoralPreviewProps
             lineHeight: style.lineHeight || '1.1',
             textAlign: style.textAlign || 'left',
             letterSpacing: 0,
+            display: field.height ? 'flex' : undefined,
+            alignItems: field.height ? 'center' : undefined,
+            justifyContent: field.height
+              ? style.textAlign === 'left'
+                ? 'flex-start'
+                : style.textAlign === 'right'
+                  ? 'flex-end'
+                  : 'center'
+              : undefined,
           };
 
           if (field.type === 'boxText') {
