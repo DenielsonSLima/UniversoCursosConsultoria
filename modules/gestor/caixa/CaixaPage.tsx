@@ -9,6 +9,23 @@ import { caixaDashboardQueryOptions, PRINCIPAL_POLO_ID } from './caixa.service';
 import { useCaixaRealtime } from './useCaixaRealtime';
 import { financeiroService } from '../financeiro/financeiro.service';
 
+const getPoloCleanName = (polo: any) => {
+  if (!polo) return '';
+  if (!polo.cidade) return polo.nome || '';
+  
+  const cityUpper = polo.cidade.toUpperCase().trim();
+  if (cityUpper === 'JAPOATA') return 'Japoatã/SE';
+  if (cityUpper === 'AQUIDABA') return 'Aquidabã/SE';
+  if (cityUpper === 'PORTO DA FOLHA') return 'Porto da Folha/SE';
+  
+  const cleanCity = polo.cidade
+    .toLowerCase()
+    .split(' ')
+    .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  return `${cleanCity}/${(polo.estado || 'SE').toUpperCase()}`;
+};
+
 interface CaixaPageProps {
   poloId?: string | null;
   isGlobal?: boolean;
@@ -93,67 +110,59 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn pb-12 space-y-8">
+    <div className="max-w-7xl mx-auto animate-fadeIn pb-12 space-y-6">
       
-      {/* HEADER PRINCIPAL */}
-      <div className="bg-[#001a33] text-white rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden shadow-2xl">
-         <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-         <div className="absolute bottom-0 left-0 w-[250px] h-[250px] bg-emerald-600/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4"></div>
-
-         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                 <span className="bg-blue-500/20 text-blue-300 font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase border border-blue-500/30 flex items-center gap-2">
-                   <Activity size={12} className="text-blue-400" /> Frente de Caixa e Saldos
-                 </span>
-              </div>
-              <h2 className="text-4xl font-black text-white uppercase tracking-tight mb-2">Painel de Caixa</h2>
-              <p className="text-slate-300 font-medium max-w-xl text-sm leading-relaxed">
-                Acompanhe o saldo consolidado das contas de todos os polos, receitas a receber, despesas a pagar e fluxo comparativo mensal.
-              </p>
-            </div>
-         </div>
-      </div>
-
       {/* TABS DE SELEÇÃO DE POLO */}
-      <div className="space-y-3">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Filtro por Polo / Unidade</span>
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
-          {/* Aba Geral */}
-          {isGlobal && (
-            <button
-              onClick={() => setSelectedPolo('todos')}
-              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border ${
-                selectedPolo === 'todos'
-                  ? 'bg-[#001a33] text-white border-[#001a33] shadow-md'
-                  : 'bg-white text-slate-500 hover:bg-slate-50 border-slate-100'
-              }`}
-            >
-              Resultado Geral (Todos os Polos)
-            </button>
-          )}
-          
-          {/* Abas de Polos Específicos */}
-          {visiblePolos.map((polo: any) => (
-            <button
-              key={polo.id}
-              onClick={() => setSelectedPolo(polo.id)}
-              disabled={!isGlobal}
-              className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border ${
-                selectedPolo === polo.id
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                  : 'bg-white text-slate-500 hover:bg-slate-50 border-slate-100'
-              }`}
-            >
-              {polo.nome}
-              {polo.id === PRINCIPAL_POLO_ID && (
-                <span className="ml-2 bg-white/20 text-[8px] px-1.5 py-0.5 rounded font-black uppercase">Polo Principal</span>
-              )}
-              {!isGlobal && (
-                <span className="ml-2 bg-white/20 text-[8px] px-1.5 py-0.5 rounded font-black uppercase">Escopo fixo</span>
-              )}
-            </button>
-          ))}
+      <div className="space-y-2">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Filtro por Polo / Unidade</span>
+        
+        <div className="border-b border-slate-200 mb-2">
+          <div className="flex gap-6 overflow-x-auto pb-px">
+            {/* Aba Geral */}
+            {isGlobal && (
+              <button
+                onClick={() => setSelectedPolo('todos')}
+                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  selectedPolo === 'todos'
+                    ? 'text-[#001a33] font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+              >
+                <Landmark size={14} className={selectedPolo === 'todos' ? 'text-[#4169E1]' : 'text-slate-400'} />
+                <span>Resultado Geral</span>
+                {selectedPolo === 'todos' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                )}
+              </button>
+            )}
+            
+            {/* Abas de Polos Específicos */}
+            {visiblePolos.map((polo: any) => {
+              const isActive = selectedPolo === polo.id;
+              const cleanPoloName = getPoloCleanName(polo);
+              return (
+                <button
+                  key={polo.id}
+                  onClick={() => setSelectedPolo(polo.id)}
+                  disabled={!isGlobal}
+                  className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                    isActive
+                      ? 'text-[#001a33] font-extrabold'
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <Landmark size={14} className={isActive ? 'text-[#4169E1]' : 'text-slate-400'} />
+                  <span>{cleanPoloName}</span>
+                  {polo.id === PRINCIPAL_POLO_ID && (
+                    <span className="ml-1.5 bg-blue-50 text-[#4169E1] text-[8px] px-1.5 py-0.5 rounded font-bold uppercase border border-blue-100">Matriz</span>
+                  )}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Informativo EAD agrupado no Principal */}
@@ -161,8 +170,8 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
           <div className="bg-blue-50/50 border border-blue-200/50 text-blue-700 p-4 rounded-2xl text-xs flex items-start gap-3">
             <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <p className="font-black uppercase tracking-wider text-[9px] mb-0.5">Informação de Lançamento EAD</p>
-              <p className="font-medium text-slate-650">Os recebimentos referentes a cursos EAD (que não possuem polo físico associado) estão consolidados junto ao **Polo Principal** ({polos.find((p: any) => p.id === PRINCIPAL_POLO_ID)?.nome || 'UNIVERSO CURSOS E CONSULTORIA'}).</p>
+              <p className="font-bold uppercase tracking-wider text-[9px] mb-0.5">Informação de Lançamento EAD</p>
+              <p className="font-medium text-slate-650">Os recebimentos referentes a cursos EAD (que não possuem polo físico associado) estão consolidados junto ao **Polo Principal** ({getPoloCleanName(polos.find((p: any) => p.id === PRINCIPAL_POLO_ID) || { nome: 'Japoatã/SE', cidade: 'JAPOATA' })}).</p>
             </div>
           </div>
         )}

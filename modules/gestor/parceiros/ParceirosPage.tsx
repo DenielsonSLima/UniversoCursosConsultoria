@@ -5,7 +5,6 @@ import {
   GraduationCap,
   LayoutGrid,
   Plus,
-  Sparkles,
   User,
   Users,
 } from 'lucide-react';
@@ -153,18 +152,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
     <div className="pb-12">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-6">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles size={16} className="text-[#4169E1]" />
-            <span className="text-xs font-semibold text-[#4169E1] tracking-wide">Módulo Gestão</span>
-          </div>
           <h2 className="text-3xl font-bold text-[#001a33]">
             Parceiros & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4169E1] to-[#003366]">Convênios</span>
           </h2>
-          <p className="text-slate-500 font-medium mt-2 max-w-lg">
-            Administre prefeituras, empresas e as conexões acadêmicas da instituição em um único lugar.
-          </p>
         </div>
 
         <div className="flex gap-3 w-full md:w-auto">
@@ -202,6 +194,31 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         totalProfessoresInativos={kpis.totalProfessoresInativos || 0}
       />
 
+      <div className="border-b border-slate-200 mb-5 mt-2">
+        <div className="flex gap-6 overflow-x-auto pb-px">
+          {tabs.map(({ id, label, icon: Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  isActive
+                    ? 'text-[#001a33] font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+              >
+                <Icon size={14} className={isActive ? 'text-[#4169E1]' : 'text-slate-400'} />
+                {label}
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <ParceirosFilters
         onSearch={handleSearch}
         onSortChange={handleSort}
@@ -215,28 +232,11 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
         loadingTurmas={loadingTurmas}
         turmasError={turmasError}
         onRetryTurmas={() => { void reloadTurmas(); }}
+        activeTab={activeTab}
       />
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm w-full md:w-fit">
-        <div className="flex p-1 gap-1 w-full md:w-auto overflow-x-auto">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold transition-all ${
-                activeTab === id
-                  ? 'bg-[#001a33] text-white shadow-lg font-bold'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <ParceirosList
+
         items={sortedAndFilteredPartners}
         isLoading={loadingPartners}
         onSelectParceiro={(parceiro) => {

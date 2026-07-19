@@ -3,166 +3,57 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
   Briefcase,
-  CalendarClock,
   GraduationCap,
   Loader2,
-  MonitorPlay,
   Users,
+  Calendar,
+  Zap,
+  Award,
 } from 'lucide-react';
-import { type GestaoResumoModalidade, gestaoService } from '../gestao.service';
+import { gestaoService } from '../gestao.service';
 import { gestaoQueryKeys } from '../gestao.query-keys';
+import { enrichTechnicalAcademicProgress } from '../gestao.mappers';
 
 interface GestaoResumoProps {
   poloId?: string;
 }
 
-type ModalidadeKey = GestaoResumoModalidade['modalidade'];
-
-interface ModalidadeVisual {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { size?: number }>;
-  border: string;
-  iconClass: string;
-  valueClass: string;
-  markerClass: string;
-}
-
-const modalidadeVisual: Record<ModalidadeKey, ModalidadeVisual> = {
-  TECNICO: {
-    icon: Briefcase,
-    border: 'border-blue-100',
-    iconClass: 'bg-blue-50 text-blue-700',
-    valueClass: 'text-blue-700',
-    markerClass: 'bg-blue-600',
-  },
-  LIVRE: {
-    icon: GraduationCap,
-    border: 'border-violet-100',
-    iconClass: 'bg-violet-50 text-violet-700',
-    valueClass: 'text-violet-700',
-    markerClass: 'bg-violet-600',
-  },
-  ESPECIALIZACAO: {
-    icon: BookOpen,
-    border: 'border-emerald-100',
-    iconClass: 'bg-emerald-50 text-emerald-700',
-    valueClass: 'text-emerald-700',
-    markerClass: 'bg-emerald-600',
-  },
-  EAD: {
-    icon: MonitorPlay,
-    border: 'border-orange-100',
-    iconClass: 'bg-orange-50 text-orange-700',
-    valueClass: 'text-orange-700',
-    markerClass: 'bg-orange-600',
-  },
-};
-
 const fmtNumber = (value: number) => value.toLocaleString('pt-BR');
 
-const defaultCards: GestaoResumoModalidade[] = [
-  { modalidade: 'TECNICO', label: 'Técnico', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
-  { modalidade: 'LIVRE', label: 'Livre', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
-  { modalidade: 'ESPECIALIZACAO', label: 'Especialização', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: null },
-  { modalidade: 'EAD', label: 'EAD', turmasAtivas: 0, alunos: 0, inscricoesMesAtual: 0 },
-];
-
-const buildCards = (data: any, showEad: boolean): GestaoResumoModalidade[] => {
-  const rpcCards = Array.isArray(data?.cards) ? data.cards : [];
-  const sourceCards = rpcCards.length > 0 ? rpcCards : defaultCards;
-
-  return sourceCards
-    .filter((card) => showEad || card.modalidade !== 'EAD')
-    .map((card) => {
-      const fallback = defaultCards.find((item) => item.modalidade === card.modalidade)!;
-      const turmasFromLegacy = data?.turmasPorTipo?.[card.modalidade];
-      const alunosFromLegacy = data?.alunosPorTipo?.[card.modalidade];
-
-      return {
-        ...fallback,
-        ...card,
-        turmasAtivas: Number(card.turmasAtivas ?? turmasFromLegacy ?? fallback.turmasAtivas),
-        alunos: Number(card.alunos ?? alunosFromLegacy ?? fallback.alunos),
-        inscricoesMesAtual: card.modalidade === 'EAD'
-          ? Number(card.inscricoesMesAtual ?? data?.totalInscricoesEadMesAtual ?? fallback.inscricoesMesAtual ?? 0)
-          : null,
-      };
-    });
-};
-
-const MetricBlock: React.FC<{
-  label: string;
-  value: number;
-  valueClass?: string;
-  icon?: React.ReactNode;
-}> = ({ label, value, valueClass = 'text-[#001a33]', icon }) => (
-  <div className="min-w-0">
-    <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-      {icon}
-      <span className="truncate">{label}</span>
-    </div>
-    <p className={`text-3xl font-black leading-none ${valueClass}`}>{fmtNumber(value)}</p>
-  </div>
-);
-
-const ModalidadeCard: React.FC<{ card: GestaoResumoModalidade }> = ({ card }) => {
-  const visual = modalidadeVisual[card.modalidade];
-  const Icon = visual.icon;
-  const isEad = card.modalidade === 'EAD';
-
-  return (
-    <article className={`relative overflow-hidden rounded-2xl border ${visual.border} bg-white p-5 shadow-sm`}>
-      <div className={`absolute inset-x-0 top-0 h-1 ${visual.markerClass}`} />
-
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Modalidade</p>
-          <h3 className="mt-1 truncate text-lg font-black uppercase tracking-tight text-[#001a33]">
-            {card.label}
-          </h3>
-        </div>
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${visual.iconClass}`}>
-          <Icon size={21} />
-        </div>
-      </div>
-
-      <div className={`mt-6 grid gap-5 ${isEad ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-        <MetricBlock
-          label="Turmas ativas"
-          value={card.turmasAtivas}
-          valueClass={visual.valueClass}
-          icon={<Briefcase size={12} />}
-        />
-        <MetricBlock
-          label="Alunos"
-          value={card.alunos}
-          icon={<Users size={12} />}
-        />
-        {isEad && (
-          <MetricBlock
-            label="Inscrições mês atual"
-            value={card.inscricoesMesAtual ?? 0}
-            valueClass="text-orange-700"
-            icon={<CalendarClock size={12} />}
-          />
-        )}
-      </div>
-    </article>
-  );
-};
-
 const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
-  const { data, isLoading, isError } = useQuery({
+  // Query 1: KPIs Globais
+  const summaryQuery = useQuery({
     queryKey: gestaoQueryKeys.summary(poloId),
     queryFn: () => gestaoService.getGestaoResumoKpis(poloId),
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 30 * 60_000,
   });
 
+  // Query 2: Turmas Ativas Enriquecidas
+  const activeClassesQuery = useQuery({
+    queryKey: ['gestao', 'resumo-active-classes', poloId],
+    queryFn: async () => {
+      const [tecnicas, livres, especializacoes] = await Promise.all([
+        gestaoService.getTurmasByModalidade('TECNICO', poloId),
+        gestaoService.getTurmasByModalidade('LIVRE', poloId),
+        gestaoService.getTurmasByModalidade('ESPECIALIZACAO', poloId),
+      ]);
+      const active = [...tecnicas, ...livres, ...especializacoes].filter(
+        (t) => t.status === 'EM_ANDAMENTO'
+      );
+      return await enrichTechnicalAcademicProgress(active);
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const isLoading = summaryQuery.isLoading || activeClassesQuery.isLoading;
+  const isError = summaryQuery.isError || activeClassesQuery.isError;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-sm font-bold text-slate-500">
         <Loader2 className="mr-3 animate-spin text-[#001a33]" size={22} />
-        Carregando resumo da gestão...
+        Carregando painel operacional da gestão...
       </div>
     );
   }
@@ -170,28 +61,189 @@ const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
   if (isError) {
     return (
       <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm font-bold text-rose-700">
-        Não foi possível carregar os indicadores de resumo.
+        Não foi possível carregar os indicadores de gestão.
       </div>
     );
   }
 
-  const cards = buildCards(data, !poloId);
+  const kpis = summaryQuery.data;
+  const allActiveClasses = activeClassesQuery.data || [];
+
+  // Cálculos dinâmicos com base nas turmas em aberto
+  const totalAlunosActive = allActiveClasses.reduce((acc, t) => acc + (t.alunosMatriculados || 0), 0);
+  const totalTurmasActive = allActiveClasses.length;
+
+  // Agrupamentos por modalidade
+  const tecnicos = allActiveClasses.filter((t) => t.modalidade === 'TECNICO');
+  const livres = allActiveClasses.filter((t) => t.modalidade === 'LIVRE');
+  const especializacoes = allActiveClasses.filter((t) => t.modalidade === 'ESPECIALIZACAO');
+
+  const renderActiveSection = (title: string, list: any[], Icon: any, colorTheme: { iconBg: string, iconText: string, textAccent: string, borderAccent: string }) => {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className={`p-1.5 rounded-lg ${colorTheme.iconBg} ${colorTheme.iconText}`}>
+            <Icon size={16} />
+          </div>
+          <h3 className="font-extrabold text-[#001a33] text-sm uppercase tracking-wider flex items-center gap-2">
+            {title}
+            <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full normal-case">
+              {list.length} {list.length === 1 ? 'turma' : 'turmas'} em andamento
+            </span>
+          </h3>
+        </div>
+
+        {list.length === 0 ? (
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-center text-slate-400 text-xs font-semibold">
+            Nenhuma turma desta modalidade em andamento no momento.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {list.map((turma) => (
+              <div
+                key={turma.id}
+                className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-slate-100 text-[#001a33] text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                      {turma.codigo}
+                    </span>
+                    <span className="text-slate-400 text-xs font-medium">
+                      {turma.poloNome || 'Polo não informado'}
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-[#001a33] text-base mt-1.5 truncate">
+                    {turma.nome}
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 pt-3 border-t border-slate-50">
+                    {/* Disciplina Atual */}
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Disciplina Atual
+                      </span>
+                      <span
+                        className="text-xs font-bold text-slate-700 flex items-center gap-1.5 mt-0.5 truncate"
+                        title={turma.disciplinaAtual}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                        {turma.disciplinaAtual || 'Não iniciada / Sem grade'}
+                        {turma.disciplinaAtualOrdem && turma.totalDisciplinas ? (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            ({turma.disciplinaAtualOrdem}/{turma.totalDisciplinas})
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
+
+                    {/* Professor */}
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Professor
+                      </span>
+                      <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-0.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
+                        {turma.professorAtual || 'Não atribuído'}
+                      </span>
+                    </div>
+
+                    {/* Próxima Aula */}
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Próxima Aula
+                      </span>
+                      <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 mt-0.5 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        {turma.proximaAulaData
+                          ? `${new Date(`${turma.proximaAulaData}T12:00:00`).toLocaleDateString('pt-BR')} ${
+                              turma.proximaAulaTitulo ? `· ${turma.proximaAulaTitulo}` : ''
+                            }`
+                          : 'Nenhuma agendada'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-row md:flex-col items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-slate-50 md:pl-4 md:border-l shrink-0 gap-1.5 min-w-[120px]">
+                  <div className="text-left md:text-right">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Término Previsto
+                    </span>
+                    <span className="text-xs font-extrabold text-[#001a33] mt-0.5 block uppercase">
+                      {turma.dataPrevisaoTermino
+                        ? new Date(`${turma.dataPrevisaoTermino}T12:00:00`).toLocaleDateString('pt-BR', {
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : 'Não informada'}
+                    </span>
+                  </div>
+                  <div className="text-right mt-1">
+                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/50">
+                      {turma.alunosMatriculados} Alunos
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Resumo operacional</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#001a33]">Modalidades em andamento</h2>
+    <div className="space-y-6">
+      {/* KPIs Consolidados baseados nas turmas em aberto */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all duration-300">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl border border-blue-100/50 shrink-0">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total de Alunos</p>
+            <h3 className="text-2xl font-extrabold text-[#001a33] mt-0.5">{fmtNumber(totalAlunosActive)}</h3>
+          </div>
         </div>
-        <p className="text-xs font-bold text-slate-400">Atualização em tempo real</p>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all duration-300">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100/50 shrink-0">
+            <Briefcase size={24} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Turmas Ativas em Curso</p>
+            <h3 className="text-2xl font-extrabold text-[#001a33] mt-0.5">{fmtNumber(totalTurmasActive)}</h3>
+          </div>
+        </div>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {cards.map((card) => (
-          <ModalidadeCard key={card.modalidade} card={card} />
-        ))}
-      </section>
+      {/* Listagem Ordenada por Modalidade */}
+      <div className="space-y-8">
+        {/* Técnico */}
+        {renderActiveSection('Cursos Técnicos', tecnicos, Briefcase, {
+          iconBg: 'bg-blue-50',
+          iconText: 'text-blue-600',
+          textAccent: 'text-blue-700',
+          borderAccent: 'border-blue-100'
+        })}
+
+        {/* Livre */}
+        {renderActiveSection('Cursos Livres', livres, Zap, {
+          iconBg: 'bg-purple-50',
+          iconText: 'text-purple-600',
+          textAccent: 'text-purple-700',
+          borderAccent: 'border-purple-100'
+        })}
+
+        {/* Especialização */}
+        {renderActiveSection('Especializações', especializacoes, Award, {
+          iconBg: 'bg-emerald-50',
+          iconText: 'text-emerald-600',
+          textAccent: 'text-emerald-700',
+          borderAccent: 'border-emerald-100'
+        })}
+      </div>
     </div>
   );
 };

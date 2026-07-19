@@ -81,24 +81,31 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
   return (
     <div className="max-w-7xl mx-auto animate-fadeIn pb-12">
       {/* ABA DE NAVEGAÇÃO PRINCIPAL */}
-      <div className="flex flex-wrap gap-2 mb-8 border-b border-slate-200 pb-3">
-        {visibleTabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 border border-transparent ${
-                isActive 
-                  ? tab.colorClass 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="border-b border-slate-200 mb-8">
+        <div className="flex gap-6 overflow-x-auto pb-px">
+          {visibleTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  isActive 
+                    ? 'text-[#001a33] font-extrabold' 
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+              >
+                <span className={isActive ? 'text-[#4169E1]' : 'text-slate-400'}>
+                  {tab.icon}
+                </span>
+                <span>{tab.label}</span>
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* CONTEÚDO PRINCIPAL DAS ABAS */}

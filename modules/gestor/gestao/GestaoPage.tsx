@@ -32,33 +32,41 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
   }, [activeTab, isDetailView, onRequestScrollTop]);
 
   const tabs = [
-    { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={18} /> },
-    { id: 'tecnicos', label: 'Técnicos', icon: <Briefcase size={18} /> },
-    { id: 'livres', label: 'Livres', icon: <Zap size={18} /> },
-    { id: 'especializacao', label: 'Especialização', icon: <Award size={18} /> },
-    ...(isMatriz ? [{ id: 'ead', label: 'EAD', icon: <MonitorPlay size={18} /> }] : []),
+    { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={14} /> },
+    { id: 'tecnicos', label: 'Técnicos', icon: <Briefcase size={14} /> },
+    { id: 'livres', label: 'Livres', icon: <Zap size={14} /> },
+    { id: 'especializacao', label: 'Especialização', icon: <Award size={14} /> },
+    ...(isMatriz ? [{ id: 'ead', label: 'EAD', icon: <MonitorPlay size={14} /> }] : []),
   ] as const;
 
   return (
     <div className="max-w-7xl mx-auto">
       {/* Navegação Geral do Módulo - Oculta apenas se estiver em Detalhes */}
       {!isDetailView && (
-        <div className="mb-8">
-          <div className="inline-flex flex-wrap gap-2 rounded-2xl bg-white p-1.5">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`group flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-[#001a33] text-white shadow-md'
-                    : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
+        <div className="border-b border-slate-200 mb-6">
+          <div className="flex gap-6 overflow-x-auto pb-px">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                    isActive
+                      ? 'text-[#001a33] font-extrabold'
+                      : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <span className={isActive ? 'text-[#4169E1]' : 'text-slate-400'}>
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

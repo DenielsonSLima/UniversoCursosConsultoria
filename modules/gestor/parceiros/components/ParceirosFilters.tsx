@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Search, Filter, Layers, CheckCircle2, MonitorPlay, BookOpenCheck, Stethoscope, Wrench, Users } from 'lucide-react';
+import type { ParceirosTabType } from '../hooks/useParceirosFilters';
 
 export type AlunoModalidadeFilter = 'EAD' | 'LIVRE' | 'ESPECIALIZACAO' | 'TECNICO';
 
@@ -17,6 +18,7 @@ interface ParceirosFiltersProps {
   loadingTurmas?: boolean;
   turmasError?: boolean;
   onRetryTurmas?: () => void;
+  activeTab?: ParceirosTabType;
 }
 
 const alunoModalidadeOptions = [
@@ -39,35 +41,36 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
   loadingTurmas = false,
   turmasError = false,
   onRetryTurmas,
+  activeTab = 'todos',
 }) => {
   const hasAlunoModalidadeFilter = selectedAlunoModalidades.length > 0;
 
   return (
-    <div className="space-y-4 mb-10 w-full">
-      <div className="flex flex-col md:flex-row gap-4 w-full">
+    <div className="space-y-3 mb-6 w-full">
+      <div className="flex flex-col md:flex-row gap-3 w-full">
       
-      {/* Campo de Busca Estilizado */}
-      <div className="flex-[2] relative group">
-        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-          <Search size={22} />
+        {/* Campo de Busca Estilizado */}
+        <div className="flex-[2] relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+            <Search size={18} />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Pesquisar por nome, CNPJ, CPF ou cidade..." 
+            className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-medium text-sm shadow-sm transition-all placeholder:text-slate-400"
+            onChange={(e) => onSearch(e.target.value)}
+          />
         </div>
-        <input 
-          type="text" 
-          placeholder="Pesquisar por nome, CNPJ, CPF ou cidade..." 
-          className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-medium shadow-sm transition-all placeholder:text-slate-400"
-          onChange={(e) => onSearch(e.target.value)}
-        />
-      </div>
 
-      <div className="flex flex-col md:flex-row flex-[3] gap-3">
+        <div className="flex flex-col md:flex-row flex-[3] gap-3">
           {/* Status */}
           <div className="relative group flex-1">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-600 z-10 pointer-events-none">
-              <CheckCircle2 size={18} />
+              <CheckCircle2 size={16} />
             </div>
             <select 
               aria-label="Filtrar parceiros por status"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
               onChange={(e) => onStatusChange && onStatusChange(e.target.value)}
             >
               <option value="todos">Todos Status</option>
@@ -84,11 +87,11 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
           {/* Turmas */}
           <div className="relative group flex-1">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-600 z-10 pointer-events-none">
-              <Layers size={18} />
+              <Layers size={16} />
             </div>
             <select 
               aria-label="Filtrar parceiros por turma"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
               value={selectedTurma}
               disabled={loadingTurmas || turmasError}
               onChange={(e) => onTurmaChange && onTurmaChange(e.target.value)}
@@ -115,11 +118,11 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
           {/* Ordenação */}
           <div className="relative group flex-1">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-600 z-10 pointer-events-none">
-              <Filter size={18} />
+              <Filter size={16} />
             </div>
             <select 
               aria-label="Ordenar parceiros"
-              className="w-full appearance-none bg-white pl-11 pr-10 py-4 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
+              className="w-full appearance-none bg-white pl-11 pr-10 py-3 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-700 font-bold text-sm cursor-pointer shadow-sm relative z-0"
               onChange={(e) => onSortChange(e.target.value)}
             >
               <option value="az">A - Z</option>
@@ -133,7 +136,7 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
               </svg>
             </div>
           </div>
-      </div>
+        </div>
       </div>
 
       {turmasError && (
@@ -151,53 +154,47 @@ const ParceirosFilters: React.FC<ParceirosFiltersProps> = ({
         </div>
       )}
 
-      <div className="rounded-[1.5rem] border border-slate-100 bg-white p-3 shadow-sm">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="px-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Filtro de alunos</p>
-            <p className="mt-1 text-[11px] font-medium text-slate-500">
-              Selecione uma ou mais modalidades para listar alunos vinculados. Ex.: EAD + Técnico.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onClearAlunoModalidades}
-              className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                !hasAlunoModalidadeFilter
-                  ? 'border-[#001a33] bg-[#001a33] text-white'
-                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-              }`}
-              title="Mostrar todos os alunos"
-            >
-              <Users size={14} />
-              Todos os alunos
-            </button>
-            {alunoModalidadeOptions.map(({ id, label, icon: Icon }) => {
-              const active = selectedAlunoModalidades.includes(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onToggleAlunoModalidade?.(id)}
-                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                    active
-                      ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-900/15'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                  }`}
-                  title={`Filtrar alunos de ${label}`}
-                >
-                  <Icon size={14} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+      {/* Filtro de Modalidade Inline e Minimalista para Alunos */}
+      {(activeTab === 'todos' || activeTab === 'alunos') && (
+        <div className="flex flex-wrap items-center gap-2 mt-2 px-3 py-2 bg-slate-50 rounded-2xl border border-slate-100/50">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">Modalidade:</span>
+          <button
+            type="button"
+            onClick={onClearAlunoModalidades}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+              !hasAlunoModalidadeFilter
+                ? 'border-[#001a33] bg-[#001a33] text-white shadow-sm shadow-[#001a33]/10'
+                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            }`}
+            title="Mostrar todos os alunos"
+          >
+            <Users size={12} />
+            Todos os alunos
+          </button>
+          {alunoModalidadeOptions.map(({ id, label, icon: Icon }) => {
+            const active = selectedAlunoModalidades.includes(id);
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onToggleAlunoModalidade?.(id)}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-xl border px-3 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                  active
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-900/15'
+                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+                title={`Filtrar alunos de ${label}`}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            );
+          })}
         </div>
-      </div>
-
+      )}
     </div>
   );
 };
 
 export default ParceirosFilters;
+

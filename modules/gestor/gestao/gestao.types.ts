@@ -62,6 +62,9 @@ export interface Turma {
   totalDisciplinas?: number;
   disciplinaAtual?: string;
   disciplinaAtualOrdem?: number;
+  professorAtual?: string;
+  proximaAulaData?: string;
+  proximaAulaTitulo?: string;
 }
 
 export interface TurmasPageFilters {

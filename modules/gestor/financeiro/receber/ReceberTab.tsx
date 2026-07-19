@@ -40,21 +40,31 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId }) => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
-        {subtabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveCourseTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-              activeCourseTab === tab.id
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                : 'text-slate-500 hover:bg-slate-50 border-transparent'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
+      <div className="border-b border-slate-200 mb-4">
+        <div className="flex gap-6 overflow-x-auto pb-px">
+          {subtabs.map((tab) => {
+            const isActive = activeCourseTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveCourseTab(tab.id)}
+                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  isActive
+                    ? 'text-[#001a33] font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+              >
+                <span className={isActive ? 'text-emerald-600' : 'text-slate-400'}>
+                  {tab.icon}
+                </span>
+                <span>{tab.label}</span>
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-600 rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4">

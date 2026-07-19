@@ -71,25 +71,39 @@ export const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<
 
   const turmaIds = turmas.map((turma) => turma.id);
   const cursoIds = Array.from(new Set(turmas.map((turma) => turma.cursoId).filter(Boolean)));
-  const [configsResult, gradeResult] = await Promise.all([
+  const todayStr = new Date().toLocaleDateString('sv-SE');
+
+  const [configsResult, gradeResult, upcomingClassesResult] = await Promise.all([
     supabase.from('turmas_disciplinas')
-      .select('turma_id, disciplina_id, concluida')
+      .select('turma_id, disciplina_id, concluida, professor_nome')
       .in('turma_id', turmaIds),
     supabase.from('modulos')
       .select('id, curso_id, created_at, disciplinas(id, nome, created_at)')
       .in('curso_id', cursoIds)
       .order('created_at', { ascending: true }),
+    supabase.from('aulas_turma')
+      .select('turma_id, data_aula, titulo')
+      .in('turma_id', turmaIds)
+      .gte('data_aula', todayStr)
+      .order('data_aula', { ascending: true }),
   ]);
 
-  if (configsResult.error || gradeResult.error) {
-    console.error('Erro ao carregar progresso das disciplinas das turmas:', configsResult.error || gradeResult.error);
+  if (configsResult.error || gradeResult.error || upcomingClassesResult.error) {
+    console.error(
+      'Erro ao carregar progresso acadêmico das turmas:',
+      configsResult.error || gradeResult.error || upcomingClassesResult.error
+    );
     return turmas;
   }
 
-  const configured = new Map<string, boolean>();
+  const configured = new Map<string, { concluida: boolean; professor_nome?: string }>();
   (configsResult.data || []).forEach((row: any) => {
-    configured.set(`${row.turma_id}:${row.disciplina_id}`, row.concluida === true);
+    configured.set(`${row.turma_id}:${row.disciplina_id}`, {
+      concluida: row.concluida === true,
+      professor_nome: row.professor_nome || undefined,
+    });
   });
+
   const gradeByCourse = new Map<string, any[]>();
   (gradeResult.data || []).forEach((module: any) => {
     gradeByCourse.set(module.curso_id, [
@@ -98,16 +112,36 @@ export const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<
     ]);
   });
 
+  const upcomingByTurma = new Map<string, { data_aula: string; titulo: string }>();
+  (upcomingClassesResult.data || []).forEach((row: any) => {
+    if (!upcomingByTurma.has(row.turma_id)) {
+      upcomingByTurma.set(row.turma_id, {
+        data_aula: row.data_aula,
+        titulo: row.titulo || '',
+      });
+    }
+  });
+
   return turmas.map((turma) => {
     const disciplinas = gradeByCourse.get(turma.cursoId) || [];
     const currentIndex = disciplinas.findIndex((discipline) => (
-      configured.get(`${turma.id}:${discipline.id}`) !== true
+      configured.get(`${turma.id}:${discipline.id}`)?.concluida !== true
     ));
+
+    const currentConfig = currentIndex >= 0
+      ? configured.get(`${turma.id}:${disciplinas[currentIndex]?.id}`)
+      : null;
+
+    const nextClass = upcomingByTurma.get(turma.id);
+
     return {
       ...turma,
       totalDisciplinas: disciplinas.length,
       disciplinaAtual: currentIndex >= 0 ? disciplinas[currentIndex]?.nome || 'Disciplina não informada' : undefined,
       disciplinaAtualOrdem: currentIndex >= 0 ? currentIndex + 1 : undefined,
+      professorAtual: currentConfig?.professor_nome || 'Não definido',
+      proximaAulaData: nextClass?.data_aula || undefined,
+      proximaAulaTitulo: nextClass?.titulo || undefined,
     };
   });
 };
