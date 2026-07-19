@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Globe2, Mail, MapPin, RefreshCw, Save, UserCircle } from 'lucide-react';
+import ProfilePhotoEditor, {
+  createCroppedProfilePhoto,
+  defaultProfilePhotoTransform,
+  ProfilePhotoTransform,
+} from './ProfilePhotoEditor';
 import { whatsappService } from './whatsapp.service';
 import { WhatsAppBusinessProfile } from './whatsapp.types';
 
@@ -22,7 +27,6 @@ const categories = [
   { value: 'FINANCE', label: 'Financeiro' },
   { value: 'HEALTH', label: 'Saúde' },
   { value: 'NONPROFIT', label: 'Sem fins lucrativos' },
-  { value: 'UNDEFINED', label: 'Não definido' },
 ];
 
 const fileToBase64 = (file: File) =>
@@ -37,12 +41,14 @@ const normalizeProfile = (profile?: WhatsAppBusinessProfile | null): WhatsAppBus
   ...emptyProfile,
   ...profile,
   websites: profile?.websites?.length ? profile.websites : [''],
+  vertical: categories.some((category) => category.value === profile?.vertical) ? profile!.vertical : 'EDU',
 });
 
 const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => {
   const queryClient = useQueryClient();
   const [profile, setProfile] = useState<WhatsAppBusinessProfile>(emptyProfile);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoTransform, setPhotoTransform] = useState<ProfilePhotoTransform>(defaultProfilePhotoTransform);
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
   const { data, isFetching, refetch } = useQuery({
@@ -66,8 +72,11 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const photo = photoFile
-        ? { base64: await fileToBase64(photoFile), type: photoFile.type, name: photoFile.name }
+      const croppedPhoto = photoFile
+        ? await createCroppedProfilePhoto(photoFile, photoTransform)
+        : null;
+      const photo = croppedPhoto
+        ? { base64: await fileToBase64(croppedPhoto), type: croppedPhoto.type, name: croppedPhoto.name }
         : null;
       const cleaned: WhatsAppBusinessProfile = {
         ...profile,
@@ -77,6 +86,7 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
     },
     onSuccess: (fresh) => {
       setPhotoFile(null);
+      setPhotoTransform(defaultProfilePhotoTransform);
       setProfile(normalizeProfile(fresh));
       setMessage({ tone: 'ok', text: 'Perfil WhatsApp salvo na Meta.' });
       queryClient.invalidateQueries({ queryKey: ['whatsapp', 'perfil-meta'] });
@@ -166,12 +176,24 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
                   type="file"
                   accept="image/jpeg,image/png"
                   className="hidden"
-                  onChange={(event) => setPhotoFile(event.target.files?.[0] || null)}
+                  onChange={(event) => {
+                    setPhotoFile(event.target.files?.[0] || null);
+                    setPhotoTransform(defaultProfilePhotoTransform);
+                    setMessage(null);
+                    event.target.value = '';
+                  }}
                 />
               </label>
               <p className="mt-3 text-xs font-medium leading-relaxed text-slate-500">
                 Use imagem quadrada em JPG ou PNG. A troca depende do upload aceito pela Meta.
               </p>
+              {photoFile && (
+                <ProfilePhotoEditor
+                  file={photoFile}
+                  transform={photoTransform}
+                  onChange={setPhotoTransform}
+                />
+              )}
             </div>
           </div>
 

@@ -1,6 +1,8 @@
 export type FlowSettings = {
   enabled: boolean;
   max_attempts: number;
+  auto_close_enabled: boolean;
+  auto_close_hours: number;
   welcome_message: string;
   invalid_cpf_message: string;
   mismatch_message: string;
@@ -21,14 +23,16 @@ export type FlowSettings = {
 export const DEFAULT_FLOW_SETTINGS: FlowSettings = {
   enabled: false,
   max_attempts: 2,
+  auto_close_enabled: true,
+  auto_close_hours: 24,
   welcome_message:
-    "Olá! Sou o atendimento automático da Universo Cursos. Para proteger seus dados e localizar seu cadastro com segurança, informe seu CPF. Pode enviar com ou sem pontuação.",
+    "Para proteger seus dados e localizar seu cadastro com segurança, informe seu CPF. Pode enviar com ou sem pontuação.",
   invalid_cpf_message:
     "Não consegui validar esse CPF. Envie novamente apenas os 11 números, ou no formato 000.000.000-00.",
   mismatch_message:
     "Por segurança, não consegui confirmar esse CPF com o telefone desta conversa. Vou encaminhar seu atendimento para nossa equipe conferir.",
   menu_message:
-    "Cadastro confirmado, {{nome_aluno}}. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente",
+    "🎓Olá! Eu sou a Uni.\n\nSou a assistente virtual da Universo Cursos e Consultoria e estou aqui para ajudar.\nEscolha uma das opções abaixo:\n1️⃣ Boleto ou link de pagamento;\n2️⃣ PIX Copia e Cola;\n3️⃣ Declaração para IRPF;\n4️⃣ Falar com um atendente.",
   receivable_choice_message:
     "Encontrei mais de uma parcela disponível. Responda com o número da parcela que deseja pagar:",
   no_receivables_message:

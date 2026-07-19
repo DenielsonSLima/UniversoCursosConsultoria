@@ -49,6 +49,24 @@ export const useWhatsAppFlow = (queryClient: QueryClient, toast: ToastApi) => {
     onError: (err: any) => toast.error('Erro ao retomar', err?.message || 'Não foi possível reiniciar o fluxo.'),
   });
 
+  const closeMutation = useMutation({
+    mutationFn: whatsappService.closeConversation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp'] });
+      toast.success('Atendimento encerrado', 'A conversa foi movida para Finalizadas.');
+    },
+    onError: (err: any) => toast.error('Erro ao encerrar', err?.message || 'Não foi possível encerrar o atendimento.'),
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: whatsappService.reopenConversation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp'] });
+      toast.success('Atendimento reaberto', 'A conversa voltou para Abertas.');
+    },
+    onError: (err: any) => toast.error('Erro ao reabrir', err?.message || 'Não foi possível reabrir o atendimento.'),
+  });
+
   return {
     settings: settingsQuery.data || null,
     sessions: sessionsQuery.data || [],
@@ -57,5 +75,7 @@ export const useWhatsAppFlow = (queryClient: QueryClient, toast: ToastApi) => {
     save: (settings: WhatsAppFlowSettings) => saveMutation.mutate(settings),
     pause: (conversationId: string) => pauseMutation.mutate(conversationId),
     reset: (conversationId: string) => resetMutation.mutate(conversationId),
+    close: (conversationId: string) => closeMutation.mutate(conversationId),
+    reopen: (conversationId: string) => reopenMutation.mutate(conversationId),
   };
 };

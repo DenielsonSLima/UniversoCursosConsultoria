@@ -126,10 +126,15 @@ const verifyCpf = async (admin: any, settings: any, session: any, input: FlowInp
     verified_at: new Date().toISOString(),
     attempts: 0,
     handoff_required: false,
-    data: { cpfLast4: cpf.slice(-4), matchSource: matchedAluno.match_source || null },
+    data: { ...(session?.data || {}), cpfLast4: cpf.slice(-4), matchSource: matchedAluno.match_source || null },
   });
-  await sendFlowText(admin, { conversation: input.conversation, aluno: matchedAluno, phone: input.phone, text: flowText(settings.menu_message, verifiedInput) });
   await logEvent(admin, next, "verified", { alunoId: matchedAluno.id, matchSource: matchedAluno.match_source || null });
+
+  const pendingAction = String(session?.data?.pendingAction || "");
+  if (pendingAction === "link") return offerPayment(admin, settings, next, verifiedInput, "link");
+  if (pendingAction === "pix") return offerPayment(admin, settings, next, verifiedInput, "pix");
+  if (pendingAction === "irpf") return offerIrpf(admin, settings, next, verifiedInput);
+  await sendFlowText(admin, { conversation: input.conversation, aluno: matchedAluno, phone: input.phone, text: flowText(settings.menu_message, verifiedInput) });
 };
 
 const sendPayment = async (
@@ -251,30 +256,58 @@ const fallback = async (admin: any, settings: any, session: any, input: FlowInpu
   await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: flowText(`${settings.fallback_message}\n\n${settings.menu_message}`, input) });
 };
 
+const requestCpfFor = async (
+  admin: any,
+  settings: any,
+  session: any,
+  input: FlowInput,
+  pendingAction: "link" | "pix" | "irpf",
+) => {
+  const next = await saveSession(admin, {
+    ...session,
+    conversa_id: input.conversation.id,
+    telefone: input.phone,
+    aluno_id: input.alunoByPhone?.id || input.conversation?.aluno_id || session?.aluno_id || null,
+    status: "awaiting_cpf",
+    verified_at: null,
+    attempts: 0,
+    handoff_required: false,
+    selected_payment_method: pendingAction === "irpf" ? null : pendingAction,
+    data: { ...(session?.data || {}), pendingAction },
+  });
+  await sendFlowText(admin, {
+    conversation: input.conversation,
+    aluno: input.alunoByPhone,
+    phone: input.phone,
+    text: settings.welcome_message,
+  });
+  await logEvent(admin, next, "cpf_requested", { pendingAction });
+};
+
 export const processWhatsAppFlow = async (admin: any, input: FlowInput) => {
   const settings = await getFlowSettings(admin);
   if (!settings.enabled) return;
 
-  const session = await getSession(admin, input.conversation.id);
+  const storedSession = await getSession(admin, input.conversation.id);
+  const session = storedSession?.status === "closed" ? null : storedSession;
   if (session?.handoff_required || session?.status === "handoff") return;
 
-  if (detectAttendantRequest(input.content)) return handoff(admin, settings, session, input, "requested_attendant");
-
   if (!session) {
-    if (normalizeCpf(input.content)) return verifyCpf(admin, settings, null, input);
     const next = await saveSession(admin, {
       conversa_id: input.conversation.id,
       telefone: input.phone,
       aluno_id: input.alunoByPhone?.id || input.conversation?.aluno_id || null,
-      status: "awaiting_cpf",
+      status: "menu",
       attempts: 0,
       handoff_required: false,
       data: {},
     });
-    await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: settings.welcome_message });
+    await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: flowText(settings.menu_message, input) });
     await logEvent(admin, next, "started", { conversaId: input.conversation.id });
     return;
   }
+
+  if (detectAttendantRequest(input.content)) return handoff(admin, settings, session, input, "requested_attendant");
 
   if (session.status === "awaiting_cpf") return verifyCpf(admin, settings, session, input);
 
@@ -295,9 +328,9 @@ export const processWhatsAppFlow = async (admin: any, input: FlowInput) => {
   }
 
   const option = parseMenuNumber(input.content);
-  if (option === 1 || detectLinkRequest(input.content)) return offerPayment(admin, settings, session, input, "link");
-  if (option === 2 || detectPixRequest(input.content)) return offerPayment(admin, settings, session, input, "pix");
-  if (option === 3 || detectIrpfRequest(input.content)) return offerIrpf(admin, settings, session, input);
+  if (option === 1 || detectLinkRequest(input.content)) return requestCpfFor(admin, settings, session, input, "link");
+  if (option === 2 || detectPixRequest(input.content)) return requestCpfFor(admin, settings, session, input, "pix");
+  if (option === 3 || detectIrpfRequest(input.content)) return requestCpfFor(admin, settings, session, input, "irpf");
   if (option === 4) return handoff(admin, settings, session, input, "menu_attendant");
   return fallback(admin, settings, session, input);
 };

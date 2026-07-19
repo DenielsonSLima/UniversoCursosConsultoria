@@ -1,7 +1,16 @@
 export const normalizeWhatsAppPhone = (value: unknown) => {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length < 10 || digits.length > 15) return "";
-  return digits.startsWith("55") ? digits : `55${digits}`;
+  const international = digits.startsWith("55") ? digits : `55${digits}`;
+
+  // A Meta pode entregar celulares brasileiros antigos sem o nono digito.
+  // Canonicalizamos antes de procurar a conversa para entrada e saida usarem
+  // exatamente a mesma chave (55 + DDD + 9 digitos).
+  if (/^55[1-9][0-9][6-9][0-9]{7}$/.test(international)) {
+    return `${international.slice(0, 4)}9${international.slice(4)}`;
+  }
+
+  return international;
 };
 
 export const textFromWhatsAppMessage = (message: any) => {
@@ -105,6 +114,9 @@ export const upsertWhatsAppConversation = async (
         contato_nome: contactName,
         ultimo_texto: isNewerPreview ? lastText || existing.ultimo_texto : existing.ultimo_texto,
         ultima_data: nextLastAt,
+        status: input.direction === "entrada" ? "aberta" : existing.status,
+        closed_at: input.direction === "entrada" ? null : existing.closed_at,
+        closed_reason: input.direction === "entrada" ? null : existing.closed_reason,
         unread_count: shouldIncrementUnread
           ? Number(existing.unread_count || 0) + 1
           : Number(existing.unread_count || 0),

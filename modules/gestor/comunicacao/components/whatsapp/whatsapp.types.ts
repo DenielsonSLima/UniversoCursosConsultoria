@@ -8,6 +8,8 @@ export interface WhatsAppConversation {
   ultimo_texto: string | null;
   ultima_data: string;
   unread_count: number;
+  closed_at?: string | null;
+  closed_reason?: string | null;
 }
 
 export interface WhatsAppFlowSettings {
@@ -15,6 +17,8 @@ export interface WhatsAppFlowSettings {
   scope?: string;
   enabled: boolean;
   max_attempts: number;
+  auto_close_enabled: boolean;
+  auto_close_hours: number;
   welcome_message: string;
   invalid_cpf_message: string;
   mismatch_message: string;

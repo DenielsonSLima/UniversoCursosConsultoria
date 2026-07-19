@@ -9,15 +9,10 @@ import {
 } from "../_shared/http.ts";
 import {
   insertWhatsAppMessage,
+  normalizeWhatsAppPhone,
   phoneBelongsToAluno,
   upsertWhatsAppConversation,
 } from "../_shared/whatsapp.ts";
-
-const normalizePhone = (value: unknown) => {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (digits.length < 10 || digits.length > 15) return "";
-  return digits.startsWith("55") ? digits : `55${digits}`;
-};
 
 const normalizeGraphVersion = (value: unknown) => {
   const version = String(value || "v23.0").trim();
@@ -51,7 +46,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const alunoId = String(body.alunoId || "").trim();
-    const to = normalizePhone(body.to);
+    const to = normalizeWhatsAppPhone(body.to);
     const message = String(body.message || "").trim();
 
     if (!alunoId) throw new Error("Aluno obrigatorio para iniciar conversa WhatsApp.");

@@ -3,7 +3,11 @@ import { formatCpfCnpj } from '../../../../../lib/documentFormatters';
 export const normalizePhone = (phone?: string | null) => {
   const digits = String(phone || '').replace(/\D/g, '');
   if (digits.length < 10) return '';
-  return digits.startsWith('55') ? digits : `55${digits}`;
+  const international = digits.startsWith('55') ? digits : `55${digits}`;
+  if (/^55[1-9][0-9][6-9][0-9]{7}$/.test(international)) {
+    return `${international.slice(0, 4)}9${international.slice(4)}`;
+  }
+  return international;
 };
 
 export const formatPhone = (phone?: string | null) => {

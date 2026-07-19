@@ -5,10 +5,12 @@ import { WhatsAppBusinessProfile, WhatsAppContact, WhatsAppConversation, WhatsAp
 export const DEFAULT_WHATSAPP_FLOW_SETTINGS: WhatsAppFlowSettings = {
   enabled: false,
   max_attempts: 2,
-  welcome_message: 'Olá! Sou o atendimento automático da Universo Cursos. Para proteger seus dados e localizar seu cadastro com segurança, informe seu CPF. Pode enviar com ou sem pontuação.',
+  auto_close_enabled: true,
+  auto_close_hours: 24,
+  welcome_message: 'Para proteger seus dados e localizar seu cadastro com segurança, informe seu CPF. Pode enviar com ou sem pontuação.',
   invalid_cpf_message: 'Não consegui validar esse CPF. Envie novamente apenas os 11 números, ou no formato 000.000.000-00.',
   mismatch_message: 'Por segurança, não consegui confirmar esse CPF com o telefone desta conversa. Vou encaminhar seu atendimento para nossa equipe conferir.',
-  menu_message: 'Cadastro confirmado, {{nome_aluno}}. Como posso ajudar?\n\n1 - Receber link/boleto de pagamento\n2 - Receber PIX copia e cola\n3 - Solicitar declaração de IRPF\n4 - Falar com atendente',
+  menu_message: '🎓Olá! Eu sou a Uni.\n\nSou a assistente virtual da Universo Cursos e Consultoria e estou aqui para ajudar.\nEscolha uma das opções abaixo:\n1️⃣ Boleto ou link de pagamento;\n2️⃣ PIX Copia e Cola;\n3️⃣ Declaração para IRPF;\n4️⃣ Falar com um atendente.',
   receivable_choice_message: 'Encontrei mais de uma parcela disponível. Responda com o número da parcela que deseja pagar:',
   no_receivables_message: 'No momento não encontrei parcela aberta, vencida ou próxima do vencimento com dados de pagamento disponíveis. Vou encaminhar para nossa equipe conferir.',
   fallback_message: 'Desculpe, não consegui entender sua resposta. Escolha uma das opções do menu ou digite 4 para falar com atendente.',
@@ -62,6 +64,16 @@ const normalizeFlowSettings = (settings?: Partial<WhatsAppFlowSettings> | null):
     next[field] = String(next[field] || '').replace(/\\n/g, '\n');
   });
   return next;
+};
+
+const getFunctionErrorMessage = async (error: any, fallback: string) => {
+  let detail = error?.message || fallback;
+  const context = error?.context;
+  if (context && typeof context.json === 'function') {
+    const payload = await context.json().catch(() => null);
+    detail = payload?.error || detail;
+  }
+  return detail;
 };
 
 export const whatsappService = {
@@ -152,7 +164,7 @@ export const whatsappService = {
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
       body: { action: 'get' },
     });
-    if (error) throw error;
+    if (error) throw new Error(await getFunctionErrorMessage(error, 'Não foi possível carregar o perfil na Meta.'));
     if ((data as any)?.error) throw new Error((data as any).error);
     return (data as any)?.profile || null;
   },
@@ -161,7 +173,7 @@ export const whatsappService = {
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
       body: { action: 'save', ...input },
     });
-    if (error) throw error;
+    if (error) throw new Error(await getFunctionErrorMessage(error, 'Não foi possível salvar o perfil na Meta.'));
     if ((data as any)?.error) throw new Error((data as any).error);
     return (data as any)?.profile || null;
   },
@@ -201,13 +213,7 @@ export const whatsappService = {
     });
 
     if (error) {
-      let detail = error.message;
-      const context = (error as any)?.context;
-      if (context && typeof context.json === 'function') {
-        const payload = await context.json().catch(() => null);
-        detail = payload?.error || detail;
-      }
-      throw new Error(detail);
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível enviar a mensagem.'));
     }
     if ((data as any)?.error) throw new Error((data as any).error);
     return data;
@@ -320,5 +326,34 @@ export const whatsappService = {
       .delete()
       .eq('conversa_id', conversationId);
     if (error) throw error;
+  },
+
+  async closeConversation(conversationId: string) {
+    const now = new Date().toISOString();
+    const { error: conversationError } = await supabase
+      .from('whatsapp_conversas')
+      .update({ status: 'arquivada', unread_count: 0, closed_at: now, closed_reason: 'manual' })
+      .eq('id', conversationId);
+    if (conversationError) throw conversationError;
+
+    const { error: sessionError } = await supabase
+      .from('whatsapp_flow_sessions')
+      .update({ status: 'closed', handoff_required: false, updated_at: now })
+      .eq('conversa_id', conversationId);
+    if (sessionError) throw sessionError;
+  },
+
+  async reopenConversation(conversationId: string) {
+    const { error: conversationError } = await supabase
+      .from('whatsapp_conversas')
+      .update({ status: 'aberta', closed_at: null, closed_reason: null })
+      .eq('id', conversationId);
+    if (conversationError) throw conversationError;
+
+    const { error: sessionError } = await supabase
+      .from('whatsapp_flow_sessions')
+      .delete()
+      .eq('conversa_id', conversationId);
+    if (sessionError) throw sessionError;
   },
 };

@@ -9,6 +9,7 @@ export const mediaPayloadFor = (message: WhatsAppMessage) => {
   return {
     id: id ? String(id) : null,
     type,
+    link: payload?.link || raw.media_url || raw.mediaUrl || null,
     caption: payload?.caption || message.conteudo,
     filename: payload?.filename || raw.filename || `${type || 'arquivo'}-${message.id}`,
     mime: payload?.mime_type || raw.mime_type || '',
@@ -18,6 +19,9 @@ export const mediaPayloadFor = (message: WhatsAppMessage) => {
 
 export const isMediaMessage = (message: WhatsAppMessage) =>
   ['image', 'audio', 'document'].includes(String(message.message_type || '').toLowerCase());
+
+export const isMediaPlaceholder = (content?: string | null) =>
+  /^\[(imagem|image|foto|audio|áudio|documento|document)\]$/i.test(String(content || '').trim());
 
 export const mediaKindFromFile = (file: File) => {
   if (file.type.startsWith('image/')) return 'image' as const;

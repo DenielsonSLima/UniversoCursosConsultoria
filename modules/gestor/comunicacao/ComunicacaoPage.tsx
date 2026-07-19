@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { MessageSquare, MessageCircle } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import {
   removeCommunicationAttachmentPaths,
@@ -365,25 +365,21 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         onStart={handleStartInternalConversation}
       />
 
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
-            channel === 'whatsapp' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-          }`}>
-            {channel === 'whatsapp' ? <MessageCircle size={22} /> : <MessageSquare size={22} />}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#001a33]">
-              {channel === 'whatsapp' ? 'Comunicação WhatsApp' : 'Mensagens internas'}
-            </h1>
-            <p className="text-xs font-medium text-slate-400">
-              {channel === 'whatsapp'
-                ? 'Caixa externa de atendimento e automações financeiras.'
-                : `${pendingCount} em aberto, ${solvedCount} solucionadas`}
-            </p>
+      {channel !== 'whatsapp' && (
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+              <MessageSquare size={22} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-[#001a33]">Mensagens internas</h1>
+              <p className="text-xs font-medium text-slate-400">
+                {pendingCount} em aberto, {solvedCount} solucionadas
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {channel === 'whatsapp' ? (

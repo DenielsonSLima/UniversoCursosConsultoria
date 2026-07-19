@@ -7,6 +7,7 @@ import { mediaKindFromFile } from './mediaUtils';
 interface MessageComposerProps {
   activeConversation: WhatsAppConversation | null;
   apiReady: boolean;
+  closed?: boolean;
   sendTyping: (typing: boolean) => void;
   onSendReply: (message: string) => Promise<void>;
   onSendMedia: (input: { file: File; kind: WhatsAppMediaKind; caption: string }) => Promise<void>;
@@ -17,6 +18,7 @@ const accept = 'image/*,audio/*,application/pdf,.pdf';
 const MessageComposer: React.FC<MessageComposerProps> = ({
   activeConversation,
   apiReady,
+  closed = false,
   sendTyping,
   onSendReply,
   onSendMedia,
@@ -34,7 +36,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
 
   if (!activeConversation) return null;
 
-  const disabled = !activeConversation.aluno_id || !apiReady;
+  const disabled = closed || !activeConversation.aluno_id || !apiReady;
   const canSend = Boolean(!disabled && (reply.trim() || file) && normalizePhone(activeConversation.telefone));
 
   const pickIcon = (kind: WhatsAppMediaKind) => {
@@ -92,7 +94,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
           onChange={(event) => updateReply(event.target.value)}
           onBlur={() => sendTyping(false)}
           rows={1}
-          placeholder={file ? 'Legenda opcional...' : activeConversation.aluno_id ? 'Escreva sua resposta...' : 'Contato sem aluno vinculado'}
+          placeholder={closed ? 'Atendimento finalizado' : file ? 'Legenda opcional...' : activeConversation.aluno_id ? 'Escreva sua resposta...' : 'Contato sem aluno vinculado'}
           disabled={disabled}
           className="max-h-28 min-h-[44px] flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-50"
         />

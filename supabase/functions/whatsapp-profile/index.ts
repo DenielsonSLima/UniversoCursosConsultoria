@@ -15,6 +15,18 @@ type BusinessProfile = {
 
 const trim = (value: unknown) => String(value || "").trim();
 
+const allowedVerticals = new Set([
+  "UNDEFINED", "OTHER", "AUTO", "BEAUTY", "APPAREL", "EDU", "ENTERTAIN", "EVENT_PLAN",
+  "FINANCE", "GROCERY", "GOVT", "HOTEL", "HEALTH", "NONPROFIT", "PROF_SERVICES",
+  "RETAIL", "TRAVEL", "RESTAURANT", "NOT_A_BIZ",
+]);
+
+const normalizeVertical = (value: unknown) => {
+  const vertical = trim(value).toUpperCase();
+  // Although Meta lists UNDEFINED in some responses, the profile update endpoint rejects it.
+  return vertical && vertical !== "UNDEFINED" && allowedVerticals.has(vertical) ? vertical : "EDU";
+};
+
 const normalizeGraphVersion = (value: unknown) => {
   const version = trim(value) || "v23.0";
   return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
@@ -26,7 +38,7 @@ const normalizeProfile = (profile: any): BusinessProfile => ({
   description: trim(profile?.description),
   email: trim(profile?.email),
   websites: Array.isArray(profile?.websites) ? profile.websites.map(trim).filter(Boolean).slice(0, 2) : [],
-  vertical: trim(profile?.vertical) || "EDU",
+  vertical: normalizeVertical(profile?.vertical),
   profilePictureUrl: profile?.profile_picture_url || profile?.profilePictureUrl || null,
 });
 
@@ -130,13 +142,16 @@ const saveProfileToMeta = async (
   const clean = normalizeProfile(profile);
   const body: Record<string, unknown> = {
     messaging_product: "whatsapp",
-    about: clean.about,
-    address: clean.address,
-    description: clean.description,
-    email: clean.email,
-    websites: clean.websites,
     vertical: clean.vertical,
   };
+
+  // The test phone endpoint rejects empty optional fields with OAuth error #10.
+  // Omit them so editing only the photo, category or website remains valid.
+  if (clean.about) body.about = clean.about;
+  if (clean.address) body.address = clean.address;
+  if (clean.description) body.description = clean.description;
+  if (clean.email) body.email = clean.email;
+  if (clean.websites?.length) body.websites = clean.websites;
 
   if (photo?.base64) body.profile_picture_handle = await uploadProfilePhoto(context, photo);
 
@@ -149,6 +164,7 @@ const saveProfileToMeta = async (
       body: JSON.stringify(body),
     },
   );
+  return clean;
 };
 
 Deno.serve(async (req: Request) => {
@@ -179,7 +195,23 @@ Deno.serve(async (req: Request) => {
     const context = await getMetaContext(admin);
 
     if (body?.action === "save") {
-      await saveProfileToMeta(context, body.profile || {}, body.photo || null);
+      const savedProfile = await saveProfileToMeta(context, body.profile || {}, body.photo || null);
+      try {
+        const profile = await readProfileFromMeta(context);
+        return respondJson({ ok: true, profile });
+      } catch (readError) {
+        // Saving and reading the profile use different Meta permissions. Do not report a
+        // successful update as failed only because the token cannot immediately read it back.
+        console.warn("whatsapp-profile saved, but could not reload from Meta:", readError);
+        return respondJson({
+          ok: true,
+          profile: {
+            ...savedProfile,
+            profilePictureUrl: body?.profile?.profilePictureUrl || null,
+          },
+          warning: "Perfil salvo, mas a Meta não permitiu recarregar os dados imediatamente.",
+        });
+      }
     }
 
     const profile = await readProfileFromMeta(context);

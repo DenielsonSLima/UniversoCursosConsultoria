@@ -27,7 +27,7 @@ export type FlowGroup = {
 };
 
 export const flowTabs: Array<{ id: FlowTabId; label: string; summary: string }> = [
-  { id: 'geral', label: 'Atendimento geral', summary: 'CPF, menu e atendente' },
+  { id: 'geral', label: 'Atendimento geral', summary: 'Menu, CPF seletivo e atendente' },
   { id: 'cobranca', label: 'Cobrança', summary: 'Boleto, PIX e parcelas' },
   { id: 'documentos', label: 'Documentos', summary: 'IRPF curso técnico' },
 ];
@@ -36,18 +36,18 @@ export const flowGroupsByTab: Record<FlowTabId, FlowGroup[]> = {
   geral: [
     {
       title: 'Identificação segura',
-      description: 'Primeiro contato do robô. Valida CPF e bloqueia dados financeiros quando telefone e CPF não conferem.',
+      description: 'Solicitada somente depois que o aluno escolhe cobrança ou IRPF. Bloqueia dados quando telefone e CPF não conferem.',
       fields: [
-        { field: 'welcome_message', label: 'Pedir CPF', help: 'Mensagem enviada quando o aluno chama no WhatsApp.', rows: 3 },
+        { field: 'welcome_message', label: 'Pedir CPF', help: 'Mensagem enviada após escolher boleto, PIX ou IRPF.', rows: 3 },
         { field: 'invalid_cpf_message', label: 'CPF inválido', help: 'Quando o CPF vem incompleto ou com menos de 11 dígitos.', rows: 3 },
         { field: 'mismatch_message', label: 'Telefone e CPF não conferem', help: 'Quando o CPF não pertence ao telefone da conversa.', rows: 3 },
       ],
     },
     {
       title: 'Menu e atendimento humano',
-      description: 'Menu central depois da validação. Mantém cobrança, IRPF e atendente em caminhos separados.',
+      description: 'Primeira resposta do robô. A opção de atendente não pede CPF.',
       fields: [
-        { field: 'menu_message', label: 'Menu principal', help: 'Use {{nome_aluno}} para chamar a pessoa pelo nome depois da confirmação.', rows: 6 },
+        { field: 'menu_message', label: 'Menu principal', help: 'Enviado imediatamente na primeira mensagem recebida.', rows: 8 },
         { field: 'fallback_message', label: 'Quando não entender', help: 'Resposta enviada quando o aluno digita algo fora do menu.', rows: 3 },
         { field: 'handoff_message', label: 'Encaminhar atendente', help: 'Mensagem antes de pausar o robô naquela conversa.', rows: 3 },
       ],

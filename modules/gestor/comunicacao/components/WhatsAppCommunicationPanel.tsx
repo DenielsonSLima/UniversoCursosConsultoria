@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bell, BellOff, CheckCircle2, Clock3, Send } from 'lucide-react';
 import { ContasReceber, financeiroService } from '../../financeiro/financeiro.service';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { MensageriaConfigData, mensageriaService } from '../../configuracoes/mensageria/mensageria.service';
@@ -14,6 +15,7 @@ import { whatsappService } from './whatsapp/whatsapp.service';
 import { WhatsAppContact } from './whatsapp/whatsapp.types';
 import { defaultMessageFor, normalizePhone } from './whatsapp/whatsapp.utils';
 import { useWhatsAppRealtime } from './whatsapp/useWhatsAppRealtime';
+import { installWhatsAppSoundUnlock, isWhatsAppSoundEnabled, playIncomingWhatsAppSound, setWhatsAppSoundEnabled } from './whatsapp/inbox/notificationSound';
 import { DEFAULT_AUTOMATION, DEFAULT_MODALITIES } from './whatsapp-panel/constants';
 import AutomationsTab from './whatsapp-panel/AutomationsTab';
 import OverdueTab from './whatsapp-panel/OverdueTab';
@@ -44,6 +46,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   const [collapsedOverdueGroups, setCollapsedOverdueGroups] = useState<Set<string>>(new Set());
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => isWhatsAppSoundEnabled());
 
   const { data: config, isLoading: loadingConfig } = useQuery({
     queryKey: ['mensageria_config', 'whatsapp'],
@@ -101,6 +104,17 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   useWhatsAppRealtime(queryClient);
   const whatsappFlow = useWhatsAppFlow(queryClient, toast);
   const birthdayAgent = useBirthdayAgent(queryClient, toast);
+
+  useEffect(() => installWhatsAppSoundUnlock(), []);
+
+  const toggleSound = () => {
+    setSoundEnabled((current) => {
+      const next = !current;
+      setWhatsAppSoundEnabled(next);
+      if (next) playIncomingWhatsAppSound();
+      return next;
+    });
+  };
 
   useEffect(() => { if (activeTab === 'configuracoes') queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] }); }, [activeTab, queryClient]);
 
@@ -368,15 +382,53 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     <div className="flex flex-1 flex-col overflow-hidden bg-white antialiased">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
+      <div className="flex min-h-[72px] shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-6 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 ring-1 ring-emerald-100">
+            <img src="/logos/whatsapp.svg" alt="" aria-hidden="true" className="h-[22px] w-[22px]" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold tracking-tight text-[#001a33]">Comunicação WhatsApp</h1>
+            <p className="truncate text-xs font-medium text-slate-400">
+              Caixa externa de atendimento e automações financeiras.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 transition-colors ${soundEnabled ? 'bg-emerald-50 text-emerald-700 ring-emerald-100 hover:bg-emerald-100' : 'bg-slate-50 text-slate-400 ring-slate-100 hover:bg-slate-100'}`}
+            title={soundEnabled ? 'Som de novas mensagens ligado' : 'Som de novas mensagens desligado'}
+            aria-label={soundEnabled ? 'Desligar som de novas mensagens' : 'Ligar som de novas mensagens'}
+          >
+            {soundEnabled ? <Bell size={16} /> : <BellOff size={16} />}
+          </button>
+          <span className={`inline-flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-bold ${
+            apiReady ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+          }`}>
+            {apiReady ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}
+            {apiReady ? 'API configurada' : 'Aguardando API'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsStartModalOpen(true)}
+            className="inline-flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+          >
+            <Send size={14} />
+            Iniciar conversa
+          </button>
+        </div>
+      </div>
+
       <WhatsAppPanelHeader
         activeTab={activeTab}
-        apiReady={apiReady}
         onTabChange={setActiveTab}
-        onOpenStartModal={() => setIsStartModalOpen(true)}
       />
 
       {activeTab === 'conversas' && (
-        <WhatsAppInbox conversations={conversations} messages={conversationMessages} flowSessions={whatsappFlow.sessions} activeConversationId={activeConversationId} apiReady={apiReady} loadingConversations={loadingConversations} loadingMessages={loadingConversationMessages} onSelectConversation={selectConversation} onOpenStartModal={() => setIsStartModalOpen(true)} onSendReply={sendConversationReply} onDeleteConversations={deleteWhatsAppConversations} onPauseFlow={whatsappFlow.pause} onResetFlow={whatsappFlow.reset} />
+        <WhatsAppInbox conversations={conversations} messages={conversationMessages} flowSessions={whatsappFlow.sessions} activeConversationId={activeConversationId} apiReady={apiReady} loadingConversations={loadingConversations} loadingMessages={loadingConversationMessages} onSelectConversation={selectConversation} onSendReply={sendConversationReply} onDeleteConversations={deleteWhatsAppConversations} onPauseFlow={whatsappFlow.pause} onResetFlow={whatsappFlow.reset} onCloseConversation={whatsappFlow.close} onReopenConversation={whatsappFlow.reopen} />
       )}
 
       {activeTab === 'automacoes' && (

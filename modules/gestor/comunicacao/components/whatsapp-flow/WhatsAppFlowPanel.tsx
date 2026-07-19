@@ -49,7 +49,7 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
   }, [activeTab]);
 
   const stats = useMemo(() => ({
-    active: sessions.filter((item) => !item.handoff_required && item.status !== 'handoff').length,
+    active: sessions.filter((item) => !item.handoff_required && !['handoff', 'closed'].includes(item.status)).length,
     handoff: sessions.filter((item) => item.handoff_required || item.status === 'handoff').length,
   }), [sessions]);
 
@@ -57,9 +57,10 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
     const byTab = {
       geral: [
         ['aluno', 'Oi, preciso de atendimento.'],
+        ['bot', draft.menu_message],
+        ['aluno', '1'],
         ['bot', draft.welcome_message],
         ['aluno', '12345678900'],
-        ['bot', draft.menu_message],
       ],
       cobranca: [
         ['aluno', '2'],
@@ -87,6 +88,11 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
     update('max_attempts', next);
   };
 
+  const updateAutoCloseHours = (value: string) => {
+    const next = Math.min(168, Math.max(1, Number(value || 24)));
+    update('auto_close_hours', next);
+  };
+
   if (loading) {
     return <div className="p-8 text-center text-sm font-bold text-slate-400">Carregando fluxo automático...</div>;
   }
@@ -102,7 +108,7 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[#001a33]">Fluxo automático de cobrança</h3>
-                <p className="text-sm font-medium text-slate-400">Sem IA: telefone + CPF, menu numérico e envio de link/PIX separado.</p>
+                <p className="text-sm font-medium text-slate-400">Menu imediato; CPF somente para cobrança e documentos. Atendimento humano sem CPF.</p>
               </div>
             </div>
             <button
@@ -116,7 +122,7 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
             </button>
           </div>
 
-          <div className="grid gap-4 py-5 md:grid-cols-3">
+          <div className="grid gap-4 py-5 md:grid-cols-2 xl:grid-cols-4">
             <label className="flex min-h-[84px] cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4">
               <span>
                 <span className="block text-sm font-bold text-[#001a33]">Robô ativo</span>
@@ -144,6 +150,27 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
               <div className="flex items-center gap-2 text-sm font-bold text-emerald-800"><ShieldCheck size={16} /> Validação</div>
               <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-700">CPF com ou sem pontuação. Só libera cobrança se telefone e CPF forem do mesmo aluno.</p>
             </div>
+            <label className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold text-[#001a33]">Encerrar por inatividade</span>
+                <input
+                  type="checkbox"
+                  checked={draft.auto_close_enabled}
+                  onChange={(event) => update('auto_close_enabled', event.target.checked)}
+                  className="h-5 w-5 accent-emerald-600"
+                />
+              </span>
+              <span className="mt-1 block text-[11px] font-semibold text-slate-400">Prazo sem novas mensagens (horas)</span>
+              <input
+                type="number"
+                min={1}
+                max={168}
+                disabled={!draft.auto_close_enabled}
+                value={draft.auto_close_hours}
+                onChange={(event) => updateAutoCloseHours(event.target.value)}
+                className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-emerald-300 disabled:opacity-50"
+              />
+            </label>
           </div>
 
           <div className="mb-5 grid gap-3 md:grid-cols-3">

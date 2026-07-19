@@ -185,13 +185,12 @@ const processStatus = async (admin: any, status: any) => {
   const messageId = String(status?.id || "").trim();
   if (!messageId) return;
 
-  await admin
-    .from("whatsapp_mensagens")
-    .update({
-      status: String(status?.status || "status"),
-      raw_payload: status,
-    })
-    .eq("meta_message_id", messageId);
+  const { error } = await admin.rpc("whatsapp_apply_message_status", {
+    p_message_id: messageId,
+    p_status: String(status?.status || "status"),
+    p_payload: status,
+  });
+  if (error) throw error;
 };
 
 const timestampToIso = (value: unknown) => {
