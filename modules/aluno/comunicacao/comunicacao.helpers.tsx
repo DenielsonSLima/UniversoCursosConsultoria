@@ -1,13 +1,13 @@
 import React from 'react';
 import { File, FileSpreadsheet, FileText, Image, Presentation } from 'lucide-react';
 
-export const ACCEPTED_ATTACHMENT_TYPES = 'image/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx';
+export const ACCEPTED_ATTACHMENT_TYPES = 'image/jpeg,image/png,image/gif,image/webp,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx';
 
 export const getFileIcon = (url: string | null, type?: string) => {
   if (!url && !type) return <File size={14} />;
   const lower = (url || type || '').toLowerCase();
 
-  if (/\.(jpe?g|png|gif|webp|svg)/.test(lower) || (type || '').startsWith('image/')) {
+  if (/\.(jpe?g|png|gif|webp)/.test(lower) || ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(type || '')) {
     return <Image size={14} className="text-blue-500" />;
   }
 
@@ -31,7 +31,7 @@ export const getFileIcon = (url: string | null, type?: string) => {
 };
 
 export const isImageUrl = (url: string) =>
-  /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url);
+  /\.(jpe?g|png|gif|webp)(\?.*)?$/i.test(url);
 
 export const formatChatTime = (isoString?: string | null) => {
   if (!isoString) return '';

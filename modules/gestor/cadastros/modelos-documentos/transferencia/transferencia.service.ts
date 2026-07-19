@@ -1,7 +1,7 @@
 
 import { createDocumentTemplateService } from '../shared/document-template.service';
 
-const transferenciaTemplatePageBreak = /<div[^>]*data-page-break=["']true["'][\s\S]*?<\/div>/i;
+const transferenciaTemplatePageBreak = /<div[^>]*data-page-break=["']true["'][\s\S]*?<\/div>/gi;
 
 const normalizeTransferenciaTextContent = (textContent = '') => {
   const currentBreaks = (textContent.match(transferenciaTemplatePageBreak) || []).length;

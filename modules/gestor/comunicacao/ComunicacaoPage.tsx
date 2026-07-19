@@ -1,70 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, MessageSquare, CheckCircle, Clock, Send, Paperclip, Filter, Tag, Sparkles, X, FileText, FileSpreadsheet, Image, File, Download, Trash2, AlertTriangle, MessageCircle, Plus } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { MessageSquare, MessageCircle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import {
+  removeCommunicationAttachmentPaths,
+  removeCommunicationAttachments,
+  resolveCommunicationAttachmentUrls,
+  uploadCommunicationAttachment,
+} from '../../shared/comunicacao/comunicacao-attachments.service';
 import WhatsAppCommunicationPanel from './components/WhatsAppCommunicationPanel';
 import StartInternalConversationModal, { InternalConversationContact } from './components/StartInternalConversationModal';
 import ToastNotification, { useToast } from '../components/ToastNotification';
-import { PortalAuthProfile } from '../../login/portal-session';
-
-interface Chat {
-  id: string;
-  remetente_id: string;
-  remetente_nome: string;
-  remetente_tipo: 'Aluno' | 'Professor';
-  categoria_id: string | null;
-  status: 'pendente' | 'solucionada';
-  ultimo_texto: string | null;
-  ultima_data: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Message {
-  id: string;
-  chat_id: string;
-  remetente_id: string | null;
-  remetente_nome: string;
-  remetente_tipo: 'aluno' | 'professor' | 'gestor' | 'sistema';
-  conteudo: string;
-  anexo_url: string | null;
-  lida: boolean;
-  created_at: string;
-}
-
-interface Category {
-  id: string;
-  nome: string;
-  descricao: string;
-  cor: string;
-  ativo: boolean;
-}
-
-interface ComunicacaoPageProps {
-  gestorProfile?: PortalAuthProfile | null;
-  channel?: 'mensagem' | 'whatsapp';
-}
-
-const playMessageSound = (tone: 'send' | 'receive') => {
-  try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const context = new AudioContextClass();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = tone === 'send' ? 660 : 880;
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.18);
-    window.setTimeout(() => context.close().catch(() => undefined), 260);
-  } catch {
-    // Som é um refinamento: se o navegador bloquear áudio, o chat continua normal.
-  }
-};
+import {
+  ComunicacaoPageProps,
+  GestorMessage,
+  getGestorCategoryInfo,
+  playGestorMessageSound,
+} from './gestor-comunicacao.types';
+import { useGestorComunicacaoRealtime } from './useGestorComunicacaoRealtime';
+import { GestorChatPanel, GestorDeleteChatModal, GestorInbox } from './GestorComunicacaoParts';
 
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channel = 'mensagem' }) => {
   const { toasts, removeToast, toast } = useToast();
@@ -72,17 +25,22 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
   const [searchText, setSearchText] = useState('');
   
-  // Realtime Data States
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
+  const {
+    activeChatId,
+    categories,
+    chats,
+    loadingChats,
+    loadingMessages,
+    messages,
+    messagesEndRef,
+    setActiveChatId,
+    setChats,
+    setMessages,
+    unreadChatIds,
+  } = useGestorComunicacaoRealtime();
   
   // Input State
   const [messageText, setMessageText] = useState('');
-  const [loadingChats, setLoadingChats] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [showStartConversation, setShowStartConversation] = useState(false);
 
   // Attachment state
@@ -96,237 +54,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingChat, setDeletingChat] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // 1. Initial Load: Chats and Categories
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  // 1.1 Realtime: manter o estado global de chats não lidos atualizado
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const { data } = await supabase
-          .from('comunicacao_mensagens')
-          .select('chat_id')
-          .eq('lida', false)
-          .in('remetente_tipo', ['aluno', 'professor']);
-        setUnreadChatIds(new Set(data?.map(m => m.chat_id) || []));
-      } catch (err) {
-        console.error('Erro ao buscar chats não lidos:', err);
-      }
-    };
-
-    fetchUnread();
-
-    const msgsGlobalChannel = supabase
-      .channel('comunicacao_msgs_global_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comunicacao_mensagens' },
-        () => {
-          fetchUnread();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(msgsGlobalChannel);
-    };
-  }, []);
-
-  // 2. Realtime Subscription: Chats — robusto, busca o registro completo em cada evento
-  useEffect(() => {
-    const chatsChannel = supabase
-      .channel('comunicacao_chats_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comunicacao_chats' },
-        async (payload) => {
-          if (payload.eventType === 'DELETE') {
-            const oldId = (payload.old as { id: string }).id;
-            setChats(prev => prev.filter(c => c.id !== oldId));
-            return;
-          }
-
-          // Para INSERT e UPDATE, busca o registro completo para garantir dados corretos
-          const changedId = (payload.new as { id: string }).id;
-          const { data: freshChat } = await supabase
-            .from('comunicacao_chats')
-            .select('*')
-            .eq('id', changedId)
-            .single();
-
-          if (!freshChat) return;
-
-          if (payload.eventType === 'INSERT') {
-            setChats(prev => {
-              if (prev.some(c => c.id === freshChat.id)) return prev;
-              // Novo chat vai pro topo (mais recente primeiro)
-              return [freshChat, ...prev];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setChats(prev => {
-              const updated = prev.map(c => c.id === freshChat.id ? freshChat : c);
-              // Reordena por ultima_data para que chats com nova mensagem subam
-              return [...updated].sort((a, b) =>
-                new Date(b.ultima_data).getTime() - new Date(a.ultima_data).getTime()
-              );
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(chatsChannel);
-    };
-  }, []);
-
-  // Helper: marcar mensagens do chat ativo como lidas
-  const markMessagesAsRead = async (chatId: string) => {
-    try {
-      await supabase
-        .from('comunicacao_mensagens')
-        .update({ lida: true })
-        .eq('chat_id', chatId)
-        .in('remetente_tipo', ['aluno', 'professor'])
-        .eq('lida', false);
-    } catch (err) {
-      console.error('Erro ao marcar mensagens como lidas:', err);
-    }
-  };
-
-  // 3. Realtime Subscription: Messages of the Active Chat
-  useEffect(() => {
-    if (!activeChatId) {
-      setMessages([]);
-      return;
-    }
-
-    loadMessages(activeChatId);
-
-    const msgsChannel = supabase
-      .channel(`comunicacao_msgs_realtime_${activeChatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'comunicacao_mensagens',
-          filter: `chat_id=eq.${activeChatId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as Message;
-          setMessages(prev => {
-            if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          if (newMsg.remetente_tipo === 'aluno' || newMsg.remetente_tipo === 'professor') {
-            playMessageSound('receive');
-            markMessagesAsRead(activeChatId);
-          }
-        }
-      )
-      .subscribe();
-
-    markMessagesAsRead(activeChatId);
-
-    return () => {
-      supabase.removeChannel(msgsChannel);
-    };
-  }, [activeChatId]);
-
-  // 4. Autoscroll to bottom when messages update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const loadInitialData = async () => {
-    setLoadingChats(true);
-    try {
-      // Fetch categories
-      const { data: catData } = await supabase
-        .from('comunicacao_categorias')
-        .select('*')
-        .order('nome', { ascending: true });
-      
-      setCategories(catData || []);
-
-      // Fetch chats
-      const { data: chatData } = await supabase
-        .from('comunicacao_chats')
-        .select('*')
-        .order('ultima_data', { ascending: false });
-      
-      setChats(chatData || []);
-
-      // Fetch initial unread message chat IDs
-      const { data: unreadData } = await supabase
-        .from('comunicacao_mensagens')
-        .select('chat_id')
-        .eq('lida', false)
-        .in('remetente_tipo', ['aluno', 'professor']);
-      setUnreadChatIds(new Set(unreadData?.map(m => m.chat_id) || []));
-
-      if (chatData && chatData.length > 0) {
-        // Find first pending chat to set active by default
-        const firstPending = chatData.find(c => c.status === 'pendente');
-        if (firstPending) {
-          setActiveChatId(firstPending.id);
-        } else {
-          setActiveChatId(chatData[0].id);
-        }
-      }
-    } catch (err) {
-      console.error('Erro ao carregar dados iniciais de comunicação:', err);
-    } finally {
-      setLoadingChats(false);
-    }
-  };
-
-  const loadMessages = async (chatId: string) => {
-    setLoadingMessages(true);
-    try {
-      const { data, error } = await supabase
-        .from('comunicacao_mensagens')
-        .select('*')
-        .eq('chat_id', chatId)
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (err) {
-      console.error('Erro ao carregar mensagens:', err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  // ── Upload helper ──
-  const uploadAttachment = async (file: File): Promise<string | null> => {
-    const ext = file.name.split('.').pop();
-    const path = `comunicacao/gestor/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from('anexos').upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('anexos').getPublicUrl(path);
-    return urlData?.publicUrl || null;
-  };
-
-  // ── File icon helper ──
-  const getFileIcon = (url: string | null, type?: string) => {
-    const lower = (url || type || '').toLowerCase();
-    if (/\.(jpe?g|png|gif|webp|svg)/.test(lower) || (type || '').startsWith('image/'))
-      return <Image size={14} className="text-blue-500" />;
-    if (/\.pdf/.test(lower)) return <FileText size={14} className="text-red-500" />;
-    if (/\.(ppt|pptx)/.test(lower)) return <File size={14} className="text-orange-500" />;
-    if (/\.(xls|xlsx)/.test(lower)) return <FileSpreadsheet size={14} className="text-emerald-600" />;
-    if (/\.(doc|docx)/.test(lower)) return <FileText size={14} className="text-blue-600" />;
-    return <File size={14} className="text-slate-500" />;
-  };
-
-  const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|svg)(\?.*)?$/i.test(url);
 
   // Send Message
   const handleSendMessage = async () => {
@@ -340,9 +67,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
     setUploadingFile(!!fileToSend);
 
     try {
-      let anexoUrl: string | null = null;
+      let attachmentPath: string | null = null;
       if (fileToSend) {
-        anexoUrl = await uploadAttachment(fileToSend);
+        attachmentPath = await uploadCommunicationAttachment({
+          actor: { type: 'gestor' },
+          chatId: activeChatId,
+          file: fileToSend,
+        });
       }
 
       const msgPayload: any = {
@@ -351,23 +82,30 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         remetente_nome: gestorNome,
         remetente_tipo: 'gestor',
         conteudo: text || (fileToSend ? `📎 ${fileToSend.name}` : ''),
-        anexo_url: anexoUrl,
+        anexo_path: attachmentPath,
+        anexo_url: null,
       };
 
       const { data: newMsg, error: msgErr } = await supabase
         .from('comunicacao_mensagens').insert(msgPayload).select().single();
-      if (msgErr) throw msgErr;
+      if (msgErr) {
+        if (attachmentPath) {
+          await removeCommunicationAttachmentPaths([attachmentPath]).catch(() => undefined);
+        }
+        throw msgErr;
+      }
 
       await supabase.from('comunicacao_chats').update({
         ultimo_texto: text || `📎 ${fileToSend?.name}`,
         ultima_data: new Date().toISOString()
       }).eq('id', activeChatId);
 
+      const [resolvedMessage] = await resolveCommunicationAttachmentUrls([newMsg as GestorMessage]);
       setMessages(prev => {
-        if (prev.some(m => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+        if (prev.some(m => m.id === resolvedMessage.id)) return prev;
+        return [...prev, resolvedMessage];
       });
-      playMessageSound('send');
+      playGestorMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       toast.error('Erro ao enviar', 'Não foi possível enviar sua resposta.');
@@ -428,7 +166,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         );
         setActiveTicketStatus('pendente');
         setActiveChatId(existingChat.id);
-        playMessageSound('send');
+        playGestorMessageSound('send');
         toast.success('Atendimento aberto', `Conversa existente com ${contact.nome} foi atualizada.`);
         return;
       }
@@ -466,7 +204,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       setMessages(newMsg ? [newMsg] : []);
       setActiveTicketStatus('pendente');
       setActiveChatId(chat.id);
-      playMessageSound('send');
+      playGestorMessageSound('send');
       toast.success('Atendimento iniciado', `Conversa interna criada para ${contact.nome}.`);
     } catch (err: any) {
       console.error('Erro ao iniciar atendimento interno:', err);
@@ -477,8 +215,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
 
   const handleTransferCategory = async (nextCategoryId: string) => {
     if (!activeChatId || !currentChat || !nextCategoryId || nextCategoryId === currentChat.categoria_id) return;
-    const previousCategory = getCategoryInfo(currentChat.categoria_id).nome;
-    const nextCategory = getCategoryInfo(nextCategoryId).nome;
+    const previousCategory = getGestorCategoryInfo(categories, currentChat.categoria_id).nome;
+    const nextCategory = getGestorCategoryInfo(categories, nextCategoryId).nome;
 
     try {
       const { error: chatErr } = await supabase
@@ -567,36 +305,15 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
 
     try {
       // 1. Busca mensagens com anexo
-      const { data: msgsWithAnexo } = await supabase
+      const { data: msgsWithAnexo, error: attachmentsError } = await supabase
         .from('comunicacao_mensagens')
-        .select('anexo_url')
-        .eq('chat_id', activeChatId)
-        .not('anexo_url', 'is', null);
+        .select('anexo_path,anexo_url')
+        .eq('chat_id', activeChatId);
+      if (attachmentsError) throw attachmentsError;
 
       // 2. Deleta arquivos do Storage
       if (msgsWithAnexo && msgsWithAnexo.length > 0) {
-        const paths = msgsWithAnexo
-          .map((m: any) => {
-            try {
-              // Extrai o path relativo da URL pública
-              // Ex: https://xxx.supabase.co/storage/v1/object/public/anexos/comunicacao/gestor/123.pdf
-              const url = new URL(m.anexo_url);
-              const pathParts = url.pathname.split('/object/public/anexos/');
-              return pathParts[1] || null;
-            } catch {
-              return null;
-            }
-          })
-          .filter(Boolean) as string[];
-
-        if (paths.length > 0) {
-          const { error: storageErr } = await supabase.storage
-            .from('anexos')
-            .remove(paths);
-          if (storageErr) {
-            console.warn('Alguns arquivos não puderam ser removidos:', storageErr);
-          }
-        }
+        await removeCommunicationAttachments(msgsWithAnexo);
       }
 
       // 3. Deleta o chat (CASCADE remove as mensagens)
@@ -616,7 +333,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
       toast.success('Atendimento excluído', 'O atendimento e todos os arquivos foram removidos.');
     } catch (err) {
       console.error('Erro ao excluir atendimento:', err);
-      toast.error('Erro ao excluir', 'Não foi possível excluir o atendimento.');
+      toast.error(
+        'Erro ao excluir',
+        'Não foi possível concluir a exclusão com segurança. O atendimento foi preservado.',
+      );
     } finally {
       setDeletingChat(false);
     }
@@ -635,23 +355,6 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
     return true;
   });
 
-  // Helpers for category visual mapping
-  const getCategoryInfo = (catId: string | null) => {
-    if (!catId) return { nome: 'Geral', cor: '#475569' };
-    const cat = categories.find(c => c.id === catId);
-    return cat || { nome: 'Geral', cor: '#475569' };
-  };
-
-  // Format timestamp (HH:MM or Date)
-  const formatTime = (isoString: string) => {
-    const d = new Date(isoString);
-    const today = new Date();
-    if (d.toDateString() === today.toDateString()) {
-      return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    }
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
-
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm animate-fadeIn antialiased">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
@@ -661,8 +364,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         onClose={() => setShowStartConversation(false)}
         onStart={handleStartInternalConversation}
       />
-      
-      {/* Top Header */}
+
       <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
         <div className="flex items-center gap-3">
           <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
@@ -683,431 +385,56 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ gestorProfile, channe
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        
         {channel === 'whatsapp' ? (
           <WhatsAppCommunicationPanel />
         ) : (
           <>
-            {/* Sidebar: Tickets list */}
-            <div className="w-[360px] border-r border-slate-200 flex flex-col bg-white shrink-0">
-              
-              {/* Ticket Status Selectors */}
-              <div className="space-y-3 border-b border-slate-100 bg-white p-4">
-                <button
-                  onClick={() => setShowStartConversation(true)}
-                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-4 text-xs font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-blue-900"
-                >
-                  <Plus size={15} />
-                  Iniciar conversa
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => {
-                      setActiveTicketStatus('pendente');
-                      // Auto select first match if available
-                      const matches = chats.filter(c => c.status === 'pendente');
-                      if (matches.length > 0) setActiveChatId(matches[0].id);
-                    }}
-                    className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${
-                      activeTicketStatus === 'pendente' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-amber-600'
-                    }`}
-                  >
-                    <Clock size={14} /> Abertas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{pendingCount}</span>
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setActiveTicketStatus('solucionada');
-                      const matches = chats.filter(c => c.status === 'solucionada');
-                      if (matches.length > 0) setActiveChatId(matches[0].id);
-                    }}
-                    className={`flex min-h-[38px] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all ${
-                      activeTicketStatus === 'solucionada' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-emerald-600'
-                    }`}
-                  >
-                    <CheckCircle size={14} /> Resolvidas <span className="rounded-full bg-white/80 px-1.5 text-[10px]">{solvedCount}</span>
-                  </button>
-                </div>
-
-                {/* Filter and Search Bar */}
-                <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <input 
-                      type="text" 
-                      placeholder="Buscar conversa..."
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      className="h-11 w-full rounded-2xl border border-slate-100 bg-slate-50 pl-9 pr-3 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-blue-200 focus:bg-white"
-                    />
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
-                  
-                  <div className="relative">
-                    <select
-                      value={selectedCategoryFilter}
-                      onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                      className="h-10 w-full cursor-pointer appearance-none rounded-xl border border-transparent bg-slate-50 pl-9 pr-8 text-xs font-semibold text-slate-600 outline-none transition-colors hover:bg-slate-100"
-                    >
-                      <option value="todos">Todas as categorias</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))}
-                    </select>
-                    <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Scrollable Tickets List */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
-                {loadingChats ? (
-                  <div className="flex justify-center items-center py-10">
-                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                ) : filteredChats.length === 0 ? (
-                  <div className="px-6 py-12 text-center">
-                    <MessageSquare size={26} className="mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm font-bold text-slate-600">Nenhuma conversa</p>
-                    <p className="mt-1 text-xs font-medium leading-relaxed text-slate-400">Inicie uma conversa com um aluno ou altere o filtro.</p>
-                  </div>
-                ) : (
-                  filteredChats.map(chat => {
-                    const catInfo = getCategoryInfo(chat.categoria_id);
-                    const isSelected = activeChatId === chat.id;
-
-                    return (
-                      <button 
-                        key={chat.id}
-                        onClick={() => setActiveChatId(chat.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all border ${
-                          isSelected ? 'bg-blue-50/80 shadow-sm border-blue-100' : 'hover:bg-slate-50 border-transparent'
-                        }`}
-                      >
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-sm ${
-                          chat.remetente_tipo === 'Professor' ? 'bg-purple-600' : 'bg-blue-600'
-                        }`}>
-                          {chat.remetente_nome.slice(0, 2).toUpperCase()}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline mb-0.5">
-                            <h4 className="font-bold truncate text-sm text-[#001a33] flex items-center gap-1.5">
-                              {chat.remetente_nome}
-                              {unreadChatIds.has(chat.id) && (
-                                <span className="w-2 h-2 bg-red-500 rounded-full shrink-0 animate-pulse" />
-                              )}
-                            </h4>
-                            <span className="text-[10px] text-slate-400 font-medium shrink-0">{formatTime(chat.ultima_data)}</span>
-                          </div>
-                          
-                          <p className="text-xs text-slate-500 truncate font-medium">
-                            {chat.ultimo_texto || 'Sem mensagens...'}
-                          </p>
-
-                          <div className="flex items-center gap-1.5 mt-2">
-                             <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: catInfo.cor }}></div>
-                             <span className="text-[10px] text-slate-400 font-semibold">Setor: {catInfo.nome}</span>
-                             <span className="text-[10px] text-slate-300 font-medium">|</span>
-                             <span className={`text-[10px] font-bold ${
-                               chat.remetente_tipo === 'Professor' ? 'text-purple-600 bg-purple-50' : 'text-blue-600 bg-blue-50'
-                             } px-2 py-0.5 rounded-full`}>
-                               {chat.remetente_tipo}
-                             </span>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* Chat Area (Conversas e mensagens) */}
-            {activeChatId && currentChat ? (
-              <div className="flex-1 flex flex-col bg-white">
-                
-                {/* Chat Topbar */}
-                <div className="min-h-[72px] border-b border-slate-100 flex justify-between items-center bg-white px-5 z-10">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white ${
-                      currentChat.remetente_tipo === 'Professor' ? 'bg-purple-600' : 'bg-blue-600'
-                    }`}>
-                      {currentChat.remetente_nome.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-[#001a33] flex items-center gap-2">
-                        {currentChat.remetente_nome}
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          currentChat.remetente_tipo === 'Professor' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-blue-50 text-blue-600 border border-blue-100'
-                        }`}>
-                          {currentChat.remetente_tipo}
-                        </span>
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-                          <Tag size={9} /> Setor: {getCategoryInfo(currentChat.categoria_id).nome}
-                        </span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className={`text-[11px] font-semibold flex items-center gap-1 ${
-                          currentChat.status === 'pendente' ? 'text-amber-500' : 'text-emerald-500'
-                        }`}>
-                          {currentChat.status === 'pendente' ? <Clock size={9} /> : <CheckCircle size={9} />}
-                          {currentChat.status === 'pendente' ? 'Aberto' : 'Resolvido'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {currentChat.status === 'pendente' && (
-                      <label className="relative flex items-center">
-                        <span className="sr-only">Transferir conversa para outro setor</span>
-                        <select
-                          value={currentChat.categoria_id || ''}
-                          onChange={(event) => handleTransferCategory(event.target.value)}
-                          className="h-10 appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-8 text-xs font-semibold text-slate-600 outline-none transition-colors hover:bg-white focus:border-blue-500"
-                        >
-                          <option value="" disabled>Transferir setor</option>
-                          {categories.filter(category => category.ativo).map(category => (
-                            <option key={category.id} value={category.id}>{category.nome}</option>
-                          ))}
-                        </select>
-                        <Tag size={12} className="pointer-events-none absolute right-3 text-slate-400" />
-                      </label>
-                    )}
-                    {currentChat.status === 'pendente' && (
-                      <button 
-                        onClick={handleMarkAsSolved}
-                        className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
-                      >
-                        <CheckCircle size={12} /> Finalizar
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      title="Excluir atendimento e arquivos"
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Messages Display */}
-                <div className="flex-1 overflow-y-auto p-5 bg-[#f7f9fb] space-y-3 custom-scrollbar">
-                  {loadingMessages ? (
-                    <div className="flex justify-center items-center py-20">
-                      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    messages.map((msg) => {
-                      const isGestor = msg.remetente_tipo === 'gestor';
-                      const isSystem = msg.remetente_tipo === 'sistema';
-
-                      if (isSystem) {
-                        return (
-                          <div key={msg.id} className="flex justify-center my-6">
-                            <span className="bg-white border border-slate-200 text-slate-500 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-                              <Sparkles size={9} /> {msg.conteudo}
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div 
-                          key={msg.id} 
-                          className={`flex items-end gap-2 ${isGestor ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {!isGestor && (
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
-                              currentChat.remetente_tipo === 'Professor' ? 'bg-purple-500' : 'bg-blue-500'
-                            }`}>
-                              {msg.remetente_nome.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          
-                          <div 
-                            className={`rounded-2xl max-w-md shadow-sm border overflow-hidden ${
-                              isGestor 
-                                ? 'bg-[#001a33] text-white border-transparent rounded-br-sm' 
-                                : 'bg-white text-slate-700 border-slate-100 rounded-bl-sm'
-                            }`}
-                          >
-                            {/* Attachment preview */}
-                            {msg.anexo_url && (
-                              <div className="p-2 border-b border-white/10">
-                                {isImageUrl(msg.anexo_url) ? (
-                                  <img
-                                    src={msg.anexo_url}
-                                    alt="anexo"
-                                    className="max-w-[220px] max-h-[160px] rounded-xl object-cover cursor-pointer"
-                                    onClick={() => window.open(msg.anexo_url, '_blank')}
-                                  />
-                                ) : (
-                                  <a
-                                    href={msg.anexo_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
-                                      isGestor ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
-                                    }`}
-                                  >
-                                    {getFileIcon(msg.anexo_url)}
-                                    <span className="truncate max-w-[160px]">{msg.anexo_url.split('/').pop()}</span>
-                                    <Download size={12} className="shrink-0" />
-                                  </a>
-                                )}
-                              </div>
-                            )}
-                            {/* Text */}
-                            {msg.conteudo && !msg.conteudo.startsWith('📎') && (
-                              <div className="px-3.5 pt-2.5 pb-1">
-                                <p className={`text-[10px] font-semibold mb-1 ${
-                                  isGestor ? 'text-blue-300' : 'text-blue-600'
-                                }`}>
-                                  {msg.remetente_nome}
-                                </p>
-                                <p className="text-sm font-medium leading-relaxed break-words">{msg.conteudo}</p>
-                              </div>
-                            )}
-                            <div className={`flex items-center justify-end px-3 pb-1.5 ${ msg.conteudo && !msg.conteudo.startsWith('📎') ? '' : 'pt-1.5' }`}>
-                              <span className="text-[10px] font-medium text-slate-400">{formatTime(msg.created_at)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Messages Input Box */}
-                <div className="shrink-0 border-t border-slate-100 bg-white">
-                  {currentChat.status === 'solucionada' ? (
-                    <div className="px-4 py-4">
-                      <div className="text-center bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-xl py-3 text-xs font-bold flex items-center justify-center gap-2">
-                        <CheckCircle size={12} /> Atendimento finalizado.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 space-y-2">
-                      {/* Pending file preview */}
-                      {pendingFile && (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
-                          {getFileIcon(null, pendingFile.type)}
-                          <span className="text-xs font-bold text-slate-700 truncate flex-1">{pendingFile.name}</span>
-                          <button onClick={() => setPendingFile(null)} className="p-0.5 hover:bg-blue-200 rounded-full transition-colors">
-                            <X size={12} className="text-slate-500" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Input row */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0"
-                          title="Anexar arquivo"
-                        >
-                          <Paperclip size={18} />
-                        </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0] || null;
-                            setPendingFile(f);
-                            e.target.value = '';
-                          }}
-                        />
-
-                        <div className="flex-1 bg-slate-50 rounded-xl flex items-center px-4 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
-                          <input 
-                            type="text" 
-                            value={messageText}
-                            onChange={(e) => setMessageText(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                            placeholder="Escreva uma mensagem..."
-                            className="w-full bg-transparent border-none outline-none text-sm text-slate-700 py-3 font-medium placeholder:text-slate-400"
-                          />
-                        </div>
-
-                        <button 
-                          onClick={handleSendMessage}
-                          disabled={!messageText.trim() && !pendingFile || uploadingFile}
-                          className="p-2.5 bg-[#001a33] text-white rounded-full hover:bg-blue-900 transition-colors shadow-sm disabled:opacity-40 shrink-0"
-                        >
-                          {uploadingFile
-                            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            : <Send size={16} />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 px-8 text-center">
-                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-300 mb-4 shadow-sm">
-                  <MessageSquare size={30} />
-                </div>
-                <h3 className="text-lg font-bold text-[#001a33] tracking-tight">Atendimento ao usuário</h3>
-                <p className="text-slate-400 text-xs font-medium max-w-xs mt-1">
-                  Selecione um chamado ao lado para iniciar a conversa em tempo real.
-                </p>
-              </div>
-            )}
+            <GestorInbox
+              activeChatId={activeChatId}
+              activeStatus={activeTicketStatus}
+              categories={categories}
+              chats={chats}
+              filteredChats={filteredChats}
+              loading={loadingChats}
+              pendingCount={pendingCount}
+              searchText={searchText}
+              selectedCategory={selectedCategoryFilter}
+              solvedCount={solvedCount}
+              unreadChatIds={unreadChatIds}
+              onActiveChat={setActiveChatId}
+              onActiveStatus={setActiveTicketStatus}
+              onCategory={setSelectedCategoryFilter}
+              onSearch={setSearchText}
+              onStart={() => setShowStartConversation(true)}
+            />
+            <GestorChatPanel
+              categories={categories}
+              chat={currentChat}
+              fileInputRef={fileInputRef}
+              loading={loadingMessages}
+              messageText={messageText}
+              messages={messages}
+              messagesEndRef={messagesEndRef}
+              pendingFile={pendingFile}
+              uploading={uploadingFile}
+              onDelete={() => setShowDeleteConfirm(true)}
+              onFile={setPendingFile}
+              onMessage={setMessageText}
+              onSend={handleSendMessage}
+              onSolve={handleMarkAsSolved}
+              onTransfer={handleTransferCategory}
+            />
           </>
         )}
-
       </div>
 
-      {/* ── Hard-Delete Confirmation Modal (Gestor) ── */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fadeIn">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
-                <AlertTriangle size={28} />
-              </div>
-
-              <div>
-                <h4 className="text-base font-bold text-[#001a33] tracking-tight">Excluir atendimento</h4>
-                <p className="text-slate-500 text-xs mt-2 leading-relaxed">
-                  Esta ação é <strong>irreversível</strong>. O atendimento, todas as mensagens
-                  e <strong>todos os arquivos anexados</strong> serão permanentemente deletados.
-                  O aluno também perderá acesso ao histórico.
-                </p>
-              </div>
-
-              <div className="flex gap-3 w-full mt-2">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={deletingChat}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide rounded-xl transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteChat}
-                  disabled={deletingChat}
-                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wide rounded-xl transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {deletingChat
-                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : <><Trash2 size={13} /> Excluir Tudo</>
-                  }
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <GestorDeleteChatModal
+          deleting={deletingChat}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDeleteChat}
+        />
       )}
     </div>
   );

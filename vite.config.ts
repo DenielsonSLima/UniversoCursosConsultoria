@@ -7,7 +7,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+    // Carregue apenas variáveis explicitamente públicas. Segredos de serviços
+    // externos nunca podem ser incorporados ao bundle do navegador.
+    const env = loadEnv(mode, '.', ['VITE_', 'REACT_APP_SUPABASE_']);
     const supabaseUrl = env.VITE_SUPABASE_URL || env.REACT_APP_SUPABASE_URL || '';
     const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.REACT_APP_SUPABASE_ANON_KEY || '';
 
@@ -18,8 +20,6 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(supabaseUrl),
         'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
         'import.meta.env.REACT_APP_SUPABASE_URL': JSON.stringify(supabaseUrl),

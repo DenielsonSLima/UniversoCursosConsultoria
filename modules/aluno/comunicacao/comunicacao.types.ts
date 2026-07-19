@@ -29,7 +29,9 @@ export interface ComunicacaoMensagem {
   remetente_nome?: string | null;
   remetente_tipo?: string | null;
   conteudo?: string | null;
+  anexo_path?: string | null;
   anexo_url?: string | null;
+  anexo_display_url?: string | null;
   lida?: boolean | null;
   created_at?: string | null;
 }

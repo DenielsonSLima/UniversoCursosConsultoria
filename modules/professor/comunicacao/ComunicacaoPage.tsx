@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { MessageSquare, Send, Paperclip, Clock, CheckCircle, Tag, Plus, X, Sparkles } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, Tag, Plus, Sparkles } from 'lucide-react';
+import { CommunicationAttachmentPreview } from '../../shared/comunicacao/CommunicationAttachmentPreview';
+import { resolveCommunicationAttachmentUrls } from '../../shared/comunicacao/comunicacao-attachments.service';
+import { ProfessorNewChatModal } from './ProfessorNewChatModal';
+import { ProfessorMessageComposer } from './ProfessorMessageComposer';
+import {
+  ProfessorCommunicationMessage,
+  professorComunicacaoService,
+} from './professor-comunicacao.service';
 
 interface ComunicacaoPageProps {
   professorId: string;
@@ -17,7 +25,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
   // New Chat Form States
   const [newChatCategory, setNewChatCategory] = useState('');
   const [newChatSubject, setNewChatSubject] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 1. Fetch Categories
@@ -58,7 +69,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
         .eq('chat_id', activeChatId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data || [];
+      return resolveCommunicationAttachmentUrls(data || []);
     }
   });
 
@@ -76,12 +87,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
           table: 'comunicacao_mensagens',
           filter: `chat_id=eq.${activeChatId}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('Realtime message received:', payload.new);
+          const [newMessage] = await resolveCommunicationAttachmentUrls([payload.new]);
           queryClient.setQueryData(['chat-messages', activeChatId], (oldData: any[] | undefined) => {
-            if (!oldData) return [payload.new];
-            if (oldData.some(m => m.id === payload.new.id)) return oldData;
-            return [...oldData, payload.new];
+            if (!oldData) return [newMessage];
+            if (oldData.some(m => m.id === newMessage.id)) return oldData;
+            return [...oldData, newMessage];
           });
         }
       )
@@ -130,36 +142,25 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
 
   // Send Message
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !activeChatId) return;
-    const text = messageText;
+    if (!activeChatId) return;
+    const text = messageText.trim();
+    const fileToSend = pendingFile;
+    if (!text && !fileToSend) return;
+
     setMessageText('');
+    setPendingFile(null);
+    setUploadingFile(Boolean(fileToSend));
 
     try {
-      const { data: newMsg, error: msgErr } = await supabase
-        .from('comunicacao_mensagens')
-        .insert({
-          chat_id: activeChatId,
-          remetente_id: professorId,
-          remetente_nome: professorNome,
-          remetente_tipo: 'professor',
-          conteudo: text
-        })
-        .select()
-        .single();
+      const newMsg = await professorComunicacaoService.sendMessage({
+        chatId: activeChatId,
+        file: fileToSend,
+        professorId,
+        professorNome,
+        text,
+      });
 
-      if (msgErr) throw msgErr;
-
-      const { error: chatErr } = await supabase
-        .from('comunicacao_chats')
-        .update({
-          ultimo_texto: text,
-          ultima_data: new Date().toISOString()
-        })
-        .eq('id', activeChatId);
-
-      if (chatErr) throw chatErr;
-
-      queryClient.setQueryData(['chat-messages', activeChatId], (oldData: any[] | undefined) => {
+      queryClient.setQueryData(['chat-messages', activeChatId], (oldData: ProfessorCommunicationMessage[] | undefined) => {
         if (!oldData) return [newMsg];
         if (oldData.some(m => m.id === newMsg.id)) return oldData;
         return [...oldData, newMsg];
@@ -167,6 +168,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       alert('Erro ao enviar mensagem.');
+    } finally {
+      setUploadingFile(false);
     }
   };
 
@@ -388,20 +391,25 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
                       )}
                       
                       <div 
-                        className={`p-3 rounded-2xl max-w-md shadow-sm border ${
+                        className={`rounded-2xl max-w-md shadow-sm border overflow-hidden ${
                           isSelf 
                             ? 'bg-[#001a33] text-white border-transparent rounded-br-sm' 
                             : 'bg-white text-slate-700 border-slate-100 rounded-bl-sm'
                         }`}
                       >
-                        <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
-                          isSelf ? 'text-purple-300' : 'text-purple-600'
-                        }`}>
-                          {isSelf ? 'Você' : msg.remetente_nome}
-                        </p>
-                        <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
-                        <div className="flex items-center justify-end mt-1">
-                          <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
+                        <CommunicationAttachmentPreview attachment={msg} outgoing={isSelf} />
+                        <div className="p-3">
+                          <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${
+                            isSelf ? 'text-purple-300' : 'text-purple-600'
+                          }`}>
+                            {isSelf ? 'Você' : msg.remetente_nome}
+                          </p>
+                          {msg.conteudo && !msg.conteudo.startsWith('📎') && (
+                            <p className="text-xs font-medium leading-relaxed break-words">{msg.conteudo}</p>
+                          )}
+                          <div className="flex items-center justify-end mt-1">
+                            <span className="text-[8px] font-bold text-slate-400">{formatTime(msg.created_at)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -417,30 +425,16 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
                   Este chamado foi solucionado.
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <button className="p-2.5 text-slate-450 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors">
-                    <Paperclip size={18} />
-                  </button>
-                  
-                  <div className="flex-1 bg-slate-50 rounded-xl overflow-hidden flex items-center px-4.5 py-1.5 border border-slate-150 focus-within:border-purple-500 focus-within:bg-white transition-all shadow-inner">
-                    <input 
-                      type="text" 
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Escreva sua mensagem..."
-                      className="w-full bg-transparent border-none outline-none text-xs text-slate-700 py-1.5 font-medium"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
-                    className="p-2.5 bg-[#001a33] text-white rounded-xl hover:bg-purple-650 transition-colors shadow-lg disabled:opacity-50"
-                  >
-                    <Send size={16} />
-                  </button>
-                </div>
+                <ProfessorMessageComposer
+                  fileInputRef={fileInputRef}
+                  messageText={messageText}
+                  pendingFile={pendingFile}
+                  uploading={uploadingFile}
+                  onFile={setPendingFile}
+                  onFileError={(message) => alert(message)}
+                  onMessage={setMessageText}
+                  onSend={handleSendMessage}
+                />
               )}
             </div>
           </div>
@@ -459,67 +453,15 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ professorId, professo
 
       {/* NEW TICKET MODAL */}
       {showNewChatModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 max-w-md w-full border border-slate-100 shadow-2xl relative animate-fadeIn">
-            <button 
-              onClick={() => setShowNewChatModal(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="mb-6">
-              <h4 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Novo Chamado Docente</h4>
-              <p className="text-slate-550 text-xs mt-1">Fale diretamente com os setores administrativos e coordenação.</p>
-            </div>
-
-            <form onSubmit={handleCreateNewChat} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-555">Setor / Assunto</label>
-                <select
-                  required
-                  value={newChatCategory}
-                  onChange={(e) => setNewChatCategory(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 outline-none rounded-xl px-4 py-3 text-xs font-bold text-slate-700 focus:border-purple-500 focus:bg-white transition-all cursor-pointer"
-                >
-                  <option value="">Selecione uma categoria...</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-555">Mensagem / Solicitação</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Escreva detalhadamente o que você precisa..."
-                  value={newChatSubject}
-                  onChange={(e) => setNewChatSubject(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 outline-none rounded-xl px-4 py-3 text-xs font-medium text-slate-700 focus:border-purple-500 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowNewChatModal(false)}
-                  className="px-5 py-3 bg-slate-100 hover:bg-slate-205 text-slate-650 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newChatCategory || !newChatSubject.trim()}
-                  className="px-5 py-3 bg-[#001a33] hover:bg-purple-650 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors shadow-md"
-                >
-                  Confirmar Chamado
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ProfessorNewChatModal
+          categories={categories}
+          categoryId={newChatCategory}
+          subject={newChatSubject}
+          onCategoryChange={setNewChatCategory}
+          onClose={() => setShowNewChatModal(false)}
+          onSubmit={handleCreateNewChat}
+          onSubjectChange={setNewChatSubject}
+        />
       )}
 
     </div>

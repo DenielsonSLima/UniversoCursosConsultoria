@@ -1,20 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Universo Cursos e Consultoria
 
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/45dd4576-5302-4c2c-9fcb-c8882d05f64b
+Portal acadêmico e administrativo da Universo Cursos e Consultoria.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Pré-requisito:** Node.js
 
 
-1. Install dependencies:
+1. Instale as dependências:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Copie apenas as variáveis públicas descritas em `.env.example` para `.env.local`.
+   Segredos e chaves privadas devem permanecer no backend/Vault e nunca usar o
+   prefixo `VITE_`.
+3. Execute o ambiente local:
    `npm run dev`

@@ -2,6 +2,7 @@
 // Componente de preview e função de impressão do recibo de despesa
 
 import React from 'react';
+import { escapeHtmlText } from '../../../../../lib/htmlSanitizer';
 import { DespesaLancamento } from '../../../financeiro/despesas/despesas.service';
 
 const formatCurrency = (value: number) =>
@@ -58,6 +59,7 @@ export const despesaToReciboData = (item: DespesaLancamento, empresaInfo?: Parti
 // Função de impressão HTML
 // ============================================================
 export const printReciboDespesa = (data: ReciboData) => {
+  const text = (value: unknown) => escapeHtmlText(value);
   const numExtenso = (() => {
     // Básico — para valores até 999.999
     const unidades = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
@@ -134,13 +136,13 @@ export const printReciboDespesa = (data: ReciboData) => {
 <div class="page">
   <div class="header">
     <div class="logo-area">
-      <h1>${data.empresaNome || 'Universo Cursos e Consultoria'}</h1>
-      <p>${data.empresaCnpj ? `CNPJ: ${data.empresaCnpj}` : ''}</p>
-      ${data.poloNome ? `<p>Unidade: ${data.poloNome}</p>` : ''}
+      <h1>${text(data.empresaNome || 'Universo Cursos e Consultoria')}</h1>
+      <p>${data.empresaCnpj ? `CNPJ: ${text(data.empresaCnpj)}` : ''}</p>
+      ${data.poloNome ? `<p>Unidade: ${text(data.poloNome)}</p>` : ''}
     </div>
     <div class="recibo-label">
-      <div class="badge">${data.reciboTitulo || 'Recibo de Despesa'}</div>
-      <div class="num">${data.reciboNumero || (data.totalParcelas && data.totalParcelas > 1 ? `Parcela ${data.parcelaNumero}/${data.totalParcelas}` : '')}</div>
+      <div class="badge">${text(data.reciboTitulo || 'Recibo de Despesa')}</div>
+      <div class="num">${text(data.reciboNumero || (data.totalParcelas && data.totalParcelas > 1 ? `Parcela ${data.parcelaNumero}/${data.totalParcelas}` : ''))}</div>
     </div>
   </div>
 
@@ -151,15 +153,15 @@ export const printReciboDespesa = (data: ReciboData) => {
 
   <div class="descricao-box">
     <label>Descrição</label>
-    <p>${data.descricao}</p>
-    ${data.categoriaNome ? `<p style="font-size:10px;color:#64748b;margin-top:3px;">Categoria: ${data.categoriaNome}</p>` : ''}
+    <p>${text(data.descricao)}</p>
+    ${data.categoriaNome ? `<p style="font-size:10px;color:#64748b;margin-top:3px;">Categoria: ${text(data.categoriaNome)}</p>` : ''}
   </div>
 
   <div class="grid">
     <div class="field">
-      <label>${data.contraparteLabel || 'Fornecedor / Credor'}</label>
-      <span>${data.fornecedorNome || 'Não informado'}</span>
-      ${data.fornecedorId ? `<small>CPF/CNPJ: ${data.fornecedorId}</small>` : ''}
+      <label>${text(data.contraparteLabel || 'Fornecedor / Credor')}</label>
+      <span>${text(data.fornecedorNome || 'Não informado')}</span>
+      ${data.fornecedorId ? `<small>CPF/CNPJ: ${text(data.fornecedorId)}</small>` : ''}
     </div>
     <div class="field">
       <label>Data de Vencimento</label>
@@ -173,14 +175,14 @@ export const printReciboDespesa = (data: ReciboData) => {
     ${data.formaPagamento ? `
     <div class="field">
       <label>Forma de Pagamento</label>
-      <span>${data.formaPagamento}</span>
+      <span>${text(data.formaPagamento)}</span>
     </div>` : ''}
     <div class="field">
       <label>Status</label>
       <span>
         ${data.status === 'PAGO'
           ? '<span class="status-pago">✓ Pago</span>'
-          : data.status || 'Pendente'}
+          : text(data.status || 'Pendente')}
       </span>
     </div>
     <div class="field">
@@ -191,15 +193,15 @@ export const printReciboDespesa = (data: ReciboData) => {
 
   ${data.observacao ? `
   <div style="font-size:11px;color:#64748b;margin-bottom:6mm;">
-    <strong>Obs:</strong> ${data.observacao}
+    <strong>Obs:</strong> ${text(data.observacao)}
   </div>` : ''}
 
   <div class="footer">
     <div style="font-size:10px;color:#94a3b8;">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
     <div class="assinatura">
       <div class="linha"></div>
-      <p>${data.assinaturaNome || data.empresaNome || 'Responsável Financeiro'}</p>
-      <p style="font-size:9px;">${data.poloNome || ''}</p>
+      <p>${text(data.assinaturaNome || data.empresaNome || 'Responsável Financeiro')}</p>
+      <p style="font-size:9px;">${text(data.poloNome || '')}</p>
     </div>
   </div>
 </div>
@@ -207,11 +209,10 @@ export const printReciboDespesa = (data: ReciboData) => {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=900,height=700');
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-  }
+  const printDocument = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const printUrl = URL.createObjectURL(printDocument);
+  window.open(printUrl, '_blank', 'noopener,noreferrer,width=900,height=700');
+  window.setTimeout(() => URL.revokeObjectURL(printUrl), 60_000);
 };
 
 // ============================================================

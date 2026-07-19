@@ -1,5 +1,10 @@
 import { supabase } from '../../../lib/supabase';
 import {
+  removeCommunicationAttachmentPaths,
+  resolveCommunicationAttachmentUrls,
+  uploadCommunicationAttachment,
+} from '../../shared/comunicacao/comunicacao-attachments.service';
+import {
   ComunicacaoCategoria,
   ComunicacaoChat,
   ComunicacaoMensagem,
@@ -43,7 +48,7 @@ const getMessages = async (chatId: string): Promise<ComunicacaoMensagem[]> => {
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return resolveCommunicationAttachmentUrls(data || []);
 };
 
 const getUnreadChatIds = async (alunoId: string): Promise<Set<string>> => {
@@ -89,21 +94,15 @@ const getChatById = async (chatId: string): Promise<ComunicacaoChat | null> => {
   return data || null;
 };
 
-const uploadAttachment = async (file: File, alunoId: string): Promise<string | null> => {
-  const ext = file.name.split('.').pop();
-  const path = `comunicacao/${alunoId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('anexos').upload(path, file, { upsert: true });
-  if (error) throw error;
-
-  const { data: urlData } = supabase.storage.from('anexos').getPublicUrl(path);
-  return urlData?.publicUrl || null;
-};
-
 const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAlunoMessageInput) => {
-  let anexoUrl: string | null = null;
+  let attachmentPath: string | null = null;
 
   if (file) {
-    anexoUrl = await uploadAttachment(file, alunoId);
+    attachmentPath = await uploadCommunicationAttachment({
+      actor: { type: 'aluno', id: alunoId },
+      chatId,
+      file,
+    });
   }
 
   const content = text || (file ? `📎 ${file.name}` : '');
@@ -115,12 +114,18 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
       remetente_nome: alunoNome,
       remetente_tipo: 'aluno',
       conteudo: content,
-      anexo_url: anexoUrl,
+      anexo_path: attachmentPath,
+      anexo_url: null,
     })
     .select()
     .single();
 
-  if (messageError) throw messageError;
+  if (messageError) {
+    if (attachmentPath) {
+      await removeCommunicationAttachmentPaths([attachmentPath]).catch(() => undefined);
+    }
+    throw messageError;
+  }
 
   const { error: chatError } = await supabase
     .from('comunicacao_chats')
@@ -131,7 +136,10 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
     .eq('id', chatId);
 
   if (chatError) throw chatError;
-  return newMessage as ComunicacaoMensagem;
+  const [resolvedMessage] = await resolveCommunicationAttachmentUrls([
+    newMessage as ComunicacaoMensagem,
+  ]);
+  return resolvedMessage;
 };
 
 const deleteChatForAluno = async (chatId: string, alunoId: string) => {
@@ -184,5 +192,6 @@ export const alunoComunicacaoService = {
   getMessages,
   getUnreadChatIds,
   markMessagesAsRead,
+  resolveMessages: resolveCommunicationAttachmentUrls,
   sendMessage,
 };

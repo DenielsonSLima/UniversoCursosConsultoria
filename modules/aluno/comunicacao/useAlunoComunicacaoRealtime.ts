@@ -66,8 +66,10 @@ export const useAlunoComunicacaoRealtime = ({
           table: 'comunicacao_mensagens',
           filter: `chat_id=eq.${activeChatId}`,
         },
-        (payload) => {
-          const newMessage = payload.new as ComunicacaoMensagem;
+        async (payload) => {
+          const [newMessage] = await alunoComunicacaoService.resolveMessages([
+            payload.new as ComunicacaoMensagem,
+          ]);
 
           queryClient.setQueryData(
             alunoComunicacaoKeys.messages(activeChatId),

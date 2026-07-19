@@ -142,6 +142,14 @@ const SANITIZE_CONFIG = {
 export const sanitizeHtml = (html: string | null | undefined): string =>
   DOMPurify.sanitize(String(html || ''), SANITIZE_CONFIG);
 
+export const escapeHtmlText = (value: unknown): string =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
 export const sanitizedHtml = (html: string | null | undefined) => ({
   __html: sanitizeHtml(html),
 });
