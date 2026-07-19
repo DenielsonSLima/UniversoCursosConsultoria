@@ -136,6 +136,13 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
 
   const handleToggleAttendance = (studentId: string, classId: string) => {
     if (isReadOnly) return;
+    if (getStudentStats(gradesMap, studentId).resultado === 'APROVEITADO') {
+      toast.info(
+        'Disciplina aproveitada',
+        'Notas e frequência são preservadas pela equivalência registrada na transferência.',
+      );
+      return;
+    }
     const current = attendanceMap[studentId]?.[classId] || null;
     const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
     toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });

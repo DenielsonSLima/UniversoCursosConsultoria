@@ -57,36 +57,64 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
           <tbody className="divide-y divide-slate-100">
             {students.map((aluno, idx) => {
               const stats = getStats(aluno.id);
+              const isCredited = stats.resultado === 'APROVEITADO';
               return (
-                <tr key={aluno.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr
+                  key={aluno.id}
+                  className={`transition-colors group ${isCredited ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'}`}
+                >
                   <td className="p-3 text-center border-r border-slate-100 text-slate-400 font-mono text-xs">{String(idx + 1).padStart(2, '0')}</td>
-                  <td className="p-3 border-r border-slate-100 font-bold text-sm text-[#001a33] truncate max-w-[250px]">{aluno.nome}</td>
+                  <td className="p-3 border-r border-slate-100 font-bold text-sm text-[#001a33] max-w-[250px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate">{aluno.nome}</span>
+                      {isCredited && (
+                        <span className="rounded-full bg-violet-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-700">
+                          Aproveitado
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   {aulas.map((aula) => {
                     const attendanceStatus = attendanceMap[aluno.id]?.[aula.id] || null;
                     const foiFalta = attendanceStatus === 'F';
                     const foiPresente = attendanceStatus === 'P';
                     return (
                       <td key={aula.id} className="p-2 border-r border-slate-100 text-center">
-                        <button
-                          onClick={() => onToggleAttendance(aluno.id, aula.id)}
-                          disabled={isReadOnly}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
-                            foiFalta
-                              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
-                              : foiPresente
-                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
-                                : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
-                          } disabled:cursor-not-allowed disabled:opacity-70`}
-                        >
-                          {foiFalta ? 'F' : foiPresente ? 'P' : '—'}
-                        </button>
+                        {isCredited ? (
+                          <span
+                            className="mx-auto inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-100 px-1.5 text-[9px] font-black text-violet-700"
+                            title="Frequência preservada pelo aproveitamento acadêmico"
+                          >
+                            APR
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => onToggleAttendance(aluno.id, aula.id)}
+                            disabled={isReadOnly}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
+                              foiFalta
+                                ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                                : foiPresente
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
+                            } disabled:cursor-not-allowed disabled:opacity-70`}
+                          >
+                            {foiFalta ? 'F' : foiPresente ? 'P' : '—'}
+                          </button>
+                        )}
                       </td>
                     );
                   })}
                   <td className="p-3 text-center">
-                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${stats.faltas > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {stats.faltas}
-                    </span>
+                    {isCredited ? (
+                      <span className="inline-flex items-center justify-center rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-black uppercase text-violet-700">
+                        Equivalência
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${stats.faltas > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {stats.faltas}
+                      </span>
+                    )}
                   </td>
                 </tr>
               );
