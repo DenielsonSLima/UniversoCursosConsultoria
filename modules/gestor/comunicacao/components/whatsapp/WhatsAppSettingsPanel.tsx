@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, CheckCircle2, MessageCircle, RefreshCw, Wallet } from 'lucide-react';
+import { AlertTriangle, BarChart3, CheckCircle2, Info, MessageCircle, RefreshCw, ShieldAlert, Wallet } from 'lucide-react';
 import { BirthdayProjectionRow } from '../whatsapp-agents/birthday.types';
 import { WhatsAppUsageSummary } from './whatsapp.types';
 
@@ -30,6 +30,27 @@ const toneClasses = {
   },
 };
 
+const alertToneClasses = {
+  initial: {
+    container: 'border-blue-200 bg-blue-50 text-blue-900',
+    icon: 'bg-blue-100 text-blue-700',
+    badge: 'border-blue-200 bg-white/80 text-blue-700',
+    Icon: Info,
+  },
+  warning: {
+    container: 'border-amber-200 bg-amber-50 text-amber-950',
+    icon: 'bg-amber-100 text-amber-700',
+    badge: 'border-amber-200 bg-white/80 text-amber-700',
+    Icon: AlertTriangle,
+  },
+  critical: {
+    container: 'border-rose-200 bg-rose-50 text-rose-950',
+    icon: 'bg-rose-100 text-rose-700',
+    badge: 'border-rose-200 bg-white/80 text-rose-700',
+    Icon: ShieldAlert,
+  },
+};
+
 const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, birthdayProjection, loading }) => {
   if (loading) {
     return (
@@ -56,6 +77,7 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
   }
 
   const usage = summary;
+  const budgetAlert = usage.alert_level === 'none' ? null : alertToneClasses[usage.alert_level];
   const buckets = [
     {
       kind: 'marketing',
@@ -95,6 +117,28 @@ const WhatsAppSettingsPanel: React.FC<WhatsAppSettingsPanelProps> = ({ summary, 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-5 custom-scrollbar">
       <div className="max-w-6xl space-y-5">
+        {budgetAlert && usage.alert_title && usage.alert_message ? (
+          <section
+            aria-live={usage.alert_level === 'critical' ? 'assertive' : 'polite'}
+            className={`flex items-start gap-3 rounded-2xl border p-4 shadow-sm ${budgetAlert.container}`}
+          >
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${budgetAlert.icon}`}>
+              <budgetAlert.Icon size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-bold">{usage.alert_title}</h3>
+                {usage.alert_threshold_percent !== null ? (
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${budgetAlert.badge}`}>
+                    Nível de {usage.alert_threshold_percent}%
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-xs font-semibold leading-relaxed opacity-80">{usage.alert_message}</p>
+            </div>
+          </section>
+        ) : null}
+
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

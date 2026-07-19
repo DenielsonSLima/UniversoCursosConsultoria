@@ -2,6 +2,35 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.5.0-beta.1] - 2026-07-19
+
+### Adicionado
+
+- Atendimento integrado à WhatsApp Cloud API com caixa de entrada em tempo real, envio e recebimento de mensagens e visualização de imagens no próprio chat.
+- Automações de aviso de vencimento, confirmação de pagamento, atraso, múltiplas parcelas vencidas e aniversário com imagem aprovada pela Meta.
+- Fluxo automático de autoatendimento com menu inicial, validação segura de CPF, consulta financeira e transferência opcional para atendente.
+- Ciclo de atendimento com assumir, encerrar, retomar, finalização automática por inatividade e separação entre conversas abertas e finalizadas.
+- Perfil público do WhatsApp Business e configuração de enquadramento da foto antes do envio para a Meta.
+- Controle mensal de orçamento calculado no backend, com avisos em 50%, 75% e nível crítico em 90%.
+
+### Alterado
+
+- Cabeçalho, navegação e organização da tela de comunicação foram compactados para aproveitar melhor a área do atendimento.
+- Indicadores de entrega, horário da última mensagem, notificações sonoras e estado das conversas foram aproximados da experiência do WhatsApp.
+- Mensagens de cobrança e aniversário passaram a utilizar dados reais de alunos, matrículas e parcelas elegíveis.
+
+### Corrigido
+
+- Webhook da Meta passou a registrar corretamente respostas, mídias e atualizações monotônicas de status sem duplicar mensagens.
+- Conversas externas passaram a localizar um único aluno pelo telefone e a manter a associação correta durante os testes de automação.
+- Cálculos de consumo e alertas deixaram de depender do navegador e agora são devolvidos prontos pela RPC protegida.
+
+### Segurança
+
+- Tokens da Meta permanecem no Vault e fora do frontend e das tabelas expostas ao navegador.
+- Webhooks, anexos, consultas financeiras e execução dos agentes foram protegidos por validações internas e permissões específicas.
+- Telefones de alunos passaram a ter unicidade normalizada para evitar dois cadastros usando o mesmo número no atendimento.
+
 ## [0.4.0-beta.2] - 2026-07-15
 
 ### Corrigido

@@ -37,11 +37,6 @@ const ConversationToolbar: React.FC<ConversationToolbarProps> = ({
   onDelete,
 }) => (
   <div className="space-y-3 border-b border-slate-100 p-4">
-    <div>
-      <h3 className="text-base font-bold text-[#001a33]">Conversas</h3>
-      <p className="text-xs font-medium text-slate-400">Caixa de entrada WhatsApp</p>
-    </div>
-
     <div className="flex items-center gap-2">
       <button
         type="button"

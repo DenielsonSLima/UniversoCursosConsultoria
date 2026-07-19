@@ -125,4 +125,9 @@ export interface WhatsAppUsageSummary {
   spent: number;
   remaining: number;
   spent_percent: number;
+  alert_level: 'none' | 'initial' | 'warning' | 'critical';
+  alert_title: string | null;
+  alert_message: string | null;
+  alert_threshold_percent: number | null;
+  alert_threshold_amount: number | null;
 }
