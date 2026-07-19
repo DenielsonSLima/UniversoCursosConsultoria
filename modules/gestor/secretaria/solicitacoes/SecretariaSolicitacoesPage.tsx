@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { secretariaService, DEFAULT_PRAZOS, type PrazoConfig, type Solicitacao } from '../secretaria.service';
+import {
+  SOLICITACOES_PAGE_SIZE,
+  SolicitacaoStatusBadge,
+  SolicitacoesPagination,
+  SolicitacoesTableHead,
+  SolicitacoesTableRow,
+} from './SecretariaSolicitacoesParts';
 import { 
   Inbox, 
   CheckCircle, 
@@ -11,70 +18,15 @@ import {
   Filter,
   Check,
   X,
-  MessageSquare,
   Settings,
   History,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight
+  ArrowUpDown
 } from 'lucide-react';
 
 
 
-const PAGE_SIZE = 8;
-
 // ─── Pagination component ────────────────────────────────────────────────────
-const Pagination: React.FC<{ page: number; total: number; onPage: (p: number) => void }> = ({ page, total, onPage }) => {
-  const pages = Math.ceil(total / PAGE_SIZE);
-  if (pages <= 1) return null;
-  return (
-    <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50/30">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-        Página {page} de {pages} · {total} registros
-      </span>
-      <div className="flex items-center gap-1">
-        <button onClick={() => onPage(1)} disabled={page === 1} className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30 transition-colors text-slate-500"><ChevronsLeft size={13} /></button>
-        <button onClick={() => onPage(page - 1)} disabled={page === 1} className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30 transition-colors text-slate-500"><ChevronLeft size={13} /></button>
-        {Array.from({ length: Math.min(5, pages) }, (_, i) => {
-          const start = Math.max(1, Math.min(page - 2, pages - 4));
-          const p = start + i;
-          if (p > pages) return null;
-          return (
-            <button
-              key={p}
-              onClick={() => onPage(p)}
-              className={`w-7 h-7 rounded-lg font-black text-[10px] transition-colors ${p === page ? 'bg-[#001a33] text-white' : 'hover:bg-slate-200 text-slate-600'}`}
-            >
-              {p}
-            </button>
-          );
-        })}
-        <button onClick={() => onPage(page + 1)} disabled={page === pages} className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30 transition-colors text-slate-500"><ChevronRight size={13} /></button>
-        <button onClick={() => onPage(pages)} disabled={page === pages} className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30 transition-colors text-slate-500"><ChevronsRight size={13} /></button>
-      </div>
-    </div>
-  );
-};
-
 // ─── Status Badge ─────────────────────────────────────────────────────────────
-const StatusBadge: React.FC<{ status: Solicitacao['status'] }> = ({ status }) => {
-  const map = {
-    Pendente: { bg: 'bg-amber-50 text-amber-600 border-amber-100', icon: <Clock size={11} /> },
-    Deferido: { bg: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: <CheckCircle size={11} /> },
-    Indeferido: { bg: 'bg-rose-50 text-rose-600 border-rose-100', icon: <XCircle size={11} /> }
-  };
-  const s = map[status];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${s.bg}`}>
-      {s.icon} {status}
-    </span>
-  );
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 const SecretariaSolicitacoesPage: React.FC = () => {
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
@@ -157,8 +109,14 @@ const SecretariaSolicitacoesPage: React.FC = () => {
       .sort((a, b) => sortFn(a, b, sortHist));
   }, [solicitacoes, searchHist, typeFilterHist, statusFilterHist, sortHist]);
 
-  const pendentesPage = pendentesFiltered.slice((pagePend - 1) * PAGE_SIZE, pagePend * PAGE_SIZE);
-  const historicoPage = historicoFiltered.slice((pageHist - 1) * PAGE_SIZE, pageHist * PAGE_SIZE);
+  const pendentesPage = pendentesFiltered.slice(
+    (pagePend - 1) * SOLICITACOES_PAGE_SIZE,
+    pagePend * SOLICITACOES_PAGE_SIZE,
+  );
+  const historicoPage = historicoFiltered.slice(
+    (pageHist - 1) * SOLICITACOES_PAGE_SIZE,
+    pageHist * SOLICITACOES_PAGE_SIZE,
+  );
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleActionSubmit = async (e: React.FormEvent) => {
@@ -211,68 +169,6 @@ const SecretariaSolicitacoesPage: React.FC = () => {
   const handleSearchHist = (v: string) => { setSearchHist(v); setPageHist(1); };
 
   // ─── Table rows ────────────────────────────────────────────────────────────
-  const TableRow: React.FC<{ item: Solicitacao; showAction?: boolean }> = ({ item, showAction = true }) => (
-    <tr className="hover:bg-slate-50/50 transition-colors group">
-      <td className="px-5 py-3.5">
-        <div>
-          <span className="font-bold text-[#001a33] text-xs block leading-tight">{item.alunoNome}</span>
-          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">{item.curso}</span>
-        </div>
-      </td>
-      <td className="px-5 py-3.5 font-mono font-bold text-slate-500 text-[11px]">{item.alunoMatricula}</td>
-      <td className="px-5 py-3.5">
-        <span className="font-bold text-slate-800 text-xs block">{item.tipo}</span>
-        <span className="text-[10px] text-slate-400 font-bold">{item.dataSolicitacao.split('-').reverse().join('/')}</span>
-      </td>
-      <td className="px-5 py-3.5">
-        <span className={`inline-block px-2 py-0.5 rounded font-black text-[9px] uppercase ${item.tipo === 'Transferência' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
-          {item.prazo}
-        </span>
-      </td>
-      <td className="px-5 py-3.5">
-        <StatusBadge status={item.status} />
-      </td>
-      {showAction && (
-        <td className="px-5 py-3.5 text-right">
-          {item.status === 'Pendente' ? (
-            <button
-              onClick={() => setSelectedSolicitacao(item)}
-              className="px-3.5 py-1.5 bg-[#001a33] hover:bg-blue-600 text-white rounded-lg font-bold uppercase tracking-wider text-[10px] transition-colors"
-            >
-              Analisar
-            </button>
-          ) : (
-            <button
-              onClick={() => setSelectedSolicitacao(item)}
-              className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-              title="Ver Resposta"
-            >
-              <MessageSquare size={14} />
-            </button>
-          )}
-        </td>
-      )}
-    </tr>
-  );
-
-  const TableHead: React.FC<{ withAction?: boolean; sort: 'asc' | 'desc'; onSort: () => void }> = ({ withAction = true, sort, onSort }) => (
-    <thead>
-      <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase font-black tracking-wider text-[9px]">
-        <th className="px-5 py-3">Estudante / Curso</th>
-        <th className="px-5 py-3">Matrícula</th>
-        <th className="px-5 py-3">
-          <button onClick={onSort} className="flex items-center gap-1 hover:text-slate-700 transition-colors">
-            Solicitação / Data
-            {sort === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-          </button>
-        </th>
-        <th className="px-5 py-3">Prazo</th>
-        <th className="px-5 py-3">Status</th>
-        {withAction && <th className="px-5 py-3 text-right">Ação</th>}
-      </tr>
-    </thead>
-  );
-
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5 text-xs font-sans animate-fadeIn">
@@ -360,7 +256,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <TableHead sort={sortPend} onSort={() => { setSortPend(s => s === 'asc' ? 'desc' : 'asc'); setPagePend(1); }} />
+              <SolicitacoesTableHead sort={sortPend} onSort={() => { setSortPend(s => s === 'asc' ? 'desc' : 'asc'); setPagePend(1); }} />
               <tbody className="divide-y divide-slate-50 font-medium text-slate-700">
                 {pendentesPage.length === 0 ? (
                   <tr>
@@ -369,12 +265,12 @@ const SecretariaSolicitacoesPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  pendentesPage.map(item => <TableRow key={item.id} item={item} />)
+                  pendentesPage.map(item => <SolicitacoesTableRow key={item.id} item={item} onSelect={setSelectedSolicitacao} />)
                 )}
               </tbody>
             </table>
           </div>
-          <Pagination page={pagePend} total={pendentesFiltered.length} onPage={setPagePend} />
+          <SolicitacoesPagination page={pagePend} total={pendentesFiltered.length} onPage={setPagePend} />
         </div>
       )}
 
@@ -423,7 +319,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <TableHead sort={sortHist} onSort={() => { setSortHist(s => s === 'asc' ? 'desc' : 'asc'); setPageHist(1); }} />
+              <SolicitacoesTableHead sort={sortHist} onSort={() => { setSortHist(s => s === 'asc' ? 'desc' : 'asc'); setPageHist(1); }} />
               <tbody className="divide-y divide-slate-50 font-medium text-slate-700">
                 {historicoPage.length === 0 ? (
                   <tr>
@@ -432,12 +328,12 @@ const SecretariaSolicitacoesPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  historicoPage.map(item => <TableRow key={item.id} item={item} />)
+                  historicoPage.map(item => <SolicitacoesTableRow key={item.id} item={item} onSelect={setSelectedSolicitacao} />)
                 )}
               </tbody>
             </table>
           </div>
-          <Pagination page={pageHist} total={historicoFiltered.length} onPage={setPageHist} />
+          <SolicitacoesPagination page={pageHist} total={historicoFiltered.length} onPage={setPageHist} />
         </div>
       )}
 
@@ -527,7 +423,7 @@ const SecretariaSolicitacoesPage: React.FC = () => {
               {selectedSolicitacao.status !== 'Pendente' ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <StatusBadge status={selectedSolicitacao.status} />
+                    <SolicitacaoStatusBadge status={selectedSolicitacao.status} />
                     <span className="text-[10px] font-bold text-slate-400">
                       Processado em {selectedSolicitacao.respostaData?.split('-').reverse().join('/')}
                     </span>

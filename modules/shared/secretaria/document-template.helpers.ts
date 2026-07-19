@@ -7,7 +7,7 @@ interface DocumentVariableContext {
   formattedEnrollment: string;
   template: any;
   selectedYear: number;
-  irpfPayments: any[];
+  irpfPayments: Array<{ total_anual_pago?: number | string | null }>;
 }
 
 const amountInWords = (value: number): string => {
@@ -64,10 +64,8 @@ export const buildDocumentVariableReplacer = (context: DocumentVariableContext) 
     ? context.aluno.responsavel_cpf
     : alunoCpf;
   const poloName = context.enrollment?.turmas?.polos?.nome || context.polo?.nomeFantasia || '';
-  const irpfTotal = context.irpfPayments.reduce(
-    (sum, payment) => sum + Number(payment.valor_pago || payment.valor || 0),
-    0,
-  );
+  // O total é calculado autoritativamente pela RPC; o frontend apenas o exibe.
+  const irpfTotal = Number(context.irpfPayments[0]?.total_anual_pago ?? 0);
   const replacements: Record<string, string> = {
     ALUNO_NOME: alunoName.toUpperCase(),
     ALUNO_CPF: alunoCpf,

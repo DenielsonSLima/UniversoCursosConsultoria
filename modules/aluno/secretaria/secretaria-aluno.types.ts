@@ -78,4 +78,5 @@ export interface AlunoSecretariaIrpfPagamento {
   numero_parcela: number | null;
   total_parcelas: number | null;
   asaas_invoice: string | null;
+  total_anual_pago: number;
 }
