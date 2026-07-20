@@ -85,9 +85,11 @@ const BibliotecaPage: React.FC = () => {
 
   const getFileIcon = (type: string) => {
     switch(type) {
-        case 'PDF': return <div className="w-8 h-8 rounded-lg bg-red-50 text-red-650 flex items-center justify-center font-black text-[10px] border border-red-100 shrink-0">PDF</div>;
-        case 'DOC': return <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-650 flex items-center justify-center font-black text-[10px] border border-blue-100 shrink-0">DOC</div>;
-        case 'XLS': return <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-650 flex items-center justify-center font-black text-[10px] border border-emerald-100 shrink-0">XLS</div>;
+        case 'PDF': return <div className="w-8 h-8 rounded-lg bg-red-50 text-red-655 flex items-center justify-center font-black text-[10px] border border-red-100 shrink-0">PDF</div>;
+        case 'DOC': return <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-655 flex items-center justify-center font-black text-[10px] border border-blue-100 shrink-0">DOC</div>;
+        case 'XLS': return <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-655 flex items-center justify-center font-black text-[10px] border border-emerald-100 shrink-0">XLS</div>;
+        case 'IMG': return <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-655 flex items-center justify-center font-black text-[10px] border border-purple-100 shrink-0">IMG</div>;
+        case 'VIDEO': return <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-655 flex items-center justify-center font-black text-[10px] border border-amber-100 shrink-0">VIDEO</div>;
         default: return <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black text-[10px] border border-slate-150 shrink-0">FILE</div>;
     }
   };
@@ -112,57 +114,35 @@ const BibliotecaPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="bg-white p-1.5 rounded-[2rem] border border-slate-150 shadow-sm flex flex-wrap gap-1 w-full max-w-4xl">
-          <button
-              onClick={() => setActiveTab('destaques')}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === 'destaques' 
-                  ? 'bg-[#001a33] text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-          >
-              <Sparkles size={14} /> Destaques
-          </button>
-          <button
-              onClick={() => setActiveTab('gerenciador')}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === 'gerenciador' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-          >
-              <LayoutGrid size={14} /> Gerenciador de Arquivos
-          </button>
-          <button
-              onClick={() => setActiveTab('professores')}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === 'professores' 
-                  ? 'bg-purple-650 bg-purple-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-          >
-              <Users size={14} /> Bibliotecas dos Professores
-          </button>
-          <button
-              onClick={() => setActiveTab('regras')}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === 'regras' 
-                  ? 'bg-amber-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-          >
-              <Lock size={14} /> Regras de Liberação
-          </button>
-          <button
-              onClick={() => setActiveTab('configuracao')}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
-                  activeTab === 'configuracao' 
-                  ? 'bg-slate-700 text-white shadow-md' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-          >
-              <Settings2 size={14} /> Configuração
-          </button>
+      <div className="border-b border-slate-200 mb-5 mt-2">
+        <div className="flex gap-6 overflow-x-auto pb-px">
+          {[
+            { id: 'destaques', label: 'Destaques', icon: Sparkles },
+            { id: 'gerenciador', label: 'Gerenciador de Arquivos', icon: LayoutGrid },
+            { id: 'professores', label: 'Bibliotecas dos Professores', icon: Users },
+            { id: 'regras', label: 'Regras de Liberação', icon: Lock },
+            { id: 'configuracao', label: 'Configuração', icon: Settings2 },
+          ].map(({ id, label, icon: Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id as LibraryTab)}
+                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
+                  isActive
+                    ? 'text-[#001a33] font-extrabold'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+              >
+                <Icon size={14} className={isActive ? 'text-[#4169E1]' : 'text-slate-400'} />
+                {label}
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Content Area */}

@@ -26,6 +26,7 @@ export function useFileExplorerMutations({
 
   const invalidateDocuments = () => {
     queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.documentsRoot });
+    queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.searchDocumentsRoot });
   };
 
   const invalidateTeacherStorageConfigs = () => {

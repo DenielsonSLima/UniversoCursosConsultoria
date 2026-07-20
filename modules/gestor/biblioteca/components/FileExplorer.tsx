@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { 
   Folder, FolderPlus, ArrowUp, ChevronRight, 
   Trash2, Edit, FolderOpen, ArrowRight, Eye, Download,
-  Copy, Lock
+  Copy, Lock, Search
 } from 'lucide-react';
 import { bibliotecaService } from '../biblioteca.service';
 import { TargetAudience, LibraryFolder, LibraryDocument } from '../biblioteca.types';
@@ -45,17 +45,34 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const [actionType, setActionType] = useState<'move' | 'copy'>('move');
   const [permissionsDoc, setPermissionsDoc] = useState<LibraryDocument | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fileTypeFilter, setFileTypeFilter] = useState('all');
+
+  const isFiltering = searchQuery.trim().length > 0 || fileTypeFilter !== 'all';
+
   const {
     folders,
     documents,
     allFolders,
     isFoldersLoading,
     isDocsLoading,
-  } = useFileExplorerQueries(teacherId, currentFolderId, !!movingItem);
+  } = useFileExplorerQueries(teacherId, currentFolderId, !!movingItem, isFiltering);
 
-  const filteredDocs = allowedAudiences 
+  const filteredDocs = (allowedAudiences 
     ? documents.filter(d => allowedAudiences.includes(d.targetAudience))
-    : documents;
+    : documents
+  ).filter(doc => {
+    if (searchQuery.trim().length > 0) {
+      const lowerQuery = searchQuery.toLowerCase();
+      const titleMatches = doc.title.toLowerCase().includes(lowerQuery);
+      const descMatches = (doc.description || '').toLowerCase().includes(lowerQuery);
+      if (!titleMatches && !descMatches) return false;
+    }
+    if (fileTypeFilter !== 'all') {
+      if (doc.fileType !== fileTypeFilter) return false;
+    }
+    return true;
+  });
 
   const {
     createFolderMutation,
@@ -137,56 +154,112 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
         case 'PDF': return <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs border border-red-100 shrink-0">PDF</div>;
         case 'DOC': return <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-100 shrink-0">DOC</div>;
         case 'XLS': return <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100 shrink-0">XLS</div>;
+        case 'IMG': return <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs border border-purple-100 shrink-0">IMG</div>;
+        case 'VIDEO': return <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs border border-amber-100 shrink-0">VIDEO</div>;
         default: return <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-bold text-xs border border-slate-100 shrink-0">FILE</div>;
     }
-  };
-
-  const isContentLoading = isFoldersLoading || isDocsLoading;
+  };  const isContentLoading = isFoldersLoading || isDocsLoading;
 
   return (
     <div className="space-y-6 animate-fadeIn">
       
-      {/* Explorer Header / Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-150">
-        {/* Breadcrumbs */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs font-black text-slate-400 uppercase tracking-wider">
-          <button 
-            onClick={() => handleBreadcrumbClick(null, -1)}
-            className="hover:text-[#001a33] transition-colors"
-          >
-            Raiz
-          </button>
-          
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={crumb.id}>
-              <ChevronRight size={12} className="text-slate-300" />
+      {/* Merged Toolbar */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-4 rounded-3xl border border-slate-150 shadow-sm">
+        {/* Left Section: Breadcrumbs or Search Results Status */}
+        <div className="w-full lg:w-auto flex flex-wrap items-center gap-1.5 text-xs font-black text-slate-400 uppercase tracking-wider">
+          {isFiltering ? (
+            <div className="text-xs font-black text-blue-600 uppercase tracking-wider flex flex-wrap items-center gap-2">
+              <span>Busca global ativa</span>
+              {searchQuery && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] normal-case font-bold">"{searchQuery}"</span>}
+              {fileTypeFilter !== 'all' && <span className="bg-purple-50 text-purple-600 px-2 py-0.5 rounded text-[10px] normal-case font-bold">Tipo: {fileTypeFilter}</span>}
+            </div>
+          ) : (
+            <>
               <button 
-                onClick={() => handleBreadcrumbClick(crumb.id, idx)}
-                className={`hover:text-[#001a33] transition-colors ${idx === breadcrumbs.length - 1 ? 'text-[#001a33] font-black' : ''}`}
+                onClick={() => handleBreadcrumbClick(null, -1)}
+                className="hover:text-[#001a33] transition-colors"
               >
-                {crumb.nome}
+                Raiz
               </button>
-            </React.Fragment>
-          ))}
+              
+              {breadcrumbs.map((crumb, idx) => (
+                <React.Fragment key={crumb.id}>
+                  <ChevronRight size={12} className="text-slate-350" />
+                  <button 
+                    onClick={() => handleBreadcrumbClick(crumb.id, idx)}
+                    className={`hover:text-[#001a33] transition-colors ${idx === breadcrumbs.length - 1 ? 'text-[#001a33] font-black' : ''}`}
+                  >
+                    {crumb.nome}
+                  </button>
+                </React.Fragment>
+              ))}
+            </>
+          )}
         </div>
 
-        {/* Buttons */}
-        {!readOnly && onNewUploadClick && (
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button 
-              onClick={() => setIsNewFolderOpen(true)}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
-            >
-              <FolderPlus size={14} /> Nova Pasta
-            </button>
-            <button 
-              onClick={() => onNewUploadClick(currentFolderId)}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/10"
-            >
-              <ArrowUp size={14} /> Enviar Arquivo
-            </button>
+        {/* Right Section: Filters & Action Buttons */}
+        <div className="w-full lg:w-auto flex flex-wrap lg:flex-nowrap items-center justify-end gap-3 flex-1">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md w-full">
+            <div className="flex items-center bg-slate-50 rounded-xl px-3.5 py-2 border border-slate-150 focus-within:border-blue-500 focus-within:bg-white transition-all">
+              <Search size={16} className="text-slate-400 mr-2 shrink-0" />
+              <input 
+                type="text"
+                placeholder="Buscar em todas as pastas..."
+                className="bg-transparent border-none outline-none w-full text-sm font-medium text-slate-800 placeholder-slate-400"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        )}
+
+          {/* File Type Select */}
+          <div className="shrink-0 w-full sm:w-auto flex gap-2">
+            <select 
+              value={fileTypeFilter}
+              onChange={(e) => setFileTypeFilter(e.target.value)}
+              className="w-full sm:w-44 px-3 py-2 bg-slate-50 border border-slate-150 rounded-xl text-sm font-medium text-slate-800 outline-none cursor-pointer focus:border-blue-500 focus:bg-white transition-all"
+            >
+              <option value="all">Todos os tipos</option>
+              <option value="PDF">PDF</option>
+              <option value="DOC">Word</option>
+              <option value="XLS">Excel</option>
+              <option value="IMG">Imagens</option>
+              <option value="VIDEO">Vídeos</option>
+              <option value="OTHER">Outros formatos</option>
+            </select>
+
+            {isFiltering && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFileTypeFilter('all');
+                }}
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-150 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+
+          {/* Action Buttons (Hidden when searching/filtering) */}
+          {!readOnly && onNewUploadClick && !isFiltering && (
+            <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+              <button 
+                onClick={() => setIsNewFolderOpen(true)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-650 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
+              >
+                <FolderPlus size={14} /> Nova Pasta
+              </button>
+              <button 
+                onClick={() => onNewUploadClick(currentFolderId)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-blue-500/10"
+              >
+                <ArrowUp size={14} /> Enviar Arquivo
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Explorer Grid */}
@@ -205,13 +278,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                 {folders.map((folder) => (
                   <div 
                     key={folder.id}
-                    className="p-4 bg-white border border-slate-150 rounded-2xl hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group"
+                    className="p-4 bg-white border border-slate-150 rounded-2xl hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between group min-w-0"
                   >
                     <div 
                       onClick={() => handleOpenFolder(folder)}
-                      className="flex items-center gap-3 cursor-pointer flex-1 mr-2"
+                      className="flex items-center gap-3 cursor-pointer flex-1 mr-2 min-w-0"
                     >
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
                         <Folder size={18} />
                       </div>
                       <span className="text-xs font-bold text-[#001a33] truncate leading-tight">{folder.nome}</span>
@@ -219,7 +292,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
 
                     {/* Folder actions dropdown/buttons */}
                     {!readOnly && (
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button 
                           onClick={() => {
                             setRenamingFolder(folder);
@@ -262,9 +335,19 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
             
             {filteredDocs.length === 0 && folders.length === 0 ? (
               <div className="p-12 text-center bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] text-slate-400 space-y-2">
-                <FolderOpen size={32} className="mx-auto text-slate-350" />
-                <h4 className="font-bold text-xs uppercase tracking-wider">Diretório Vazio</h4>
-                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Esta pasta não contém arquivos ou subpastas publicadas.</p>
+                {isFiltering ? (
+                  <>
+                    <Search size={32} className="mx-auto text-slate-350" />
+                    <h4 className="font-bold text-xs uppercase tracking-wider">Nenhum resultado encontrado</h4>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Nenhum arquivo corresponde aos critérios de busca selecionados.</p>
+                  </>
+                ) : (
+                  <>
+                    <FolderOpen size={32} className="mx-auto text-slate-350" />
+                    <h4 className="font-bold text-xs uppercase tracking-wider">Diretório Vazio</h4>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Esta pasta não contém arquivos ou subpastas publicadas.</p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

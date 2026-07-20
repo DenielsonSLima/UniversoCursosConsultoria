@@ -5,16 +5,25 @@ import { bibliotecaQueryKeys } from '../biblioteca.queryKeys';
 export function useFileExplorerQueries(
   teacherId: string | null,
   currentFolderId: string | null,
-  movingItemOpen: boolean
+  movingItemOpen: boolean,
+  isSearching?: boolean
 ) {
   const foldersQuery = useQuery({
     queryKey: bibliotecaQueryKeys.folders(teacherId, currentFolderId),
-    queryFn: () => bibliotecaService.getFolders(currentFolderId, teacherId)
+    queryFn: () => bibliotecaService.getFolders(currentFolderId, teacherId),
+    enabled: !isSearching
   });
 
   const documentsQuery = useQuery({
     queryKey: bibliotecaQueryKeys.documents(teacherId, currentFolderId),
-    queryFn: () => bibliotecaService.getDocuments({ pastaId: currentFolderId, teacherId })
+    queryFn: () => bibliotecaService.getDocuments({ pastaId: currentFolderId, teacherId }),
+    enabled: !isSearching
+  });
+
+  const searchDocumentsQuery = useQuery({
+    queryKey: bibliotecaQueryKeys.searchDocuments(teacherId),
+    queryFn: () => bibliotecaService.getDocuments({ teacherId }),
+    enabled: !!isSearching
   });
 
   const allFoldersQuery = useQuery({
@@ -24,10 +33,10 @@ export function useFileExplorerQueries(
   });
 
   return {
-    folders: foldersQuery.data || [],
-    documents: documentsQuery.data || [],
+    folders: isSearching ? [] : (foldersQuery.data || []),
+    documents: isSearching ? (searchDocumentsQuery.data || []) : (documentsQuery.data || []),
     allFolders: allFoldersQuery.data || [],
-    isFoldersLoading: foldersQuery.isLoading,
-    isDocsLoading: documentsQuery.isLoading,
+    isFoldersLoading: !isSearching && foldersQuery.isLoading,
+    isDocsLoading: isSearching ? searchDocumentsQuery.isLoading : documentsQuery.isLoading,
   };
 }

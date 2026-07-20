@@ -21,8 +21,7 @@
     "npm:react-router-dom@^7.13.0": "7.18.1_react@19.2.7_react-dom@19.2.7__react@19.2.7",
     "npm:react@^19.2.4": "19.2.7",
     "npm:sharp@~0.35.2": "0.35.3",
-    "npm:typescript@~5.8.2": "5.8.3",
-    "npm:vite@^6.2.0": "6.4.3_@types+node@22.20.0"
+    "npm:typescript@~5.8.2": "5.8.3"
   },
   "jsr": {
     "@supabase/functions-js@2.110.0": {
@@ -1839,6 +1838,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@babel/core@^7.29.7",
         "npm:@eslint/js@^10.0.1",
         "npm:@supabase/supabase-js@^2.95.3",
         "npm:@tanstack/react-query@^5.101.0",
@@ -1856,7 +1856,7 @@
         "npm:react@^19.2.4",
         "npm:sharp@~0.35.2",
         "npm:typescript@~5.8.2",
-        "npm:vite@^6.2.0"
+        "npm:vite@^6.4.3"
       ]
     }
   }

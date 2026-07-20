@@ -15,6 +15,7 @@ export function useFileExplorerRealtime() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'biblioteca_documentos' }, () => {
         queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.documentsRoot });
+        queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.searchDocumentsRoot });
       })
       .subscribe();
 

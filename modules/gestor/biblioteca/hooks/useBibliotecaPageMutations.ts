@@ -8,6 +8,7 @@ export function useBibliotecaPageMutations() {
 
   const invalidateDocuments = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.documentsRoot });
+    queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.searchDocumentsRoot });
     queryClient.invalidateQueries({ queryKey: bibliotecaQueryKeys.rulesDocuments });
   }, [queryClient]);
 

@@ -5,6 +5,9 @@ export const bibliotecaQueryKeys = {
   documentsRoot: ['library-documents'] as const,
   documents: (teacherId: string | null, currentFolderId: string | null) =>
     ['library-documents', teacherId, currentFolderId] as const,
+  searchDocumentsRoot: ['library-all-documents-search'] as const,
+  searchDocuments: (teacherId: string | null) =>
+    ['library-all-documents-search', teacherId] as const,
   allFoldersMoveRoot: ['library-all-folders-move'] as const,
   allFoldersMove: (teacherId: string | null) =>
     ['library-all-folders-move', teacherId] as const,
