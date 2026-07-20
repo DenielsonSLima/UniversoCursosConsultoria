@@ -27,6 +27,11 @@ export const financeiroQueryKeys = {
   transferenciasRoot: ['financeiro', 'transferencias'] as const,
   transferenciasList: (filters: TransferenciasFilters) =>
     ['financeiro', 'transferencias', 'list', filters] as const,
+  conciliacaoBancariaRoot: ['financeiro', 'conciliacao-bancaria'] as const,
+  conciliacaoBancariaItems: (poloId?: string | null) =>
+    ['financeiro', 'conciliacao-bancaria', 'items', poloId || 'sem-polo'] as const,
+  conciliacaoBancariaTransacoes: (poloId?: string | null) =>
+    ['financeiro', 'conciliacao-bancaria', 'transacoes', poloId || 'sem-polo'] as const,
   contasBancariasSaldos: ['financeiro', 'contas-bancarias-saldos'] as const,
   polos: ['financeiro', 'polos'] as const,
   parceiros: ['financeiro', 'parceiros'] as const,

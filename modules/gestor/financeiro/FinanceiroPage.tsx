@@ -1,8 +1,13 @@
 // File: modules/gestor/financeiro/FinanceiroPage.tsx
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { 
-  TrendingUp, TrendingDown, Layers, ArrowRightLeft, Lock
+import {
+  ArrowRightLeft,
+  FileText,
+  Layers,
+  Lock,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react';
 import { FinanceiroTabId } from '../access-control';
 
@@ -11,6 +16,7 @@ import ResumoTab from './resumo/ResumoTab';
 import ReceberTab from './receber/ReceberTab';
 import DespesasTab from './despesas/DespesasTab';
 import TransferenciasTab from './transferencias/TransferenciasTab';
+import ConciliacaoBancariaTab from './conciliacao-bancaria/ConciliacaoBancariaTab';
 import OutrosDebitosTab from './outros-debitos/OutrosDebitosTab';
 import OutrosCreditosTab from './outros-creditos/OutrosCreditosTab';
 
@@ -29,6 +35,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
     { id: 'receber' as const, label: 'Contas a Receber', icon: <TrendingUp size={14} />, colorClass: 'bg-emerald-600 text-white shadow-md' },
     { id: 'despesas' as const, label: 'Despesas', icon: <TrendingDown size={14} />, colorClass: 'bg-rose-600 text-white shadow-md' },
     { id: 'transferencias' as const, label: 'Transferências', icon: <ArrowRightLeft size={14} />, colorClass: 'bg-slate-800 text-white shadow-md' },
+    { id: 'conciliacao-bancaria' as const, label: 'Conciliação Bancária', icon: <FileText size={14} className="text-blue-200" />, colorClass: 'bg-cyan-700 text-white shadow-md' },
     { id: 'outros-debitos' as const, label: 'Outros Débitos', icon: <TrendingDown size={14} className="rotate-90 text-rose-500" />, colorClass: 'bg-indigo-600 text-white shadow-md' },
     { id: 'outros-creditos' as const, label: 'Outros Créditos', icon: <TrendingUp size={14} className="-rotate-90 text-emerald-500" />, colorClass: 'bg-teal-600 text-white shadow-md' },
   ], []);
@@ -53,6 +60,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
         return <DespesasTab poloId={poloId} />;
       case 'transferencias':
         return <TransferenciasTab poloId={poloId} />;
+      case 'conciliacao-bancaria':
+        return <ConciliacaoBancariaTab poloId={poloId} />;
       case 'outros-debitos':
         return <OutrosDebitosTab poloId={poloId} />;
       case 'outros-creditos':

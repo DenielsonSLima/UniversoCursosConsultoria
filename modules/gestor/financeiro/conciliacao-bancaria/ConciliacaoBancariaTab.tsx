@@ -357,7 +357,6 @@ const ConciliacaoBancariaTab: React.FC<ConciliacaoBancariaTabProps> = ({ poloId 
               Selecione um arquivo de retorno para aplicar baixa automática em lote.
             </p>
           )}
-          </div>
         </div>
       </div>
       <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50 px-5 py-4 text-xs text-emerald-700">

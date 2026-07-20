@@ -39,6 +39,7 @@ import {
   updateAsaasLegacyConfig,
 } from "./credentials.ts";
 import { reconcileBaneseReceivable } from "./banese.ts";
+import { importBaneseCnab240Return } from "./banese-cnab240.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -403,6 +404,15 @@ Deno.serve(async (req: Request) => {
     if (action === "reconcile-banese-receivable") {
       return respondJson(
         await reconcileBaneseReceivable(admin, body.receivableId),
+      );
+    }
+
+    if (action === "import-banese-cnab240-return") {
+      return respondJson(
+        await importBaneseCnab240Return(admin, {
+          ...body,
+          environment: body.environment || "sandbox",
+        }),
       );
     }
 

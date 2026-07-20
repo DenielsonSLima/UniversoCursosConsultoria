@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap } from 'lucide-react';
+import { Building2, Calendar, GraduationCap } from 'lucide-react';
 import type { TechnicalEnrollmentFormValues } from '../technicalLanding.types';
 
 interface HighSchoolSituationFieldsProps {
@@ -11,7 +11,8 @@ interface HighSchoolSituationFieldsProps {
   minimumHighSchoolGrade: 2 | 3;
 }
 
-const inputClassName = 'min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60';
+const inputClassName =
+  'min-h-12 w-full rounded-2xl border border-slate-200/90 bg-slate-50/80 px-4 text-xs font-bold text-slate-800 outline-none transition-all duration-200 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60';
 
 const HighSchoolSituationFields: React.FC<HighSchoolSituationFieldsProps> = ({
   value,
@@ -22,57 +23,71 @@ const HighSchoolSituationFields: React.FC<HighSchoolSituationFieldsProps> = ({
   minimumHighSchoolGrade,
 }) => {
   const isCompleted = value.highSchoolSituation === 'CONCLUIDO';
-  const isStudying = value.highSchoolSituation === 'CURSANDO_2_ANO'
-    || value.highSchoolSituation === 'CURSANDO_3_ANO';
+  const isStudying =
+    value.highSchoolSituation === 'CURSANDO_2_ANO' || value.highSchoolSituation === 'CURSANDO_3_ANO';
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-[#001a33]">
-        <GraduationCap size={18} className="text-blue-600" />
-        <h3 className="text-sm font-black uppercase tracking-wider">Situação do Ensino Médio</h3>
+      <div className="flex items-center gap-2.5 text-[#001a33]">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100/80 text-blue-600">
+          <GraduationCap size={18} />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-wider">Situação do Ensino Médio</h3>
       </div>
 
       <label className="block">
-        <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Situação atual</span>
+        <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Situação Escolar Atual
+        </span>
         <select
           required
           disabled={disabled}
           value={value.highSchoolSituation}
-          onChange={(event) => onChange({
-            highSchoolSituation: event.target.value as TechnicalEnrollmentFormValues['highSchoolSituation'],
-            completionYear: '',
-            expectedCompletionYear: '',
-          })}
+          onChange={(event) =>
+            onChange({
+              highSchoolSituation: event.target.value as TechnicalEnrollmentFormValues['highSchoolSituation'],
+              completionYear: '',
+              expectedCompletionYear: '',
+            })
+          }
           className={inputClassName}
         >
-          <option value="">Selecione...</option>
+          <option value="">Selecione sua situação escolar...</option>
           {acceptsConcurrent && minimumHighSchoolGrade <= 2 ? (
-            <option value="CURSANDO_2_ANO">Estou cursando a 2ª série</option>
+            <option value="CURSANDO_2_ANO">Estou cursando a 2ª série do Ensino Médio</option>
           ) : null}
-          {acceptsConcurrent ? <option value="CURSANDO_3_ANO">Estou cursando a 3ª série</option> : null}
-          {acceptsSubsequent ? <option value="CONCLUIDO">Já concluí o Ensino Médio</option> : null}
+          {acceptsConcurrent ? (
+            <option value="CURSANDO_3_ANO">Estou cursando a 3ª série do Ensino Médio</option>
+          ) : null}
+          {acceptsSubsequent ? (
+            <option value="CONCLUIDO">Já concluí o Ensino Médio integralmente</option>
+          ) : null}
         </select>
       </label>
 
       {value.highSchoolSituation ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block sm:col-span-2">
-            <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {isCompleted ? 'Escola onde concluiu' : 'Escola onde estuda'}
+            <span className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <Building2 size={12} className="text-blue-600" />
+              {isCompleted ? 'Escola onde concluiu' : 'Escola onde cursa atualmente'}
             </span>
             <input
               required
               disabled={disabled}
               value={value.schoolName}
               onChange={(event) => onChange({ schoolName: event.target.value.toLocaleUpperCase('pt-BR') })}
-              placeholder="Nome completo da escola"
+              placeholder="Nome oficial e completo da instituição escolar"
               className={inputClassName}
             />
           </label>
 
           {isCompleted ? (
             <label className="block">
-              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Ano de conclusão</span>
+              <span className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <Calendar size={12} className="text-blue-600" />
+                Ano de conclusão
+              </span>
               <input
                 required
                 disabled={disabled}
@@ -89,7 +104,10 @@ const HighSchoolSituationFields: React.FC<HighSchoolSituationFieldsProps> = ({
 
           {isStudying ? (
             <label className="block">
-              <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Previsão de conclusão</span>
+              <span className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <Calendar size={12} className="text-blue-600" />
+                Previsão de conclusão
+              </span>
               <input
                 required
                 disabled={disabled}

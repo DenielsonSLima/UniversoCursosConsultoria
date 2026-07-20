@@ -20,6 +20,7 @@ export const FINANCEIRO_TAB_IDS = [
   'receber',
   'despesas',
   'transferencias',
+  'conciliacao-bancaria',
   'outros-debitos',
   'outros-creditos',
 ] as const;

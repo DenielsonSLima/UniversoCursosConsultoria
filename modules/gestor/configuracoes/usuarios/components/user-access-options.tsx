@@ -37,6 +37,7 @@ export const USER_FORM_FINANCEIRO_TABS = [
   { id: 'receber', label: 'Contas a Receber', icon: <TrendingUp size={16} /> },
   { id: 'despesas', label: 'Despesas', icon: <TrendingDown size={16} /> },
   { id: 'transferencias', label: 'Transferências', icon: <ArrowRightLeft size={16} /> },
+  { id: 'conciliacao-bancaria', label: 'Conciliação Bancária', icon: <FileText size={16} /> },
   { id: 'outros-debitos', label: 'Outros Débitos', icon: <TrendingDown size={16} /> },
   { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
 ];

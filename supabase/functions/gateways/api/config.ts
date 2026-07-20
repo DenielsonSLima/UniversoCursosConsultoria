@@ -19,6 +19,7 @@ export const GESTOR_ACTIONS = new Set([
   "save-issuer",
   "test-connection",
   "reconcile-banese-receivable",
+  "import-banese-cnab240-return",
 ]);
 
 export const GLOBAL_ACTIONS = new Set([
@@ -27,6 +28,7 @@ export const GLOBAL_ACTIONS = new Set([
   "save-issuer",
   "test-connection",
   "reconcile-banese-receivable",
+  "import-banese-cnab240-return",
 ]);
 
 export const PROVIDERS: Record<ProviderCode, { supports: PaymentMethod[] }> = {

@@ -42,6 +42,7 @@ const FINANCEIRO_TABS = [
   { id: 'receber', label: 'Contas a Receber' },
   { id: 'despesas', label: 'Contas a Pagar (Despesas)' },
   { id: 'transferencias', label: 'Transferências' },
+  { id: 'conciliacao-bancaria', label: 'Conciliação Bancária' },
   { id: 'outros-debitos', label: 'Outros Débitos' },
   { id: 'outros-creditos', label: 'Outros Créditos' }
 ];
