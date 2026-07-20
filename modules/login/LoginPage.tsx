@@ -18,6 +18,21 @@ const hasOAuthReturnInUrl = () => (
   window.location.search.includes('code=')
 );
 
+const getOAuthReturnCode = () => {
+  const searchCode = new URLSearchParams(window.location.search).get('code');
+  if (searchCode) {
+    return searchCode;
+  }
+
+  if (!window.location.hash) {
+    return null;
+  }
+
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashParams = new URLSearchParams(hash);
+  return hashParams.get('code');
+};
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -118,10 +133,29 @@ const LoginPage: React.FC = () => {
 
     const finishGoogleReturn = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
         const hasOAuthReturn = hasOAuthReturnInUrl();
+        let session = null;
 
-        if (!data.session) {
+        if (hasOAuthReturn) {
+          const authCode = getOAuthReturnCode();
+
+          if (authCode) {
+            const { data: exchangedData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
+
+            if (exchangeError) {
+              throw new Error(exchangeError.message || 'Não foi possível concluir a troca de sessão do Google.');
+            }
+
+            session = exchangedData.session;
+          }
+        }
+
+        if (!session) {
+          const { data } = await supabase.auth.getSession();
+          session = data?.session;
+        }
+
+        if (!session) {
           if (hasOAuthReturn) {
             setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
           }
