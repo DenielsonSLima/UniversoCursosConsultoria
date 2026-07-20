@@ -34,6 +34,7 @@ const GestorPage = lazy(() => import('./modules/gestor/gestor.page'));
 const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
+const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
 
 const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
@@ -60,6 +61,9 @@ const App: React.FC = () => {
 
         {/* ── Rotas Públicas (sempre disponíveis) ── */}
         <Route path="/" element={<PublicPage />} />
+        <Route path="/links" element={<BioPage />} />
+        <Route path="/bio" element={<BioPage />} />
+        <Route path="/linktree" element={<BioPage />} />
         <Route path="/contato" element={<ContactPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/privacidade" element={<PrivacyPage />} />
