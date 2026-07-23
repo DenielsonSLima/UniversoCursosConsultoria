@@ -10,6 +10,7 @@ import ResumoBancarioPanel from './ResumoBancarioPanel';
 import {
   BANCO_INTER_V3_DEFAULT_SCOPES,
   BANESE_FIXED_BANKING_DATA,
+  baneseFixedBankingData,
   CONFIGURABLE_PROVIDER_CODES,
   PROVIDER_ORDER,
   environmentLabel,
