@@ -142,7 +142,7 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
 
     try {
       await loadFacebookSdk(appId, graphVersion);
-      facebookWindow.FB?.login(
+      facebookWindow().FB?.login(
         (response) => {
           setIsLaunching(false);
           if (response?.authResponse?.code) {
