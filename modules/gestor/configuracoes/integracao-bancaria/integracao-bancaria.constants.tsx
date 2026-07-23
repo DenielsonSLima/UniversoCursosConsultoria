@@ -124,7 +124,12 @@ export const METHODS: Array<{
   },
 ];
 
-export const PROVIDER_ORDER: GatewayProviderCode[] = ['asaas', 'mercado_pago', 'banco_inter', 'banese_card'];
+export const PROVIDER_ORDER: GatewayProviderCode[] = ['banese_card', 'mercado_pago'];
+
+export const CONFIGURABLE_PROVIDER_CODES = new Set<GatewayProviderCode>(PROVIDER_ORDER);
+
+export const BANCO_INTER_V3_DEFAULT_SCOPES =
+  'boleto-cobranca.read boleto-cobranca.write';
 
 export const BANESE_FIXED_BANKING_DATA = Object.freeze({
   beneficiaryName: 'UNIVERSO CURSOS E CONSULTORIA LTDA',
@@ -182,8 +187,8 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-cyan-500 bg-cyan-50',
     action: 'bg-cyan-600 hover:bg-cyan-700 shadow-cyan-600/20',
     shadow: 'rgba(0, 168, 232, 0.18)',
-    description: 'Gateway reservado para pagamentos por cartão de crédito.',
-    bestFor: 'cartão de crédito',
+    description: 'Checkout Pro para cartão; ativação aguardando recuperação segura de preferências ambíguas.',
+    bestFor: 'homologação de cartão',
     icon: WalletCards,
   },
   banco_inter: {
@@ -215,8 +220,8 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-emerald-500 bg-emerald-50',
     action: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20',
     shadow: 'rgba(0, 132, 61, 0.18)',
-    description: 'Boleto em homologação; o Banese ativará o BolePix no mesmo título em produção.',
-    bestFor: 'boleto com Pix em produção',
+    description: 'Boleto via API em homologação; Pix aguardando liberação formal do Banese em produção.',
+    bestFor: 'boleto e Pix',
     icon: Landmark,
   },
 };
@@ -261,6 +266,7 @@ export const requiredFieldsFor = (
       { label: 'Access token', configured: credential?.accessTokenConfigured === true },
       { label: 'Public key', configured: credential?.publicKeyConfigured === true },
       { label: 'Webhook secret', configured: credential?.webhookSecretConfigured === true },
+      { label: 'Merchant ID validado', configured: String(credential?.metadata?.merchantId || '').trim().length > 0 },
     ];
   }
 

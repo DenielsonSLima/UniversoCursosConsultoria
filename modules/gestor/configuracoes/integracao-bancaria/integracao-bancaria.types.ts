@@ -26,6 +26,7 @@ export interface CredentialFormState {
   banesePixConvenio: string;
   banesePixChave: string;
   baneseCarteira: string;
+  baneseEdi7Code: string;
   baneseAgencia: string;
   baneseConta: string;
   notes: string;
@@ -55,6 +56,7 @@ export const emptyCredentialForm: CredentialFormState = {
   banesePixConvenio: '',
   banesePixChave: '',
   baneseCarteira: '',
+  baneseEdi7Code: '',
   baneseAgencia: '',
   baneseConta: '',
   notes: '',

@@ -51,6 +51,8 @@ interface RotasBancariasPanelProps {
   selectedRoute?: GatewayRoute;
   selectedProviderSupportsMethod: boolean;
   selectedRouteCredentialReady: boolean;
+  selectedProviderCheckoutBlocked: boolean;
+  selectedRouteBlockedReason?: string | null;
   routeMutationPending: boolean;
   getCredential: (providerCode: GatewayProviderCode, environment: GatewayEnvironment) => GatewayCredential | undefined;
   setRouteEnvironment: (value: GatewayEnvironment) => void;
@@ -83,6 +85,8 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
   selectedRoute,
   selectedProviderSupportsMethod,
   selectedRouteCredentialReady,
+  selectedProviderCheckoutBlocked,
+  selectedRouteBlockedReason,
   routeMutationPending,
   getCredential,
   setRouteEnvironment,
@@ -147,7 +151,11 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
                 type="button"
                 onClick={() => {
                   setPaymentMethod(method.value);
-                  if (route?.providerCode) setRouteProviderCode(route.providerCode);
+                  if (route?.providerCode && provider) {
+                    setRouteProviderCode(route.providerCode);
+                  } else {
+                    setRouteProviderCode(method.value === 'CREDIT_CARD' ? 'mercado_pago' : 'banese_card');
+                  }
                 }}
                 className={`min-h-[148px] min-w-0 overflow-hidden rounded-lg border p-4 text-left transition-all ${
                   active ? method.selected : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-white hover:text-[#001a33]'
@@ -222,12 +230,16 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
             <div className="mb-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
               <p className="text-xs font-bold leading-relaxed text-amber-700">
-                Na homologação, o Banese devolve somente linha digitável e código de barras. Em produção, o banco ativará o Pix dentro do mesmo boleto; por isso o BolePix usa a rota BOLETO e não exige uma rota Pix separada. Cartão não é suportado neste fluxo.
+                O boleto Banese é emitido pela API e o PDF é montado pelo sistema. O Pix está bloqueado em homologação e depende de liberação formal em produção. Quando o retorno identificar BolePix no mesmo título, a conciliação preserva essa origem. Cartão não é suportado pelo Banese.
               </p>
             </div>
           )}
 
-          {!selectedRouteCredentialReady && (
+          {selectedProviderCheckoutBlocked ? (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-relaxed text-amber-800">
+              {selectedRouteBlockedReason || String(routeProvider?.metadata?.checkout_block_reason || 'Rota bloqueada até concluir a homologação de emissão e callbacks deste provedor.')}
+            </div>
+          ) : !selectedRouteCredentialReady && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-bold leading-relaxed text-red-700">
               Antes de aplicar esta rota, cadastre as chaves de {routeProvider?.name || 'banco'} em {environmentLabel(routeEnvironment)} na aba Parametrização.
             </div>
@@ -236,7 +248,7 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
           <button
             type="button"
             onClick={activateRoute}
-            disabled={routeMutationPending || !selectedProviderSupportsMethod || !selectedRouteCredentialReady}
+            disabled={routeMutationPending || selectedProviderCheckoutBlocked || !selectedProviderSupportsMethod || !selectedRouteCredentialReady}
             className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-md px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-40 ${brand.action}`}
           >
             {routeMutationPending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
@@ -273,7 +285,11 @@ const RotasBancariasPanel: React.FC<RotasBancariasPanelProps> = ({
                   type="button"
                   onClick={() => {
                     setPaymentMethod(method.value);
-                    if (route?.providerCode) setRouteProviderCode(route.providerCode);
+                    if (route?.providerCode && provider) {
+                      setRouteProviderCode(route.providerCode);
+                    } else {
+                      setRouteProviderCode(method.value === 'CREDIT_CARD' ? 'mercado_pago' : 'banese_card');
+                    }
                   }}
                   className={`flex min-h-[76px] min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg border px-4 py-3 text-left transition-all ${
                     active ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:bg-white'

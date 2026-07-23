@@ -82,38 +82,7 @@ export interface GatewayOverview {
   issuerConfig?: GatewayIssuerConfig | null;
   issuerCandidates: GatewayIssuerCandidate[];
   activePolosCount: number;
-  webhookUrls: Record<GatewayProviderCode, string>;
-}
-
-export interface BaneseCnabImportSummary {
-  fileLines: number;
-  segmentT: number;
-  segmentU: number;
-  events: number;
-  matched: number;
-  paid: number;
-  notFound: number;
-  conflicts: number;
-  errors: number;
-  skipped: number;
-}
-
-export interface BaneseCnabImportOutcome {
-  row: number;
-  nossoNumero: string;
-  status: 'success' | 'warning' | 'error';
-  action: string;
-  message: string;
-}
-
-export interface BaneseCnabImportResult {
-  success: boolean;
-  importId: string;
-  fileName: string | null;
-  importedAt: string;
-  summary: BaneseCnabImportSummary;
-  outcomes: BaneseCnabImportOutcome[];
-  message?: string;
+  webhookUrls: Partial<Record<GatewayProviderCode, string | null>>;
 }
 
 export interface SaveCredentialInput {
@@ -279,16 +248,6 @@ export const integracaoBancariaService = {
       status: data.status,
       message: data.message,
     };
-  },
-
-  async importBaneseCnab240Return(input: {
-    fileContentBase64: string;
-    fileName?: string;
-    environment?: GatewayEnvironment;
-  }): Promise<BaneseCnabImportResult> {
-    return invoke<BaneseCnabImportResult>('import-banese-cnab240-return', {
-      ...input,
-    });
   },
 
   async reconcileBaneseReceivable(receivableId: string): Promise<{

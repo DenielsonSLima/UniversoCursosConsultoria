@@ -22,6 +22,10 @@ import {
   statusLabel,
 } from './integracao-bancaria.constants';
 import {
+  isValidBaneseEdi7Code,
+  normalizeBaneseEdi7Code,
+} from './integracao-bancaria.validation';
+import {
   CredentialProviderCard,
   EnvironmentBadge,
   EnvironmentBanner,
@@ -147,20 +151,25 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
   testConnection,
 }) => {
   const brand = PROVIDER_BRANDS[credentialProviderCode];
-  const webhookUrl = editCredential?.webhookUrl || overview?.webhookUrls?.[credentialProviderCode] || '';
-  const copyDisabled = !webhookUrl;
+  const webhookAvailable = credentialProviderCode !== 'banco_inter';
+  const webhookUrl = webhookAvailable
+    ? editCredential?.webhookUrl || overview?.webhookUrls?.[credentialProviderCode] || ''
+    : '';
+  const copyDisabled = !webhookAvailable || !webhookUrl;
+  const baneseEdi7CodeEntered = credentialForm.baneseEdi7Code.length > 0;
+  const baneseEdi7CodeValid = isValidBaneseEdi7Code(credentialForm.baneseEdi7Code);
 
   return (
     <div className="space-y-5">
       <div className="grid gap-3 lg:grid-cols-3">
         <InfoCard icon={Key} title="Chave única por banco" tone="blue">
-          Asaas, Mercado Pago e Banese ficam cadastrados uma vez por ambiente. A modalidade só escolhe qual banco usar.
+          Mercado Pago e Banese ficam cadastrados uma vez por ambiente. A modalidade só escolhe qual banco usar.
         </InfoCard>
         <InfoCard icon={ServerCog} title="Sandbox e produção" tone={keysEnvironment === 'production' ? 'emerald' : 'amber'}>
           Cada ambiente tem tokens próprios, webhook próprio e status próprio para evitar mistura de teste com cobrança real.
         </InfoCard>
         <InfoCard icon={LinkIcon} title="Webhook individual">
-          Cada banco recebe sua URL de retorno. Quando a cobrança mudar de status, o sistema identifica a origem.
+          Cada adaptador homologado recebe sua URL de retorno. Provedores ainda bloqueados não anunciam callback antes de existir um consumidor seguro.
         </InfoCard>
       </div>
 
@@ -303,7 +312,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 />
                 <TextInput
                   icon={WalletCards}
-                  label="Merchant ID"
+                  label="Merchant ID (conferido automaticamente)"
                   value={credentialForm.merchantId}
                   onChange={(value) => updateCredentialForm('merchantId', value)}
                 />
@@ -362,7 +371,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 <div className="rounded-lg border border-orange-100 bg-orange-50/70 p-4 md:col-span-2">
                   <p className="text-[10px] font-black uppercase tracking-widest text-orange-700">Permissões da aplicação no Inter</p>
                   <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
-                    Habilite Pix Cobrança (leitura e escrita), Cobrança/Boleto com Pix (leitura e escrita) e Webhook. Os escopos são solicitados automaticamente pelo servidor.
+                    Para a homologação atual, habilite somente Cobrança/Boleto com Pix V3 (leitura e escrita). O teste valida OAuth e mTLS com esses escopos; ele não atesta Pix avulso nem webhook, que permanecem bloqueados até existir o adaptador correspondente.
                   </p>
                 </div>
               </>
@@ -433,6 +442,48 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   value={credentialForm.baneseCarteira}
                   onChange={(value) => updateCredentialForm('baneseCarteira', value)}
                 />
+                <label className="space-y-2">
+                  <span className="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-widest text-slate-500">
+                    <FileText size={14} />
+                    Código EDI 7
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] text-slate-600">
+                      opcional no OAuth
+                    </span>
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={6}
+                    value={credentialForm.baneseEdi7Code}
+                    onChange={(event) => updateCredentialForm(
+                      'baneseEdi7Code',
+                      normalizeBaneseEdi7Code(event.target.value),
+                    )}
+                    aria-invalid={baneseEdi7CodeEntered && !baneseEdi7CodeValid}
+                    aria-describedby="banese-edi7-help"
+                    className={`h-11 w-full rounded-md border px-3 font-mono text-sm tracking-[0.28em] text-slate-700 outline-none transition-all focus:bg-white ${
+                      baneseEdi7CodeEntered && !baneseEdi7CodeValid
+                        ? 'border-amber-400 bg-amber-50 focus:border-amber-500'
+                        : baneseEdi7CodeValid
+                          ? 'border-emerald-300 bg-emerald-50/50 focus:border-emerald-500'
+                          : 'border-slate-200 bg-white focus:border-blue-500'
+                    }`}
+                    placeholder="000000"
+                  />
+                  <p
+                    id="banese-edi7-help"
+                    className={`text-[10px] font-semibold ${
+                      baneseEdi7CodeEntered && !baneseEdi7CodeValid
+                        ? 'text-amber-700'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {baneseEdi7CodeEntered && !baneseEdi7CodeValid
+                      ? `Faltam ${6 - credentialForm.baneseEdi7Code.length} dígito(s). O código deve ter exatamente 6.`
+                      : 'Usado somente na troca de arquivos CNAB. Não participa do teste OAuth do boleto.'}
+                  </p>
+                </label>
                 <TextInput
                   icon={Landmark}
                   label="Agência"
@@ -467,7 +518,9 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook de {credentialProvider?.name}</p>
                 <code className="mt-1 block truncate text-xs font-bold text-slate-600">
-                  {webhookUrl || 'URL será gerada após salvar'}
+                  {webhookAvailable
+                    ? webhookUrl || 'URL será gerada após salvar'
+                    : 'Indisponível até homologar o consumidor de callbacks do Banco Inter'}
                 </code>
               </div>
               <button
@@ -483,6 +536,10 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
             {credentialProviderCode === 'banese_card' ? (
               <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
                 O Banese confirmou a existência do webhook, mas ainda não enviou autenticação, payload e política de repetição. A URL fica reservada; a consulta da API é a confirmação principal.
+              </p>
+            ) : credentialProviderCode === 'banco_inter' ? (
+              <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
+                A API atual apenas valida as credenciais do BolePix V3. Nenhuma URL deve ser cadastrada no Inter enquanto emissão, assinatura e repetição dos callbacks não estiverem implementadas e homologadas.
               </p>
             ) : null}
           </div>

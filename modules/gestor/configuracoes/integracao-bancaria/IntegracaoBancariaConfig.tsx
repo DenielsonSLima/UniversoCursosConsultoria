@@ -8,7 +8,9 @@ import IntegracaoBancariaHeader from './IntegracaoBancariaHeader';
 import RotasBancariasPanel from './RotasBancariasPanel';
 import ResumoBancarioPanel from './ResumoBancarioPanel';
 import {
+  BANCO_INTER_V3_DEFAULT_SCOPES,
   BANESE_FIXED_BANKING_DATA,
+  CONFIGURABLE_PROVIDER_CODES,
   PROVIDER_ORDER,
   environmentLabel,
   methodLabel,
@@ -17,6 +19,10 @@ import {
   credentialReadyForRoute,
   supportsMethod,
 } from './integracao-bancaria.constants';
+import {
+  isValidBaneseEdi7Code,
+  normalizeBaneseEdi7Code,
+} from './integracao-bancaria.validation';
 import {
   GatewayEnvironment,
   GatewayModalidade,
@@ -38,9 +44,9 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const [modalidade, setModalidade] = useState<GatewayModalidade>('EAD');
   const [routeEnvironment, setRouteEnvironment] = useState<GatewayEnvironment>('sandbox');
   const [keysEnvironment, setKeysEnvironment] = useState<GatewayEnvironment>('sandbox');
-  const [paymentMethod, setPaymentMethod] = useState<GatewayPaymentMethod>('PIX');
-  const [routeProviderCode, setRouteProviderCode] = useState<GatewayProviderCode>('asaas');
-  const [credentialProviderCode, setCredentialProviderCode] = useState<GatewayProviderCode>('asaas');
+  const [paymentMethod, setPaymentMethod] = useState<GatewayPaymentMethod>('BOLETO');
+  const [routeProviderCode, setRouteProviderCode] = useState<GatewayProviderCode>('banese_card');
+  const [credentialProviderCode, setCredentialProviderCode] = useState<GatewayProviderCode>('banese_card');
   const [credentialForm, setCredentialForm] = useState<CredentialFormState>(emptyCredentialForm);
   const [selectedIssuerId, setSelectedIssuerId] = useState('');
 
@@ -50,7 +56,8 @@ const IntegracaoBancariaConfig: React.FC = () => {
   });
 
   const providers = useMemo(() => {
-    const items = overview?.providers || [];
+    const items = (overview?.providers || [])
+      .filter((item) => CONFIGURABLE_PROVIDER_CODES.has(item.code));
     return [...items].sort((a, b) => PROVIDER_ORDER.indexOf(a.code) - PROVIDER_ORDER.indexOf(b.code));
   }, [overview]);
 
@@ -70,10 +77,22 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const editCredential = getCredential(credentialProviderCode, keysEnvironment);
   const routedProvider = providers.find((item) => item.code === selectedRoute?.providerCode);
   const selectedProviderSupportsMethod = supportsMethod(routeProvider, paymentMethod);
-  const selectedRouteCredentialReady = !(
-    routeProviderCode === 'banese_card' && routeEnvironment === 'production'
-  ) && credentialReadyForRoute(routeProviderCode, routeCredential, paymentMethod);
-  const routedBrandCode = (selectedRoute?.providerCode as GatewayProviderCode | undefined) || routeProviderCode;
+  const selectedRouteBlockedReason = routeProviderCode === 'banese_card'
+      && routeEnvironment === 'sandbox'
+      && paymentMethod === 'PIX'
+    ? 'O Pix Banese está indisponível em homologação e só poderá ser ativado após a liberação formal do banco em produção.'
+    : routeProviderCode === 'banese_card' && routeEnvironment === 'production'
+      ? 'As rotas Banese de produção permanecem bloqueadas até a conclusão formal da homologação do boleto e a liberação do Pix pelo banco.'
+      : routeProvider?.metadata?.checkout_blocked === true
+        ? String(routeProvider.metadata.checkout_block_reason || 'Rota bloqueada até concluir a homologação segura deste provedor.')
+        : null;
+  const selectedProviderCheckoutBlocked = Boolean(selectedRouteBlockedReason);
+  const selectedRouteCredentialReady = !selectedProviderCheckoutBlocked
+    && credentialReadyForRoute(routeProviderCode, routeCredential, paymentMethod);
+  const routedBrandCode = selectedRoute?.providerCode
+      && CONFIGURABLE_PROVIDER_CODES.has(selectedRoute.providerCode)
+    ? selectedRoute.providerCode
+    : routeProviderCode;
   const headerProviderCode = activeTab === 'parametrizacao' ? credentialProviderCode : routedBrandCode;
   const summaryEnvironment = overview?.activeEnvironment || routeEnvironment;
   const activeEnvironment = activeTab === 'parametrizacao'
@@ -86,8 +105,12 @@ const IntegracaoBancariaConfig: React.FC = () => {
     : routedProvider?.name || routeProvider?.name || routeProviderCode;
 
   useEffect(() => {
-    if (selectedRoute?.providerCode) setRouteProviderCode(selectedRoute.providerCode);
-  }, [selectedRoute?.id, selectedRoute?.providerCode]);
+    if (selectedRoute?.providerCode && CONFIGURABLE_PROVIDER_CODES.has(selectedRoute.providerCode)) {
+      setRouteProviderCode(selectedRoute.providerCode);
+      return;
+    }
+    setRouteProviderCode(paymentMethod === 'CREDIT_CARD' ? 'mercado_pago' : 'banese_card');
+  }, [paymentMethod, selectedRoute?.id, selectedRoute?.providerCode]);
 
   useEffect(() => {
     if (activeTab === 'resumo' && overview?.activeEnvironment) {
@@ -116,6 +139,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
       banesePixConvenio: metadataValue(editCredential?.metadata, 'banesePixConvenio'),
       banesePixChave: metadataValue(editCredential?.metadata, 'banesePixChave'),
       baneseCarteira: metadataValue(editCredential?.metadata, 'baneseCarteira'),
+      baneseEdi7Code: metadataValue(editCredential?.metadata, 'baneseEdi7Code'),
       baneseAgencia: isBanese ? BANESE_FIXED_BANKING_DATA.agency : metadataValue(editCredential?.metadata, 'baneseAgencia'),
       baneseConta: isBanese ? BANESE_FIXED_BANKING_DATA.account : metadataValue(editCredential?.metadata, 'baneseConta') || metadataValue(editCredential?.metadata, 'baneseContaDisplay'),
       interPixKey: metadataValue(editCredential?.metadata, 'interPixKey'),
@@ -189,6 +213,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
   };
 
   const copyWebhookUrl = () => {
+    if (credentialProviderCode === 'banco_inter') return;
     const url = editCredential?.webhookUrl || overview?.webhookUrls?.[credentialProviderCode] || '';
     if (!url) return;
     navigator.clipboard.writeText(url);
@@ -244,12 +269,21 @@ const IntegracaoBancariaConfig: React.FC = () => {
       payload.privateKeyPem = credentialForm.privateKeyPem;
       payload.metadata = {
         interPixKey: credentialForm.interPixKey,
-        interScopes: 'cob.read cob.write cobv.read cobv.write pix.read webhook.read webhook.write boleto-cobranca.read boleto-cobranca.write',
+        interScopes: BANCO_INTER_V3_DEFAULT_SCOPES,
         notes: credentialForm.notes,
       };
     }
 
     if (credentialProviderCode === 'banese_card') {
+      const baneseEdi7Code = normalizeBaneseEdi7Code(credentialForm.baneseEdi7Code);
+      if (baneseEdi7Code && !isValidBaneseEdi7Code(baneseEdi7Code)) {
+        toast.error(
+          'Código EDI 7 inválido',
+          'Informe exatamente 6 dígitos ou deixe o campo vazio. Ele é opcional para o OAuth de boletos.',
+        );
+        return;
+      }
+
       payload.clientId = credentialForm.clientId;
       payload.clientSecret = credentialForm.clientSecret;
       payload.metadata = {
@@ -259,6 +293,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
         baneseBeneficiarioInscricao: BANESE_FIXED_BANKING_DATA.beneficiaryDocument,
         baneseCodigoBeneficiario: BANESE_FIXED_BANKING_DATA.beneficiaryCode,
         baneseCarteira: credentialForm.baneseCarteira,
+        baneseEdi7Code,
         baneseAgencia: BANESE_FIXED_BANKING_DATA.agency,
         baneseConta: BANESE_FIXED_BANKING_DATA.account,
         baneseContaDisplay: BANESE_FIXED_BANKING_DATA.account,
@@ -273,6 +308,10 @@ const IntegracaoBancariaConfig: React.FC = () => {
     if (!routeProvider) return;
     if (!selectedProviderSupportsMethod) {
       toast.error('Rota incompatível', `${routeProvider.name} não atende ${methodLabel(paymentMethod)}.`);
+      return;
+    }
+    if (selectedRouteBlockedReason) {
+      toast.error('Rota ainda não homologada', selectedRouteBlockedReason);
       return;
     }
     if (!selectedRouteCredentialReady) {
@@ -299,7 +338,11 @@ const IntegracaoBancariaConfig: React.FC = () => {
     setModalidade(nextModalidade);
     setRouteEnvironment(summaryEnvironment);
     setPaymentMethod(nextMethod);
-    if (nextProviderCode) setRouteProviderCode(nextProviderCode);
+    if (nextProviderCode && CONFIGURABLE_PROVIDER_CODES.has(nextProviderCode)) {
+      setRouteProviderCode(nextProviderCode);
+    } else {
+      setRouteProviderCode(nextMethod === 'CREDIT_CARD' ? 'mercado_pago' : 'banese_card');
+    }
   };
 
   if (isLoading) {
@@ -371,6 +414,8 @@ const IntegracaoBancariaConfig: React.FC = () => {
           selectedRoute={selectedRoute}
           selectedProviderSupportsMethod={selectedProviderSupportsMethod}
           selectedRouteCredentialReady={selectedRouteCredentialReady}
+          selectedProviderCheckoutBlocked={selectedProviderCheckoutBlocked}
+          selectedRouteBlockedReason={selectedRouteBlockedReason}
           routeMutationPending={routeMutation.isPending}
           getCredential={getCredential}
           setRouteEnvironment={setRouteEnvironment}

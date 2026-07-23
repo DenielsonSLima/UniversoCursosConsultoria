@@ -3,7 +3,7 @@ import { BaneseSyncSummary, formatApiSyncDateTime } from './conciliacao-bancaria
 
 interface ConciliacaoResumoProps {
   totalPendentes: number;
-  valorPendentes: number;
+  valorPendentes: number | null;
   totalPagoHoje: number;
   totalComErro: number;
   apiSync: BaneseSyncSummary;
@@ -58,31 +58,31 @@ const buildSyncCards = (summary: ConciliacaoResumoProps): ConciliacaoResumoCard[
     title: 'Última consulta CNAB240',
     getValue: () => formatApiSyncDateTime(summary.cnab240Sync.lastConsultaAt),
     valueClass: 'text-[#001a33] text-sm',
-    detail: 'Última consulta de retorno em lote enviada',
+    detail: 'Último arquivo de retorno registrado',
   },
   {
     title: 'Última sincronização CNAB240',
     getValue: () => formatApiSyncDateTime(summary.cnab240Sync.lastSincronizacaoAt),
     valueClass: 'text-[#001a33] text-sm',
-    detail: 'Último retorno em lote aplicado',
+    detail: 'Última atualização de arquivo de retorno',
   },
   {
-    title: 'Sincronizações CNAB240 hoje',
+    title: 'Arquivos CNAB240 hoje',
     getValue: () => summary.cnab240Sync.syncsToday,
     valueClass: 'text-indigo-700 text-3xl',
-    detail: 'Registros conciliados por arquivo importado',
+    detail: 'Arquivos de retorno registrados hoje',
   },
   {
-    title: 'Sincronizações CNAB240 semana',
+    title: 'Arquivos CNAB240 semana',
     getValue: () => summary.cnab240Sync.syncsThisWeek,
     valueClass: 'text-indigo-700 text-3xl',
-    detail: 'Registros conciliados por arquivo importado',
+    detail: 'Arquivos de retorno registrados nesta semana',
   },
   {
-    title: 'Sincronizações CNAB240 mês',
+    title: 'Arquivos CNAB240 mês',
     getValue: () => summary.cnab240Sync.syncsThisMonth,
     valueClass: 'text-indigo-700 text-3xl',
-    detail: 'Registros conciliados por arquivo importado',
+    detail: 'Arquivos de retorno registrados neste mês',
   },
 ];
 
@@ -94,16 +94,18 @@ const cards: ConciliacaoResumoCard[] = [
     detail: 'Cobranças Banese ainda não baixadas',
   },
   {
-    title: 'Valor pendente',
-    getValue: (summary) => toCurrency(summary.valorPendentes),
+    title: 'Valor pendente exato',
+    getValue: (summary) => summary.valorPendentes === null
+      ? 'Indisponível'
+      : toCurrency(summary.valorPendentes),
     valueClass: 'text-emerald-700 text-sm',
-    detail: 'Saldo aguardando baixa',
+    detail: 'Não estimado pela lista paginada; exige agregação segura específica',
   },
   {
-    title: 'Baixas confirmadas hoje',
+    title: 'Boletos pagos hoje',
     getValue: (summary) => summary.totalPagoHoje,
     valueClass: 'text-emerald-700 text-3xl',
-    detail: 'Atualizadas no fluxo de conciliação',
+    detail: 'Cobranças Banese com pagamento no dia civil de Maceió',
   },
   {
     title: 'Erros de conciliação',
