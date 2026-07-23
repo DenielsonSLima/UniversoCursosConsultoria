@@ -341,7 +341,7 @@ export const financeiroService = {
       .select(`
         *,
         parceiros(nome, cpf_cnpj, telefone),
-        polos(nome, cnpj, cidade, estado),
+        polos!contas_receber_polo_id_fkey(nome, cnpj, cidade, estado),
         turmas(
           nome,
           codigo,
@@ -416,10 +416,10 @@ export const financeiroService = {
   ): Promise<ContasReceber[]> {
     let query = supabase
       .from('contas_receber')
-      .select(`
+        .select(`
         *,
         parceiros(nome, cpf_cnpj, telefone),
-        polos(nome, cnpj, cidade, estado),
+        polos!contas_receber_polo_id_fkey(nome, cnpj, cidade, estado),
         turmas!inner(
           nome,
           codigo,
@@ -646,6 +646,7 @@ export const financeiroService = {
   },
 
   async createOtherCredit(input: {
+    idempotencyKey: string;
     poloId: string;
     descricao: string;
     valor: number;
@@ -653,92 +654,16 @@ export const financeiroService = {
     clienteId?: string;
     formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     contaBancariaId?: string;
-    markAsPaid?: boolean;
-    generateAsaas?: boolean;
+    mode: 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
   }): Promise<ContasReceber> {
-    const payload = {
-      polo_id: input.poloId,
-      descricao: input.descricao,
-      valor: input.valor,
-      data_vencimento: input.dataVencimento,
-      status: input.markAsPaid ? 'PAGO' : 'PENDENTE',
-      categoria: 'OUTROS_CREDITOS',
-      cliente_id: input.clienteId || null,
-      forma_pagamento: input.formaPagamento || null,
-      conta_bancaria_id: input.contaBancariaId || null,
-      valor_pago: input.markAsPaid ? input.valor : null,
-      data_pagamento: input.markAsPaid ? input.dataVencimento : null,
-      origem_pagamento: input.markAsPaid ? 'PRESENCIAL' : (input.generateAsaas ? 'ASAAS' : 'LOCAL'),
-    };
-
-    const { data, error } = await supabase
-      .from('contas_receber')
-      .insert(payload)
-      .select(`
-        *,
-        parceiros(nome, cpf_cnpj),
-        polos(nome, cnpj, cidade, estado)
-      `)
-      .single();
-
-    if (error) {
-      console.error('Erro ao criar outro crédito:', error);
-      throw error;
-    }
-
-    if (input.generateAsaas && data?.id) {
-      await asaasIntegrationService.syncReceivable(data.id);
-      const { data: synced, error: syncFetchError } = await supabase
-        .from('contas_receber')
-        .select(`
-          *,
-          parceiros(nome, cpf_cnpj),
-          polos(nome, cnpj, cidade, estado)
-        `)
-        .eq('id', data.id)
-        .single();
-      if (syncFetchError) throw syncFetchError;
-      return {
-        id: synced.id,
-        poloId: synced.polo_id,
-        poloNome: synced.polos?.nome || '',
-        poloCnpj: synced.polos?.cnpj || '',
-        poloCidade: synced.polos?.cidade || '',
-        poloUf: synced.polos?.estado || '',
-        descricao: synced.descricao,
-        valor: Number(synced.valor),
-        dataVencimento: synced.data_vencimento,
-        dataPagamento: synced.data_pagamento,
-        valorPago: synced.valor_pago === null ? undefined : Number(synced.valor_pago),
-        status: synced.status,
-        categoria: synced.categoria,
-        clienteId: synced.cliente_id,
-        clienteNome: synced.parceiros?.nome || 'Cliente Geral',
-        clienteCpfCnpj: synced.parceiros?.cpf_cnpj || '',
-        formaPagamento: synced.forma_pagamento,
-        origemPagamento: synced.origem_pagamento,
-        gatewayProvider: synced.gateway_provider,
-        contaBancariaId: synced.conta_bancaria_id,
-        nossoNumeroAsaas: synced.nosso_numero_asaas,
-        asaasPaymentId: synced.asaas_payment_id || synced.gateway_payment_id,
-        asaasPaymentLinkId: synced.asaas_payment_link_id || synced.gateway_payment_link_id,
-        asaasInvoiceUrl: synced.asaas_invoice_url || synced.gateway_invoice_url,
-        asaasBankSlipUrl: synced.asaas_bank_slip_url || synced.gateway_bank_slip_url,
-        asaasInstallmentId: synced.asaas_installment_id || synced.gateway_installment_id,
-        asaasTransactionReceiptUrl: synced.asaas_transaction_receipt_url || synced.gateway_transaction_receipt_url,
-        asaasStatus: synced.asaas_status || synced.gateway_status,
-        asaasLastError: synced.asaas_last_error || synced.gateway_last_error,
-        createdAt: synced.created_at,
-      };
-    }
-
+    const { receivable: data } = await asaasIntegrationService.createOtherCredit(input);
     return {
       id: data.id,
       poloId: data.polo_id,
-      poloNome: data.polos?.nome || '',
-      poloCnpj: data.polos?.cnpj || '',
-      poloCidade: data.polos?.cidade || '',
-      poloUf: data.polos?.estado || '',
+      poloNome: '',
+      poloCnpj: '',
+      poloCidade: '',
+      poloUf: '',
       descricao: data.descricao,
       valor: Number(data.valor),
       dataVencimento: data.data_vencimento,
@@ -747,8 +672,8 @@ export const financeiroService = {
       status: data.status,
       categoria: data.categoria,
       clienteId: data.cliente_id,
-      clienteNome: data.parceiros?.nome || 'Cliente Geral',
-      clienteCpfCnpj: data.parceiros?.cpf_cnpj || '',
+      clienteNome: 'Cliente Geral',
+      clienteCpfCnpj: '',
       formaPagamento: data.forma_pagamento,
       origemPagamento: data.origem_pagamento,
       gatewayProvider: data.gateway_provider,
@@ -769,8 +694,13 @@ export const financeiroService = {
   async markReceivablePaid(
     id: string,
     params: {
+      idempotencyKey: string;
       contaBancariaId: string;
-      valorPago: number;
+      valorPago: number | string;
+      valorJuros?: number | string;
+      valorMulta?: number | string;
+      valorDesconto?: number | string;
+      valorAcrescimo?: number | string;
       dataPagamento: string;
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     }
@@ -784,6 +714,8 @@ export const financeiroService = {
     gatewayProvider?: string | null;
     gatewayPaymentId?: string | null;
     futureSyncWarning?: string | null;
+    settlementId?: string;
+    replayed?: boolean;
   }> {
     return asaasIntegrationService.settleInPerson(id, params);
   },
@@ -1079,8 +1011,9 @@ export const financeiroService = {
   async searchAlunoReceivables(searchQuery: string, poloId?: string): Promise<any[]> {
     let query = supabase
       .from('contas_receber')
-      .select('*, parceiros!inner(nome, cpf_cnpj), polos(nome)')
-      .eq('categoria', 'MENSALIDADE');
+      .select('id, descricao, valor, data_vencimento, data_pagamento, status, categoria, forma_pagamento, cliente_id, polo_id, parceiros!inner(nome, cpf_cnpj), polos!contas_receber_polo_id_fkey(nome)')
+      .eq('categoria', 'MENSALIDADE')
+      .in('status', ['PENDENTE', 'VENCIDO']);
 
     if (poloId && poloId !== 'todos') {
       query = query.eq('polo_id', poloId);
@@ -1090,7 +1023,9 @@ export const financeiroService = {
       query = query.or(`descricao.ilike.%${searchQuery}%,parceiros.nome.ilike.%${searchQuery}%,parceiros.cpf_cnpj.ilike.%${searchQuery}%`);
     }
 
-    const { data, error } = await query.order('data_vencimento', { ascending: true });
+    const { data, error } = await query
+      .order('data_vencimento', { ascending: true })
+      .limit(500);
     if (error) {
       console.error('Erro ao buscar contas a receber de alunos:', error);
       throw error;

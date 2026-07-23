@@ -1,4 +1,18 @@
 import React, { useMemo, useState } from 'react';
+
+/** Fallback for non-secure contexts (HTTP over LAN) where crypto.randomUUID is unavailable. */
+const safeRandomUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback: build a v4 UUID from crypto.getRandomValues
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, CheckCircle2, Loader2, ReceiptText, Search, WalletCards, X } from 'lucide-react';
 import { financeiroService } from '../../financeiro/financeiro.service';
@@ -24,12 +38,6 @@ const formatCurrencyInput = (value: number) => value.toLocaleString('pt-BR', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
-const parseCurrencyInput = (value: string) => {
-  const normalized = value.replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.');
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
 const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const activeUserId = sessionStorage.getItem('logged_user_id');
   const activePoloId = sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id');
@@ -43,6 +51,11 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
   const [paymentDate, setPaymentDate] = useState(today());
   const [paymentMethod, setPaymentMethod] = useState<'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO'>('DINHEIRO');
   const [paidValue, setPaidValue] = useState('');
+  const [interestValue, setInterestValue] = useState('');
+  const [penaltyValue, setPenaltyValue] = useState('');
+  const [discountValue, setDiscountValue] = useState('');
+  const [additionValue, setAdditionValue] = useState('');
+  const [settlementAttemptId, setSettlementAttemptId] = useState(() => safeRandomUUID());
   const normalizedTerm = searchTerm.trim();
 
   const alunosQuery = useQuery({
@@ -71,12 +84,22 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
     setPaymentDate(today());
     setPaymentMethod('DINHEIRO');
     setAccountId('');
+    setInterestValue('');
+    setPenaltyValue('');
+    setDiscountValue('');
+    setAdditionValue('');
+    setSettlementAttemptId(safeRandomUUID());
   };
 
   const settlementMutation = useMutation({
     mutationFn: () => financeiroService.markReceivablePaid(selected!.id, {
+      idempotencyKey: settlementAttemptId,
       contaBancariaId: accountId,
-      valorPago: parseCurrencyInput(paidValue),
+      valorPago: paidValue,
+      valorJuros: interestValue || '0',
+      valorMulta: penaltyValue || '0',
+      valorDesconto: discountValue || '0',
+      valorAcrescimo: additionValue || '0',
       dataPagamento: paymentDate,
       formaPagamento: paymentMethod,
     }),
@@ -100,7 +123,7 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
     ),
   });
 
-  const confirmDisabled = !accountId || !paymentDate || parseCurrencyInput(paidValue) <= 0 || settlementMutation.isPending;
+  const confirmDisabled = !accountId || !paymentDate || !/[1-9]/.test(paidValue) || settlementMutation.isPending;
   const debts = recebiveisQuery.data || [];
   const totalOpen = debts.reduce((sum, item) => sum + item.valor, 0);
 
@@ -237,7 +260,27 @@ const SecretariaConsultaFinanceiraPage: React.FC = () => {
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Valor recebido</span>
                 <input value={paidValue} onChange={(event) => setPaidValue(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400" />
               </label>
+              <label>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Juros recebidos</span>
+                <input value={interestValue} onChange={(event) => setInterestValue(event.target.value)} placeholder="0,00" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400" />
+              </label>
+              <label>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Multa recebida</span>
+                <input value={penaltyValue} onChange={(event) => setPenaltyValue(event.target.value)} placeholder="0,00" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400" />
+              </label>
+              <label>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Desconto concedido</span>
+                <input value={discountValue} onChange={(event) => setDiscountValue(event.target.value)} placeholder="0,00" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400" />
+              </label>
+              <label>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Outros acréscimos</span>
+                <input value={additionValue} onChange={(event) => setAdditionValue(event.target.value)} placeholder="0,00" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-black text-slate-700 outline-none focus:border-cyan-400" />
+              </label>
             </div>
+
+            <p className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-600">
+              O servidor confere se principal + juros + multa + acréscimos − desconto corresponde exatamente ao valor recebido. Nenhum cálculo financeiro é consolidado nesta tela.
+            </p>
 
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setSelected(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600">Cancelar</button>

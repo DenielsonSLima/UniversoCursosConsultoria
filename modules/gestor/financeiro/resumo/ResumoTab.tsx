@@ -2,8 +2,11 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Users, AlertTriangle, DollarSign, Link2, CheckCircle2 } from 'lucide-react';
+import { Search, Users, AlertTriangle } from 'lucide-react';
 import { financeiroService } from '../financeiro.service';
+import { financeiroQueryKeys } from '../financeiro.queryKeys';
+import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
+import BaneseApiHealthCard from './BaneseApiHealthCard';
 
 interface ResumoTabProps {
   poloId?: string | null;
@@ -11,18 +14,19 @@ interface ResumoTabProps {
 
 const ResumoTab: React.FC<ResumoTabProps> = ({ poloId }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  useFinanceiroRealtime(poloId);
 
   // Fetch KPIs
   const { data: kpis, isLoading: isKpisLoading } = useQuery({
-    queryKey: ['financeiro-resumo-kpis', poloId || 'todos'],
+    queryKey: financeiroQueryKeys.resumoKpisByPolo(poloId),
     queryFn: () => financeiroService.getResumoKpis(poloId || undefined)
   });
 
   // Fetch / Search student receivables
   const { data: receivables = [], isLoading: isSearchLoading } = useQuery({
-    queryKey: ['financeiro-aluno-receivables', searchTerm, poloId || 'todos'],
+    queryKey: financeiroQueryKeys.alunoReceivablesSearch(searchTerm, poloId),
     queryFn: () => financeiroService.searchAlunoReceivables(searchTerm, poloId || undefined),
-    enabled: true
+    enabled: searchTerm.trim().length >= 2
   });
 
   const formatCurrency = (value: number) => {
@@ -87,6 +91,8 @@ const ResumoTab: React.FC<ResumoTabProps> = ({ poloId }) => {
           </div>
         </div>
       </div>
+
+      <BaneseApiHealthCard />
 
       {/* Aluno Receivables Search Engine */}
       <div className="bg-white p-6 rounded-[2rem] border border-slate-150 shadow-sm space-y-6">
