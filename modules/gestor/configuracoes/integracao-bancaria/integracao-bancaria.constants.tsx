@@ -131,14 +131,18 @@ export const CONFIGURABLE_PROVIDER_CODES = new Set<GatewayProviderCode>(PROVIDER
 export const BANCO_INTER_V3_DEFAULT_SCOPES =
   'boleto-cobranca.read boleto-cobranca.write';
 
-export const BANESE_FIXED_BANKING_DATA = Object.freeze({
-  beneficiaryName: 'UNIVERSO CURSOS E CONSULTORIA LTDA',
+export const baneseFixedBankingData = (environment?: 'sandbox' | 'production') => ({
+  beneficiaryName: environment === 'sandbox'
+    ? 'API Boletos - Universo Cursos e Consultoria LTDA'
+    : 'UNIVERSO CURSOS E CONSULTORIA LTDA',
   beneficiaryDocument: '13.278.137/0001-54',
   agency: '033',
   account: '03/100649-0',
   beneficiaryCode: '03/100649-0',
-  agreement: '15528',
+  agreement: environment === 'sandbox' ? '15857255' : '15856813',
 });
+
+export const BANESE_FIXED_BANKING_DATA = baneseFixedBankingData('production');
 
 export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
   label: string;

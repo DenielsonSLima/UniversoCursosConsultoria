@@ -127,21 +127,22 @@ const IntegracaoBancariaConfig: React.FC = () => {
 
   useEffect(() => {
     const isBanese = credentialProviderCode === 'banese_card';
-    setCredentialForm({
-      ...emptyCredentialForm,
-      walletId: metadataValue(editCredential?.metadata, 'walletId'),
-      merchantId: metadataValue(editCredential?.metadata, 'merchantId'),
-      baneseConvenio: isBanese ? BANESE_FIXED_BANKING_DATA.agreement : metadataValue(editCredential?.metadata, 'baneseConvenio'),
-      baneseBoletoConvenio: isBanese ? BANESE_FIXED_BANKING_DATA.agreement : metadataValue(editCredential?.metadata, 'baneseBoletoConvenio') || metadataValue(editCredential?.metadata, 'baneseConvenio'),
-      baneseBeneficiarioNome: isBanese ? BANESE_FIXED_BANKING_DATA.beneficiaryName : metadataValue(editCredential?.metadata, 'baneseBeneficiarioNome'),
-      baneseBeneficiarioInscricao: isBanese ? BANESE_FIXED_BANKING_DATA.beneficiaryDocument : metadataValue(editCredential?.metadata, 'baneseBeneficiarioInscricao'),
-      baneseCodigoBeneficiario: isBanese ? BANESE_FIXED_BANKING_DATA.beneficiaryCode : metadataValue(editCredential?.metadata, 'baneseCodigoBeneficiario'),
-      banesePixConvenio: metadataValue(editCredential?.metadata, 'banesePixConvenio'),
-      banesePixChave: metadataValue(editCredential?.metadata, 'banesePixChave'),
-      baneseCarteira: metadataValue(editCredential?.metadata, 'baneseCarteira'),
-      baneseEdi7Code: metadataValue(editCredential?.metadata, 'baneseEdi7Code'),
-      baneseAgencia: isBanese ? BANESE_FIXED_BANKING_DATA.agency : metadataValue(editCredential?.metadata, 'baneseAgencia'),
-      baneseConta: isBanese ? BANESE_FIXED_BANKING_DATA.account : metadataValue(editCredential?.metadata, 'baneseConta') || metadataValue(editCredential?.metadata, 'baneseContaDisplay'),
+      const fixedData = baneseFixedBankingData(keysEnvironment);
+      setCredentialForm({
+        ...emptyCredentialForm,
+        walletId: metadataValue(editCredential?.metadata, 'walletId'),
+        merchantId: metadataValue(editCredential?.metadata, 'merchantId'),
+        baneseConvenio: isBanese ? fixedData.agreement : metadataValue(editCredential?.metadata, 'baneseConvenio'),
+        baneseBoletoConvenio: isBanese ? fixedData.agreement : metadataValue(editCredential?.metadata, 'baneseBoletoConvenio') || metadataValue(editCredential?.metadata, 'baneseConvenio'),
+        baneseBeneficiarioNome: isBanese ? fixedData.beneficiaryName : metadataValue(editCredential?.metadata, 'baneseBeneficiarioNome'),
+        baneseBeneficiarioInscricao: isBanese ? fixedData.beneficiaryDocument : metadataValue(editCredential?.metadata, 'baneseBeneficiarioInscricao'),
+        baneseCodigoBeneficiario: isBanese ? fixedData.beneficiaryCode : metadataValue(editCredential?.metadata, 'baneseCodigoBeneficiario'),
+        banesePixConvenio: metadataValue(editCredential?.metadata, 'banesePixConvenio'),
+        banesePixChave: metadataValue(editCredential?.metadata, 'banesePixChave'),
+        baneseCarteira: metadataValue(editCredential?.metadata, 'baneseCarteira'),
+        baneseEdi7Code: metadataValue(editCredential?.metadata, 'baneseEdi7Code'),
+        baneseAgencia: isBanese ? fixedData.agency : metadataValue(editCredential?.metadata, 'baneseAgencia'),
+        baneseConta: isBanese ? fixedData.account : metadataValue(editCredential?.metadata, 'baneseConta') || metadataValue(editCredential?.metadata, 'baneseContaDisplay'),
       interPixKey: metadataValue(editCredential?.metadata, 'interPixKey'),
       notes: metadataValue(editCredential?.metadata, 'notes'),
     });
@@ -284,19 +285,20 @@ const IntegracaoBancariaConfig: React.FC = () => {
         return;
       }
 
+      const fixedData = baneseFixedBankingData(keysEnvironment);
       payload.clientId = credentialForm.clientId;
       payload.clientSecret = credentialForm.clientSecret;
       payload.metadata = {
-        baneseConvenio: BANESE_FIXED_BANKING_DATA.agreement,
-        baneseBoletoConvenio: BANESE_FIXED_BANKING_DATA.agreement,
-        baneseBeneficiarioNome: BANESE_FIXED_BANKING_DATA.beneficiaryName,
-        baneseBeneficiarioInscricao: BANESE_FIXED_BANKING_DATA.beneficiaryDocument,
-        baneseCodigoBeneficiario: BANESE_FIXED_BANKING_DATA.beneficiaryCode,
+        baneseConvenio: fixedData.agreement,
+        baneseBoletoConvenio: fixedData.agreement,
+        baneseBeneficiarioNome: fixedData.beneficiaryName,
+        baneseBeneficiarioInscricao: fixedData.beneficiaryDocument,
+        baneseCodigoBeneficiario: fixedData.beneficiaryCode,
         baneseCarteira: credentialForm.baneseCarteira,
         baneseEdi7Code,
-        baneseAgencia: BANESE_FIXED_BANKING_DATA.agency,
-        baneseConta: BANESE_FIXED_BANKING_DATA.account,
-        baneseContaDisplay: BANESE_FIXED_BANKING_DATA.account,
+        baneseAgencia: fixedData.agency,
+        baneseConta: fixedData.account,
+        baneseContaDisplay: fixedData.account,
         notes: credentialForm.notes,
       };
     }

@@ -35,22 +35,71 @@ export const PROVIDERS: Record<ProviderCode, { supports: PaymentMethod[] }> = {
   asaas: { supports: ["PIX", "BOLETO", "CREDIT_CARD"] },
   mercado_pago: { supports: ["CREDIT_CARD"] },
   banco_inter: { supports: ["PIX", "BOLETO"] },
-  banese_card: { supports: ["BOLETO"] },
+  banese_card: { supports: ["PIX", "BOLETO"] },
+};
+
+export const CONFIGURABLE_PROVIDER_CODES = [
+  "banese_card",
+  "mercado_pago",
+] as const satisfies readonly ProviderCode[];
+
+const configurableProviderCodes = new Set<ProviderCode>(
+  CONFIGURABLE_PROVIDER_CODES,
+);
+
+export const assertProviderInFinancialScope = (
+  providerCode: ProviderCode,
+) => {
+  if (configurableProviderCodes.has(providerCode)) return;
+  throw new Error(
+    providerCode === "asaas"
+      ? "Asaas foi desativado para novas cobrancas. O historico permanece somente para auditoria e encerramento seguro."
+      : "Banco Inter foi removido do escopo financeiro. Use Banese para boleto/Pix ou Mercado Pago para cartao.",
+  );
+};
+
+export const assertProviderMethodInFinancialScope = (
+  providerCode: ProviderCode,
+  paymentMethod: PaymentMethod,
+) => {
+  assertProviderInFinancialScope(providerCode);
+  const valid = providerCode === "banese_card"
+    ? paymentMethod === "PIX" || paymentMethod === "BOLETO"
+    : paymentMethod === "CREDIT_CARD";
+  if (!valid) {
+    throw new Error(
+      providerCode === "banese_card"
+        ? "Banese atende somente boleto e Pix; cartao deve usar Mercado Pago."
+        : "Mercado Pago atende somente cartao neste sistema; boleto e Pix devem usar Banese.",
+    );
+  }
 };
 
 export const assertProviderAdapterReady = (
   providerCode: ProviderCode,
   paymentMethod: PaymentMethod,
+  environment?: Environment,
 ) => {
-  if (providerCode === "banco_inter") {
+  assertProviderMethodInFinancialScope(providerCode, paymentMethod);
+  if (providerCode === "mercado_pago") {
     throw new Error(
-      "As credenciais do Banco Inter podem ser configuradas e testadas, mas a rota de cobranca so sera liberada apos homologar a emissao e os callbacks.",
+      "A rota Mercado Pago permanece bloqueada ate homologar a recuperacao de criacao ambigua de preferencias, sem risco de gerar dois links pagaveis.",
     );
   }
   if (providerCode !== "banese_card") return;
-  if (paymentMethod === "CREDIT_CARD") {
+  if (environment === "production") {
     throw new Error(
-      "Banese nao aceita cartao de credito neste fluxo. Use Asaas ou Mercado Pago para cartao.",
+      "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
+    );
+  }
+  if (paymentMethod === "PIX") {
+    throw new Error(
+      "Pix Banese permanece bloqueado enquanto o ambiente de homologacao do banco estiver indisponivel.",
+    );
+  }
+  if (paymentMethod !== "BOLETO") {
+    throw new Error(
+      "Banese nao aceita cartao de credito neste fluxo. Use Mercado Pago para cartao.",
     );
   }
 };
@@ -77,6 +126,17 @@ export const normalizeMethod = (value: unknown): PaymentMethod => {
   if (method === "CARTAO" || method === "CARTÃO") return "CREDIT_CARD";
   throw new Error("Forma de pagamento invalida.");
 };
+
+export const assertStoredProviderAdapterReady = (
+  providerCode: unknown,
+  paymentMethod: unknown,
+  environment?: unknown,
+) =>
+  assertProviderAdapterReady(
+    normalizeProviderCode(providerCode),
+    normalizeMethod(paymentMethod),
+    environment === undefined ? undefined : normalizeEnvironment(environment),
+  );
 
 export const normalizeModalidade = (value: unknown): Modalidade => {
   const modalidade = String(value || "")
@@ -149,6 +209,7 @@ export const pickMetadata = (value: unknown) => {
     "baneseConta",
     "baneseContaDisplay",
     "baneseCodigoEspecie",
+    "baneseEdi7Code",
     "quantidadeDiasBaixaDevolucao",
     "banesePixHomologacaoDisponivel",
     "notes",
@@ -160,35 +221,82 @@ export const pickMetadata = (value: unknown) => {
   );
 };
 
-export const BANESE_FIXED_METADATA = Object.freeze({
-  baneseBeneficiarioNome: "UNIVERSO CURSOS E CONSULTORIA LTDA",
+export const DEFAULT_BANCO_INTER_SCOPES =
+  "boleto-cobranca.read boleto-cobranca.write";
+
+export const normalizeBancoInterScopes = (value: unknown) => {
+  // A integracao atual homologa apenas Cobranca V3/BolePix. Os scopes nao
+  // sao configuraveis pelo cliente para evitar ampliacao acidental de
+  // privilegios (pix.*, webhook.* ou produtos ainda sem adapter canonico).
+  void value;
+  return DEFAULT_BANCO_INTER_SCOPES;
+};
+
+export const baneseFixedMetadata = (environment?: Environment) => ({
+  baneseBeneficiarioNome: environment === "sandbox"
+    ? "API Boletos - Universo Cursos e Consultoria LTDA"
+    : "UNIVERSO CURSOS E CONSULTORIA LTDA",
   baneseBeneficiarioInscricao: "13.278.137/0001-54",
   baneseAgencia: "033",
   baneseConta: "03/100649-0",
   baneseContaDisplay: "03/100649-0",
   baneseCodigoBeneficiario: "03/100649-0",
-  baneseConvenio: "15528",
-  baneseBoletoConvenio: "15528",
+  baneseConvenio: environment === "sandbox" ? "15857255" : "15856813",
+  baneseBoletoConvenio: environment === "sandbox" ? "15857255" : "15856813",
 });
+
+export const BANESE_FIXED_METADATA = baneseFixedMetadata("production");
+
+export const normalizeBaneseEdi7Code = (value: unknown) => {
+  const normalized = String(value || "").replace(/\D/g, "");
+  if (normalized && !/^\d{6}$/.test(normalized)) {
+    throw new Error("Código EDI7 Banese deve possuir exatamente 6 dígitos.");
+  }
+  return normalized;
+};
 
 export const enforceProviderFixedMetadata = (
   providerCode: ProviderCode,
   metadata: Record<string, unknown>,
-) => providerCode === "banese_card"
-  ? { ...metadata, ...BANESE_FIXED_METADATA }
-  : metadata;
+  environment?: Environment,
+) => {
+  if (providerCode === "banco_inter") {
+    return {
+      ...metadata,
+      interScopes: normalizeBancoInterScopes(metadata.interScopes),
+    };
+  }
+  if (providerCode === "banese_card") {
+    const hasEdi7 = Object.prototype.hasOwnProperty.call(
+      metadata,
+      "baneseEdi7Code",
+    );
+    return {
+      ...metadata,
+      ...(hasEdi7
+        ? { baneseEdi7Code: normalizeBaneseEdi7Code(metadata.baneseEdi7Code) }
+        : {}),
+      ...baneseFixedMetadata(environment),
+    };
+  }
+  return metadata;
+};
 
 export const providerOverviewRow = (provider: any) => {
   if (provider?.code === "mercado_pago") {
     return {
       ...provider,
-      description: "Gateway reservado para pagamentos por cartao de credito.",
+      description:
+        "Checkout Pro para cartao; rota bloqueada ate homologar a recuperacao idempotente de preferencias.",
       supports_pix: false,
       supports_boleto: false,
       supports_credit_card: true,
       metadata: {
         ...(provider?.metadata || {}),
         intended_role: "credit_card",
+        checkout_blocked: true,
+        checkout_block_reason:
+          "Aguardando homologacao da recuperacao de tentativas ambiguas na criacao de preferencias Mercado Pago.",
       },
     };
   }
@@ -197,7 +305,7 @@ export const providerOverviewRow = (provider: any) => {
       ...provider,
       name: "Banco Inter",
       description:
-        "API oficial do Inter Empresas para Pix Cobranca e Boleto com Pix, autenticada por OAuth e certificado mTLS.",
+        "Credenciais da Cobranca/BolePix V3; emissao e callbacks ainda bloqueados ate homologacao.",
       supports_pix: true,
       supports_boleto: true,
       supports_credit_card: false,
@@ -216,8 +324,8 @@ export const providerOverviewRow = (provider: any) => {
     ...provider,
     name: "Banese",
     description:
-      "Boleto em homologacao; o Banese ativara o BolePix no mesmo titulo em producao.",
-    supports_pix: false,
+      "Boleto via API em homologacao; Pix sera liberado pelo Banese somente em producao.",
+    supports_pix: true,
     supports_boleto: true,
     supports_credit_card: false,
     has_public_api: true,
@@ -227,7 +335,7 @@ export const providerOverviewRow = (provider: any) => {
       intended_role: "bolepix_boleto",
       homologation_only: true,
       pix_homologation_note:
-        "Homologacao devolve apenas linha e barras; em producao o QR BolePix vira parte do boleto, sem rota Pix separada.",
+        "O servico Pix esta indisponivel em homologacao e so podera ser ativado depois da liberacao formal do banco em producao.",
     },
   };
 };
