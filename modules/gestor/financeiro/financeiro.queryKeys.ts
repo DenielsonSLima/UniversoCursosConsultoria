@@ -32,9 +32,28 @@ export const financeiroQueryKeys = {
     ['financeiro', 'conciliacao-bancaria', 'items', poloId || 'sem-polo'] as const,
   conciliacaoBancariaTransacoes: (poloId?: string | null) =>
     ['financeiro', 'conciliacao-bancaria', 'transacoes', poloId || 'sem-polo'] as const,
+  baneseApiHealthByEnvironment: (environment?: string | null) =>
+    ['financeiro', 'banese-api-health', environment || 'sem-ambiente'] as const,
+  baneseApiHealth: (
+    environment?: string | null,
+    credentialEvidence?: {
+      configured: boolean;
+      lastTestAt?: string | null;
+      lastTestStatus?: string | null;
+    } | null,
+  ) => [
+    'financeiro',
+    'banese-api-health',
+    environment || 'sem-ambiente',
+    credentialEvidence || null,
+  ] as const,
   contasBancariasSaldos: ['financeiro', 'contas-bancarias-saldos'] as const,
   polos: ['financeiro', 'polos'] as const,
   parceiros: ['financeiro', 'parceiros'] as const,
-  resumoKpis: ['financeiro', 'resumo-kpis'] as const,
-  alunoReceivables: ['financeiro', 'aluno-receivables'] as const,
+  resumoKpis: ['financeiro-resumo-kpis'] as const,
+  resumoKpisByPolo: (poloId?: string | null) =>
+    ['financeiro-resumo-kpis', poloId || 'todos'] as const,
+  alunoReceivables: ['financeiro-aluno-receivables'] as const,
+  alunoReceivablesSearch: (search: string, poloId?: string | null) =>
+    ['financeiro-aluno-receivables', search, poloId || 'todos'] as const,
 };
