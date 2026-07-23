@@ -513,36 +513,45 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
             </label>
           </div>
 
-          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook de {credentialProvider?.name}</p>
-                <code className="mt-1 block truncate text-xs font-bold text-slate-600">
-                  {webhookAvailable
-                    ? webhookUrl || 'URL será gerada após salvar'
-                    : 'Indisponível até homologar o consumidor de callbacks do Banco Inter'}
-                </code>
-              </div>
-              <button
-                type="button"
-                onClick={copyWebhookUrl}
-                disabled={copyDisabled}
-                className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wider text-[#001a33] disabled:opacity-40"
-              >
-                <Copy size={15} />
-                Copiar
-              </button>
+          {credentialProviderCode === 'banese_card' ? (
+            <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800">
+                Baixa e Liquidação Automática Banese
+              </p>
+              <p className="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-950">
+                Conforme informado pelo banco, o Banese não utiliza Webhooks para notificações ativas de cobrança bancária. As liquidações são confirmadas automaticamente através da consulta diária à API de pagamentos efetivados e pelo arquivo de retorno CNAB240 (VAN EDI7).
+              </p>
             </div>
-            {credentialProviderCode === 'banese_card' ? (
-              <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
-                O Banese confirmou a existência do webhook, mas ainda não enviou autenticação, payload e política de repetição. A URL fica reservada; a consulta da API é a confirmação principal.
-              </p>
-            ) : credentialProviderCode === 'banco_inter' ? (
-              <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
-                A API atual apenas valida as credenciais do BolePix V3. Nenhuma URL deve ser cadastrada no Inter enquanto emissão, assinatura e repetição dos callbacks não estiverem implementadas e homologadas.
-              </p>
-            ) : null}
-          </div>
+          ) : (
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Webhook de {credentialProvider?.name}
+                  </p>
+                  <code className="mt-1 block truncate text-xs font-bold text-slate-600">
+                    {webhookAvailable
+                      ? webhookUrl || 'URL será gerada após salvar'
+                      : 'Indisponível até homologar o consumidor de callbacks do Banco Inter'}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyWebhookUrl}
+                  disabled={copyDisabled}
+                  className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wider text-[#001a33] disabled:opacity-40"
+                >
+                  <Copy size={15} />
+                  Copiar
+                </button>
+              </div>
+              {credentialProviderCode === 'banco_inter' && (
+                <p className="mt-3 text-xs font-semibold leading-relaxed text-amber-700">
+                  A API atual apenas valida as credenciais do BolePix V3. Nenhuma URL deve ser cadastrada no Inter enquanto emissão, assinatura e repetição dos callbacks não estiverem implementadas e homologadas.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <button
