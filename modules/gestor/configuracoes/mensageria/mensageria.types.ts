@@ -8,11 +8,21 @@ export interface MensageriaConfigData {
   waTokenConfigured?: boolean;
   waStatus?: string;
   waBusinessAccountId?: string;
+  waBusinessPortfolioId?: string;
   waPhoneNumberId?: string;
   waDisplayPhoneNumber?: string;
   waGraphVersion?: string;
   waAppId?: string;
   waEmbeddedSignupConfigId?: string;
+  waConnectionMode?: 'cloud_api' | 'coexistence';
+  waCoexistenceVerifiedAt?: string;
+  waContactsSyncStatus?: 'not_requested' | 'requested' | 'receiving' | 'completed' | 'error';
+  waContactsSyncRequestId?: string;
+  waHistorySyncStatus?: 'not_requested' | 'requested' | 'receiving' | 'completed' | 'declined' | 'error';
+  waHistorySyncRequestId?: string;
+  waHistorySyncProgress?: number;
+  waLastAccountEvent?: string;
+  waLastAccountEventAt?: string;
   waAppSecret?: string;
   waWebhookVerifyToken?: string;
   waAccountCurrency?: string;
@@ -64,6 +74,7 @@ export interface WhatsAppEmbeddedSignupRequest {
 export interface WhatsAppEmbeddedSignupResult {
   ok: boolean;
   event?: string;
+  coexistenceVerified?: boolean;
   wabaId?: string | null;
   phoneNumberId?: string | null;
   businessId?: string | null;

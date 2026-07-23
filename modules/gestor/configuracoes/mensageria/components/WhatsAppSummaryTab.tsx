@@ -3,9 +3,11 @@ import {
   Activity,
   BadgeDollarSign,
   CheckCircle2,
+  Cloud,
   Hash,
   MessageCircle,
   Phone,
+  QrCode,
   ShieldCheck,
   Signal,
   Webhook,
@@ -60,6 +62,8 @@ const WhatsAppSummaryTab: React.FC<WhatsAppSummaryTabProps> = ({ config, webhook
   const isReady = Boolean(config?.waEnabled && config?.waPhoneNumberId && config?.waBusinessAccountId && config?.waTokenConfigured);
   const quality = config?.waQualityRating || 'Não informado';
   const currency = config?.waAccountCurrency || 'BRL';
+  const isCoexistence = config?.waConnectionMode === 'coexistence';
+  const connectionLabel = isCoexistence ? 'Coexistência com WhatsApp Business App' : 'Cloud API exclusiva';
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -74,7 +78,9 @@ const WhatsAppSummaryTab: React.FC<WhatsAppSummaryTabProps> = ({ config, webhook
                 {isReady ? 'WhatsApp pronto para testes' : 'Configuração incompleta'}
               </p>
               <p className={`mt-1 text-xs font-bold leading-relaxed ${isReady ? 'text-emerald-700' : 'text-amber-700'}`}>
-                O envio passa pela Edge Function segura; tokens ficam no Vault e não aparecem no navegador.
+                {isReady
+                  ? `${connectionLabel}. Apenas ${config?.waDisplayPhoneNumber || 'o número selecionado'} está ativo no portal.`
+                  : 'Escolha Cloud API exclusiva ou Coexistência com QR Code para ativar um único número.'}
               </p>
             </div>
           </div>
@@ -82,6 +88,25 @@ const WhatsAppSummaryTab: React.FC<WhatsAppSummaryTabProps> = ({ config, webhook
             <Signal size={13} />
             {config?.waStatus || 'nao_configurado'}
           </span>
+        </div>
+      </div>
+
+      <div className={`rounded-xl border p-5 ${isCoexistence ? 'border-emerald-200 bg-emerald-50' : 'border-blue-200 bg-blue-50'}`}>
+        <div className="flex items-start gap-3">
+          <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ${isCoexistence ? 'text-emerald-700' : 'text-blue-700'}`}>
+            {isCoexistence ? <QrCode size={20} /> : <Cloud size={20} />}
+          </span>
+          <div>
+            <p className={`text-[10px] font-black uppercase tracking-widest ${isCoexistence ? 'text-emerald-600' : 'text-blue-600'}`}>
+              Forma de conexão ativa
+            </p>
+            <h4 className="mt-1 text-sm font-black uppercase tracking-tight text-[#001a33]">{connectionLabel}</h4>
+            <p className={`mt-1 text-xs font-bold leading-relaxed ${isCoexistence ? 'text-emerald-700' : 'text-blue-700'}`}>
+              {isCoexistence
+                ? 'O mesmo número continua disponível no celular e recebe os eventos oficiais também pela Cloud API.'
+                : 'Este número opera somente pela Cloud API e não representa uma sessão do WhatsApp Business App no celular.'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -121,6 +146,7 @@ const WhatsAppSummaryTab: React.FC<WhatsAppSummaryTabProps> = ({ config, webhook
             {[
               ['WABA ID', config?.waBusinessAccountId],
               ['Phone Number ID', config?.waPhoneNumberId],
+              ['Modo ativo', connectionLabel],
               ['App ID', config?.waAppId],
               ['Graph API', config?.waGraphVersion || 'v25.0'],
             ].map(([label, value]) => (

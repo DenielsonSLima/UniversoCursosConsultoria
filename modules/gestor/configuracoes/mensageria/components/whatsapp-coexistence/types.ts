@@ -27,6 +27,7 @@ export interface FacebookWindow extends globalThis.Window {
 
 export interface WhatsAppCoexistenceTabProps {
   draft: MensageriaConfigData;
+  activeConfig: MensageriaConfigData | null;
   webhookUrl: string;
   onChange: <K extends keyof MensageriaConfigData>(field: K, value: MensageriaConfigData[K]) => void;
 }

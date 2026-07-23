@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
+  Cloud,
   Copy,
   ExternalLink,
   History,
@@ -13,6 +14,7 @@ import {
   MessageCircle,
   PhoneForwarded,
   PlugZap,
+  QrCode,
   ShieldCheck,
   Smartphone,
   XCircle,
@@ -27,10 +29,19 @@ import {
 } from './constants';
 import Field from './Field';
 import { facebookWindow, loadFacebookSdk } from './facebookSdk';
-import { parseSessionPayload } from './sessionPayload';
+import {
+  embeddedSignupErrorMessage,
+  isTrustedFacebookOrigin,
+  parseSessionPayload,
+} from './sessionPayload';
 import type { LoginResult, SessionEntry, WhatsAppCoexistenceTabProps } from './types';
 
-const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, webhookUrl, onChange }) => {
+const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({
+  draft,
+  activeConfig,
+  webhookUrl,
+  onChange,
+}) => {
   const queryClient = useQueryClient();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -38,6 +49,11 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
   const [loginResult, setLoginResult] = useState<LoginResult | null>(null);
   const [onboardingResult, setOnboardingResult] = useState<WhatsAppEmbeddedSignupResult | null>(null);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [candidateConnection, setCandidateConnection] = useState<{
+    wabaId?: string;
+    phoneNumberId?: string;
+    businessId?: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const latestCodeRef = useRef<string | null>(null);
@@ -74,6 +90,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     pendingLaunchWarningRef.current = window.setTimeout(() => {
       if (latestCodeRef.current || latestSessionEventRef.current || completedCodeRef.current) return;
 
+      setIsLaunching(false);
       setOnboardingError(
         'A Meta abriu o popup, mas nao retornou code nem evento do WhatsApp. Se a tela disser que esta pessoa nao pode integrar clientes no momento, a App/conta da Meta ainda nao esta habilitada para onboarding de clientes. Feche o popup e confira Acoes necessarias, App Review, Access Verification e permissoes avancadas no Meta for Developers.',
       );
@@ -121,24 +138,23 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
         sessionEvent,
       });
 
+      if (!result.coexistenceVerified) {
+        throw new Error('A Meta concluiu o popup, mas não confirmou o número em coexistência.');
+      }
+
       setOnboardingResult(result);
-      if (result.wabaId) onChange('waBusinessAccountId', result.wabaId);
-      if (result.phoneNumberId) onChange('waPhoneNumberId', result.phoneNumberId);
-      if (result.displayPhoneNumber) onChange('waDisplayPhoneNumber', result.displayPhoneNumber);
-      onChange('waEnabled', true);
-      onChange('waStatus', 'configurado');
-      queryClient.invalidateQueries({ queryKey: ['mensageria_config', 'whatsapp'] });
+      await queryClient.invalidateQueries({ queryKey: ['mensageria_config', 'whatsapp'] });
     } catch (error) {
       completedCodeRef.current = null;
       setOnboardingError(error instanceof Error ? error.message : 'Nao foi possivel concluir o Embedded Signup.');
     } finally {
       setIsCompleting(false);
     }
-  }, [appId, clearPendingLaunchWarning, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, onChange, queryClient]);
+  }, [appId, clearPendingLaunchWarning, clearPendingSessionWarning, configurationId, draft.waAppSecret, graphVersion, queryClient]);
 
   useEffect(() => {
     const handleMessage = (event: any) => {
-      if (!event.origin.endsWith('facebook.com')) return;
+      if (!isTrustedFacebookOrigin(event.origin)) return;
 
       const payload = parseSessionPayload(event.data);
       if (payload?.type !== 'WA_EMBEDDED_SIGNUP') return;
@@ -152,9 +168,19 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
       clearPendingLaunchWarning();
       clearPendingSessionWarning();
 
+      if (payload.event === 'CANCEL' || payload.event === 'ERROR') {
+        setOnboardingError(embeddedSignupErrorMessage(payload));
+        return;
+      }
+
       const data = payload.data && typeof payload.data === 'object' ? payload.data as Record<string, unknown> : null;
-      if (typeof data?.waba_id === 'string') onChange('waBusinessAccountId', data.waba_id);
-      if (typeof data?.phone_number_id === 'string') onChange('waPhoneNumberId', data.phone_number_id);
+      if (data) {
+        setCandidateConnection({
+          wabaId: typeof data.waba_id === 'string' ? data.waba_id : undefined,
+          phoneNumberId: typeof data.phone_number_id === 'string' ? data.phone_number_id : undefined,
+          businessId: typeof data.business_id === 'string' ? data.business_id : undefined,
+        });
+      }
 
       if (payload.event === COEXISTENCE_FINISH_EVENT && latestCodeRef.current) {
         void completeEmbeddedSignup(latestCodeRef.current, payload);
@@ -171,7 +197,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
       clearPendingLaunchWarning();
       clearPendingSessionWarning();
     };
-  }, [clearPendingLaunchWarning, clearPendingSessionWarning, completeEmbeddedSignup, onChange]);
+  }, [clearPendingLaunchWarning, clearPendingSessionWarning, completeEmbeddedSignup]);
 
   const handleLaunch = async () => {
     if (!appId || !configurationId) {
@@ -186,6 +212,7 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     setIsLaunching(true);
     setOnboardingResult(null);
     setOnboardingError(null);
+    setCandidateConnection(null);
     setLoginResult(null);
     clearPendingLaunchWarning();
     clearPendingSessionWarning();
@@ -196,7 +223,13 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     try {
       await loadFacebookSdk(appId, graphVersion || DEFAULT_GRAPH_VERSION);
       scheduleMissingLaunchWarning();
-      facebookWindow().FB?.login((response) => {
+      const facebookSdk = facebookWindow().FB;
+      if (!facebookSdk) {
+        throw new Error('O SDK do Facebook não ficou disponível para abrir o Embedded Signup.');
+      }
+
+      facebookSdk.login((response) => {
+        setIsLaunching(false);
         const code = response.authResponse?.code;
         if (code) {
           clearPendingLaunchWarning();
@@ -231,20 +264,18 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
         response_type: 'code',
         override_default_response_type: true,
         extras: {
-          version: 'v4',
           setup: {},
           sessionInfoVersion: '3',
           featureType: 'whatsapp_business_app_onboarding',
         },
       });
     } catch (error) {
+      setIsLaunching(false);
       setLoginResult({
         receivedAt: new Date().toISOString(),
         status: 'error',
         message: error instanceof Error ? error.message : 'Nao foi possivel abrir o Embedded Signup.',
       });
-    } finally {
-      setIsLaunching(false);
     }
   };
 
@@ -260,6 +291,9 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
     { label: 'Configuration ID', value: configurationId || 'Nao informado', ready: Boolean(configurationId), icon: Link2 },
     { label: 'Webhook', value: webhookUrl, ready: Boolean(webhookUrl), icon: ShieldCheck },
   ];
+  const coexistenceVerified = activeConfig?.waConnectionMode === 'coexistence' && Boolean(activeConfig.waCoexistenceVerifiedAt);
+  const cloudApiActive = activeConfig?.waConnectionMode !== 'coexistence' && Boolean(activeConfig?.waEnabled && activeConfig.waPhoneNumberId);
+  const activeNumber = activeConfig?.waDisplayPhoneNumber || 'Número não informado';
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -303,6 +337,48 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
         ))}
       </div>
 
+      <div className={`rounded-xl border p-5 ${
+        coexistenceVerified
+          ? 'border-emerald-200 bg-emerald-50'
+          : cloudApiActive
+            ? 'border-blue-200 bg-blue-50'
+            : 'border-slate-200 bg-slate-50'
+      }`}>
+        <div className="flex items-start gap-3">
+          {coexistenceVerified
+            ? <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-emerald-700" />
+            : cloudApiActive
+              ? <Cloud size={22} className="mt-0.5 shrink-0 text-blue-700" />
+              : <QrCode size={22} className="mt-0.5 shrink-0 text-slate-500" />}
+          <div>
+            <h4 className={`text-sm font-black uppercase tracking-tight ${
+              coexistenceVerified ? 'text-emerald-950' : cloudApiActive ? 'text-blue-950' : 'text-slate-800'
+            }`}>
+              {coexistenceVerified
+                ? 'Número ativo em coexistência'
+                : cloudApiActive
+                  ? 'Sua conexão Cloud API atual está protegida'
+                  : 'Nenhum número ativo será alterado antes do QR Code'}
+            </h4>
+            <p className={`mt-1 text-xs font-bold leading-relaxed ${
+              coexistenceVerified ? 'text-emerald-700' : cloudApiActive ? 'text-blue-700' : 'text-slate-500'
+            }`}>
+              {coexistenceVerified
+                ? `${activeNumber} continua no WhatsApp Business App do celular e também está ativo na Cloud API.`
+                : cloudApiActive
+                  ? `${activeNumber} continuará funcionando exclusivamente pela Cloud API enquanto você entra com o Facebook e escolhe outro número do WhatsApp Business App.`
+                  : 'O portal somente ativará o número escolhido quando a Meta concluir o onboarding e confirmar is_on_biz_app=true.'}
+            </p>
+            {coexistenceVerified ? (
+              <p className="mt-2 text-[11px] font-bold text-emerald-700">
+                Contatos: {activeConfig?.waContactsSyncStatus || 'not_requested'} · Histórico: {activeConfig?.waHistorySyncStatus || 'not_requested'}
+                {typeof activeConfig?.waHistorySyncProgress === 'number' ? ` (${activeConfig.waHistorySyncProgress}%)` : ''}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Field icon={KeyRound} label="App ID da Meta">
           <input
@@ -340,21 +416,43 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
               <Smartphone size={20} />
             </span>
             <div>
-              <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Adicionar numero em coexistencia</h4>
+              <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Entrar com Facebook e conectar pelo QR Code</h4>
               <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                O popup deve mostrar a opcao de conectar uma conta existente do WhatsApp Business App.
+                Escolha no popup a opção de conectar um WhatsApp Business App existente. O número pode ser diferente da conexão Cloud API atual.
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleLaunch}
             disabled={!canLaunch}
             className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-900/20 transition-colors hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
           >
             {isLaunching || isCompleting ? <Loader2 size={15} className="animate-spin" /> : <PhoneForwarded size={15} />}
-            {isCompleting ? 'Concluindo...' : isLaunching ? 'Abrindo...' : 'Abrir Embedded Signup'}
+            {isCompleting
+              ? 'Validando número...'
+              : isLaunching
+                ? 'Abrindo Meta...'
+                : coexistenceVerified
+                  ? 'Conectar outro número'
+                  : 'Entrar com Facebook e QR'}
           </button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ['1', 'Entrar no Facebook', 'Use uma conta administradora do portfólio empresarial.'],
+            ['2', 'Escolher o Business App', 'Selecione conectar uma conta existente, não adicionar Cloud API padrão.'],
+            ['3', 'Escanear o QR', 'No celular, confirme no WhatsApp Business App e leia o QR exibido pela Meta.'],
+            ['4', 'Ativação automática', 'Somente após a validação final o portal substitui o número atualmente ativo.'],
+          ].map(([step, title, description]) => (
+            <div key={step} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#001a33] text-[10px] font-black text-white">{step}</span>
+              <p className="mt-3 text-[11px] font-black uppercase tracking-tight text-[#001a33]">{title}</p>
+              <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-500">{description}</p>
+            </div>
+          ))}
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -381,6 +479,21 @@ const WhatsAppCoexistenceTab: React.FC<WhatsAppCoexistenceTabProps> = ({ draft, 
           </div>
         </div>
       </div>
+
+      {candidateConnection && !onboardingResult ? (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+          <div className="flex items-start gap-3">
+            <QrCode size={22} className="mt-0.5 shrink-0 text-blue-700" />
+            <div>
+              <h4 className="text-sm font-black uppercase tracking-tight text-blue-950">Número candidato recebido da Meta</h4>
+              <p className="mt-1 text-xs font-bold leading-relaxed text-blue-700">
+                WABA {candidateConnection.wabaId || '-'} · Phone Number ID {candidateConnection.phoneNumberId || '-'}.
+                A conexão ativa ainda não foi alterada; o backend está aguardando a confirmação oficial de coexistência.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {onboardingResult && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">

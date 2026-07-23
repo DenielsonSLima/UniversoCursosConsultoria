@@ -16,6 +16,7 @@ import type { MensageriaConfigData } from '../mensageria.types';
 
 interface WhatsAppApiConfigTabProps {
   draft: MensageriaConfigData;
+  activeConfig: MensageriaConfigData | null;
   onChange: <K extends keyof MensageriaConfigData>(field: K, value: MensageriaConfigData[K]) => void;
 }
 
@@ -39,20 +40,27 @@ const Field = ({
   </label>
 );
 
-const inputClass = 'h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
+const inputClass =
+  'h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
 
-const WhatsAppApiConfigTab: React.FC<WhatsAppApiConfigTabProps> = ({ draft, onChange }) => {
+const WhatsAppApiConfigTab: React.FC<WhatsAppApiConfigTabProps> = ({ draft, activeConfig, onChange }) => {
+  const replacingCoexistence = activeConfig?.waConnectionMode === 'coexistence' && Boolean(activeConfig.waEnabled);
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+      <div className={`rounded-xl border p-5 ${replacingCoexistence ? 'border-amber-200 bg-amber-50' : 'border-blue-200 bg-blue-50'}`}>
         <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm">
+          <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ${replacingCoexistence ? 'text-amber-700' : 'text-blue-700'}`}>
             <MessageCircle size={21} />
           </span>
           <div>
-            <h4 className="text-sm font-black uppercase tracking-tight text-emerald-950">Meta WhatsApp Cloud API</h4>
-            <p className="mt-1 text-xs font-bold leading-relaxed text-emerald-700">
-              Configure os IDs do app criado na Meta. O token é salvo no Vault pelo backend e não fica gravado na tabela.
+            <h4 className={`text-sm font-black uppercase tracking-tight ${replacingCoexistence ? 'text-amber-950' : 'text-blue-950'}`}>
+              Cloud API exclusiva
+            </h4>
+            <p className={`mt-1 text-xs font-bold leading-relaxed ${replacingCoexistence ? 'text-amber-700' : 'text-blue-700'}`}>
+              {replacingCoexistence
+                ? `A coexistência de ${activeConfig?.waDisplayPhoneNumber || 'seu número atual'} continuará ativa até você confirmar a substituição. Preencha abaixo o número Cloud API.`
+                : 'Configure o número que ficará ativo na Cloud API oficial da Meta. O token é salvo com segurança no Vault.'}
             </p>
           </div>
         </div>
@@ -140,7 +148,7 @@ const WhatsAppApiConfigTab: React.FC<WhatsAppApiConfigTabProps> = ({ draft, onCh
             value={draft.waToken || ''}
             onChange={(event) => onChange('waToken', event.target.value)}
             className={inputClass}
-            placeholder={draft.waTokenConfigured ? 'Token ja cadastrado. Preencha apenas para substituir.' : 'Token permanente do system user'}
+            placeholder={draft.waTokenConfigured ? 'Token já cadastrado. Preencha apenas para substituir.' : 'Token permanente do system user'}
           />
         </Field>
 
