@@ -48,8 +48,17 @@ export const documentForGateway = (value: unknown) => {
   return "";
 };
 
-export const normalizeEnvironment = (value: unknown): GatewayEnvironment =>
-  value === "production" ? "production" : "sandbox";
+export const normalizeEnvironment = (value: unknown): GatewayEnvironment => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return normalized === "production" || normalized === "producao"
+    ? "production"
+    : "sandbox";
+};
 
 export const normalizePaymentMethod = (
   value: unknown,
@@ -73,7 +82,8 @@ export const normalizeProviderCode = (
     return "asaas";
   }
   if (
-    raw === "mercado_pago" || raw === "mercado-pago" || raw === "mercado pago" ||
+    raw === "mercado_pago" || raw === "mercado-pago" ||
+    raw === "mercado pago" ||
     raw === "mercado pago checkout" || raw === "mercadopago"
   ) {
     return "mercado_pago";

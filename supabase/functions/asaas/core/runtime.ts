@@ -7,8 +7,17 @@ export interface AsaasRuntime {
   baseUrl: string;
 }
 
-export const normalizeEnvironment = (value: unknown): Environment =>
-  value === "production" ? "production" : "sandbox";
+export const normalizeEnvironment = (value: unknown): Environment => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return normalized === "production" || normalized === "producao"
+    ? "production"
+    : "sandbox";
+};
 
 export const apiSecretName = (environment: Environment) =>
   environment === "production" ? "asaas_production_api_key" : "asaas_sandbox_api_key";

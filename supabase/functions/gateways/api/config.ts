@@ -87,25 +87,29 @@ export const assertProviderAdapterReady = (
     );
   }
   if (providerCode !== "banese_card") return;
-  if (environment === "production") {
+  if (paymentMethod === "PIX" && environment !== "production") {
     throw new Error(
-      "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
+      "Pix Banese permanece bloqueado em sandbox enquanto o ambiente de homologacao do banco estiver indisponivel.",
     );
   }
-  if (paymentMethod === "PIX") {
-    throw new Error(
-      "Pix Banese permanece bloqueado enquanto o ambiente de homologacao do banco estiver indisponivel.",
-    );
-  }
-  if (paymentMethod !== "BOLETO") {
+  if (paymentMethod === "CREDIT_CARD") {
     throw new Error(
       "Banese nao aceita cartao de credito neste fluxo. Use Mercado Pago para cartao.",
     );
   }
 };
 
-export const normalizeEnvironment = (value: unknown): Environment =>
-  value === "production" ? "production" : "sandbox";
+export const normalizeEnvironment = (value: unknown): Environment => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return normalized === "production" || normalized === "producao"
+    ? "production"
+    : "sandbox";
+};
 
 export const normalizeProviderCode = (value: unknown): ProviderCode => {
   const code = String(value || "").trim().toLowerCase();
@@ -241,8 +245,9 @@ export const baneseFixedMetadata = (environment?: Environment) => ({
   baneseConta: "03/100649-0",
   baneseContaDisplay: "03/100649-0",
   baneseCodigoBeneficiario: "03/100649-0",
-  baneseConvenio: environment === "sandbox" ? "15857255" : "15856813",
-  baneseBoletoConvenio: environment === "sandbox" ? "15857255" : "15856813",
+  baneseConvenio: environment === "sandbox" ? "15857255" : "15261",
+  baneseBoletoConvenio: environment === "sandbox" ? "15857255" : "15261",
+  ...(environment === "production" ? { banesePixChave: "79998617614" } : {}),
 });
 
 export const BANESE_FIXED_METADATA = baneseFixedMetadata("production");
@@ -324,7 +329,7 @@ export const providerOverviewRow = (provider: any) => {
     ...provider,
     name: "Banese",
     description:
-      "Boleto via API em homologacao; Pix sera liberado pelo Banese somente em producao.",
+      "Boleto e Pix via API do Banese em producao, com retorno no layout próprio.",
     supports_pix: true,
     supports_boleto: true,
     supports_credit_card: false,
@@ -333,9 +338,8 @@ export const providerOverviewRow = (provider: any) => {
       ...(provider?.metadata || {}),
       checkout_blocked: false,
       intended_role: "bolepix_boleto",
-      homologation_only: true,
       pix_homologation_note:
-        "O servico Pix esta indisponivel em homologacao e so podera ser ativado depois da liberacao formal do banco em producao.",
+        "O servico Pix esta disponivel em producao; em sandbox permanece bloqueado.",
     },
   };
 };

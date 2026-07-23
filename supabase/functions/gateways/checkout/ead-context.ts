@@ -7,6 +7,13 @@ import type {
   GatewayPaymentMethod,
 } from "./types.ts";
 import { resolveEadCharge } from "./ead-finance.ts";
+import { assertStoredProviderAdapterReady } from "../api/config.ts";
+import {
+  type GestorAutorizado,
+  requireFinanceWriteAccess,
+  requireGestorAtivo,
+  requireGestorForPolo,
+} from "../../_shared/authz.ts";
 import {
   normalizeEnvironment,
   normalizePaymentMethod,
@@ -45,13 +52,9 @@ const getAvailableTurma = (turmas: any[]) => {
       )
     ).length;
 
-    const min = Number(turma?.qtd_vagas_minima || 0);
     const max = Number(turma?.vagas_totais || 0);
     const shouldBlock =
       turma?.bloquear_matriculas_apos_completar_vagas !== false;
-    if (shouldBlock && min > 0 && matriculados >= min) {
-      continue;
-    }
     if (shouldBlock && max > 0 && matriculados >= max) {
       continue;
     }
@@ -88,8 +91,8 @@ const looksLikeRpcNotFound = (error: any) => {
   const code = String(error?.code || "").toLowerCase();
   const haystack = `${errorMessage} ${details} ${hint}`;
   return haystack.includes("does not exist") && haystack.includes(
-    "payment_checkout_upsert_matricula",
-  ) || code === "42883";
+        "payment_checkout_upsert_matricula",
+      ) || code === "42883";
 };
 
 const upsertEadMatricula = async (
@@ -112,12 +115,18 @@ const upsertEadMatricula = async (
 
     if (!looksLikeRpcNotFound(error)) throw error;
 
-    const fallback = await admin.rpc("asaas_checkout_upsert_matricula", rpcArgs);
+    const fallback = await admin.rpc(
+      "asaas_checkout_upsert_matricula",
+      rpcArgs,
+    );
     if (fallback.error) throw fallback.error;
     return fallback.data;
   } catch (error) {
     if (!looksLikeRpcNotFound(error)) throw error;
-    const fallback = await admin.rpc("asaas_checkout_upsert_matricula", rpcArgs);
+    const fallback = await admin.rpc(
+      "asaas_checkout_upsert_matricula",
+      rpcArgs,
+    );
     if (fallback.error) throw fallback.error;
     return fallback.data;
   }
@@ -136,18 +145,42 @@ const fetchGatewayRoutes = async (
     .eq("payment_method", paymentMethod)
     .neq("enabled", false);
 
-  if (environment) query = query.eq("environment", environment);
-
   const { data, error } = await query.order("environment", { ascending: true });
   if (error) {
-    console.error("Nao foi possivel consultar rota bancaria do checkout:", error);
+    console.error(
+      "Nao foi possivel consultar rota bancaria do checkout:",
+      error,
+    );
     throw new Error(
       "Nao foi possivel validar a rota bancaria antes de gerar a cobranca.",
     );
   }
 
-  return data || [];
+  const normalizedEnvironment = environment
+    ? normalizeEnvironment(environment)
+    : null;
+
+  const normalizedRoutes = (data || []).map((route: any) => ({
+    ...route,
+    environment: normalizeEnvironment(route?.environment),
+  }));
+
+  if (!normalizedEnvironment) return normalizedRoutes;
+
+  return normalizedRoutes.filter((route: any) =>
+    route?.environment === normalizedEnvironment
+  );
 };
+
+const normalizedEnvironmentLabel = (environment: GatewayEnvironment) =>
+  environment === "production" ? "producao" : "sandbox";
+
+const paymentMethodPreferredEnvironment = (
+  paymentMethod: GatewayPaymentMethod,
+): GatewayEnvironment[] =>
+  paymentMethod === "CREDIT_CARD"
+    ? ["sandbox", "production"]
+    : ["production", "sandbox"];
 
 export const resolvePaymentGatewayRoute = async (
   admin: any,
@@ -155,78 +188,80 @@ export const resolvePaymentGatewayRoute = async (
   paymentMethod: GatewayPaymentMethod,
   environment?: GatewayEnvironment,
 ): Promise<{ route: CheckoutRoute; environment: GatewayEnvironment }> => {
-  const normalizeLabel = (environment: string) =>
-    environment === "production" ? "producao" : "sandbox";
-
   const configuredEnvironment = environment || await resolveGatewayEnvironment(admin);
-  const configuredRoutes = await fetchGatewayRoutes(
+  const availableRoutes = await fetchGatewayRoutes(
     admin,
     modalidade,
     paymentMethod,
     configuredEnvironment,
   );
+  const availableEnvironments = [
+    ...new Set(
+      availableRoutes
+        .map((route: any) => String(route?.environment || ""))
+        .filter(Boolean),
+    ),
+  ].map(normalizedEnvironmentLabel);
 
-  if (configuredRoutes.length > 1) {
-    throw new Error(
-      `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${normalizeLabel(configuredEnvironment)}. Corrija para manter apenas uma rota ativa por ambiente.`,
+  for (const routeEnvironment of paymentMethodPreferredEnvironment(paymentMethod)) {
+    const environmentRoutes = (availableRoutes || []).filter((route: any) =>
+      String(route?.environment || "sandbox") === routeEnvironment
     );
-  }
 
-  if (configuredRoutes.length === 0) {
-    const fallbackRoutes = await fetchGatewayRoutes(admin, modalidade, paymentMethod);
-    if (fallbackRoutes.length > 1) {
-      const availableEnvironments = [...new Set(
-        (fallbackRoutes || []).map((route: any) => String(route?.environment || ""))
-          .filter(Boolean),
-      )]
-        .map((item) => normalizeLabel(String(item)));
+    if (environmentRoutes.length === 0) continue;
+    if (environmentRoutes.length > 1) {
       throw new Error(
-        `Rota ${paymentMethod} de ${modalidade} nao esta ativa em ${normalizeLabel(
-          configuredEnvironment,
-        )}. Existem rotas ativas em: ${availableEnvironments.join(", ")}. Confirme o ambiente ativo em configuracoes gerais.`,
+        `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${
+          normalizedEnvironmentLabel(routeEnvironment)
+        }. Corrija para manter apenas uma rota ativa por ambiente.`,
       );
     }
 
-    if (fallbackRoutes.length === 1) {
-      const onlyRoute = fallbackRoutes[0];
-      const onlyRouteEnvironment = onlyRoute.environment === "production"
-        ? "production" as GatewayEnvironment
-        : "sandbox" as GatewayEnvironment;
-      if (onlyRouteEnvironment !== configuredEnvironment) {
-        throw new Error(
-          `Rota ${paymentMethod} de ${modalidade} esta ativa apenas em ${normalizeLabel(onlyRouteEnvironment)}. Ajuste o ambiente ativo para ${normalizeLabel(onlyRouteEnvironment)} ou ative a rota no ambiente ${normalizeLabel(configuredEnvironment)}.`,
-        );
-      }
+    const route = environmentRoutes[0];
+    if (route?.enabled === false) continue;
+
+    assertStoredProviderAdapterReady(
+      route?.provider_code,
+      paymentMethod,
+      route?.environment || routeEnvironment,
+    );
+
+    const providerCode = normalizeProviderCode(route?.provider_code);
+    if (!providerCode) {
+      throw new Error(
+        `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${
+          normalizedEnvironmentLabel(routeEnvironment)
+        }.`,
+      );
     }
 
+    return {
+      environment: route.environment === "production"
+        ? "production"
+        : "sandbox",
+      route: {
+        providerCode,
+        credentialId: route.credential_id || null,
+        enabled: route.enabled !== false,
+      },
+    };
+  }
+
+  if (availableRoutes.length === 0) {
     throw new Error(
-      `Rota ${paymentMethod} de ${modalidade} em ${normalizeLabel(configuredEnvironment)} nao esta ativa.`,
+      `Rota ${paymentMethod} de ${modalidade} em ${
+        normalizedEnvironmentLabel(configuredEnvironment)
+      } nao esta ativa.`,
     );
   }
 
-  const configuredRoute = configuredRoutes[0];
-  if (configuredRoute?.enabled === false) {
-    throw new Error(
-      `Nenhuma rota ativa encontrada para ${paymentMethod} de ${modalidade}.`,
-    );
-  }
-
-  const route = configuredRoute;
-  const providerCode = normalizeProviderCode(route?.provider_code);
-  if (!providerCode) {
-    throw new Error(
-      `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${normalizeLabel(String(route?.environment || configuredEnvironment))}.`,
-    );
-  }
-
-  return {
-    environment: route.environment === "production" ? "production" : "sandbox",
-    route: {
-      providerCode,
-      credentialId: route.credential_id || null,
-      enabled: route.enabled !== false,
-    },
-  };
+  throw new Error(
+    `Rota ${paymentMethod} de ${modalidade} nao esta ativa nos ambientes suportados. ${
+      availableEnvironments.length
+        ? `Existen rotas ativas em: ${availableEnvironments.join(", ")}.`
+        : ""
+    }`.trim(),
+  );
 };
 
 export const resolveRequestedMethod = (body: CheckoutBody) =>
@@ -248,12 +283,6 @@ const configuredMethodsForCourse = (course: any): GatewayPaymentMethod[] => {
     methods.push("CREDIT_CARD");
   }
   return methods;
-};
-
-const mercadoPagoCardInstallmentsForCourse = (course: any) => {
-  const parsed = Number(course?.financeiro_config?.cartao?.maxParcelas || 1);
-  if (!Number.isFinite(parsed) || parsed < 1) return 1;
-  return Math.max(1, Math.min(21, Math.floor(parsed)));
 };
 
 export const assertNonEadCheckoutRequestIsRoutable = async (
@@ -357,14 +386,13 @@ export const buildEadCheckoutContext = async (
       body.billingType,
     installments: body.eadInstallments ?? body.installments,
   });
-  const { environment, route } = await resolvePaymentGatewayRoute(
+  const gatewayEnvironment = await resolveGatewayEnvironment(runtime.admin);
+  const { route } = await resolvePaymentGatewayRoute(
     runtime.admin,
     "EAD",
     charge.method,
+    gatewayEnvironment,
   );
-  if (route.providerCode === "mercado_pago" && charge.method === "CREDIT_CARD") {
-    charge.installmentCount = mercadoPagoCardInstallmentsForCourse(course);
-  }
 
   const token = String(runtime.req.headers.get("Authorization") || "").replace(
     /^Bearer\s+/i,
@@ -380,36 +408,34 @@ export const buildEadCheckoutContext = async (
     throw new Error("Sessao invalida para pagamento EAD.");
   }
 
-  const { data: usuarioSistema, error: usuarioError } = await runtime.admin
-    .from("usuarios_sistema")
-    .select("id, perfil, status")
-    .ilike("email", authEmail)
-    .maybeSingle();
-  if (usuarioError) throw usuarioError;
-  const isGestorAtivo = Boolean(usuarioSistema) &&
-    String(usuarioSistema?.status || "").toUpperCase() !== "INATIVO" &&
-    String(usuarioSistema?.status || "").toUpperCase() !== "BLOQUEADO";
+  const { data: authenticatedAluno, error: authenticatedAlunoError } =
+    await runtime.admin
+      .from("parceiros")
+      .select("*")
+      .eq("tipo", "Aluno")
+      .ilike("email", authEmail)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+  if (authenticatedAlunoError) throw authenticatedAlunoError;
 
-  let alunoQuery = runtime.admin
-    .from("parceiros")
-    .select("*")
-    .eq("tipo", "Aluno");
-  alunoQuery = isGestorAtivo && requestedAlunoId
-    ? alunoQuery.eq("id", requestedAlunoId)
-    : alunoQuery.ilike("email", authEmail);
-
-  const { data: aluno, error: alunoError } = await alunoQuery
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (alunoError) throw alunoError;
+  let gestor: GestorAutorizado | null = null;
+  let aluno = authenticatedAluno;
+  if (requestedAlunoId && requestedAlunoId !== authenticatedAluno?.id) {
+    gestor = await requireGestorAtivo(runtime.req, runtime.admin);
+    requireFinanceWriteAccess(gestor);
+    const { data: requestedAluno, error: requestedAlunoError } = await runtime
+      .admin
+      .from("parceiros")
+      .select("*")
+      .eq("tipo", "Aluno")
+      .eq("id", requestedAlunoId)
+      .maybeSingle();
+    if (requestedAlunoError) throw requestedAlunoError;
+    aluno = requestedAluno;
+  }
   if (!aluno || String(aluno.tipo || "").toUpperCase() !== "ALUNO") {
     throw new Error("Cadastro de aluno nao localizado para pagamento EAD.");
-  }
-  if (!isGestorAtivo && requestedAlunoId && requestedAlunoId !== aluno.id) {
-    throw new Error(
-      "Voce so pode gerar cobranca EAD para o seu proprio cadastro.",
-    );
   }
 
   let turmasQuery = runtime.admin
@@ -437,6 +463,7 @@ export const buildEadCheckoutContext = async (
   if (!turma) {
     throw new Error("Nao ha turma EAD aberta para este curso no momento.");
   }
+  if (gestor) requireGestorForPolo(gestor, turma.polo_id);
 
   const matricula = await upsertEadMatricula(runtime.admin, aluno.id, turma.id);
   if (!matricula?.id) {
@@ -445,7 +472,7 @@ export const buildEadCheckoutContext = async (
 
   return {
     ...runtime,
-    environment,
+    environment: gatewayEnvironment,
     course,
     aluno,
     turma,
