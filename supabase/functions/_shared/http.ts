@@ -3,7 +3,7 @@ type CorsOptions = {
 };
 
 const SECURITY_RESPONSE_HEADERS = {
-  "X-Frame-Options": "DENY",
+  "X-Frame-Options": "SAMEORIGIN",
   "Content-Security-Policy": "frame-ancestors 'self'; form-action 'self';",
   "Vary": "Origin",
 };
