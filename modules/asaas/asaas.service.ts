@@ -1,4 +1,10 @@
 import { supabase } from '../../lib/supabase';
+import {
+  buildEnrollmentSyncPayload,
+  type GatewayPaymentMethod,
+} from './enrollment-sync';
+
+export type { GatewayPaymentMethod } from './enrollment-sync';
 
 const extractFunctionErrorMessage = async (error: any) => {
   const context = error?.context;
@@ -23,8 +29,15 @@ const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> =
 };
 
 export interface CheckoutPaymentSelection {
-  method: 'PIX' | 'BOLETO' | 'CREDIT_CARD';
+  method: GatewayPaymentMethod;
   installments?: number;
+}
+
+export interface EnrollmentPaymentOption {
+  paymentMethod: GatewayPaymentMethod;
+  providerCode: 'asaas' | 'mercado_pago' | 'banco_inter' | 'banese_card';
+  credentialId: string;
+  environment?: 'sandbox' | 'production';
 }
 
 export const asaasIntegrationService = {
@@ -32,17 +45,59 @@ export const asaasIntegrationService = {
     return invokeAdmin<{ success: boolean }>('test-connection');
   },
 
-  async syncEnrollment(matriculaId: string) {
+  async syncEnrollment(
+    matriculaId: string,
+    paymentMethod: GatewayPaymentMethod | null,
+  ) {
     return invokeAdmin<{
       success: boolean;
       receivable?: any;
       skipped?: boolean;
       skippedReason?: string | null;
-    }>('sync-enrollment', { matriculaId });
+    }>('sync-enrollment', buildEnrollmentSyncPayload(matriculaId, paymentMethod));
+  },
+
+  async getEnrollmentPaymentOptions(turmaId: string) {
+    return invokeAdmin<{
+      success: boolean;
+      environment: 'sandbox' | 'production';
+      modalidade: string;
+      options: EnrollmentPaymentOption[];
+    }>('preflight-enrollment-charge', { turmaId });
+  },
+
+  async preflightEnrollmentCharge(
+    turmaId: string,
+    paymentMethod: GatewayPaymentMethod,
+  ) {
+    return invokeAdmin<{
+      success: boolean;
+      environment: 'sandbox' | 'production';
+      modalidade: string;
+      options: EnrollmentPaymentOption[];
+    }>('preflight-enrollment-charge', { turmaId, paymentMethod });
   },
 
   async syncReceivable(receivableId: string) {
     return invokeAdmin<{ success: boolean; receivable: any }>('sync-receivable', { receivableId });
+  },
+
+  async createOtherCredit(input: {
+    idempotencyKey: string;
+    poloId: string;
+    descricao: string;
+    valor: number;
+    dataVencimento: string;
+    clienteId?: string;
+    formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
+    contaBancariaId?: string;
+    mode: 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
+  }) {
+    return invokeAdmin<{
+      success: boolean;
+      receivable: any;
+      reused: boolean;
+    }>('create-other-credit', input);
   },
 
   async cancelReceivable(receivableId: string, environment?: 'sandbox' | 'production') {
@@ -73,8 +128,13 @@ export const asaasIntegrationService = {
   async settleInPerson(
     receivableId: string,
     params: {
+      idempotencyKey: string;
       contaBancariaId: string;
-      valorPago: number;
+      valorPago: number | string;
+      valorJuros?: number | string;
+      valorMulta?: number | string;
+      valorDesconto?: number | string;
+      valorAcrescimo?: number | string;
       dataPagamento: string;
       formaPagamento: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     },
@@ -89,6 +149,8 @@ export const asaasIntegrationService = {
       gatewayProvider?: string | null;
       gatewayPaymentId?: string | null;
       futureSyncWarning?: string | null;
+      settlementId?: string;
+      replayed?: boolean;
     }>('manual-settlement', { receivableId, ...params });
   },
 

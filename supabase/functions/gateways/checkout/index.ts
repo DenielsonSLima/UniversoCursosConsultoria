@@ -6,7 +6,7 @@ import {
   isRateLimitExceeded,
   json,
 } from "../../_shared/http.ts";
-import type { CheckoutRuntime, EadCheckoutContext } from "./types.ts";
+import type { CheckoutRuntime } from "./types.ts";
 import { normalizeErrorMessage, providerLabelFor } from "./utils.ts";
 
 const parseBody = (bodyText: string) => {
@@ -30,7 +30,8 @@ const preflightCorsHeaders = (req: Request) => {
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": requestedHeaders || "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": requestedHeaders ||
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
@@ -40,40 +41,6 @@ const preflightCorsHeaders = (req: Request) => {
     Vary: "Origin",
   };
 };
-
-const cancelLocalCheckout = async (
-  context: EadCheckoutContext,
-  input: { createdRemotePayment: boolean; receivableId?: string | null },
-) => {
-  if (input.createdRemotePayment) return;
-
-  if (input.receivableId) {
-    await context.admin.from("contas_receber")
-      .delete()
-      .eq("id", input.receivableId)
-      .is("gateway_payment_id", null)
-      .neq("status", "PAGO")
-      .then(() => {});
-  }
-
-  if (context.matricula?.id) {
-    await context.admin.from("matriculas")
-      .update({ status: "CANCELADO" })
-      .eq("id", context.matricula.id)
-      .in("status", [
-        "PENDENTE",
-        "AGUARDANDO_PAGAMENTO",
-        "AGUARDANDO_CONFIRMACAO",
-      ])
-      .then(() => {});
-  }
-};
-
-const remotePaymentWasCreated = (error: unknown) =>
-  Boolean(
-    error && typeof error === "object" &&
-      (error as Record<string, unknown>).remotePaymentCreated === true,
-  );
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -109,10 +76,6 @@ Deno.serve(async (req: Request) => {
     },
   );
 
-  let context: EadCheckoutContext | null = null;
-  let createdRemotePayment = false;
-  let checkoutReceivableId: string | null = null;
-
   try {
     const { buildEadCheckoutContext } = await import("./ead-context.ts");
     const runtime: CheckoutRuntime = {
@@ -130,12 +93,11 @@ Deno.serve(async (req: Request) => {
       return runCourseCheckout(runtime);
     }
 
-    context = resolvedContext;
+    const context = resolvedContext;
 
     const { handleGatewayCheckout } = await import("./providers/gateway.ts");
     const result = await handleGatewayCheckout(context);
-    createdRemotePayment = result.createdRemotePayment;
-    checkoutReceivableId = result.receivableId || null;
+    const checkoutReceivableId = result.receivableId || null;
 
     console.info("payment-checkout routed", {
       modalidade: "EAD",
@@ -151,13 +113,9 @@ Deno.serve(async (req: Request) => {
     const message = normalizeErrorMessage(error);
     console.error("Erro no payment-checkout:", error);
 
-    if (context) {
-      await cancelLocalCheckout(context, {
-        createdRemotePayment: createdRemotePayment ||
-          remotePaymentWasCreated(error),
-        receivableId: checkoutReceivableId,
-      });
-    }
+    // O checkout e idempotente pelo recebivel. Em falha, preservar matricula,
+    // recebivel e eventual lock permite retry/recovery e impede que a requisicao
+    // perdedora apague o estado de outra chamada concorrente.
 
     return json({ error: message }, 400, req);
   }

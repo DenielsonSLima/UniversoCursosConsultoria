@@ -2,14 +2,19 @@ export type Environment = "sandbox" | "production";
 
 export type ImportResultType = "success" | "warning" | "error";
 
+export type BaneseSettlementChannel = "BOLETO" | "PIX" | null;
+
 export type ParsedEvent = {
   lineNumber: number;
   lote: string;
   nossoNumero: string;
   movementCode: string;
+  nominalAmount: number;
   paidAmount: number;
   occurrenceDate: string | null;
   segmentTMovement: string | null;
+  liquidationReasonCodes: string[];
+  settlementChannel: BaneseSettlementChannel;
   paid: boolean;
   rawTLine: string | null;
   rawULine: string;
@@ -18,9 +23,12 @@ export type ParsedEvent = {
 export type ParsedSegmentT = {
   linha: number;
   lote: string;
+  sequence: number;
   movement: string | null;
   nossoNumero: string | null;
   nossoValido: boolean;
+  nominalAmount: number;
+  liquidationReasonCodes: string[];
   rawLine: string;
 };
 
@@ -68,4 +76,3 @@ export type BaneseCnabImportResult = {
   outcomes: ImportOutcome[];
   message?: string;
 };
-

@@ -113,7 +113,7 @@ const RegrasCobrancaConfig: React.FC = () => {
       <div className="bg-white rounded-3xl space-y-6">
         <div>
           <h3 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Regras de Cobrança (Supabase)</h3>
-          <p className="text-sm font-medium text-slate-500 mt-1">Parametrize o envio automático padrão (Juros, Multas e Descontos).</p>
+          <p className="text-sm font-medium text-slate-500 mt-1">Configure parâmetros globais de referência para o simulador de juros, multas e descontos.</p>
         </div>
 
         <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl flex items-start gap-3">
@@ -121,7 +121,7 @@ const RegrasCobrancaConfig: React.FC = () => {
             <AlertCircle size={20} />
           </div>
           <p className="text-sm font-medium text-slate-600">
-            Estas regras serão salvas no banco de dados e aplicadas a todas as cobranças em tempo real. Qualquer mudança atualizará a tela de outros usuários conectados via Supabase Realtime.
+            Estas regras são salvas no banco e hoje alimentam apenas este simulador como referência. As cobranças reais continuam usando as regras definidas na turma e na matrícula. Alterações nesta tela são sincronizadas via Supabase Realtime.
           </p>
         </div>
 

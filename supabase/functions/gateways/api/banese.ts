@@ -1,7 +1,4 @@
-import {
-  ensureBaneseBoletoFinancialTerms,
-  queryBaneseBoleto,
-} from "../../banese/core/adapter.ts";
+import { queryBaneseBoleto } from "../../banese/core/adapter.ts";
 import {
   calculateBaneseAcceptablePaymentRange,
   normalizeBaneseFinancialTerms,
@@ -12,8 +9,12 @@ import {
   activateEnrollmentAfterPayment,
   syncOnlineInscriptionPayment,
 } from "../webhook/domain/ead-enrollment.ts";
+import {
+  applyReceivableSnapshotFields,
+  applyRemoteIdentitySnapshot,
+} from "../checkout/remote-title-guard.ts";
 import type { Environment } from "./config.ts";
-import { resolveBaneseReceivableFinancialTerms } from "./banese-financial-terms.ts";
+import { requireGatewayEnvironment } from "./environment.ts";
 
 const onlyDigits = (value: unknown) => String(value || "").replace(/\D/g, "");
 
@@ -28,6 +29,10 @@ type BaneseBoletoQuery = typeof queryBaneseBoleto;
 
 type ReconcileBaneseDependencies = {
   queryBoleto?: BaneseBoletoQuery;
+  syncFutureInstallments?: (
+    matriculaId: string,
+    environment: Environment,
+  ) => Promise<unknown>;
 };
 
 const hasBankNumberValue = (value: unknown) =>
@@ -54,6 +59,66 @@ export const sumBanesePaymentValues = (
     }
     return total + value;
   }, 0);
+
+export type BaneseSettlementMethod = "BOLETO" | "PIX";
+
+const normalizedSettlementLabel = (value: unknown) =>
+  String(value ?? "").trim().toUpperCase().replace(/[\s_-]+/g, " ");
+
+const hasReasonCode61 = (value: unknown) => {
+  const values = Array.isArray(value) ? value : [value];
+  return values.some((candidate) =>
+    normalizedSettlementLabel(candidate) === "61"
+  );
+};
+
+const paymentHasCanonicalPixEvidence = (
+  payment: Record<string, unknown>,
+) => {
+  const reasonValues = [
+    payment.CodigoMotivoLiquidacao,
+    payment.codigoMotivoLiquidacao,
+    payment.CodigoOcorrenciaLiquidacao,
+    payment.codigoOcorrenciaLiquidacao,
+    payment.CodigoMotivo,
+    payment.codigoMotivo,
+    payment.CodigoOcorrencia,
+    payment.codigoOcorrencia,
+  ];
+  const settlementValues = [
+    payment.FormaLiquidacao,
+    payment.formaLiquidacao,
+    payment.CanalLiquidacao,
+    payment.canalLiquidacao,
+    payment.MeioLiquidacao,
+    payment.meioLiquidacao,
+    payment.MotivoLiquidacao,
+    payment.motivoLiquidacao,
+  ].filter((value) => value !== undefined && value !== null);
+  const normalizedValues = settlementValues.map(normalizedSettlementLabel);
+  const explicitlyPix = normalizedValues.some((value) =>
+    ["PIX", "BOLEPIX", "BOLETO PIX", "LIQUIDADO VIA PIX"].includes(value)
+  );
+  const explicitlyBoleto = normalizedValues.some((value) =>
+    ["BOLETO", "CODIGO DE BARRAS", "LINHA DIGITAVEL"].includes(value)
+  );
+
+  return !explicitlyBoleto &&
+    (explicitlyPix || reasonValues.some(hasReasonCode61));
+};
+
+/**
+ * O produto bancario permanece BOLETO. A forma contabil muda para PIX somente
+ * quando cada pagamento traz prova canonica de liquidacao BolePix. O manual
+ * atual de PagamentosEfetivados documenta apenas banco, data e valor; portanto,
+ * ausencia, texto descritivo livre, conflito ou pagamento misto falham fechado.
+ */
+export const classifyBaneseSettlementMethod = (
+  payments: Array<Record<string, unknown>>,
+): BaneseSettlementMethod =>
+  payments.length > 0 && payments.every(paymentHasCanonicalPixEvidence)
+    ? "PIX"
+    : "BOLETO";
 
 const banesePaymentDate = (payment: Record<string, unknown>) => {
   const raw = String(
@@ -199,8 +264,10 @@ export const reconcileBaneseReceivable = async (
     throw new Error("A conciliacao Banese disponivel atende somente boletos.");
   }
 
-  const environment: Environment =
-    receivable.gateway_environment === "production" ? "production" : "sandbox";
+  const environment: Environment = requireGatewayEnvironment(
+    receivable.gateway_environment,
+    "titulo Banese",
+  );
   const { data: credential, error: credentialError } = await admin
     .from("payment_gateway_credentials")
     .select("metadata")
@@ -219,64 +286,40 @@ export const reconcileBaneseReceivable = async (
     receivable.gateway_boleto_nosso_numero ||
       receivable.gateway_payment_id,
   );
-  let confirmedFinancialTerms;
   if (
-    receivable.gateway_financial_terms &&
-    typeof receivable.gateway_financial_terms === "object" &&
-    receivable.gateway_financial_terms_confirmed_at
+    !receivable.gateway_financial_terms ||
+    typeof receivable.gateway_financial_terms !== "object"
   ) {
-    confirmedFinancialTerms = normalizeBaneseFinancialTerms({
-      ...receivable.gateway_financial_terms,
-      nominalAmount: Number(receivable.valor || 0),
-      dueDate: String(receivable.data_vencimento || "").slice(0, 10),
-    });
-  } else {
-    if (environment !== "sandbox") {
-      throw new Error(
-        "Titulo Banese de producao nao possui snapshot confirmado dos termos financeiros.",
-      );
-    }
-    const requestedTerms = await resolveBaneseReceivableFinancialTerms(
-      admin,
-      receivable,
+    throw new Error(
+      "Titulo Banese nao possui o pedido financeiro canonico persistido antes do POST; a conciliacao automatica foi bloqueada.",
     );
-    const confirmation = await ensureBaneseBoletoFinancialTerms(
-      admin,
-      environment,
-      {
-        convenio,
-        nossoNumero,
-        nominalAmount: Number(receivable.valor || 0),
-        dueDate: String(receivable.data_vencimento || "").slice(0, 10),
-        financialTerms: requestedTerms,
-      },
+  }
+  const confirmedFinancialTerms = normalizeBaneseFinancialTerms(
+    receivable.gateway_financial_terms,
+  );
+  if (
+    Math.round(confirmedFinancialTerms.nominalAmount * 100) !==
+      Math.round(Number(receivable.valor || 0) * 100) ||
+    confirmedFinancialTerms.dueDate !==
+      String(receivable.data_vencimento || "").slice(0, 10)
+  ) {
+    throw new Error(
+      "Pedido financeiro canonico Banese diverge do valor ou vencimento do recebivel; a conciliacao automatica foi bloqueada.",
     );
-    confirmedFinancialTerms = confirmation.financialTerms;
-    const confirmedAt = new Date().toISOString();
-    const { data: confirmedReceivable, error: confirmationError } = await admin
-      .from("contas_receber")
-      .update({
-        gateway_financial_terms: confirmedFinancialTerms,
-        gateway_financial_terms_confirmed_at: confirmedAt,
-        gateway_synced_at: confirmedAt,
-        gateway_last_error: null,
-        updated_at: confirmedAt,
-      })
-      .eq("id", receivable.id)
-      .eq("gateway_provider", "banese_card")
-      .eq("gateway_environment", environment)
-      .eq("gateway_payment_method", "BOLETO")
-      .or(baneseReceivableTitleFilter(nossoNumero))
-      .select("id")
-      .maybeSingle();
-    if (confirmationError) throw confirmationError;
-    if (!confirmedReceivable) {
-      throw new Error(
-        "Cobranca mudou antes de persistir os termos financeiros Banese.",
-      );
-    }
-    receivable.gateway_financial_terms = confirmedFinancialTerms;
-    receivable.gateway_financial_terms_confirmed_at = confirmedAt;
+  }
+  const submissionChannel = String(
+    receivable.gateway_submission_channel || "",
+  ).trim().toUpperCase();
+  const submissionStatus = String(
+    receivable.gateway_submission_status || "",
+  ).trim().toUpperCase();
+  if (
+    submissionStatus === "API_AMBIGUOUS" &&
+    !["", "API"].includes(submissionChannel)
+  ) {
+    throw new Error(
+      "Titulo Banese ambiguo possui canal de submissao inconsistente; a conciliacao automatica foi bloqueada.",
+    );
   }
   const snapshot = await (dependencies.queryBoleto ?? queryBaneseBoleto)(
     admin,
@@ -332,10 +375,21 @@ export const reconcileBaneseReceivable = async (
   );
   const receivableUpdate: Record<string, unknown> = {
     gateway_status: snapshot.remoteStatus,
+    gateway_financial_terms: confirmedFinancialTerms,
+    gateway_financial_terms_confirmed_at:
+      receivable.gateway_financial_terms_confirmed_at || syncedAt,
     gateway_synced_at: syncedAt,
     gateway_last_error: null,
     updated_at: syncedAt,
   };
+  const shouldConfirmApiSubmission = ["", "API"].includes(
+    submissionChannel,
+  ) && ["", "API_AMBIGUOUS", "API_REGISTERED"].includes(submissionStatus);
+  if (shouldConfirmApiSubmission) {
+    receivableUpdate.gateway_creation_token = null;
+    receivableUpdate.gateway_submission_channel = "API";
+    receivableUpdate.gateway_submission_status = "API_REGISTERED";
+  }
   if (!receivable.gateway_boleto_nosso_numero) {
     receivableUpdate.gateway_boleto_nosso_numero = snapshotNossoNumero;
   }
@@ -355,11 +409,12 @@ export const reconcileBaneseReceivable = async (
   }
   const shouldSettle = snapshot.paid &&
     String(receivable.status || "").toUpperCase() !== "PAGO";
+  const settlementMethod = classifyBaneseSettlementMethod(snapshot.payments);
   if (shouldSettle) {
     receivableUpdate.status = "PAGO";
     receivableUpdate.valor_pago = Number(paymentTotal.toFixed(2));
     receivableUpdate.data_pagamento = paymentDates.at(-1);
-    receivableUpdate.forma_pagamento = "BOLETO";
+    receivableUpdate.forma_pagamento = settlementMethod;
     receivableUpdate.origem_pagamento = "BANESE";
   }
 
@@ -378,6 +433,26 @@ export const reconcileBaneseReceivable = async (
       "AGUARDANDO_CONFIRMACAO",
     ]);
   }
+  updateQuery = applyRemoteIdentitySnapshot(updateQuery, receivable);
+  updateQuery = applyReceivableSnapshotFields(updateQuery, receivable, [
+    "status",
+    "origem_pagamento",
+    "forma_pagamento",
+    "valor",
+    "data_vencimento",
+    "gateway_status",
+    "gateway_creation_token",
+    "gateway_financial_terms",
+    "gateway_financial_terms_confirmed_at",
+    "gateway_submission_channel",
+    "gateway_submission_status",
+    "gateway_cnab_file_id",
+    "gateway_boleto_convenio",
+    "gateway_boleto_agencia",
+    "gateway_boleto_linha_digitavel",
+    "gateway_boleto_codigo_barras",
+    "updated_at",
+  ]);
   const { data: updatedRow, error: updateError } = await updateQuery
     .select()
     .maybeSingle();
@@ -393,6 +468,7 @@ export const reconcileBaneseReceivable = async (
     convenio: onlyDigits(convenio),
     nossoNumero: snapshotNossoNumero,
     financialTerms: confirmedFinancialTerms,
+    settlementMethod,
   };
   const transactionPayload = {
     remote_status: snapshot.remoteStatus,
@@ -475,6 +551,7 @@ export const reconcileBaneseReceivable = async (
     if (repairError) throw repairError;
   }
 
+  let futureSyncWarning: string | null = null;
   if (snapshot.paid && String(updated.status || "").toUpperCase() === "PAGO") {
     await syncOnlineInscriptionPayment({ admin } as any, {
       receivable: updated,
@@ -483,10 +560,55 @@ export const reconcileBaneseReceivable = async (
       paymentId: snapshotNossoNumero,
       paymentLinkId: null,
       localStatus: "PAGO",
-      legacyPaymentMethod: "BOLETO",
+      legacyPaymentMethod: String(updated.forma_pagamento || settlementMethod),
       pendingStatus: "AGUARDANDO_PAGAMENTO",
     });
     await activateEnrollmentAfterPayment({ admin } as any, updated);
+
+    if (
+      dependencies.syncFutureInstallments &&
+      updated.matricula_id &&
+      String(updated.tipo_lancamento || "").toUpperCase() === "MATRICULA"
+    ) {
+      const { data: matricula, error: matriculaError } = await admin
+        .from("matriculas")
+        .select(
+          "gerar_cobranca_futura, sincronizar_asaas, turmas(gerar_cobrancas_futuras, sincronizar_asaas_futuro)",
+        )
+        .eq("id", updated.matricula_id)
+        .maybeSingle();
+      if (matriculaError) throw matriculaError;
+      const turma = Array.isArray(matricula?.turmas)
+        ? matricula.turmas[0]
+        : matricula?.turmas;
+      const gerarFutura = matricula?.gerar_cobranca_futura ??
+        turma?.gerar_cobrancas_futuras ?? false;
+      const syncEnabled = matricula?.sincronizar_asaas ??
+        turma?.sincronizar_asaas_futuro ?? true;
+      if (gerarFutura && syncEnabled) {
+        try {
+          await dependencies.syncFutureInstallments(
+            updated.matricula_id,
+            environment,
+          );
+        } catch (syncError) {
+          futureSyncWarning = syncError instanceof Error
+            ? syncError.message
+            : String(syncError);
+          const { error: warningError } = await admin
+            .from("contas_receber")
+            .update({
+              gateway_last_error:
+                `Pagamento Banese conciliado; parcelas futuras pendentes: ${futureSyncWarning}`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", updated.id)
+            .eq("status", "PAGO")
+            .eq("gateway_provider", "banese_card");
+          if (warningError) throw warningError;
+        }
+      }
+    }
   }
 
   return {
@@ -495,5 +617,6 @@ export const reconcileBaneseReceivable = async (
     remoteStatus: snapshot.remoteStatus,
     paid: snapshot.paid,
     payments: snapshot.payments.length,
+    futureSyncWarning,
   };
 };

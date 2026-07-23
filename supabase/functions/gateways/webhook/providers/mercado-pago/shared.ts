@@ -18,6 +18,7 @@ export const firstString = (...values: unknown[]) => {
 
 export const firstNumber = (...values: unknown[]) => {
   for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
     const normalized = Number(value);
     if (Number.isFinite(normalized)) return normalized;
   }

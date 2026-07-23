@@ -1,192 +1,34 @@
-import React, { ReactNode, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { keepPreviousData, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import {
-  CheckCircle2,
-  Clock3,
-  Copy,
-  LayoutGrid,
-  Loader2,
-  Search,
-  Table2,
-  Users,
-  WalletCards,
-  ExternalLink,
-  RefreshCw,
-  ReceiptText,
-  X,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQueries } from '@tanstack/react-query';
 import {
   financeiroService,
-  ContasReceber,
-  ReceivablesGroupMode,
-  ReceivablesPageFilters,
-  ReceivablesStatusScope,
+  type ReceivablesPageFilters,
 } from '../../financeiro.service';
-import { asaasIntegrationService } from '../../../../asaas/asaas.service';
-import { formatMatricula } from '../../../../../lib/academicUtils';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { financeiroQueryKeys } from '../../financeiro.queryKeys';
 import { useFinanceiroRealtime } from '../../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import { useModalidadeReceberQueries } from '../hooks/useModalidadeReceberQueries';
-import { printReciboDespesa } from '../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
-import { copyTextToClipboard } from '../../../../../lib/clipboard';
-import type { BanesePaymentRecord } from '../../../../aluno/financeiro/banese/banese-payment.types';
-import { gestorBanesePaymentService } from '../banese/gestor-banese-payment.service';
-import FinancialReportExportButton, {
-  FinancialReportColumn,
-  FinancialReportFilter,
-  FinancialReportRow,
-  FinancialReportStatusBadge,
-  FinancialReportSummaryCard,
-} from '../../components/FinancialReportPreview';
+import { ModalidadeReceberOverlays } from './modalidade-receber/ModalidadeReceberOverlays';
+import { ModalidadeReceberToolbar } from './modalidade-receber/ModalidadeReceberToolbar';
+import {
+  type ReceivableActionsContext,
+} from './modalidade-receber/ReceivableItemPresentation';
+import { ReceivablesList } from './modalidade-receber/ReceivablesList';
+import type {
+  GroupItemsState,
+  GroupMode,
+  ModalidadeReceberTabProps,
+  ReceivableKpis,
+  ReceivableStatusCounts,
+  StatusScope,
+  ViewMode,
+} from './modalidade-receber/modalidade-receber.types';
+import { useModalidadeReceberOperations } from './modalidade-receber/useModalidadeReceberOperations';
+import { useModalidadeReceberReport } from './modalidade-receber/useModalidadeReceberReport';
 
-const BanesePaymentPage = React.lazy(() => import('../../../../aluno/financeiro/banese/BanesePaymentPage'));
-
-const today = () => new Date().toISOString().slice(0, 10);
-
-const parseCurrencyInput = (value: string): number | null => {
-  const raw = String(value || '').trim();
-  if (!raw) return null;
-
-  const cleaned = raw.replace(/[^0-9.,-]/g, '');
-  if (!cleaned) return null;
-
-  const hasMinus = cleaned.startsWith('-');
-  const sanitized = hasMinus ? cleaned.slice(1) : cleaned;
-
-  const lastComma = sanitized.lastIndexOf(',');
-  const lastDot = sanitized.lastIndexOf('.');
-  const decimalSeparator = lastComma > lastDot ? ',' : '.';
-  const decimalIndex = sanitized.lastIndexOf(decimalSeparator);
-
-  if (decimalIndex <= 0) {
-    const integerPart = sanitized.replace(/[.,]/g, '');
-    const parsed = Number(integerPart);
-    if (!Number.isFinite(parsed)) return null;
-    return hasMinus ? -parsed : parsed;
-  }
-
-  const integerPart = sanitized.slice(0, decimalIndex).replace(/[.,]/g, '');
-  const decimalPart = sanitized.slice(decimalIndex + 1).replace(/\D/g, '').slice(0, 2);
-  const normalized = `${integerPart || '0'}.${decimalPart || '0'}`;
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed)) return null;
-
-  return hasMinus ? -parsed : parsed;
-};
-
-const formatCurrencyInput = (value: number | string) => {
-  const parsed = typeof value === 'number' ? value : parseCurrencyInput(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return '';
-  return Number(parsed).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
-
-const normalizeCurrencyTyping = (value: string) => {
-  const parsed = parseCurrencyInput(value);
-  if (!Number.isFinite(parsed || 0) || parsed === null || parsed < 0) return '';
-  return formatCurrencyInput(parsed);
-};
-
-type ViewMode = 'table' | 'cards';
-type GroupMode = ReceivablesGroupMode;
-type StatusScope = ReceivablesStatusScope;
-type CourseModality = 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
-
-const statusScopeLabels: Record<StatusScope, string> = {
-  pending: 'Pendentes',
-  received: 'Recebidos',
-  canceled: 'Cancelados',
-  all: 'Todos',
-};
-
-const groupModeLabels: Record<GroupMode, string> = {
-  none: 'Sem agrupamento',
-  student: 'Por aluno',
-  class: 'Por turma',
-  polo: 'Por polo',
-};
-
-const paymentGatewayLabels: Record<string, string> = {
-  asaas: 'Asaas',
-  banese: 'Banese',
-  banese_card: 'Banese',
-  mercado_pago: 'Mercado Pago',
-  banco_inter: 'Banco Inter',
-  inter: 'Banco Inter',
-  gateway: 'Gateway bancário',
-};
-
-const paymentGatewayCode = (item: ContasReceber): string | null => {
-  const explicitProvider = String(item.gatewayProvider || '').trim().toLowerCase();
-  if (explicitProvider) return explicitProvider;
-
-  const origin = String(item.origemPagamento || '').trim().toUpperCase();
-  if (origin.includes('BANESE')) return 'banese_card';
-  if (origin.includes('MERCADO_PAGO') || origin.includes('MERCADO PAGO')) return 'mercado_pago';
-  if (origin.includes('BANCO_INTER') || origin === 'INTER') return 'banco_inter';
-  if (origin.includes('ASAAS')) return 'asaas';
-  if (origin.startsWith('GATEWAY')) return 'gateway';
-
-  // Compatibilidade com cobranças Asaas anteriores à coluna gateway_provider.
-  if (item.asaasPaymentId) return 'asaas';
-  return null;
-};
-
-const paymentGatewayLabel = (item: ContasReceber) => {
-  const providerCode = paymentGatewayCode(item);
-  if (!providerCode) return 'Integração bancária';
-  if (paymentGatewayLabels[providerCode]) return paymentGatewayLabels[providerCode];
-
-  return providerCode
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(' ');
-};
-
-const paymentGatewayStatusLabel = (item: ContasReceber) => {
-  const normalized = String(item.asaasStatus || '').toUpperCase();
-  if (!normalized) return 'Não sincronizado';
-
-  const providerLabel = paymentGatewayLabel(item);
-  const providerReference = providerLabel === 'Gateway bancário' || providerLabel === 'Integração bancária'
-    ? providerLabel.toLowerCase()
-    : providerLabel;
-  const labels: Record<string, string> = {
-    PENDING: `Pendente no ${providerReference}`,
-    CONFIRMED: `Confirmado no ${providerReference}`,
-    RECEIVED: `Recebido no ${providerReference}`,
-    OVERDUE: `Vencido no ${providerReference}`,
-    DELETED: `Cancelado no ${providerReference}`,
-    CANCELED: `Cancelado no ${providerReference}`,
-    REFUNDED: `Estornado no ${providerReference}`,
-    REFUND_REQUESTED: 'Estorno solicitado',
-    AWAITING_RISK_ANALYSIS: `Em análise no ${providerReference}`,
-  };
-  return labels[normalized] || normalized;
-};
-
-const paymentGatewayStatusClass = (status?: string) => {
-  const normalized = String(status || '').toUpperCase();
-  if (['CONFIRMED', 'RECEIVED'].includes(normalized)) return 'text-emerald-600';
-  if (['DELETED', 'CANCELED'].includes(normalized)) return 'text-rose-600';
-  if (normalized === 'PENDING') return 'text-blue-600';
-  if (normalized === 'OVERDUE') return 'text-amber-600';
-  return 'text-slate-400';
-};
-
-interface ModalidadeReceberTabProps {
-  poloId?: string | null;
-  modality: CourseModality;
-  title: string;
-  description: string;
-  icon: ReactNode;
-  accentLabel: string;
-}
+const PAGE_SIZE = 10;
+const GROUP_ITEMS_PAGE_SIZE = 25;
 
 export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   poloId,
@@ -196,7 +38,6 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   icon,
   accentLabel,
 }) => {
-  const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [search, setSearch] = useState('');
   const [statusScope, setStatusScope] = useState<StatusScope>('pending');
@@ -207,20 +48,8 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   const [dueStart, setDueStart] = useState('');
   const [dueEnd, setDueEnd] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const groupItemsPageSize = 25;
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [reportReceivables, setReportReceivables] = useState<ContasReceber[] | null>(null);
-  const [selected, setSelected] = useState<ContasReceber | null>(null);
-  const [accountId, setAccountId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
-  const [paymentDate, setPaymentDate] = useState(today());
-  const [paidValue, setPaidValue] = useState('');
-  const [reversalItem, setReversalItem] = useState<ContasReceber | null>(null);
-  const [reversalReason, setReversalReason] = useState('');
-  const [recreateAsaas, setRecreateAsaas] = useState(true);
-  const [banesePaymentRecords, setBanesePaymentRecords] = useState<BanesePaymentRecord[]>([]);
-  const [selectedBanesePaymentId, setSelectedBanesePaymentId] = useState<string | null>(null);
+  const operations = useModalidadeReceberOperations(toast);
 
   useFinanceiroRealtime(poloId);
 
@@ -237,7 +66,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     statusScope,
     groupMode,
     page,
-    pageSize,
+    pageSize: PAGE_SIZE,
   }), [debouncedSearch, dueEnd, dueStart, groupMode, page, poloId, statusScope]);
 
   const {
@@ -245,7 +74,6 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     groupsQuery,
     summaryQuery,
   } = useModalidadeReceberQueries(modality, pageFilters);
-
   const { accountsQuery } = useFinanceiroSharedQueries({ accounts: true, polos: false, partners: false });
   const receivables = receivablesQuery.data?.rows || [];
   const groups = groupsQuery.data?.groups || [];
@@ -259,7 +87,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
         ...pageFilters,
         groupKey: group.key,
         page: groupPages[group.key] || 1,
-        pageSize: groupItemsPageSize,
+        pageSize: GROUP_ITEMS_PAGE_SIZE,
       };
       return {
         queryKey: financeiroQueryKeys.receivablesGroupItems(modality, filters),
@@ -273,136 +101,40 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
   });
 
   const groupItemsByKey = useMemo(() => {
-    const result = new Map<string, (typeof groupItemQueries)[number]>();
-    groups.forEach((group, index) => result.set(group.key, groupItemQueries[index]));
+    const result = new Map<string, GroupItemsState>();
+    groups.forEach((group, index) => {
+      const query = groupItemQueries[index];
+      result.set(group.key, {
+        rows: query?.data?.rows || [],
+        isLoading: Boolean(query?.isLoading),
+      });
+    });
     return result;
   }, [groupItemQueries, groups]);
 
-  const paidValueNumber = useMemo(() => parseCurrencyInput(paidValue), [paidValue]);
   const activeSettlementAccounts = useMemo(() => (
     accounts.filter((account) =>
       account.ativo !== false
-      && (!selected?.poloId || !account.poloId || account.poloId === selected.poloId)
+      && (!operations.selected?.poloId || !account.poloId || account.poloId === operations.selected.poloId)
     )
-  ), [accounts, selected?.poloId]);
+  ), [accounts, operations.selected?.poloId]);
 
-  const paymentMutation = useMutation({
-    mutationFn: () => financeiroService.markReceivablePaid(selected!.id!, {
-      contaBancariaId: accountId,
-      valorPago: paidValueNumber,
-      dataPagamento: paymentDate,
-      formaPagamento: paymentMethod,
-    }),
-    onSuccess: async (result) => {
-      const paidReceivable = selected;
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
-        selected?.turmaId
-          ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', selected.turmaId] })
-          : Promise.resolve(),
-      ]);
-      toast.success(
-        'Recebimento confirmado',
-        result.futureSyncWarning
-          ? `Baixa registrada. Atenção na sincronização futura: ${result.futureSyncWarning}`
-          : result.gatewayCanceled
-          ? `Baixa manual registrada e título ${result.gatewayPaymentId || paidReceivable?.asaasPaymentId || ''} cancelado no ${paymentGatewayLabel(paidReceivable!)}.`
-          : paidReceivable?.asaasPaymentId
-            ? `Baixa manual registrada. A cobrança no ${paymentGatewayLabel(paidReceivable)} já estava confirmada/recebida ou não exigia cancelamento.`
-            : 'Baixa manual registrada na conta selecionada.',
-      );
-      setSelected(null);
-    },
-    onError: (error: any) => toast.error('Erro ao confirmar recebimento', error.message || 'Não foi possível registrar a baixa manual.'),
-  });
-
-  const syncMutation = useMutation({
-    mutationFn: (receivableId: string) => asaasIntegrationService.syncReceivable(receivableId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-    onError: (error: any) => console.error('Não foi possível enviar a cobrança ao banco configurado:', error),
-  });
-
-  const refreshMutation = useMutation({
-    mutationFn: (receivableId: string) => asaasIntegrationService.refreshReceivableStatus(receivableId),
-    onSuccess: async (result) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
-        result.receivable?.turma_id
-          ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', result.receivable.turma_id] })
-          : Promise.resolve(),
-      ]);
-    },
-    onError: (error: any) => console.error('Não foi possível atualizar o status bancário:', error),
-  });
-
-  const baneseDetailsMutation = useMutation({
-    mutationFn: (receivableId: string) => gestorBanesePaymentService.getPaymentDetails(receivableId),
-    onSuccess: (records, receivableId) => {
-      setBanesePaymentRecords(records);
-      setSelectedBanesePaymentId(receivableId);
-    },
-    onError: (error: any) => toast.error(
-      'Cobrança Banese indisponível',
-      error?.message || 'Não foi possível carregar os dados bancários desta cobrança.',
-    ),
-  });
-
-  const reversalMutation = useMutation({
-    mutationFn: () => financeiroService.reverseManualSettlement(reversalItem!.id!, {
-      recreateAsaas,
-      reason: reversalReason,
-    }),
-    onSuccess: async (result) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
-        queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
-        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
-        queryClient.invalidateQueries({ queryKey: ['aluno-financeiro'] }),
-        reversalItem?.turmaId
-          ? queryClient.invalidateQueries({ queryKey: ['turma-financeiro', reversalItem.turmaId] })
-          : Promise.resolve(),
-      ]);
-      toast.success(
-        'Baixa manual estornada',
-        result.gatewayRecreated
-          ? `O recebível voltou para pendente e uma nova cobrança ${paymentGatewayLabel(reversalItem!)} foi gerada.`
-          : 'O recebível voltou para pendente para nova conferência.',
-      );
-      setReversalItem(null);
-      setReversalReason('');
-      setRecreateAsaas(true);
-    },
-    onError: (error: any) => toast.error('Erro ao estornar baixa', error.message || 'Não foi possível desfazer a baixa manual.'),
-  });
-
-  const statusCounts = {
+  const statusCounts: ReceivableStatusCounts = {
     pending: summaryQuery.data?.pendingCount || 0,
     received: summaryQuery.data?.receivedCount || 0,
     canceled: summaryQuery.data?.canceledCount || 0,
     all: summaryQuery.data?.allCount || 0,
   };
-
-  const kpis = {
+  const kpis: ReceivableKpis = {
     total: summaryQuery.data?.allValue || 0,
     recebido: summaryQuery.data?.receivedValue || 0,
     aReceber: summaryQuery.data?.pendingValue || 0,
     vencidos: summaryQuery.data?.overdueCount || 0,
   };
-
   const totalItems = groupMode === 'none'
     ? receivablesQuery.data?.totalItems || 0
     : groupsQuery.data?.totalItems || 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const paginated = receivables;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   useEffect(() => {
     setPage(1);
@@ -417,1077 +149,102 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     setGroupPages({});
   }, [search, dueStart, dueEnd, statusScope, groupMode, modality, page]);
 
-  useEffect(() => {
-    setReportReceivables(null);
-  }, [debouncedSearch, dueStart, dueEnd, statusScope, modality, poloId]);
-
-  const closePaymentModal = () => setSelected(null);
-  const closeReversalModal = () => {
-    setReversalItem(null);
-    setReversalReason('');
-    setRecreateAsaas(true);
-  };
-
-  useEffect(() => {
-    if (!selected && !reversalItem) return;
-
-    const onDocumentKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (selected) closePaymentModal();
-      if (reversalItem) closeReversalModal();
-    };
-
-    document.addEventListener('keydown', onDocumentKeyDown);
-    return () => document.removeEventListener('keydown', onDocumentKeyDown);
-  }, [selected, reversalItem]);
-
-  const openPayment = (item: ContasReceber) => {
-    setSelected(item);
-    setPaidValue(formatCurrencyInput(item.valor));
-    setPaymentDate(today());
-    setPaymentMethod('PIX');
-    const matchingAccount = accounts.find((account) =>
-      account.ativo !== false && account.poloId && account.poloId === item.poloId
-    ) || accounts.find((account) => account.ativo !== false && !account.poloId);
-    setAccountId(matchingAccount?.id || '');
-  };
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-
-  const formatDate = (value: string) =>
-    value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—';
-
-  const formatEnrollment = (item: ContasReceber) =>
-    item.matriculaId ? formatMatricula(item.matriculaId, item.createdAt, item.poloId) : 'Sem matrícula';
-
-  const paymentOriginLabel = (item: ContasReceber) => {
-    if (item.origemPagamento === 'PRESENCIAL') {
-      return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
-        ? `Manual, cobrança ${paymentGatewayLabel(item)} cancelada`
-        : 'Manual';
-    }
-    if (paymentGatewayCode(item)) return paymentGatewayLabel(item);
-    if (item.origemPagamento === 'LOCAL') return 'Local';
-    return item.status === 'PAGO' ? 'Manual' : 'Aguardando';
-  };
-
-  const paymentMethodLabel = (item: ContasReceber) => {
-    if (item.formaPagamento === 'CARTAO') return 'Cartão';
-    if (item.formaPagamento === 'BOLETO') return 'Boleto';
-    if (item.formaPagamento === 'PIX') return 'Pix';
-    if (item.formaPagamento === 'DINHEIRO') return 'Dinheiro';
-    return item.asaasPaymentId ? `Link ${paymentGatewayLabel(item)}` : 'Não definido';
-  };
-
-  const normalizeGatewayFee = (item: ContasReceber) => {
-    if (item.taxa !== undefined) return item.taxa;
-    const hasAsaasCharge = paymentGatewayCode(item) === 'asaas';
-    if (!hasAsaasCharge) return 0;
-    if (item.formaPagamento === 'PIX' || item.formaPagamento === 'BOLETO') return 1.99;
-    if (item.formaPagamento === 'CARTAO') return Number((0.49 + item.valor * 0.0299).toFixed(2));
-    return 0;
-  };
-
-  const normalizeGatewayNet = (item: ContasReceber) => {
-    if (item.valorLiquido !== undefined) return item.valorLiquido;
-    const gross = item.valor || 0;
-    return Math.max(0, Number((gross - normalizeGatewayFee(item)).toFixed(2)));
-  };
-
-  const copyInvoiceUrl = async (item: ContasReceber) => {
-    const url = item.asaasInvoiceUrl || item.asaasBankSlipUrl;
-    if (!url) return;
-    if (await copyTextToClipboard(url)) {
-      toast.success('Link copiado', 'O link da cobrança foi copiado para envio ao aluno.');
-      return;
-    }
-    toast.error('Não foi possível copiar', 'Seu navegador bloqueou a cópia automática deste link.');
-  };
-
-  const openCharge = (item: ContasReceber) => {
-    if (paymentGatewayCode(item) === 'banese_card') {
-      if (!item.id) return;
-      baneseDetailsMutation.mutate(item.id);
-      return;
-    }
-
-    const url = item.asaasBankSlipUrl || item.asaasInvoiceUrl;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const closeBanesePayment = () => {
-    setSelectedBanesePaymentId(null);
-    setBanesePaymentRecords([]);
-  };
-
-  const refreshBanesePayment = async () => {
-    if (!selectedBanesePaymentId) return;
-    await refreshMutation.mutateAsync(selectedBanesePaymentId);
-    const records = await gestorBanesePaymentService.getPaymentDetails(selectedBanesePaymentId);
-    setBanesePaymentRecords(records);
-  };
-
-  const canReverseManualSettlement = (item: ContasReceber) =>
-    item.status === 'PAGO' && item.origemPagamento === 'PRESENCIAL';
-
-  const isPaidThroughAsaas = (item: ContasReceber) => {
-    const asaasStatus = String(item.asaasStatus || '').toUpperCase();
-    return item.status === 'PAGO' && (
-      String(item.origemPagamento || '').toUpperCase() === 'ASAAS'
-      || ['RECEIVED', 'CONFIRMED'].includes(asaasStatus)
-      || Boolean(item.asaasTransactionReceiptUrl)
-    );
-  };
-
-  const openAsaasReceipt = (item: ContasReceber) => {
-    if (item.asaasTransactionReceiptUrl) {
-      window.open(item.asaasTransactionReceiptUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    toast.info(
-      'Comprovante Asaas indisponível',
-      'O Asaas ainda não retornou o comprovante oficial desta cobrança. Use Atualizar Asaas para consultar novamente.',
-    );
-  };
-
-  const printInstitutionalReceipt = (item: ContasReceber) => {
-    printReciboDespesa({
-      reciboTitulo: 'Recibo de Pagamento',
-      reciboNumero: item.id ? item.id.slice(0, 8).toUpperCase() : undefined,
-      contraparteLabel: 'Aluno / Pagador',
-      assinaturaNome: 'Responsável Financeiro',
-      empresaNome: 'Universo Cursos e Consultoria',
-      empresaCnpj: item.poloCnpj,
-      descricao: item.descricao,
-      valor: item.valor,
-      valorPago: item.valorPago ?? item.valor,
-      dataVencimento: item.dataVencimento,
-      dataPagamento: item.dataPagamento,
-      fornecedorNome: item.clienteNome,
-      fornecedorId: item.clienteCpfCnpj,
-      categoriaNome: [item.cursoNome, item.turmaNome, item.tipoLancamento].filter(Boolean).join(' • '),
-      formaPagamento: paymentMethodLabel(item),
-      poloNome: item.poloNome,
-      parcelaNumero: item.parcelaNumero,
-      observacao: 'Pagamento manual registrado no sistema da Universo Cursos e Consultoria.',
-      status: item.status,
-    });
-  };
-
-  const openPaidReceipt = (item: ContasReceber) => {
-    if (isPaidThroughAsaas(item)) {
-      openAsaasReceipt(item);
-      return;
-    }
-
-    printInstitutionalReceipt(item);
-  };
-
-  const openReversal = (item: ContasReceber) => {
-    setReversalItem(item);
-    setReversalReason('');
-    setRecreateAsaas(Boolean(item.asaasPaymentId));
-  };
-
   const toggleGroup = (key: string) => {
     const willOpen = !expandedGroups.has(key);
     setExpandedGroups((current) => {
       const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
-    if (willOpen) {
-      setGroupPages((pages) => ({ ...pages, [key]: pages[key] || 1 }));
-    }
+    if (willOpen) setGroupPages((pages) => ({ ...pages, [key]: pages[key] || 1 }));
   };
 
   const changeGroupPage = (key: string, nextPage: number) => {
     setGroupPages((current) => ({ ...current, [key]: Math.max(1, nextPage) }));
   };
 
-  const loadReportReceivables = async () => {
-    try {
-      const rows = await financeiroService.getReceivablesExportByModality(modality, {
-        poloId: poloId || undefined,
-        search: search.trim(),
-        dueStart,
-        dueEnd,
-        statusScope,
-      });
-      setReportReceivables(rows);
-    } catch (error: any) {
-      toast.error('Erro ao preparar o extrato', error?.message || 'Não foi possível carregar todos os registros do relatório.');
-      throw error;
-    }
+  const report = useModalidadeReceberReport({
+    modality,
+    poloId,
+    title,
+    search,
+    debouncedSearch,
+    dueStart,
+    dueEnd,
+    statusScope,
+    groupMode,
+    statusCounts,
+    toast,
+  });
+
+  const receivableActions: ReceivableActionsContext = {
+    baneseDetailsPending: operations.baneseDetailsMutation.isPending,
+    baneseDetailsReceivableId: operations.baneseDetailsMutation.variables,
+    refreshPending: operations.refreshMutation.isPending,
+    syncPending: operations.syncMutation.isPending,
+    onOpenPayment: operations.openPayment,
+    onCopyInvoiceUrl: operations.copyInvoiceUrl,
+    onOpenCharge: operations.openCharge,
+    onRefresh: (receivableId) => operations.refreshMutation.mutate(receivableId),
+    onSync: (receivableId) => operations.syncMutation.mutate(receivableId),
+    onOpenPaidReceipt: operations.openPaidReceipt,
+    onOpenReversal: operations.openReversal,
   };
-
-  const reportPoloId = useMemo(() => {
-    if (poloId && poloId !== 'todos') return poloId;
-    if (typeof window === 'undefined') return undefined;
-    return sessionStorage.getItem('current_polo_id') || sessionStorage.getItem('active_polo_id') || undefined;
-  }, [poloId]);
-
-  const reportColumns = useMemo<FinancialReportColumn[]>(() => [
-    { label: 'Aluno' },
-    { label: 'Cobrança' },
-    { label: 'Turma / unidade' },
-    { label: 'Vencimento' },
-    { label: 'Situação', align: 'center' },
-    { label: 'Valor', align: 'right' },
-  ], []);
-
-  const reportRows = useMemo<FinancialReportRow[]>(() => (reportReceivables || []).map((item) => ({
-    id: item.id || `${item.clienteId}-${item.dataVencimento}-${item.descricao}`,
-    cells: [
-      <div>
-        <p className="font-black text-[#001a33]">{item.clienteNome || 'Aluno não informado'}</p>
-        <p className="mt-0.5 text-slate-500">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
-        <p className="mt-0.5 font-bold text-slate-500">Matrícula: {formatEnrollment(item)}</p>
-      </div>,
-      <div>
-        <p className="font-bold text-slate-700">{item.descricao}</p>
-        <p className="mt-0.5 font-black uppercase tracking-wider text-slate-400">
-          {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
-        </p>
-        {item.asaasInvoiceUrl && item.status !== 'PAGO' && (
-          <p className="mt-0.5 font-bold text-blue-600">Cobrança {paymentGatewayLabel(item)} vinculada</p>
-        )}
-      </div>,
-      <div>
-        <p className="font-bold text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
-        <p className="mt-0.5 font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
-        <p className="mt-0.5 text-slate-400">{item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}</p>
-      </div>,
-      <div>
-        <p className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</p>
-        {item.status === 'PAGO' && (
-          <p className="mt-0.5 font-bold text-emerald-700">Pago em {formatDate(item.dataPagamento || '')}</p>
-        )}
-        <p className="mt-0.5 text-slate-500">{paymentMethodLabel(item)}</p>
-      </div>,
-      <FinancialReportStatusBadge status={item.status} />,
-      <div>
-        <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 text-[9px] font-bold text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
-        <p className="text-[9px] font-bold text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
-        {item.valorPago !== undefined && (
-          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">Rec.: {formatCurrency(item.valorPago)}</p>
-        )}
-      </div>,
-    ],
-  })), [reportReceivables]);
-
-  const reportTotals = useMemo(() => {
-    const source = reportReceivables || [];
-    const total = source.reduce((sum, item) => sum + item.valor, 0);
-    const recebido = source
-      .filter((item) => item.status === 'PAGO')
-      .reduce((sum, item) => sum + (item.valorPago ?? item.valor), 0);
-    const aReceber = source
-      .filter((item) => ['PENDENTE', 'VENCIDO', 'SUSPENSO'].includes(item.status))
-      .reduce((sum, item) => sum + item.valor, 0);
-    const vencidos = source.filter((item) => item.status === 'VENCIDO').length;
-    return { total, recebido, aReceber, vencidos };
-  }, [reportReceivables]);
-
-  const reportExpectedCount = reportReceivables?.length ?? (
-    statusScope === 'pending'
-      ? statusCounts.pending
-      : statusScope === 'received'
-        ? statusCounts.received
-        : statusScope === 'canceled'
-          ? statusCounts.canceled
-          : statusCounts.all
-  );
-
-  const reportFilters = useMemo<FinancialReportFilter[]>(() => {
-    const filterDate = (value?: string) => value ? formatDate(value) : 'Sem limite';
-    return [
-      { label: 'Modalidade', value: title },
-      { label: 'Situação', value: statusScopeLabels[statusScope] },
-      { label: 'Busca', value: search.trim() || 'Todos os alunos' },
-      { label: 'Vencimento', value: `${filterDate(dueStart)} até ${filterDate(dueEnd)}` },
-      { label: 'Agrupamento', value: groupModeLabels[groupMode] },
-      { label: 'Registros', value: `${reportExpectedCount} cobrança(s)` },
-    ];
-  }, [dueEnd, dueStart, groupMode, reportExpectedCount, search, statusScope, title]);
-
-  const reportSummaryCards = useMemo<FinancialReportSummaryCard[]>(() => [
-    { label: 'Total previsto', value: formatCurrency(reportTotals.total), tone: 'slate' },
-    { label: 'Recebido', value: formatCurrency(reportTotals.recebido), tone: 'emerald' },
-    { label: 'A receber', value: formatCurrency(reportTotals.aReceber), tone: 'amber' },
-    { label: 'Vencidos', value: reportTotals.vencidos, tone: 'rose' },
-  ], [reportTotals]);
-
-  const StatusBadge = ({ item }: { item: ContasReceber }) => (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${
-      item.status === 'PAGO'
-        ? 'bg-emerald-50 text-emerald-700'
-        : item.status === 'VENCIDO'
-          ? 'bg-rose-50 text-rose-700'
-          : item.status === 'SUSPENSO'
-            ? 'bg-blue-50 text-blue-700'
-            : item.status === 'CANCELADO'
-              ? 'bg-slate-100 text-slate-500'
-              : 'bg-amber-50 text-amber-700'
-    }`}>
-      {item.status === 'PAGO' ? <CheckCircle2 size={11} /> : <Clock3 size={11} />}
-      {item.status}
-    </span>
-  );
-
-  const ChargeActions = ({ item }: { item: ContasReceber }) => {
-    if (item.status === 'PAGO') {
-      const paidThroughAsaas = isPaidThroughAsaas(item);
-      return (
-        <div className="flex max-w-[190px] flex-col gap-2">
-          <span className="text-[10px] font-bold text-slate-400">Recebido em {formatDate(item.dataPagamento || '')}</span>
-          <button
-            type="button"
-            onClick={() => openPaidReceipt(item)}
-            className={`inline-flex items-center justify-center gap-1 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider ${
-              paidThroughAsaas
-                ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
-                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-            }`}
-            title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Imprimir recibo interno da Universo'}
-          >
-            {paidThroughAsaas ? <ExternalLink size={12} /> : <ReceiptText size={12} />}
-            {paidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
-          </button>
-          {paidThroughAsaas && !item.asaasTransactionReceiptUrl && item.id && (
-            <button
-              type="button"
-              onClick={() => refreshMutation.mutate(item.id!)}
-              disabled={refreshMutation.isPending}
-              className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 disabled:opacity-50"
-              title="Consultar novamente o comprovante no Asaas"
-            >
-              <RefreshCw className={refreshMutation.isPending ? 'animate-spin' : ''} size={12} />
-              Atualizar Asaas
-            </button>
-          )}
-          {canReverseManualSettlement(item) && (
-            <button
-              type="button"
-              onClick={() => openReversal(item)}
-              className="rounded-xl border border-rose-200 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-600 hover:bg-rose-50"
-              title="Estornar baixa manual"
-            >
-              Estornar baixa
-            </button>
-          )}
-        </div>
-      );
-    }
-
-    if (!['PENDENTE', 'VENCIDO'].includes(item.status)) {
-      return <span className="text-[10px] font-bold text-slate-400">Sem ação financeira</span>;
-    }
-
-    return (
-      <div className="grid w-full max-w-[180px] grid-cols-2 gap-2">
-        <button
-          onClick={() => openPayment(item)}
-          className="col-span-2 rounded-xl bg-[#001a33] px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700"
-          title="Confirmar recebimento manual"
-        >
-          Receber
-        </button>
-        {item.asaasInvoiceUrl || item.asaasBankSlipUrl ? (
-          <>
-            <button
-              type="button"
-              onClick={() => copyInvoiceUrl(item)}
-              className="flex items-center justify-center gap-1 rounded-xl border border-emerald-200 px-2 py-2 text-[10px] font-black uppercase text-emerald-700"
-              title="Copiar link de cobrança"
-            >
-              <Copy size={12} /> Link
-            </button>
-            <button
-              type="button"
-              onClick={() => openCharge(item)}
-              disabled={baneseDetailsMutation.isPending && baneseDetailsMutation.variables === item.id}
-              className="flex items-center justify-center gap-1 rounded-xl border border-blue-200 px-2 py-2 text-[10px] font-black uppercase text-blue-600"
-              title={paymentGatewayCode(item) === 'banese_card' ? 'Abrir boleto Banese no portal de gestão' : 'Abrir cobrança'}
-            >
-              {baneseDetailsMutation.isPending && baneseDetailsMutation.variables === item.id
-                ? <Loader2 className="animate-spin" size={12} />
-                : <ExternalLink size={12} />}
-              Abrir
-            </button>
-            <button
-              type="button"
-              onClick={() => refreshMutation.mutate(item.id!)}
-              disabled={refreshMutation.isPending}
-              className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-2 py-2 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
-              title="Consultar status atual no banco configurado"
-            >
-              <RefreshCw className={refreshMutation.isPending ? 'animate-spin' : ''} size={12} /> Atualizar
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => syncMutation.mutate(item.id!)}
-            disabled={syncMutation.isPending}
-            className="col-span-2 flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase text-slate-600 disabled:opacity-50"
-          >
-            <RefreshCw className={syncMutation.isPending ? 'animate-spin' : ''} size={12} />
-            Enviar ao banco
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const renderReceivableRow = (item: ContasReceber, index: number, compactStudent = false) => (
-    <tr
-      key={item.id}
-      className={`${
-        index % 2 === 0 ? 'bg-white' : compactStudent ? 'bg-emerald-50/45' : 'bg-slate-50/55'
-      } align-top transition-colors hover:bg-emerald-50/70`}
-    >
-      <td className="px-5 py-5">
-        {compactStudent ? (
-          <div className="space-y-1.5">
-            <p className="text-xs font-black uppercase tracking-wider text-[#001a33]">
-              {item.parcelaNumero !== undefined ? `Parcela ${item.parcelaNumero}` : item.tipoLancamento || 'Cobrança'}
-            </p>
-            <p className="text-[10px] font-bold text-slate-500">Venc.: {formatDate(item.dataVencimento)}</p>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Matrícula: {formatEnrollment(item)}</p>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <p className="break-words text-sm font-black leading-tight text-[#001a33]">{item.clienteNome}</p>
-            <p className="whitespace-nowrap text-[10px] font-bold text-slate-400">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Matrícula: {formatEnrollment(item)}</p>
-          </div>
-        )}
-      </td>
-      <td className="px-5 py-5">
-        <div className="space-y-1.5">
-          <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.descricao}</p>
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-            {item.tipoLancamento || 'Mensalidade'} {item.parcelaNumero !== undefined ? `· Parcela ${item.parcelaNumero}` : ''}
-          </p>
-          <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">
-            {paymentGatewayLabel(item)}:{' '}
-            <span className={paymentGatewayStatusClass(item.asaasStatus)}>{paymentGatewayStatusLabel(item)}</span>
-          </p>
-        </div>
-      </td>
-      <td className="px-5 py-5">
-        <div className="space-y-1.5">
-          <p className="break-words text-xs font-bold leading-snug text-slate-700">{item.turmaNome || item.cursoNome || 'Turma não informada'}</p>
-          <p className="break-words text-[10px] font-bold uppercase tracking-wide text-slate-500">{item.poloNome || 'Unidade não informada'}</p>
-          <p className="text-[10px] font-medium leading-snug text-slate-400">
-            CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
-          </p>
-        </div>
-      </td>
-      <td className="px-5 py-5">
-        <div className="space-y-2">
-          <StatusBadge item={item} />
-          <p className="text-[10px] font-bold text-slate-500">Forma: {paymentMethodLabel(item)}</p>
-          <p className="text-[10px] font-bold text-slate-500">Origem: {paymentOriginLabel(item)}</p>
-          {['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase()) && (
-            <p className="text-[10px] font-bold text-rose-600">
-              Cobrança cancelada/excluída no {paymentGatewayLabel(item)} após baixa manual.
-            </p>
-          )}
-          <p className="text-[10px] font-bold text-slate-400">
-            Venc.: {formatDate(item.dataVencimento)}
-          </p>
-          {item.status === 'PAGO' && (
-            <p className="text-[10px] font-bold text-emerald-700">
-              Pago: {formatDate(item.dataPagamento || '')}
-            </p>
-          )}
-        </div>
-      </td>
-      <td className="px-5 py-5">
-        <p className="whitespace-nowrap text-sm font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-        <p className="mt-1 whitespace-nowrap text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
-        <p className="whitespace-nowrap text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
-        {item.valorPago !== undefined && (
-          <p className="mt-1 whitespace-nowrap text-[10px] font-bold text-emerald-700">
-            Rec.: {formatCurrency(item.valorPago)}
-          </p>
-        )}
-      </td>
-      <td className="px-5 py-5"><ChargeActions item={item} /></td>
-    </tr>
-  );
-
-  const ReceivableCard: React.FC<{ item: ContasReceber }> = ({ item }) => (
-    <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-black text-[#001a33]">{item.clienteNome}</p>
-          <p className="mt-1 text-[10px] font-bold text-slate-400">CPF: {item.clienteCpfCnpj || 'não informado'}</p>
-        </div>
-        <StatusBadge item={item} />
-      </div>
-      <div className="mt-4 rounded-2xl bg-slate-50 p-3">
-        <p className="text-xs font-bold text-slate-700">{item.descricao}</p>
-        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">{item.tipoLancamento || 'Mensalidade'}</p>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <div>
-          <p className="text-[9px] font-black uppercase text-slate-400">Vencimento</p>
-          <p className="font-bold text-slate-700">{formatDate(item.dataVencimento)}</p>
-        </div>
-        <div>
-          <p className="text-[9px] font-black uppercase text-slate-400">Valor</p>
-          <p className="font-black text-[#001a33]">{formatCurrency(item.valor)}</p>
-          <p className="mt-1 text-[11px] font-black text-slate-500">Taxa: {formatCurrency(normalizeGatewayFee(item))}</p>
-          <p className="text-[11px] font-black text-emerald-700">Líquido: {formatCurrency(normalizeGatewayNet(item))}</p>
-        </div>
-      </div>
-      <div className="mt-4 border-t border-slate-100 pt-3">
-        <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Unidade</p>
-        <p className="text-xs font-bold text-slate-700">{item.poloNome}</p>
-        <p className="text-[10px] font-semibold text-slate-400">
-          CNPJ: {item.poloCnpj || 'não informado'} · {item.poloCidade || 'Cidade não informada'} / {item.poloUf || 'UF'}
-        </p>
-      </div>
-      <div className="mt-4">
-        <ChargeActions item={item} />
-      </div>
-    </article>
-  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
-      {selectedBanesePaymentId && banesePaymentRecords.length ? (
-        <React.Suspense fallback={(
-          <div className="fixed inset-0 z-[99999] grid place-items-center bg-[#f2f5f7] text-[#001a33]">
-            <div className="flex items-center gap-3 text-sm font-black uppercase tracking-wider">
-              <Loader2 className="animate-spin" size={20} /> Carregando cobrança Banese
-            </div>
-          </div>
-        )}>
-          <BanesePaymentPage
-            installment={banesePaymentRecords.find((record) => record.id === selectedBanesePaymentId) || banesePaymentRecords[0]}
-            installments={banesePaymentRecords}
-            onBack={closeBanesePayment}
-            onRefresh={refreshBanesePayment}
-          />
-        </React.Suspense>
-      ) : null}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-emerald-600">
-            {icon}
-            <span className="text-xs font-black uppercase tracking-[0.18em]">{accentLabel}</span>
-          </div>
-          <h4 className="text-2xl font-black uppercase tracking-tight text-[#001a33]">{title}</h4>
-          <p className="text-xs font-medium text-slate-500">
-            {description}
-          </p>
-        </div>
-
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Previsto', value: formatCurrency(kpis.total), color: 'text-[#001a33]' },
-          { label: 'Recebido', value: formatCurrency(kpis.recebido), color: 'text-emerald-600' },
-          { label: 'A Receber', value: formatCurrency(kpis.aReceber), color: 'text-amber-600' },
-          { label: 'Vencidos', value: `${kpis.vencidos}`, color: 'text-rose-600' },
-        ].map((kpi) => (
-          <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-            <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
-            <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs de status */}
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {[
-          { id: 'pending' as const, label: 'Pendentes', count: statusCounts.pending },
-          { id: 'received' as const, label: 'Recebidos', count: statusCounts.received },
-          { id: 'canceled' as const, label: 'Cancelados', count: statusCounts.canceled },
-          { id: 'all' as const, label: 'Todos', count: statusCounts.all },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border flex items-center gap-2 ${
-              statusScope === tab.id
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${statusScope === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* Busca */}
-        <div className="relative flex-1 min-w-[220px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Aluno, turma, CPF, cobrança ou unidade..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          />
-        </div>
-
-        {/* Data Início */}
-        <input
-          type="date"
-          value={dueStart}
-          onChange={(e) => setDueStart(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          title="Vencimento Inicial"
-        />
-
-        {/* Data Fim */}
-        <input
-          type="date"
-          value={dueEnd}
-          onChange={(e) => setDueEnd(e.target.value)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-          title="Vencimento Final"
-        />
-
-        {/* Agrupamento */}
-        <select
-          value={groupMode}
-          onChange={(e) => setGroupMode(e.target.value as GroupMode)}
-          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-        >
-          <option value="student">Agrupar por aluno</option>
-          <option value="class">Agrupar por turma</option>
-          <option value="polo">Agrupar por polo</option>
-          <option value="none">Sem agrupamento</option>
-        </select>
-
-        {/* Limpar Filtros */}
-        {(search || dueStart || dueEnd) && (
-          <button
-            onClick={() => {
-              setSearch('');
-              setDueStart('');
-              setDueEnd('');
-            }}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl text-xs font-bold uppercase transition-colors"
-          >
-            Limpar
-          </button>
-        )}
-
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <FinancialReportExportButton
-            title={`Extrato de Cobranças - ${title}`}
-            subtitle="Cobranças, parcelas e recebimentos conforme os filtros selecionados."
-            rightTitle="Extrato de Cobranças"
-            rightType={title}
-            fileName={`extrato-cobrancas-${modality.toLowerCase()}-${new Date().toISOString().slice(0, 10)}`}
-            columns={reportColumns}
-            rows={reportRows}
-            filters={reportFilters}
-            summaryCards={reportSummaryCards}
-            poloId={reportPoloId}
-            tone="emerald"
-            onBeforeOpen={loadReportReceivables}
-            disabled={isLoading}
-          />
-
-          {/* Toggles */}
-          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Tabela"
-            >
-              <Table2 size={15} />
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Cards"
-            >
-              <LayoutGrid size={15} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
-        {isPageFetching && !isLoading && (
-          <div className="absolute right-5 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase text-emerald-700 shadow-sm">
-            <Loader2 className="animate-spin" size={12} /> Atualizando
-          </div>
-        )}
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-3 py-20 text-sm font-bold text-slate-500">
-            <Loader2 className="animate-spin text-emerald-600" /> Carregando recebíveis...
-          </div>
-        ) : (
-          viewMode === 'cards' ? (
-            <div className="space-y-5 bg-slate-50/60 p-4">
-              {totalItems === 0 ? (
-                <div className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</div>
-              ) : groupMode === 'none' ? (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {paginated.map((item) => <ReceivableCard key={item.id} item={item} />)}
-                </div>
-              ) : groups.map((group) => {
-                const isExpanded = expandedGroups.has(group.key);
-                const detailQuery = groupItemsByKey.get(group.key);
-                const detailRows = detailQuery?.data?.rows || [];
-                const detailPage = groupPages[group.key] || 1;
-                const detailTotalPages = Math.max(1, Math.ceil(group.itemCount / groupItemsPageSize));
-                return (
-                  <section key={group.key} className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.key)}
-                      className="flex w-full items-center justify-between gap-4 text-left"
-                    >
-                      <span className="flex min-w-0 items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600">
-                        {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                        <Users size={14} /> <span className="truncate">{group.label}</span>
-                      </span>
-                      <span className="whitespace-nowrap text-[10px] font-bold text-slate-400">{group.itemCount} cobrança(s)</span>
-                    </button>
-                    {isExpanded && (
-                      <>
-                        {detailQuery?.isLoading ? (
-                          <div className="flex items-center justify-center gap-2 py-8 text-xs font-bold text-slate-400">
-                            <Loader2 className="animate-spin" size={16} /> Carregando cobranças...
-                          </div>
-                        ) : (
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {detailRows.map((item) => <ReceivableCard key={item.id} item={item} />)}
-                          </div>
-                        )}
-                        {detailTotalPages > 1 && (
-                          <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 text-[10px] font-black uppercase text-slate-500">
-                            <button type="button" disabled={detailPage <= 1} onClick={() => changeGroupPage(group.key, detailPage - 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Anterior</button>
-                            <span>{detailPage} / {detailTotalPages}</span>
-                            <button type="button" disabled={detailPage >= detailTotalPages} onClick={() => changeGroupPage(group.key, detailPage + 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Próxima</button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] table-fixed text-left">
-                <colgroup>
-                  <col className="w-[17%]" />
-                  <col className="w-[23%]" />
-                  <col className="w-[24%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[12%]" />
-                </colgroup>
-                <thead className="bg-slate-50">
-                  <tr>
-                    {['Aluno', 'Cobrança', 'Turma / unidade', 'Recebimento', 'Valor', 'Ações'].map((label) => (
-                      <th key={label} className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                {totalItems === 0 ? (
-                  <tbody><tr><td colSpan={6} className="py-16 text-center text-xs font-bold text-slate-400">Nenhuma cobrança encontrada.</td></tr></tbody>
-                ) : groupMode === 'none' ? (
-                  <tbody className="divide-y divide-slate-100">
-                    {paginated.map((item, index) => renderReceivableRow(item, index))}
-                  </tbody>
-                ) : groups.map((group) => {
-                  const isExpanded = expandedGroups.has(group.key);
-                  const detailQuery = groupItemsByKey.get(group.key);
-                  const detailRows = detailQuery?.data?.rows || [];
-                  const detailPage = groupPages[group.key] || 1;
-                  const detailTotalPages = Math.max(1, Math.ceil(group.itemCount / groupItemsPageSize));
-                  const first = group.first;
-
-                  return (
-                    <tbody key={group.key} className="divide-y divide-slate-100">
-                      <tr className="bg-slate-50/80 transition-colors hover:bg-blue-50/70">
-                        <td colSpan={6} className="p-0">
-                          <button
-                            type="button"
-                            onClick={() => toggleGroup(group.key)}
-                            className="grid w-full grid-cols-[minmax(260px,1.5fr)_minmax(180px,0.9fr)_minmax(180px,0.9fr)_minmax(140px,0.7fr)] items-center gap-4 px-5 py-4 text-left"
-                          >
-                            <span className="flex min-w-0 items-center gap-3">
-                              <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
-                                isExpanded ? 'bg-[#001a33] text-white' : 'bg-white text-slate-500'
-                              }`}>
-                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block truncate text-sm font-black text-[#001a33]">{group.label}</span>
-                                <span className="mt-1 block truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                  {groupMode === 'student'
-                                    ? `CPF: ${first?.clienteCpfCnpj || 'não informado'} · Matrícula: ${first ? formatEnrollment(first) : 'sem matrícula'}`
-                                    : groupMode === 'polo'
-                                      ? `${first?.poloCnpj || 'CNPJ não informado'} · ${first?.poloCidade || 'Cidade não informada'} / ${first?.poloUf || 'UF'}`
-                                      : first?.cursoNome || 'Curso não informado'}
-                                </span>
-                              </span>
-                            </span>
-
-                            <span className="text-xs font-bold text-slate-600">
-                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Parcelas</span>
-                              {group.itemCount} cobrança(s)
-                            </span>
-
-                            <span className="text-xs font-bold text-slate-600">
-                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Situação</span>
-                              {group.pendingCount} pend. · {group.receivedCount} rec. · {group.canceledCount} canc.
-                            </span>
-
-                            <span className="text-right text-xs font-bold text-slate-600">
-                              <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Próximo vencimento</span>
-                              <span className="text-[10px] text-slate-400">{group.nextDue ? formatDate(group.nextDue) : '—'}</span>
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-                      {isExpanded && detailQuery?.isLoading && (
-                        <tr><td colSpan={6} className="py-8 text-center text-xs font-bold text-slate-400"><Loader2 className="mr-2 inline animate-spin" size={14} />Carregando cobranças...</td></tr>
-                      )}
-                      {isExpanded && detailRows.map((item, index) => renderReceivableRow(item, index, groupMode === 'student'))}
-                      {isExpanded && detailTotalPages > 1 && (
-                        <tr>
-                          <td colSpan={6} className="px-5 py-3">
-                            <div className="flex items-center justify-end gap-2 text-[10px] font-black uppercase text-slate-500">
-                              <button type="button" disabled={detailPage <= 1} onClick={() => changeGroupPage(group.key, detailPage - 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Anterior</button>
-                              <span>{detailPage} / {detailTotalPages}</span>
-                              <button type="button" disabled={detailPage >= detailTotalPages} onClick={() => changeGroupPage(group.key, detailPage + 1)} className="rounded-lg border px-2.5 py-1.5 disabled:opacity-40">Próxima</button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  );
-                })}
-              </table>
-            </div>
-          )
-        )}
-      </div>
-
-      {!isLoading && totalItems > 0 && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-xs font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {groupMode === 'none'
-              ? `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalItems)} de ${totalItems} cobrança(s)`
-              : `Mostrando ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalItems)} de ${totalItems} grupo(s), ${groupsQuery.data?.totalReceivables || 0} cobrança(s)`}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={page <= 1}
-              className="rounded-xl border border-slate-200 px-3 py-2 font-black uppercase disabled:opacity-40"
-            >
-              Anterior
-            </button>
-            <span className="rounded-xl bg-slate-50 px-3 py-2 font-black text-[#001a33]">
-              {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              disabled={page >= totalPages}
-              className="rounded-xl border border-slate-200 px-3 py-2 font-black uppercase disabled:opacity-40"
-            >
-              Próxima
-            </button>
-          </div>
-        </div>
-      )}
-
-      {selected && typeof document !== 'undefined' && createPortal((
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closePaymentModal();
-          }}
-        >
-          <div
-            className="relative w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button onClick={closePaymentModal} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
-              <X size={18} />
-            </button>
-            <div className="mb-6 flex items-center gap-3">
-              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600"><WalletCards size={22} /></div>
-              <div>
-                <h5 className="font-black uppercase text-[#001a33]">Confirmar recebimento</h5>
-                <p className="text-xs text-slate-500">{selected.clienteNome} · {selected.descricao}</p>
-              </div>
-            </div>
-
-            {selected.tipoLancamento === 'MATRICULA' && (
-              <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-800">
-                Ao confirmar esta matrícula, o sistema criará automaticamente as parcelas futuras do cronograma da turma.
-              </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-[10px] font-black uppercase text-slate-500">
-                Conta bancária
-                <select value={accountId} onChange={(event) => setAccountId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700">
-                  <option value="">Selecione...</option>
-                  {activeSettlementAccounts.map((account) => (
-                    <option key={account.id} value={account.id}>{account.banco} · {account.conta}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[10px] font-black uppercase text-slate-500">
-                Forma de pagamento
-                <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as typeof paymentMethod)} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700">
-                  <option value="PIX">PIX</option>
-                  <option value="BOLETO">Boleto</option>
-                  <option value="CARTAO">Cartão</option>
-                  <option value="DINHEIRO">Dinheiro</option>
-                </select>
-              </label>
-              <label className="text-[10px] font-black uppercase text-slate-500">
-                Data do pagamento
-                <input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700" />
-              </label>
-              <label className="text-[10px] font-black uppercase text-slate-500">
-                Valor recebido
-                <div className="relative mt-2">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">R$</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={paidValue}
-                    onChange={(event) => setPaidValue(normalizeCurrencyTyping(event.target.value))}
-                    onBlur={(event) => setPaidValue(formatCurrencyInput(event.target.value))}
-                    placeholder="0,00"
-                    className="w-full rounded-xl border border-slate-200 p-3 pl-10 text-xs font-bold text-slate-700"
-                  />
-                </div>
-              </label>
-            </div>
-
-            {!activeSettlementAccounts.length && (
-              <p className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold text-amber-700">
-                Nenhuma conta bancária ativa foi encontrada para este polo. Cadastre uma conta do polo ou uma conta global antes da baixa.
-              </p>
-            )}
-
-            {paymentMutation.isError && (
-              <p className="mt-4 text-xs font-bold text-rose-600">
-                {paymentMutation.error instanceof Error ? paymentMutation.error.message : 'Não foi possível confirmar o recebimento.'}
-              </p>
-            )}
-
-            <button
-              onClick={() => paymentMutation.mutate()}
-              disabled={!accountId || !paymentDate || paidValueNumber <= 0 || paymentMutation.isPending}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-xs font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50"
-            >
-              {paymentMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-              {paymentMutation.isPending ? 'Confirmando...' : 'Confirmar e registrar'}
-            </button>
-          </div>
-        </div>
-      ), document.body)}
-
-      {reversalItem && typeof document !== 'undefined' && createPortal((
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-[9999] flex min-h-screen w-full items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeReversalModal();
-          }}
-        >
-          <div
-            className="relative w-full max-w-xl rounded-[2rem] bg-white p-7 shadow-2xl"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button onClick={closeReversalModal} className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100">
-              <X size={18} />
-            </button>
-            <div className="mb-6 flex items-center gap-3">
-              <div className="rounded-2xl bg-rose-50 p-3 text-rose-600"><RefreshCw size={22} /></div>
-              <div>
-                <h5 className="font-black uppercase text-[#001a33]">Estornar baixa manual</h5>
-                <p className="text-xs text-slate-500">{reversalItem.clienteNome} · {reversalItem.descricao}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold text-amber-800">
-              <p>Essa ação desfaz somente a baixa lançada manualmente no sistema.</p>
-              <p>O recebível volta para pendente, os dados de pagamento local são limpos e ele volta para conferência.</p>
-              {reversalItem.asaasPaymentId && (
-                <p>Como o título anterior no {paymentGatewayLabel(reversalItem)} foi cancelado, o sistema não reativa o mesmo ID. Ele gera um novo título bancário.</p>
-              )}
-            </div>
-
-            {reversalItem.asaasPaymentId && (
-              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <input
-                  type="checkbox"
-                  checked={recreateAsaas}
-                  onChange={(event) => setRecreateAsaas(event.target.checked)}
-                  className="mt-1 h-4 w-4 accent-emerald-600"
-                />
-                <span>
-                  <span className="block text-xs font-black uppercase tracking-wider text-[#001a33]">Gerar nova cobrança {paymentGatewayLabel(reversalItem)}</span>
-                  <span className="mt-1 block text-xs font-medium text-slate-500">
-                    Recomendado quando a baixa manual cancelou o título original no banco.
-                  </span>
-                </span>
-              </label>
-            )}
-
-            <label className="mt-5 block text-[10px] font-black uppercase text-slate-500">
-              Motivo do estorno
-              <textarea
-                value={reversalReason}
-                onChange={(event) => setReversalReason(event.target.value)}
-                placeholder="Ex.: baixa lançada no aluno errado"
-                className="mt-2 min-h-[92px] w-full resize-none rounded-xl border border-slate-200 p-3 text-xs font-bold text-slate-700 outline-none focus:border-rose-300"
-              />
-            </label>
-
-            <button
-              onClick={() => reversalMutation.mutate()}
-              disabled={reversalMutation.isPending}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 py-3.5 text-xs font-black uppercase tracking-wider text-white hover:bg-rose-700 disabled:opacity-50"
-            >
-              {reversalMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
-              {reversalMutation.isPending ? 'Estornando...' : 'Confirmar estorno da baixa'}
-            </button>
-          </div>
-        </div>
-      ), document.body)}
+      <ModalidadeReceberOverlays operations={operations} settlementAccounts={activeSettlementAccounts} />
+      <ModalidadeReceberToolbar
+        modality={modality}
+        title={title}
+        description={description}
+        icon={icon}
+        accentLabel={accentLabel}
+        kpis={kpis}
+        statusCounts={statusCounts}
+        statusScope={statusScope}
+        search={search}
+        dueStart={dueStart}
+        dueEnd={dueEnd}
+        groupMode={groupMode}
+        viewMode={viewMode}
+        report={report}
+        isLoading={isLoading}
+        onStatusScopeChange={setStatusScope}
+        onSearchChange={setSearch}
+        onDueStartChange={setDueStart}
+        onDueEndChange={setDueEnd}
+        onGroupModeChange={setGroupMode}
+        onViewModeChange={setViewMode}
+        onClearFilters={() => {
+          setSearch('');
+          setDueStart('');
+          setDueEnd('');
+        }}
+      />
+      <ReceivablesList
+        viewMode={viewMode}
+        groupMode={groupMode}
+        isLoading={isLoading}
+        isPageFetching={isPageFetching}
+        totalItems={totalItems}
+        totalReceivables={groupsQuery.data?.totalReceivables || 0}
+        page={page}
+        pageSize={PAGE_SIZE}
+        totalPages={totalPages}
+        groupItemsPageSize={GROUP_ITEMS_PAGE_SIZE}
+        receivables={receivables}
+        groups={groups}
+        groupItemsByKey={groupItemsByKey}
+        expandedGroups={expandedGroups}
+        groupPages={groupPages}
+        actions={receivableActions}
+        onToggleGroup={toggleGroup}
+        onChangeGroupPage={changeGroupPage}
+        onChangePage={setPage}
+      />
     </div>
   );
 };

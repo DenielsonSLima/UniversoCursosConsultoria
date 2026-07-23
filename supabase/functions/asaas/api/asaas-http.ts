@@ -2,9 +2,13 @@ import { callAsaas as callAsaasCore } from "../core/http.ts";
 import type { AsaasRuntime } from "../core/runtime.ts";
 
 export type { AsaasRuntime } from "../core/runtime.ts";
+export { shouldKeepAsaasCreationLock } from "../core/http.ts";
 
-export const callAsaas = (runtime: AsaasRuntime, path: string, init: RequestInit = {}) =>
-  callAsaasCore(runtime, path, init, "Universo-Cursos-Gestao");
+export const callAsaas = (
+  runtime: AsaasRuntime,
+  path: string,
+  init: RequestInit = {},
+) => callAsaasCore(runtime, path, init, "Universo-Cursos-Gestao");
 
 const ASAAS_FILE_HOSTS = new Set([
   "api.asaas.com",
@@ -21,8 +25,13 @@ const assertAsaasFileUrl = (rawUrl: string) => {
     throw new Error("URL do boleto oficial Asaas inválida.");
   }
 
-  if (parsed.protocol !== "https:" || !ASAAS_FILE_HOSTS.has(parsed.hostname.toLowerCase())) {
-    throw new Error("URL do boleto oficial fora dos domínios permitidos do Asaas.");
+  if (
+    parsed.protocol !== "https:" ||
+    !ASAAS_FILE_HOSTS.has(parsed.hostname.toLowerCase())
+  ) {
+    throw new Error(
+      "URL do boleto oficial fora dos domínios permitidos do Asaas.",
+    );
   }
 
   return parsed.toString();
@@ -32,7 +41,8 @@ export const fetchAsaasFile = async (
   runtime: AsaasRuntime,
   url: string,
 ) => {
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
   const safeUrl = assertAsaasFileUrl(url);
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -45,7 +55,9 @@ export const fetchAsaasFile = async (
     });
 
     if (response.status >= 300 && response.status < 400) {
-      throw new Error("O Asaas redirecionou o boleto oficial. Gere o carnê novamente para obter uma URL direta válida.");
+      throw new Error(
+        "O Asaas redirecionou o boleto oficial. Gere o carnê novamente para obter uma URL direta válida.",
+      );
     }
 
     if (response.ok) {
@@ -53,9 +65,15 @@ export const fetchAsaasFile = async (
       if (contentLength > 15 * 1024 * 1024) {
         throw new Error("Boleto oficial Asaas acima do tamanho permitido.");
       }
-      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-      if (contentType && !contentType.includes("pdf") && !contentType.includes("octet-stream")) {
-        throw new Error("O arquivo retornado pelo Asaas não parece ser um PDF oficial.");
+      const contentType = String(response.headers.get("content-type") || "")
+        .toLowerCase();
+      if (
+        contentType && !contentType.includes("pdf") &&
+        !contentType.includes("octet-stream")
+      ) {
+        throw new Error(
+          "O arquivo retornado pelo Asaas não parece ser um PDF oficial.",
+        );
       }
       return new Uint8Array(await response.arrayBuffer());
     }
@@ -71,10 +89,14 @@ export const fetchAsaasFile = async (
     }
 
     if (response.status === 429) {
-      throw new Error("O Asaas limitou temporariamente o download dos boletos oficiais. Tente novamente em alguns instantes ou gere o carnê em lotes menores.");
+      throw new Error(
+        "O Asaas limitou temporariamente o download dos boletos oficiais. Tente novamente em alguns instantes ou gere o carnê em lotes menores.",
+      );
     }
 
-    throw new Error(`Não foi possível baixar o boleto oficial do Asaas (${response.status}).`);
+    throw new Error(
+      `Não foi possível baixar o boleto oficial do Asaas (${response.status}).`,
+    );
   }
 
   throw new Error("Não foi possível baixar o boleto oficial do Asaas.");

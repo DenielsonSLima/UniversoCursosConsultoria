@@ -191,9 +191,9 @@ export const getBanesePixCredentials = async (
     getBaneseSecret(admin, environment, "client_secret"),
     getBaneseSecret(admin, environment, "crt_access_token"),
   ]);
-  if (!clientId || !clientSecret || !crtAccessToken) {
+  if (!clientId || !clientSecret) {
     throw new BaneseAdapterConfigurationError(
-      `Client ID, Client Secret e CrtAccessToken do Banese Card Pix devem estar configurados para ${environment}.`,
+      `Client ID e Client Secret do Banese Card devem estar configurados para ${environment}.`,
     );
   }
   return { clientId, clientSecret, crtAccessToken };
@@ -219,13 +219,16 @@ export const requestBanesePixAccessToken = async (
 ) => {
   assertEnvironment(environment);
   const credentials = await getBanesePixCredentials(admin, environment);
+  const requestHeaders = {
+    ...(credentials.crtAccessToken
+      ? { CrtAccessToken: credentials.crtAccessToken }
+      : {}),
+    Terminal: BANESE_PIX_ENDPOINTS[environment].terminal,
+  };
   return requestAccessToken(
     BANESE_PIX_ENDPOINTS[environment].tokenUrl,
     credentials,
     scope,
-    {
-      CrtAccessToken: credentials.crtAccessToken,
-      Terminal: BANESE_PIX_ENDPOINTS[environment].terminal,
-    },
+    requestHeaders,
   );
 };

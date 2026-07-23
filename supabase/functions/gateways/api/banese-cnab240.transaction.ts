@@ -2,7 +2,10 @@ import {
   activateEnrollmentAfterPayment,
   syncOnlineInscriptionPayment,
 } from "../webhook/domain/ead-enrollment.ts";
-import { baneseReceivableTitleFilter, baneseTransactionTitleFilter } from "./banese.ts";
+import {
+  baneseReceivableTitleFilter,
+  baneseTransactionTitleFilter,
+} from "./banese.ts";
 import {
   Environment,
   ImportEventResult,
@@ -76,9 +79,12 @@ const upsertTransaction = async (
     payment_method: "BOLETO",
     remote_payment_id: event.nossoNumero,
     remote_status: remoteStatus,
-    amount: receivable?.valor != null ? Number(receivable.valor) : event.paidAmount,
+    amount: receivable?.valor != null
+      ? Number(receivable.valor)
+      : event.paidAmount,
     bank_slip_our_number: event.nossoNumero,
-    bank_slip_digitable_line: receivable?.gateway_boleto_linha_digitavel || null,
+    bank_slip_digitable_line: receivable?.gateway_boleto_linha_digitavel ||
+      null,
     bank_slip_barcode: receivable?.gateway_boleto_codigo_barras || null,
     invoice_url: receivable?.gateway_invoice_url || null,
     bank_slip_url: receivable?.gateway_bank_slip_url || null,
@@ -148,7 +154,9 @@ export const applyCnab240Event = async (
 
   const receivableQuery = await admin
     .from("contas_receber")
-    .select("id, status, valor, polo_id, gateway_environment, gateway_boleto_nosso_numero, gateway_boleto_linha_digitavel, gateway_boleto_codigo_barras, gateway_installments, gateway_issuer_polo_id, gateway_invoice_url, gateway_bank_slip_url")
+    .select(
+      "id, status, valor, polo_id, gateway_environment, gateway_boleto_nosso_numero, gateway_boleto_linha_digitavel, gateway_boleto_codigo_barras, gateway_installments, gateway_issuer_polo_id, gateway_invoice_url, gateway_bank_slip_url",
+    )
     .eq("gateway_provider", "banese_card")
     .eq("gateway_payment_method", "BOLETO")
     .or(baneseReceivableTitleFilter(event.nossoNumero))
@@ -270,4 +278,3 @@ export const applyCnab240Event = async (
     transactionId,
   };
 };
-

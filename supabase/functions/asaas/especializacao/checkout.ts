@@ -1,5 +1,8 @@
-import { buildCheckoutCharge, resolveCourseConfiguredPayment } from "../core/checkout.ts";
-import { roundMoney, toNumber } from "../core/money.ts";
+import {
+  buildCheckoutCharge,
+  resolveCourseConfiguredPayment,
+} from "../core/checkout.ts";
+import { resolveInitialEnrollmentChargeValue } from "../core/enrollment-financial-terms.ts";
 import type { CoursePaymentRequest } from "../core/payment-methods.ts";
 
 export const resolveEspecializacaoCheckoutCharge = (
@@ -7,17 +10,21 @@ export const resolveEspecializacaoCheckoutCharge = (
   turma: any,
   dueDate: string,
   paymentRequest: CoursePaymentRequest = {},
+  matricula?: any,
 ) => {
-  const { billingType, installmentCount } = resolveCourseConfiguredPayment(course, {
-    ...paymentRequest,
-    requireExplicitWhenMultiple: true,
-    modalidadeLabel: "ESPECIALIZACAO",
-  });
-  const value = roundMoney(
-    toNumber(turma?.valor_matricula)
-    || toNumber(course?.valor)
-    || toNumber(turma?.valor_parcela),
+  const { billingType, installmentCount } = resolveCourseConfiguredPayment(
+    course,
+    {
+      ...paymentRequest,
+      requireExplicitWhenMultiple: true,
+      modalidadeLabel: "ESPECIALIZACAO",
+    },
   );
+  const value = resolveInitialEnrollmentChargeValue({
+    course,
+    turma,
+    matricula,
+  });
 
   return buildCheckoutCharge({
     course,
@@ -25,6 +32,7 @@ export const resolveEspecializacaoCheckoutCharge = (
     dueDate,
     billingType,
     value,
+    matricula,
     applyTurmaAdjustments: true,
     installmentCount: billingType === "CREDIT_CARD" ? installmentCount : 1,
   });

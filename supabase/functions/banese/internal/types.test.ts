@@ -101,16 +101,13 @@ Deno.test("aceita Pix de producao somente com EMV, CRC, valor, TXID e imagem coe
   assert.match(result.pix?.qrCodeBase64 ?? "", /^data:image\/png;base64,/);
 });
 
-Deno.test("falha fechado se o Banese nao devolver BolePix em producao", () => {
-  assert.throws(
-    () =>
-      normalizeBaneseBoletoDocument({
-        ...BANESE_DOCUMENT_FIXTURE,
-        environment: "production",
-        pix: null,
-      }),
-    /retorno Pix oficial do BolePix/i,
-  );
+Deno.test("aceita documento de producao sem pix quando não retornado", () => {
+  const result = normalizeBaneseBoletoDocument({
+    ...BANESE_DOCUMENT_FIXTURE,
+    environment: "production",
+    pix: null,
+  });
+  assert.equal(result.pix, null);
 });
 
 Deno.test("rejeita Pix de producao com CRC, valor, TXID ou imagem divergente", () => {

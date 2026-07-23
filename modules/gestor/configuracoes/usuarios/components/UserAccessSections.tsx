@@ -50,7 +50,9 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
             personalizarPermissoes: false,
             personalizarHorario: profileId ? false : true,
             permissoes: nextProfile?.permissoes?.modules || previous.permissoes,
-            financeiroAbas: nextProfile?.permissoes?.financeiroTabs || [],
+            financeiroAbas: nextProfile?.permissoes?.financeiroTabs?.length
+              ? nextProfile?.permissoes.financeiroTabs
+              : nextProfile?.permissoes?.tabs?.financeiro || [],
             abasModulos: nextProfile?.permissoes?.tabs || {},
           }));
         }}

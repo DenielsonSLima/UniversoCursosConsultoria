@@ -5,10 +5,50 @@ import {
   isPaidPayment,
   normalizeErrorMessage,
   normalizeGatewayPaymentMethod,
-  PENDENTE_INSCRICAO_STATUS,
   resolvePublicBaseUrl,
 } from "./checkout-utils.ts";
 import { paymentDate } from "../../asaas/core/status.ts";
+import {
+  hasRepairableOnlineInscriptionIdentity,
+  repairOnlineInscription,
+} from "../online-inscription.ts";
+
+const repairAsaasInscricao = async (
+  context: CheckoutContext,
+  receivable: any,
+  payment: any = null,
+) => {
+  if (!hasRepairableOnlineInscriptionIdentity(receivable)) return null;
+  const paid = isPaidPayment(payment) ||
+    String(receivable?.status || "").toUpperCase() === "PAGO";
+  return await repairOnlineInscription({
+    admin: context.admin,
+    receivable,
+    gatewayProvider: "asaas",
+    environment: context.environment,
+    paymentId: payment?.id || receivable.gateway_payment_id ||
+      receivable.asaas_payment_id,
+    customerId: payment?.customer || receivable.gateway_customer_id,
+    paymentLinkId: payment?.paymentLink ||
+      receivable.gateway_payment_link_id ||
+      receivable.asaas_payment_link_id,
+    localStatus: paid ? "PAGO" : receivable.status,
+    legacyPaymentMethod: mapBillingType(
+      payment?.billingType || receivable.gateway_payment_method ||
+        context.gatewayPaymentMethodForCharge,
+    ),
+    paidAt: paid
+      ? receivable.data_pagamento || (payment ? paymentDate(payment) : null)
+      : null,
+    academic: {
+      course: context.course,
+      turma: context.turma,
+      aluno: context.aluno,
+      matricula: context.matricula,
+      technicalSchoolSnapshot: context.technicalSchoolSnapshot,
+    },
+  });
+};
 
 export const handleAsaasCheckout = async (context: CheckoutContext) => {
   const {
@@ -70,6 +110,7 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
   setExistingReceivable(existingReceivable);
 
   if (existingReceivable?.status === "PAGO") {
+    await repairAsaasInscricao(context, existingReceivable);
     if (!keepTechnicalDocumentationPending) {
       await admin.from("matriculas").update({ status: "ATIVO" }).eq(
         "id",
@@ -89,7 +130,10 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
       hasExplicitPaymentSelection ? charge : undefined,
     );
     existingReceivable = getExistingReceivable();
-    if (reusableUrl) return json({ url: reusableUrl });
+    if (reusableUrl) {
+      await repairAsaasInscricao(context, existingReceivable);
+      return json({ url: reusableUrl });
+    }
   }
 
   if (
@@ -168,45 +212,11 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
         .single();
       if (reconcileError) throw reconcileError;
 
-      const inscriptionPayload: any = {
-        curso_id: course.id,
-        turma_id: turma.id,
-        aluno_id: aluno.id,
-        matricula_id: matricula.id,
-        asaas_payment_id: matchedPayment.id,
-        asaas_customer_id: matchedPayment.customer || aluno.asaas_customer_id ||
-          null,
-        asaas_payment_link_id: matchedPayment.paymentLink ||
-          existingReceivable.asaas_payment_link_id,
-        nome: aluno.nome,
-        cpf_cnpj: cpfCnpj || null,
-        email: aluno.email || null,
-        telefone: aluno.telefone || null,
-        valor: Number(matchedPayment.value || course.valor || 0),
-        status: paid ? "PAGO" : PENDENTE_INSCRICAO_STATUS,
-        pago_em: paid ? new Date().toISOString() : null,
-        confirmado_em: paid ? new Date().toISOString() : null,
-        forma_pagamento: matchedPayment.billingType || null,
-        erro: null,
-        ...technicalSchoolSnapshot,
-        updated_at: new Date().toISOString(),
-      };
-      const { data: pendingInscricoes, error: pendingInscricaoError } =
-        await admin
-          .from("inscricoes_online")
-          .select("id")
-          .eq("matricula_id", matricula.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
-      if (pendingInscricaoError) throw pendingInscricaoError;
-      const inscriptionQuery = pendingInscricoes?.[0]
-        ? admin.from("inscricoes_online").update(inscriptionPayload).eq(
-          "id",
-          pendingInscricoes[0].id,
-        )
-        : admin.from("inscricoes_online").insert(inscriptionPayload);
-      const { error: inscriptionError } = await inscriptionQuery;
-      if (inscriptionError) throw inscriptionError;
+      await repairAsaasInscricao(
+        context,
+        reconciledReceivable,
+        matchedPayment,
+      );
 
       if (paid) {
         if (!keepTechnicalDocumentationPending) {
@@ -297,6 +307,7 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
     throw new Error("Não foi possível registrar a cobrança interna.");
   }
   if (receivable.status === "PAGO") {
+    await repairAsaasInscricao(context, receivable);
     if (!keepTechnicalDocumentationPending) {
       await admin.from("matriculas").update({ status: "ATIVO" }).eq(
         "id",
@@ -343,6 +354,7 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
       .eq("id", receivable.id)
       .maybeSingle();
     if (inProgressReceivable?.asaas_invoice_url) {
+      await repairAsaasInscricao(context, inProgressReceivable);
       return json({ url: inProgressReceivable.asaas_invoice_url });
     }
     if (
@@ -354,6 +366,11 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
         recovered?.receivable?.asaas_invoice_url ||
         recovered?.payment?.invoiceUrl
       ) {
+        await repairAsaasInscricao(
+          context,
+          recovered.receivable,
+          recovered.payment,
+        );
         return json({
           url: recovered.receivable.asaas_invoice_url ||
             recovered.payment.invoiceUrl,
@@ -372,6 +389,11 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
     if (
       recovered?.receivable?.asaas_invoice_url || recovered?.payment?.invoiceUrl
     ) {
+      await repairAsaasInscricao(
+        context,
+        recovered.receivable,
+        recovered.payment,
+      );
       return json({
         url: recovered.receivable.asaas_invoice_url ||
           recovered.payment.invoiceUrl,
@@ -445,53 +467,16 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
     .select()
     .single();
   if (updateReceivableError) throw updateReceivableError;
-  await persistGatewayTransaction(payment, updatedReceivable);
-
-  const inscricaoPayload: any = {
-    curso_id: course.id,
-    turma_id: turma.id,
-    aluno_id: aluno.id,
-    matricula_id: matricula.id,
-    asaas_payment_id: payment.id,
-    asaas_customer_id: customerId,
-    asaas_payment_link_id: null,
-    gateway_provider: "asaas",
-    gateway_environment: environment,
-    gateway_payment_id: payment.id,
-    gateway_customer_id: customerId,
-    gateway_payment_link_id: null,
-    nome: aluno.nome,
-    cpf_cnpj: cpfCnpj || null,
-    email: aluno.email || null,
-    telefone: aluno.telefone || null,
-    valor: charge.value,
-    status: PENDENTE_INSCRICAO_STATUS,
-    forma_pagamento: mapBillingType(payment.billingType),
-    erro: null,
-    ...technicalSchoolSnapshot,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data: pendingInscricoes, error: pendingInscricaoError } = await admin
-    .from("inscricoes_online")
-    .select("id")
-    .eq("matricula_id", matricula.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (pendingInscricaoError) throw pendingInscricaoError;
-
-  if (pendingInscricoes?.[0]) {
-    const { error } = await admin
-      .from("inscricoes_online")
-      .update(inscricaoPayload)
-      .eq("id", pendingInscricoes[0].id);
-    if (error) throw error;
-  } else {
-    const { error } = await admin.from("inscricoes_online").insert(
-      inscricaoPayload,
-    );
-    if (error) throw error;
-  }
+  const inscricao = await repairAsaasInscricao(
+    context,
+    updatedReceivable,
+    payment,
+  );
+  await persistGatewayTransaction(
+    payment,
+    updatedReceivable,
+    inscricao?.id || null,
+  );
 
   return json({
     url: updatedReceivable.asaas_invoice_url || payment.invoiceUrl,

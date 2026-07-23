@@ -43,8 +43,8 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<MainTab>('resumo');
   const [modalidade, setModalidade] = useState<GatewayModalidade>('EAD');
-  const [routeEnvironment, setRouteEnvironment] = useState<GatewayEnvironment>('sandbox');
-  const [keysEnvironment, setKeysEnvironment] = useState<GatewayEnvironment>('sandbox');
+  const [routeEnvironment, setRouteEnvironment] = useState<GatewayEnvironment>('production');
+  const [keysEnvironment, setKeysEnvironment] = useState<GatewayEnvironment>('production');
   const [paymentMethod, setPaymentMethod] = useState<GatewayPaymentMethod>('BOLETO');
   const [routeProviderCode, setRouteProviderCode] = useState<GatewayProviderCode>('banese_card');
   const [credentialProviderCode, setCredentialProviderCode] = useState<GatewayProviderCode>('banese_card');
@@ -81,12 +81,10 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const selectedRouteBlockedReason = routeProviderCode === 'banese_card'
       && routeEnvironment === 'sandbox'
       && paymentMethod === 'PIX'
-    ? 'O Pix Banese está indisponível em homologação e só poderá ser ativado após a liberação formal do banco em produção.'
-    : routeProviderCode === 'banese_card' && routeEnvironment === 'production'
-      ? 'As rotas Banese de produção permanecem bloqueadas até a conclusão formal da homologação do boleto e a liberação do Pix pelo banco.'
-      : routeProvider?.metadata?.checkout_blocked === true
-        ? String(routeProvider.metadata.checkout_block_reason || 'Rota bloqueada até concluir a homologação segura deste provedor.')
-        : null;
+    ? 'O Pix Banese permanece indisponível em homologação e só será liberado na produção.'
+    : routeProvider?.metadata?.checkout_blocked === true
+      ? String(routeProvider.metadata.checkout_block_reason || 'Rota bloqueada até concluir a homologação segura deste provedor.')
+      : null;
   const selectedProviderCheckoutBlocked = Boolean(selectedRouteBlockedReason);
   const selectedRouteCredentialReady = !selectedProviderCheckoutBlocked
     && credentialReadyForRoute(routeProviderCode, routeCredential, paymentMethod);
@@ -95,7 +93,15 @@ const IntegracaoBancariaConfig: React.FC = () => {
     ? selectedRoute.providerCode
     : routeProviderCode;
   const headerProviderCode = activeTab === 'parametrizacao' ? credentialProviderCode : routedBrandCode;
-  const summaryEnvironment = overview?.activeEnvironment || routeEnvironment;
+  const hasProductionPixOrBoleto = (overview?.routes || []).some(
+    (route) =>
+      route.enabled === true
+      && route.environment === 'production'
+      && (route.paymentMethod === 'PIX' || route.paymentMethod === 'BOLETO'),
+  );
+  const summaryEnvironment = overview?.activeEnvironment === 'sandbox' && hasProductionPixOrBoleto
+    ? 'production'
+    : overview?.activeEnvironment || routeEnvironment;
   const activeEnvironment = activeTab === 'parametrizacao'
     ? keysEnvironment
     : activeTab === 'resumo'
@@ -138,8 +144,8 @@ const IntegracaoBancariaConfig: React.FC = () => {
         baneseBeneficiarioNome: isBanese ? fixedData.beneficiaryName : metadataValue(editCredential?.metadata, 'baneseBeneficiarioNome'),
         baneseBeneficiarioInscricao: isBanese ? fixedData.beneficiaryDocument : metadataValue(editCredential?.metadata, 'baneseBeneficiarioInscricao'),
         baneseCodigoBeneficiario: isBanese ? fixedData.beneficiaryCode : metadataValue(editCredential?.metadata, 'baneseCodigoBeneficiario'),
-        banesePixConvenio: metadataValue(editCredential?.metadata, 'banesePixConvenio'),
-        banesePixChave: metadataValue(editCredential?.metadata, 'banesePixChave'),
+        banesePixConvenio: isBanese ? fixedData.agreement : metadataValue(editCredential?.metadata, 'banesePixConvenio'),
+        banesePixChave: isBanese ? (metadataValue(editCredential?.metadata, 'banesePixChave') || fixedData.pixKey) : metadataValue(editCredential?.metadata, 'banesePixChave'),
         baneseCarteira: metadataValue(editCredential?.metadata, 'baneseCarteira'),
         baneseEdi7Code: metadataValue(editCredential?.metadata, 'baneseEdi7Code'),
         baneseAgencia: isBanese ? fixedData.agency : metadataValue(editCredential?.metadata, 'baneseAgencia'),
@@ -289,10 +295,17 @@ const IntegracaoBancariaConfig: React.FC = () => {
       const fixedData = baneseFixedBankingData(keysEnvironment);
       payload.clientId = credentialForm.clientId;
       payload.clientSecret = credentialForm.clientSecret;
-      payload.metadata = {
-        baneseConvenio: fixedData.agreement,
-        baneseBoletoConvenio: fixedData.agreement,
-        baneseBeneficiarioNome: fixedData.beneficiaryName,
+        payload.metadata = {
+          baneseConvenio: fixedData.agreement,
+          baneseBoletoConvenio: fixedData.agreement,
+          banesePixConvenio: fixedData.agreement,
+          banesePixChave: credentialForm.banesePixChave || fixedData.pixKey,
+          banesePixHomologacaoDisponivel: keysEnvironment === 'production' &&
+            Boolean(
+              (credentialForm.banesePixChave || fixedData.pixKey).trim() &&
+              (credentialForm.banesePixConvenio?.trim() || fixedData.agreement),
+            ),
+          baneseBeneficiarioNome: fixedData.beneficiaryName,
         baneseBeneficiarioInscricao: fixedData.beneficiaryDocument,
         baneseCodigoBeneficiario: fixedData.beneficiaryCode,
         baneseCarteira: credentialForm.baneseCarteira,
@@ -302,6 +315,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
         baneseContaDisplay: fixedData.account,
         notes: credentialForm.notes,
       };
+      payload.crtAccessToken = credentialForm.crtAccessToken;
     }
 
     saveCredentialMutation.mutate(payload);
@@ -335,11 +349,12 @@ const IntegracaoBancariaConfig: React.FC = () => {
   const openRouteFromSummary = (
     nextModalidade: GatewayModalidade,
     nextMethod: GatewayPaymentMethod,
+    nextEnvironment: GatewayEnvironment,
     nextProviderCode?: GatewayProviderCode,
   ) => {
     setActiveTab(nextModalidade);
     setModalidade(nextModalidade);
-    setRouteEnvironment(summaryEnvironment);
+    setRouteEnvironment(nextEnvironment);
     setPaymentMethod(nextMethod);
     if (nextProviderCode && CONFIGURABLE_PROVIDER_CODES.has(nextProviderCode)) {
       setRouteProviderCode(nextProviderCode);

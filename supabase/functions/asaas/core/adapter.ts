@@ -1,11 +1,11 @@
 import { isValidCpf, onlyDigits } from "./customer.ts";
-import { callAsaas } from "./http.ts";
+import { callAsaas, isCanonicalAsaasPostRejection } from "./http.ts";
 import {
   apiSecretName,
-  baseUrlFor,
-  normalizeEnvironment,
   type AsaasRuntime,
+  baseUrlFor,
   type Environment,
+  normalizeEnvironment,
 } from "./runtime.ts";
 
 export const ASAAS_PROVIDER_CODE = "asaas" as const;
@@ -54,6 +54,14 @@ export type AdapterCreateChargeResult = {
   raw: unknown;
 };
 
+const markAsaasRemotePaymentCreated = (error: unknown) => {
+  const marked = error && typeof error === "object"
+    ? error
+    : new AsaasAdapterError(String(error || "Falha na API Asaas."));
+  (marked as unknown as Record<string, unknown>).remotePaymentCreated = true;
+  return marked;
+};
+
 export class AsaasAdapterError extends Error {
   constructor(message: string) {
     super(message);
@@ -76,7 +84,9 @@ const roundMoney = (value: unknown) => {
 
 const assertAmount = (amount: number) => {
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw new AsaasAdapterError("Valor da cobranca Asaas deve ser maior que zero.");
+    throw new AsaasAdapterError(
+      "Valor da cobranca Asaas deve ser maior que zero.",
+    );
   }
 };
 
@@ -96,13 +106,14 @@ const normalizeInstallments = (value: unknown) => {
     throw new AsaasAdapterError("Quantidade de parcelas Asaas invalida.");
   }
   if (parsed > 21) {
-    throw new AsaasAdapterError("Asaas aceita no maximo 21 parcelas nesta integracao.");
+    throw new AsaasAdapterError(
+      "Asaas aceita no maximo 21 parcelas nesta integracao.",
+    );
   }
   return parsed;
 };
 
-const payerName = (payer: AdapterPayer) =>
-  firstString(payer.name, payer.nome);
+const payerName = (payer: AdapterPayer) => firstString(payer.name, payer.nome);
 
 const payerDocument = (payer: AdapterPayer) =>
   onlyDigits(payer.cpfCnpj ?? payer.cpf_cnpj ?? payer.cpf ?? payer.cnpj);
@@ -111,7 +122,9 @@ const assertPayer = (payer: AdapterPayer) => {
   const name = payerName(payer);
   const document = payerDocument(payer);
   if (!name) throw new AsaasAdapterError("Pagador Asaas deve ter nome.");
-  if (!document) throw new AsaasAdapterError("Pagador Asaas deve ter CPF/CNPJ.");
+  if (!document) {
+    throw new AsaasAdapterError("Pagador Asaas deve ter CPF/CNPJ.");
+  }
   if (document.length === 11 && !isValidCpf(document)) {
     throw new AsaasAdapterError("CPF invalido para cobranca Asaas.");
   }
@@ -130,7 +143,9 @@ export const getAsaasApiKey = async (
   if (error) throw error;
   const apiKey = firstString(data);
   if (!apiKey) {
-    throw new AsaasAdapterError(`Chave Asaas nao configurada para ${environment}.`);
+    throw new AsaasAdapterError(
+      `Chave Asaas nao configurada para ${environment}.`,
+    );
   }
   return apiKey;
 };
@@ -150,7 +165,9 @@ const resolveRuntime = async (
 const notificationsDisabled = async (admin: any) => {
   const { data } = await admin
     .from("asaas_config")
-    .select("notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled")
+    .select(
+      "notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled",
+    )
     .maybeSingle();
 
   const enabled = data?.notifications_enabled === true ||
@@ -171,7 +188,10 @@ const persistCustomerId = async (
 
   await admin
     .from("parceiros")
-    .update({ asaas_customer_id: customerId, updated_at: new Date().toISOString() })
+    .update({
+      asaas_customer_id: customerId,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", parceiroId);
 
   await admin.from("payment_gateway_customers").upsert({
@@ -183,7 +203,12 @@ const persistCustomerId = async (
   }, {
     onConflict: "parceiro_id,provider_code,environment",
   }).then(({ error }: any) => {
-    if (error) console.warn("Nao foi possivel espelhar cliente Asaas no gateway bancario:", error);
+    if (error) {
+      console.warn(
+        "Nao foi possivel espelhar cliente Asaas no gateway bancario:",
+        error,
+      );
+    }
   });
 
   return customerId;
@@ -196,12 +221,15 @@ const customerPayload = (
   name: payerName(payer),
   cpfCnpj: payerDocument(payer),
   email: firstString(payer.email) || undefined,
-  mobilePhone: firstString(payer.telefone, payer.phone, payer.mobilePhone) || undefined,
-  postalCode: onlyDigits(String(payer.cep ?? payer.postalCode ?? "")) || undefined,
+  mobilePhone: firstString(payer.telefone, payer.phone, payer.mobilePhone) ||
+    undefined,
+  postalCode: onlyDigits(String(payer.cep ?? payer.postalCode ?? "")) ||
+    undefined,
   address: firstString(payer.endereco, payer.address) || undefined,
   addressNumber: firstString(payer.numero, payer.addressNumber) || undefined,
   complement: firstString(payer.complemento, payer.complement) || undefined,
-  province: firstString(payer.bairro, payer.district, payer.province) || undefined,
+  province: firstString(payer.bairro, payer.district, payer.province) ||
+    undefined,
   externalReference: firstString(payer.id) || undefined,
   notificationDisabled,
   groupName: "Alunos Universo",
@@ -240,7 +268,12 @@ const ensureCustomer = async (
     throw new AsaasAdapterError("Asaas retornou cliente sem id.");
   }
 
-  return persistCustomerId(admin, payer, runtime.environment, String(customer.id));
+  return persistCustomerId(
+    admin,
+    payer,
+    runtime.environment,
+    String(customer.id),
+  );
 };
 
 const isCanceledPayment = (payment: any) =>
@@ -249,9 +282,11 @@ const isCanceledPayment = (payment: any) =>
   );
 
 const isPaidPayment = (payment: any) =>
-  ["RECEIVED", "CONFIRMED"].includes(String(payment?.status || "").toUpperCase());
+  ["RECEIVED", "CONFIRMED"].includes(
+    String(payment?.status || "").toUpperCase(),
+  );
 
-const remotePaymentMatchesInput = (
+export const remotePaymentMatchesInput = (
   payment: any,
   input: AdapterCreateChargeInput,
 ) => {
@@ -259,36 +294,22 @@ const remotePaymentMatchesInput = (
   const remoteBillingType = String(payment?.billingType || "").toUpperCase();
   if (remoteBillingType !== expectedBillingType) return false;
 
+  const expectedDueDate = String(input.dueDate || "").slice(0, 10);
+  const remoteDueDate = String(payment?.dueDate || "").slice(0, 10);
+  if (expectedDueDate && remoteDueDate !== expectedDueDate) return false;
+
   const installments = normalizeInstallments(input.installments);
-  const hasInstallments = expectedBillingType === "CREDIT_CARD" && installments > 1;
-  const remoteHasInstallments = Boolean(payment?.installment || payment?.installmentId);
+  const hasInstallments = expectedBillingType === "CREDIT_CARD" &&
+    installments > 1;
+  const remoteHasInstallments = Boolean(
+    payment?.installment || payment?.installmentId,
+  );
   if (hasInstallments !== remoteHasInstallments) return false;
 
   const expectedValue = hasInstallments
     ? roundMoney(Number(input.amount || 0) / installments)
     : roundMoney(input.amount);
   return Math.abs(roundMoney(payment?.value) - expectedValue) <= 0.01;
-};
-
-const cancelPayment = async (
-  runtime: AsaasRuntime,
-  paymentId: string,
-) => {
-  const response = await fetch(`${runtime.baseUrl}/payments/${paymentId}`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "Universo-Cursos-Gateway",
-      access_token: runtime.apiKey,
-    },
-  });
-  if (!response.ok && response.status !== 404) {
-    const payload = await response.json().catch(() => null);
-    const message = payload?.errors?.map((item: any) => item.description).join(" ") ||
-      payload?.message ||
-      `Erro ${response.status} ao cancelar cobranca Asaas anterior.`;
-    throw new AsaasAdapterError(message);
-  }
 };
 
 const recoverPaymentByReceivable = async (
@@ -303,17 +324,37 @@ const recoverPaymentByReceivable = async (
     `/payments?externalReference=${encodeURIComponent(receivableId)}&limit=10`,
     {},
     "Universo-Cursos-Gateway",
-  ).catch(() => null);
+  );
 
   const payments = Array.isArray(response?.data) ? response.data : [];
   for (const payment of payments) {
     if (String(payment?.externalReference || "") !== receivableId) continue;
     if (isCanceledPayment(payment)) continue;
-    if (remotePaymentMatchesInput(payment, input) || isPaidPayment(payment)) return payment;
-    if (payment?.id) await cancelPayment(runtime, String(payment.id));
+    if (remotePaymentMatchesInput(payment, input) || isPaidPayment(payment)) {
+      return payment;
+    }
+    throw new AsaasAdapterError(
+      "Existe uma cobranca Asaas ativa com o mesmo externalReference, mas valor, metodo ou parcelamento divergente. Reconcilie o titulo antes de tentar novamente.",
+    );
   }
 
   return null;
+};
+
+export const recoverAsaasCharge = async (
+  input: AdapterCreateChargeInput,
+): Promise<AdapterCreateChargeResult | null> => {
+  const environment = normalizeEnvironment(input.environment);
+  assertPaymentMethod(input.paymentMethod);
+  assertAmount(input.amount);
+  const runtime = await resolveRuntime(input.admin, environment);
+  const recoveredPayment = await recoverPaymentByReceivable(runtime, input);
+  if (!recoveredPayment?.id) return null;
+  try {
+    return await resultFromPayment(runtime, input, recoveredPayment);
+  } catch (error) {
+    throw markAsaasRemotePaymentCreated(error);
+  }
 };
 
 const buildPaymentPayload = (
@@ -397,7 +438,8 @@ const resultFromPayment = async (
     pixPayload: pixQrCode.payload,
     pixEncodedImage: pixQrCode.encodedImage,
     customer: firstString(payment?.customer) || null,
-    installmentId: firstString(payment?.installment, payment?.installmentId) || null,
+    installmentId: firstString(payment?.installment, payment?.installmentId) ||
+      null,
     transactionReceiptUrl: firstString(payment?.transactionReceiptUrl) || null,
     status: firstString(payment?.status, "PENDING"),
     raw: payment || {},
@@ -412,15 +454,26 @@ export const createAsaasCharge = async (
   assertAmount(input.amount);
   assertPayer(input.payer || {});
 
+  const recovered = await recoverAsaasCharge(input);
+  if (recovered) return recovered;
   const runtime = await resolveRuntime(input.admin, environment);
-  const customerId = await ensureCustomer(runtime, input.admin, input.payer || {});
-  const recoveredPayment = await recoverPaymentByReceivable(runtime, input);
-  if (recoveredPayment?.id) return resultFromPayment(runtime, input, recoveredPayment);
+  const customerId = await ensureCustomer(
+    runtime,
+    input.admin,
+    input.payer || {},
+  );
 
-  const payment = await callAsaas(runtime, "/payments", {
-    method: "POST",
-    body: JSON.stringify(buildPaymentPayload(customerId, input)),
-  }, "Universo-Cursos-Gateway");
+  try {
+    const payment = await callAsaas(runtime, "/payments", {
+      method: "POST",
+      body: JSON.stringify(buildPaymentPayload(customerId, input)),
+    }, "Universo-Cursos-Gateway");
 
-  return resultFromPayment(runtime, input, payment);
+    return await resultFromPayment(runtime, input, payment);
+  } catch (error) {
+    if (!isCanonicalAsaasPostRejection(error)) {
+      throw markAsaasRemotePaymentCreated(error);
+    }
+    throw error;
+  }
 };

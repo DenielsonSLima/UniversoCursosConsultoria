@@ -12,14 +12,14 @@ export function useOutrosCreditosQueries(
   const creditsQuery = useQuery({
     queryKey: financeiroQueryKeys.outrosCreditosList(poloId),
     queryFn: () => financeiroService.getOutrosCreditos(poloId || undefined),
-    enabled: Boolean(poloId),
+    enabled: true,
     staleTime: 15_000,
   });
 
   const summaryQuery = useQuery({
     queryKey: financeiroQueryKeys.outrosCreditosSummary(summaryFilters),
     queryFn: () => financeiroService.getOutrosCreditosSummary(summaryFilters),
-    enabled: Boolean(poloId),
+    enabled: true,
     staleTime: 15_000,
   });
 

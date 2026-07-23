@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reconcileBaneseReceivable } from "../gateways/api/banese.ts";
+import { syncRouteAwareFutureInstallments } from "../asaas/api/route-aware-future-sync.ts";
+import { requireGatewayEnvironment } from "../gateways/api/environment.ts";
 
 const MAX_BATCH_SIZE = 10;
 
@@ -97,7 +99,14 @@ Deno.serve(async (req: Request) => {
 
   for (const receivableId of ids) {
     try {
-      const result = await reconcileBaneseReceivable(admin, receivableId);
+      const result = await reconcileBaneseReceivable(admin, receivableId, {
+        syncFutureInstallments: (matriculaId, environment) =>
+          syncRouteAwareFutureInstallments(
+            admin,
+            matriculaId,
+            environment,
+          ),
+      });
       reconciled += 1;
       if (result.paid) paid += 1;
     } catch (error) {
@@ -119,11 +128,79 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const { data: futureSyncQueue, error: futureSyncQueueError } = await admin
+    .from("contas_receber")
+    .select("id, matricula_id, gateway_environment")
+    .eq("status", "PAGO")
+    .eq("gateway_provider", "banese_card")
+    .eq("tipo_lancamento", "MATRICULA")
+    .like(
+      "gateway_last_error",
+      "Pagamento Banese conciliado; parcelas futuras pendentes:%",
+    )
+    .order("updated_at", { ascending: true })
+    .limit(MAX_BATCH_SIZE);
+  if (futureSyncQueueError) {
+    console.error("banese future installment retry query failed", {
+      message: safeError(futureSyncQueueError),
+    });
+  }
+
+  let futureRetried = 0;
+  let futureRecovered = 0;
+  for (const item of futureSyncQueue || []) {
+    if (!item.matricula_id) continue;
+    futureRetried += 1;
+    try {
+      await syncRouteAwareFutureInstallments(
+        admin,
+        item.matricula_id,
+        requireGatewayEnvironment(
+          item.gateway_environment,
+          "recebivel Banese da fila de parcelas futuras",
+        ),
+      );
+      const { error: clearError } = await admin
+        .from("contas_receber")
+        .update({
+          gateway_last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", item.id)
+        .eq("status", "PAGO")
+        .eq("gateway_provider", "banese_card")
+        .like(
+          "gateway_last_error",
+          "Pagamento Banese conciliado; parcelas futuras pendentes:%",
+        );
+      if (clearError) throw clearError;
+      futureRecovered += 1;
+    } catch (error) {
+      const message = safeError(error);
+      console.error("banese future installment retry failed", {
+        receivableId: item.id,
+        message,
+      });
+      await admin
+        .from("contas_receber")
+        .update({
+          gateway_last_error:
+            `Pagamento Banese conciliado; parcelas futuras pendentes: ${message}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", item.id)
+        .eq("status", "PAGO")
+        .eq("gateway_provider", "banese_card");
+    }
+  }
+
   return json({
     success: true,
     claimed: ids.length,
     reconciled,
     paid,
     failed,
+    futureRetried,
+    futureRecovered,
   });
 });

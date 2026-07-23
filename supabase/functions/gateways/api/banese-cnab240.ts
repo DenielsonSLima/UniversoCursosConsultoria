@@ -4,7 +4,10 @@ import {
   CnabParseResult,
   ImportEventResult,
 } from "./banese-cnab240.types.ts";
-import { parseCnab240Payload, parsePayloadText } from "./banese-cnab240.parser.ts";
+import {
+  parseCnab240Payload,
+  parsePayloadText,
+} from "./banese-cnab240.parser.ts";
 
 const nextImportId = () => {
   const timestamp = Date.now().toString(36);
@@ -99,4 +102,3 @@ export const importBaneseCnab240Return = async (
     outcomes,
   } as BaneseCnabImportResult;
 };
-

@@ -30,6 +30,7 @@ export type CheckoutContext = {
     providerCode: string;
     credentialId: string | null;
     enabled: boolean;
+    environment?: "sandbox" | "production";
   };
   technicalSchoolSnapshot: Record<string, unknown>;
 };

@@ -2,24 +2,34 @@ import {
   createGatewayCharge,
   gatewayOnlyPrimaryUrl,
   gatewayPrimaryUrl,
-  type GatewayProviderCode,
   gatewayReceivableUpdate,
   persistGatewayTransaction,
+  recoverGatewayCharge,
   repairGatewayTransactionFromReceivable,
 } from "../../router.ts";
 import { resolveBaneseReceivableFinancialTerms } from "../../api/banese-financial-terms.ts";
 import {
   assertGatewayTitleCanBeReset,
+  assertNoAmbiguousRemoteCreation,
   boletoIssuedAtAfterReset,
+  hasAmbiguousRemoteCreation,
   isRemoteTitleNonPayable,
 } from "../remote-title-guard.ts";
+import {
+  applyCheckoutAttemptSnapshot,
+  CHECKOUT_MUTABLE_RECEIVABLE_STATUSES,
+  claimExistingGatewayCheckout,
+} from "../gateway-creation-fence.ts";
+import { assertGatewayCreationFence } from "../../../asaas/api/gateway-routing-guard.ts";
+import {
+  hasRepairableOnlineInscriptionIdentity,
+  repairOnlineInscription,
+} from "../../online-inscription.ts";
 import type { EadCheckoutContext } from "../types.ts";
 import {
   documentForGateway,
   normalizeErrorMessage,
-  onlyDigits,
   paymentMethodForLegacyField,
-  PENDENTE_INSCRICAO_STATUS,
   providerLabelFor,
   publicBaseUrl,
 } from "../utils.ts";
@@ -30,6 +40,7 @@ import {
   paymentResponseFromReceivable,
   shouldReuseReceivable,
 } from "./gateway-view.ts";
+import { AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES } from "../../webhook/domain/ead-enrollment.ts";
 
 const markRemotePaymentCreated = (error: unknown) => {
   if (error && typeof error === "object") {
@@ -41,59 +52,26 @@ const markRemotePaymentCreated = (error: unknown) => {
   return wrapped;
 };
 
-const upsertPendingInscricao = async (
+const repairCheckoutInscricao = async (
   context: EadCheckoutContext,
-  input: {
-    providerCode: GatewayProviderCode;
-    remotePaymentId: string | null;
-    remoteCustomerId: string | null;
-    remotePaymentLinkId: string | null;
-  },
+  receivable: any,
+  requireGatewayTransaction = false,
 ) => {
-  const document = documentForGateway(context.aluno.cpf_cnpj);
-  const isAsaas = input.providerCode === "asaas";
-  const payload = {
-    curso_id: context.course.id,
-    turma_id: context.turma.id,
-    aluno_id: context.aluno.id,
-    matricula_id: context.matricula.id,
-    asaas_payment_id: isAsaas ? input.remotePaymentId : null,
-    asaas_customer_id: isAsaas ? input.remoteCustomerId : null,
-    asaas_payment_link_id: isAsaas ? input.remotePaymentLinkId : null,
-    gateway_provider: input.providerCode,
-    gateway_environment: context.environment,
-    gateway_payment_id: input.remotePaymentId,
-    gateway_customer_id: input.remoteCustomerId,
-    gateway_payment_link_id: input.remotePaymentLinkId,
-    nome: context.aluno.nome,
-    cpf_cnpj: document || onlyDigits(context.aluno.cpf_cnpj) || null,
-    email: context.aluno.email || null,
-    telefone: context.aluno.telefone || null,
-    valor: context.charge.value,
-    status: PENDENTE_INSCRICAO_STATUS,
-    forma_pagamento: paymentMethodForLegacyField(context.charge.method),
-    erro: null,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data: existingInscricoes, error: lookupError } = await context.admin
-    .from("inscricoes_online")
-    .select("id")
-    .eq("matricula_id", context.matricula.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (lookupError) throw lookupError;
-
-  const query = existingInscricoes?.[0]?.id
-    ? context.admin.from("inscricoes_online").update(payload).eq(
-      "id",
-      existingInscricoes[0].id,
-    )
-    : context.admin.from("inscricoes_online").insert(payload);
-
-  const { data, error } = await query.select("id").maybeSingle();
-  if (error) throw error;
-  return data?.id || existingInscricoes?.[0]?.id || null;
+  if (!hasRepairableOnlineInscriptionIdentity(receivable)) return null;
+  return await repairOnlineInscription({
+    admin: context.admin,
+    receivable,
+    legacyPaymentMethod: paymentMethodForLegacyField(
+      receivable.gateway_payment_method || context.charge.method,
+    ),
+    academic: {
+      course: context.course,
+      turma: context.turma,
+      aluno: context.aluno,
+      matricula: context.matricula,
+    },
+    requireGatewayTransaction,
+  });
 };
 
 export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
@@ -112,10 +90,12 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
   let receivable = existingReceivables?.[0] || null;
 
   if (String(receivable?.status || "").toUpperCase() === "PAGO") {
+    await repairGatewayTransactionFromReceivable(context.admin, receivable);
+    await repairCheckoutInscricao(context, receivable, true);
     await context.admin.from("matriculas").update({ status: "ATIVO" }).eq(
       "id",
       context.matricula.id,
-    );
+    ).in("status", [...AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES]);
     const url = gatewayPrimaryUrl(receivable) || `${publicBaseUrl()}/aluno`;
     return {
       response: {
@@ -138,6 +118,7 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     shouldReuseReceivable(receivable, context, providerCode)
   ) {
     await repairGatewayTransactionFromReceivable(context.admin, receivable);
+    await repairCheckoutInscricao(context, receivable, true);
     const url = gatewayOnlyPrimaryUrl(receivable) ||
       gatewayPrimaryUrl(receivable);
     return {
@@ -173,15 +154,19 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         Math.round(Number(context.charge.value || 0) * 100) &&
       String(receivable?.data_vencimento || "").slice(0, 10) ===
         String(context.charge.dueDate || "").slice(0, 10) &&
-      !isRemoteTitleNonPayable(receivable)
+      !isRemoteTitleNonPayable(receivable),
   );
   const preserveReservedBaneseNumber = Boolean(
     sameBaneseCharge &&
       receivable?.gateway_boleto_nosso_numero,
   );
-  assertGatewayTitleCanBeReset(receivable, {
-    allowBaneseRecovery: preserveReservedBaneseNumber,
-  });
+  const ambiguousAsaasCreation = providerCode === "asaas" &&
+    hasAmbiguousRemoteCreation(receivable);
+  if (!ambiguousAsaasCreation) {
+    assertGatewayTitleCanBeReset(receivable, {
+      allowBaneseRecovery: preserveReservedBaneseNumber,
+    });
+  }
   if (preserveReservedBaneseNumber) {
     resetGatewayFields.gateway_boleto_linha_digitavel =
       receivable.gateway_boleto_linha_digitavel || null;
@@ -217,61 +202,111 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     gateway_environment: context.environment,
     gateway_payment_method: context.charge.method,
     gateway_installments: context.charge.installmentCount,
+    asaas_fee_value: context.charge.feeValue,
+    asaas_net_value: context.charge.netValue,
+    gateway_fee_value: context.charge.feeValue,
+    gateway_net_value: context.charge.netValue,
     updated_at: new Date().toISOString(),
   };
 
-  if (receivable?.id) {
+  const attemptToken = crypto.randomUUID();
+  let lockedReceivable: any = null;
+  let creationOwnedByThisRequest = false;
+
+  if (receivable?.id && !ambiguousAsaasCreation) {
+    lockedReceivable = await claimExistingGatewayCheckout({
+      admin: context.admin,
+      receivable,
+      receivablePayload,
+      providerCode,
+      attemptToken,
+    });
+    creationOwnedByThisRequest = Boolean(lockedReceivable);
+  } else if (!receivable?.id) {
     const { data, error } = await context.admin
       .from("contas_receber")
-      .update(receivablePayload)
-      .eq("id", receivable.id)
-      .neq("status", "PAGO")
-      .select()
-      .maybeSingle();
-    if (error) throw error;
-    receivable = data || receivable;
-  } else {
-    const { data, error } = await context.admin
-      .from("contas_receber")
-      .insert(receivablePayload)
+      .insert({
+        ...receivablePayload,
+        gateway_status: "CREATING",
+        gateway_creation_token: attemptToken,
+        ...(providerCode === "asaas"
+          ? {
+            asaas_status: "CREATING",
+            asaas_last_error: null,
+          }
+          : {}),
+      })
       .select()
       .single();
     if (error) throw error;
-    receivable = data;
+    lockedReceivable = data;
+    creationOwnedByThisRequest = true;
   }
 
-  const staleCreatingBefore = new Date(Date.now() - 2 * 60 * 1000)
-    .toISOString();
-  const { data: lockedReceivable, error: lockError } = await context.admin
-    .from("contas_receber")
-    .update({
-      gateway_provider: providerCode,
-      gateway_environment: context.environment,
-      gateway_payment_method: context.charge.method,
-      gateway_installments: context.charge.installmentCount,
-      gateway_status: "CREATING",
-      gateway_last_error: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", receivable.id)
-    .is("gateway_payment_id", null)
-    .or(
-      `gateway_status.is.null,gateway_status.neq.CREATING,updated_at.lt.${staleCreatingBefore}`,
-    )
-    .select()
-    .maybeSingle();
-  if (lockError) throw lockError;
+  const baseUrl = publicBaseUrl();
+  const gatewayChargeInput = (
+    targetReceivable: any,
+    financialTerms:
+      | Awaited<
+        ReturnType<typeof resolveBaneseReceivableFinancialTerms>
+      >
+      | null = null,
+  ) => ({
+    admin: context.admin,
+    supabaseUrl: context.supabaseUrl,
+    providerCode,
+    credentialId: context.route.credentialId,
+    environment: context.environment,
+    paymentMethod: context.charge.method,
+    receivable: targetReceivable,
+    payer: {
+      id: context.aluno.id,
+      name: context.aluno.nome,
+      email: context.aluno.email,
+      cpfCnpj: documentForGateway(context.aluno.cpf_cnpj),
+      phone: context.aluno.telefone,
+      address: context.aluno.endereco,
+      number: context.aluno.numero,
+      complement: context.aluno.complemento,
+      postalCode: context.aluno.cep,
+      district: context.aluno.bairro,
+      city: context.aluno.cidade,
+      state: context.aluno.uf ?? context.aluno.estado,
+    },
+    amount: context.charge.value,
+    description: context.charge.description,
+    dueDate: context.charge.dueDate,
+    installments: context.charge.installmentCount,
+    successUrl: `${baseUrl}/aluno?gateway=success`,
+    failureUrl: `${baseUrl}/aluno?gateway=failure`,
+    pendingUrl: `${baseUrl}/aluno?gateway=pending`,
+    financialTerms,
+  });
+
+  let gatewayResult: any = null;
   if (!lockedReceivable) {
-    const { data: currentReceivable } = await context.admin
-      .from("contas_receber")
-      .select("*")
-      .eq("id", receivable.id)
-      .maybeSingle();
-    if (shouldReuseReceivable(currentReceivable, context, providerCode)) {
+    const { data: currentReceivable, error: currentReceivableError } =
+      await context.admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", receivable.id)
+        .maybeSingle();
+    if (currentReceivableError) throw currentReceivableError;
+    const currentCreationIsAmbiguous = hasAmbiguousRemoteCreation(
+      currentReceivable,
+    );
+    if (currentCreationIsAmbiguous && providerCode !== "asaas") {
+      assertNoAmbiguousRemoteCreation(currentReceivable);
+    }
+    if (
+      !currentCreationIsAmbiguous &&
+      shouldReuseReceivable(currentReceivable, context, providerCode)
+    ) {
       await repairGatewayTransactionFromReceivable(
         context.admin,
         currentReceivable,
       );
+      await repairCheckoutInscricao(context, currentReceivable, true);
       const url = gatewayOnlyPrimaryUrl(currentReceivable) ||
         gatewayPrimaryUrl(currentReceivable);
       return {
@@ -290,14 +325,29 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         receivableId: currentReceivable.id,
       };
     }
+    if (
+      providerCode === "asaas" &&
+      currentCreationIsAmbiguous
+    ) {
+      gatewayResult = await recoverGatewayCharge(
+        gatewayChargeInput(currentReceivable),
+      );
+      if (gatewayResult) {
+        lockedReceivable = currentReceivable;
+      } else {
+        throw new Error(
+          "A criacao Asaas continua ambigua e nenhuma cobranca canonica foi localizada pelo externalReference. A tentativa foi preservada para nova conciliacao, sem emitir outro titulo.",
+        );
+      }
+    }
+  }
+  if (!lockedReceivable) {
     throw new Error(
       "A cobranca ja esta sendo preparada. Aguarde alguns instantes e tente novamente.",
     );
   }
 
-  let gatewayResult: any;
-  try {
-    const baseUrl = publicBaseUrl();
+  if (!gatewayResult) {
     const financialTerms = providerCode === "banese_card" &&
         context.charge.method === "BOLETO"
       ? await resolveBaneseReceivableFinancialTerms(
@@ -305,44 +355,46 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
         lockedReceivable,
       )
       : null;
-    gatewayResult = await createGatewayCharge({
-      admin: context.admin,
-      supabaseUrl: context.supabaseUrl,
-      providerCode,
-      credentialId: context.route.credentialId,
-      environment: context.environment,
-      paymentMethod: context.charge.method,
-      receivable: lockedReceivable,
-      payer: {
-        id: context.aluno.id,
-        name: context.aluno.nome,
-        email: context.aluno.email,
-        cpfCnpj: documentForGateway(context.aluno.cpf_cnpj),
-        phone: context.aluno.telefone,
-        address: context.aluno.endereco,
-        number: context.aluno.numero,
-        complement: context.aluno.complemento,
-        postalCode: context.aluno.cep,
-        district: context.aluno.bairro,
-        city: context.aluno.cidade,
-        state: context.aluno.uf ?? context.aluno.estado,
-      },
-      amount: context.charge.value,
-      description: context.charge.description,
-      dueDate: context.charge.dueDate,
-      installments: context.charge.installmentCount,
-      successUrl: `${baseUrl}/aluno?gateway=success`,
-      failureUrl: `${baseUrl}/aluno?gateway=failure`,
-      pendingUrl: `${baseUrl}/aluno?gateway=pending`,
-      financialTerms,
-    });
-  } catch (error) {
-    await context.admin.from("contas_receber").update({
-      gateway_status: null,
-      gateway_last_error: normalizeErrorMessage(error),
-      updated_at: new Date().toISOString(),
-    }).eq("id", lockedReceivable.id);
-    throw error;
+    try {
+      gatewayResult = await createGatewayCharge(
+        gatewayChargeInput(lockedReceivable, financialTerms),
+      );
+    } catch (error) {
+      const remotePaymentMayExist = Boolean(
+        error && typeof error === "object" &&
+          (error as Record<string, unknown>).remotePaymentCreated === true,
+      );
+      await context.admin.from("contas_receber").update({
+        gateway_status: remotePaymentMayExist ? "CREATING" : null,
+        gateway_creation_token: remotePaymentMayExist ? attemptToken : null,
+        gateway_last_error: normalizeErrorMessage(error),
+        ...(remotePaymentMayExist
+          ? {
+            gateway_submission_channel: "API",
+            gateway_submission_status:
+              lockedReceivable.gateway_submission_status === "API_REGISTERED"
+                ? "API_REGISTERED"
+                : "API_AMBIGUOUS",
+          }
+          : {}),
+        ...(providerCode === "asaas"
+          ? {
+            asaas_status: remotePaymentMayExist ? "CREATING" : null,
+            asaas_last_error: normalizeErrorMessage(error),
+          }
+          : {}),
+        updated_at: new Date().toISOString(),
+      })
+        .eq("id", lockedReceivable.id)
+        .eq("gateway_creation_token", attemptToken)
+        .eq("gateway_provider", providerCode)
+        .eq("gateway_environment", context.environment)
+        .eq("gateway_payment_method", context.charge.method)
+        .eq("gateway_status", "CREATING")
+        .in("status", [...CHECKOUT_MUTABLE_RECEIVABLE_STATUSES])
+        .is("gateway_payment_id", null);
+      throw error;
+    }
   }
 
   let updatedReceivable: any;
@@ -352,32 +404,68 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     );
 
   try {
-    const { data, error: updateGatewayError } = await context.admin
+    const { data: postCreateSnapshot, error: postCreateSnapshotError } =
+      await context.admin
+        .from("contas_receber")
+        .select("*")
+        .eq("id", lockedReceivable.id)
+        .maybeSingle();
+    if (postCreateSnapshotError) throw postCreateSnapshotError;
+    if (!postCreateSnapshot) {
+      throw new Error("Cobranca nao encontrada apos a criacao no gateway.");
+    }
+    assertGatewayCreationFence({
+      receivable: postCreateSnapshot,
+      providerCode,
+      environment: context.environment,
+      paymentMethod: context.charge.method,
+      attemptToken: creationOwnedByThisRequest ? attemptToken : undefined,
+      expectedBankSlipOurNumber: gatewayResult.bankSlipOurNumber,
+    });
+
+    let persistQuery = context.admin
       .from("contas_receber")
-      .update(gatewayReceivableUpdate({
-        providerCode,
-        environment: context.environment,
-        paymentMethod: context.charge.method,
-        installments: context.charge.installmentCount,
-        result: gatewayResult,
-      }))
+      .update({
+        ...gatewayReceivableUpdate({
+          providerCode,
+          environment: context.environment,
+          paymentMethod: context.charge.method,
+          installments: context.charge.installmentCount,
+          result: gatewayResult,
+        }),
+        gateway_creation_token: null,
+        gateway_submission_channel: "API",
+        gateway_submission_status: "API_REGISTERED",
+      })
       .eq("id", lockedReceivable.id)
-      .select()
-      .single();
+      .eq("gateway_provider", providerCode)
+      .eq("gateway_environment", context.environment)
+      .eq("gateway_payment_method", context.charge.method)
+      .eq("gateway_status", "CREATING")
+      .in("status", [...CHECKOUT_MUTABLE_RECEIVABLE_STATUSES])
+      .is("gateway_payment_id", null);
+    persistQuery = applyCheckoutAttemptSnapshot(
+      persistQuery,
+      postCreateSnapshot,
+    );
+    const { data, error: updateGatewayError } = await persistQuery.select()
+      .maybeSingle();
     if (updateGatewayError) throw updateGatewayError;
+    if (!data) {
+      throw new Error(
+        "Cobranca mudou antes de persistir o titulo criado no gateway.",
+      );
+    }
     updatedReceivable = data;
 
-    const inscricaoOnlineId = await upsertPendingInscricao(context, {
-      providerCode,
-      remotePaymentId: gatewayResult.remotePaymentId ||
-        gatewayResult.remotePaymentLinkId,
-      remoteCustomerId: gatewayResult.remoteCustomerId,
-      remotePaymentLinkId: gatewayResult.remotePaymentLinkId,
-    });
+    const inscricaoOnline = await repairCheckoutInscricao(
+      context,
+      updatedReceivable,
+    );
 
     await persistGatewayTransaction(context.admin, {
       receivable: updatedReceivable,
-      inscricaoOnlineId,
+      inscricaoOnlineId: inscricaoOnline?.id || null,
       providerCode,
       environment: context.environment,
       paymentMethod: context.charge.method,
@@ -397,8 +485,10 @@ export const handleGatewayCheckout = async (context: EadCheckoutContext) => {
     }
     : null;
   if (!url && !pixQrCode) {
-    throw new Error(
-      "Nao foi possivel recuperar o link do checkout gerado pelo provedor configurado.",
+    throw markRemotePaymentCreated(
+      new Error(
+        "Nao foi possivel recuperar o link do checkout gerado pelo provedor configurado.",
+      ),
     );
   }
 

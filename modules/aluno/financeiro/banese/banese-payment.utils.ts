@@ -6,7 +6,6 @@ import type {
   BaneseStatusPresentation,
 } from './banese-payment.types';
 
-const PAYMENT_LINK_PARAMS = ['banesePayment', 'baneseBoleto'];
 const CANCELED_STATUSES = new Set(['CANCELADO', 'CANCELED', 'ESTORNADO', 'DEVOLVIDO', 'REFUNDED']);
 const isCanceledBaneseTitle = (record: BanesePaymentRecord) => (
   CANCELED_STATUSES.has(String(record.status ?? '').toUpperCase())
@@ -294,20 +293,4 @@ export const getBaneseStatusPresentation = (record: BanesePaymentRecord): Banese
 export const canPayBaneseRecord = (record: BanesePaymentRecord) => {
   if (!hasRegisteredBaneseBoleto(record)) return false;
   return hasPayableBaneseStatus(record);
-};
-
-export const getBaneseOfficialDocumentUrl = (record: BanesePaymentRecord) => {
-  for (const value of [record.gateway_bank_slip_url, record.gateway_invoice_url]) {
-    const candidate = String(value ?? '').trim();
-    if (!candidate) continue;
-    try {
-      const url = new URL(candidate);
-      if (url.protocol !== 'https:') continue;
-      if (PAYMENT_LINK_PARAMS.some((parameter) => url.searchParams.has(parameter))) continue;
-      return url.toString();
-    } catch {
-      // Tenta a proxima URL devolvida pelo servidor.
-    }
-  }
-  return null;
 };

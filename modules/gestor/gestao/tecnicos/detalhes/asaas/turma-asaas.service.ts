@@ -1,4 +1,8 @@
-import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
+import {
+  asaasIntegrationService,
+  type GatewayPaymentMethod,
+} from '../../../../../asaas/asaas.service';
+import { requireGatewayPaymentMethod } from '../../../../../asaas/enrollment-sync';
 import { academicLifecycleService } from '../academic-lifecycle.service';
 
 export interface MatricularAlunoComCobrancaInput {
@@ -8,6 +12,7 @@ export interface MatricularAlunoComCobrancaInput {
   gerar_cobranca_inicial?: boolean;
   gerar_cobranca_futura?: boolean | null;
   sincronizar_asaas?: boolean | null;
+  paymentMethod?: GatewayPaymentMethod | null;
   valorMatricula: number;
   valorParcela: number;
   valorRematricula: number;
@@ -30,6 +35,21 @@ export const turmaAsaasService = {
   async matricularAlunoComCobranca(
     input: MatricularAlunoComCobrancaInput,
   ): Promise<MatricularAlunoComCobrancaResult> {
+    const gerarCobrancaInicial = input.gerar_cobranca_inicial
+      ?? (input.financeiro_herdado !== true);
+    const paymentMethod = gerarCobrancaInicial
+      ? requireGatewayPaymentMethod(input.paymentMethod)
+      : null;
+    if (
+      gerarCobrancaInicial && input.sincronizar_asaas !== false && paymentMethod
+    ) {
+      // O preflight ocorre antes do RPC que cria matricula/recebivel para que
+      // uma opcao sem rota/credencial nao deixe dados parciais.
+      await asaasIntegrationService.preflightEnrollmentCharge(
+        input.turmaId,
+        paymentMethod,
+      );
+    }
     const matricula = await academicLifecycleService.matricularAlunoComFinanceiro({
       turmaId: input.turmaId,
       alunoId: input.alunoId,
@@ -48,19 +68,28 @@ export const turmaAsaasService = {
     });
 
     try {
-      const syncResult = await asaasIntegrationService.syncEnrollment(matricula.id);
+      const syncResult = await asaasIntegrationService.syncEnrollment(
+        matricula.id,
+        paymentMethod,
+      );
+      const gatewayReference = syncResult.receivable?.gateway_payment_id
+        || syncResult.receivable?.gateway_payment_link_id
+        || syncResult.receivable?.gateway_invoice_url
+        || syncResult.receivable?.asaas_payment_id
+        || syncResult.receivable?.asaas_payment_link_id
+        || syncResult.receivable?.asaas_invoice_url;
       return {
         matricula,
-        asaasSynced: Boolean(syncResult.receivable?.asaas_payment_id) && syncResult.skipped !== true,
+        asaasSynced: Boolean(gatewayReference) && syncResult.skipped !== true,
         asaasSkipped: syncResult.skipped === true,
         asaasSkipReason: syncResult.skippedReason || null,
       };
     } catch (error) {
-      console.error('Matrícula criada, mas a cobrança Asaas não foi sincronizada:', error);
+      console.error('Matrícula criada, mas a cobrança não foi sincronizada no gateway:', error);
       return {
         matricula,
         asaasSynced: false,
-        asaasError: error instanceof Error ? error.message : 'Falha na integração Asaas',
+        asaasError: error instanceof Error ? error.message : 'Falha na integração com o gateway',
       };
     }
   },

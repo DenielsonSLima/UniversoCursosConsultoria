@@ -1,3 +1,39 @@
+export type WhatsAppSector =
+  | 'pedagogico_coordenacao'
+  | 'financeiro'
+  | 'comercial_matriculas'
+  | 'atendimento_geral';
+
+export type WhatsAppTicketStatus =
+  | 'bot_triagem'
+  | 'pendente_setor'
+  | 'em_atendimento'
+  | 'redirecionado_externo'
+  | 'solucionada'
+  | 'aguardando_avaliacao';
+
+export type WhatsAppInstituicao = 'universo' | 'anhanguera' | 'unopar';
+
+export interface WhatsAppConexao {
+  id: string;
+  nome: string;
+  instituicao: WhatsAppInstituicao;
+  telefone: string | null;
+  phone_number_id: string | null;
+  waba_id: string | null;
+  is_default: boolean;
+  is_matriz_financeira: boolean;
+  status: 'ativo' | 'inativo';
+  connection_mode?: 'cloud_api' | 'coexistence' | null;
+  graph_version?: string | null;
+  app_id?: string | null;
+  app_secret?: string | null;
+  verify_token?: string | null;
+  token_configured?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WhatsAppConversation {
   id: string;
   aluno_id: string | null;
@@ -10,6 +46,23 @@ export interface WhatsAppConversation {
   unread_count: number;
   closed_at?: string | null;
   closed_reason?: string | null;
+
+  // Campos de Comunicação Multisetorial
+  conexao_id?: string | null;
+  setor?: WhatsAppSector | null;
+  polo_id?: string | null;
+  polo_nome?: string | null;
+  atendente_id?: string | null;
+  atendente_nome?: string | null;
+  instituicao?: WhatsAppInstituicao | null;
+  status_atendimento?: WhatsAppTicketStatus | null;
+  sub_assunto?: string | null;
+  tempo_primeira_resposta_seg?: number | null;
+  tempo_total_atendimento_seg?: number | null;
+  csat_score?: number | null;
+  csat_comentario?: string | null;
+  data_inicio_atendimento?: string | null;
+  data_fim_atendimento?: string | null;
 }
 
 export interface WhatsAppFlowSettings {

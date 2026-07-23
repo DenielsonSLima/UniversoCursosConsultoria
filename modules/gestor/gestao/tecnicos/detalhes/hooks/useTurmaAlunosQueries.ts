@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AcademicStudent, academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAlunosService } from '../turma-alunos.service';
+import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
 
 export const useTurmaStudents = (turmaId: string) => useQuery({
   queryKey: academicLifecycleKeys.alunos(turmaId),
@@ -68,6 +69,13 @@ export const usePrevisaoFinanceiraTurma = (turmaId: string, enabled: boolean) =>
   queryFn: () => turmaAlunosService.preverGeracaoCobrancasFuturas(turmaId),
   enabled,
   staleTime: 30_000,
+});
+
+export const useEnrollmentPaymentOptions = (turmaId: string, enabled: boolean) => useQuery({
+  queryKey: ['enrollment-payment-options', turmaId],
+  queryFn: () => asaasIntegrationService.getEnrollmentPaymentOptions(turmaId),
+  enabled,
+  staleTime: 15_000,
 });
 
 export const useDestinationClasses = (

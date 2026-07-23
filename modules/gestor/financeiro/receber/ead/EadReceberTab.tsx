@@ -8,7 +8,7 @@ const EadReceberTab: React.FC<{ poloId?: string | null }> = ({ poloId }) => (
     modality="EAD"
     accentLabel="EAD"
     title="Recebíveis EAD"
-    description="Cobranças de cursos EAD com links, status Asaas e baixa manual."
+    description="Cobranças de cursos EAD com links, status bancário e baixa manual."
     icon={<Laptop size={18} />}
   />
 );

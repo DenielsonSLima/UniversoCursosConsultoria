@@ -4,6 +4,14 @@ import {
   baneseDocumentFixtureAt,
 } from "../internal/testing/document-fixture.ts";
 import {
+  buildBanesePixImageFixture,
+  buildBanesePixPayloadFixture,
+} from "../internal/testing/pix-fixture.ts";
+import {
+  baneseDueDateFactor,
+  calculateBaneseAsbaceDoubleDigit,
+} from "../internal/bank-fields.ts";
+import {
   buildBaneseBoletoPayload,
   calculateBaneseNossoNumero,
   cancelBaneseBoleto,
@@ -11,6 +19,60 @@ import {
   validateBaneseBoletoResponse,
   validateBanesePixChargeInput,
 } from "./adapter.ts";
+
+const modulo10Digit = (value: string) => {
+  let weight = 2;
+  let total = 0;
+  for (let index = value.length - 1; index >= 0; index -= 1) {
+    const product = Number(value[index]) * weight;
+    total += product > 9 ? product - 9 : product;
+    weight = weight === 2 ? 1 : 2;
+  }
+  return String((10 - (total % 10)) % 10);
+};
+
+const barcodeGeneralDigit = (barcode: string) => {
+  let weight = 2;
+  let total = 0;
+  for (let index = barcode.length - 1; index >= 0; index -= 1) {
+    if (index === 4) continue;
+    total += Number(barcode[index]) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const remainder = total % 11;
+  return String(remainder < 2 ? 1 : 11 - remainder);
+};
+
+const makeBaneseBarcodePack = (amount: number, dueDate: string) => {
+  const amountValue = String(Math.round(amount * 100)).padStart(10, "0");
+  const agreement = BANESE_DOCUMENT_FIXTURE.beneficiary.agreement;
+  const agency = BANESE_DOCUMENT_FIXTURE.beneficiary.agency;
+  const account = BANESE_DOCUMENT_FIXTURE.beneficiary.account.replace(
+    /\D/g,
+    "",
+  );
+  const asbaceBase = `${
+    agency.slice(-2)
+  }${account}${BANESE_DOCUMENT_FIXTURE.ourNumber}047`;
+  const freeField = `${asbaceBase}${
+    calculateBaneseAsbaceDoubleDigit(asbaceBase)
+  }`;
+  const withPlaceholder = `04790${
+    baneseDueDateFactor(dueDate)
+  }${amountValue}${freeField}`;
+  const barcode = `${withPlaceholder.slice(0, 4)}${
+    barcodeGeneralDigit(withPlaceholder)
+  }${withPlaceholder.slice(5)}`;
+  const fieldOne = `${barcode.slice(0, 4)}${barcode.slice(19, 24)}`;
+  const fieldTwo = barcode.slice(24, 34);
+  const fieldThree = barcode.slice(34, 44);
+  const digitableLine = `${fieldOne}${modulo10Digit(fieldOne)}${fieldTwo}${
+    modulo10Digit(fieldTwo)
+  }${fieldThree}${modulo10Digit(fieldThree)}${barcode[4]}${
+    barcode.slice(5, 19)
+  }`;
+  return { agreement, barcode, digitableLine };
+};
 
 const validInput = {
   admin: { rpc: async () => ({ data: null, error: null }) },
@@ -112,12 +174,170 @@ Deno.test("bloqueia Pix Banese no sandbox indisponivel", async () => {
   );
 });
 
-Deno.test("bloqueia criacao Banese fora do sandbox", async () => {
+Deno.test("nao bloqueia criacao Banese por regra de ambiente em producao", async () => {
   await assert.rejects(
     () =>
       createBaneseBoletoCharge({ ...validInput, environment: "production" }),
-    /bloqueadas em producao/i,
+    (error: any) => {
+      const message = String(error?.message || error);
+      return /convenio/i.test(message) &&
+        !/bloqueadas em producao/i.test(message);
+    },
   );
+});
+
+Deno.test("bloqueia em producao boletas fora da faixa 2 a 10", async () => {
+  await assert.rejects(
+    () =>
+      createBaneseBoletoCharge({
+        ...reservedBoletoInput(false),
+        environment: "production",
+        amount: 1.5,
+      }),
+    (error: any) => {
+      const message = String(error?.message || error);
+      return /2,00|2.00/i.test(message) && /10,00|10.00/i.test(message);
+    },
+  );
+});
+
+Deno.test("producao aceita retorno do boleto sem pix", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; method: string }> = [];
+  const amount = 5.5;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const payloadWithoutPix = JSON.stringify({
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    ValorNominalNumerico: amount,
+    NossoNumeroSemDv: BANESE_DOCUMENT_FIXTURE.ourNumber.slice(0, 8),
+    convenio: values.agreement,
+  });
+
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = init?.method ||
+      (input instanceof Request ? input.method : "GET");
+    calls.push({ url, method });
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(payloadWithoutPix, { status: 200 });
+  };
+
+  try {
+    const productionInput = {
+      ...reservedBoletoInput(false),
+      environment: "production" as const,
+      amount,
+      financialTerms: null,
+    };
+    const result = await createBaneseBoletoCharge(productionInput);
+    assert.equal(result.pixPayload, null);
+    assert.equal(result.pixEncodedImage, null);
+    const postCalls = calls.filter((call) =>
+      call.method === "POST" && call.url.includes("/cobranca/v1/")
+    ).length;
+    assert.equal(postCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("producao aceita retornos de pix no retorno da criacao", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 8.5;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const payloadWithPix = JSON.stringify({
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    brCodeEMV: buildBanesePixPayloadFixture("TXID-TESTE", amount),
+    qrcode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+  });
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(payloadWithPix, { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(typeof result.pixPayload, "string");
+    assert.equal(typeof result.pixEncodedImage, "string");
+    assert.equal(
+      result.pixPayload?.length,
+      buildBanesePixPayloadFixture("TXID-TESTE", amount).length,
+    );
+    assert.match(
+      result.pixEncodedImage ?? "",
+      /^data:image\/png;base64,/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 8.5;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const payloadWithPix = JSON.stringify({
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    brCodeEMV: "04793153400000279903303100649000000002304772",
+    qrcode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+  });
+
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(payloadWithPix, { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, null);
+    assert.equal(result.pixEncodedImage, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 const adminForBaneseReservation = (alreadyReserved: boolean) => ({
@@ -155,6 +375,76 @@ const reservedBoletoInput = (alreadyReserved: boolean) => ({
   financialTerms: null,
 });
 
+Deno.test("erros locais falham antes de reservar Nosso Numero", async () => {
+  const originalFetch = globalThis.fetch;
+  const rpcCalls: string[] = [];
+  let fetchCalls = 0;
+  const admin = {
+    rpc: async (fn: string) => {
+      rpcCalls.push(fn);
+      throw new Error(`RPC nao deveria ser chamada: ${fn}`);
+    },
+  };
+  globalThis.fetch = () => {
+    fetchCalls += 1;
+    return Promise.reject(new Error("fetch nao deveria ser chamado"));
+  };
+
+  const baseInput = {
+    ...reservedBoletoInput(true),
+    admin,
+  };
+  const invalidInputs = [
+    {
+      ...baseInput,
+      payer: { ...validInput.payer, document: "123" },
+    },
+    {
+      ...baseInput,
+      payer: { ...validInput.payer, postalCode: "49000" },
+    },
+    {
+      ...baseInput,
+      receivable: { ...baseInput.receivable, baneseCodigoEspecie: 3 },
+    },
+    {
+      ...baseInput,
+      financialTerms: {
+        nominalAmount: BANESE_DOCUMENT_FIXTURE.amount,
+        dueDate: BANESE_DOCUMENT_FIXTURE.dueDate,
+        discount: {
+          type: "fixed" as const,
+          value: BANESE_DOCUMENT_FIXTURE.amount,
+        },
+      },
+    },
+  ];
+
+  try {
+    for (const input of invalidInputs) {
+      await assert.rejects(
+        () => createBaneseBoletoCharge(input),
+        (error: any) => {
+          assert.notEqual(error?.remotePaymentCreated, true);
+          return true;
+        },
+      );
+    }
+    // Uma repeticao do mesmo pedido invalido tambem nao cria reserva/ownership.
+    await assert.rejects(
+      () => createBaneseBoletoCharge(invalidInputs[1]),
+      (error: any) => {
+        assert.notEqual(error?.remotePaymentCreated, true);
+        return true;
+      },
+    );
+    assert.deepEqual(rpcCalls, []);
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("reserva existente recupera boleto por GET sem novo POST", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; method: string }> = [];
@@ -175,6 +465,7 @@ Deno.test("reserva existente recupera boleto por GET sem novo POST", async () =>
         NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
         NumeroLinhaDigitavel: BANESE_DOCUMENT_FIXTURE.digitableLine,
         NumeroCodigoBarras: BANESE_DOCUMENT_FIXTURE.barcode,
+        UrlBoleto: "https://servidor-externo.example/boleto.pdf",
         CodigoSituacaoBoleto: 2,
         ValorNominal: BANESE_DOCUMENT_FIXTURE.amount,
         DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
@@ -184,9 +475,25 @@ Deno.test("reserva existente recupera boleto por GET sem novo POST", async () =>
   };
 
   try {
-    const result = await createBaneseBoletoCharge(reservedBoletoInput(true));
-    const raw = result.raw as { recovered?: boolean };
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(true),
+      successUrl: "https://universocc.com.br/aluno?origem=checkout",
+    });
+    const raw = result.raw as {
+      recovered?: boolean;
+      response?: Record<string, unknown>;
+    };
     assert.equal(raw.recovered, true);
+    const localDocumentUrl = new URL(String(result.bankSlipUrl));
+    assert.equal(localDocumentUrl.origin, "https://universocc.com.br");
+    assert.equal(localDocumentUrl.pathname, "/aluno");
+    assert.equal(localDocumentUrl.searchParams.get("module"), "financeiro");
+    assert.equal(
+      localDocumentUrl.searchParams.get("banesePayment"),
+      BANESE_DOCUMENT_FIXTURE.receivableId,
+    );
+    assert.equal(result.link, result.bankSlipUrl);
+    assert.equal("UrlBoleto" in (raw.response || {}), false);
     assert.equal(
       calls.filter((call) =>
         call.method === "POST" && call.url.includes("/cobranca/v1/")
@@ -233,7 +540,8 @@ const cancellationFetch = (initialSituation: number) => {
   const calls: Array<{ url: string; method: string }> = [];
   const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
-    const method = init?.method || (input instanceof Request ? input.method : "GET");
+    const method = init?.method ||
+      (input instanceof Request ? input.method : "GET");
     calls.push({ url, method });
     if (url.includes("/autenticacao/")) {
       return new Response(
@@ -246,19 +554,25 @@ const cancellationFetch = (initialSituation: number) => {
       return new Response(JSON.stringify({ Mensagem: "ok" }), { status: 200 });
     }
     if (url.endsWith("/pagamentos/efetivados")) {
-      return new Response(JSON.stringify({
-        PagamentosEfetivados: [{
-          ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
-          DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
-        }],
-      }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          PagamentosEfetivados: [{
+            ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
+            DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
+          }],
+        }),
+        { status: 200 },
+      );
     }
-    return new Response(JSON.stringify({
-      NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
-      CodigoSituacaoBoleto: situation,
-      ValorNominal: BANESE_DOCUMENT_FIXTURE.amount,
-      DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
-    }), { status: 200 });
+    return new Response(
+      JSON.stringify({
+        NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+        CodigoSituacaoBoleto: situation,
+        ValorNominal: BANESE_DOCUMENT_FIXTURE.amount,
+        DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+      }),
+      { status: 200 },
+    );
   };
   return { calls, fetcher };
 };

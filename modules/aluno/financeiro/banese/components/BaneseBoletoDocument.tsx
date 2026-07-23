@@ -1,4 +1,5 @@
 import Download from 'lucide-react/dist/esm/icons/download';
+import ExternalLink from 'lucide-react/dist/esm/icons/external-link';
 import FileCheck2 from 'lucide-react/dist/esm/icons/file-check-2';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
@@ -29,14 +30,29 @@ const BaneseBoletoDocument = ({
           <h2 className="text-sm font-black text-[#001a33]">Boleto Banese em PDF</h2>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onDownload}
-        disabled={!documentUrl}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-[9px] font-black uppercase tracking-[0.15em] text-white transition hover:bg-[#07345f] disabled:cursor-not-allowed disabled:bg-slate-300"
-      >
-        <Download size={14} /> Baixar boleto
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (documentUrl) {
+              window.open(documentUrl, '_blank', 'noopener,noreferrer');
+            }
+          }}
+          disabled={!documentUrl}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#001a33] px-4 text-[9px] font-black uppercase tracking-[0.15em] text-[#001a33] transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-300"
+          title="Abrir boleto PDF diretamente em uma nova aba do navegador"
+        >
+          <ExternalLink size={14} /> Abrir em nova aba
+        </button>
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={!documentUrl}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-[9px] font-black uppercase tracking-[0.15em] text-white transition hover:bg-[#07345f] disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <Download size={14} /> Baixar boleto
+        </button>
+      </div>
     </header>
 
     <div className="relative min-h-[760px] bg-[#dfe5e9] p-2 sm:min-h-[920px] sm:p-4">

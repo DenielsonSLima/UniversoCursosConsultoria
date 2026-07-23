@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import sharp from 'sharp';
 
 const rootDir = process.cwd();
 const docsRoot = path.join(rootDir, 'Documentos', 'Cursos EAD para Adicionar');
@@ -235,6 +236,101 @@ const legacyCourseDefinitions = [
     tags: ['alimentacao'],
   },
   {
+    title: 'Educação Especial Inclusiva e Ensino Infantil e Fundamental',
+    hours: 180,
+    area: 'Educação Inclusiva',
+    price: 129.9,
+    batch: 10,
+    sources: [
+      '../Educacao Especial Inclusiva e ensino infantil fundamental, 180hrs 129,90 /Educação especial.pdf',
+      '../Educacao Especial Inclusiva e ensino infantil fundamental, 180hrs 129,90 /educação infantil e ensino fundamental.pdf',
+    ],
+    tags: ['bncc', 'pedagogia', 'inclusao'],
+    lessonTopics: [
+      'Conceitos de Educação Especial e direitos de aprendizagem',
+      'Direitos, legislação e garantias da educação inclusiva',
+      'Reconhecimento de perfis de estudantes e barreiras de participação',
+      'Adaptação curricular para a Educação Infantil',
+      'Atenção educacional no Ensino Fundamental I e II',
+      'Planejamento de aulas acessíveis e materiais inclusivos',
+      'Estratégias de avaliação inclusiva e acompanhamento individual',
+      'Trabalho colaborativo com família, escola e rede de apoio',
+    ],
+    activityCount: 8,
+    activityBank: [
+      [
+        'Em uma turma de Educação Infantil, três crianças precisam de mais apoio visual. A melhor decisão inicial da equipe pedagógica é:',
+        'Criar pistas visuais, rotina estável e combinar instruções curtas com repetição.',
+        'Retirar as crianças do grupo para não atrapalhar os demais.',
+        'Diminuir o tempo de brincadeira de toda a turma.',
+        'Manter o mesmo plano sem adaptações para não gerar confusão.',
+      ],
+      [
+        'Ao organizar uma atividade de alfabetização para turma inclusiva, a alternativa mais adequada é:',
+        'Usar um único material para todos e exigir o mesmo tempo de execução.',
+        'Usar diferentes linguagens: visual, auditiva e tátil, com metas progressivas.',
+        'Substituir toda atividade por tarefas individuais repetitivas.',
+        'Aplicar apenas atividades escritas, já que a avaliação depende de texto.',
+      ],
+      [
+        'Ao receber avaliação médica indicando necessidades específicas, o professor deve:',
+        'Ignorar a orientação e seguir o planejamento padrão.',
+        'Usar a orientação como base para ajustar ambiente, comunicação e estratégias.',
+        'Trocar imediatamente a responsabilidade da família pela turma.',
+        'Encerrar atividades coletivas e focar só no atendimento individual.',
+      ],
+      [
+        'Uma evidência importante em planejamento inclusivo é:',
+        'Plano Educacional Individualizado com objetivos e estratégias avaliáveis.',
+        'Registro apenas do nome dos alunos com deficiência.',
+        'Arquivar apenas boletins finais sem acompanhar processos.',
+        'Aguardar o fim do trimestre para registrar progressos.',
+      ],
+      [
+        'No Ensino Fundamental, diante de dificuldades de leitura de um aluno, a conduta mais correta é:',
+        'Retirar o aluno de todas as leituras coletivas para não gerar constrangimento.',
+        'Dividir a atividade em etapas curtas, com repetição orientada e materiais adaptados.',
+        'Manter o mesmo recurso de todo o grupo e aumentar o volume de tarefas.',
+        'Atrasar a devolução da devolutiva à família até ter um gráfico completo.',
+      ],
+      [
+        'Para reduzir barreiras de aprendizagem, uma boa prática de sala é:',
+        'Padronizar sempre o mesmo formato e ignorar estilos de aprendizagem diferentes.',
+        'Variar metodologia e prever apoios físicos, digitais e de linguagem.',
+        'Remover apoio visual para estimular “memória auditiva”.',
+        'Usar somente reforços positivos sem acompanhamento de dados.',
+      ],
+      [
+        'Na parceria com a família, a comunicação mais eficiente é:',
+        'Reuniões regulares com metas simples, linguagem respeitosa e acordos de acompanhamento.',
+        'Comunicação esporádica apenas quando houver crise.',
+        'Conversa apenas por terceiros para evitar mal-entendidos.',
+        'Troca apenas quando solicitado pelo responsável.',
+      ],
+      [
+        'Ao registrar evolução, o professor deve priorizar:',
+        'Relatos críticos e comparações entre colegas sem contexto.',
+        'Observações objetivas: contexto, estratégia usada e evidência de progresso.',
+        'Anotações vagas para preservar tempo.',
+        'Somente a nota final da etapa.',
+      ],
+    ],
+    questionBank: [
+      ['Qual princípio organiza a Educação Inclusiva na escola?', 'Garantir participação com igualdade, acessibilidade e respeito à diversidade.', 'Escolher atividades somente para alunos com desempenho médio.', 'Centralizar decisões apenas na gestão escolar.', 'Substituir o currículo por conteúdos livres de padrão'],
+      ['Na Educação Infantil inclusiva, o planejamento deve priorizar:', 'Rotina estruturada, interações significativas e múltiplas linguagens.', 'Redução de brincadeiras para ganhar controle.', 'Separação de alunos conforme desempenho.', 'Apenas atividades individuais.'],
+      ['A adaptação curricular pode incluir:', 'Único método para toda a turma.', 'Mudanças em formato, tempo, recursos e avaliação.', 'Remoção de conteúdos essenciais.', 'Pular etapas sem registrar as decisões.'],
+      ['Para favorecer autonomia, uma ação recomendada é:', 'Oferecer pistas visuais e rotinas previsíveis com apoio gradativo.', 'Evitar instruções orais para não confundir os alunos.', 'Centralizar todas as respostas na professora.', 'Não permitir escolhas de tarefas.'],
+      ['Sobre avaliação inclusiva, é mais correto afirmar que ela deve:', 'Ser contínua, diagnóstica e orientada para intervenção.', 'Ser apenas somativa e classificatória.', 'Basear-se apenas em comparação entre colegas.', 'Usar o mesmo formato sem revisão.'],
+      ['Em equipe multidisciplinar, o papel do professor é:', 'Escutar, registrar e articular o trabalho com especialistas e família.', 'Executar sozinho todas as decisões pedagógicas.', 'Assumir competências legais médicas e terapêuticas.', 'Evitar compartilhar informações por segurança.'],
+      ['Ao identificar sinais de barreira de participação, o professor deve primeiro:', 'Investigar contexto, observar a tarefa e planejar um ajuste simples.', 'Aumentar a cobrança para compensar o desempenho.', 'Transferir o aluno imediatamente de classe.', 'Concluir que a dificuldade é desinteresse e apenas pedir mais esforço.'],
+      ['No Ensino Fundamental, a relação entre inclusão e BNCC se expressa como:', 'Organização de práticas que considerem diversidade, equidade e direitos de aprendizagem.', 'Cumprimento rígido de conteúdos sem adaptações.', 'Foco apenas em aprovação por nota.', 'Abandono do planejamento anual.'],
+      ['Qual medida fortalece a relação escola-família?', 'Canal regular de comunicação, metas compartilhadas e devolutivas objetivas.', 'Contato apenas em reuniões obrigatórias de final de bimestre.', 'Foco apenas em reclamações.', 'Evitar explicar estratégias pedagógicas.'],
+      ['A melhor postura profissional da docência inclusiva é:', 'Respeito, ética, observação, planejamento e responsabilidade educativa.', 'Acelerar etapas para seguir cronograma.', 'Decidir sem escutar estudante e família.', 'Padronizar respostas para todas as dificuldades'],
+    ],
+    researchNotes: ['Curso desenvolvido para apoiar práticas de inclusão na Educação Infantil e no Ensino Fundamental, com foco em acessibilidade, adaptação pedagógica e avaliação contínua.'],
+    generateCover: true,
+  },
+  {
     title: 'Acolhimento e Segurança no Retorno às Aulas',
     hours: 80,
     area: 'Educação',
@@ -280,6 +376,74 @@ const newCourseDefinitions = [
     tags: ['farmacia', 'saude', 'atendimento'],
     lessonTopics: ['Sistema de Saúde, Farmácia e Papel do Atendente', 'Atendimento, Triagem Comercial e Comunicação', 'Medicamentos, Receitas e Cuidados Básicos', 'Organização, Estoque e Validade', 'Boas Práticas, Anvisa e Segurança', 'Vendas Responsáveis e Rotina de Balcão'],
     researchNotes: ['O curso não habilita prescrição nem dispensação técnica privativa. O foco é atendimento, organização, leitura básica de rotinas, apoio sob supervisão farmacêutica e boas práticas sanitárias.'],
+  },
+  {
+    title: 'Atendente de Consultório Médico',
+    hours: 100,
+    area: 'Saúde',
+    price: 109.9,
+    batch: 1,
+    sources: [],
+    tags: ['saude', 'atendimento', 'consultorio', 'clinica'],
+    lessonTopics: [
+      'Boas-vindas, ética e comunicação no atendimento clínico',
+      'Fluxo administrativo do consultório: agenda, cadastro e confirmação',
+      'Prontuário, sigilo e organização documental',
+      'Triagem inicial e classificação de risco no primeiro contato',
+      'Encaminhamento seguro, segurança do paciente e qualidade do atendimento',
+    ],
+    activityBank: [
+      [
+        'Simular acolhimento telefônico com coleta de dados mínimos em 3 minutos.',
+        'Registrar nome completo, motivo da consulta, data de nascimento e canal de retorno.',
+        'Responder apenas se o paciente conhece o nome do médico.',
+        'Atender sem anotar informações para depois.',
+        'Encerrar sem confirmar dados sensíveis.',
+      ],
+      [
+        'Montar agenda semanal com priorização por tipo de atendimento e urgência.',
+        'Separar horários fixos para demanda eletiva e manter bloqueios de segurança para casos urgentes.',
+        'Colocar todos os pacientes no mesmo horário para padronizar.',
+        'Priorizar sempre o primeiro agendado, sem avaliar prioridade clínica.',
+        'Evitar critérios e trocar horários sem registro.',
+      ],
+      [
+        'Confeccionar cadastro completo de paciente com validação de documentos.',
+        'Conferir documento de identidade, contato atual e histórico de atendimento antes de finalizar o cadastro.',
+        'Inserir apenas nome e telefone para ganhar tempo.',
+        'Deixar campos obrigatórios em branco quando faltar documentos.',
+        'Compartilhar prontuário em grupos para conferência.',
+      ],
+      [
+        'Revisar e organizar prontuário inicial com checklist de sigilo e LGPD.',
+        'Verificar autorização de acesso, anexos obrigatórios e histórico antes de liberar atendimento.',
+        'Armazenar dados em planilha aberta para consulta rápida.',
+        'Aceitar qualquer documento sem conferência de autenticidade.',
+        'Permitir acesso de todos os funcionários sem controle.',
+      ],
+      [
+        'Resolver cenário de rotina: atraso de paciente + confirmação + remanejamento de horário.',
+        'Informar nova previsão com empatia, registrar ajuste e comunicar equipe médica imediatamente.',
+        'Reagendar sem confirmar disponibilidade e sem registrar.',
+        'Informar ausência de reposição e ignorar comunicação.',
+        'Negar atendimento sem orientar próximos passos.',
+      ],
+    ],
+    activityCount: 5,
+    questionBank: [
+      ['Qual informação é obrigatória no primeiro atendimento?', 'Motivo da consulta', 'CPF do acompanhante', 'Idade do médico', 'Cor preferida da sala'],
+      ['Em caso de paciente sem seguro vigente, a atitude correta é:', 'Registrar dados e orientar equipe financeira antes da consulta', 'Negar atendimento', 'Cobrar valor no momento', 'Entregar documento incompleto'],
+      ['Qual conduta indica quebra de sigilo?', 'Divulgar prontuário em grupo aberto', 'Confirmar consulta por voz com familiar', 'Registrar no sistema autorizado', 'Utilizar senha individualizada'],
+      ['A confirmação de consulta deve ocorrer prioritariamente:', '24h antes do horário previsto, quando aplicável', 'Após o início da consulta', 'Só no dia sem contato', 'Apenas por mensagem pública'],
+      ['Na triagem inicial, o dado mais crítico para segurança é:', 'Sinais de alerta (dor intensa, falta de ar, alergias)', 'Cor dos olhos', 'Preferência musical', 'Cidade de origem'],
+      ['Para reagendar paciente com prioridade, o mais correto é:', 'Reagendar com protocolo de prioridade e registrar motivo', 'Cancelar e não avisar', 'Trocar sem registrar', 'Transferir sem confirmar'],
+      ['A principal finalidade do protocolo de biossegurança na recepção é:', 'Minimizar risco de infecção e contaminação cruzada', 'Embelezar ambiente', 'Reduzir consumo de materiais', 'Agilizar o recebimento de correspondências'],
+      ['Em uma anamnese emergencial, a informação que reduz risco médico é:', 'Medicamentos em uso e alergias', 'Nome do plano de saúde', 'Cor do uniforme', 'Preferência de idioma'],
+      ['Ao identificar erro de cadastro já gravado, o correto é:', 'Corrigir em nova revisão com rastreabilidade', 'Sobrescrever sem trilha', 'Deletar histórico', 'Ignorar para não atrasar'],
+      ['Qual mensagem de acolhimento está adequada para o paciente em atraso?', 'Precisamos regularizar sua chegada e vamos conferir opções de horário', 'Você ficou sem atendimento', 'Não atendemos depois do horário', 'Procure outro local'],
+    ],
+    researchNotes: ['Curso focado em protocolo administrativo e de acolhimento do consultório com privacidade, segurança da informação e segurança do paciente.'],
+    generateCover: true,
   },
   {
     title: 'Marketing Digital',
@@ -1053,6 +1217,20 @@ function splitIntoLessons(course, rawText) {
 }
 
 function buildQuestions(course, lessons) {
+  const activityPromptSet = new Set(
+    (Array.isArray(course.activityBank)
+      ? course.activityBank
+          .map((activity) => {
+            if (Array.isArray(activity) && typeof activity[0] === 'string') return activity[0];
+            if (typeof activity === 'string') return activity;
+            return typeof activity?.enunciado === 'string' ? activity.enunciado : '';
+          })
+          .filter(Boolean)
+          .map((item) => String(item).trim().toLowerCase())
+      : []
+    ).filter(Boolean),
+  );
+
   const generic = [
     ['Qual atitude demonstra postura ética no curso?', 'Registrar informações corretamente e respeitar normas da área.', 'Ignorar procedimentos para acelerar a rotina.', 'Compartilhar dados sem autorização.', 'Atuar sem planejamento.'],
     ['Por que o planejamento é importante?', 'Porque organiza objetivos, recursos, prazos e critérios de acompanhamento.', 'Porque substitui a avaliação.', 'Porque elimina a necessidade de registros.', 'Porque evita comunicação com a equipe.'],
@@ -1177,7 +1355,12 @@ function buildQuestions(course, lessons) {
     );
   }
 
-  const questions = [...byTag, ...generic].slice(0, MIN_QUESTIONS);
+  const questions = [...byTag, ...generic]
+    .filter(([question]) => {
+      const normalizedQuestion = String(question || '').trim().toLowerCase();
+      return !activityPromptSet.has(normalizedQuestion);
+    })
+    .slice(0, MIN_QUESTIONS);
   while (questions.length < MIN_QUESTIONS) {
     const lesson = lessons[questions.length % lessons.length];
     questions.push([
@@ -1199,23 +1382,42 @@ function buildQuestions(course, lessons) {
 }
 
 function buildActivities(course, lessons, questions) {
-  return lessons.slice(0, 4).map((lesson, index) => ({
-    id: `atividade-${index + 1}`,
-    titulo: `Atividade ${index + 1}: ${lesson.titulo}`,
-    descricao: `Marque a alternativa correta sobre uma situação prática relacionada ao curso de ${course.title}.`,
-    tipo: 'multipla_escolha',
-    obrigatoria: true,
-    etapaId: lesson.id,
-    aulaId: lesson.id,
-    enunciado: questions[index]?.pergunta || `Qual conduta se relaciona melhor com "${lesson.titulo}"?`,
-    opcoes: questions[index]?.opcoes || [
+  const targetCount = Math.min(course.activityCount ?? 4, lessons.length);
+  const customActivities = Array.isArray(course.activityBank) ? course.activityBank : [];
+
+  return lessons.slice(0, targetCount).map((lesson, index) => {
+    const customActivity = customActivities[index];
+    const fallback = questions[index]?.opcoes || [
       'Aplicar o conteúdo com planejamento, ética, registro e segurança.',
       'Ignorar procedimentos para acelerar a rotina.',
       'Executar tarefas sem observar o contexto.',
-      'Deixar registros para depois sem critério.'
-    ],
-    respostaCorreta: questions[index]?.respostaCorreta ?? 0,
-  }));
+      'Deixar registros para depois sem critério.',
+    ];
+    const enunciadoPadrao = questions[index]?.pergunta || `Qual conduta se relaciona melhor com "${lesson.titulo}"?`;
+
+    const customEnunciado = typeof customActivity === 'string'
+      ? customActivity
+      : Array.isArray(customActivity) && typeof customActivity[0] === 'string'
+        ? customActivity[0]
+        : '';
+
+    const customOpcoes = Array.isArray(customActivity)
+      ? customActivity.slice(1).filter((item) => typeof item === 'string')
+      : [];
+
+    return {
+      id: `atividade-${index + 1}`,
+      titulo: `Atividade ${index + 1}: ${lesson.titulo}`,
+      descricao: `Marque a alternativa correta sobre uma situação prática relacionada ao curso de ${course.title}.`,
+      tipo: 'multipla_escolha',
+      obrigatoria: true,
+      etapaId: lesson.id,
+      aulaId: lesson.id,
+      enunciado: customEnunciado || enunciadoPadrao,
+      opcoes: customOpcoes.length >= 4 ? customOpcoes.slice(0, 4) : [...fallback],
+      respostaCorreta: 0,
+    };
+  });
 }
 
 function buildEadConfig(course, lessons) {
@@ -1378,6 +1580,17 @@ function coverSourceForCourse(course) {
     throw new Error(`Capa base nao encontrada: ${fileName}`);
   }
   return sourcePath;
+}
+
+async function ensureCourseCover(course, coverPath) {
+  if (course.generateCover) {
+    await sharp(Buffer.from(generatedCoverSvg(course)))
+      .webp({ quality: 82, effort: 5 })
+      .toFile(coverPath);
+    return;
+  }
+
+  copyFileSync(coverSourceForCourse(course), coverPath);
 }
 
 function hashString(value) {
@@ -1675,7 +1888,7 @@ async function buildCourses() {
       const slug = slugify(course.title);
       const coverPath = path.join(coversDir, `${slug}.webp`);
       if (!existsSync(coverPath)) {
-        copyFileSync(coverSourceForCourse(normalizedCourse), coverPath);
+        await ensureCourseCover(normalizedCourse, coverPath);
       }
       return {
         ...normalizedCourse,

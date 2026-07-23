@@ -1,6 +1,9 @@
 import { buildCheckoutCharge } from "../core/checkout.ts";
 import { roundMoney, toNumber } from "../core/money.ts";
-import { calculateEadCheckoutFeeBreakdown, shouldPassEadInstallmentCost } from "./fees.ts";
+import {
+  calculateEadCheckoutFeeBreakdown,
+  shouldPassEadInstallmentCost,
+} from "./fees.ts";
 import type { EadCheckoutPaymentRequest } from "./payment-request.ts";
 import { resolveEadPaymentSelection } from "./payment-request.ts";
 import { resolveEadConfiguredPayment } from "./payment-methods.ts";
@@ -13,11 +16,22 @@ export const resolveEadCheckoutCharge = (
 ) => {
   const { financeiroConfig } = resolveEadConfiguredPayment(course);
   const baseValue = roundMoney(toNumber(course?.valor));
-  const paymentSelection = resolveEadPaymentSelection(financeiroConfig, paymentRequest);
+  if (!baseValue || baseValue <= 0) {
+    throw new Error("Valor do curso EAD ainda nao configurado para cobranca.");
+  }
+  const paymentSelection = resolveEadPaymentSelection(
+    financeiroConfig,
+    paymentRequest,
+  );
   const { billingType, installmentCount } = paymentSelection;
-  const includeFeeInCheckout = financeiroConfig.considerarTaxaNoCheckout === true;
+  const includeFeeInCheckout = financeiroConfig.considerarTaxaNoCheckout ===
+    true;
   const shouldApplyFeeInCheckout = billingType === "CREDIT_CARD"
-    ? (shouldPassEadInstallmentCost({ financeiroConfig, billingType, installmentCount }) || includeFeeInCheckout)
+    ? includeFeeInCheckout || shouldPassEadInstallmentCost({
+      financeiroConfig,
+      billingType,
+      installmentCount,
+    })
     : includeFeeInCheckout;
   const feeBreakdown = calculateEadCheckoutFeeBreakdown(
     baseValue,

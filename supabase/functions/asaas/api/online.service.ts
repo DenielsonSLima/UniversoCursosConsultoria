@@ -1,4 +1,4 @@
-import { callAsaas, type AsaasRuntime } from "./asaas-http.ts";
+import { type AsaasRuntime, callAsaas } from "./asaas-http.ts";
 import { buildCoursePaymentDescription } from "./shared.ts";
 import {
   isEadCourseModality,
@@ -31,7 +31,9 @@ export const createAsaasOnlineService = (
       month: "2-digit",
       day: "2-digit",
     }).formatToParts(new Date());
-    const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const value = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
     return `${value.year}-${value.month}-${value.day}`;
   };
 
@@ -45,16 +47,22 @@ export const createAsaasOnlineService = (
     const matriculas = turma?.matriculas;
     if (!Array.isArray(matriculas)) return 0;
     return matriculas.filter((matricula: any) =>
-      blockingEnrollmentStatuses.has(String(matricula?.status || "").toUpperCase())
+      blockingEnrollmentStatuses.has(
+        String(matricula?.status || "").toUpperCase(),
+      )
     ).length;
   };
 
-  const getTurmaUnavailabilityReason = (turma: any, requireOnlinePermission = true) => {
+  const getTurmaUnavailabilityReason = (
+    turma: any,
+    requireOnlinePermission = true,
+  ) => {
     const today = currentMaceioDate();
     const alunosMatriculados = getMatriculasTotal(turma);
     const vagasTotais = Number(turma?.vagas_totais || 0);
     const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
-    const bloquearMatriculasAposCompletarVagas = turma?.bloquear_matriculas_apos_completar_vagas !== false;
+    const bloquearMatriculasAposCompletarVagas =
+      turma?.bloquear_matriculas_apos_completar_vagas !== false;
     const inicioInscricao = toDateString(turma?.data_inicio_inscricao);
     const fimInscricao = toDateString(turma?.data_fim_inscricao);
 
@@ -63,11 +71,15 @@ export const createAsaasOnlineService = (
     }
 
     if (inicioInscricao && today < inicioInscricao) {
-      return `As inscrições ainda não abriram. Abertura prevista para ${formatDatePtBr(inicioInscricao)}.`;
+      return `As inscrições ainda não abriram. Abertura prevista para ${
+        formatDatePtBr(inicioInscricao)
+      }.`;
     }
 
     if (fimInscricao && today > fimInscricao) {
-      return `As inscrições foram encerradas em ${formatDatePtBr(fimInscricao)}. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.`;
+      return `As inscrições foram encerradas em ${
+        formatDatePtBr(fimInscricao)
+      }. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.`;
     }
 
     if (bloquearMatriculasAposCompletarVagas) {
@@ -83,7 +95,10 @@ export const createAsaasOnlineService = (
     return null;
   };
 
-  const getAvailableTurmaForEnrollment = (turmas: any[], requireOnlinePermission = true) => {
+  const getAvailableTurmaForEnrollment = (
+    turmas: any[],
+    requireOnlinePermission = true,
+  ) => {
     const evaluated = (turmas || []).map((turma) => ({
       turma,
       reason: getTurmaUnavailabilityReason(turma, requireOnlinePermission),
@@ -94,7 +109,8 @@ export const createAsaasOnlineService = (
 
     return {
       turma: null,
-      reason: evaluated[0]?.reason || "Não há turma aberta para este curso para receber inscrições.",
+      reason: evaluated[0]?.reason ||
+        "Não há turma aberta para este curso para receber inscrições.",
     };
   };
 
@@ -106,7 +122,9 @@ export const createAsaasOnlineService = (
     const courseId = String(body.courseId || "");
     const paymentId = body.paymentId ? String(body.paymentId) : "";
     const forcedAlunoId = body.alunoId ? String(body.alunoId) : "";
-    if (!courseId && !paymentId) throw new Error("Informe o curso ou o pagamento Asaas para reconciliar.");
+    if (!courseId && !paymentId) {
+      throw new Error("Informe o curso ou o pagamento Asaas para reconciliar.");
+    }
 
     const { data: course, error: courseError } = await admin
       .from("cursos")
@@ -114,36 +132,54 @@ export const createAsaasOnlineService = (
       .eq("id", courseId)
       .maybeSingle();
     if (courseError) throw courseError;
-    if (!course && courseId) throw new Error("Curso não encontrado para reconciliação.");
+    if (!course && courseId) {
+      throw new Error("Curso não encontrado para reconciliação.");
+    }
     if (course && !isOnlineCourseModality(course.modalidade)) {
-      throw new Error("A reconciliação online é permitida apenas para modalidades com checkout online (EAD, LIVRE, ESPECIALIZACAO e TECNICO).");
+      throw new Error(
+        "A reconciliação online é permitida apenas para modalidades com checkout online (EAD, LIVRE, ESPECIALIZACAO e TECNICO).",
+      );
     }
 
     const paymentsResponse = paymentId
       ? { data: [await callAsaas(runtime, `/payments/${paymentId}`)] }
-      : await callAsaas(runtime, `/payments?externalReference=${encodeURIComponent(courseId)}&limit=50`);
+      : await callAsaas(
+        runtime,
+        `/payments?externalReference=${encodeURIComponent(courseId)}&limit=50`,
+      );
     const paidPayments = (paymentsResponse?.data || []).filter((payment: any) =>
-      ["RECEIVED", "CONFIRMED"].includes(String(payment.status || "")),
+      ["RECEIVED", "CONFIRMED"].includes(String(payment.status || ""))
     );
 
     let reconciled = 0;
     for (const payment of paidPayments) {
-      const customer = payment.customer ? await callAsaas(runtime, `/customers/${payment.customer}`) : null;
+      const customer = payment.customer
+        ? await callAsaas(runtime, `/customers/${payment.customer}`)
+        : null;
       const cpfCnpj = String(customer?.cpfCnpj || "").replace(/\D/g, "");
 
       let aluno: any = null;
       if (forcedAlunoId) {
-        const { data, error } = await admin.from("parceiros").select("*").eq("id", forcedAlunoId).maybeSingle();
+        const { data, error } = await admin.from("parceiros").select("*").eq(
+          "id",
+          forcedAlunoId,
+        ).maybeSingle();
         if (error) throw error;
         aluno = data;
       }
       if (!aluno && cpfCnpj) {
-        const { data, error } = await admin.from("parceiros").select("*").eq("cpf_cnpj", cpfCnpj).maybeSingle();
+        const { data, error } = await admin.from("parceiros").select("*").eq(
+          "cpf_cnpj",
+          cpfCnpj,
+        ).maybeSingle();
         if (error) throw error;
         aluno = data;
       }
       if (!aluno && customer?.email) {
-        const { data, error } = await admin.from("parceiros").select("*").ilike("email", customer.email).maybeSingle();
+        const { data, error } = await admin.from("parceiros").select("*").ilike(
+          "email",
+          customer.email,
+        ).maybeSingle();
         if (error) throw error;
         aluno = data;
       }
@@ -166,13 +202,18 @@ export const createAsaasOnlineService = (
         if (error) throw error;
         aluno = data;
       } else if (customer?.id && !aluno.asaas_customer_id) {
-        await admin.from("parceiros").update({ asaas_customer_id: customer.id }).eq("id", aluno.id);
+        await admin.from("parceiros").update({ asaas_customer_id: customer.id })
+          .eq("id", aluno.id);
       }
 
       const targetCourse = course || (() => {
-        throw new Error("Curso obrigatório para reconciliar pagamento sem link antigo.");
+        throw new Error(
+          "Curso obrigatório para reconciliar pagamento sem link antigo.",
+        );
       })();
-      const requireOnlinePermission = !isEadCourseModality(targetCourse.modalidade);
+      const requireOnlinePermission = !isEadCourseModality(
+        targetCourse.modalidade,
+      );
       let turmasQuery = admin.from("turmas")
         .select(`
           id,
@@ -186,32 +227,48 @@ export const createAsaasOnlineService = (
           matriculas(status)
         `)
         .eq("curso_id", targetCourse.id)
-        .in("status", isEadCourseModality(targetCourse.modalidade)
-          ? ["EM_ANDAMENTO"]
-          : ["INSCRICOES_ABERTAS", "EM_ANDAMENTO"]);
+        .in(
+          "status",
+          isEadCourseModality(targetCourse.modalidade)
+            ? ["EM_ANDAMENTO"]
+            : ["INSCRICOES_ABERTAS", "EM_ANDAMENTO"],
+        );
       if (requireOnlinePermission) {
         turmasQuery = turmasQuery.eq("permitir_inscricoes_online", true);
       }
       if (options.poloId) {
         turmasQuery = turmasQuery.eq("polo_id", options.poloId);
       }
-      const { data: turmas, error: turmaError } = await turmasQuery.order("data_inicio", { ascending: true });
+      const { data: turmas, error: turmaError } = await turmasQuery.order(
+        "data_inicio",
+        { ascending: true },
+      );
       if (turmaError) throw turmaError;
-      const turmaSelection = getAvailableTurmaForEnrollment(turmas || [], requireOnlinePermission);
+      const turmaSelection = getAvailableTurmaForEnrollment(
+        turmas || [],
+        requireOnlinePermission,
+      );
       const turma = turmaSelection.turma;
-      if (!turma) throw new Error(`Não há turma aberta para ${targetCourse.nome}.`);
+      if (!turma) {
+        throw new Error(`Não há turma aberta para ${targetCourse.nome}.`);
+      }
 
-      const { data: existingMatricula, error: existingMatriculaError } = await admin.from("matriculas")
-        .select("*")
-        .eq("aluno_id", aluno.id)
-        .eq("turma_id", turma.id)
-        .maybeSingle();
+      const { data: existingMatricula, error: existingMatriculaError } =
+        await admin.from("matriculas")
+          .select("*")
+          .eq("aluno_id", aluno.id)
+          .eq("turma_id", turma.id)
+          .maybeSingle();
       if (existingMatriculaError) throw existingMatriculaError;
 
-      const keepTechnicalDocumentationPending = isTecnicoCourseModality(targetCourse.modalidade);
-      const existingStatus = String(existingMatricula?.status || "").toUpperCase();
-      const preserveApprovedTechnicalStatus = keepTechnicalDocumentationPending
-        && ["ATIVO", "CONCLUIDO", "TRANCADO"].includes(existingStatus);
+      const keepTechnicalDocumentationPending = isTecnicoCourseModality(
+        targetCourse.modalidade,
+      );
+      const existingStatus = String(existingMatricula?.status || "")
+        .toUpperCase();
+      const preserveApprovedTechnicalStatus =
+        keepTechnicalDocumentationPending &&
+        ["ATIVO", "CONCLUIDO", "TRANCADO"].includes(existingStatus);
       let matricula = existingMatricula;
 
       if (!existingMatricula) {
@@ -223,14 +280,21 @@ export const createAsaasOnlineService = (
       } else if (!preserveApprovedTechnicalStatus) {
         matricula = (await admin
           .from("matriculas")
-          .update({ status: keepTechnicalDocumentationPending ? "PENDENTE" : "ATIVO" })
+          .update({
+            status: keepTechnicalDocumentationPending ? "PENDENTE" : "ATIVO",
+          })
           .eq("id", existingMatricula.id)
           .select()
           .single()).data;
       }
-      if (!matricula) throw new Error("Não foi possível registrar a matrícula reconciliada.");
+      if (!matricula) {
+        throw new Error("Não foi possível registrar a matrícula reconciliada.");
+      }
 
-      const paidAt = String(payment.paymentDate || payment.clientPaymentDate || payment.confirmedDate || new Date().toISOString()).slice(0, 10);
+      const paidAt = String(
+        payment.paymentDate || payment.clientPaymentDate ||
+          payment.confirmedDate || new Date().toISOString(),
+      ).slice(0, 10);
       const receivablePayload = {
         polo_id: turma.polo_id,
         descricao: buildCoursePaymentDescription(targetCourse.nome),
@@ -250,45 +314,52 @@ export const createAsaasOnlineService = (
         nosso_numero_asaas: payment.id,
         asaas_invoice_url: payment.invoiceUrl || null,
         asaas_bank_slip_url: payment.bankSlipUrl || null,
-        asaas_installment_id: payment.installment || payment.installmentId || null,
+        asaas_installment_id: payment.installment || payment.installmentId ||
+          null,
         asaas_transaction_receipt_url: payment.transactionReceiptUrl || null,
         asaas_status: payment.status || null,
         asaas_synced_at: new Date().toISOString(),
         asaas_last_error: null,
         updated_at: new Date().toISOString(),
       };
-      const { data: existingReceivable, error: existingReceivableError } = await admin
-        .from("contas_receber")
-        .select("id")
-        .eq("asaas_payment_id", payment.id)
-        .maybeSingle();
+      const { data: existingReceivable, error: existingReceivableError } =
+        await admin
+          .from("contas_receber")
+          .select("id")
+          .eq("asaas_payment_id", payment.id)
+          .maybeSingle();
       if (existingReceivableError) throw existingReceivableError;
       const receivableQuery = existingReceivable
-        ? admin.from("contas_receber").update(receivablePayload).eq("id", existingReceivable.id)
+        ? admin.from("contas_receber").update(receivablePayload).eq(
+          "id",
+          existingReceivable.id,
+        )
         : admin.from("contas_receber").insert(receivablePayload);
       const { error: receivableError } = await receivableQuery;
       if (receivableError) throw receivableError;
 
-      const { error: inscricaoError } = await admin.from("inscricoes_online").upsert({
-        curso_id: targetCourse.id,
-        turma_id: turma.id,
-        aluno_id: aluno.id,
-        matricula_id: matricula.id,
-        asaas_payment_id: payment.id,
-        asaas_customer_id: customer?.id || payment.customer || null,
-        asaas_payment_link_id: payment.paymentLink || null,
-        nome: customer?.name || aluno.nome,
-        cpf_cnpj: cpfCnpj || aluno.cpf_cnpj || null,
-        email: customer?.email || aluno.email || null,
-        telefone: customer?.mobilePhone || customer?.phone || aluno.telefone || null,
-        valor: Number(payment.value || targetCourse.valor || 0),
-        status: "PAGO",
-        pago_em: new Date().toISOString(),
-        confirmado_em: new Date().toISOString(),
-        forma_pagamento: payment.billingType || null,
-        erro: null,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "asaas_payment_id" });
+      const { error: inscricaoError } = await admin.from("inscricoes_online")
+        .upsert({
+          curso_id: targetCourse.id,
+          turma_id: turma.id,
+          aluno_id: aluno.id,
+          matricula_id: matricula.id,
+          asaas_payment_id: payment.id,
+          asaas_customer_id: customer?.id || payment.customer || null,
+          asaas_payment_link_id: payment.paymentLink || null,
+          nome: customer?.name || aluno.nome,
+          cpf_cnpj: cpfCnpj || aluno.cpf_cnpj || null,
+          email: customer?.email || aluno.email || null,
+          telefone: customer?.mobilePhone || customer?.phone ||
+            aluno.telefone || null,
+          valor: Number(payment.value || targetCourse.valor || 0),
+          status: "PAGO",
+          pago_em: new Date().toISOString(),
+          confirmado_em: new Date().toISOString(),
+          forma_pagamento: payment.billingType || null,
+          erro: null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "asaas_payment_id" });
       if (inscricaoError) throw inscricaoError;
 
       reconciled += 1;
@@ -300,7 +371,9 @@ export const createAsaasOnlineService = (
   const createCourseLink = async (runtime: AsaasRuntime, body: any) => {
     void runtime;
     void body;
-    throw new Error("Links diretos de curso foram desativados. Use o checkout online do aluno para gerar cobrança no nome do aluno.");
+    throw new Error(
+      "Links diretos de curso foram desativados. Use o checkout online do aluno para gerar cobrança no nome do aluno.",
+    );
   };
 
   return {

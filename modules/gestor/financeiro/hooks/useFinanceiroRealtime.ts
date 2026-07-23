@@ -52,7 +52,7 @@ export function useFinanceiroRealtime(poloId?: string | null) {
           ),
           refetchType: 'active',
         });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables });
 

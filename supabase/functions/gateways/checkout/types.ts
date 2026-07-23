@@ -4,16 +4,13 @@ import type {
   GatewayProviderCode,
 } from "../router.ts";
 
-export type {
-  GatewayEnvironment,
-  GatewayPaymentMethod,
-  GatewayProviderCode,
-};
+export type { GatewayEnvironment, GatewayPaymentMethod, GatewayProviderCode };
 
 export type CheckoutRoute = {
   providerCode: GatewayProviderCode;
   credentialId: string | null;
   enabled: boolean;
+  environment?: GatewayEnvironment;
 };
 
 export type CheckoutBody = Record<string, unknown>;
@@ -22,6 +19,8 @@ export type EadCharge = {
   method: GatewayPaymentMethod;
   installmentCount: number;
   value: number;
+  feeValue: number;
+  netValue: number;
   description: string;
   dueDate: string;
 };

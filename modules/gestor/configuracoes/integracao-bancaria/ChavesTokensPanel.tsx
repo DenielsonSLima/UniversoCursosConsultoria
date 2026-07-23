@@ -382,7 +382,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 md:col-span-2">
                   <p className="text-xs font-black uppercase tracking-wider text-amber-800">Homologação Banese</p>
                   <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-700">
-                    Client ID, Client Secret, convênio e dados da conta habilitam o boleto no Sandbox. O Banese confirmou que o BolePix será acrescentado pela própria API de boletos em produção, sem convênio Pix/SAB, chave Pix ou CRT separados.
+                    Em sandbox, o fluxo continua limitado. Em produção, o BolePix pode retornar junto ao boleto; então ative os dados de Pix abaixo para garantir a saída completa no ambiente real.
                   </p>
                 </div>
                 <TextInput
@@ -402,6 +402,14 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   type="password"
                 />
                 <TextInput
+                  icon={Key}
+                  label="CrtAccessToken"
+                  value={credentialForm.crtAccessToken}
+                  onChange={(value) => updateCredentialForm('crtAccessToken', value)}
+                  configured={editCredential?.metadata?.baneseCrtAccessTokenConfigured === true}
+                  type="password"
+                />
+                <TextInput
                   icon={Landmark}
                   label="Convênio boleto"
                   value={credentialForm.baneseBoletoConvenio || credentialForm.baneseConvenio}
@@ -411,6 +419,24 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                   }}
                   configured={Boolean(editCredential?.metadata?.baneseBoletoConvenio || editCredential?.metadata?.baneseConvenio)}
                   readOnly
+                />
+                <TextInput
+                  icon={Landmark}
+                  label="Convênio Pix"
+                  value={credentialForm.banesePixConvenio || credentialForm.baneseConvenio}
+                  onChange={(value) => {
+                    updateCredentialForm('banesePixConvenio', value);
+                    updateCredentialForm('baneseConvenio', value);
+                  }}
+                  configured={Boolean(editCredential?.metadata?.banesePixConvenio || editCredential?.metadata?.baneseConvenio)}
+                  readOnly
+                />
+                <TextInput
+                  icon={Key}
+                  label="Chave Pix"
+                  value={credentialForm.banesePixChave}
+                  onChange={(value) => updateCredentialForm('banesePixChave', value)}
+                  configured={Boolean(editCredential?.metadata?.banesePixChave)}
                 />
                 <TextInput
                   icon={FileText}

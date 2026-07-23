@@ -1,8 +1,116 @@
 import assert from "node:assert/strict";
 import {
+  createGatewayCharge,
   gatewayTransactionInputFromReceivable,
+  normalizeGatewayAdapterResult,
   repairGatewayTransactionFromReceivable,
 } from "./router.ts";
+
+Deno.test("facade bloqueia Pix Banese mesmo sem passar pela resolucao de rota", async () => {
+  let databaseReads = 0;
+  await assert.rejects(
+    () =>
+      createGatewayCharge({
+        admin: {
+          from: () => {
+            databaseReads += 1;
+            throw new Error("nao deveria consultar configuracao");
+          },
+        },
+        supabaseUrl: "https://example.supabase.co",
+        providerCode: "banese_card",
+        environment: "sandbox",
+        paymentMethod: "PIX",
+        receivable: { id: "receivable-1" },
+        payer: {},
+        amount: 99.9,
+        description: "Matricula",
+      }),
+    /Pix Banese permanece bloqueado/i,
+  );
+  assert.equal(databaseReads, 0);
+});
+
+Deno.test("facade aceita somente o escopo Banese e Mercado Pago para novas cobrancas", async () => {
+  let databaseReads = 0;
+  const base = {
+    admin: {
+      from: () => {
+        databaseReads += 1;
+        throw new Error("nao deveria consultar configuracao");
+      },
+    },
+    supabaseUrl: "https://example.supabase.co",
+    environment: "sandbox" as const,
+    receivable: { id: "receivable-scope" },
+    payer: {},
+    amount: 99.9,
+    description: "Matricula",
+  };
+
+  await assert.rejects(
+    () =>
+      createGatewayCharge({
+        ...base,
+        providerCode: "asaas",
+        paymentMethod: "BOLETO",
+      }),
+    /Asaas foi desativado/i,
+  );
+  await assert.rejects(
+    () =>
+      createGatewayCharge({
+        ...base,
+        providerCode: "mercado_pago",
+        paymentMethod: "BOLETO",
+      }),
+    /somente cartao/i,
+  );
+  await assert.rejects(
+    () =>
+      createGatewayCharge({
+        ...base,
+        providerCode: "mercado_pago",
+        paymentMethod: "CREDIT_CARD",
+      }),
+    /homologacao segura do cartao/i,
+  );
+  await assert.rejects(
+    () =>
+      createGatewayCharge({
+        ...base,
+        providerCode: "banco_inter" as any,
+        paymentMethod: "BOLETO",
+      }),
+    /sem adapter homologado/i,
+  );
+  assert.equal(databaseReads, 0);
+});
+
+Deno.test("URL de checkout nao e gravada como id de payment link", () => {
+  const asaas = normalizeGatewayAdapterResult("asaas", "BOLETO", {
+    id: "pay_123",
+    link: "https://sandbox.asaas.com/i/pay_123",
+    invoiceUrl: "https://sandbox.asaas.com/i/pay_123",
+  });
+  assert.equal(asaas.remotePaymentId, "pay_123");
+  assert.equal(asaas.remotePaymentLinkId, null);
+  assert.equal(asaas.invoiceUrl, "https://sandbox.asaas.com/i/pay_123");
+
+  const mercadoPago = normalizeGatewayAdapterResult(
+    "mercado_pago",
+    "CREDIT_CARD",
+    {
+      id: "preference_123",
+      link: "https://www.mercadopago.com.br/checkout/v1/redirect",
+    },
+  );
+  assert.equal(mercadoPago.remotePaymentLinkId, "preference_123");
+  assert.equal(
+    mercadoPago.invoiceUrl,
+    "https://www.mercadopago.com.br/checkout/v1/redirect",
+  );
+});
 
 const repairableReceivable = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -29,11 +137,14 @@ Deno.test("reconstroi auditoria bancaria a partir do recebivel persistido", () =
 });
 
 Deno.test("nao inventa auditoria sem identidade remota", () => {
-  assert.equal(gatewayTransactionInputFromReceivable({
-    gateway_provider: "banese_card",
-    gateway_environment: "sandbox",
-    gateway_payment_method: "BOLETO",
-  }), null);
+  assert.equal(
+    gatewayTransactionInputFromReceivable({
+      gateway_provider: "banese_card",
+      gateway_environment: "sandbox",
+      gateway_payment_method: "BOLETO",
+    }),
+    null,
+  );
 });
 
 Deno.test("reparo preserva auditoria existente sem executar update", async () => {

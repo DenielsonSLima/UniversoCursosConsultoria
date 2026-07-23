@@ -13,18 +13,40 @@ const receivable = {
   gateway_payment_id: OUR_NUMBER,
   gateway_boleto_nosso_numero: OUR_NUMBER,
   gateway_boleto_convenio: "15528",
+  gateway_status: "PENDING",
+  updated_at: "2026-07-21T12:00:00.000Z",
 };
 
 const fakeAdmin = () => {
-  const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
+  const updates: Array<{ table: string; payload: Record<string, unknown> }> =
+    [];
+  const filters: Array<{
+    table: string;
+    kind: "eq" | "is" | "in" | "or";
+    field: string;
+    value: unknown;
+  }> = [];
   const admin = {
     from(table: string) {
       let payload: Record<string, unknown> | null = null;
       const builder: any = {
         select: () => builder,
-        eq: () => builder,
-        in: () => builder,
-        or: () => builder,
+        eq: (field: string, value: unknown) => {
+          filters.push({ table, kind: "eq", field, value });
+          return builder;
+        },
+        is: (field: string, value: unknown) => {
+          filters.push({ table, kind: "is", field, value });
+          return builder;
+        },
+        in: (field: string, value: unknown) => {
+          filters.push({ table, kind: "in", field, value });
+          return builder;
+        },
+        or: (value: string) => {
+          filters.push({ table, kind: "or", field: "or", value });
+          return builder;
+        },
         update: (value: Record<string, unknown>) => {
           payload = value;
           updates.push({ table, payload: value });
@@ -48,11 +70,11 @@ const fakeAdmin = () => {
       return builder;
     },
   };
-  return { admin, updates };
+  return { admin, updates, filters };
 };
 
 Deno.test("baixa manual Banese confirma banco antes de atualizar o recebivel", async () => {
-  const { admin, updates } = fakeAdmin();
+  const { admin, updates, filters } = fakeAdmin();
   let cancellationInput: Record<string, unknown> | null = null;
   const result = await cancelBaneseReceivableBeforeManualSettlement(
     admin,
@@ -79,12 +101,32 @@ Deno.test("baixa manual Banese confirma banco antes de atualizar o recebivel", a
   });
   assert.equal(result.remoteStatus, "CANCELED");
   assert.equal(
-    updates.find((item) => item.table === "contas_receber")?.payload.gateway_status,
+    updates.find((item) => item.table === "contas_receber")?.payload
+      .gateway_status,
     "CANCELED",
   );
   assert.equal(
-    updates.find((item) => item.table === "payment_gateway_transactions")?.payload.remote_status,
+    updates.find((item) => item.table === "payment_gateway_transactions")
+      ?.payload.remote_status,
     "CANCELED",
+  );
+  const receivableFilters = filters.filter((item) =>
+    item.table === "contas_receber"
+  );
+  assert.ok(
+    receivableFilters.some((item) =>
+      item.field === "gateway_payment_id" && item.value === OUR_NUMBER
+    ),
+  );
+  assert.ok(
+    receivableFilters.some((item) =>
+      item.field === "gateway_boleto_nosso_numero" && item.value === OUR_NUMBER
+    ),
+  );
+  assert.ok(
+    receivableFilters.some((item) =>
+      item.field === "updated_at" && item.value === receivable.updated_at
+    ),
   );
 });
 
@@ -100,6 +142,19 @@ Deno.test("baixa manual rejeita recebivel que nao pertence ao Banese", async () 
   );
 });
 
+Deno.test("baixa manual Banese nao infere sandbox sem ambiente", async () => {
+  const { admin, updates } = fakeAdmin();
+  await assert.rejects(
+    () =>
+      cancelBaneseReceivableBeforeManualSettlement(admin, {
+        ...receivable,
+        gateway_environment: null,
+      }),
+    /ambiente ausente ou invalido/i,
+  );
+  assert.equal(updates.length, 0);
+});
+
 Deno.test("falha remota Banese preserva o recebivel local", async () => {
   const { admin, updates } = fakeAdmin();
   await assert.rejects(
@@ -110,6 +165,19 @@ Deno.test("falha remota Banese preserva o recebivel local", async () => {
         },
       }),
     /ja pago/i,
+  );
+  assert.equal(updates.length, 0);
+});
+
+Deno.test("baixa Banese bloqueia identidades remotas divergentes", async () => {
+  const { admin, updates } = fakeAdmin();
+  await assert.rejects(
+    () =>
+      cancelBaneseReceivableBeforeManualSettlement(admin, {
+        ...receivable,
+        gateway_payment_id: "000000016",
+      }),
+    /identidade Banese inconsistente/i,
   );
   assert.equal(updates.length, 0);
 });

@@ -20,11 +20,27 @@ export type BaneseBoletoPdfOptions = {
   branding?: BaneseDocumentBranding;
 };
 
+const normalizeInputWithPixFallback = (rawInput: BaneseBoletoDocumentInput) => {
+  try {
+    return normalizeBaneseBoletoDocument(rawInput);
+  } catch (error) {
+    const message = String((error as Error)?.message || error);
+    if (rawInput.environment !== "production" || !/pix/i.test(message)) {
+      throw error;
+    }
+
+    return normalizeBaneseBoletoDocument({
+      ...rawInput,
+      pix: null,
+    });
+  }
+};
+
 export const buildBaneseBoletoPdf = async (
   rawInput: BaneseBoletoDocumentInput,
   options: BaneseBoletoPdfOptions = {},
 ) => {
-  const input = normalizeBaneseBoletoDocument(rawInput);
+  const input = normalizeInputWithPixFallback(rawInput);
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Boleto Banese ${input.documentNumber}`);
   pdf.setSubject("Cobrança bancária Banese");

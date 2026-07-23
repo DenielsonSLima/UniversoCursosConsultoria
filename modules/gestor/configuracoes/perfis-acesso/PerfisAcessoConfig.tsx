@@ -67,7 +67,12 @@ const PerfisAcessoConfig: React.FC = () => {
       setNome(perfil.nome);
       setDescricao(perfil.descricao || '');
       setSelectedModules(perfil.permissoes?.modules || []);
-      setSelectedTabs(perfil.permissoes?.tabs || {});
+      setSelectedTabs({
+        ...(perfil.permissoes?.tabs || {}),
+        financeiro: perfil.permissoes?.tabs?.financeiro
+          ?? perfil.permissoes?.financeiroTabs
+          ?? [],
+      });
       setHorarioAtivo(perfil.restricao_horario?.ativo || false);
       setDiasHorario(perfil.restricao_horario?.dias || [1, 2, 3, 4, 5]);
       setHorarioInicio(perfil.restricao_horario?.horario_inicio || '08:00');

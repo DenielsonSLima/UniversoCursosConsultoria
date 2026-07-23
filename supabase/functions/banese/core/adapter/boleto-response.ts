@@ -73,19 +73,12 @@ export const boletoResultFromResponse = (
       payload.NossoNumero,
       payload.IdTituloEmpresa,
     ),
-    link: firstString(
-      rawRecord.link,
-      rawRecord.url,
-      rawRecord.Url,
-      rawRecord.urlBoleto,
-      rawRecord.UrlBoleto,
-      portalUrl,
-    ) || null,
-    bankSlipUrl: firstString(
-      rawRecord.urlBoleto,
-      rawRecord.UrlBoleto,
-      portalUrl,
-    ) || null,
+    // O Banese devolve os dados do titulo, nao um PDF hospedado. A URL
+    // apresentada ao aluno e sempre a pagina autenticada da Universo, onde o
+    // boleto/carne e montado localmente a partir da linha e do codigo de barras
+    // validados. Campos URL inesperados da resposta bancaria nunca viram link.
+    link: portalUrl || null,
+    bankSlipUrl: portalUrl || null,
     bankSlipDigitableLine: linhaDigitavel,
     bankSlipBarcode: codigoBarras,
     bankSlipOurNumber: String(payload.NossoNumero),

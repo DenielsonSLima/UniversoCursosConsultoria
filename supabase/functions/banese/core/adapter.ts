@@ -21,7 +21,10 @@ export {
   createBaneseBoletoCharge,
   queryBaneseBoleto,
 } from "./adapter/boleto.ts";
-export { buildBaneseBoletoPayload } from "./adapter/boleto-payload.ts";
+export {
+  buildBaneseBoletoPayload,
+  validateBaneseBoletoPayloadInput,
+} from "./adapter/boleto-payload.ts";
 export { ensureBaneseBoletoFinancialTerms } from "./adapter/boleto-financial-terms.ts";
 export { validateBaneseBoletoResponse } from "./adapter/boleto-response.ts";
 export {

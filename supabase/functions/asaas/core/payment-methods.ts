@@ -30,10 +30,23 @@ export interface CourseFinanceiroConfig {
 export const normalizeCourseFinanceiroConfig = (config: any = {}): CourseFinanceiroConfig => {
   const metodos = config?.metodosRecebimento || {};
   const cartao = config?.cartao || {};
-  const parcelasPadrao = Math.max(1, toNumber(config?.parcelasPadrao, 1));
-  const maxParcelas = cartao?.aceitar
-    ? Math.max(parcelasPadrao, toNumber(cartao?.maxParcelas, parcelasPadrao))
+  const configuredDefaultInstallments = Math.max(
+    1,
+    Math.floor(toNumber(config?.parcelasPadrao, 1)),
+  );
+  const cardEnabled = metodos.cartao !== false && cartao.aceitar !== false;
+  const maxParcelas = cardEnabled
+    ? Math.max(
+      1,
+      Math.min(
+        21,
+        Math.floor(
+          toNumber(cartao?.maxParcelas, configuredDefaultInstallments),
+        ),
+      ),
+    )
     : 1;
+  const parcelasPadrao = Math.min(configuredDefaultInstallments, maxParcelas);
 
   return {
     parcelasPadrao,

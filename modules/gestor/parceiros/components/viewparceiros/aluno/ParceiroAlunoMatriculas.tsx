@@ -16,6 +16,10 @@ import {
   academicLifecycleService,
 } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
 import { turmaAsaasService } from '../../../../gestao/tecnicos/detalhes/asaas';
+import {
+  asaasIntegrationService,
+  type GatewayPaymentMethod,
+} from '../../../../../asaas/asaas.service';
 import { getMaceioIsoDate } from '../../../../gestao/tecnicos/technicalClassDates';
 import ToastNotification, { useToast } from '../../shared/ToastNotification';
 import ParceiroAlunoMatriculasModals, {
@@ -36,6 +40,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
   const [showNew, setShowNew] = useState(false);
   const [newClassId, setNewClassId] = useState('');
   const [pendingNewEnrollment, setPendingNewEnrollment] = useState<any>(null);
+  const [newEnrollmentPaymentMethod, setNewEnrollmentPaymentMethod] = useState<GatewayPaymentMethod | null>(null);
   const [selected, setSelected] = useState<any>(null);
   const [mode, setMode] = useState<OperationMode>('MOVIMENTACAO');
   const [movementType, setMovementType] = useState<AcademicMovementType>('TRANCAMENTO');
@@ -140,6 +145,21 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
     ),
     [allClasses, selected]
   );
+  const pendingEnrollmentUsesGateway = pendingNewEnrollment?.cursos?.modalidade === 'TECNICO'
+    && !(Boolean(pendingNewEnrollment?.financeiro_herdado)
+      || String(pendingNewEnrollment?.origem_financeira || 'NORMAL').toUpperCase() === 'LEGADO')
+    && (pendingNewEnrollment?.sincronizar_asaas_futuro ?? true);
+  const newEnrollmentOptionsQuery = useQuery({
+    queryKey: ['enrollment-payment-options', pendingNewEnrollment?.id],
+    queryFn: () => asaasIntegrationService.getEnrollmentPaymentOptions(pendingNewEnrollment.id),
+    enabled: Boolean(pendingNewEnrollment?.id && pendingEnrollmentUsesGateway),
+    staleTime: 15_000,
+    retry: false,
+  });
+  const newEnrollmentPaymentOptions = useMemo(
+    () => newEnrollmentOptionsQuery.data?.options.map((option) => option.paymentMethod) || [],
+    [newEnrollmentOptionsQuery.data]
+  );
 
   const invalidate = async () => {
     await Promise.all([
@@ -174,6 +194,7 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
           gerar_cobranca_inicial: !financeiroHerdado,
           gerar_cobranca_futura: selectedClass?.gerar_cobrancas_futuras ?? false,
           sincronizar_asaas: selectedClass?.sincronizar_asaas_futuro ?? true,
+          paymentMethod: newEnrollmentPaymentMethod,
         });
       }
 
@@ -184,10 +205,26 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
       await invalidate();
       setShowNew(false);
       setPendingNewEnrollment(null);
+      setNewEnrollmentPaymentMethod(null);
       setNewClassId('');
+      if ('asaasError' in result && result.asaasError) {
+        toast.info(
+          'Matrícula criada com pendência bancária',
+          result.asaasError
+        );
+      } else if (result.asaasSynced) {
+        toast.success('Matrícula e cobrança criadas', 'O título foi encaminhado ao gateway selecionado.');
+      } else if ('asaasSkipped' in result && result.asaasSkipped) {
+        toast.info(
+          'Matrícula criada sem emissão',
+          result.asaasSkipReason || 'A sincronização bancária foi ignorada pela configuração da turma.'
+        );
+      } else {
+        toast.success('Matrícula criada', 'O vínculo acadêmico foi registrado com sucesso.');
+      }
     },
     onError: (error: any) => {
-      toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no Asaas: ${error.message}`);
+      toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no gateway: ${error.message}`);
     },
   });
 
@@ -198,19 +235,58 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
     const isTechnical = selectedClass.cursos?.modalidade === 'TECNICO';
     const origem = selectedClass?.origem_financeira || 'NORMAL';
     const financeiroHerdado = Boolean(selectedClass?.financeiro_herdado) || origem === 'LEGADO';
-    const deveSincronizarAsaas = isTechnical
+    const deveSincronizarGateway = isTechnical
       && !financeiroHerdado
       && (selectedClass?.sincronizar_asaas_futuro ?? true);
 
-    if (deveSincronizarAsaas && !isValidEnrollmentCpf(aluno?.cpf_cnpj)) {
+    if (deveSincronizarGateway && !isValidEnrollmentCpf(aluno?.cpf_cnpj)) {
       toast.error(
         'CPF inválido para cobrança',
-        'Atualize o CPF do aluno com um documento válido antes de gerar a matrícula no Asaas.'
+        'Atualize o CPF do aluno com um documento válido antes de gerar a cobrança no gateway.'
       );
       return;
     }
 
+    setNewEnrollmentPaymentMethod(null);
     setPendingNewEnrollment(selectedClass);
+  };
+
+  const submitNewEnrollment = () => {
+    const origem = pendingNewEnrollment?.origem_financeira || 'NORMAL';
+    const financeiroHerdado = Boolean(pendingNewEnrollment?.financeiro_herdado) || origem === 'LEGADO';
+    const requiresPaymentMethod = pendingNewEnrollment?.cursos?.modalidade === 'TECNICO'
+      && !financeiroHerdado;
+    if (requiresPaymentMethod && !newEnrollmentPaymentMethod) {
+      toast.error('Método obrigatório', 'Escolha Pix, boleto ou cartão de crédito para a cobrança inicial.');
+      return;
+    }
+    const shouldSyncGateway = requiresPaymentMethod
+      && (pendingNewEnrollment?.sincronizar_asaas_futuro ?? true);
+    if (shouldSyncGateway && newEnrollmentOptionsQuery.isLoading) {
+      toast.info('Validando rota bancária', 'Aguarde a validação das credenciais antes de confirmar.');
+      return;
+    }
+    if (shouldSyncGateway && newEnrollmentOptionsQuery.isError) {
+      toast.error(
+        'Rota bancária indisponível',
+        newEnrollmentOptionsQuery.error instanceof Error
+          ? newEnrollmentOptionsQuery.error.message
+          : 'Não foi possível validar as rotas desta turma.'
+      );
+      return;
+    }
+    if (
+      shouldSyncGateway
+      && newEnrollmentPaymentMethod
+      && !newEnrollmentPaymentOptions.includes(newEnrollmentPaymentMethod)
+    ) {
+      toast.error(
+        'Método sem rota pronta',
+        'Escolha um método com rota ativa e credencial homologada para esta turma.'
+      );
+      return;
+    }
+    newEnrollmentMutation.mutate();
   };
 
   const movementMutation = useMutation({
@@ -381,12 +457,28 @@ const ParceiroAlunoMatriculas: React.FC<Props> = ({ alunoId }) => {
         classId={newClassId}
         classes={allClasses}
         pendingClass={pendingNewEnrollment}
+        paymentMethod={newEnrollmentPaymentMethod}
+        availablePaymentMethods={newEnrollmentPaymentOptions}
+        paymentOptionsLoading={newEnrollmentOptionsQuery.isLoading}
+        paymentOptionsError={newEnrollmentOptionsQuery.error instanceof Error
+          ? newEnrollmentOptionsQuery.error.message
+          : null}
         mutation={newEnrollmentMutation}
-        onClassChange={setNewClassId}
+        onClassChange={(value) => {
+          setNewClassId(value);
+          setNewEnrollmentPaymentMethod(null);
+        }}
+        onPaymentMethodChange={setNewEnrollmentPaymentMethod}
         onPrepare={confirmNewEnrollment}
-        onConfirm={() => newEnrollmentMutation.mutate()}
-        onCloseEnrollment={() => setShowNew(false)}
-        onCloseConfirmation={() => setPendingNewEnrollment(null)}
+        onConfirm={submitNewEnrollment}
+        onCloseEnrollment={() => {
+          setShowNew(false);
+          setNewEnrollmentPaymentMethod(null);
+        }}
+        onCloseConfirmation={() => {
+          setPendingNewEnrollment(null);
+          setNewEnrollmentPaymentMethod(null);
+        }}
         selected={selected}
         mode={mode}
         movementType={movementType}

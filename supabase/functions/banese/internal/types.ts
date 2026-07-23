@@ -216,13 +216,8 @@ export const normalizeBaneseBoletoDocument = (
     account: beneficiaryAccount,
     ourNumber,
   });
-  if (input.environment === "production" && !input.pix) {
-    throw new Error(
-      "Documento Banese de producao exige o retorno Pix oficial do BolePix.",
-    );
-  }
-  const pix = input.environment === "production"
-    ? normalizeBanesePixDocumentData(input.pix!, amount)
+  const pix = input.environment === "production" && input.pix
+    ? normalizeBanesePixDocumentData(input.pix, amount)
     : null;
 
   return {

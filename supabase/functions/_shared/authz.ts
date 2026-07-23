@@ -12,7 +12,8 @@ export interface GestorAutorizado {
   tabs: Record<string, string[]>;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const normalize = (value: unknown) => String(value || "").trim().toLowerCase();
 
@@ -22,19 +23,39 @@ const isActiveStatus = (status: unknown) =>
 const isFinanceWriteProfile = (perfil: unknown) =>
   ["gestor", "financeiro"].includes(normalize(perfil));
 
-const normalizeStringArray = (value: unknown) => Array.isArray(value)
-  ? [...new Set(value.map((item) => String(item || "").trim()).filter(Boolean))]
-  : [];
+export const authorizationErrorHttpStatus = (message: unknown) => {
+  const normalized = normalize(message);
+  if (/autenticacao|sessao invalida/.test(normalized)) return 401;
+  if (
+    /acesso|nao autorizado|apenas usuario interno ativo|fora dos dias ou horarios/
+      .test(normalized)
+  ) {
+    return 403;
+  }
+  return null;
+};
+
+const normalizeStringArray = (value: unknown) =>
+  Array.isArray(value)
+    ? [
+      ...new Set(
+        value.map((item) => String(item || "").trim()).filter(Boolean),
+      ),
+    ]
+    : [];
 
 const normalizePermissions = (value: unknown) => {
   const source = value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-  const rawTabs = source.tabs && typeof source.tabs === "object" && !Array.isArray(source.tabs)
+  const rawTabs = source.tabs && typeof source.tabs === "object" &&
+      !Array.isArray(source.tabs)
     ? source.tabs as Record<string, unknown>
     : {};
   const tabs: Record<string, string[]> = {};
-  for (const [moduleId, moduleTabs] of Object.entries(rawTabs)) tabs[moduleId] = normalizeStringArray(moduleTabs);
+  for (const [moduleId, moduleTabs] of Object.entries(rawTabs)) {
+    tabs[moduleId] = normalizeStringArray(moduleTabs);
+  }
   return {
     modules: normalizeStringArray(source.modules),
     financeiroTabs: normalizeStringArray(source.financeiroTabs),
@@ -43,19 +64,50 @@ const normalizePermissions = (value: unknown) => {
   };
 };
 
+const resolveGestorFinanceiroTabs = (gestor: GestorAutorizado) => {
+  const legacyTabs = normalizeStringArray(gestor.financeiroTabs);
+  const scopedTabs = normalizeStringArray(gestor.tabs?.financeiro);
+
+  if (!scopedTabs.length) return legacyTabs;
+  if (
+    scopedTabs.includes("receber") &&
+    legacyTabs.includes("receber") &&
+    !scopedTabs.includes("conciliacao-bancaria")
+  ) {
+    return [...new Set([...scopedTabs, "conciliacao-bancaria"])] as string[];
+  }
+
+  return scopedTabs;
+};
+
 const scheduleAllowsAccess = (value: unknown, now = new Date()) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return true;
   const schedule = value as Record<string, unknown>;
   if (schedule.ativo !== true) return true;
-  const days = normalizeStringArray(schedule.dias).map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+  const days = normalizeStringArray(schedule.dias).map(Number).filter((day) =>
+    Number.isInteger(day) && day >= 0 && day <= 6
+  );
   const start = String(schedule.horario_inicio || "");
   const end = String(schedule.horario_fim || "");
-  if (days.length === 0 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(end) || start === end) return false;
+  if (
+    days.length === 0 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(end) || start === end
+  ) return false;
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Maceio", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    timeZone: "America/Maceio",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
   }).formatToParts(now);
-  const formatted = Object.fromEntries(parts.map(({ type, value: partValue }) => [type, partValue]));
-  const day = ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[formatted.weekday];
+  const formatted = Object.fromEntries(
+    parts.map(({ type, value: partValue }) => [type, partValue]),
+  );
+  const day =
+    ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<
+      string,
+      number
+    >)[formatted.weekday];
   const time = `${formatted.hour}:${formatted.minute}`;
   if (start <= end) return days.includes(day) && time >= start && time <= end;
   if (time >= start) return days.includes(day);
@@ -66,38 +118,62 @@ const scheduleAllowsAccess = (value: unknown, now = new Date()) => {
 export const bearerTokenFromRequest = (req: Request) =>
   (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
 
-export const requireGestorAtivo = async (req: Request, admin: any): Promise<GestorAutorizado> => {
+export const requireGestorAtivo = async (
+  req: Request,
+  admin: any,
+): Promise<GestorAutorizado> => {
   const token = bearerTokenFromRequest(req);
-  if (!token) throw new Error("Autenticacao obrigatoria para esta acao financeira.");
+  if (!token) {
+    throw new Error("Autenticacao obrigatoria para esta acao financeira.");
+  }
 
   const { data: authData, error: authError } = await admin.auth.getUser(token);
-  const email = authData?.user?.email ? String(authData.user.email).trim().toLowerCase() : "";
+  const email = authData?.user?.email
+    ? String(authData.user.email).trim().toLowerCase()
+    : "";
   if (authError || !email) {
     throw new Error("Sessao invalida para esta acao financeira.");
   }
 
   const { data: usuario, error: usuarioError } = await admin
     .from("usuarios_sistema")
-    .select("id, email, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)")
+    .select(
+      "id, email, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)",
+    )
     .ilike("email", email)
     .maybeSingle();
   if (usuarioError) throw usuarioError;
   if (!usuario || !isActiveStatus(usuario.status)) {
-    throw new Error("Apenas usuario interno ativo pode executar esta acao financeira.");
+    throw new Error(
+      "Apenas usuario interno ativo pode executar esta acao financeira.",
+    );
   }
 
   const context = usuario.context ? String(usuario.context).trim() : null;
-  const profile = Array.isArray(usuario.perfis_acesso) ? usuario.perfis_acesso[0] : usuario.perfis_acesso;
+  const profile = Array.isArray(usuario.perfis_acesso)
+    ? usuario.perfis_acesso[0]
+    : usuario.perfis_acesso;
   const userPermissions = normalizePermissions(usuario.permissoes);
   const profilePermissions = normalizePermissions(profile?.permissoes);
-  const effective = profile && !usuario.personalizar_permissoes ? profilePermissions : userPermissions;
-  const explicitPoloIds = normalizeStringArray(usuario.polo_ids).filter((id) => UUID_RE.test(id));
+  const effective = profile && !usuario.personalizar_permissoes
+    ? profilePermissions
+    : userPermissions;
+  const explicitPoloIds = normalizeStringArray(usuario.polo_ids).filter((id) =>
+    UUID_RE.test(id)
+  );
   const contextPoloId = UUID_RE.test(context || "") ? context : null;
-  const poloIds = explicitPoloIds.length > 0 ? explicitPoloIds : contextPoloId ? [contextPoloId] : [];
-  const isGlobal = userPermissions.allPolos && poloIds.length === 0;
+  const poloIds = explicitPoloIds.length > 0
+    ? explicitPoloIds
+    : contextPoloId
+    ? [contextPoloId]
+    : [];
+  const isGlobal = effective.allPolos && poloIds.length === 0;
   const poloId = isGlobal ? null : poloIds[0] || null;
-  const schedule = usuario.restricao_horario ?? profile?.restricao_horario ?? null;
-  if (!scheduleAllowsAccess(schedule)) throw new Error("Acesso bloqueado fora dos dias ou horarios permitidos.");
+  const schedule = usuario.restricao_horario ?? profile?.restricao_horario ??
+    null;
+  if (!scheduleAllowsAccess(schedule)) {
+    throw new Error("Acesso bloqueado fora dos dias ou horarios permitidos.");
+  }
 
   return {
     id: usuario.id,
@@ -114,14 +190,27 @@ export const requireGestorAtivo = async (req: Request, admin: any): Promise<Gest
   };
 };
 
-export const requireGestorModule = (gestor: GestorAutorizado, moduleId: string) => {
-  if (!gestor.modules.includes(moduleId)) throw new Error(`Acesso ao modulo ${moduleId} nao autorizado.`);
+export const requireGestorModule = (
+  gestor: GestorAutorizado,
+  moduleId: string,
+) => {
+  if (!gestor.modules.includes(moduleId)) {
+    throw new Error(`Acesso ao modulo ${moduleId} nao autorizado.`);
+  }
 };
 
-export const requireGestorTab = (gestor: GestorAutorizado, moduleId: string, tabId: string) => {
+export const requireGestorTab = (
+  gestor: GestorAutorizado,
+  moduleId: string,
+  tabId: string,
+) => {
   requireGestorModule(gestor, moduleId);
-  const allowedTabs = moduleId === "financeiro" ? (gestor.tabs.financeiro || gestor.financeiroTabs) : gestor.tabs[moduleId];
-  if (!allowedTabs?.includes(tabId)) throw new Error(`Acesso a aba ${tabId} nao autorizado.`);
+  const allowedTabs = moduleId === "financeiro"
+    ? resolveGestorFinanceiroTabs(gestor)
+    : gestor.tabs[moduleId];
+  if (!allowedTabs?.includes(tabId)) {
+    throw new Error(`Acesso a aba ${tabId} nao autorizado.`);
+  }
 };
 
 export const requireGestorGlobal = (gestor: GestorAutorizado) => {
@@ -131,15 +220,43 @@ export const requireGestorGlobal = (gestor: GestorAutorizado) => {
 };
 
 export const requireFinanceWriteAccess = (gestor: GestorAutorizado) => {
-  if (!isFinanceWriteProfile(gestor.perfil) || (!gestor.modules.includes("financeiro") && !gestor.modules.includes("caixa"))) {
-    throw new Error("Apenas gestor ou financeiro ativo pode executar esta movimentacao financeira.");
+  if (
+    !isFinanceWriteProfile(gestor.perfil) ||
+    (!gestor.modules.includes("financeiro") &&
+      !gestor.modules.includes("caixa"))
+  ) {
+    throw new Error(
+      "Apenas gestor ou financeiro ativo pode executar esta movimentacao financeira.",
+    );
   }
 };
 
-export const requireGestorForPolo = (gestor: GestorAutorizado, poloId?: string | null) => {
+export const requireGlobalFinancialTabAccess = (
+  gestor: GestorAutorizado,
+  tabId: string,
+) => {
+  if (!isFinanceWriteProfile(gestor.perfil)) {
+    throw new Error(
+      "Acesso financeiro global nao autorizado para este perfil.",
+    );
+  }
+  requireGestorTab(gestor, "financeiro", tabId);
+  if (!gestor.isGlobal || gestor.poloIds.length > 0) {
+    throw new Error(
+      "Acesso financeiro global obrigatorio para esta operacao bancaria.",
+    );
+  }
+};
+
+export const requireGestorForPolo = (
+  gestor: GestorAutorizado,
+  poloId?: string | null,
+) => {
   if (gestor.isGlobal) return;
   if (!poloId) {
-    throw new Error("Cobranca sem polo definido nao pode ser movimentada por usuario de polo.");
+    throw new Error(
+      "Cobranca sem polo definido nao pode ser movimentada por usuario de polo.",
+    );
   }
   if (gestor.poloIds.includes(poloId)) return;
   throw new Error("Gestor sem permissao para movimentar cobranca deste polo.");

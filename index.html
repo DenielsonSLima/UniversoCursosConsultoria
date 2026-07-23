@@ -87,33 +87,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body {
-          font-family: 'Inter', sans-serif;
-          -webkit-font-smoothing: subpixel-antialiased;
-          -moz-osx-font-smoothing: auto;
-          text-rendering: optimizeLegibility;
-        }
-
         html,
-        #root,
-        #root * {
-          -webkit-font-smoothing: subpixel-antialiased;
-          -moz-osx-font-smoothing: auto;
+        body,
+        #root {
+          font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
           text-rendering: optimizeLegibility;
+          -webkit-text-size-adjust: 100%;
         }
 
-        /* Agenda: preserva a fonte do portal, com rasterização mais nítida em telas Safari/WebKit. */
-        #root .agenda-typography,
-        #root .agenda-typography * {
-          -webkit-font-smoothing: auto;
-          -moz-osx-font-smoothing: auto;
-          text-rendering: optimizeLegibility;
+        #root * {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
+
         .animate-fadeIn {
-            animation: fadeIn 0.3s ease-in-out;
+            animation: fadeIn 0.25s ease-out forwards;
+            backface-visibility: hidden;
+            will-change: opacity, transform;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>

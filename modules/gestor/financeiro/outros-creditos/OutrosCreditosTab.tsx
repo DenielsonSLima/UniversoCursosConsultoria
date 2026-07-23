@@ -26,9 +26,11 @@ import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { useOutrosCreditosQueries } from './hooks/useOutrosCreditosQueries';
+import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
+import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
 
 type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
-type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'ASAAS';
+type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
 type OtherCreditGroupMode = 'partner' | 'polo' | 'none';
 
 interface OutrosCreditosTabProps {
@@ -36,6 +38,14 @@ interface OutrosCreditosTabProps {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const PENDING_OUTROS_CREDIT_STATUSES = [
+  'PENDENTE',
+  'VENCIDO',
+  'SUSPENSO',
+  'AGUARDANDO_CONFIRMACAO',
+  'AGUARDANDO_PAGAMENTO',
+] as const;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -64,9 +74,22 @@ const statusClass = (status: string) => {
 };
 
 const origemLabel = (item: ContasReceber) => {
-  if (item.origemPagamento === 'ASAAS' || item.asaasPaymentId || item.asaasPaymentLinkId) return 'Link bancário';
+  if (item.gatewayProvider === 'mercado_pago' || item.origemPagamento === 'MERCADO_PAGO') return 'Mercado Pago';
+  if (item.gatewayProvider === 'banese_card' || item.origemPagamento === 'BANESE') return 'Banese';
+  if (item.gatewayProvider === 'banco_inter' || item.origemPagamento === 'BANCO_INTER') return 'Banco Inter';
+  if (item.gatewayProvider === 'asaas' || item.origemPagamento === 'ASAAS' || item.asaasPaymentId || item.asaasPaymentLinkId) return 'Asaas';
   if (item.origemPagamento === 'PRESENCIAL') return 'Local/Caixa';
   return 'Conta local';
+};
+
+const isPendingOutrosCredito = (status: string) => PENDING_OUTROS_CREDIT_STATUSES.includes(status);
+
+const generateAttemptId = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
 const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPoloId }) => {
@@ -91,10 +114,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   const [accountId, setAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
   const [receiveItem, setReceiveItem] = useState<ContasReceber | null>(null);
-  const [receiveAccountId, setReceiveAccountId] = useState('');
-  const [receiveMethod, setReceiveMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
-  const [receiveDate, setReceiveDate] = useState(today());
-  const [receiveValue, setReceiveValue] = useState('');
+  const [creationAttemptId, setCreationAttemptId] = useState(() => generateAttemptId());
 
   useFinanceiroRealtime();
 
@@ -126,15 +146,15 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   const createMutation = useMutation({
     mutationFn: () => financeiroService.createOtherCredit({
+      idempotencyKey: creationAttemptId,
       poloId: effectivePoloId,
       descricao: description.trim(),
       valor: parseCurrencyInput(value),
       dataVencimento: dueDate,
       clienteId: partnerId || undefined,
-      formaPagamento: mode === 'LOCAL_PAGO' || mode === 'ASAAS' ? paymentMethod : undefined,
+      formaPagamento: mode === 'LOCAL_PAGO' || mode === 'GATEWAY' ? paymentMethod : undefined,
       contaBancariaId: mode === 'LOCAL_PAGO' ? accountId : undefined,
-      markAsPaid: mode === 'LOCAL_PAGO',
-      generateAsaas: mode === 'ASAAS',
+      mode,
     }),
     onSuccess: async (created) => {
       await Promise.all([
@@ -144,9 +164,10 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       ]);
       setIsModalOpen(false);
       resetForm();
+      setCreationAttemptId(generateAttemptId());
       toast.success(
-        mode === 'ASAAS' ? 'Crédito e link criados' : 'Crédito registrado',
-        mode === 'ASAAS' && created.asaasInvoiceUrl
+        mode === 'GATEWAY' ? 'Crédito e link criados' : 'Crédito registrado',
+        mode === 'GATEWAY' && created.asaasInvoiceUrl
           ? 'A cobrança foi enviada para a rota bancária configurada e o link já está disponível.'
           : 'O lançamento foi salvo em Outros Créditos.',
       );
@@ -173,13 +194,9 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   });
 
   const receiveMutation = useMutation({
-    mutationFn: () => financeiroService.markReceivablePaid(receiveItem!.id!, {
-      contaBancariaId: receiveAccountId,
-      valorPago: parseCurrencyInput(receiveValue || String(receiveItem?.valor || 0)),
-      dataPagamento: receiveDate,
-      formaPagamento: receiveMethod,
-    }),
-    onSuccess: async () => {
+    mutationFn: (payload: ManualSettlementPayload) =>
+      financeiroService.markReceivablePaid(receiveItem!.id!, payload),
+    onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.outrosCreditosRoot }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
@@ -187,15 +204,11 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       ]);
       toast.success(
         'Recebimento confirmado',
-        receiveItem?.asaasPaymentId || receiveItem?.asaasPaymentLinkId
-          ? 'A baixa manual foi registrada e a cobrança bancária foi cancelada.'
+        result.gatewayCanceled
+          ? 'A baixa manual foi registrada somente após a integração confirmar o cancelamento da cobrança bancária.'
           : 'O crédito foi baixado na conta/caixa selecionada.',
       );
       setReceiveItem(null);
-      setReceiveAccountId('');
-      setReceiveMethod('PIX');
-      setReceiveDate(today());
-      setReceiveValue('');
     },
     onError: (error: any) => toast.error('Erro ao confirmar recebimento', error.message),
   });
@@ -209,6 +222,19 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     setPartnerId('');
     setAccountId('');
     setPaymentMethod('PIX');
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setCreationAttemptId(generateAttemptId());
+    setIsModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    if (createMutation.isPending) return;
+    setIsModalOpen(false);
+    resetForm();
+    setCreationAttemptId(generateAttemptId());
   };
 
   const baseFiltered = useMemo(() => {
@@ -234,27 +260,30 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   const filtered = useMemo(() => {
     if (statusScope === 'received') return baseFiltered.filter((item) => item.status === 'PAGO');
-    if (statusScope === 'pending') return baseFiltered.filter((item) => ['PENDENTE', 'VENCIDO'].includes(item.status));
+    if (statusScope === 'pending') return baseFiltered.filter((item) => isPendingOutrosCredito(item.status));
     if (statusScope === 'canceled') return baseFiltered.filter((item) => ['CANCELADO', 'ESTORNADO'].includes(item.status));
     return baseFiltered;
   }, [baseFiltered, statusScope]);
 
+  const receivedItems = useMemo(() => baseFiltered.filter((item) => item.status === 'PAGO'), [baseFiltered]);
+  const pendingItems = useMemo(() => baseFiltered.filter((item) => isPendingOutrosCredito(item.status)), [baseFiltered]);
+  const canceledItems = useMemo(() => baseFiltered.filter((item) => ['CANCELADO', 'ESTORNADO'].includes(item.status)), [baseFiltered]);
   const totals = {
-    received: summaryQuery.data?.receivedCount || 0,
-    pending: summaryQuery.data?.pendingCount || 0,
-    canceled: summaryQuery.data?.canceledCount || 0,
-    all: summaryQuery.data?.allCount || 0,
-    receivedValue: summaryQuery.data?.receivedValue || 0,
-    pendingValue: summaryQuery.data?.pendingValue || 0,
+    received: summaryQuery.data?.receivedCount ?? receivedItems.length,
+    pending: summaryQuery.data?.pendingCount ?? pendingItems.length,
+    canceled: summaryQuery.data?.canceledCount ?? canceledItems.length,
+    all: summaryQuery.data?.allCount ?? baseFiltered.length,
+    receivedValue: summaryQuery.data?.receivedValue ?? receivedItems.reduce((s, i) => s + (i.valorPago ?? i.valor), 0),
+    pendingValue: summaryQuery.data?.pendingValue ?? pendingItems.reduce((s, i) => s + i.valor, 0),
   };
 
   const kpis = useMemo(() => {
     const total = baseFiltered.reduce((s, i) => s + i.valor, 0);
-    const recebido = baseFiltered.filter((i) => i.status === 'PAGO').reduce((s, i) => s + (i.valorPago ?? i.valor), 0);
-    const aReceber = baseFiltered.filter((i) => ['PENDENTE', 'VENCIDO'].includes(i.status)).reduce((s, i) => s + i.valor, 0);
+    const recebido = receivedItems.reduce((s, i) => s + (i.valorPago ?? i.valor), 0);
+    const aReceber = pendingItems.reduce((s, i) => s + i.valor, 0);
     const vencidos = baseFiltered.filter((i) => i.status === 'VENCIDO').length;
     return { total, recebido, aReceber, vencidos };
-  }, [baseFiltered]);
+  }, [baseFiltered, pendingItems, receivedItems]);
 
   const allGroups = useMemo(() => {
     if (groupMode === 'none') return [];
@@ -310,16 +339,10 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   }, [accountId, activeAccounts, mode]);
 
   useEffect(() => {
-    if (mode === 'ASAAS' && paymentMethod === 'DINHEIRO') {
+    if (mode === 'GATEWAY' && paymentMethod === 'DINHEIRO') {
       setPaymentMethod('PIX');
     }
   }, [mode, paymentMethod]);
-
-  useEffect(() => {
-    if (receiveAccountId && !receiveAccounts.some((account) => account.id === receiveAccountId)) {
-      setReceiveAccountId('');
-    }
-  }, [receiveAccountId, receiveAccounts]);
 
   const validateAndSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -340,7 +363,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.warning('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
       return;
     }
-    if (mode === 'ASAAS' && paymentMethod === 'DINHEIRO') {
+    if (mode === 'GATEWAY' && paymentMethod === 'DINHEIRO') {
       toast.warning('Forma inválida', 'Link bancário permite Pix, boleto ou cartão.');
       return;
     }
@@ -358,25 +381,6 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   const openReceiveModal = (item: ContasReceber) => {
     setReceiveItem(item);
-    setReceiveValue(formatCurrencyInput(String(item.valor)));
-    setReceiveDate(today());
-    setReceiveMethod('PIX');
-    setReceiveAccountId('');
-  };
-
-  const confirmReceive = (event: React.FormEvent) => {
-    event.preventDefault();
-    const numericValue = parseCurrencyInput(receiveValue);
-    if (!receiveItem) return;
-    if (!receiveAccountId) {
-      toast.warning('Conta obrigatória', 'Selecione a conta/caixa que recebeu o valor.');
-      return;
-    }
-    if (!numericValue || numericValue <= 0) {
-      toast.warning('Valor inválido', 'Informe um valor recebido maior que zero.');
-      return;
-    }
-    receiveMutation.mutate();
   };
 
   useEffect(() => {
@@ -397,7 +401,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   const getGroupSummary = (items: ContasReceber[]) => {
     const sortedByDue = [...items].sort((a, b) => a.dataVencimento.localeCompare(b.dataVencimento));
-    const pendingItems = items.filter((item) => ['PENDENTE', 'VENCIDO'].includes(item.status));
+    const pendingItems = items.filter((item) => isPendingOutrosCredito(item.status));
     const receivedItems = items.filter((item) => item.status === 'PAGO');
     const canceledItems = items.filter((item) => ['CANCELADO', 'ESTORNADO'].includes(item.status));
 
@@ -506,7 +510,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           </p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-700"
         >
           <Plus size={16} /> Novo crédito
@@ -728,7 +732,11 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Novo crédito</p>
                 <h4 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Registrar entrada avulsa</h4>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200">
+              <button
+                onClick={closeCreateModal}
+                disabled={createMutation.isPending}
+                className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -738,7 +746,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                 {[
                   { id: 'LOCAL_PAGO' as const, label: 'Receber agora', desc: 'Entrada local no caixa/conta', icon: Landmark },
                   { id: 'LOCAL_RECEBER' as const, label: 'A receber local', desc: 'Cria conta pendente sem gateway', icon: WalletCards },
-                  { id: 'ASAAS' as const, label: 'Link bancário', desc: 'Usa a rota da Integração Bancária', icon: LinkIcon },
+                  { id: 'GATEWAY' as const, label: 'Link bancário', desc: 'Usa a rota da Integração Bancária', icon: LinkIcon },
                 ].map((option) => {
                   const Icon = option.icon;
                   const active = mode === option.id;
@@ -821,7 +829,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                     ))}
                   </select>
                 </label>
-                {(mode === 'LOCAL_PAGO' || mode === 'ASAAS') && (
+                {(mode === 'LOCAL_PAGO' || mode === 'GATEWAY') && (
                   <>
                     {mode === 'LOCAL_PAGO' && (
                       <label className="space-y-1">
@@ -845,7 +853,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                     )}
                     <label className="space-y-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {mode === 'ASAAS' ? 'Forma do link bancário' : 'Forma de recebimento'}
+                        {mode === 'GATEWAY' ? 'Forma do link bancário' : 'Forma de recebimento'}
                       </span>
                       <select
                         value={paymentMethod}
@@ -862,7 +870,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                 )}
               </div>
 
-              {mode === 'ASAAS' && (
+              {mode === 'GATEWAY' && (
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-700">
                   O sistema vai consultar a aba Outros Créditos da Integração Bancária para decidir se o link usa Asaas, Mercado Pago ou Banese neste ambiente e nesta forma de pagamento.
                 </div>
@@ -871,7 +879,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeCreateModal}
+                  disabled={createMutation.isPending}
                   className="rounded-2xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50"
                 >
                   Cancelar
@@ -891,101 +900,18 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       )}
 
       {receiveItem && (
-        <div className="fixed inset-0 z-[120] flex min-h-screen items-center justify-center bg-[#001a33]/65 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Baixa manual</p>
-                <h4 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Confirmar recebimento</h4>
-                <p className="mt-1 text-sm font-semibold text-slate-500">{receiveItem.descricao}</p>
-              </div>
-              <button onClick={() => setReceiveItem(null)} className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200">
-                <X size={18} />
-              </button>
-            </div>
-
-            {(receiveItem.asaasPaymentId || receiveItem.asaasPaymentLinkId) && (
-              <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold text-amber-700">
-                Esta cobrança possui link bancário. Ao confirmar uma baixa manual, o sistema registra o recebimento local e cancela a cobrança no gateway para evitar cobrança duplicada.
-              </div>
-            )}
-
-            <form onSubmit={confirmReceive} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Valor recebido</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={receiveValue}
-                    onChange={(event) => setReceiveValue(normalizeCurrencyInput(event.target.value))}
-                    onBlur={() => setReceiveValue((current) => formatCurrencyInput(current))}
-                    placeholder="0,00"
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400 focus:bg-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Data do recebimento</span>
-                  <input
-                    type="date"
-                    value={receiveDate}
-                    onChange={(event) => setReceiveDate(event.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400 focus:bg-white"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Conta / caixa de entrada</span>
-                  <select
-                    value={receiveAccountId}
-                    onChange={(event) => setReceiveAccountId(event.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                  >
-                    <option value="">Selecione a conta</option>
-                    {receiveAccounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.banco} - {account.conta} - Saldo: {formatCurrency(account.saldoAtual || 0)}
-                      </option>
-                    ))}
-                  </select>
-                  {receiveAccounts.length === 0 && (
-                    <p className="text-[10px] font-bold text-amber-600">Nenhuma conta ativa vinculada à unidade do lançamento.</p>
-                  )}
-                </label>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Forma de recebimento</span>
-                  <select
-                    value={receiveMethod}
-                    onChange={(event) => setReceiveMethod(event.target.value as any)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                  >
-                    <option value="PIX">Pix</option>
-                    <option value="DINHEIRO">Dinheiro</option>
-                    <option value="CARTAO">Cartão</option>
-                    <option value="BOLETO">Boleto</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setReceiveItem(null)}
-                  className="rounded-2xl border border-slate-200 px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={receiveMutation.isPending}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#001a33] px-6 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-slate-900/15 disabled:opacity-50"
-                >
-                  {receiveMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                  Confirmar recebimento
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ManualSettlementModal
+          key={receiveItem.id}
+          receivable={receiveItem}
+          accounts={receiveAccounts}
+          initialAccountId={receiveAccounts[0]?.id || ''}
+          pending={receiveMutation.isPending}
+          error={receiveMutation.error instanceof Error ? receiveMutation.error.message : null}
+          onClose={() => {
+            if (!receiveMutation.isPending) setReceiveItem(null);
+          }}
+          onConfirm={(payload) => receiveMutation.mutate(payload)}
+        />
       )}
     </div>
   );

@@ -13,5 +13,7 @@ export const createBoletoGatewayCharge = async (input: GatewayChargeInput) => {
     const { createBaneseBoletoCharge } = await import("./banese.ts");
     return createBaneseBoletoCharge(input);
   }
-  throw new Error("Gateway Boleto nao configurado para o provedor selecionado.");
+  throw new Error(
+    "Gateway Boleto nao configurado para o provedor selecionado.",
+  );
 };

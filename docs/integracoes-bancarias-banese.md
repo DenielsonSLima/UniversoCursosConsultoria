@@ -1,97 +1,81 @@
-# Integracao Bancaria Banese Card
+# Integração bancária Banese — boleto e Pix
 
-Esta nota registra a leitura dos documentos locais em `Documentos/forum banese api`
-e dos PDFs oficiais do Banese usados como referencia para pre-configuracao do
-banco/provedor Banese Card.
+Esta nota resume os manuais locais fornecidos pelo Banese e as regras já
+incorporadas ao sistema. Banese não é usado para cartão. O identificador interno
+legado `banese_card` é apenas um código técnico do provedor e não altera essa
+restrição.
 
-## Autenticacao
+## API de cobrança / boleto
 
-O Banese Card nao usa uma chave unica no formato do Asaas. A autenticacao principal
-e OAuth 2 `client_credentials`, com `Client ID` e `Client Secret` fornecidos
-pelo banco apos habilitacao do convenio.
+Autenticação OAuth 2 `client_credentials`, com segredo mantido no backend/Vault.
 
-O sistema deve solicitar token no endpoint do ambiente e usar o retorno como:
+Ambientes documentados:
 
-```text
-Authorization: Bearer <access_token>
-```
+- sandbox: `https://sandbox.banese.b.br/cobranca/v1`;
+- produção: `https://webapi.banese.b.br/cobranca/v1`;
+- token sandbox: `https://sandbox.banese.b.br/autenticacao/oauth/v1/token`;
+- token produção: `https://webapi.banese.b.br/autenticacao/oauth/v1/token`.
 
-## Boleto / API Cobranca
+Escopo do token: `boletos`.
 
-Base URLs:
+Operações principais:
 
-- Sandbox: `https://sandbox.banese.b.br/cobranca/v1`
-- Producao: `https://webapi.banese.b.br/cobranca/v1`
+- `POST /convenios/{id_convenio}/boletos` — emitir;
+- `PUT /convenios/{id_convenio}/boletos/{nosso_numero}` — alterar;
+- `PUT /convenios/{id_convenio}/boletos/{nosso_numero}/baixa` — baixar;
+- `GET /convenios/{id_convenio}/boletos/{nosso_numero}` — consultar;
+- `GET /convenios/{id_convenio}/boletos/{nosso_numero}/pagamentos/efetivados`
+  — consultar pagamentos.
 
-Token:
+A API retorna os dados do título, não um PDF final. O sistema monta boleto e
+carnê por rotas privadas/autenticadas usando os dados confirmados pelo banco.
+Os modelos submetidos à validação estão em `banese homologacao/`.
 
-- Sandbox: `https://sandbox.banese.b.br/autenticacao/oauth/v1/token`
-- Producao: `https://webapi.banese.b.br/autenticacao/oauth/v1/token`
+## Pix / SAB Guias
 
-Token body:
+Ambientes documentados:
 
-```text
-grant_type=client_credentials&scope=boletos
-```
+- sandbox: `https://apipix-h.banese.b.br/guias/v1`;
+- produção: `https://apipix.banese.b.br/guias/v1`;
+- token sandbox: `https://apipix-h.banese.b.br/security/v3/oauth/token`;
+- token produção: `https://apipix.banese.b.br/security/v3/oauth/token`.
 
-Endpoints principais:
+Operações descritas no manual:
 
-- Criar boleto: `POST /convenios/{id_convenio}/boletos`
-- Alterar boleto: `PUT /convenios/{id_convenio}/boletos/{nosso_numero}`
-- Baixar boleto: `PUT /convenios/{id_convenio}/boletos/{nosso_numero}/baixa`
-- Consultar boleto: `GET /convenios/{id_convenio}/boletos/{nosso_numero}`
-- Consultar pagamentos: `GET /convenios/{id_convenio}/boletos/{nosso_numero}/pagamentos/efetivados`
+- `POST /manutencao/guiaVencimentoFuturo`;
+- `POST /manutencao/guiaImediata`;
+- `GET /manutencao/guias/{CodigoDeBarra}`;
+- `PUT /manutencao/webhook/{chave}`.
 
-## Pix / API SAB Guias
+O Pix está bloqueado no ambiente de homologação por decisão do banco. Nenhuma
+rota Pix está ativa. A produção só pode ser habilitada depois da liberação
+formal e da validação de credenciais, CRT/certificado, chave Pix, convênio,
+terminal e webhook.
 
-Base URLs:
+## API principal e CNAB240 de contingência
 
-- Sandbox: `https://apipix-h.banese.b.br/guias/v1`
-- Producao: `https://apipix.banese.b.br/guias/v1`
+A API é sempre o caminho principal para emissão, consulta e retorno. CNAB240 é
+uma segunda opção operacional para indisponibilidade da API. A contingência não
+pode operar até que o Banese forneça/confirme o EDI7 e homologue os movimentos
+necessários, incluindo baixa quando aplicável.
 
-Token:
+Na aba **Financeiro > Conciliação**, remessa e retorno são fluxos separados,
+com prévia antes da aplicação, idempotência por arquivo e revisão obrigatória
+para qualquer divergência.
 
-- Sandbox: `https://apipix-h.banese.b.br/security/v3/oauth/token`
-- Producao: `https://apipix.banese.b.br/security/v3/oauth/token`
+## Dados ainda necessários do banco
 
-O manual tambem descreve etapa de certificado/CRT Access Token para comunicacao
-com a API Pix. Esse valor deve ficar em segredo/Vault.
+- aprovação formal do layout de boleto e carnê;
+- credenciais e convênio de produção da API de cobrança;
+- liberação e dados completos do Pix em produção;
+- EDI7 real e homologação de remessa/retorno CNAB240;
+- confirmação das regras de nosso número, carteira, espécie, baixa/devolução,
+  multa, juros e desconto;
+- confirmação do header `Terminal` (`99000090054` em homologação e
+  `99000090049` em produção, conforme manual);
+- confirmação do endpoint de certificado grafado no manual como
+  `/manutencao/cerificado`, inclusive se a ausência de `t` é intencional.
 
-Endpoints relevantes:
+Nenhum desses valores deve ser inventado ou armazenado em frontend, log ou
+documentação pública.
 
-- Criar guia com vencimento: `POST /manutencao/guiaVencimentoFuturo`
-- Criar guia imediata: `POST /manutencao/guiaImediata`
-- Consultar guia: `GET /manutencao/guias/{CodigoDeBarra}`
-- Webhook Pix: `PUT /manutencao/webhook/{chave}`
-
-## O que pedir ao gerente Banese Card
-
-Para boleto:
-
-- Habilitacao da API de Cobranca/Boleto para o CNPJ da escola.
-- `Client ID` e `Client Secret` de sandbox e producao.
-- Codigo do convenio de boleto.
-- CPF/CNPJ do beneficiario cadastrado no convenio.
-- Regras de Nosso Numero, carteira, especie, baixa/devolucao, multa, juros e desconto.
-
-Para Pix/SAB Guias:
-
-- Habilitacao da API Pix/SAB Guias.
-- `Client ID` e `Client Secret` de sandbox e producao, se forem separados da cobranca.
-- CRT Access Token/certificado para obter certificado de comunicacao Pix.
-- Codigo do convenio Pix/SAB Guias.
-- Chave Pix cadastrada no Banese.
-- Confirmacao do formato de webhook e ambiente de homologacao.
-- Confirmacao do header `Terminal`:
-  - Homologacao: `99000090054`
-  - Producao: `99000090049`
-- Confirmacao do endpoint de certificado descrito no manual como `/manutencao/cerificado`.
-  O texto do manual aparece sem a letra `t`; confirmar se e erro de digitacao ou endpoint real.
-- Formato do certificado cliente, senha, cadeia/CA e prazo de renovacao, caso o certificado
-  precise ser armazenado ou enviado pela Edge Function.
-
-Para cartao de credito:
-
-- A documentacao local fornecida cobre boleto e Pix/SAB Guias.
-- Como o Banese Card nao aceita cartao de credito neste fluxo, rota `CREDIT_CARD`
-  deve permanecer em Asaas ou Mercado Pago.

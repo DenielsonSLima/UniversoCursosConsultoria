@@ -1,9 +1,11 @@
+import assert from "node:assert/strict";
 import {
   getTurmaUnavailabilityReason,
   isUnsafeCallbackHost,
   missingTechnicalEnrollmentFields,
   normalizeErrorMessage,
   normalizeGatewayPaymentMethod,
+  resolvePaymentGatewayRoute,
   tryNormalizeGatewayPaymentMethod,
 } from "./checkout-utils.ts";
 
@@ -57,9 +59,62 @@ Deno.test("preserva bloqueio de turma sem inscricao online", () => {
   );
 });
 
+Deno.test("quantidade minima nao funciona como teto de matriculas", () => {
+  assertEquals(
+    getTurmaUnavailabilityReason({
+      permitir_inscricoes_online: true,
+      bloquear_matriculas_apos_completar_vagas: true,
+      qtd_vagas_minima: 1,
+      vagas_totais: 30,
+      matriculas: [{ status: "ATIVO" }],
+    }),
+    null,
+  );
+});
+
+Deno.test("vagas totais continuam sendo o teto da turma", () => {
+  assertEquals(
+    getTurmaUnavailabilityReason({
+      permitir_inscricoes_online: true,
+      bloquear_matriculas_apos_completar_vagas: true,
+      qtd_vagas_minima: 1,
+      vagas_totais: 1,
+      matriculas: [{ status: "ATIVO" }],
+    }),
+    "A turma está com vagas completas. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.",
+  );
+});
+
 Deno.test("normaliza mensagens de erro estruturadas", () => {
   assertEquals(
     normalizeErrorMessage({ message: "Falha", code: "gateway_error" }),
     "Falha (Código: gateway_error)",
+  );
+});
+
+Deno.test("resolvedor tecnico bloqueia rota Mercado Pago legada habilitada", async () => {
+  const response = {
+    data: {
+      provider_code: "mercado_pago",
+      credential_id: "credential-1",
+      enabled: true,
+    },
+    error: null,
+  };
+  const query: any = {
+    select: () => query,
+    eq: () => query,
+    maybeSingle: () => Promise.resolve(response),
+  };
+
+  await assert.rejects(
+    () =>
+      resolvePaymentGatewayRoute(
+        { from: () => query },
+        "TECNICO",
+        "CREDIT_CARD",
+        "sandbox",
+      ),
+    /criacao ambigua de preferencias/i,
   );
 });

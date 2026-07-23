@@ -4,6 +4,7 @@ export const persistAsaasGatewayTransaction = async (
   context: CheckoutContext,
   payment: any,
   currentReceivable: any,
+  inscricaoOnlineId: string | null = null,
 ) => {
   if (!payment?.id || !currentReceivable?.id) return;
 
@@ -17,6 +18,7 @@ export const persistAsaasGatewayTransaction = async (
   } = context;
   const payload = {
     receivable_id: currentReceivable.id,
+    inscricao_online_id: inscricaoOnlineId,
     provider_code: "asaas",
     environment,
     payment_method: gatewayPaymentMethodForCharge,

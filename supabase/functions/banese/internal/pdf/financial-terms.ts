@@ -51,16 +51,20 @@ export const presentBaneseFinancialTerms = (
         : percentage(terms.penalty.value),
     }
     : { label: "Multa após o vencimento", value: "Sem multa" };
+  const interestAmountPerDay = terms.interest
+    ? terms.interest.type === "daily-fixed"
+      ? terms.interest.value
+      : (terms.nominalAmount * (terms.interest.value / 100)) / 30
+    : 0;
   const interest: BaneseFinancialTermField = terms.interest
     ? {
       label: `Juros a partir de ${
         formatBaneseDocumentDate(terms.interest.startsOn)
       }`,
-      value: terms.interest.type === "daily-fixed"
-        ? `${money(terms.interest.value)} ao dia`
-        : `${percentage(terms.interest.value)} ao mês`,
+      value: `${money(interestAmountPerDay)} ao dia`,
     }
     : { label: "Juros após o vencimento", value: "Sem juros" };
 
   return { terms, discount, penalty, interest, amountUntilDue };
 };
+

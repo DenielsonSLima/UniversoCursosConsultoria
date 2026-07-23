@@ -133,7 +133,26 @@ export const canAccessGestorModule = (
 export const canAccessFinanceiroTab = (
   permissions: GestorPermissions,
   tabId: string,
-) => permissions.financeiroTabs.includes(tabId as FinanceiroTabId);
+) => getEffectiveFinanceiroTabs(permissions).includes(tabId as FinanceiroTabId);
+
+export const getEffectiveFinanceiroTabs = (
+  permissions: GestorPermissions,
+): FinanceiroTabId[] => {
+  const legacyTabs = normalizeFinanceiroTabs(permissions.financeiroTabs);
+  if (permissions.tabs && Object.prototype.hasOwnProperty.call(permissions.tabs, 'financeiro')) {
+    const scopedTabs = normalizeFinanceiroTabs(permissions.tabs.financeiro);
+    if (!scopedTabs.length) return legacyTabs;
+
+    if (scopedTabs.includes('receber') && legacyTabs.includes('receber')) {
+      return scopedTabs.includes('conciliacao-bancaria')
+        ? scopedTabs
+        : [...new Set([...scopedTabs, 'conciliacao-bancaria'])];
+    }
+
+    return scopedTabs;
+  }
+  return legacyTabs;
+};
 
 export const canAccessTab = (
   permissions: GestorPermissions,
@@ -141,10 +160,7 @@ export const canAccessTab = (
   tabId: string,
 ): boolean => {
   if (moduleId === 'financeiro') {
-    const hasLegacy = permissions.financeiroTabs?.includes(tabId as FinanceiroTabId);
-    const hasNew = permissions.tabs?.['financeiro']?.includes(tabId);
-    if (permissions.tabs?.['financeiro']) return hasNew;
-    return hasLegacy ?? true;
+    return getEffectiveFinanceiroTabs(permissions).includes(tabId as FinanceiroTabId);
   }
 
   if (!permissions.tabs || !permissions.tabs[moduleId]) {

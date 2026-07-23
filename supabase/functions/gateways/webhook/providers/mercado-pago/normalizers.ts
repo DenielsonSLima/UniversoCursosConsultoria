@@ -29,7 +29,7 @@ export const pixPayloadFor = (payment: Record<string, unknown>) => {
 
 export const installmentsFor = (
   payment: Record<string, unknown>,
-  receivable: any,
+  receivable: Record<string, unknown>,
 ) => firstNumber(payment.installments, receivable.gateway_installments, 1) || 1;
 
 export const paymentFromOrder = (

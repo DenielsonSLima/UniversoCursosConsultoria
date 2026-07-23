@@ -19,10 +19,12 @@ export interface CurrentWhatsAppConfig {
 }
 
 export type PhoneNumberStatus = Record<string, unknown> & {
+  id?: string | null;
   is_on_biz_app?: boolean;
   platform_type?: string | null;
   display_phone_number?: string | null;
   quality_rating?: string | null;
+  verified_name?: string | null;
 };
 
 export interface SyncRequestResult {

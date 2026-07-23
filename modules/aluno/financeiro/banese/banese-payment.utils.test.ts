@@ -4,7 +4,6 @@ import type { BanesePaymentRecord } from './banese-payment.types';
 import {
   canPayBaneseRecord,
   getBaneseCarnetInstallments,
-  getBaneseOfficialDocumentUrl,
   getBanesePaymentActionLabel,
   getBanesePixPresentation,
   getBaneseStatusPresentation,
@@ -235,19 +234,9 @@ test('aceita grupo de carnê previamente validado pelo DTO protegido', () => {
   );
 });
 
-test('mascara documento e bloqueia link recursivo do portal', () => {
+test('mascara documento sem depender de PDF ou URL externa do Banese', () => {
   assert.equal(maskBaneseDocument('12345678909'), '***.***.***-09');
   assert.equal(maskBaneseDocument('***.***.***-02'), '***.***.***-02');
-  assert.equal(getBaneseOfficialDocumentUrl(registeredRecord({
-    gateway_bank_slip_url: 'https://universocc.com.br/aluno?module=financeiro&banesePayment=abc',
-  })), null);
-  assert.equal(getBaneseOfficialDocumentUrl(registeredRecord({
-    gateway_bank_slip_url: 'https://banco.example/documento.pdf',
-  })), 'https://banco.example/documento.pdf');
-  assert.equal(getBaneseOfficialDocumentUrl(registeredRecord({
-    gateway_bank_slip_url: 'https://universocc.com.br/aluno?banesePayment=abc',
-    gateway_invoice_url: 'https://banco.example/segunda-opcao.pdf',
-  })), 'https://banco.example/segunda-opcao.pdf');
 });
 
 test('apresenta cobrança devolvida como encerrada', () => {

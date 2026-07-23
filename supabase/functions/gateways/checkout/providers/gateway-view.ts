@@ -1,7 +1,4 @@
-import {
-  gatewayPrimaryUrl,
-  type GatewayProviderCode,
-} from "../../router.ts";
+import { gatewayPrimaryUrl, type GatewayProviderCode } from "../../router.ts";
 import { isRemoteTitleNonPayable } from "../remote-title-guard.ts";
 import type { EadCheckoutContext } from "../types.ts";
 

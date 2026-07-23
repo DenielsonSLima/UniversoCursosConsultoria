@@ -1,10 +1,19 @@
 import type { GatewayWebhookContext } from "../types.ts";
+import { repairOnlineInscription } from "../../online-inscription.ts";
 
-const AUTOMATIC_ENROLLMENT_MODALITIES = new Set([
+const AUTOMATIC_ENROLLMENT_MODALITIES = new Set<string>([
   "EAD",
   "LIVRE",
   "ESPECIALIZACAO",
 ]);
+export const AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES = [
+  "PENDENTE",
+  "AGUARDANDO_PAGAMENTO",
+  "AGUARDANDO_CONFIRMACAO",
+] as const;
+const AUTOMATIC_ACTIVATION_SOURCE_STATUSES = new Set<string>(
+  AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES,
+);
 
 const normalizeModality = (value: unknown) =>
   String(value || "")
@@ -15,6 +24,10 @@ const normalizeModality = (value: unknown) =>
 
 export const isAutomaticEnrollmentActivationModality = (value: unknown) =>
   AUTOMATIC_ENROLLMENT_MODALITIES.has(normalizeModality(value));
+
+export const isEnrollmentStatusEligibleForAutomaticActivation = (
+  value: unknown,
+) => AUTOMATIC_ACTIVATION_SOURCE_STATUSES.has(normalizeModality(value));
 
 export const activateEnrollmentAfterPayment = async (
   context: GatewayWebhookContext,
@@ -40,11 +53,18 @@ export const activateEnrollmentAfterPayment = async (
     : turma?.cursos;
   // TECNICO fica deliberadamente fora: a ativacao depende da analise documental.
   if (!isAutomaticEnrollmentActivationModality(course?.modalidade)) return;
+  // Uma baixa atrasada nunca pode reativar matricula encerrada, transferida,
+  // trancada ou concluida. A comparacao de status no UPDATE tambem protege a
+  // corrida entre esta leitura e uma movimentacao academica.
+  if (!isEnrollmentStatusEligibleForAutomaticActivation(matricula?.status)) {
+    return;
+  }
 
   const { error: updateError } = await context.admin
     .from("matriculas")
     .update({ status: "ATIVO" })
-    .eq("id", receivable.matricula_id);
+    .eq("id", receivable.matricula_id)
+    .eq("status", matricula.status);
   if (updateError) throw updateError;
 };
 
@@ -64,28 +84,20 @@ export const syncOnlineInscriptionPayment = async (
   if (!input.receivable?.matricula_id) return;
 
   const paid = input.localStatus === "PAGO";
-  const updates: Record<string, unknown> = {
-    gateway_provider: input.gatewayProvider,
-    gateway_environment: input.environment,
-    gateway_payment_id: input.paymentId,
-    gateway_payment_link_id: input.paymentLinkId,
-    status: paid ? "PAGO" : input.localStatus || input.pendingStatus,
-    forma_pagamento: input.legacyPaymentMethod,
-    erro: null,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (paid) {
-    updates.pago_em = new Date().toISOString();
-    updates.confirmado_em = new Date().toISOString();
-  }
-
-  const { error } = await context.admin
-    .from("inscricoes_online")
-    .update(updates)
-    .eq("matricula_id", input.receivable.matricula_id)
-    .eq("gateway_provider", input.gatewayProvider);
-  if (error) throw error;
+  await repairOnlineInscription({
+    admin: context.admin,
+    receivable: input.receivable,
+    gatewayProvider: input.gatewayProvider,
+    environment: input.environment,
+    paymentId: input.paymentId,
+    customerId: input.receivable.gateway_customer_id || null,
+    paymentLinkId: input.paymentLinkId,
+    localStatus: paid ? "PAGO" : input.localStatus || input.pendingStatus,
+    legacyPaymentMethod: input.legacyPaymentMethod,
+    pendingStatus: input.pendingStatus,
+    paidAt: paid ? input.receivable.data_pagamento || null : null,
+    requireGatewayTransaction: true,
+  });
 };
 
 /** @deprecated Use activateEnrollmentAfterPayment. */

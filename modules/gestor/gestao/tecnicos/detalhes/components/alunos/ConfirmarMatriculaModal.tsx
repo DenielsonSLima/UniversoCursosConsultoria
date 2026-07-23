@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, CircleDollarSign, DollarSign, Percent, ReceiptText, X } from 'lucide-react';
 import { Turma } from '../../../../gestao.types';
 import { TurmaFinanceiroMatriculaConfig, PrevisaoFinanceiraTurma } from '../../turma-alunos.service';
+import type { GatewayPaymentMethod } from '../../../../../../asaas/asaas.service';
 
 export type EnrollmentStep = 'MATRICULA' | 'PARCELAS';
 
@@ -29,12 +30,18 @@ interface ConfirmarMatriculaModalProps {
     gerar_cobranca_futura: boolean | null;
     sincronizar_asaas: boolean | null;
   };
+  paymentMethod: GatewayPaymentMethod | null;
+  availablePaymentMethods: GatewayPaymentMethod[];
+  paymentOptionsLoading: boolean;
+  paymentOptionsError: boolean;
+  paymentOptionsEnvironment?: 'sandbox' | 'production';
   onFlagsChange: (next: {
     financeiro_herdado: boolean;
     gerar_cobranca_inicial: boolean;
     gerar_cobranca_futura: boolean | null;
     sincronizar_asaas: boolean | null;
   }) => void;
+  onPaymentMethodChange: (method: GatewayPaymentMethod) => void;
   isPending: boolean;
   onStepChange: (step: EnrollmentStep) => void;
   onFinanceChange: (field: keyof EnrollmentFinance, value: string) => void;
@@ -69,6 +76,15 @@ const getResumoPrevisao = (previsao?: PrevisaoFinanceiraTurma) => {
   const quantidade = Number(previsao.quantidade_prevista || 0);
   return `${quantidade} parcelas previstas; geração ${previsao.gerar_cobrancas_futuras ? 'ativa' : 'inativa'}.`;
 };
+
+const PAYMENT_METHOD_OPTIONS: ReadonlyArray<{
+  value: GatewayPaymentMethod;
+  label: string;
+}> = [
+  { value: 'PIX', label: 'Pix' },
+  { value: 'BOLETO', label: 'Boleto' },
+  { value: 'CREDIT_CARD', label: 'Cartão de crédito' },
+];
 
 interface MoneyFieldProps {
   label: string;
@@ -111,13 +127,20 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   turmaFinanceiroConfig,
   previsao,
   enrollmentFlags,
+  paymentMethod,
+  availablePaymentMethods,
+  paymentOptionsLoading,
+  paymentOptionsError,
+  paymentOptionsEnvironment,
   onFlagsChange,
+  onPaymentMethodChange,
   isPending,
   onStepChange,
   onFinanceChange,
   onClose,
   onConfirm,
 }) => {
+  const environmentLabel = (paymentOptionsEnvironment || 'sandbox').toUpperCase();
   const aplicaDescontoMensalidade = turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false;
   const aplicaEncargosMensalidade = turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false;
   const descontoMensalidade = aplicaDescontoMensalidade ? finance.descontoPontualidade : 0;
@@ -220,6 +243,50 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                   <span>Financeiro herdado <small className="mt-1 block text-[10px] font-semibold normal-case tracking-normal text-slate-400">Não cria uma nova cobrança inicial.</small></span>
                 </label>
               </div>
+
+              {enrollmentFlags.gerar_cobranca_inicial && !enrollmentFlags.financeiro_herdado && (
+                <fieldset className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                  <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-blue-700">
+                    Método da cobrança inicial
+                  </legend>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {PAYMENT_METHOD_OPTIONS.filter((option) =>
+                      enrollmentFlags.sincronizar_asaas === false
+                      || availablePaymentMethods.includes(option.value)
+                    ).map((option) => (
+                      <label
+                        key={option.value}
+                        className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-[10px] font-black uppercase tracking-wide transition-colors ${
+                          paymentMethod === option.value
+                            ? 'border-blue-500 bg-blue-600 text-white'
+                            : 'border-blue-100 bg-white text-slate-600 hover:border-blue-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="enrollment-payment-method"
+                          value={option.value}
+                          checked={paymentMethod === option.value}
+                          onChange={() => onPaymentMethodChange(option.value)}
+                          className="sr-only"
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className={`mt-2 text-[10px] font-semibold ${paymentMethod ? 'text-blue-600' : 'text-amber-700'}`}>
+                    {paymentOptionsLoading
+                      ? 'Validando rotas e credenciais deste ambiente...'
+                      : paymentOptionsError
+                        ? 'Não foi possível validar as rotas bancárias.'
+                          : enrollmentFlags.sincronizar_asaas !== false && availablePaymentMethods.length === 0
+                          ? `Ambiente atual: ${environmentLabel}. Nenhum método possui rota ativa e credencial pronta aqui.`
+                          : paymentMethod
+                      ? 'A rota bancária será resolvida pelo método escolhido.'
+                      : 'Escolha um método para criar a cobrança inicial.'}
+                  </p>
+                </fieldset>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-3 text-xs font-black uppercase text-slate-500">
@@ -336,7 +403,7 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                       checked={enrollmentFlags.sincronizar_asaas ?? true}
                       onChange={(event) => onFlagsChange({ ...enrollmentFlags, sincronizar_asaas: event.target.checked })}
                     />
-                    Sincronizar Asaas
+                    Sincronizar no gateway
                   </label>
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
                     Rematrícula {formatCurrency(finance.valorRematricula)}

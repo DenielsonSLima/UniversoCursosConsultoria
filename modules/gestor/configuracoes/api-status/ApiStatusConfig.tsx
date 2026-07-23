@@ -1,8 +1,12 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Server, Database, ShieldCheck, Globe, CreditCard, AlertCircle } from 'lucide-react';
-import { AsaasConfigData, asaasService } from '../asaas/asaas.service';
+import { Server, Database, ShieldCheck, Globe, CreditCard, Landmark } from 'lucide-react';
+import {
+  GatewayEnvironment,
+  GatewayProviderCode,
+  integracaoBancariaService,
+} from '../integracao-bancaria/integracao-bancaria.service';
 
 const formatDateTime = (value?: string) => {
   if (!value) return 'Sem teste recente';
@@ -30,14 +34,16 @@ const statusBadge = (status: 'online' | 'warning' | 'offline', label: string) =>
 };
 
 const ApiStatusConfig: React.FC = () => {
-  const { data: asaasConfig, isLoading: isLoadingAsaas, isError: isAsaasError } = useQuery<AsaasConfigData>({
-    queryKey: ['asaas_config'],
-    queryFn: () => asaasService.getConfig(),
+  const { data: overview, isLoading, isError } = useQuery({
+    queryKey: ['integracao_bancaria'],
+    queryFn: integracaoBancariaService.getOverview,
   });
 
-  const asaasHasOkTest = asaasConfig?.configured && asaasConfig.lastTestStatus === 'OK';
-  const getAsaasStatus = (environment: 'sandbox' | 'production') => {
-    if (isLoadingAsaas) {
+  const getProviderStatus = (
+    providerCode: Extract<GatewayProviderCode, 'banese_card' | 'mercado_pago'>,
+    environment: GatewayEnvironment,
+  ) => {
+    if (isLoading) {
       return {
         badge: statusBadge('warning', 'Verificando'),
         detail: 'Consultando configuração...',
@@ -45,39 +51,46 @@ const ApiStatusConfig: React.FC = () => {
       };
     }
 
-    if (isAsaasError) {
+    if (isError) {
       return {
         badge: statusBadge('warning', 'Atenção'),
-        detail: 'Não foi possível consultar o Asaas',
+        detail: 'Não foi possível consultar a integração bancária',
         iconClass: 'bg-orange-100 text-orange-600',
       };
     }
 
-    if (asaasConfig?.environment === environment && asaasHasOkTest) {
+    const credential = overview?.credentials.find(
+      (item) => item.providerCode === providerCode && item.environment === environment,
+    );
+    if (credential?.configured && credential.lastTestStatus === 'OK') {
       return {
-        badge: statusBadge('online', 'Ativo'),
-        detail: `Conexão validada em ${formatDateTime(asaasConfig.lastTestAt)}`,
+        badge: statusBadge('online', 'Validada'),
+        detail: `Último teste válido em ${formatDateTime(credential.lastTestAt || undefined)}`,
         iconClass: 'bg-emerald-100 text-emerald-600',
       };
     }
 
-    if (asaasConfig?.environment === environment && asaasConfig?.configured) {
+    if (credential?.configured) {
       return {
-        badge: statusBadge('warning', 'Configurar'),
-        detail: asaasConfig.lastTestMessage || 'Chave salva, aguardando teste de conexão',
+        badge: statusBadge('warning', 'Revisar'),
+        detail: credential.lastTestMessage || 'Chaves salvas, aguardando teste de conexão',
         iconClass: 'bg-orange-100 text-orange-600',
       };
     }
 
     return {
       badge: statusBadge('offline', 'Inativo'),
-      detail: 'Ambiente não selecionado nesta configuração',
+      detail: 'Credenciais ainda não validadas neste ambiente',
       iconClass: 'bg-slate-100 text-slate-500',
     };
   };
 
-  const sandboxStatus = getAsaasStatus('sandbox');
-  const productionStatus = getAsaasStatus('production');
+  const providerCards = [
+    { providerCode: 'banese_card' as const, environment: 'sandbox' as const, label: 'Banese Homologação', icon: Landmark },
+    { providerCode: 'banese_card' as const, environment: 'production' as const, label: 'Banese Produção', icon: Landmark },
+    { providerCode: 'mercado_pago' as const, environment: 'sandbox' as const, label: 'Mercado Pago Teste', icon: CreditCard },
+    { providerCode: 'mercado_pago' as const, environment: 'production' as const, label: 'Mercado Pago Produção', icon: CreditCard },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -132,27 +145,22 @@ const ApiStatusConfig: React.FC = () => {
           <span className="text-slate-400 text-xs font-mono">Build 20240228</span>
         </div>
 
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className={`p-3 rounded-xl ${sandboxStatus.iconClass}`}><CreditCard size={24} /></div>
-            <div className="min-w-0">
-              <p className="font-bold text-[#001a33]">Asaas Sandbox</p>
-              <p className="text-xs text-slate-500 truncate">{sandboxStatus.detail}</p>
+        {providerCards.map((card) => {
+          const providerStatus = getProviderStatus(card.providerCode, card.environment);
+          const Icon = card.icon;
+          return (
+            <div key={`${card.providerCode}-${card.environment}`} className="p-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-between gap-3">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className={`p-3 rounded-xl ${providerStatus.iconClass}`}><Icon size={24} /></div>
+                <div className="min-w-0">
+                  <p className="font-bold text-[#001a33]">{card.label}</p>
+                  <p className="text-xs text-slate-500 truncate">{providerStatus.detail}</p>
+                </div>
+              </div>
+              {providerStatus.badge}
             </div>
-          </div>
-          {sandboxStatus.badge}
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className={`p-3 rounded-xl ${productionStatus.iconClass}`}><AlertCircle size={24} /></div>
-            <div className="min-w-0">
-              <p className="font-bold text-[#001a33]">Asaas Produção</p>
-              <p className="text-xs text-slate-500 truncate">{productionStatus.detail}</p>
-            </div>
-          </div>
-          {productionStatus.badge}
-        </div>
+          );
+        })}
 
       </div>
     </div>

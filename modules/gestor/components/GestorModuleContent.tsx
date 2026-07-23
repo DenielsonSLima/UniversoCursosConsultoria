@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Lock, Settings } from 'lucide-react';
 import type { PortalAuthProfile } from '../../login/portal-session';
-import { canAccessTab } from '../access-control';
+import { canAccessTab, getEffectiveFinanceiroTabs } from '../access-control';
 import type { GestorPermissions } from '../access-control';
 import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
 
@@ -95,7 +95,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'gestao': return <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} />;
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
     case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={isGlobal} />;
-    case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={permissions.financeiroTabs} />;
+    case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'biblioteca': return <BibliotecaPage />;
     case 'comunicacao': return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') ? <ComunicacaoPage gestorProfile={profile} channel="mensagem" /> : <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
     case 'comunicacao-mensagem': return <ComunicacaoPage gestorProfile={profile} channel="mensagem" />;

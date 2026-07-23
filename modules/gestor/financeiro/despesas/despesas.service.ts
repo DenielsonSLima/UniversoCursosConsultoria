@@ -187,7 +187,11 @@ export const despesasService = {
   async createDespesa(input: CreateDespesaInput): Promise<DespesaLancamento[]> {
     const totalParcelas = Math.max(1, input.totalParcelas || 1);
     const intervaloDias = Math.max(1, input.intervaloDias || 30);
-    const grupoParcelas = totalParcelas > 1 ? crypto.randomUUID() : undefined;
+    const grupoParcelas = totalParcelas > 1
+      ? (typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `group-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
+      : undefined;
 
     const rows = Array.from({ length: totalParcelas }, (_, i) => ({
       polo_id: input.poloId,

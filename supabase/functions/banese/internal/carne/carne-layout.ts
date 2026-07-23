@@ -139,16 +139,30 @@ export const drawBaneseCarnetSlip = async (
     return top - height;
   };
   let stubTop = box.y + box.height - 49;
-  stubTop = stubField(
-    "Parcela / Documento",
-    baneseCarnetInstallmentDocument(input.documentNumber, input.installment),
-    stubTop,
-    24,
-    true,
-  );
   const innerX = box.x + 6;
   const innerWidth = stubWidth - 12;
-  const dueWidth = innerWidth * 0.48;
+  const halfStubWidth = innerWidth * 0.48;
+  const dueWidth = halfStubWidth;
+
+  // Separação em cards lado a lado: Parcela e Documento
+  drawBox(
+    page,
+    fonts,
+    { x: innerX, y: stubTop - 24, width: halfStubWidth, height: 24 },
+    "Parcela",
+    input.installment ? `${input.installment.current}/${input.installment.total}` : "1/1",
+    { valueSize: 6.5, bold: true },
+  );
+  drawBox(
+    page,
+    fonts,
+    { x: innerX + halfStubWidth, y: stubTop - 24, width: innerWidth - halfStubWidth, height: 24 },
+    "Nº Documento",
+    input.documentNumber,
+    { valueSize: 6, bold: true },
+  );
+  stubTop -= 24;
+
   const dueValueHeight = 28;
   drawBox(
     page,
@@ -156,7 +170,7 @@ export const drawBaneseCarnetSlip = async (
     {
       x: innerX,
       y: stubTop - dueValueHeight,
-      width: dueWidth,
+      width: halfStubWidth,
       height: dueValueHeight,
     },
     "Vencimento",
@@ -361,7 +375,7 @@ export const drawBaneseCarnetSlip = async (
   const middleY = bankAreaY + 47;
   const middleTop = contentTop - rowHeight * 3;
   const middleHeight = Math.max(58, middleTop - middleY);
-  const pixWidth = Math.min(118, Math.max(92, bodyWidth * 0.29));
+  const pixWidth = bodyWidth * 0.28;
   const termsWidth = bodyWidth - pixWidth;
   const termsHeight = 31;
   const termsY = middleY + middleHeight - termsHeight;

@@ -14,6 +14,7 @@ import { ENROLLMENT_PHASES, EnrollmentFlagConfig } from './alunos/turmaAlunos.co
 import {
   useAvailableStudents,
   useDestinationClasses,
+  useEnrollmentPaymentOptions,
   useTurmaFinanceiroMatriculaConfig,
   useTurmaStudents,
   usePrevisaoFinanceiraTurma,
@@ -28,6 +29,7 @@ import {
 } from '../hooks/useTurmaAlunosMutations';
 import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { getMaceioIsoDate } from '../../technicalClassDates';
+import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -53,6 +55,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     gerar_cobranca_futura: turma.gerarCobrancasFuturas ?? null,
     sincronizar_asaas: turma.sincronizarAsaasFuturo ?? true,
   });
+  const [enrollmentPaymentMethod, setEnrollmentPaymentMethod] = useState<GatewayPaymentMethod | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<AcademicStudent | null>(null);
   const [studentToRemove, setStudentToRemove] = useState<AcademicStudent | null>(null);
@@ -82,6 +85,15 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
   const turmaFinanceiroConfig = financeiroConfigQuery.data;
   const previsaoQuery = usePrevisaoFinanceiraTurma(turma.id, !!pendingEnrollment && !!turmaFinanceiroConfig);
+  const paymentOptionsQuery = useEnrollmentPaymentOptions(
+    turma.id,
+    !!pendingEnrollment
+      && enrollmentFlags.gerar_cobranca_inicial
+      && enrollmentFlags.sincronizar_asaas !== false,
+  );
+  const paymentOptionsEnvironment = paymentOptionsQuery.data?.environment || 'sandbox';
+  const availablePaymentMethods = (paymentOptionsQuery.data?.options || [])
+    .map((option) => option.paymentMethod);
   const destinationClassesQuery = useDestinationClasses(
     turma.id,
     !!selectedStudent && (
@@ -106,19 +118,19 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       );
     } else if (result.asaasSkipped) {
       toast.success(
-        'Matrícula criada sem envio ao Asaas',
+        'Matrícula criada sem envio ao gateway',
         result.asaasSkipReason || 'A regra financeira da turma/matrícula não exige sincronização no gateway.'
       );
     } else {
-      toast.warning(
+      toast.info(
         'Matrícula criada; sincronização pendente',
         result.asaasError
-          ? `A cobrança local foi criada, mas o Asaas respondeu: ${result.asaasError}`
+          ? `A cobrança local foi criada, mas o gateway respondeu: ${result.asaasError}`
           : 'A matrícula foi criada, mas não houve confirmação de sincronização no gateway.'
       );
     }
     },
-    (error: any) => toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no Asaas: ${error.message}`),
+    (error: any) => toast.error('Matrícula não realizada', `Não foi possível validar/criar a cobrança no gateway: ${error.message}`),
   );
   const confirmEnrollment = (student: any) => {
     if (!canEnroll || financeiroConfigQuery.isError || financeiroConfigQuery.isLoading || !turmaFinanceiroConfig) {
@@ -139,12 +151,12 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     const defaults = turmaFinanceiroConfig;
     const financeiroHerdado = defaults.financeiroHerdado || defaults.origemFinanceira === 'LEGADO';
     const gerarCobrancaInicial = defaults.origemFinanceira === 'NORMAL' && !financeiroHerdado;
-    const deveSincronizarAsaas = gerarCobrancaInicial && (defaults.sincronizarAsaasFuturo ?? true);
+    const deveSincronizarGateway = gerarCobrancaInicial && (defaults.sincronizarAsaasFuturo ?? true);
 
-    if (deveSincronizarAsaas && !isValidStudentCpf(student.cpf_cnpj)) {
+    if (deveSincronizarGateway && !isValidStudentCpf(student.cpf_cnpj)) {
       toast.error(
         'CPF inválido para cobrança',
-        'Atualize o CPF do aluno com um documento válido antes de gerar a matrícula no Asaas.'
+        'Atualize o CPF do aluno com um documento válido antes de gerar a cobrança no gateway.'
       );
       return;
     }
@@ -165,6 +177,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         gerar_cobranca_futura: defaults.gerarCobrancasFuturas ?? null,
         sincronizar_asaas: defaults.sincronizarAsaasFuturo ?? true,
       });
+      setEnrollmentPaymentMethod(null);
       setEnrollmentStep('MATRICULA');
       setPendingEnrollment(student);
     };
@@ -172,6 +185,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const closeEnrollmentConfirmation = () => {
     setPendingEnrollment(null);
     setEnrollmentStep('MATRICULA');
+    setEnrollmentPaymentMethod(null);
   };
   const updateEnrollmentFinance = (field: keyof typeof enrollmentFinance, value: string) => {
     setEnrollmentFinance((current) => ({
@@ -193,6 +207,29 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     }
     if (enrollmentFlags.gerar_cobranca_inicial && enrollmentFinance.valorMatricula <= 0) {
       toast.error('Valor obrigatório', 'Informe o valor da matrícula para gerar a cobrança inicial.');
+      return;
+    }
+    if (enrollmentFlags.gerar_cobranca_inicial && !enrollmentPaymentMethod) {
+      toast.error('Método obrigatório', 'Escolha Pix, boleto ou cartão de crédito para a cobrança inicial.');
+      setEnrollmentStep('MATRICULA');
+      return;
+    }
+    if (
+      enrollmentFlags.gerar_cobranca_inicial
+      && enrollmentFlags.sincronizar_asaas !== false
+      && (
+        paymentOptionsQuery.isLoading
+        || paymentOptionsQuery.isError
+        || !enrollmentPaymentMethod
+        || !availablePaymentMethods.includes(enrollmentPaymentMethod)
+      )
+    ) {
+      toast.error(
+        'Rota bancária indisponível',
+        paymentOptionsQuery.isError
+          ? 'Não foi possível validar as rotas bancárias. Atualize a tela e tente novamente.'
+          : 'Escolha um método que possua rota ativa e credencial pronta neste ambiente.',
+      );
       return;
     }
     if (enrollmentFlags.gerar_cobranca_futura && enrollmentFinance.valorParcela <= 0) {
@@ -220,6 +257,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     }
     enrollMutation.mutate({
       alunoId: pendingEnrollment.id,
+      paymentMethod: enrollmentPaymentMethod,
       ...enrollmentFlags,
       ...enrollmentFinance,
     });
@@ -344,8 +382,14 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           turmaFinanceiroConfig={turmaFinanceiroConfig}
           previsao={previsaoQuery.data}
           enrollmentFlags={enrollmentFlags}
+          paymentMethod={enrollmentPaymentMethod}
+          availablePaymentMethods={availablePaymentMethods}
+          paymentOptionsLoading={paymentOptionsQuery.isLoading}
+          paymentOptionsError={paymentOptionsQuery.isError}
+          paymentOptionsEnvironment={paymentOptionsEnvironment}
           onFlagsChange={setEnrollmentFlags}
-          isPending={enrollMutation.isPending}
+          onPaymentMethodChange={setEnrollmentPaymentMethod}
+          isPending={enrollMutation.isPending || paymentOptionsQuery.isLoading}
           onStepChange={setEnrollmentStep}
           onFinanceChange={updateEnrollmentFinance}
           onClose={closeEnrollmentConfirmation}

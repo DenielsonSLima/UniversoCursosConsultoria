@@ -4,7 +4,10 @@ import type { AsaasRuntime } from "./asaas-http.ts";
 
 const one = (value: any) => Array.isArray(value) ? value[0] : value;
 
-export const createAsaasCarnetService = (admin: any, _syncReceivable: unknown) => {
+export const createAsaasCarnetService = (
+  admin: any,
+  _syncReceivable: unknown,
+) => {
   const tecnicoCarnet = createTecnicoCarnetService(admin);
 
   const ensureTecnicoScope = async (receivableIds: string[]) => {
@@ -20,7 +23,9 @@ export const createAsaasCarnetService = (admin: any, _syncReceivable: unknown) =
       .order("data_vencimento", { ascending: true });
     if (error) throw error;
     if ((data || []).length !== ids.length) {
-      throw new Error("Uma ou mais cobranças selecionadas não foram encontradas.");
+      throw new Error(
+        "Uma ou mais cobranças selecionadas não foram encontradas.",
+      );
     }
 
     const invalidItems = (data || []).filter((item: any) => {
@@ -40,7 +45,10 @@ export const createAsaasCarnetService = (admin: any, _syncReceivable: unknown) =
   };
 
   return {
-    generateOfficialCarnet: async (runtime: AsaasRuntime, receivableIds: string[]) => {
+    generateOfficialCarnet: async (
+      runtime: AsaasRuntime,
+      receivableIds: string[],
+    ) => {
       await ensureTecnicoScope(receivableIds);
       return tecnicoCarnet.generateOfficialCarnet(runtime, receivableIds);
     },

@@ -1,8 +1,10 @@
 import {
   type Environment,
+  normalizeBancoInterScopes,
+  normalizeEnvironment,
   type PaymentMethod,
   type ProviderCode,
-  normalizeEnvironment,
+  baneseFixedMetadata,
 } from "./config.ts";
 
 const secretName = (
@@ -41,7 +43,7 @@ export const getCredential = async (
   return data;
 };
 
-const getGatewaySecret = async (
+export const getGatewaySecret = async (
   admin: any,
   providerCode: ProviderCode,
   environment: Environment,
@@ -149,7 +151,8 @@ export const isCredentialConfiguredForProvider = (
   if (providerCode === "mercado_pago") {
     return credential.access_token_configured === true &&
       credential.public_key_configured === true &&
-      credential.webhook_secret_configured === true;
+      credential.webhook_secret_configured === true &&
+      Boolean(String(credential.metadata?.merchantId || "").trim());
   }
   if (providerCode === "banco_inter") {
     return credential.client_id_configured === true &&
@@ -180,23 +183,65 @@ export const isCredentialConfiguredForRoute = async (
   );
   if (!configured || providerCode !== "banese_card") return configured;
   if (paymentMethod === "BOLETO") {
+    const fixedMetadata = baneseFixedMetadata(environment);
     return Boolean(
       credential?.metadata?.baneseBoletoConvenio ||
-        credential?.metadata?.baneseConvenio,
-    ) && Boolean(credential?.metadata?.baneseAgencia);
+      credential?.metadata?.baneseConvenio ||
+      fixedMetadata.baneseBoletoConvenio ||
+      fixedMetadata.baneseConvenio,
+    ) && Boolean(
+      credential?.metadata?.baneseAgencia ||
+        fixedMetadata.baneseAgencia,
+    );
   }
   if (paymentMethod === "PIX") {
-    const crtAccessToken = await getGatewaySecret(
-      admin,
-      providerCode,
-      environment,
-      "crt_access_token",
+    const fixedMetadata = baneseFixedMetadata(environment);
+    const hasConvenio = Boolean(
+      credential?.metadata?.banesePixConvenio ||
+        credential?.metadata?.baneseConvenio ||
+        fixedMetadata.banesePixConvenio ||
+        fixedMetadata.baneseConvenio,
     );
+    const hasChave = Boolean(
+      credential?.metadata?.banesePixChave ||
+        credential?.metadata?.pixChave ||
+        credential?.metadata?.chave ||
+        fixedMetadata.banesePixChave,
+    );
+    const hasPixHomologacaoDisponivel =
+      credential?.metadata?.banesePixHomologacaoDisponivel === true ||
+      String(credential?.metadata?.banesePixHomologacaoDisponivel || "")
+        .toLowerCase() === "true";
+    if (environment !== "production") {
+      let crtAccessToken: string | null = null;
+      try {
+        crtAccessToken = await getGatewaySecret(
+          admin,
+          providerCode,
+          environment,
+          "crt_access_token",
+        );
+      } catch {
+        crtAccessToken = null;
+      }
+      const hasConfiguredCrtToken = Boolean(
+        crtAccessToken ||
+        credential?.metadata?.baneseCrtAccessTokenConfigured === true ||
+        String(credential?.metadata?.baneseCrtAccessTokenConfigured || "")
+          .toLowerCase() === "true" ||
+        credential?.metadata?.crt_access_token_configured === true ||
+        String(credential?.metadata?.crt_access_token_configured || "")
+          .toLowerCase() === "true",
+      );
+      return Boolean(
+        hasConvenio &&
+          hasChave &&
+          (hasConfiguredCrtToken || hasPixHomologacaoDisponivel),
+      );
+    }
     return Boolean(
-      crtAccessToken &&
-        credential?.metadata?.banesePixConvenio &&
-        credential?.metadata?.banesePixChave &&
-        credential?.metadata?.banesePixHomologacaoDisponivel === true,
+      hasConvenio &&
+        hasChave,
     );
   }
   return false;
@@ -255,7 +300,31 @@ const testAsaas = async (apiKey: string, environment: Environment) => {
   return { status: "OK", message: "Conexao validada com sucesso." };
 };
 
-const testMercadoPago = async (accessToken: string) => {
+export const resolveMercadoPagoMerchantId = (
+  userPayload: unknown,
+  expectedMerchantId?: unknown,
+) => {
+  const payload = userPayload && typeof userPayload === "object" &&
+      !Array.isArray(userPayload)
+    ? userPayload as Record<string, unknown>
+    : {};
+  const merchantId = String(payload.id ?? "").trim();
+  if (!merchantId) {
+    throw new Error("O Mercado Pago respondeu sem o ID da conta vendedora.");
+  }
+  const expected = String(expectedMerchantId ?? "").trim();
+  if (expected && expected !== merchantId) {
+    throw new Error(
+      "O merchantId informado nao pertence ao access token do Mercado Pago.",
+    );
+  }
+  return merchantId;
+};
+
+const testMercadoPago = async (
+  accessToken: string,
+  expectedMerchantId?: unknown,
+) => {
   const response = await fetch("https://api.mercadopago.com/users/me", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -263,7 +332,16 @@ const testMercadoPago = async (accessToken: string) => {
     const text = await response.text().catch(() => "");
     throw new Error(text || "O Mercado Pago recusou o token informado.");
   }
-  return { status: "OK", message: "Conexao validada com sucesso." };
+  const payload = await response.json().catch(() => null);
+  const merchantId = resolveMercadoPagoMerchantId(
+    payload,
+    expectedMerchantId,
+  );
+  return {
+    status: "OK",
+    message: `Conexao validada com a conta vendedora ${merchantId}.`,
+    merchantId,
+  };
 };
 
 const baneseTokenUrl = (environment: Environment) =>
@@ -310,15 +388,13 @@ const bancoInterTokenUrl = (environment: Environment) =>
     ? "https://cdpj.partners.bancointer.com.br/oauth/v2/token"
     : "https://cdpj-sandbox.partners.uatinter.co/oauth/v2/token";
 
-const DEFAULT_BANCO_INTER_SCOPES =
-  "cob.read cob.write cobv.read cobv.write pix.read webhook.read webhook.write boleto-cobranca.read boleto-cobranca.write";
-
 const testBancoInter = async (
   clientId: string,
   clientSecret: string,
   certificatePem: string,
   privateKeyPem: string,
   environment: Environment,
+  scopes: string,
 ) => {
   const client = Deno.createHttpClient({
     cert: certificatePem,
@@ -333,7 +409,7 @@ const testBancoInter = async (
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        scope: DEFAULT_BANCO_INTER_SCOPES,
+        scope: scopes,
         grant_type: "client_credentials",
       }),
     });
@@ -354,7 +430,8 @@ const testBancoInter = async (
     }
     return {
       status: "OK",
-      message: "OAuth e certificado mTLS validados com sucesso no Banco Inter.",
+      message:
+        "OAuth e certificado mTLS do BolePix V3 validados. Emissao, Pix avulso e callbacks ainda nao estao homologados.",
     };
   } finally {
     client.close();
@@ -366,6 +443,7 @@ export const testProvider = async (
   providerCode: ProviderCode,
   environment: Environment,
   providedSecrets: Record<string, string> = {},
+  providedMetadata: Record<string, unknown> = {},
 ) => {
   if (providerCode === "asaas") {
     const apiKey = providedSecrets.api_key ||
@@ -381,32 +459,62 @@ export const testProvider = async (
     if (!accessToken) {
       throw new Error("Informe o access token do Mercado Pago.");
     }
-    return testMercadoPago(accessToken);
+    const credential = providedMetadata.merchantId === undefined
+      ? await getCredential(admin, providerCode, environment)
+      : null;
+    const expectedMerchantId = providedMetadata.merchantId ??
+      credential?.metadata?.merchantId;
+    return testMercadoPago(accessToken, expectedMerchantId);
   }
 
   if (providerCode === "banco_inter") {
     const [clientId, clientSecret, certificatePem, privateKeyPem] =
       await Promise.all([
-        Promise.resolve(providedSecrets.client_id ||
-          getGatewaySecret(admin, providerCode, environment, "client_id")),
-        Promise.resolve(providedSecrets.client_secret ||
-          getGatewaySecret(admin, providerCode, environment, "client_secret")),
-        Promise.resolve(providedSecrets.certificate_pem ||
-          getGatewaySecret(admin, providerCode, environment, "certificate_pem")),
-        Promise.resolve(providedSecrets.private_key_pem ||
-          getGatewaySecret(admin, providerCode, environment, "private_key_pem")),
+        Promise.resolve(
+          providedSecrets.client_id ||
+            getGatewaySecret(admin, providerCode, environment, "client_id"),
+        ),
+        Promise.resolve(
+          providedSecrets.client_secret ||
+            getGatewaySecret(admin, providerCode, environment, "client_secret"),
+        ),
+        Promise.resolve(
+          providedSecrets.certificate_pem ||
+            getGatewaySecret(
+              admin,
+              providerCode,
+              environment,
+              "certificate_pem",
+            ),
+        ),
+        Promise.resolve(
+          providedSecrets.private_key_pem ||
+            getGatewaySecret(
+              admin,
+              providerCode,
+              environment,
+              "private_key_pem",
+            ),
+        ),
       ]);
     if (!clientId || !clientSecret || !certificatePem || !privateKeyPem) {
       throw new Error(
         "Informe Client ID, Client Secret, certificado e chave privada do Banco Inter.",
       );
     }
+    const credential = providedMetadata.interScopes === undefined
+      ? await getCredential(admin, providerCode, environment)
+      : null;
+    const scopes = normalizeBancoInterScopes(
+      providedMetadata.interScopes ?? credential?.metadata?.interScopes,
+    );
     return testBancoInter(
       String(clientId),
       String(clientSecret),
       String(certificatePem),
       String(privateKeyPem),
       environment,
+      scopes,
     );
   }
 

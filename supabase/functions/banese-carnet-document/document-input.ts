@@ -122,12 +122,13 @@ export const buildBaneseCarnetDocumentInputs = (
       speciesCode: Number(metadata.baneseCodigoEspecie || 21),
       speciesLabel: "ME",
       acceptance: "A",
-      instructions: environment === "sandbox"
-        ? [
-          "CARNÊ DE HOMOLOGAÇÃO - NÃO REALIZAR PAGAMENTO.",
-          text(row.descricao),
-        ]
-        : [text(row.descricao)],
+      instructions: [
+        ...(environment === "sandbox"
+          ? ["CARNÊ DE HOMOLOGAÇÃO - NÃO REALIZAR PAGAMENTO."]
+          : []),
+        ...(text(row.descricao) ? [text(row.descricao)] : []),
+        "Sr(a) caixa, não receber após 60 dias de atraso.",
+      ],
       financialTerms: {
         ...asRecord(row.gateway_financial_terms),
         nominalAmount: amount,

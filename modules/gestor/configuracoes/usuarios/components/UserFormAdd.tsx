@@ -40,11 +40,14 @@ const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
   const permissions = normalizeGestorPermissions(user.permissoes, {
     fallbackFullAccess: false,
   });
-  const financeiroAbas = permissions.financeiroTabs.length > 0
-    ? permissions.financeiroTabs
-    : permissions.modules.includes('financeiro')
-      ? DEFAULT_FINANCEIRO_TABS
-      : [];
+  const scopedFinanceiroAbas = permissions.tabs?.financeiro || [];
+  const financeiroAbas = scopedFinanceiroAbas.length > 0
+    ? scopedFinanceiroAbas
+    : permissions.financeiroTabs.length > 0
+      ? permissions.financeiroTabs
+      : permissions.modules.includes('financeiro')
+        ? DEFAULT_FINANCEIRO_TABS
+        : [];
   return {
     permissoes: permissions.modules.length > 0 ? permissions.modules : ['inicio'],
     financeiroAbas,

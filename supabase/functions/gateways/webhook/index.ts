@@ -5,6 +5,16 @@ import {
   getClientIp,
   isRateLimitExceeded,
 } from "../../_shared/http.ts";
+import { resolveGatewayWebhookEventId } from "./event-identity.ts";
+import {
+  duplicateWebhookHttpStatus,
+  registerGatewayWebhookEvent,
+  webhookReviewMarker,
+} from "./event-idempotency.ts";
+import {
+  isMercadoPagoSignatureTimestampFresh,
+  parseMercadoPagoSignature,
+} from "./mercado-pago-signature.ts";
 import { processGatewayWebhook } from "./providers/index.ts";
 import type { GatewayEnvironment, GatewayProviderCode } from "./types.ts";
 
@@ -53,16 +63,6 @@ const normalizeRemotePaymentId = (...values: unknown[]) => {
   return null;
 };
 
-const resolveEventId = (payload: any, req: Request) =>
-  String(
-    payload?.id ||
-      payload?.event_id ||
-      payload?.data?.id ||
-      payload?.payment?.id ||
-      req.headers.get("x-request-id") ||
-      crypto.randomUUID(),
-  );
-
 const resolveEventType = (payload: any, req: Request) => {
   const url = new URL(req.url);
   return String(
@@ -86,19 +86,6 @@ const resolveRemotePaymentId = (payload: any, req: Request) => {
     payload?.payment_id,
     payload?.resource,
   );
-};
-
-const parseMercadoPagoSignature = (header: string | null) => {
-  const parsed = { ts: "", v1: "" };
-  for (const part of String(header || "").split(",")) {
-    const separator = part.indexOf("=");
-    if (separator < 0) continue;
-    const key = part.slice(0, separator).trim();
-    const value = part.slice(separator + 1).trim();
-    if (key === "ts") parsed.ts = value;
-    if (key === "v1") parsed.v1 = value;
-  }
-  return parsed;
 };
 
 const toHex = (buffer: ArrayBuffer) =>
@@ -157,6 +144,11 @@ const assertMercadoPagoSignature = async (
   );
   if (!ts || !v1) {
     throw new WebhookAuthError("Assinatura Mercado Pago ausente.");
+  }
+  if (!isMercadoPagoSignatureTimestampFresh(ts)) {
+    throw new WebhookAuthError(
+      "Timestamp da assinatura Mercado Pago invalido ou expirado.",
+    );
   }
 
   const url = new URL(req.url);
@@ -231,25 +223,42 @@ Deno.serve(async (req: Request) => {
     await assertWebhookSignature(admin, req, providerCode, environment);
 
     const payload = await req.json().catch(() => ({}));
-    const eventId = resolveEventId(payload, req);
     const remotePaymentId = resolveRemotePaymentId(payload, req);
+    const eventType = resolveEventType(payload, req);
+    const eventId = resolveGatewayWebhookEventId({
+      payload,
+      requestId: req.headers.get("x-request-id"),
+      eventType,
+      remotePaymentId,
+    });
 
-    const { error } = await admin
-      .from("payment_gateway_webhook_events")
-      .upsert({
-        provider_code: providerCode,
-        environment,
-        event_id: eventId,
-        event_type: resolveEventType(payload, req),
-        remote_payment_id: remotePaymentId,
-        payload,
-        processed: false,
-        processing_error: null,
-        received_at: new Date().toISOString(),
-      }, {
-        onConflict: "provider_code,environment,event_id",
-      });
-    if (error) throw error;
+    const registration = await registerGatewayWebhookEvent(admin, {
+      providerCode,
+      environment,
+      eventId,
+      eventType,
+      remotePaymentId,
+      payload,
+    });
+    if (!registration.shouldProcess) {
+      const processing = registration.processing === true;
+      return new Response(
+        JSON.stringify({
+          received: !processing,
+          duplicate: true,
+          processing,
+          retry: processing,
+        }),
+        {
+          status: duplicateWebhookHttpStatus(processing),
+          headers: {
+            ...corsHeadersForRequest,
+            "Content-Type": "application/json",
+            ...(processing ? { "Retry-After": "15" } : {}),
+          },
+        },
+      );
+    }
 
     let processResult;
     try {
@@ -278,16 +287,19 @@ Deno.serve(async (req: Request) => {
       throw processError;
     }
 
-    await admin
+    const { error: completionError } = await admin
       .from("payment_gateway_webhook_events")
       .update({
         processed: true,
-        processing_error: null,
+        // O evento foi consumido, mas conflitos/reversoes precisam continuar
+        // consultaveis e alertaveis depois do ACK enviado ao provedor.
+        processing_error: webhookReviewMarker(processResult),
         processed_at: new Date().toISOString(),
       })
       .eq("provider_code", providerCode)
       .eq("environment", environment)
       .eq("event_id", eventId);
+    if (completionError) throw completionError;
 
     return new Response(JSON.stringify({ received: true, ...processResult }), {
       status: 200,

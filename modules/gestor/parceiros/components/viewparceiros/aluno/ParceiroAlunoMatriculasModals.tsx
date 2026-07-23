@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { AcademicMovementType } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
+import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA';
 export type TransferType = 'INTERNA_TURMA' | 'INTERNA_POLO' | 'EXTERNA_ENVIADA';
@@ -29,8 +30,13 @@ interface EnrollmentModalProps {
   classId: string;
   classes: any[];
   pendingClass: any;
+  paymentMethod: GatewayPaymentMethod | null;
+  availablePaymentMethods: GatewayPaymentMethod[];
+  paymentOptionsLoading: boolean;
+  paymentOptionsError: string | null;
   mutation: any;
   onClassChange: (value: string) => void;
+  onPaymentMethodChange: (value: GatewayPaymentMethod) => void;
   onPrepare: () => void;
   onConfirm: () => void;
   onCloseEnrollment: () => void;
@@ -39,8 +45,27 @@ interface EnrollmentModalProps {
 
 const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
   open, classId, classes, pendingClass, mutation, onClassChange, onPrepare,
-  onConfirm, onCloseEnrollment, onCloseConfirmation,
-}) => (
+  paymentMethod, availablePaymentMethods, paymentOptionsLoading,
+  paymentOptionsError, onPaymentMethodChange, onConfirm, onCloseEnrollment,
+  onCloseConfirmation,
+}) => {
+  const origemFinanceira = pendingClass?.origem_financeira || 'NORMAL';
+  const financeiroHerdado = Boolean(pendingClass?.financeiro_herdado)
+    || origemFinanceira === 'LEGADO';
+  const requiresPaymentMethod = pendingClass?.cursos?.modalidade === 'TECNICO'
+    && !financeiroHerdado;
+  const requiresGatewayValidation = requiresPaymentMethod
+    && (pendingClass?.sincronizar_asaas_futuro ?? true);
+  const allPaymentMethods = [
+    ['PIX', 'Pix'],
+    ['BOLETO', 'Boleto'],
+    ['CREDIT_CARD', 'Cartão'],
+  ] as const;
+  const visiblePaymentMethods = requiresGatewayValidation
+    ? allPaymentMethods.filter(([value]) => availablePaymentMethods.includes(value))
+    : allPaymentMethods;
+
+  return (
   <>
     {open && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -75,19 +100,89 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
           <div className="space-y-4 p-6">
             {pendingClass.cursos?.modalidade === 'TECNICO' ? (
               <>
-                <p className="text-sm font-semibold leading-relaxed text-slate-600">Ao confirmar, o sistema vai registrar a matrícula, gerar o Contas a Receber e criar a cobrança inicial no Asaas.</p>
+                <p className="text-sm font-semibold leading-relaxed text-slate-600">
+                  {requiresPaymentMethod
+                    ? 'Ao confirmar, o sistema vai registrar a matrícula, gerar o Contas a Receber e encaminhar a cobrança inicial pela rota bancária escolhida.'
+                    : 'Ao confirmar, o sistema vai registrar a matrícula preservando a regra financeira legada, sem criar cobrança inicial.'}
+                </p>
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                   <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Valor da matrícula</p>
                   <p className="mt-1 text-2xl font-black text-emerald-800">{formatCurrency(Number(pendingClass.valor_matricula || 0))}</p>
                 </div>
-                <p className="rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-500">Após o pagamento no Asaas, a baixa será automática no sistema e as próximas parcelas serão liberadas.</p>
+                {requiresPaymentMethod && (
+                  <fieldset className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                    <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-blue-700">
+                      Método da cobrança inicial
+                    </legend>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      {visiblePaymentMethods.map(([value, label]) => (
+                        <label
+                          key={value}
+                          className={`cursor-pointer rounded-xl border px-3 py-3 text-center text-[10px] font-black uppercase tracking-wide ${
+                            paymentMethod === value
+                              ? 'border-blue-500 bg-blue-600 text-white'
+                              : 'border-blue-100 bg-white text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="partner-enrollment-payment-method"
+                            value={value}
+                            checked={paymentMethod === value}
+                            onChange={() => onPaymentMethodChange(value)}
+                            className="sr-only"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    {requiresGatewayValidation && paymentOptionsLoading && (
+                      <p className="mt-2 text-[10px] font-semibold text-blue-700">
+                        Validando rotas e credenciais bancárias...
+                      </p>
+                    )}
+                    {requiresGatewayValidation && paymentOptionsError && (
+                      <p className="mt-2 text-[10px] font-semibold text-rose-700">
+                        {paymentOptionsError}
+                      </p>
+                    )}
+                    {requiresGatewayValidation
+                      && !paymentOptionsLoading
+                      && !paymentOptionsError
+                      && visiblePaymentMethods.length === 0 && (
+                      <p className="mt-2 text-[10px] font-semibold text-rose-700">
+                        Nenhum método possui rota ativa e credencial pronta neste ambiente.
+                      </p>
+                    )}
+                    {!paymentMethod && (
+                      <p className="mt-2 text-[10px] font-semibold text-amber-700">
+                        Escolha um método antes de confirmar.
+                      </p>
+                    )}
+                  </fieldset>
+                )}
+                {requiresPaymentMethod && (
+                  <p className="rounded-2xl bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-500">
+                    A baixa automática ocorrerá somente após a confirmação canônica do provedor selecionado.
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-sm font-semibold leading-relaxed text-slate-600">Esta ação vai registrar a matrícula no histórico acadêmico do aluno.</p>
             )}
             <div className="flex gap-3 pt-2">
               <button onClick={onCloseConfirmation} className="flex-1 rounded-xl border border-slate-200 py-3 text-xs font-black uppercase text-slate-500">Cancelar</button>
-              <button onClick={onConfirm} disabled={mutation.isPending} className="flex-[1.4] rounded-xl bg-emerald-600 py-3 text-xs font-black uppercase text-white disabled:opacity-50">
+              <button
+                onClick={onConfirm}
+                disabled={mutation.isPending
+                  || (requiresPaymentMethod && !paymentMethod)
+                  || (requiresGatewayValidation && (
+                    paymentOptionsLoading
+                    || Boolean(paymentOptionsError)
+                    || visiblePaymentMethods.length === 0
+                  ))}
+                className="flex-[1.4] rounded-xl bg-emerald-600 py-3 text-xs font-black uppercase text-white disabled:opacity-50"
+              >
                 {mutation.isPending ? 'Gerando...' : 'Confirmar'}
               </button>
             </div>
@@ -96,7 +191,8 @@ const EnrollmentModals: React.FC<EnrollmentModalProps> = ({
       </div>
     )}
   </>
-);
+  );
+};
 
 interface OperationModalProps {
   selected: any;

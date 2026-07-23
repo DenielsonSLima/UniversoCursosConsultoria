@@ -20,7 +20,9 @@ import {
   todayIsoDate,
 } from "./utils.ts";
 
-export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
+export const validateBaneseBoletoPayloadInput = (
+  input: AdapterCreateChargeInput,
+) => {
   assertAmount(input.amount);
   const dueDate = assertIsoDate(
     input.dueDate,
@@ -50,23 +52,6 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
       "Boleto Banese Card requer identificador do recebivel.",
     );
   }
-  const nossoNumero = onlyDigits(
-    metadata.baneseNossoNumero ?? metadata.nossoNumero ?? metadata.NossoNumero,
-  );
-  if (!/^\d{9}$/.test(nossoNumero)) {
-    throw new BaneseAdapterConfigurationError(
-      "Boleto Banese Card requer NossoNumero com 8 digitos + DV, unico por convenio.",
-    );
-  }
-  const agencia = onlyDigits(metadata.baneseAgencia).padStart(3, "0").slice(-3);
-  if (
-    calculateBaneseNossoNumero(agencia, nossoNumero.slice(0, 8)) !== nossoNumero
-  ) {
-    throw new BaneseAdapterConfigurationError(
-      "Digito verificador do Nosso Numero Banese nao confere com a agencia beneficiaria.",
-    );
-  }
-
   const street = firstString(
     payer.endereco,
     payer.address,
@@ -131,27 +116,13 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
     Endereco: address,
   });
 
-  const basePayload = {
-    NossoNumero: nossoNumero,
-    CodigoMoeda: 9,
-    DataEmissao: todayIsoDate(),
-    DataVencimento: dueDate,
-    ValorNominal: Number(input.amount.toFixed(2)),
-    NumeroDocumento: externalReference.slice(0, 15),
-    CodigoEspecie: boletoSpecies(metadata.baneseCodigoEspecie),
-    CodigoTipoBaixaDevolucao: 1,
-    QuantidadeDiasBaixaDevolucao: boundedInteger(
-      metadata.quantidadeDiasBaixaDevolucao,
-      30,
-      1,
-      180,
-    ),
-    IndicadorPagamentoParcial: false,
-    TipoValorAceito: 3,
-    FlAceite: true,
-    IdTituloEmpresa: externalReference.slice(0, 25),
-    Pagador: pagador,
-  };
+  const codigoEspecie = boletoSpecies(metadata.baneseCodigoEspecie);
+  const quantidadeDiasBaixaDevolucao = boundedInteger(
+    metadata.quantidadeDiasBaixaDevolucao,
+    30,
+    1,
+    180,
+  );
   const financialTerms = input.financialTerms
     ? normalizeBaneseFinancialTerms({
       ...input.financialTerms,
@@ -159,10 +130,58 @@ export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
       dueDate,
     })
     : null;
+  const financialTermsPayload = financialTerms
+    ? mapBaneseFinancialTermsToPayload(financialTerms)
+    : {};
 
   return {
-    ...basePayload,
-    ...(financialTerms ? mapBaneseFinancialTermsToPayload(financialTerms) : {}),
+    dueDate,
+    metadata,
+    externalReference,
+    pagador,
+    codigoEspecie,
+    quantidadeDiasBaixaDevolucao,
+    financialTermsPayload,
+  };
+};
+
+export const buildBaneseBoletoPayload = (input: AdapterCreateChargeInput) => {
+  const validated = validateBaneseBoletoPayloadInput(input);
+  const metadata = validated.metadata;
+
+  const nossoNumero = onlyDigits(
+    metadata.baneseNossoNumero ?? metadata.nossoNumero ?? metadata.NossoNumero,
+  );
+  if (!/^\d{9}$/.test(nossoNumero)) {
+    throw new BaneseAdapterConfigurationError(
+      "Boleto Banese Card requer NossoNumero com 8 digitos + DV, unico por convenio.",
+    );
+  }
+  const agencia = onlyDigits(metadata.baneseAgencia).padStart(3, "0").slice(-3);
+  if (
+    calculateBaneseNossoNumero(agencia, nossoNumero.slice(0, 8)) !== nossoNumero
+  ) {
+    throw new BaneseAdapterConfigurationError(
+      "Digito verificador do Nosso Numero Banese nao confere com a agencia beneficiaria.",
+    );
+  }
+
+  return {
+    NossoNumero: nossoNumero,
+    CodigoMoeda: 9,
+    DataEmissao: todayIsoDate(),
+    DataVencimento: validated.dueDate,
+    ValorNominal: Number(input.amount.toFixed(2)),
+    NumeroDocumento: validated.externalReference.slice(0, 15),
+    CodigoEspecie: validated.codigoEspecie,
+    CodigoTipoBaixaDevolucao: 1,
+    QuantidadeDiasBaixaDevolucao: validated.quantidadeDiasBaixaDevolucao,
+    IndicadorPagamentoParcial: false,
+    TipoValorAceito: 3,
+    FlAceite: true,
+    IdTituloEmpresa: validated.externalReference.slice(0, 25),
+    Pagador: validated.pagador,
+    ...validated.financialTermsPayload,
   };
 };
 

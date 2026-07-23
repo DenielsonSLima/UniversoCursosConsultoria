@@ -41,22 +41,22 @@ const flowTextFields: Array<keyof Pick<WhatsAppFlowSettings,
   'irpf_ready_message' |
   'irpf_link_intro_message'
 >> = [
-  'welcome_message',
-  'invalid_cpf_message',
-  'mismatch_message',
-  'menu_message',
-  'receivable_choice_message',
-  'no_receivables_message',
-  'fallback_message',
-  'handoff_message',
-  'link_intro_message',
-  'pix_intro_message',
-  'irpf_not_eligible_message',
-  'irpf_year_choice_message',
-  'irpf_no_years_message',
-  'irpf_ready_message',
-  'irpf_link_intro_message',
-];
+    'welcome_message',
+    'invalid_cpf_message',
+    'mismatch_message',
+    'menu_message',
+    'receivable_choice_message',
+    'no_receivables_message',
+    'fallback_message',
+    'handoff_message',
+    'link_intro_message',
+    'pix_intro_message',
+    'irpf_not_eligible_message',
+    'irpf_year_choice_message',
+    'irpf_no_years_message',
+    'irpf_ready_message',
+    'irpf_link_intro_message',
+  ];
 
 const normalizeFlowSettings = (settings?: Partial<WhatsAppFlowSettings> | null): WhatsAppFlowSettings => {
   const next = { ...DEFAULT_WHATSAPP_FLOW_SETTINGS, ...(settings || {}) } as WhatsAppFlowSettings;
@@ -90,8 +90,8 @@ export const whatsappService = {
       const polo = Array.isArray(row.polos) ? row.polos[0] : row.polos;
       const poloNome = polo?.nome
         ? [polo.nome, [polo.cidade, polo.estado].filter(Boolean).join('/')]
-            .filter(Boolean)
-            .join(' - ')
+          .filter(Boolean)
+          .join(' - ')
         : '';
 
       return {
@@ -356,4 +356,139 @@ export const whatsappService = {
       .eq('conversa_id', conversationId);
     if (sessionError) throw sessionError;
   },
+
+  async getConexoes(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('whatsapp_conexoes')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async saveConexao(input: any): Promise<any> {
+    const payload = {
+      ...input,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase
+      .from('whatsapp_conexoes')
+      .upsert(payload)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async transferConversation(input: {
+    conversationId: string;
+    setor?: string;
+    poloId?: string;
+    atendenteId?: string;
+    gestorNome: string;
+    motivo?: string;
+  }) {
+    const { conversationId, setor, poloId, atendenteId, gestorNome, motivo } = input;
+    const updates: any = {
+      updated_at: new Date().toISOString(),
+      status_atendimento: 'pendente_setor',
+    };
+    if (setor) updates.setor = setor;
+    if (poloId !== undefined) updates.polo_id = poloId;
+    if (atendenteId !== undefined) {
+      updates.atendente_id = atendenteId;
+      if (atendenteId) updates.status_atendimento = 'em_atendimento';
+    }
+
+    const { error: chatErr } = await supabase
+      .from('whatsapp_conversas')
+      .update(updates)
+      .eq('id', conversationId);
+
+    if (chatErr) throw chatErr;
+
+    const logDesc = [
+      setor ? `setor: ${setor}` : null,
+      poloId ? `polo alterado` : null,
+      atendenteId ? `atendente atribuído` : null,
+      motivo ? `motivo: "${motivo}"` : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    await supabase.from('whatsapp_mensagens').insert({
+      conversa_id: conversationId,
+      remetente_tipo: 'sistema',
+      remetente_nome: 'Sistema',
+      conteudo: `🔄 Atendimento transferido por ${gestorNome} (${logDesc || 'novo direcionamento'}).`,
+      direcao: 'saida',
+    });
+  },
+
+  async updateTicketStatus(input: {
+    conversationId: string;
+    status: string;
+    csatScore?: number;
+    csatComentario?: string;
+  }) {
+    const { conversationId, status, csatScore, csatComentario } = input;
+    const now = new Date().toISOString();
+
+    const payload: any = {
+      status_atendimento: status,
+      updated_at: now,
+    };
+
+    if (status === 'em_atendimento') {
+      payload.data_inicio_atendimento = now;
+    } else if (status === 'solucionada' || status === 'aguardando_avaliacao') {
+      payload.data_fim_atendimento = now;
+    }
+
+    if (csatScore !== undefined) payload.csat_score = csatScore;
+    if (csatComentario !== undefined) payload.csat_comentario = csatComentario;
+
+    const { error } = await supabase
+      .from('whatsapp_conversas')
+      .update(payload)
+      .eq('id', conversationId);
+
+    if (error) throw error;
+  },
+
+  async getMetricsSummary(): Promise<any> {
+    const { data: rows, error } = await supabase
+      .from('whatsapp_conversas')
+      .select('id, status_atendimento, tempo_primeira_resposta_seg, tempo_total_atendimento_seg, csat_score');
+
+    if (error) throw error;
+    const conversations = rows || [];
+
+    const totalConversations = conversations.length;
+    const pendingCount = conversations.filter((c: any) => c.status_atendimento === 'pendente_setor').length;
+    const inServiceCount = conversations.filter((c: any) => c.status_atendimento === 'em_atendimento').length;
+    const redirectedCount = conversations.filter((c: any) => c.status_atendimento === 'redirecionado_externo').length;
+    const solvedCount = conversations.filter((c: any) => c.status_atendimento === 'solucionada').length;
+
+    const firstResponseTimes = conversations.map((c: any) => c.tempo_primeira_resposta_seg).filter((t: any) => typeof t === 'number' && t > 0);
+    const totalServiceTimes = conversations.map((c: any) => c.tempo_total_atendimento_seg).filter((t: any) => typeof t === 'number' && t > 0);
+    const csats = conversations.map((c: any) => c.csat_score).filter((s: any) => typeof s === 'number' && s > 0);
+
+    const avgFirstResponseSeconds = firstResponseTimes.length ? Math.round(firstResponseTimes.reduce((a: number, b: number) => a + b, 0) / firstResponseTimes.length) : 0;
+    const avgTotalServiceSeconds = totalServiceTimes.length ? Math.round(totalServiceTimes.reduce((a: number, b: number) => a + b, 0) / totalServiceTimes.length) : 0;
+    const averageCsat = csats.length ? Number((csats.reduce((a: number, b: number) => a + b, 0) / csats.length).toFixed(1)) : 0;
+
+    return {
+      totalConversations,
+      pendingCount,
+      inServiceCount,
+      redirectedCount,
+      solvedCount,
+      avgFirstResponseSeconds,
+      avgTotalServiceSeconds,
+      averageCsat,
+      csatCount: csats.length,
+    };
+  },
 };
+

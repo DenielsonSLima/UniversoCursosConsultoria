@@ -2,9 +2,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   findAlunoByPhone,
+  insertWhatsAppMessage,
   normalizeWhatsAppPhone,
   textFromWhatsAppMessage,
-  insertWhatsAppMessage,
   upsertWhatsAppConversation,
 } from "../_shared/whatsapp.ts";
 import { processWhatsAppFlow } from "../_shared/whatsapp-flow/engine.ts";
@@ -66,10 +66,16 @@ const safeEqual = (left: string, right: string) => {
 
 const validateSignature = async (admin: any, req: Request, rawBody: string) => {
   const appSecret = await getAppSecret(admin);
-  if (!appSecret) throw new Error("App Secret do WhatsApp nao configurado para validar webhook.");
+  if (!appSecret) {
+    throw new Error(
+      "App Secret do WhatsApp nao configurado para validar webhook.",
+    );
+  }
 
   const signature = String(req.headers.get("x-hub-signature-256") || "").trim();
-  if (!signature.startsWith("sha256=")) throw new Error("Assinatura do webhook WhatsApp ausente.");
+  if (!signature.startsWith("sha256=")) {
+    throw new Error("Assinatura do webhook WhatsApp ausente.");
+  }
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -78,9 +84,15 @@ const validateSignature = async (admin: any, req: Request, rawBody: string) => {
     false,
     ["sign"],
   );
-  const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(rawBody),
+  );
   const expected = `sha256=${hexFromBuffer(digest)}`;
-  if (!safeEqual(signature, expected)) throw new Error("Assinatura do webhook WhatsApp invalida.");
+  if (!safeEqual(signature, expected)) {
+    throw new Error("Assinatura do webhook WhatsApp invalida.");
+  }
 };
 
 const validatePayloadSource = async (admin: any, payload: any) => {
@@ -90,19 +102,33 @@ const validatePayloadSource = async (admin: any, payload: any) => {
 
   const { data: config, error } = await admin
     .from("mensageria_config")
-    .select("wa_phone_number_id")
+    .select("wa_business_account_id, wa_phone_number_id")
     .eq("tipo", "whatsapp")
     .maybeSingle();
   if (error) throw error;
 
   const expectedPhoneId = String(config?.wa_phone_number_id || "").trim();
-  if (!expectedPhoneId) return;
+  const expectedWabaId = String(config?.wa_business_account_id || "").trim();
 
   for (const entry of payload?.entry || []) {
+    const receivedWabaId = String(entry?.id || "").trim();
+    if (expectedWabaId && receivedWabaId && receivedWabaId !== expectedWabaId) {
+      throw new Error(
+        "Webhook recebido para uma WABA diferente da configurada.",
+      );
+    }
+
     for (const change of entry?.changes || []) {
-      const receivedPhoneId = String(change?.value?.metadata?.phone_number_id || "").trim();
-      if (receivedPhoneId && receivedPhoneId !== expectedPhoneId) {
-        throw new Error("Webhook recebido para um Phone Number ID diferente do configurado.");
+      const receivedPhoneId = String(
+        change?.value?.metadata?.phone_number_id || "",
+      ).trim();
+      if (
+        expectedPhoneId && receivedPhoneId &&
+        receivedPhoneId !== expectedPhoneId
+      ) {
+        throw new Error(
+          "Webhook recebido para um Phone Number ID diferente do configurado.",
+        );
       }
     }
   }
@@ -131,7 +157,9 @@ const processFlowSafely = async (
       aluno_id: input.aluno?.id || null,
       event_type: "flow_error",
       details: {
-        message: flowError instanceof Error ? flowError.message : "Erro inesperado no fluxo WhatsApp.",
+        message: flowError instanceof Error
+          ? flowError.message
+          : "Erro inesperado no fluxo WhatsApp.",
       },
     });
   }
@@ -149,7 +177,11 @@ const scheduleFlowTasks = async (tasks: FlowTask[]) => {
   await run();
 };
 
-const processMessage = async (admin: any, message: any, contact: any): Promise<FlowTask | null> => {
+const processMessage = async (
+  admin: any,
+  message: any,
+  contact: any,
+): Promise<FlowTask | null> => {
   const phone = normalizeWhatsAppPhone(message?.from);
   if (!phone) return null;
 
@@ -177,8 +209,9 @@ const processMessage = async (admin: any, message: any, contact: any): Promise<F
     read: false,
   });
 
-  if (!insertedMessage) return null;
-  return () => processFlowSafely(admin, { conversation, aluno, phone, content });
+  if (!insertedMessage || message?.type === "unsupported") return null;
+  return () =>
+    processFlowSafely(admin, { conversation, aluno, phone, content });
 };
 
 const processStatus = async (admin: any, status: any) => {
@@ -241,9 +274,14 @@ const processHistoryMessage = async (
 ) => {
   const businessPhone = normalizeWhatsAppPhone(input.businessPhone);
   const from = normalizeWhatsAppPhone(input.message?.from);
-  const threadPhone = normalizeWhatsAppPhone(input.threadId);
-  const isOutgoing = Boolean(businessPhone && from && businessPhone === from);
-  const phone = isOutgoing ? threadPhone : from;
+  const to = normalizeWhatsAppPhone(input.message?.to);
+  const threadPhone = normalizeWhatsAppPhone(
+    input.threadId || input.message?.context?.wa_id,
+  );
+  const isOutgoing = Boolean(
+    to || (businessPhone && from && businessPhone === from),
+  );
+  const phone = isOutgoing ? to || threadPhone : from || threadPhone;
   if (!phone) return;
 
   const aluno = await findAlunoByPhone(admin, phone);
@@ -274,6 +312,226 @@ const processHistoryMessage = async (
   });
 };
 
+const processStateSync = async (admin: any, value: any) => {
+  let synchronized = 0;
+  for (const item of value?.state_sync || []) {
+    if (item?.type !== "contact" || item?.action !== "add") continue;
+    const phone = normalizeWhatsAppPhone(item?.contact?.phone_number);
+    const name = String(
+      item?.contact?.full_name || item?.contact?.first_name || "",
+    ).trim();
+    if (!phone || !name) continue;
+
+    const { data: conversation, error } = await admin
+      .from("whatsapp_conversas")
+      .select("id, aluno_id")
+      .eq("telefone", phone)
+      .maybeSingle();
+    if (error) throw error;
+    if (!conversation || conversation.aluno_id) continue;
+
+    const { error: updateError } = await admin
+      .from("whatsapp_conversas")
+      .update({ contato_nome: name, updated_at: new Date().toISOString() })
+      .eq("id", conversation.id);
+    if (updateError) throw updateError;
+    synchronized += 1;
+  }
+
+  await admin
+    .from("mensageria_config")
+    .update({
+      wa_contacts_sync_status: "receiving",
+      wa_last_health_check_at: new Date().toISOString(),
+    })
+    .eq("tipo", "whatsapp");
+
+  return synchronized;
+};
+
+const processAccountUpdate = async (
+  admin: any,
+  wabaId: unknown,
+  value: any,
+) => {
+  const event = String(value?.event || "").trim().toUpperCase();
+  if (!event) return;
+
+  const update: Record<string, unknown> = {
+    wa_last_account_event: event,
+    wa_last_account_event_at: new Date().toISOString(),
+  };
+  if (event === "PARTNER_REMOVED" || event === "ACCOUNT_OFFBOARDED") {
+    update.wa_enabled = false;
+    update.wa_status = "desconectado";
+  } else if (event === "ACCOUNT_RECONNECTED") {
+    update.wa_enabled = true;
+    update.wa_status = "configurado";
+  }
+
+  const { error } = await admin
+    .from("mensageria_config")
+    .update(update)
+    .eq("tipo", "whatsapp")
+    .eq("wa_business_account_id", String(wabaId || "").trim());
+  if (error) throw error;
+};
+
+const processHistoryChunk = async (
+  admin: any,
+  value: any,
+  historyChunk: any,
+) => {
+  const errors = Array.isArray(historyChunk?.errors) ? historyChunk.errors : [];
+  if (errors.length > 0) {
+    const declined = errors.some((error: any) =>
+      Number(error?.code) === 2593109
+    );
+    const { error } = await admin
+      .from("mensageria_config")
+      .update({
+        wa_history_sync_status: declined ? "declined" : "error",
+        wa_last_health_check_at: new Date().toISOString(),
+      })
+      .eq("tipo", "whatsapp");
+    if (error) throw error;
+    return;
+  }
+
+  for (const thread of historyChunk?.threads || []) {
+    const threadId = thread?.context?.wa_id || thread?.id;
+    for (const message of thread?.messages || []) {
+      await processHistoryMessage(admin, {
+        threadId,
+        message,
+        businessPhone: value?.metadata?.display_phone_number,
+      });
+    }
+  }
+
+  const progress = Number(historyChunk?.metadata?.progress);
+  const { error } = await admin
+    .from("mensageria_config")
+    .update({
+      wa_history_sync_status: progress === 100 ? "completed" : "receiving",
+      wa_history_sync_progress: Number.isFinite(progress)
+        ? Math.max(0, Math.min(progress, 100))
+        : null,
+      wa_last_health_check_at: new Date().toISOString(),
+    })
+    .eq("tipo", "whatsapp");
+  if (error) throw error;
+};
+
+const processWebhookPayload = async (
+  admin: any,
+  payload: any,
+  eventId: string,
+) => {
+  try {
+    const flowTasks: FlowTask[] = [];
+    for (const entry of payload?.entry || []) {
+      for (const change of entry?.changes || []) {
+        const field = String(change?.field || "");
+        const value = change?.value || {};
+
+        if (field === "account_update") {
+          await processAccountUpdate(admin, entry?.id, value);
+          continue;
+        }
+
+        const contactsByWaId = new Map(
+          (value.contacts || []).map((
+            contact: any,
+          ) => [String(contact.wa_id || ""), contact]),
+        );
+
+        if (field === "messages") {
+          for (const message of value.messages || []) {
+            const task = await processMessage(
+              admin,
+              message,
+              contactsByWaId.get(String(message?.from || "")),
+            );
+            if (task) flowTasks.push(task);
+          }
+          for (const status of value.statuses || []) {
+            await processStatus(admin, status);
+          }
+        }
+
+        if (field === "smb_message_echoes" || field === "history") {
+          for (const echo of value.message_echoes || []) {
+            await processMessageEcho(admin, echo);
+          }
+        }
+
+        if (field === "history") {
+          for (const message of value.messages || []) {
+            await processHistoryMessage(admin, {
+              threadId: message?.from,
+              message,
+              businessPhone: value?.metadata?.display_phone_number,
+            });
+          }
+          for (const historyChunk of value.history || []) {
+            await processHistoryChunk(admin, value, historyChunk);
+          }
+        }
+
+        if (field === "smb_app_state_sync") {
+          await processStateSync(admin, value);
+        }
+      }
+    }
+
+    const { error: processedError } = await admin
+      .from("whatsapp_webhook_events")
+      .update({
+        processed: true,
+        error: null,
+        processed_at: new Date().toISOString(),
+      })
+      .eq("id", eventId);
+    if (processedError) throw processedError;
+
+    await scheduleFlowTasks(flowTasks);
+  } catch (error) {
+    await admin
+      .from("whatsapp_webhook_events")
+      .update({
+        error: error instanceof Error
+          ? error.message
+          : "Erro inesperado no webhook WhatsApp.",
+        processed_at: new Date().toISOString(),
+      })
+      .eq("id", eventId);
+    console.error("whatsapp-webhook processing error:", error);
+  }
+};
+
+const hashPayload = async (rawBody: string) => {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(rawBody),
+  );
+  return `sha256:${hexFromBuffer(digest)}`;
+};
+
+const schedulePayloadProcessing = (
+  admin: any,
+  payload: any,
+  eventId: string,
+) => {
+  const processing = processWebhookPayload(admin, payload, eventId);
+  const waitUntil = (globalThis as any).EdgeRuntime?.waitUntil;
+  if (typeof waitUntil === "function") {
+    waitUntil(processing);
+    return Promise.resolve();
+  }
+  return processing;
+};
+
 Deno.serve(async (req: Request) => {
   try {
     const admin = createAdmin();
@@ -291,7 +549,9 @@ Deno.serve(async (req: Request) => {
       return text("Token de verificacao invalido.", 403);
     }
 
-    if (req.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
+    if (req.method !== "POST") {
+      return json({ error: "Metodo nao permitido." }, 405);
+    }
 
     const rawBody = await req.text();
     await validateSignature(admin, req, rawBody);
@@ -299,76 +559,71 @@ Deno.serve(async (req: Request) => {
     const payload = JSON.parse(rawBody || "{}");
     await validatePayloadSource(admin, payload);
 
+    const eventKey = await hashPayload(rawBody);
+    const { data: duplicateEvent, error: duplicateError } = await admin
+      .from("whatsapp_webhook_events")
+      .select(
+        "id, processed, error, processing_started_at, processing_attempts",
+      )
+      .eq("event_key", eventKey)
+      .maybeSingle();
+    if (duplicateError) throw duplicateError;
+    if (duplicateEvent) {
+      if (duplicateEvent.processed) {
+        return json({ received: true, duplicate: true });
+      }
+
+      const startedAt = duplicateEvent.processing_started_at
+        ? new Date(duplicateEvent.processing_started_at).getTime()
+        : 0;
+      const hasActiveLease = !duplicateEvent.error &&
+        Number.isFinite(startedAt) &&
+        Date.now() - startedAt < 5 * 60 * 1000;
+      if (hasActiveLease) {
+        return json({ received: true, duplicate: true, processing: true });
+      }
+
+      const { error: retryError } = await admin
+        .from("whatsapp_webhook_events")
+        .update({
+          error: null,
+          processing_started_at: new Date().toISOString(),
+          processing_attempts: Number(duplicateEvent.processing_attempts || 0) +
+            1,
+        })
+        .eq("id", duplicateEvent.id);
+      if (retryError) throw retryError;
+
+      await schedulePayloadProcessing(admin, payload, duplicateEvent.id);
+      return json({ received: true, retried: true });
+    }
+
     const firstChange = payload?.entry?.[0]?.changes?.[0];
     const { data: eventRow, error: eventError } = await admin
       .from("whatsapp_webhook_events")
       .insert({
-        event_key: firstChange?.value?.metadata?.phone_number_id || payload?.object || null,
+        event_key: eventKey,
         field: firstChange?.field || null,
         payload,
+        processing_started_at: new Date().toISOString(),
+        processing_attempts: 1,
       })
       .select("id")
       .single();
+    if (eventError?.code === "23505") {
+      return json({ received: true, duplicate: true });
+    }
     if (eventError) throw eventError;
 
-    try {
-      const flowTasks: FlowTask[] = [];
-      for (const entry of payload?.entry || []) {
-        for (const change of entry?.changes || []) {
-          const value = change?.value || {};
-          const contactsByWaId = new Map(
-            (value.contacts || []).map((contact: any) => [String(contact.wa_id || ""), contact]),
-          );
-
-          for (const message of value.messages || []) {
-            const task = await processMessage(admin, message, contactsByWaId.get(String(message?.from || "")));
-            if (task) flowTasks.push(task);
-          }
-
-          for (const status of value.statuses || []) {
-            await processStatus(admin, status);
-          }
-
-          for (const echo of value.message_echoes || []) {
-            await processMessageEcho(admin, echo);
-          }
-
-          for (const historyChunk of value.history || []) {
-            for (const thread of historyChunk?.threads || []) {
-              for (const message of thread?.messages || []) {
-                await processHistoryMessage(admin, {
-                  threadId: thread?.id,
-                  message,
-                  businessPhone: value?.metadata?.display_phone_number,
-                });
-              }
-            }
-          }
-        }
-      }
-
-      await admin
-        .from("whatsapp_webhook_events")
-        .update({ processed: true, processed_at: new Date().toISOString() })
-        .eq("id", eventRow.id);
-
-      await scheduleFlowTasks(flowTasks);
-    } catch (error) {
-      await admin
-        .from("whatsapp_webhook_events")
-        .update({
-          error: error instanceof Error ? error.message : "Erro inesperado no webhook WhatsApp.",
-          processed_at: new Date().toISOString(),
-        })
-        .eq("id", eventRow.id);
-      throw error;
-    }
+    await schedulePayloadProcessing(admin, payload, eventRow.id);
 
     return json({ received: true });
   } catch (error) {
     console.error("whatsapp-webhook error:", error);
     return json({
-      error: error instanceof Error ? error.message : "Erro inesperado no webhook WhatsApp.",
+      error: error instanceof Error
+        ? error.message
+        : "Erro inesperado no webhook WhatsApp.",
     }, 400);
   }
 });

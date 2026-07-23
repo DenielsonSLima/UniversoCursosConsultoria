@@ -58,10 +58,10 @@ autenticacao.
 1. Pagina co-branded, responsiva, com boleto, area Pix e navegador de carne.
 2. Endpoint estudantil com DTO minimo e sanitizado: concluido em
    `banese-student-payment`.
-3. PDF bancario A4 privado: concluido em `banese-boleto-document`. O servidor
-   carrega beneficiario e pagador, valida linha, barras, vencimento e chave
-   ASBACE e devolve o PDF com `Cache-Control: private, no-store` para exibicao e
-   download na mesma tela.
+3. PDF A4 proprio e privado: concluido em `banese-boleto-document`. O Banese
+   devolve os dados do titulo; o servidor carrega beneficiario e pagador,
+   valida linha, barras, vencimento e chave ASBACE e monta o PDF da Universo com
+   `Cache-Control: private, no-store` para exibicao e download na mesma tela.
 4. PDF completo do carne: concluido em `banese-carnet-document`. O aluno envia
    somente a parcela selecionada; o servidor deriva e valida todas as parcelas
    do mesmo grupo antes de gerar o arquivo, sem misturar Asaas ou outro emissor.
@@ -69,6 +69,6 @@ autenticacao.
    API recomendada pelo Banese.
 6. Webhook como acelerador depois do contrato tecnico de autenticacao e payload.
 
-O `gateway_bank_slip_url` atual pode apontar para a propria pagina do portal e
-nao e usado como documento. A tela incorpora exclusivamente o Blob PDF retornado
-pelo endpoint privado `banese-boleto-document`.
+O Banese nao fornece PDF ou URL de documento. A tela incorpora exclusivamente o
+Blob PDF montado pelo endpoint privado `banese-boleto-document`; campos URL do
+gateway nunca sao usados como documento Banese.

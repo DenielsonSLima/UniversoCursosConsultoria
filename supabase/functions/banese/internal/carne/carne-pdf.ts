@@ -39,12 +39,23 @@ export const buildBaneseCarnetPdf = async (
     );
   }
 
-  const items = rawItems
-    .map(normalizeBaneseBoletoDocument)
-    .sort((left, right) =>
-      left.dueDate.localeCompare(right.dueDate) ||
-      left.documentNumber.localeCompare(right.documentNumber)
-    );
+  const items = rawItems.map((item) => {
+    try {
+      return normalizeBaneseBoletoDocument(item);
+    } catch (error) {
+      const message = String((error as Error)?.message || error);
+      if (item.environment !== "production" || !/pix/i.test(message)) {
+        throw error;
+      }
+      return normalizeBaneseBoletoDocument({
+        ...item,
+        pix: null,
+      });
+    }
+  }).sort((left, right) =>
+    left.dueDate.localeCompare(right.dueDate) ||
+    left.documentNumber.localeCompare(right.documentNumber)
+  );
   const payerDocuments = new Set(items.map((item) => item.payer.document));
   if (payerDocuments.size !== 1) {
     throw new Error("Um carne Banese deve conter boletos de um unico pagador.");
@@ -78,11 +89,24 @@ export const buildBaneseCarnetPdf = async (
     item.environment === "production" && Boolean(item.pix)
   );
   if (hasOfficialPix) {
-    if (items.some((item) => !item.pix)) {
-      throw new Error(
-        "Carne Banese com Pix exige um payload oficial para cada parcela.",
-      );
+    const allProductionItemsHavePix = items.every((item) =>
+      item.environment !== "production" || Boolean(item.pix)
+    );
+    if (!allProductionItemsHavePix) {
+      // Se uma parcela perdeu o retorno de Pix valido, cai sem Pix no documento
+      // inteiro para evitar mostrar dado contaminado no PDF.
+      items.forEach((item) => {
+        if (item.environment === "production") {
+          item.pix = null;
+        }
+      });
     }
+  }
+
+  const effectiveOfficialPix = items.some((item) =>
+    item.environment === "production" && Boolean(item.pix)
+  );
+  if (effectiveOfficialPix) {
     for (
       const [label, values] of [
         ["Pix copia e cola", items.map((item) => item.pix!.copyAndPaste)],
@@ -103,7 +127,7 @@ export const buildBaneseCarnetPdf = async (
       throw new Error("Cada parcela do carne deve possuir TXID Pix exclusivo.");
     }
   }
-  if (options.itemsPerPage === 3 && hasOfficialPix) {
+  if (options.itemsPerPage === 3 && effectiveOfficialPix) {
     throw new Error(
       "Carne Banese com Pix oficial aceita no maximo 2 parcelas por pagina.",
     );
@@ -115,7 +139,7 @@ export const buildBaneseCarnetPdf = async (
   pdf.setCreator("Universo Cursos e Consultoria");
   const fonts = await baneseDocumentFonts(pdf);
   const assets = await embedBaneseBrandAssets(pdf, options.branding);
-  const itemsPerPage = options.itemsPerPage || (hasOfficialPix ? 2 : 3);
+  const itemsPerPage = options.itemsPerPage || (effectiveOfficialPix ? 2 : 3);
   const margin = 14;
   const gap = 9;
   const slotHeight = (BANESE_PDF_PAGE.height - margin * 2 -

@@ -1,216 +1,44 @@
-import type { BaneseFinancialTermsInput } from "../banese/internal/financial-terms.ts";
+import {
+  assertGatewayChargeAdapterReady,
+  normalizeGatewayAdapterResult,
+  withIssuerSnapshot,
+  withProviderMetadata,
+} from "./router-adapter-runtime.ts";
+import type {
+  GatewayChargeInput,
+  GatewayChargeResult,
+  GatewayEnvironment,
+  GatewayPaymentMethod,
+  GatewayProviderCode,
+} from "./router-adapter-runtime.ts";
 
-export type GatewayEnvironment = "sandbox" | "production";
-export type GatewayPaymentMethod = "PIX" | "BOLETO" | "CREDIT_CARD";
-export type GatewayProviderCode = "asaas" | "mercado_pago" | "banese_card";
-
-export type GatewayIssuer = {
-  id: string;
-  companyId: string;
-  name: string;
-  cnpj: string;
-  city: string;
-  state: string;
-};
-
-export type GatewayChargeInput = {
-  admin: any;
-  supabaseUrl: string;
-  providerCode: GatewayProviderCode;
-  environment: GatewayEnvironment;
-  paymentMethod: GatewayPaymentMethod;
-  credentialId?: string | null;
-  receivable: any;
-  payer: Record<string, unknown>;
-  amount: number;
-  description: string;
-  dueDate?: string | null;
-  installments?: number | null;
-  successUrl?: string | null;
-  failureUrl?: string | null;
-  pendingUrl?: string | null;
-  issuer?: GatewayIssuer | null;
-  financialTerms?: BaneseFinancialTermsInput | null;
-};
-
-export type GatewayChargeResult = {
-  providerCode: GatewayProviderCode;
-  remotePaymentId: string | null;
-  remotePaymentLinkId: string | null;
-  remoteCustomerId: string | null;
-  remoteStatus: string | null;
-  invoiceUrl: string | null;
-  bankSlipUrl: string | null;
-  pixPayload: string | null;
-  pixEncodedImage: string | null;
-  bankSlipDigitableLine: string | null;
-  bankSlipBarcode: string | null;
-  bankSlipOurNumber: string | null;
-  issuerPoloId: string | null;
-  financialTerms: Record<string, unknown> | null;
-  rawPayload: Record<string, unknown>;
-};
-
-const paymentIssuer = async (admin: any): Promise<GatewayIssuer> => {
-  const { data: config, error: configError } = await admin
-    .from("payment_gateway_issuer_config")
-    .select("issuer_polo_id, active, applies_to_all_polos")
-    .eq("id", 1)
-    .maybeSingle();
-  if (configError) throw configError;
-  if (
-    !config?.issuer_polo_id ||
-    config.active !== true ||
-    config.applies_to_all_polos !== true
-  ) {
-    throw new Error("O emissor financeiro global da matriz nao esta configurado.");
-  }
-
-  const { data: issuer, error: issuerError } = await admin
-    .from("polos")
-    .select("id, company_id, nome, cnpj, cidade, estado, status, is_matriz")
-    .eq("id", config.issuer_polo_id)
-    .maybeSingle();
-  if (issuerError) throw issuerError;
-  if (
-    !issuer ||
-    issuer.is_matriz !== true ||
-    String(issuer.status || "").toLowerCase() !== "ativo"
-  ) {
-    throw new Error("O polo matriz emissor nao esta ativo ou deixou de ser matriz.");
-  }
-
-  return {
-    id: issuer.id,
-    companyId: issuer.company_id,
-    name: issuer.nome,
-    cnpj: issuer.cnpj,
-    city: issuer.cidade,
-    state: issuer.estado,
-  };
-};
-
-const providerMetadata = async (
-  admin: any,
-  providerCode: GatewayProviderCode,
-  environment: GatewayEnvironment,
-  credentialId?: string | null,
-) => {
-  let query = admin
-    .from("payment_gateway_credentials")
-    .select("metadata")
-    .eq("provider_code", providerCode)
-    .eq("environment", environment);
-  if (credentialId) query = query.eq("id", credentialId);
-  const { data, error } = await query.maybeSingle();
-  if (error) throw error;
-  if (credentialId && !data) {
-    throw new Error(
-      "Credencial bancaria da rota nao pertence ao provedor/ambiente selecionado.",
-    );
-  }
-  return data?.metadata && typeof data.metadata === "object"
-    ? data.metadata
-    : {};
-};
-
-const withProviderMetadata = async (
-  input: GatewayChargeInput,
-): Promise<GatewayChargeInput> => {
-  const [metadata, issuer] = await Promise.all([
-    input.providerCode === "asaas"
-      ? Promise.resolve({})
-      : providerMetadata(
-        input.admin,
-        input.providerCode,
-        input.environment,
-        input.credentialId,
-      ),
-    paymentIssuer(input.admin),
-  ]);
-  return {
-    ...input,
-    issuer,
-    receivable: {
-      ...(input.receivable || {}),
-      gateway_issuer_polo_id: issuer.id,
-      metadata: {
-        ...(input.receivable?.metadata || {}),
-        ...metadata,
-      },
-      payment_gateway_metadata: metadata,
-      payment_gateway_issuer: issuer,
-    },
-  };
-};
-
-const normalizeAdapterResult = (
-  providerCode: GatewayProviderCode,
-  paymentMethod: GatewayPaymentMethod,
-  result: any,
-): GatewayChargeResult => {
-  const raw = result?.raw && typeof result.raw === "object" ? result.raw : {};
-  const isHostedCheckoutProvider = providerCode === "mercado_pago" ||
-    providerCode === "asaas";
-  return {
-    providerCode,
-    remotePaymentId: result?.id || null,
-    remotePaymentLinkId: result?.link || result?.paymentLinkId || result?.paymentLink ||
-      (providerCode === "mercado_pago" ? result?.id : null) || null,
-    remoteCustomerId: result?.customer || result?.customerId || null,
-    remoteStatus: result?.status || "created",
-    invoiceUrl: result?.invoiceUrl || result?.link || null,
-    bankSlipUrl: result?.bankSlipUrl ||
-      (paymentMethod === "BOLETO" ? result?.link || null : null),
-    pixPayload: result?.pixPayload ||
-      (!isHostedCheckoutProvider && paymentMethod === "PIX"
-        ? result?.link || null
-        : null),
-    pixEncodedImage: result?.pixEncodedImage ||
-      result?.pixEncodedImageBase64 ||
-      null,
-    bankSlipDigitableLine: result?.bankSlipDigitableLine || null,
-    bankSlipBarcode: result?.bankSlipBarcode || null,
-    bankSlipOurNumber: result?.bankSlipOurNumber || null,
-    issuerPoloId: null,
-    financialTerms: result?.financialTerms &&
-        typeof result.financialTerms === "object"
-      ? result.financialTerms
-      : null,
-    rawPayload: raw,
-  };
-};
-
-const withIssuerSnapshot = (
-  result: GatewayChargeResult,
-  issuer?: GatewayIssuer | null,
-): GatewayChargeResult => ({
-  ...result,
-  issuerPoloId: issuer?.id || null,
-});
+export {
+  assertGatewayChargeAdapterReady,
+  normalizeGatewayAdapterResult,
+} from "./router-adapter-runtime.ts";
+export type {
+  GatewayChargeInput,
+  GatewayChargeResult,
+  GatewayEnvironment,
+  GatewayIssuer,
+  GatewayPaymentMethod,
+  GatewayProviderCode,
+} from "./router-adapter-runtime.ts";
 
 export const createGatewayCharge = async (
   input: GatewayChargeInput,
 ): Promise<GatewayChargeResult> => {
+  // Esta é a última fronteira antes dos adapters. Callers internos que não
+  // passam pela resolução de rotas também precisam respeitar as capacidades
+  // efetivamente homologadas do banco.
+  assertGatewayChargeAdapterReady(input);
   const hydratedInput = await withProviderMetadata(input);
-  if (hydratedInput.providerCode === "banese_card") {
-    if (hydratedInput.environment !== "sandbox") {
-      throw new Error(
-        "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
-      );
-    }
-    if (hydratedInput.paymentMethod === "CREDIT_CARD") {
-      throw new Error(
-        "Banese nao aceita cartao de credito neste fluxo de checkout.",
-      );
-    }
-  }
 
   if (hydratedInput.paymentMethod === "PIX") {
     const { createPixGatewayCharge } = await import("./pix/index.ts");
     const result = await createPixGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
-      normalizeAdapterResult(hydratedInput.providerCode, "PIX", result),
+      normalizeGatewayAdapterResult(hydratedInput.providerCode, "PIX", result),
       hydratedInput.issuer,
     );
   }
@@ -219,7 +47,11 @@ export const createGatewayCharge = async (
     const { createBoletoGatewayCharge } = await import("./boleto/index.ts");
     const result = await createBoletoGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
-      normalizeAdapterResult(hydratedInput.providerCode, "BOLETO", result),
+      normalizeGatewayAdapterResult(
+        hydratedInput.providerCode,
+        "BOLETO",
+        result,
+      ),
       hydratedInput.issuer,
     );
   }
@@ -228,7 +60,7 @@ export const createGatewayCharge = async (
     const { createCardGatewayCharge } = await import("./cartao/index.ts");
     const result = await createCardGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
-      normalizeAdapterResult(
+      normalizeGatewayAdapterResult(
         hydratedInput.providerCode,
         "CREDIT_CARD",
         result,
@@ -238,6 +70,33 @@ export const createGatewayCharge = async (
   }
 
   throw new Error("Forma de pagamento do gateway bancario invalida.");
+};
+
+export const recoverGatewayCharge = async (
+  input: GatewayChargeInput,
+): Promise<GatewayChargeResult | null> => {
+  if (input.providerCode !== "asaas") {
+    throw new Error(
+      "Recuperacao sem nova emissao esta disponivel somente para cobrancas Asaas.",
+    );
+  }
+  const hydratedInput = await withProviderMetadata(input);
+  const { recoverAsaasCharge } = await import("../asaas/core/adapter.ts");
+  const result = await recoverAsaasCharge({
+    ...hydratedInput,
+    environment: hydratedInput.environment,
+    paymentMethod: hydratedInput.paymentMethod,
+  });
+  return result
+    ? withIssuerSnapshot(
+      normalizeGatewayAdapterResult(
+        "asaas",
+        hydratedInput.paymentMethod,
+        result,
+      ),
+      hydratedInput.issuer,
+    )
+    : null;
 };
 
 export const persistGatewayTransaction = async (
@@ -298,7 +157,9 @@ export const persistGatewayTransaction = async (
     .maybeSingle();
   if (existingError) {
     throw new Error(
-      `Nao foi possivel consultar a auditoria da transacao bancaria: ${existingError.message || existingError}`,
+      `Nao foi possivel consultar a auditoria da transacao bancaria: ${
+        existingError.message || existingError
+      }`,
     );
   }
   if (existing?.id && options.insertOnly) return;
@@ -322,7 +183,9 @@ export const persistGatewayTransaction = async (
     : await admin.from("payment_gateway_transactions").insert(writePayload);
   if (result.error) {
     throw new Error(
-      `Cobranca criada, mas a auditoria da transacao bancaria falhou: ${result.error.message || result.error}`,
+      `Cobranca criada, mas a auditoria da transacao bancaria falhou: ${
+        result.error.message || result.error
+      }`,
     );
   }
 };
@@ -440,8 +303,8 @@ export const gatewayReceivableUpdate = (
     gateway_financial_terms_confirmed_at: input.result.financialTerms
       ? syncedAt
       : null,
-    gateway_transaction_receipt_url:
-      (raw as any)?.transactionReceiptUrl || null,
+    gateway_transaction_receipt_url: (raw as any)?.transactionReceiptUrl ||
+      null,
     gateway_status: input.result.remoteStatus,
     gateway_synced_at: syncedAt,
     gateway_last_error: null,

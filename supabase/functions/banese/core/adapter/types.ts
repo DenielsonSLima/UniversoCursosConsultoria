@@ -64,7 +64,7 @@ export type BaneseClientCredentials = {
 export type BaneseBoletoCredentials = BaneseClientCredentials;
 
 export type BanesePixCredentials = BaneseClientCredentials & {
-  crtAccessToken: string;
+  crtAccessToken?: string | null;
 };
 
 export type BaneseAccessToken = {

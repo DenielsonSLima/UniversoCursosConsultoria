@@ -4,12 +4,42 @@ import { createAsaasBillingService } from "./billing.service.ts";
 import { createAsaasCarnetService } from "./carnet.service.ts";
 import { createAsaasOnlineService } from "./online.service.ts";
 import { callAsaas } from "./asaas-http.ts";
-import { requireFinanceWriteAccess, requireGestorAtivo, requireGestorGlobal, requireGestorForPolo, requireReceivablesSettlementAccess } from "./authz.ts";
+import {
+  requireFinanceWriteAccess,
+  requireGestorAtivo,
+  requireGestorForPolo,
+  requireGestorGlobal,
+  requireOtherCreditsWriteAccess,
+  requireReceivablesSettlementAccess,
+} from "./authz.ts";
 import type { Environment } from "./shared.ts";
 import { reconcileBaneseReceivable } from "../../gateways/api/banese.ts";
-import { cancelBaneseReceivableBeforeManualSettlement } from "../../gateways/api/banese-cancellation.ts";
 import {
-  UUID_RE,
+  assertStoredProviderAdapterReady,
+  normalizeProviderCode,
+} from "../../gateways/api/config.ts";
+import {
+  getCredential,
+  isCredentialConfiguredForRoute,
+} from "../../gateways/api/credentials.ts";
+import {
+  applyReceivableSnapshotFields,
+  applyRemoteIdentitySnapshot,
+  assertAsaasReceivableCancellationAllowed,
+  hasRemoteTitleReference,
+} from "../../gateways/checkout/remote-title-guard.ts";
+import {
+  buildEnrollmentReceivablePaymentPatch,
+  decideEnrollmentPaymentPatch,
+  resolveManualSettlementReversalGateway,
+} from "./gateway-routing-guard.ts";
+import { syncRouteAwareFutureInstallments } from "./route-aware-future-sync.ts";
+import { executeManualSettlementAction } from "./manual-settlement.action.ts";
+import {
+  resolveExistingAsaasEnvironment,
+  resolveExistingAsaasEnvironmentForMany,
+} from "./receivable-runtime.ts";
+import {
   apiSecretName,
   baseUrlFor,
   buildCorsHeaders,
@@ -17,17 +47,24 @@ import {
   isRateLimitExceeded,
   json,
   normalizeEnvironment,
+  UUID_RE,
   webhookSecretName,
 } from "./shared.ts";
+import {
+  createOtherCreditServerSide,
+  normalizeOtherCreditRequest,
+} from "./other-credit.service.ts";
 
 const GESTOR_ACTIONS = new Set([
   "get-config",
   "save-config",
   "save-notification-preferences",
   "sync-enrollment",
+  "preflight-enrollment-charge",
   "test-connection",
   "ensure-webhook",
   "reconcile-online-payment",
+  "create-other-credit",
   "sync-receivable",
   "cancel-receivable",
   "generate-official-carnet",
@@ -47,6 +84,8 @@ const GLOBAL_CONFIG_ACTIONS = new Set([
 
 const FINANCE_WRITE_ACTIONS = new Set([
   "reconcile-online-payment",
+  "create-other-credit",
+  "sync-enrollment",
   "sync-receivable",
   "refresh-receivable-status",
   "cancel-receivable",
@@ -59,16 +98,26 @@ Deno.serve(async (req: Request) => {
   const respondJson = (body: unknown, status = 200) => json(body, status, req);
 
   if (isRateLimitExceeded(`asaas-api:${getClientIp(req)}`, 180, 60000)) {
-    return new Response(JSON.stringify({
-      error: "Muitas requisições em curto período. Aguarde alguns instantes.",
-    }), {
-      status: 429,
-      headers: { ...corsHeadersForRequest, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Muitas requisições em curto período. Aguarde alguns instantes.",
+      }),
+      {
+        status: 429,
+        headers: {
+          ...corsHeadersForRequest,
+          "Content-Type": "application/json",
+        },
+      },
+    );
   }
 
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest });
-  if (req.method !== "POST") return respondJson({ error: "Método não permitido." }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeadersForRequest });
+  }
+  if (req.method !== "POST") {
+    return respondJson({ error: "Método não permitido." }, 405);
+  }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -91,11 +140,16 @@ Deno.serve(async (req: Request) => {
     if (gestor && action === "manual-settlement") {
       requireReceivablesSettlementAccess(gestor);
     }
+    if (gestor && action === "create-other-credit") {
+      requireOtherCreditsWriteAccess(gestor);
+    }
 
     const getConfig = async () => {
       const { data, error } = await admin
         .from("asaas_config")
-        .select("id, environment, wallet_id, configured, last_test_at, last_test_status, last_test_message, notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled")
+        .select(
+          "id, environment, wallet_id, configured, last_test_at, last_test_status, last_test_message, notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled",
+        )
         .maybeSingle();
       if (error) throw error;
       return data || {
@@ -111,13 +165,15 @@ Deno.serve(async (req: Request) => {
     };
 
     const anyNotificationChannelEnabled = (config: any) =>
-      config?.notification_whatsapp_enabled === true
-      || config?.notification_email_enabled === true
-      || config?.notification_sms_enabled === true
-      || config?.notifications_enabled === true;
+      config?.notification_whatsapp_enabled === true ||
+      config?.notification_email_enabled === true ||
+      config?.notification_sms_enabled === true ||
+      config?.notifications_enabled === true;
 
     const getSecret = async (name: string) => {
-      const { data, error } = await admin.rpc("asaas_get_secret", { p_secret_name: name });
+      const { data, error } = await admin.rpc("asaas_get_secret", {
+        p_secret_name: name,
+      });
       if (error) throw error;
       return data as string | null;
     };
@@ -132,7 +188,8 @@ Deno.serve(async (req: Request) => {
       const existing = await getWebhookToken(environment);
       if (existing) return existing;
 
-      const token = `universo-${environment}-${crypto.randomUUID()}-${crypto.randomUUID()}`;
+      const token =
+        `universo-${environment}-${crypto.randomUUID()}-${crypto.randomUUID()}`;
       const { error } = await admin.rpc("asaas_set_secret", {
         p_secret_name: webhookSecretName(environment),
         p_secret_value: token,
@@ -148,20 +205,165 @@ Deno.serve(async (req: Request) => {
       return token;
     };
 
-    const getRuntime = async (requestedEnvironment?: Environment) => {
+    const getGatewayRuntime = async (requestedEnvironment?: Environment) => {
       const config = await getConfig();
-      const environment = requestedEnvironment || normalizeEnvironment(config.environment);
+      const environment = requestedEnvironment ||
+        normalizeEnvironment(config.environment);
       const apiKey = await getSecret(apiSecretName(environment));
-      if (!apiKey) throw new Error(`A chave do ambiente ${environment} ainda não foi configurada.`);
       return {
         config,
-        apiKey,
+        apiKey: apiKey || "",
         environment,
         baseUrl: baseUrlFor(environment),
       };
     };
 
-    const billing = createAsaasBillingService(admin, anyNotificationChannelEnabled);
+    const getRuntime = async (requestedEnvironment?: Environment) => {
+      const runtime = await getGatewayRuntime(requestedEnvironment);
+      const { apiKey, environment } = runtime;
+      if (!apiKey) {
+        throw new Error(
+          `A chave do ambiente ${environment} ainda não foi configurada.`,
+        );
+      }
+      return runtime;
+    };
+
+    type EnrollmentPaymentOptionCandidate = {
+      paymentMethod: "PIX" | "BOLETO" | "CREDIT_CARD";
+      providerCode: "asaas" | "mercado_pago" | "banco_inter" | "banese_card";
+      credentialId: string;
+      environment: Environment;
+    };
+
+    const normalizedEnvironmentLabel = (environment: Environment) =>
+      environment === "production" ? "producao" : "sandbox";
+
+    const paymentMethodPreferredEnvironments = (
+      paymentMethod: EnrollmentPaymentOptionCandidate["paymentMethod"],
+    ): Environment[] =>
+      paymentMethod === "CREDIT_CARD"
+        ? ["sandbox", "production"]
+        : ["production", "sandbox"];
+
+    const resolveEnrollmentPaymentOption = async (
+      modalidade: string,
+      paymentMethod: EnrollmentPaymentOptionCandidate["paymentMethod"],
+      strict = false,
+    ): Promise<EnrollmentPaymentOptionCandidate | null> => {
+      const { data: routesData, error } = await admin
+        .from("payment_gateway_routes")
+        .select("provider_code, credential_id, enabled, environment")
+        .eq("modalidade", modalidade)
+        .eq("payment_method", paymentMethod)
+        .neq("enabled", false);
+      if (error) throw error;
+
+      const routes = (routesData || []).map((route: any) => ({
+        ...route,
+        environment: normalizeEnvironment(route?.environment),
+      }));
+      const availableEnvironments = [
+        ...new Set(routes.map((route) => route.environment)),
+      ].map((value) => normalizedEnvironmentLabel(value));
+
+      for (const environment of paymentMethodPreferredEnvironments(paymentMethod)) {
+        const envRoutes = routes.filter(
+          (route: any) => route.environment === environment,
+        );
+        if (envRoutes.length === 0) continue;
+        if (envRoutes.length > 1) {
+          throw new Error(
+            `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${
+              normalizedEnvironmentLabel(environment)
+            }. Corrija para manter apenas uma rota ativa por ambiente.`,
+          );
+        }
+
+        const route = envRoutes[0];
+        try {
+          assertStoredProviderAdapterReady(
+            route.provider_code,
+            paymentMethod,
+            route.environment,
+          );
+
+          let credentialData: any = null;
+          if (route.credential_id) {
+            const { data, error } = await admin
+              .from("payment_gateway_credentials")
+              .select("*")
+              .eq("id", route.credential_id)
+              .maybeSingle();
+            if (error) throw error;
+            if (
+              data?.provider_code === route.provider_code &&
+              normalizeEnvironment(data?.environment) === route.environment
+            ) {
+              credentialData = data;
+            }
+          }
+          if (!credentialData) {
+            credentialData = await getCredential(
+              admin,
+              route.provider_code,
+              route.environment,
+            );
+          }
+          if (
+            !credentialData?.id ||
+            credentialData.provider_code !== route.provider_code ||
+            normalizeEnvironment(credentialData.environment) !== route.environment ||
+            !await isCredentialConfiguredForRoute(
+              admin,
+              route.provider_code,
+              route.environment,
+              paymentMethod,
+              credentialData,
+            )
+          ) {
+            if (strict) {
+              throw new Error(
+                `Rota ${paymentMethod} de ${modalidade} em ${
+                  normalizedEnvironmentLabel(environment)
+                } nao possui credencial pronta.`,
+              );
+            }
+            continue;
+          }
+
+          return {
+            paymentMethod,
+            providerCode: normalizeProviderCode(route.provider_code),
+            credentialId: credentialData.id,
+            environment,
+          };
+        } catch (error) {
+          if (!strict) {
+            continue;
+          }
+          throw error instanceof Error
+            ? error
+            : new Error("Nao foi possivel validar a rota bancaria.");
+        }
+      }
+
+      if (strict) {
+        throw new Error(
+          `Rota ${paymentMethod} de ${modalidade} nao esta ativa. ${
+            availableEnvironments.length > 0
+              ? `Rota ativa em: ${availableEnvironments.join(", ")}.`
+              : "Nao foram encontradas rotas ativas."
+          }`,
+        );
+      }
+      return null;
+    };
+
+    const billing = createAsaasBillingService(
+      admin,
+      anyNotificationChannelEnabled,
+    );
     const {
       mapBillingType,
       refreshReceivableStatus,
@@ -171,9 +373,96 @@ Deno.serve(async (req: Request) => {
     const online = createAsaasOnlineService(admin, mapBillingType);
     const carnet = createAsaasCarnetService(admin, syncReceivable);
 
+    const preflightEnrollmentCharge = async (
+      turmaId: string,
+      requestedPaymentMethod?: unknown,
+    ) => {
+      if (!UUID_RE.test(turmaId)) throw new Error("Turma inválida.");
+      const { data: turma, error: turmaError } = await admin
+        .from("turmas")
+        .select("id, polo_id, cursos(modalidade)")
+        .eq("id", turmaId)
+        .maybeSingle();
+      if (turmaError) throw turmaError;
+      if (!turma) throw new Error("Turma não encontrada.");
+      if (gestor) requireGestorForPolo(gestor, turma.polo_id);
+
+      const course = Array.isArray(turma.cursos)
+        ? turma.cursos[0]
+        : turma.cursos;
+      const modalidade = String(course?.modalidade || "")
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      if (
+        modalidade &&
+        !["EAD", "TECNICO", "LIVRE", "ESPECIALIZACAO", "OUTROS_CREDITOS"]
+          .includes(modalidade)
+      ) {
+        throw new Error(
+          "A pré-validação de cobrança de matrícula não possui suporte para esta modalidade.",
+        );
+      }
+
+      const requestedMethod = requestedPaymentMethod === undefined ||
+        requestedPaymentMethod === null || requestedPaymentMethod === ""
+        ? null
+        : buildEnrollmentReceivablePaymentPatch(requestedPaymentMethod)
+          .gateway_payment_method;
+      const methodsToResolve: Array<
+        "PIX" | "BOLETO" | "CREDIT_CARD"
+      > = requestedMethod ? [requestedMethod] : ["PIX", "BOLETO", "CREDIT_CARD"];
+      const options = (
+        await Promise.all(
+          methodsToResolve.map((method) =>
+            resolveEnrollmentPaymentOption(modalidade, method, false)
+          ),
+        )
+      )
+        .filter((option): option is EnrollmentPaymentOptionCandidate =>
+          option !== null
+        )
+        .map((option) => ({
+          paymentMethod: option.paymentMethod,
+          providerCode: option.providerCode,
+          credentialId: option.credentialId,
+          environment: option.environment,
+        }));
+
+      if (
+        requestedMethod &&
+        !options.some((item) => item.paymentMethod === requestedMethod)
+      ) {
+        const available = options.map((item) => item.paymentMethod).join(", ");
+        throw new Error(
+          available
+            ? `O método ${requestedMethod} não possui rota ativa e credencial pronta. Disponíveis: ${available}.`
+            : "Nenhum método possui rota ativa e credencial pronta para esta turma e ambiente.",
+        );
+      }
+
+      const environment = options.find((item) => item.environment === "production")
+        ?.environment || "sandbox";
+
+      return { environment, modalidade, options };
+    };
+
+    if (action === "preflight-enrollment-charge") {
+      return respondJson({
+        success: true,
+        ...await preflightEnrollmentCharge(
+          String(body.turmaId || ""),
+          body.paymentMethod,
+        ),
+      });
+    }
+
     if (action === "get-config") {
       const config = await getConfig();
-      const environment = normalizeEnvironment(body.environment || config.environment);
+      const environment = normalizeEnvironment(
+        body.environment || config.environment,
+      );
       const apiKey = await getSecret(apiSecretName(environment));
       const webhookToken = await getWebhookToken(environment);
       return respondJson({
@@ -183,7 +472,8 @@ Deno.serve(async (req: Request) => {
         apiConfigured: Boolean(apiKey),
         webhookConfigured: Boolean(webhookToken),
         notificationsEnabled: anyNotificationChannelEnabled(config),
-        notificationWhatsappEnabled: config.notification_whatsapp_enabled === true,
+        notificationWhatsappEnabled:
+          config.notification_whatsapp_enabled === true,
         notificationEmailEnabled: config.notification_email_enabled === true,
         notificationSmsEnabled: config.notification_sms_enabled === true,
         webhookUrl: `${supabaseUrl}/functions/v1/asaas-webhook`,
@@ -214,10 +504,13 @@ Deno.serve(async (req: Request) => {
       }
 
       if (webhookToken) {
-        const { error: webhookSecretError } = await admin.rpc("asaas_set_secret", {
-          p_secret_name: webhookSecretName(environment),
-          p_secret_value: webhookToken,
-        });
+        const { error: webhookSecretError } = await admin.rpc(
+          "asaas_set_secret",
+          {
+            p_secret_name: webhookSecretName(environment),
+            p_secret_value: webhookToken,
+          },
+        );
         if (webhookSecretError) throw webhookSecretError;
         if (environment === "sandbox") {
           await admin.rpc("asaas_set_secret", {
@@ -228,14 +521,17 @@ Deno.serve(async (req: Request) => {
       }
 
       const config = await getConfig();
-      const notificationWhatsappEnabled = body.notificationWhatsappEnabled === true;
+      const notificationWhatsappEnabled =
+        body.notificationWhatsappEnabled === true;
       const notificationEmailEnabled = body.notificationEmailEnabled === true;
       const notificationSmsEnabled = body.notificationSmsEnabled === true;
       const { error: configError } = await admin.from("asaas_config").upsert({
         id: config.id,
         environment,
         wallet_id: body.walletId || null,
-        notifications_enabled: notificationWhatsappEnabled || notificationEmailEnabled || notificationSmsEnabled || body.notificationsEnabled === true,
+        notifications_enabled: notificationWhatsappEnabled ||
+          notificationEmailEnabled || notificationSmsEnabled ||
+          body.notificationsEnabled === true,
         notification_whatsapp_enabled: notificationWhatsappEnabled,
         notification_email_enabled: notificationEmailEnabled,
         notification_sms_enabled: notificationSmsEnabled,
@@ -253,7 +549,8 @@ Deno.serve(async (req: Request) => {
 
     if (action === "save-notification-preferences") {
       const config = await getConfig();
-      const notificationWhatsappEnabled = body.notificationWhatsappEnabled === true;
+      const notificationWhatsappEnabled =
+        body.notificationWhatsappEnabled === true;
       const notificationEmailEnabled = body.notificationEmailEnabled === true;
       const notificationSmsEnabled = body.notificationSmsEnabled === true;
       const { error: configError } = await admin.from("asaas_config").upsert({
@@ -261,7 +558,8 @@ Deno.serve(async (req: Request) => {
         environment: config.environment || "sandbox",
         wallet_id: config.wallet_id || null,
         configured: config.configured === true,
-        notifications_enabled: notificationWhatsappEnabled || notificationEmailEnabled || notificationSmsEnabled,
+        notifications_enabled: notificationWhatsappEnabled ||
+          notificationEmailEnabled || notificationSmsEnabled,
         notification_whatsapp_enabled: notificationWhatsappEnabled,
         notification_email_enabled: notificationEmailEnabled,
         notification_sms_enabled: notificationSmsEnabled,
@@ -282,6 +580,7 @@ Deno.serve(async (req: Request) => {
           gerar_cobranca_inicial,
           sincronizar_asaas,
           turmas(
+            id,
             polo_id,
             origem_financeira,
             financeiro_herdado,
@@ -293,36 +592,116 @@ Deno.serve(async (req: Request) => {
       if (matriculaError) throw matriculaError;
       if (!matricula) throw new Error("Matrícula não encontrada.");
 
-      const turma = Array.isArray(matricula.turmas) ? matricula.turmas[0] : matricula.turmas;
+      const turma = Array.isArray(matricula.turmas)
+        ? matricula.turmas[0]
+        : matricula.turmas;
       if (gestor) requireGestorForPolo(gestor, turma?.polo_id);
       const origem = String(turma?.origem_financeira || "NORMAL").toUpperCase();
-      const financeiroHerdado = matricula.financeiro_herdado === true
-        || turma?.financeiro_herdado === true
-        || origem === "LEGADO";
-      const gerarInicial = matricula.gerar_cobranca_inicial ?? !financeiroHerdado;
-      const syncEnabled = matricula.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
+      const financeiroHerdado = matricula.financeiro_herdado === true ||
+        turma?.financeiro_herdado === true ||
+        origem === "LEGADO";
+      const gerarInicial = matricula.gerar_cobranca_inicial ??
+        !financeiroHerdado;
+      const syncEnabled = matricula.sincronizar_asaas ??
+        turma?.sincronizar_asaas_futuro ?? true;
 
-      if (gerarInicial === false || syncEnabled === false) {
+      if (gerarInicial === false) {
         return respondJson({
           success: true,
           skipped: true,
-          skippedReason: gerarInicial === false
-            ? "Cobrança inicial bloqueada por regra de financeiro legado."
-            : "Sincronização Asaas desativada na matrícula/turma.",
+          skippedReason:
+            "Cobrança inicial bloqueada por regra de financeiro legado.",
         });
+      }
+
+      const paymentPatch = buildEnrollmentReceivablePaymentPatch(
+        body.paymentMethod,
+      );
+      let selectedEnvironment: Environment | null = null;
+      if (syncEnabled !== false) {
+        const preflight = await preflightEnrollmentCharge(
+          String(body.turmaId || turma?.id || ""),
+          body.paymentMethod,
+        );
+        selectedEnvironment =
+          preflight.options.find((option) =>
+            option.paymentMethod === paymentPatch.gateway_payment_method
+          )?.environment || preflight.environment;
       }
 
       const { data, error } = await admin
         .from("contas_receber")
-        .select("id")
+        .select("*")
         .eq("matricula_id", matriculaId)
         .eq("tipo_lancamento", "MATRICULA")
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Cobrança de matrícula não encontrada.");
 
-      const runtime = await getRuntime();
-      const receivable = await syncReceivable(runtime, data.id);
+      const patchDecision = decideEnrollmentPaymentPatch({
+        receivable: data,
+        requestedMethod: body.paymentMethod,
+        hasRemoteReference: hasRemoteTitleReference(data),
+      });
+      let updatedReceivable = data;
+      if (patchDecision === "apply") {
+        let updateQuery = admin
+          .from("contas_receber")
+          .update({
+            ...paymentPatch,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id)
+          .eq("status", data.status);
+        updateQuery = data.forma_pagamento === null ||
+            data.forma_pagamento === undefined
+          ? updateQuery.is("forma_pagamento", null)
+          : updateQuery.eq("forma_pagamento", data.forma_pagamento);
+        updateQuery = data.gateway_payment_method === null ||
+            data.gateway_payment_method === undefined
+          ? updateQuery.is("gateway_payment_method", null)
+          : updateQuery.eq(
+            "gateway_payment_method",
+            data.gateway_payment_method,
+          );
+        updateQuery = applyRemoteIdentitySnapshot(updateQuery, data);
+        updateQuery = applyReceivableSnapshotFields(updateQuery, data, [
+          "asaas_status",
+          "gateway_status",
+          "updated_at",
+        ]);
+        const { data: patchedReceivable, error: updateError } =
+          await updateQuery.select().maybeSingle();
+        if (updateError) throw updateError;
+        if (!patchedReceivable) {
+          throw new Error(
+            "A cobrança mudou durante a definição do método. Atualize a tela e tente novamente.",
+          );
+        }
+        updatedReceivable = patchedReceivable;
+      }
+
+      if (syncEnabled === false) {
+        return respondJson({
+          success: true,
+          receivable: updatedReceivable,
+          skipped: true,
+          skippedReason:
+            "Sincronização no gateway desativada na matrícula/turma.",
+        });
+      }
+
+      if (String(updatedReceivable.status || "").toUpperCase() === "PAGO") {
+        return respondJson({
+          success: true,
+          receivable: updatedReceivable,
+          skipped: true,
+          skippedReason: "Cobrança de matrícula já está paga.",
+        });
+      }
+
+      const runtime = await getGatewayRuntime(selectedEnvironment || undefined);
+      const receivable = await syncReceivable(runtime, updatedReceivable.id);
       return respondJson({
         success: true,
         receivable,
@@ -331,8 +710,40 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const getRuntimeForAction = () => getRuntime(body.environment ? normalizeEnvironment(body.environment) : undefined);
+    const getRuntimeForAction = () =>
+      getRuntime(
+        body.environment ? normalizeEnvironment(body.environment) : undefined,
+      );
     const getRuntimeForMovement = () => getRuntime();
+    const getGatewayRuntimeForMovement = () => getGatewayRuntime();
+    const getRuntimeForReceivableMovement = (receivable: any) =>
+      getRuntime(resolveExistingAsaasEnvironment(receivable) || undefined);
+    const getGatewayRuntimeForReceivableMovement = (receivable: any) =>
+      getGatewayRuntime(
+        resolveExistingAsaasEnvironment(receivable) || undefined,
+      );
+
+    if (action === "create-other-credit") {
+      const request = normalizeOtherCreditRequest(body);
+      if (gestor) requireGestorForPolo(gestor, request.poloId);
+
+      const config = await getConfig();
+      const environment = normalizeEnvironment(config.environment);
+      const result = await createOtherCreditServerSide({
+        admin,
+        environment,
+        request,
+        syncGateway: async (receivable) => {
+          const receivableRuntime =
+            await getGatewayRuntimeForReceivableMovement(
+              receivable,
+            );
+          return syncReceivable(receivableRuntime, receivable.id);
+        },
+      });
+
+      return respondJson({ success: true, ...result });
+    }
 
     if (action === "test-connection") {
       const runtime = await getRuntimeForAction();
@@ -371,7 +782,9 @@ Deno.serve(async (req: Request) => {
       };
 
       const list = await callAsaas(runtime, "/webhooks?limit=100");
-      const existing = (list?.data || []).find((item: any) => item.url === webhookUrl);
+      const existing = (list?.data || []).find((item: any) =>
+        item.url === webhookUrl
+      );
       const webhook = existing
         ? await callAsaas(runtime, `/webhooks/${existing.id}`, {
           method: "PUT",
@@ -396,12 +809,16 @@ Deno.serve(async (req: Request) => {
 
     if (action === "reconcile-online-payment") {
       if (gestor && !gestor.isGlobal && !gestor.poloId) {
-        throw new Error("Usuário financeiro sem polo definido não pode reconciliar pagamento online.");
+        throw new Error(
+          "Usuário financeiro sem polo definido não pode reconciliar pagamento online.",
+        );
       }
       const runtime = await getRuntimeForMovement();
-      return respondJson(await online.reconcileOnlinePayment(runtime, body, {
-        poloId: gestor && !gestor.isGlobal ? gestor.poloId : null,
-      }));
+      return respondJson(
+        await online.reconcileOnlinePayment(runtime, body, {
+          poloId: gestor && !gestor.isGlobal ? gestor.poloId : null,
+        }),
+      );
     }
 
     if (action === "sync-receivable") {
@@ -409,21 +826,25 @@ Deno.serve(async (req: Request) => {
       if (!UUID_RE.test(receivableId)) {
         throw new Error("Cobrança inválida para sincronização.");
       }
-      const { data: receivableToSync, error: receivableToSyncError } = await admin
-        .from("contas_receber")
-        .select("id, polo_id")
-        .eq("id", receivableId)
-        .single();
+      const { data: receivableToSync, error: receivableToSyncError } =
+        await admin
+          .from("contas_receber")
+          .select(
+            "id, polo_id, asaas_payment_id, asaas_payment_link_id, asaas_status, gateway_provider, gateway_environment, gateway_payment_id, gateway_payment_link_id, gateway_boleto_nosso_numero, gateway_status",
+          )
+          .eq("id", receivableId)
+          .single();
       if (receivableToSyncError) throw receivableToSyncError;
       if (gestor) requireGestorForPolo(gestor, receivableToSync.polo_id);
 
-      const runtime = await getRuntimeForMovement();
+      const runtime = await getGatewayRuntimeForReceivableMovement(
+        receivableToSync,
+      );
       const receivable = await syncReceivable(runtime, receivableId);
       return respondJson({ success: true, receivable });
     }
 
     if (action === "cancel-receivable") {
-      const runtime = await getRuntimeForMovement();
       const receivableId = String(body.receivableId || "").trim();
       if (!UUID_RE.test(receivableId)) {
         throw new Error("Cobrança inválida para cancelamento.");
@@ -436,10 +857,18 @@ Deno.serve(async (req: Request) => {
         .single();
       if (error) throw error;
       if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
+      assertAsaasReceivableCancellationAllowed(receivable);
 
-      if (receivable.status === "PAGO" || ["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
-        throw new Error("Cobranças pagas/confirmadas não podem ser canceladas por este fluxo.");
+      if (
+        receivable.status === "PAGO" ||
+        ["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)
+      ) {
+        throw new Error(
+          "Cobranças pagas/confirmadas não podem ser canceladas por este fluxo.",
+        );
       }
+
+      const runtime = await getRuntimeForReceivableMovement(receivable);
 
       let asaasCanceled = false;
       let asaasDeleteStatus: number | null = null;
@@ -447,65 +876,91 @@ Deno.serve(async (req: Request) => {
       let asaasPaymentLinkDeleteStatus: number | null = null;
 
       if (receivable.asaas_payment_id) {
-        const response = await fetch(`${runtime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-Gestao",
-            access_token: runtime.apiKey,
+        const response = await fetch(
+          `${runtime.baseUrl}/payments/${receivable.asaas_payment_id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "Universo-Cursos-Gestao",
+              access_token: runtime.apiKey,
+            },
           },
-        });
+        );
         asaasDeleteStatus = response.status;
-        const payload = response.status === 204 ? null : await response.json().catch(() => null);
+        const payload = response.status === 204
+          ? null
+          : await response.json().catch(() => null);
 
         if (response.ok) {
           asaasCanceled = true;
         } else if (response.status === 404) {
-          if (String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
-            throw new Error("Cobrança Asaas não encontrada no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.");
+          if (
+            String(receivable.asaas_status || "").toUpperCase() !== "DELETED"
+          ) {
+            throw new Error(
+              "Cobrança Asaas não encontrada no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.",
+            );
           }
         } else {
-          const message = payload?.errors?.map((item: any) => item.description).join(" ")
-            || payload?.message
-            || `Erro ${response.status} ao cancelar cobrança no Asaas.`;
+          const message = payload?.errors?.map((item: any) =>
+            item.description
+          ).join(" ") ||
+            payload?.message ||
+            `Erro ${response.status} ao cancelar cobrança no Asaas.`;
           throw new Error(message);
         }
       }
 
       if (receivable.asaas_payment_link_id) {
-        const response = await fetch(`${runtime.baseUrl}/paymentLinks/${receivable.asaas_payment_link_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-Gestao",
-            access_token: runtime.apiKey,
+        const response = await fetch(
+          `${runtime.baseUrl}/paymentLinks/${receivable.asaas_payment_link_id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "Universo-Cursos-Gestao",
+              access_token: runtime.apiKey,
+            },
           },
-        });
+        );
         asaasPaymentLinkDeleteStatus = response.status;
-        const payload = response.status === 204 ? null : await response.json().catch(() => null);
+        const payload = response.status === 204
+          ? null
+          : await response.json().catch(() => null);
 
         if (response.ok) {
           asaasPaymentLinkCanceled = true;
         } else if (response.status === 404) {
-          if (!asaasCanceled && String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
-            throw new Error("Link de pagamento Asaas não encontrado no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.");
+          if (
+            !asaasCanceled &&
+            String(receivable.asaas_status || "").toUpperCase() !== "DELETED"
+          ) {
+            throw new Error(
+              "Link de pagamento Asaas não encontrado no ambiente configurado. Atualize/reconcilie antes de cancelar localmente.",
+            );
           }
           asaasPaymentLinkCanceled = true;
         } else {
-          const message = payload?.errors?.map((item: any) => item.description).join(" ")
-            || payload?.message
-            || `Erro ${response.status} ao remover link de pagamento no Asaas.`;
+          const message = payload?.errors?.map((item: any) =>
+            item.description
+          ).join(" ") ||
+            payload?.message ||
+            `Erro ${response.status} ao remover link de pagamento no Asaas.`;
           throw new Error(message);
         }
       }
 
-      const { data: canceled, error: updateError } = await admin
+      const cancelUpdate = admin
         .from("contas_receber")
         .update({
           status: "CANCELADO",
           asaas_status: "DELETED",
           asaas_payment_link_id: null,
-          nosso_numero_asaas: receivable.asaas_payment_link_id && !receivable.asaas_payment_id ? null : receivable.nosso_numero_asaas,
+          nosso_numero_asaas:
+            receivable.asaas_payment_link_id && !receivable.asaas_payment_id
+              ? null
+              : receivable.nosso_numero_asaas,
           asaas_invoice_url: null,
           asaas_bank_slip_url: null,
           asaas_transaction_receipt_url: null,
@@ -514,12 +969,19 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivable.id)
-        .in("status", ["PENDENTE", "VENCIDO"])
-        .select()
-        .maybeSingle();
+        .in("status", ["PENDENTE", "VENCIDO"]);
+      const { data: canceled, error: updateError } =
+        await applyRemoteIdentitySnapshot(
+          cancelUpdate,
+          receivable,
+        )
+          .select()
+          .maybeSingle();
       if (updateError) throw updateError;
       if (!canceled) {
-        throw new Error("Cobrança mudou de status antes do cancelamento. Atualize a tela e tente novamente.");
+        throw new Error(
+          "Cobrança mudou de status antes do cancelamento. Atualize a tela e tente novamente.",
+        );
       }
 
       return respondJson({
@@ -538,24 +1000,38 @@ Deno.serve(async (req: Request) => {
         : [];
       const uniqueReceivableIds: string[] = [...new Set(receivableIds)];
       if (!uniqueReceivableIds.length) {
-        throw new Error("Selecione ao menos uma cobrança para gerar o carnê oficial.");
+        throw new Error(
+          "Selecione ao menos uma cobrança para gerar o carnê oficial.",
+        );
       }
       if (uniqueReceivableIds.some((id) => !UUID_RE.test(id))) {
         throw new Error("A seleção do carnê possui cobrança inválida.");
       }
-      const { data: selectedReceivables, error: selectedReceivablesError } = await admin
-        .from("contas_receber")
-        .select("id, polo_id")
-        .in("id", uniqueReceivableIds);
+      const { data: selectedReceivables, error: selectedReceivablesError } =
+        await admin
+          .from("contas_receber")
+          .select(
+            "id, polo_id, asaas_payment_id, asaas_payment_link_id, asaas_status, gateway_provider, gateway_environment, gateway_payment_id, gateway_payment_link_id, gateway_boleto_nosso_numero, gateway_status",
+          )
+          .in("id", uniqueReceivableIds);
       if (selectedReceivablesError) throw selectedReceivablesError;
       if ((selectedReceivables || []).length !== uniqueReceivableIds.length) {
-        throw new Error("Uma ou mais cobranças selecionadas não foram encontradas.");
+        throw new Error(
+          "Uma ou mais cobranças selecionadas não foram encontradas.",
+        );
       }
       if (gestor) {
-        for (const row of selectedReceivables || []) requireGestorForPolo(gestor, row.polo_id);
+        for (const row of selectedReceivables || []) {
+          requireGestorForPolo(gestor, row.polo_id);
+        }
       }
-      const runtime = await getRuntimeForMovement();
-      return respondJson(await carnet.generateOfficialCarnet(runtime, uniqueReceivableIds));
+      const runtime = await getRuntime(
+        resolveExistingAsaasEnvironmentForMany(selectedReceivables || []) ||
+          undefined,
+      );
+      return respondJson(
+        await carnet.generateOfficialCarnet(runtime, uniqueReceivableIds),
+      );
     }
 
     if (action === "refresh-receivable-status") {
@@ -574,219 +1050,43 @@ Deno.serve(async (req: Request) => {
         const reconciliation = await reconcileBaneseReceivable(
           admin,
           receivableId,
+          {
+            syncFutureInstallments: (matriculaId, environment) =>
+              syncRouteAwareFutureInstallments(
+                admin,
+                matriculaId,
+                environment,
+              ),
+          },
         );
         return respondJson({
           success: true,
           receivable: reconciliation.receivable,
         });
       }
-      const runtime = await getRuntimeForMovement();
+      const runtime = await getRuntimeForReceivableMovement(receivable);
       const refreshed = await refreshReceivableStatus(runtime, receivable);
       return respondJson({ success: true, receivable: refreshed });
     }
 
     if (action === "manual-settlement") {
-      const receivableId = String(body.receivableId || "").trim();
-      if (!UUID_RE.test(receivableId)) {
-        throw new Error("Cobrança inválida para baixa manual.");
-      }
-      const { data: receivable, error } = await admin
-        .from("contas_receber")
-        .select("*")
-        .eq("id", receivableId)
-        .single();
-      if (error) throw error;
-      if (gestor) requireGestorForPolo(gestor, receivable.polo_id);
-
-      if (!["PENDENTE", "VENCIDO"].includes(String(receivable.status || "").toUpperCase())) {
-        throw new Error("Baixa manual permitida apenas para cobranças pendentes ou vencidas.");
-      }
-      if (["RECEIVED", "CONFIRMED"].includes(String(receivable.asaas_status || "").toUpperCase())) {
-        throw new Error("Cobrança já confirmada no Asaas. Atualize o status e use o comprovante oficial.");
-      }
-
-      const valorPago = Number(body.valorPago);
-      if (!Number.isFinite(valorPago) || valorPago <= 0) {
-        throw new Error("Valor pago inválido para baixa manual.");
-      }
-      const dataPagamento = String(body.dataPagamento || "").slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataPagamento)) {
-        throw new Error("Data de pagamento inválida para baixa manual.");
-      }
-      const formaPagamento = String(body.formaPagamento || "").trim();
-      if (!formaPagamento) throw new Error("Forma de pagamento obrigatória para baixa manual.");
-
-      const contaBancariaId = String(body.contaBancariaId || "").trim();
-      if (!UUID_RE.test(contaBancariaId)) {
-        throw new Error("Conta bancária obrigatória para baixa manual.");
-      }
-      const { data: contaBancaria, error: contaError } = await admin
-        .from("contas_bancarias")
-        .select("id, polo_id, ativo")
-        .eq("id", contaBancariaId)
-        .maybeSingle();
-      if (contaError) throw contaError;
-      if (!contaBancaria || contaBancaria.ativo !== true) {
-        throw new Error("Conta bancária inativa ou não encontrada.");
-      }
-      if (receivable.polo_id && contaBancaria.polo_id && contaBancaria.polo_id !== receivable.polo_id) {
-        throw new Error("Conta bancária pertence a outro polo.");
-      }
-
-      let settlementRuntime: Awaited<ReturnType<typeof getRuntime>> | null = null;
-      let asaasCanceled = false;
-      let asaasPaymentLinkCanceled = false;
-      let baneseCanceled = false;
-      let canceledGatewayPaymentId: string | null = null;
-      if (receivable.gateway_provider === "banese_card") {
-        const cancellation = await cancelBaneseReceivableBeforeManualSettlement(
-          admin,
-          receivable,
-        );
-        baneseCanceled = true;
-        canceledGatewayPaymentId = cancellation.remotePaymentId;
-      }
-      if (receivable.asaas_payment_id && !["RECEIVED", "CONFIRMED"].includes(receivable.asaas_status)) {
-        settlementRuntime = await getRuntimeForMovement();
-        const remotePaymentResponse = await fetch(`${settlementRuntime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-Gestao",
-            access_token: settlementRuntime.apiKey,
-          },
-        });
-        const remotePayment = remotePaymentResponse.status === 204
-          ? null
-          : await remotePaymentResponse.json().catch(() => null);
-        if (remotePaymentResponse.status === 404) {
-          if (String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
-            throw new Error("Cobrança Asaas não encontrada no ambiente configurado. Atualize/reconcilie antes da baixa manual.");
-          }
-        } else if (!remotePaymentResponse.ok) {
-          const message = remotePayment?.errors?.map((item: any) => item.description).join(" ")
-            || remotePayment?.message
-            || `Erro ${remotePaymentResponse.status} ao consultar cobrança no Asaas.`;
-          throw new Error(message);
-        }
-        if (["RECEIVED", "CONFIRMED"].includes(String(remotePayment?.status || "").toUpperCase())) {
-          throw new Error("O Asaas já confirmou este pagamento. Não é permitido converter para baixa manual.");
-        }
-        const deletePaymentResponse = await fetch(`${settlementRuntime.baseUrl}/payments/${receivable.asaas_payment_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-Gestao",
-            access_token: settlementRuntime.apiKey,
-          },
-        });
-        if (!deletePaymentResponse.ok && deletePaymentResponse.status !== 404) {
-          const payload = await deletePaymentResponse.json().catch(() => null);
-          const message = payload?.errors?.map((item: any) => item.description).join(" ")
-            || payload?.message
-            || `Erro ${deletePaymentResponse.status} ao cancelar cobrança no Asaas.`;
-          throw new Error(message);
-        }
-        asaasCanceled = true;
-      }
-      if (receivable.asaas_payment_link_id) {
-        settlementRuntime = settlementRuntime || await getRuntimeForMovement();
-        const response = await fetch(`${settlementRuntime.baseUrl}/paymentLinks/${receivable.asaas_payment_link_id}`, {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "Universo-Cursos-Gestao",
-            access_token: settlementRuntime.apiKey,
-          },
-        });
-        if (!response.ok && response.status !== 404) {
-          const payload = await response.json().catch(() => null);
-          const message = payload?.errors?.map((item: any) => item.description).join(" ")
-            || payload?.message
-            || `Erro ${response.status} ao remover link de pagamento no Asaas.`;
-          throw new Error(message);
-        }
-        if (response.status === 404 && !receivable.asaas_payment_id && String(receivable.asaas_status || "").toUpperCase() !== "DELETED") {
-          throw new Error("Link de pagamento Asaas não encontrado no ambiente configurado. Atualize/reconcilie antes da baixa manual.");
-        }
-        asaasPaymentLinkCanceled = true;
-      }
-
-      const { data: settled, error: updateError } = await admin.from("contas_receber")
-        .update({
-          status: "PAGO",
-          conta_bancaria_id: contaBancariaId,
-          valor_pago: valorPago,
-          data_pagamento: dataPagamento,
-          forma_pagamento: formaPagamento,
-          origem_pagamento: "PRESENCIAL",
-          asaas_status: receivable.asaas_payment_id || receivable.asaas_payment_link_id ? "DELETED" : null,
-          asaas_payment_link_id: null,
-          nosso_numero_asaas: receivable.asaas_payment_link_id && !receivable.asaas_payment_id ? null : receivable.nosso_numero_asaas,
-          asaas_invoice_url: null,
-          asaas_bank_slip_url: null,
-          asaas_transaction_receipt_url: null,
-          ...(baneseCanceled
-            ? {
-              gateway_status: "CANCELED",
-              gateway_synced_at: new Date().toISOString(),
-              gateway_last_error: null,
-            }
-            : {}),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", receivableId)
-        .in("status", ["PENDENTE", "VENCIDO"])
-        .select("id")
-        .maybeSingle();
-      if (updateError) throw updateError;
-      if (!settled) {
-        throw new Error("Cobrança mudou de status antes da baixa. Atualize a tela e tente novamente.");
-      }
-
-      let futureSyncWarning: string | null = null;
-      if (receivable.matricula_id) {
-        const { data: matricula, error: matriculaError } = await admin
-          .from("matriculas")
-          .select("gerar_cobranca_futura, sincronizar_asaas, turmas(gerar_cobrancas_futuras, sincronizar_asaas_futuro)")
-          .eq("id", receivable.matricula_id)
-          .maybeSingle();
-        if (matriculaError) throw matriculaError;
-        const turma = Array.isArray(matricula?.turmas) ? matricula?.turmas[0] : matricula?.turmas;
-        const gerarFutura = matricula?.gerar_cobranca_futura ?? turma?.gerar_cobrancas_futuras ?? false;
-        const syncEnabled = matricula?.sincronizar_asaas ?? turma?.sincronizar_asaas_futuro ?? true;
-        if (gerarFutura && syncEnabled) {
-          try {
-            settlementRuntime = settlementRuntime || await getRuntimeForMovement();
-            const syncResult = await syncFutureInstallments(settlementRuntime, receivable.matricula_id);
-            const syncReason = "reason" in syncResult ? syncResult.reason : null;
-            if (syncResult?.skipped && syncReason) {
-              futureSyncWarning = String(syncReason);
-            }
-          } catch (syncError) {
-            futureSyncWarning = syncError instanceof Error ? syncError.message : String(syncError);
-            await admin.from("contas_receber").update({
-              asaas_last_error: futureSyncWarning,
-              updated_at: new Date().toISOString(),
-            })
-              .eq("matricula_id", receivable.matricula_id)
-              .in("status", ["PENDENTE", "VENCIDO"])
-              .neq("tipo_lancamento", "MATRICULA");
-          }
-        }
-      }
-      return respondJson({
-        success: true,
-        asaasCanceled,
-        asaasPaymentLinkCanceled,
-        asaasPaymentId: receivable.asaas_payment_id || null,
-        baneseCanceled,
-        gatewayCanceled: baneseCanceled || asaasCanceled || asaasPaymentLinkCanceled,
-        gatewayProvider: receivable.gateway_provider || (receivable.asaas_payment_id ? "asaas" : null),
-        gatewayPaymentId: canceledGatewayPaymentId || receivable.asaas_payment_id || null,
-        futureSyncWarning,
+      const result = await executeManualSettlementAction({
+        admin,
+        actor: gestor,
+        body,
+        requirePoloAccess: requireGestorForPolo,
+        getAsaasRuntime: getRuntimeForReceivableMovement,
+        syncFutureInstallments: async (matriculaId) => {
+          const runtime = await getGatewayRuntimeForMovement();
+          return await syncRouteAwareFutureInstallments(
+            admin,
+            matriculaId,
+            runtime.environment,
+          );
+        },
       });
+      return respondJson(result);
     }
-
     if (action === "reverse-manual-settlement") {
       const receivableId = String(body.receivableId || "").trim();
       if (!UUID_RE.test(receivableId)) {
@@ -807,39 +1107,66 @@ Deno.serve(async (req: Request) => {
         throw new Error("Este estorno é permitido apenas para baixas manuais.");
       }
 
-      const oldAsaasPaymentId = receivable.asaas_payment_id || null;
-      const oldGatewayPaymentId = receivable.gateway_payment_id || null;
-      const isBanese = receivable.gateway_provider === "banese_card";
-      const shouldRecreateAsaas = Boolean(recreateAsaas && receivable.cliente_id && oldAsaasPaymentId);
-      const shouldRecreateBanese = Boolean(
-        recreateAsaas && receivable.cliente_id && isBanese && oldGatewayPaymentId,
+      const {
+        oldAsaasPaymentId,
+        oldGatewayPaymentId,
+        oldGatewayPaymentLinkId,
+        shouldRecreateAsaas,
+        shouldRecreateBanese,
+        shouldRecreateGateway,
+        clearCanceledBanese,
+        clearCanceledGateway,
+        restoredLegacyPaymentMethod,
+      } = resolveManualSettlementReversalGateway(
+        receivable,
+        recreateAsaas,
       );
-      const clearCanceledBanese = isBanese && Boolean(oldGatewayPaymentId);
-      const shouldRecreateGateway = shouldRecreateAsaas || shouldRecreateBanese;
 
-      const { data: reverted, error: updateError } = await admin
+      let reverseQuery = admin
         .from("contas_receber")
         .update({
           status: "PENDENTE",
           conta_bancaria_id: null,
           valor_pago: null,
           data_pagamento: null,
-          forma_pagamento: clearCanceledBanese ? "BOLETO" : null,
+          forma_pagamento: clearCanceledGateway
+            ? restoredLegacyPaymentMethod
+            : null,
           origem_pagamento: shouldRecreateAsaas
             ? "ASAAS"
-            : shouldRecreateBanese ? "BANESE" : "LOCAL",
+            : shouldRecreateBanese
+            ? "BANESE"
+            : "LOCAL",
           asaas_payment_id: shouldRecreateAsaas ? null : oldAsaasPaymentId,
-          nosso_numero_asaas: shouldRecreateAsaas ? null : receivable.nosso_numero_asaas,
-          asaas_invoice_url: shouldRecreateAsaas ? null : receivable.asaas_invoice_url,
-          asaas_bank_slip_url: shouldRecreateAsaas ? null : receivable.asaas_bank_slip_url,
-          asaas_transaction_receipt_url: shouldRecreateAsaas ? null : receivable.asaas_transaction_receipt_url,
-          asaas_installment_id: shouldRecreateAsaas ? null : receivable.asaas_installment_id,
+          nosso_numero_asaas: shouldRecreateAsaas
+            ? null
+            : receivable.nosso_numero_asaas,
+          asaas_invoice_url: shouldRecreateAsaas
+            ? null
+            : receivable.asaas_invoice_url,
+          asaas_bank_slip_url: shouldRecreateAsaas
+            ? null
+            : receivable.asaas_bank_slip_url,
+          asaas_transaction_receipt_url: shouldRecreateAsaas
+            ? null
+            : receivable.asaas_transaction_receipt_url,
+          asaas_installment_id: shouldRecreateAsaas
+            ? null
+            : receivable.asaas_installment_id,
           asaas_status: shouldRecreateAsaas ? null : receivable.asaas_status,
-          asaas_synced_at: shouldRecreateAsaas ? null : receivable.asaas_synced_at,
+          asaas_synced_at: shouldRecreateAsaas
+            ? null
+            : receivable.asaas_synced_at,
           asaas_last_error: oldAsaasPaymentId
-            ? `Baixa manual estornada. Cobrança Asaas anterior: ${oldAsaasPaymentId}. ${body.reason ? `Motivo: ${String(body.reason).slice(0, 180)}` : ""}`
-            : body.reason ? `Baixa manual estornada. Motivo: ${String(body.reason).slice(0, 180)}` : null,
-          ...(clearCanceledBanese
+            ? `Baixa manual estornada. Cobrança Asaas anterior: ${oldAsaasPaymentId}. ${
+              body.reason ? `Motivo: ${String(body.reason).slice(0, 180)}` : ""
+            }`
+            : body.reason
+            ? `Baixa manual estornada. Motivo: ${
+              String(body.reason).slice(0, 180)
+            }`
+            : null,
+          ...(clearCanceledGateway
             ? {
               gateway_payment_id: null,
               gateway_payment_link_id: null,
@@ -856,18 +1183,52 @@ Deno.serve(async (req: Request) => {
               gateway_transaction_receipt_url: null,
               gateway_status: null,
               gateway_synced_at: null,
-              gateway_last_error: `Baixa manual estornada. Titulo Banese anterior: ${oldGatewayPaymentId}. ${body.reason ? `Motivo: ${String(body.reason).slice(0, 180)}` : ""}`,
+              gateway_last_error: `Baixa manual estornada. Titulo ${
+                clearCanceledBanese ? "Banese" : "Asaas"
+              } anterior: ${
+                oldGatewayPaymentId || oldGatewayPaymentLinkId ||
+                oldAsaasPaymentId
+              }. ${
+                body.reason
+                  ? `Motivo: ${String(body.reason).slice(0, 180)}`
+                  : ""
+              }`,
             }
             : {}),
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivableId)
+        .eq("status", "PAGO")
+        .eq("origem_pagamento", "PRESENCIAL");
+      reverseQuery = applyRemoteIdentitySnapshot(reverseQuery, receivable);
+      reverseQuery = applyReceivableSnapshotFields(
+        reverseQuery,
+        receivable,
+        [
+          "conta_bancaria_id",
+          "valor_pago",
+          "data_pagamento",
+          "forma_pagamento",
+          "gateway_status",
+          "asaas_status",
+          "updated_at",
+        ],
+      );
+      const { data: reverted, error: updateError } = await reverseQuery
         .select()
-        .single();
+        .maybeSingle();
       if (updateError) throw updateError;
+      if (!reverted) {
+        throw new Error(
+          "A baixa mudou durante o estorno. Atualize a tela antes de tentar novamente.",
+        );
+      }
 
       const finalReceivable = shouldRecreateGateway
-        ? await syncReceivable(await getRuntimeForMovement(), reverted.id)
+        ? await syncReceivable(
+          await getGatewayRuntimeForMovement(),
+          reverted.id,
+        )
         : reverted;
 
       return respondJson({
@@ -876,7 +1237,11 @@ Deno.serve(async (req: Request) => {
         asaasRecreated: shouldRecreateAsaas,
         baneseRecreated: shouldRecreateBanese,
         gatewayRecreated: shouldRecreateGateway,
-        gatewayProvider: shouldRecreateBanese ? "banese_card" : shouldRecreateAsaas ? "asaas" : null,
+        gatewayProvider: shouldRecreateBanese
+          ? "banese_card"
+          : shouldRecreateAsaas
+          ? "asaas"
+          : null,
       });
     }
 
@@ -887,6 +1252,8 @@ Deno.serve(async (req: Request) => {
     return respondJson({ error: "Ação desconhecida." }, 400);
   } catch (error) {
     console.error(error);
-    return respondJson({ error: error instanceof Error ? error.message : "Erro interno." }, 400);
+    return respondJson({
+      error: error instanceof Error ? error.message : "Erro interno.",
+    }, 400);
   }
 });

@@ -19,9 +19,12 @@ import {
 } from "../../_shared/http.ts";
 import type { CheckoutContext } from "./checkout-context.ts";
 import { handleProviderGatewayCheckout } from "./provider-checkout.ts";
-import { handleAsaasCheckout } from "./asaas-checkout.ts";
 import { cleanupFailedCheckout } from "./checkout-cleanup.ts";
 import type { GatewayEnvironment } from "../router.ts";
+import {
+  AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES,
+  isEnrollmentStatusEligibleForAutomaticActivation,
+} from "../webhook/domain/ead-enrollment.ts";
 import {
   alunoPortalUrl,
   assertRequestedPaymentMethodMatchesCourse,
@@ -206,12 +209,15 @@ export const handlePaymentCheckout = async (req: Request) => {
       );
       if (
         !keepTechnicalDocumentationPending &&
-        !["ativo", "concluido", "trancado"].includes(existingStatus)
+        isEnrollmentStatusEligibleForAutomaticActivation(existingStatus)
       ) {
         await admin
           .from("matriculas")
           .update({ status: "ATIVO" })
-          .eq("id", existingCourseCheckout.matricula.id);
+          .eq("id", existingCourseCheckout.matricula.id)
+          .in("status", [
+            ...AUTOMATIC_ENROLLMENT_ACTIVATION_SOURCE_STATUSES,
+          ]);
       }
       return json({
         url: existingCourseCheckout.url || alunoPortalUrl(course.id),
@@ -322,25 +328,21 @@ export const handlePaymentCheckout = async (req: Request) => {
           aluno.ano_previsto_conclusao_ensino_medio || null,
       }
       : {};
+    const { data: pricingMatriculas, error: pricingMatriculaError } =
+      isEadCheckout ? { data: [], error: null } : await admin
+        .from("matriculas")
+        .select(
+          "id, valor_matricula_individual, desconto_pontualidade_individual, juros_atraso_individual, multa_atraso_individual, data_matricula",
+        )
+        .eq("aluno_id", aluno.id)
+        .eq("turma_id", turma.id)
+        .order("data_matricula", { ascending: false })
+        .limit(1);
+    if (pricingMatriculaError) throw pricingMatriculaError;
+    const pricingMatricula = pricingMatriculas?.[0] || null;
     const gerarCobrancaFutura = isEadCheckout
       ? false
       : turma.gerar_cobrancas_futuras === true;
-
-    const { data: matricula, error: matriculaError } = await admin.rpc(
-      "asaas_checkout_upsert_matricula",
-      {
-        p_aluno_id: aluno.id,
-        p_turma_id: turma.id,
-        p_gerar_cobranca_futura: gerarCobrancaFutura,
-      },
-    );
-    if (matriculaError) throw matriculaError;
-    if (!matricula?.id) {
-      throw new Error(
-        "Não foi possível registrar a matrícula para o checkout.",
-      );
-    }
-    state.checkoutMatriculaId = matricula.id;
 
     const { data: config, error: configError } = await admin
       .from("asaas_config")
@@ -371,6 +373,7 @@ export const handlePaymentCheckout = async (req: Request) => {
           installments: requestedInstallments,
         }
         : undefined,
+      matricula: pricingMatricula,
     });
     const receivableFeeFields = isEadCheckout
       ? {
@@ -397,10 +400,12 @@ export const handlePaymentCheckout = async (req: Request) => {
       providerCode: string;
       credentialId: string | null;
       enabled: boolean;
+      environment: GatewayEnvironment;
     } = {
       providerCode: "asaas",
       credentialId: null,
       enabled: true,
+      environment,
     };
     if (routeModalidade) {
       gatewayRoute = await resolvePaymentGatewayRoute(
@@ -436,6 +441,30 @@ export const handlePaymentCheckout = async (req: Request) => {
       );
     }
 
+    // Somente reserva/reactiva a matricula depois de validar metodo, ambiente,
+    // rota e requisitos do provedor. Assim erro de configuracao nao deixa uma
+    // matricula pendente sem sequer ter iniciado o checkout bancario.
+    const { data: matricula, error: matriculaError } = await admin.rpc(
+      "asaas_checkout_upsert_matricula",
+      {
+        p_aluno_id: aluno.id,
+        p_turma_id: turma.id,
+        p_gerar_cobranca_futura: gerarCobrancaFutura,
+      },
+    );
+    if (matriculaError) throw matriculaError;
+    if (!matricula?.id) {
+      throw new Error(
+        "Não foi possível registrar a matrícula para o checkout.",
+      );
+    }
+    if (pricingMatricula?.id && pricingMatricula.id !== matricula.id) {
+      throw new Error(
+        "A matrícula mudou durante o cálculo financeiro. Atualize a tela antes de tentar novamente.",
+      );
+    }
+    state.checkoutMatriculaId = matricula.id;
+
     const context: CheckoutContext = {
       admin,
       supabaseUrl,
@@ -445,7 +474,7 @@ export const handlePaymentCheckout = async (req: Request) => {
       aluno,
       turma,
       matricula,
-      environment,
+      environment: gatewayRoute.environment || environment,
       notificationsEnabled,
       isEadCheckout,
       keepTechnicalDocumentationPending,
@@ -460,10 +489,7 @@ export const handlePaymentCheckout = async (req: Request) => {
       technicalSchoolSnapshot,
     };
 
-    if (gatewayRoute.providerCode !== "asaas") {
-      return await handleProviderGatewayCheckout(context);
-    }
-    return await handleAsaasCheckout(context);
+    return await handleProviderGatewayCheckout(context);
   } catch (error) {
     const errorMessage = normalizeErrorMessage(error);
     const remotePaymentMayExist = Boolean(

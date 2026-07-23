@@ -139,7 +139,8 @@ export const baneseFixedBankingData = (environment?: 'sandbox' | 'production') =
   agency: '033',
   account: '03/100649-0',
   beneficiaryCode: '03/100649-0',
-  agreement: environment === 'sandbox' ? '15857255' : '15856813',
+  agreement: environment === 'sandbox' ? '15857255' : '15261',
+  pixKey: environment === 'production' ? '79998617614' : '',
 });
 
 export const BANESE_FIXED_BANKING_DATA = baneseFixedBankingData('production');
@@ -224,7 +225,7 @@ export const PROVIDER_BRANDS: Record<GatewayProviderCode, {
     selected: 'border-emerald-500 bg-emerald-50',
     action: 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20',
     shadow: 'rgba(0, 132, 61, 0.18)',
-    description: 'Boleto via API em homologação; Pix aguardando liberação formal do Banese em produção.',
+    description: 'Boleto e Pix via API do Banese em produção, com retorno no layout próprio (boleto + Pix).',
     bestFor: 'boleto e Pix',
     icon: Landmark,
   },
@@ -286,6 +287,7 @@ export const requiredFieldsFor = (
 
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
+  const hasAnyMetadata = (keys: string[]) => keys.some((key) => hasMetadata(key));
 
   return [
     { label: 'Client ID', configured: credential?.clientIdConfigured === true },
@@ -316,6 +318,24 @@ export const requiredFieldsForRoute = (
 
   const metadata = credential?.metadata || {};
   const hasMetadata = (key: string) => String(metadata[key] || '').trim().length > 0;
+  const fixedData = baneseFixedBankingData(credential?.environment);
+  const hasAnyMetadata = (keys: string[]) => keys.some((key) => hasMetadata(key));
+  const hasFixedOrMetadata = (key: string) => {
+    if (key === 'baneseBoletoConvenio' || key === 'banesePixConvenio' || key === 'baneseConvenio') {
+      return hasMetadata(key) || String(fixedData.agreement || '').trim().length > 0;
+    }
+    if (key === 'banesePixChave' || key === 'pixChave' || key === 'chave') {
+      return hasMetadata(key) || String(fixedData.pixKey || '').trim().length > 0;
+    }
+    if (key === 'baneseAgencia') return hasMetadata(key) || String(fixedData.agency || '').trim().length > 0;
+    if (key === 'baneseConta' || key === 'baneseContaDisplay') {
+      return hasMetadata(key) || String(fixedData.account || '').trim().length > 0;
+    }
+    if (key === 'baneseCodigoBeneficiario') {
+      return hasMetadata(key) || String(fixedData.beneficiaryCode || '').trim().length > 0;
+    }
+    return hasMetadata(key);
+  };
   const baseFields = [
     { label: 'Client ID', configured: credential?.clientIdConfigured === true },
     { label: 'Client secret', configured: credential?.clientSecretConfigured === true },
@@ -324,17 +344,31 @@ export const requiredFieldsForRoute = (
   if (method === 'BOLETO') {
     return [
       ...baseFields,
-      { label: 'Convênio boleto', configured: hasMetadata('baneseBoletoConvenio') || hasMetadata('baneseConvenio') },
-      { label: 'Agência boleto', configured: hasMetadata('baneseAgencia') },
-      { label: 'Conta beneficiária', configured: hasMetadata('baneseConta') || hasMetadata('baneseContaDisplay') },
-      { label: 'Código beneficiário', configured: hasMetadata('baneseCodigoBeneficiario') },
-      { label: 'OAuth homologado', configured: credential?.lastTestStatus === 'OK' },
+      { label: 'Convênio boleto', configured: hasFixedOrMetadata('baneseBoletoConvenio') || hasFixedOrMetadata('baneseConvenio') },
+      { label: 'Agência boleto', configured: hasMetadata('baneseAgencia') || hasFixedOrMetadata('baneseAgencia') },
+      {
+        label: 'Conta beneficiária',
+        configured: hasMetadata('baneseConta') || hasMetadata('baneseContaDisplay') || hasFixedOrMetadata('baneseConta'),
+      },
+      {
+        label: 'Código beneficiário',
+        configured: hasMetadata('baneseCodigoBeneficiario') || hasFixedOrMetadata('baneseCodigoBeneficiario'),
+      },
     ];
   }
 
   if (method === 'PIX') {
     return [
-      { label: 'BolePix usa a rota BOLETO', configured: false },
+      ...baseFields,
+      {
+        label: 'Convênio Pix',
+        configured: hasFixedOrMetadata('banesePixConvenio') || hasFixedOrMetadata('baneseConvenio'),
+      },
+      {
+        label: 'Chave Pix',
+        configured: hasAnyMetadata(['banesePixChave', 'pixChave', 'chave']) ||
+          hasFixedOrMetadata('banesePixChave'),
+      },
     ];
   }
 

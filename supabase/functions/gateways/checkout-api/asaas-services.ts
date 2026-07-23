@@ -219,8 +219,17 @@ export const createAsaasCheckoutServices = (
     return findOrCreateCustomerByCpf();
   };
 
-  const persistGatewayTransaction = (payment: any, currentReceivable: any) =>
-    persistAsaasGatewayTransaction(context, payment, currentReceivable);
+  const persistGatewayTransaction = (
+    payment: any,
+    currentReceivable: any,
+    inscricaoOnlineId: string | null = null,
+  ) =>
+    persistAsaasGatewayTransaction(
+      context,
+      payment,
+      currentReceivable,
+      inscricaoOnlineId,
+    );
   let existingReceivable: any = null;
 
   const clearLocalAsaasPayment = async (

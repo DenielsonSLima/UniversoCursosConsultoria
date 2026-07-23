@@ -7,12 +7,13 @@ export const registerWebhookEvent = async (
     payload: any;
   },
 ) => {
-  const { error: insertError } = await admin.from("asaas_webhook_events").insert({
-    event_id: input.eventId,
-    event_type: input.eventType,
-    payment_id: input.paymentId || null,
-    payload: input.payload,
-  });
+  const { error: insertError } = await admin.from("asaas_webhook_events")
+    .insert({
+      event_id: input.eventId,
+      event_type: input.eventType,
+      payment_id: input.paymentId || null,
+      payload: input.payload,
+    });
 
   if (insertError?.code === "23505") {
     const { data: existingEvent, error: existingError } = await admin
@@ -43,7 +44,10 @@ export const registerWebhookEvent = async (
   return { duplicateProcessed: false };
 };
 
-export const markWebhookEventProcessed = async (admin: any, eventId: string) => {
+export const markWebhookEventProcessed = async (
+  admin: any,
+  eventId: string,
+) => {
   await admin.from("asaas_webhook_events").update({
     processed: true,
     processing_error: null,
@@ -51,7 +55,11 @@ export const markWebhookEventProcessed = async (admin: any, eventId: string) => 
   }).eq("event_id", eventId);
 };
 
-export const markWebhookEventFailed = async (admin: any, eventId: string, error: unknown) => {
+export const markWebhookEventFailed = async (
+  admin: any,
+  eventId: string,
+  error: unknown,
+) => {
   await admin.from("asaas_webhook_events").update({
     processed: false,
     processing_error: error instanceof Error ? error.message : String(error),

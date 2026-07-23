@@ -1,9 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+  authorizationErrorHttpStatus,
   requireGestorAtivo,
   requireGestorGlobal,
   requireGestorModule,
+  requireGlobalFinancialTabAccess,
 } from "../../_shared/authz.ts";
 import {
   buildCorsHeaders,
@@ -14,6 +16,9 @@ import {
 import { getPaymentIssuerOverview, savePaymentIssuer } from "./issuer.ts";
 import {
   assertProviderAdapterReady,
+  assertProviderInFinancialScope,
+  assertProviderMethodInFinancialScope,
+  CONFIGURABLE_PROVIDER_CODES,
   credentialWebhookUrlFor,
   enforceProviderFixedMetadata,
   extractSecretInput,
@@ -30,6 +35,7 @@ import {
 } from "./config.ts";
 import {
   getCredential,
+  getGatewaySecret,
   isCredentialConfiguredForProvider,
   isCredentialConfiguredForRoute,
   mergeAsaasLegacyCredential,
@@ -39,7 +45,7 @@ import {
   updateAsaasLegacyConfig,
 } from "./credentials.ts";
 import { reconcileBaneseReceivable } from "./banese.ts";
-import { importBaneseCnab240Return } from "./banese-cnab240.ts";
+import { syncRouteAwareFutureInstallments } from "../../asaas/api/route-aware-future-sync.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -81,8 +87,14 @@ Deno.serve(async (req: Request) => {
     const gestor = GESTOR_ACTIONS.has(action)
       ? await requireGestorAtivo(req, admin)
       : null;
-    if (gestor && !gestor.modules.includes("configuracoes")) requireGestorModule(gestor, "financeiro");
-    if (gestor && GLOBAL_ACTIONS.has(action)) requireGestorGlobal(gestor);
+    if (gestor && !gestor.modules.includes("configuracoes")) {
+      requireGestorModule(gestor, "financeiro");
+    }
+    if (gestor && action === "reconcile-banese-receivable") {
+      requireGlobalFinancialTabAccess(gestor, "conciliacao-bancaria");
+    } else if (gestor && GLOBAL_ACTIONS.has(action)) {
+      requireGestorGlobal(gestor);
+    }
 
     if (action === "get-overview") {
       const [
@@ -92,19 +104,20 @@ Deno.serve(async (req: Request) => {
         configResult,
         issuerOverview,
       ] = await Promise.all([
-        admin.from("payment_gateway_providers").select("*").eq(
-          "active",
-          true,
-        ).order("name", { ascending: true }),
-        admin.from("payment_gateway_credentials").select("*").order(
-          "provider_code",
-          { ascending: true },
-        ).order("environment", { ascending: true }),
-        admin.from("payment_gateway_routes").select("*").order("modalidade", {
-          ascending: true,
-        }).order("payment_method", { ascending: true }).order("environment", {
-          ascending: true,
-        }),
+        admin.from("payment_gateway_providers").select("*")
+          .eq("active", true)
+          .in("code", [...CONFIGURABLE_PROVIDER_CODES])
+          .order("name", { ascending: true }),
+        admin.from("payment_gateway_credentials").select("*")
+          .in("provider_code", [...CONFIGURABLE_PROVIDER_CODES]).order(
+            "provider_code",
+            { ascending: true },
+          ).order("environment", { ascending: true }),
+        admin.from("payment_gateway_routes").select("*")
+          .in("provider_code", [...CONFIGURABLE_PROVIDER_CODES])
+          .order("modalidade", { ascending: true })
+          .order("payment_method", { ascending: true })
+          .order("environment", { ascending: true }),
         admin.from("asaas_config").select("environment").maybeSingle(),
         getPaymentIssuerOverview(admin),
       ]);
@@ -119,14 +132,62 @@ Deno.serve(async (req: Request) => {
             admin,
             credential,
           );
-          return {
+          const nextCredential = {
             ...mergedCredential,
-            webhook_url: mergedCredential.webhook_url ||
-              credentialWebhookUrlFor(
-                supabaseUrl,
-                mergedCredential.provider_code,
-                mergedCredential.environment,
-              ),
+            webhook_url: mergedCredential.provider_code === "banco_inter"
+              ? null
+              : mergedCredential.webhook_url ||
+                credentialWebhookUrlFor(
+                  supabaseUrl,
+                  mergedCredential.provider_code,
+                  mergedCredential.environment,
+                ),
+          };
+
+          if (nextCredential.provider_code !== "banese_card") {
+            return nextCredential;
+          }
+
+          const metadata = (nextCredential.metadata || {}) as Record<string, unknown>;
+          const crtAccessToken = await getGatewaySecret(
+            admin,
+            nextCredential.provider_code,
+            nextCredential.environment,
+            "crt_access_token",
+          ).catch(() => null);
+          const hasConfiguredCrtToken = Boolean(
+            crtAccessToken ||
+              metadata.baneseCrtAccessTokenConfigured === true ||
+              String(metadata.baneseCrtAccessTokenConfigured || "").toLowerCase() ===
+              "true" ||
+              metadata.crt_access_token_configured === true ||
+              String(metadata.crt_access_token_configured || "").toLowerCase() ===
+              "true",
+          );
+          const hasConvenioPix = Boolean(
+            metadata.banesePixConvenio ||
+              metadata.baneseConvenio,
+          );
+          const hasChavePix = Boolean(
+            metadata.banesePixChave ||
+              metadata.pixChave ||
+              metadata.chave,
+          );
+          const hasCrtToken = hasConfiguredCrtToken;
+          const hasPixHomologacao = metadata.banesePixHomologacaoDisponivel === true ||
+            String(metadata.banesePixHomologacaoDisponivel || "").toLowerCase() ===
+              "true" ||
+            (nextCredential.environment === "production"
+              ? hasConvenioPix && hasChavePix
+              : hasConvenioPix && hasChavePix && hasCrtToken);
+
+          return {
+            ...nextCredential,
+            metadata: {
+              ...metadata,
+              baneseCrtAccessTokenConfigured: hasCrtToken,
+              banesePixHomologacaoDisponivel: hasPixHomologacao,
+            },
           };
         }),
       );
@@ -140,9 +201,7 @@ Deno.serve(async (req: Request) => {
         issuerCandidates: issuerOverview.candidates,
         activePolosCount: issuerOverview.active_polos_count,
         webhookUrls: {
-          asaas: webhookUrlFor(supabaseUrl, "asaas"),
           mercado_pago: webhookUrlFor(supabaseUrl, "mercado_pago"),
-          banco_inter: webhookUrlFor(supabaseUrl, "banco_inter"),
           banese_card: webhookUrlFor(supabaseUrl, "banese_card"),
         },
       });
@@ -160,6 +219,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "save-credential") {
       const providerCode = normalizeProviderCode(body.providerCode);
+      assertProviderInFinancialScope(providerCode);
       const environment = normalizeEnvironment(body.environment);
       const metadata = enforceProviderFixedMetadata(
         providerCode,
@@ -217,14 +277,38 @@ Deno.serve(async (req: Request) => {
           ? enforceProviderFixedMetadata(providerCode, {})
           : {}),
       };
+      // O merchantId do Mercado Pago vem do proprio /users/me. Por isso a
+      // conexao precisa ser testada assim que os segredos estiverem completos,
+      // antes de calcular a prontidao final da rota.
+      const providerSecretsReady = providerCode === "mercado_pago"
+        ? nextFlags.access_token_configured === true &&
+          nextFlags.public_key_configured === true &&
+          nextFlags.webhook_secret_configured === true
+        : isCredentialConfiguredForProvider(providerCode, {
+          ...nextFlags,
+          metadata: nextMetadata,
+        });
+
+      const testResult = providerSecretsReady
+        ? await testProvider(
+          admin,
+          providerCode,
+          environment,
+          secrets,
+          nextMetadata,
+        )
+        : { status: "PENDING", message: "Credenciais salvas parcialmente." };
+      const testedMerchantId = providerCode === "mercado_pago" &&
+          "merchantId" in testResult
+        ? String(testResult.merchantId || "").trim()
+        : "";
+      const testedMetadata = testedMerchantId
+        ? { ...nextMetadata, merchantId: testedMerchantId }
+        : nextMetadata;
       const configured = isCredentialConfiguredForProvider(providerCode, {
         ...nextFlags,
-        metadata: nextMetadata,
+        metadata: testedMetadata,
       });
-
-      const testResult = configured
-        ? await testProvider(admin, providerCode, environment, secrets)
-        : { status: "PENDING", message: "Credenciais salvas parcialmente." };
 
       for (const [kind, value] of Object.entries(secrets)) {
         if (!value) continue;
@@ -254,9 +338,11 @@ Deno.serve(async (req: Request) => {
           label: body.label || current?.label || null,
           configured,
           ...nextFlags,
-          webhook_url: body.webhookUrl ||
-            credentialWebhookUrlFor(supabaseUrl, providerCode, environment),
-          metadata: nextMetadata,
+          webhook_url: providerCode === "banco_inter"
+            ? null
+            : body.webhookUrl ||
+              credentialWebhookUrlFor(supabaseUrl, providerCode, environment),
+          metadata: testedMetadata,
           last_test_at: new Date().toISOString(),
           last_test_status: testResult.status,
           last_test_message: testResult.message,
@@ -274,8 +360,14 @@ Deno.serve(async (req: Request) => {
         success: true,
         credential: {
           ...data,
-          webhook_url: data.webhook_url ||
-            credentialWebhookUrlFor(supabaseUrl, providerCode, environment),
+          webhook_url: providerCode === "banco_inter"
+            ? null
+            : data.webhook_url ||
+              credentialWebhookUrlFor(
+                supabaseUrl,
+                providerCode,
+                environment,
+              ),
         },
       });
     }
@@ -286,26 +378,20 @@ Deno.serve(async (req: Request) => {
       const modalidade = normalizeModalidade(body.modalidade);
       const paymentMethod = normalizeMethod(body.paymentMethod);
       const routeEnabled = body.enabled !== false;
+      assertProviderMethodInFinancialScope(providerCode, paymentMethod);
 
       if (
         routeEnabled && providerCode === "banese_card" &&
-        environment !== "sandbox"
+        paymentMethod === "PIX" &&
+        environment === "sandbox"
       ) {
         throw new Error(
-          "Banese permanece bloqueado em producao ate a conclusao formal da homologacao.",
-        );
-      }
-      if (
-        routeEnabled && providerCode === "banese_card" &&
-        paymentMethod === "PIX"
-      ) {
-        throw new Error(
-          "Pix Banese nao pode ser ativado: o banco informou que o servico de homologacao esta indisponivel e a liberacao ocorrera somente em producao.",
+          "Pix Banese nao pode ser ativado no sandbox: o servico esta indisponivel nesta faixa e permanece em producao.",
         );
       }
 
       if (routeEnabled) {
-        assertProviderAdapterReady(providerCode, paymentMethod);
+        assertProviderAdapterReady(providerCode, paymentMethod, environment);
         if (!PROVIDERS[providerCode].supports.includes(paymentMethod)) {
           throw new Error(
             "Este provedor nao atende a forma de pagamento selecionada.",
@@ -377,6 +463,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "test-connection") {
       const providerCode = normalizeProviderCode(body.providerCode);
+      assertProviderInFinancialScope(providerCode);
       const environment = normalizeEnvironment(body.environment);
       const secrets = extractSecretInput(body);
       const result = await testProvider(
@@ -387,9 +474,22 @@ Deno.serve(async (req: Request) => {
       );
       const current = await getCredential(admin, providerCode, environment);
       if (current?.id) {
+        const testedMerchantId = providerCode === "mercado_pago" &&
+            "merchantId" in result
+          ? String(result.merchantId || "").trim()
+          : "";
+        const testedMetadata = testedMerchantId
+          ? { ...(current.metadata || {}), merchantId: testedMerchantId }
+          : current.metadata;
+        const configured = isCredentialConfiguredForProvider(providerCode, {
+          ...current,
+          metadata: testedMetadata,
+        });
         const { error } = await admin
           .from("payment_gateway_credentials")
           .update({
+            configured,
+            metadata: testedMetadata,
             last_test_at: new Date().toISOString(),
             last_test_status: result.status,
             last_test_message: result.message,
@@ -403,24 +503,30 @@ Deno.serve(async (req: Request) => {
 
     if (action === "reconcile-banese-receivable") {
       return respondJson(
-        await reconcileBaneseReceivable(admin, body.receivableId),
+        await reconcileBaneseReceivable(admin, body.receivableId, {
+          syncFutureInstallments: (matriculaId, environment) =>
+            syncRouteAwareFutureInstallments(
+              admin,
+              matriculaId,
+              environment,
+            ),
+        }),
       );
     }
 
     if (action === "import-banese-cnab240-return") {
-      return respondJson(
-        await importBaneseCnab240Return(admin, {
-          ...body,
-          environment: body.environment || "sandbox",
-        }),
-      );
+      return respondJson({
+        error:
+          "Importador direto desativado. Use a prévia e a confirmação da Edge banese-cnab240-api.",
+      }, 410);
     }
 
     return respondJson({ error: "Acao nao reconhecida." }, 400);
   } catch (error) {
     console.error("Erro na integracao bancaria:", error);
+    const message = error instanceof Error ? error.message : "Erro interno.";
     return respondJson({
-      error: error instanceof Error ? error.message : "Erro interno.",
-    }, 400);
+      error: message,
+    }, authorizationErrorHttpStatus(message) || 400);
   }
 });

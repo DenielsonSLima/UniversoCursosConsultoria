@@ -30,7 +30,10 @@ export const validateBanesePixChargeInput = async (
     );
   }
   const metadata = metadataFrom(input.receivable || {});
-  if (metadata.banesePixHomologacaoDisponivel !== true) {
+  if (
+    input.environment === "sandbox" &&
+    metadata.banesePixHomologacaoDisponivel !== true
+  ) {
     throw new BaneseAdapterConfigurationError(
       "Pix Banese permanece bloqueado: o pacote de homologacao recebido nao contem CrtAccessToken, convenio/chave Pix nem o contrato SAB Guias por cobranca.",
     );
@@ -49,9 +52,12 @@ export const validateBanesePixChargeInput = async (
     metadata.pixChave,
     metadata.chave,
   );
-  if (!credentials.crtAccessToken || !convenio || !chave) {
+  if (!convenio || !chave || (input.environment === "sandbox" &&
+    !credentials.crtAccessToken)) {
     throw new BaneseAdapterConfigurationError(
-      "Pix Banese Card requer CrtAccessToken configurado, convenio Pix e chave Pix do recebedor.",
+      input.environment === "sandbox"
+        ? "Pix Banese exige CrtAccessToken, convenio e chave Pix no ambiente de homologacao."
+        : "Pix Banese em producao requer convenio e chave Pix do recebedor.",
     );
   }
   return {
@@ -99,9 +105,11 @@ export const createBanesePixCharge = async (
     method: "POST",
     headers: {
       Authorization: `${token.tokenType} ${token.accessToken}`,
-      CrtAccessToken: validation.credentials.crtAccessToken,
       Terminal: BANESE_PIX_ENDPOINTS[input.environment].terminal,
       "Content-Type": "application/json",
+      ...(validation.credentials.crtAccessToken
+        ? { CrtAccessToken: validation.credentials.crtAccessToken }
+        : {}),
     },
     body: JSON.stringify(validation.pixPayload),
   });

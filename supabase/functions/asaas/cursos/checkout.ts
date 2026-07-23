@@ -26,12 +26,39 @@ export const resolveOnlineCharge = (
   options: {
     payment?: CoursePaymentRequest;
     eadPayment?: { method?: unknown; installments?: unknown };
+    matricula?: any;
   } = {},
 ) => {
   const modalidade = String(course?.modalidade || "").toUpperCase();
-  if (modalidade === "EAD") return resolveEadCheckoutCharge(course, turma, dueDate, options.eadPayment);
-  if (modalidade === "LIVRE") return resolveLivreCheckoutCharge(course, turma, dueDate, options.payment);
-  if (modalidade === "ESPECIALIZACAO") return resolveEspecializacaoCheckoutCharge(course, turma, dueDate, options.payment);
-  if (modalidade === "TECNICO") return resolveTecnicoInitialEnrollmentCharge(course, turma, dueDate, options.payment);
+  if (modalidade === "EAD") {
+    return resolveEadCheckoutCharge(course, turma, dueDate, options.eadPayment);
+  }
+  if (modalidade === "LIVRE") {
+    return resolveLivreCheckoutCharge(
+      course,
+      turma,
+      dueDate,
+      options.payment,
+      options.matricula,
+    );
+  }
+  if (modalidade === "ESPECIALIZACAO") {
+    return resolveEspecializacaoCheckoutCharge(
+      course,
+      turma,
+      dueDate,
+      options.payment,
+      options.matricula,
+    );
+  }
+  if (modalidade === "TECNICO") {
+    return resolveTecnicoInitialEnrollmentCharge(
+      course,
+      turma,
+      dueDate,
+      options.payment,
+      options.matricula,
+    );
+  }
   throw new Error("Modalidade sem regra de checkout Asaas.");
 };

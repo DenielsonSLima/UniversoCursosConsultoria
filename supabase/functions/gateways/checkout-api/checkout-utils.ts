@@ -1,7 +1,15 @@
 import { normalizeCourseFinanceiroConfig } from "./checkout-rules.ts";
 import { normalizeCourseModality } from "../../asaas/core/modality.ts";
-import { type GatewayPaymentMethod, gatewayPrimaryUrl } from "../router.ts";
-import { normalizeProviderCode } from "../checkout/utils.ts";
+import {
+  type GatewayEnvironment,
+  type GatewayPaymentMethod,
+  gatewayPrimaryUrl,
+} from "../router.ts";
+import {
+  normalizeEnvironment,
+  normalizeProviderCode,
+} from "../checkout/utils.ts";
+import { assertStoredProviderAdapterReady } from "../api/config.ts";
 
 export const PENDENTE_INSCRICAO_STATUS = "AGUARDANDO_PAGAMENTO";
 export const BLOCKING_ENROLLMENT_STATUSES = new Set([
@@ -308,19 +316,31 @@ export const checkoutRouteModalidade = (value: unknown) => {
     : null;
 };
 
+const normalizeGatewayEnvironmentLabel = (environment: GatewayEnvironment) =>
+  environment === "production" ? "producao" : "sandbox";
+
+const preferredGatewayEnvironments = (
+  paymentMethod: GatewayPaymentMethod,
+): GatewayEnvironment[] =>
+  paymentMethod === "CREDIT_CARD"
+    ? ["sandbox", "production"]
+    : ["production", "sandbox"];
+
 export const resolvePaymentGatewayRoute = async (
   admin: any,
   modalidade: string,
-  paymentMethod: string,
-  environment: string,
+  paymentMethod: GatewayPaymentMethod,
+  environment?: GatewayEnvironment,
 ) => {
+  const configuredEnvironment: GatewayEnvironment = environment === "production"
+    ? "production"
+    : "sandbox";
   const { data, error } = await admin
     .from("payment_gateway_routes")
-    .select("provider_code, credential_id, enabled")
+    .select("provider_code, credential_id, enabled, environment")
     .eq("modalidade", modalidade)
     .eq("payment_method", paymentMethod)
-    .eq("environment", environment)
-    .maybeSingle();
+    .neq("enabled", false);
 
   if (error) {
     console.error(
@@ -332,28 +352,72 @@ export const resolvePaymentGatewayRoute = async (
     );
   }
 
-  if (!data || data.enabled === false) {
+  const availableRoutes = (data || []).map((route: any) => ({
+    ...route,
+    environment: normalizeEnvironment(route?.environment),
+  }));
+  const availableEnvironments = [
+    ...new Set(
+      availableRoutes.map((route: any) => String(route?.environment || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+
+  for (const routeEnvironment of preferredGatewayEnvironments(paymentMethod)) {
+    const environmentRoutes = availableRoutes.filter((route: any) =>
+      String(route?.environment || "sandbox") === routeEnvironment
+    );
+    if (environmentRoutes.length === 0) continue;
+    if (environmentRoutes.length > 1) {
+      throw new Error(
+        `Configuracao duplicada para ${paymentMethod} de ${modalidade} em ${
+          normalizeGatewayEnvironmentLabel(routeEnvironment)
+        }. Corrija para manter apenas uma rota ativa por ambiente.`,
+      );
+    }
+
+    const route = environmentRoutes[0];
+    if (route.enabled === false) continue;
+
+    assertStoredProviderAdapterReady(
+      route.provider_code,
+      paymentMethod,
+      route.environment,
+    );
+    const providerCode = normalizeProviderCode(route.provider_code);
+    if (!providerCode) {
+      throw new Error(
+        `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${
+          normalizeGatewayEnvironmentLabel(routeEnvironment)
+        }.`,
+      );
+    }
+
+    return {
+      providerCode,
+      credentialId: route.credential_id || null,
+      enabled: route.enabled !== false,
+      environment: route.environment || routeEnvironment,
+    };
+  }
+
+  if (availableRoutes.length === 0) {
     throw new Error(
       `Rota ${paymentMethod} de ${modalidade} em ${
-        environment === "production" ? "producao" : "sandbox"
+        normalizeGatewayEnvironmentLabel(configuredEnvironment)
       } nao esta ativa.`,
     );
   }
 
-  const providerCode = normalizeProviderCode(data.provider_code);
-  if (!providerCode) {
-    throw new Error(
-      `Provedor bancario invalido para a rota ${paymentMethod} de ${modalidade} em ${
-        environment === "production" ? "producao" : "sandbox"
-      }.`,
-    );
-  }
-
-  return {
-    providerCode,
-    credentialId: data.credential_id || null,
-    enabled: data.enabled !== false,
-  };
+  throw new Error(
+    `Rota ${paymentMethod} de ${modalidade} nao esta ativa nos ambientes suportados. ${
+      availableEnvironments.length
+        ? `Existen rotas ativas em: ${
+          availableEnvironments.map(normalizeGatewayEnvironmentLabel).join(", ")
+        }.`
+        : ""
+    }`.trim(),
+  );
 };
 
 export const formatDatePtBr = (value: unknown) => {
@@ -379,7 +443,6 @@ export const getTurmaUnavailabilityReason = (
   const today = currentMaceioDate();
   const alunosMatriculados = getMatriculasTotal(turma);
   const vagasTotais = Number(turma?.vagas_totais || 0);
-  const vagasMinima = Number(turma?.qtd_vagas_minima || 0);
   const bloquearMatriculasAposCompletarVagas =
     turma?.bloquear_matriculas_apos_completar_vagas !== false;
 
@@ -403,10 +466,6 @@ export const getTurmaUnavailabilityReason = (
   }
 
   if (bloquearMatriculasAposCompletarVagas) {
-    if (vagasMinima > 0 && alunosMatriculados >= vagasMinima) {
-      return `A turma atingiu o limite configurado de ${vagasMinima} alunos e não está aceitando novos alunos.`;
-    }
-
     if (vagasTotais > 0 && alunosMatriculados >= vagasTotais) {
       return "A turma está com vagas completas. Novas inscrições só estarão disponíveis quando uma nova turma for aberta.";
     }

@@ -13,5 +13,7 @@ export const createCardGatewayCharge = async (input: GatewayChargeInput) => {
     const { createBaneseCardCharge } = await import("./banese.ts");
     return createBaneseCardCharge(input);
   }
-  throw new Error("Gateway Cartao nao configurado para o provedor selecionado.");
+  throw new Error(
+    "Gateway Cartao nao configurado para o provedor selecionado.",
+  );
 };

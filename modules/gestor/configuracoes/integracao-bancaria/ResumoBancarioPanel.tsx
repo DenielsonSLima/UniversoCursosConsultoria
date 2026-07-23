@@ -42,6 +42,7 @@ interface ResumoBancarioPanelProps {
   onSelectRoute: (
     modalidade: GatewayModalidade,
     method: GatewayPaymentMethod,
+    environment: GatewayEnvironment,
     providerCode?: GatewayProviderCode,
   ) => void;
 }
@@ -53,9 +54,29 @@ const routeFor = (
   environment: GatewayEnvironment,
 ) => overview?.routes.find(
   (routeItem) => routeItem.modalidade === modalidade
-    && routeItem.paymentMethod === method
-    && routeItem.environment === environment,
+  && routeItem.paymentMethod === method
+  && routeItem.environment === environment,
 );
+
+const routeForDisplay = (
+  overview: GatewayOverview | undefined,
+  modalidade: GatewayModalidade,
+  method: GatewayPaymentMethod,
+  environment: GatewayEnvironment,
+) => {
+  const exact = routeFor(overview, modalidade, method, environment);
+  if (exact?.enabled === true) return exact;
+
+  const fallback = (overview?.routes || []).find(
+    (routeItem) =>
+      routeItem.modalidade === modalidade
+      && routeItem.paymentMethod === method
+      && routeItem.enabled === true
+      && routeItem.environment !== environment,
+  );
+
+  return fallback || exact;
+};
 
 const SummaryStat = ({
   icon: Icon,
@@ -95,9 +116,16 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
 }) => {
   const summaryRoutes = MODALIDADES.flatMap((modalidade) =>
     METHODS.map((method) => {
-      const route = routeFor(overview, modalidade.value, method.value, routeEnvironment);
+      const route = routeForDisplay(
+        overview,
+        modalidade.value,
+        method.value,
+        routeEnvironment,
+      );
       const provider = providers.find((item) => item.code === route?.providerCode);
-      const credential = route?.providerCode ? getCredential(route.providerCode, routeEnvironment) : undefined;
+      const credential = route?.providerCode
+        ? getCredential(route.providerCode, route.environment || routeEnvironment)
+        : undefined;
       const credentialReady = credentialReadyForRoute(route?.providerCode, credential, method.value);
       return { modalidade, method, route, provider, credentialReady };
     }),
@@ -183,9 +211,17 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
       <section className="grid min-w-0 gap-4 xl:grid-cols-2">
         {MODALIDADES.map((modalidade) => {
           const modalidadeRoutes = METHODS.map((method) => {
-            const route = routeFor(overview, modalidade.value, method.value, routeEnvironment);
+            const route = routeForDisplay(
+              overview,
+              modalidade.value,
+              method.value,
+              routeEnvironment,
+            );
             const provider = providers.find((item) => item.code === route?.providerCode);
-            const credential = route?.providerCode ? getCredential(route.providerCode, routeEnvironment) : undefined;
+            const routeEnvironmentForMethod = route?.environment || routeEnvironment;
+            const credential = route?.providerCode
+              ? getCredential(route.providerCode, routeEnvironmentForMethod)
+              : undefined;
             const credentialReady = credentialReadyForRoute(route?.providerCode, credential, method.value);
             return { method, route, provider, credentialReady };
           });
@@ -209,13 +245,14 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <EnvironmentBadge environment={routeEnvironment} />
-                  <StatusPill active={readyCount === METHODS.length} label={`${readyCount}/${METHODS.length} ok`} />
+                <EnvironmentBadge environment={routeEnvironment} />
+                <StatusPill active={readyCount === METHODS.length} label={`${readyCount}/${METHODS.length} ok`} />
                 </div>
               </div>
 
-              <div className="grid gap-2">
+            <div className="grid gap-2">
                 {modalidadeRoutes.map(({ method, route, provider, credentialReady }) => {
+                  const routeEnvironmentForMethod = route?.environment || routeEnvironment;
                   const providerCode = route?.providerCode;
                   const brand = providerCode ? PROVIDER_BRANDS[providerCode] : undefined;
                   const routeReady = route?.enabled === true && credentialReady;
@@ -229,7 +266,12 @@ const ResumoBancarioPanel: React.FC<ResumoBancarioPanelProps> = ({
                     <button
                       key={method.value}
                       type="button"
-                      onClick={() => onSelectRoute(modalidade.value, method.value, providerCode)}
+                      onClick={() => onSelectRoute(
+                        modalidade.value,
+                        method.value,
+                        routeEnvironmentForMethod,
+                        providerCode,
+                      )}
                       className="group flex min-h-[78px] min-w-0 items-center justify-between gap-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left transition-all hover:border-blue-200 hover:bg-white"
                     >
                       <div className="flex min-w-0 items-center gap-3">

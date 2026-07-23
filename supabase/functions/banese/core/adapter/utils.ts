@@ -54,10 +54,6 @@ export const sanitizedBoletoSnapshot = (value: unknown) =>
     "numeroCodigoBarras",
     "status",
     "Status",
-    "url",
-    "Url",
-    "urlBoleto",
-    "UrlBoleto",
   ]);
 
 export const stringValue = (value: unknown) => String(value ?? "").trim();

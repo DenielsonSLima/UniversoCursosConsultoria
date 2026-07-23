@@ -39,25 +39,27 @@ const candidateRow = (candidate: IssuerCandidate) => ({
 });
 
 export const getPaymentIssuerOverview = async (admin: any) => {
-  const [configResult, candidatesResult, activePolosResult] = await Promise.all([
-    admin
-      .from("payment_gateway_issuer_config")
-      .select("id, issuer_polo_id, applies_to_all_polos, active, updated_at")
-      .eq("id", 1)
-      .maybeSingle(),
-    admin
-      .from("polos")
-      .select(
-        "id, company_id, nome, cnpj, cidade, estado, status, is_matriz, empresas(id, nome_fantasia, razao_social, cnpj)",
-      )
-      .eq("is_matriz", true)
-      .eq("status", "ativo")
-      .order("created_at", { ascending: true }),
-    admin
-      .from("polos")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "ativo"),
-  ]);
+  const [configResult, candidatesResult, activePolosResult] = await Promise.all(
+    [
+      admin
+        .from("payment_gateway_issuer_config")
+        .select("id, issuer_polo_id, applies_to_all_polos, active, updated_at")
+        .eq("id", 1)
+        .maybeSingle(),
+      admin
+        .from("polos")
+        .select(
+          "id, company_id, nome, cnpj, cidade, estado, status, is_matriz, empresas(id, nome_fantasia, razao_social, cnpj)",
+        )
+        .eq("is_matriz", true)
+        .eq("status", "ativo")
+        .order("created_at", { ascending: true }),
+      admin
+        .from("polos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "ativo"),
+    ],
+  );
 
   if (configResult.error) throw configResult.error;
   if (candidatesResult.error) throw candidatesResult.error;
@@ -74,8 +76,7 @@ export const getPaymentIssuerOverview = async (admin: any) => {
       ? {
         id: configResult.data.id,
         issuer_polo_id: configResult.data.issuer_polo_id,
-        applies_to_all_polos:
-          configResult.data.applies_to_all_polos === true,
+        applies_to_all_polos: configResult.data.applies_to_all_polos === true,
         active: configResult.data.active === true,
         updated_at: configResult.data.updated_at,
         issuer: configuredIssuer,

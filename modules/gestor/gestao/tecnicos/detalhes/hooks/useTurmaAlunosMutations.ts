@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/
 import { AcademicMovementType, academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAsaasService } from '../asaas';
+import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
 
 type MutationSuccess<TData, TVariables> = NonNullable<UseMutationOptions<TData, Error, TVariables>['onSuccess']>;
@@ -22,6 +23,7 @@ export interface EnrollInput {
   gerar_cobranca_inicial?: boolean;
   gerar_cobranca_futura?: boolean | null;
   sincronizar_asaas?: boolean | null;
+  paymentMethod: GatewayPaymentMethod | null;
 }
 
 export interface MovementInput {
