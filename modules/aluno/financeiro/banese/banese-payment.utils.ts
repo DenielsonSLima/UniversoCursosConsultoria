@@ -110,8 +110,8 @@ const pixCrc16 = (value: string) => {
 
 export const isValidBanesePixPayload = (value: unknown) => {
   const payload = String(value ?? '').trim();
-  if (payload.length < 30 || payload.length > 600 || /\s/.test(payload)) return false;
-  if (!/^00020[12]/.test(payload) || !payload.includes('BR.GOV.BCB.PIX')) return false;
+  if (payload.length < 30 || payload.length > 600 || !/^[\x20-\x7E]+$/.test(payload)) return false;
+  if (!/^00020[12]/.test(payload) || !payload.toUpperCase().includes('BR.GOV.BCB.PIX')) return false;
   const match = payload.match(/6304([0-9A-F]{4})$/i);
   if (!match) return false;
   return pixCrc16(payload.slice(0, -4)) === match[1].toUpperCase();

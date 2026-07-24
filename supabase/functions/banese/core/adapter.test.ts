@@ -396,6 +396,53 @@ Deno.test("producao aceita GUI Banese minusculo e renderiza QR a partir do EMV o
   }
 });
 
+Deno.test("producao aceita o campo QrCode textual com GUI Banese minuscula", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 102;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const officialQrCode = buildBanesePixPayloadFixture(
+    "BANESE-QR-CODE",
+    amount,
+    "br.gov.bcb.pix",
+  );
+  const creationResponse = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroCodigoBarras: values.barcode,
+    NumeroLinhaDigitavel: values.digitableLine,
+    QrCode: officialQrCode,
+  };
+
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(creationResponse), { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, officialQrCode);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(
+      diagnostic?.attempts?.[0]?.imageSource,
+      "generated_from_official_emv",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("aceita espaços permitidos pelo EMV no nome do recebedor Banese", () => {
   const payload =
     "00020101021226840014br.gov.bcb.pix2562qrcode-h.banese.b.br/jws/cobv/78923f2a35174d5a965f3c9442ddbe9f5204000053039865802BR5924ARACAJU PREF GABINETE DO6007ARACAJU62070503***6304A8E7";

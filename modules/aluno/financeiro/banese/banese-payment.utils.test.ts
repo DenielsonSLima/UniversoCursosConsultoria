@@ -24,6 +24,9 @@ const pixPayloadWithCrc = (value: string) => {
 };
 
 const validPixPayload = pixPayloadWithCrc('00020126330014BR.GOV.BCB.PIX0111123456789015204000053039865802BR5908UNIVERSO6007JAPOATA6304');
+const baneseLowercaseGuiPayload = pixPayloadWithCrc(
+  '00020126330014br.gov.bcb.pix0111123456789015204000053039865802BR5908UNIVERSO6007JAPOATA6304',
+);
 
 const registeredRecord = (overrides: Partial<BanesePaymentRecord> = {}): BanesePaymentRecord => ({
   id: '00000000-0000-4000-8000-000000000001',
@@ -73,6 +76,17 @@ test('libera Pix somente em produção com dado oficial', () => {
   assert.match(pix.imageSource ?? '', /^data:image\/png;base64,/);
 });
 
+test('aceita o QrCode textual informado pelo Banese com GUI minúscula', () => {
+  const pix = getBanesePixPresentation(registeredRecord({
+    gateway_environment: 'production',
+    gateway_pix_payload: baneseLowercaseGuiPayload,
+    gateway_pix_encoded_image: `iVBORw0KGgo${'a'.repeat(128)}`,
+  }));
+  assert.equal(isValidBanesePixPayload(baneseLowercaseGuiPayload), true);
+  assert.equal(pix.state, 'available');
+  assert.equal(pix.payload, baneseLowercaseGuiPayload);
+});
+
 test('não libera Pix de produção com retorno incompleto', () => {
   const pix = getBanesePixPresentation(registeredRecord({
     gateway_environment: 'production',
@@ -98,6 +112,13 @@ test('explica que boleto de produção sem BolePix precisa ser reemitido', () =>
 test('rejeita Pix copia e cola sem estrutura ou CRC EMV válido', () => {
   assert.equal(isValidBanesePixPayload('erro'), false);
   assert.equal(isValidBanesePixPayload(`${validPixPayload.slice(0, -1)}0`), false);
+  assert.equal(isValidBanesePixPayload(`${baneseLowercaseGuiPayload}\n`), true);
+  assert.equal(
+    isValidBanesePixPayload(
+      `${baneseLowercaseGuiPayload.slice(0, 20)}\n${baneseLowercaseGuiPayload.slice(20)}`,
+    ),
+    false,
+  );
   assert.equal(isValidBanesePixPayload(validPixPayload), true);
 });
 
