@@ -31,6 +31,7 @@ const invokeAdmin = async <T>(action: string, payload: Record<string, unknown> =
 export interface CheckoutPaymentSelection {
   method: GatewayPaymentMethod;
   installments?: number;
+  presentation?: 'BOLETO' | 'PIX';
 }
 
 export interface EnrollmentPaymentOption {
