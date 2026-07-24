@@ -7,6 +7,7 @@ import { build } from 'esbuild';
 const testFiles = [
   'modules/aluno/financeiro/banese/banese-payment.utils.test.ts',
   'modules/aluno/financeiro/banese/hooks/useBaneseBoletoDocument.test.ts',
+  'modules/aluno/cursos/eadCheckoutOptions.test.ts',
 ];
 const outputFiles = testFiles.map((_, index) =>
   join(tmpdir(), `universo-banese-payment-${index}.test.mjs`)
