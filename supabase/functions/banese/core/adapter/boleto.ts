@@ -38,60 +38,171 @@ import {
 
 const isProduction = (environment: Environment) => environment === "production";
 
-const hasPixReturn = (raw: unknown) => {
-  const record = asRecord(raw);
-  const pixPayload = firstString(
-    record.brCodeEMV,
-    record.dsUrl,
-    record.brCode,
-    record.BrCodeEMV,
-    record.copiaCola,
-    record.pixPayload,
-    record.pix,
-    record.qrText,
-    record.txId,
-    record.txid,
-  );
-  const pixEncodedImage = firstString(
-    record.base64,
-    record.qrCode,
-    record.qrcode,
-    record.qrCodeBase64,
-    record.qr_code_base64,
-    record.qrCodeImage,
-    record.pixQrCode,
-    record.pixImagem,
-  );
-  return { pixPayload, pixEncodedImage };
+const PIX_PAYLOAD_FIELD_NAMES = new Set([
+  "brcodeemv",
+  "dsurl",
+  "brcode",
+  "copiacola",
+  "pixpayload",
+  "qrtext",
+  "emv",
+]);
+
+const PIX_IMAGE_FIELD_NAMES = new Set([
+  "base64",
+  "qrcode",
+  "qrcodebase64",
+  "qrcodeimage",
+  "pixqrcode",
+  "piximagem",
+  "imagemqrcode",
+]);
+
+const normalizedFieldName = (value: string) =>
+  value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+
+const pixReturnCandidates = (raw: unknown) => {
+  const payloadCandidates: string[] = [];
+  const imageCandidates: string[] = [];
+  let visited = 0;
+
+  const visit = (
+    value: unknown,
+    parentPath: string[],
+    depth: number,
+  ) => {
+    if (
+      depth > 4 || visited > 120 || !value || typeof value !== "object"
+    ) {
+      return;
+    }
+    visited += 1;
+
+    for (const [key, child] of Object.entries(asRecord(value))) {
+      const normalizedKey = normalizedFieldName(key);
+      const path = [...parentPath, normalizedKey];
+      const pixScoped = path.some((part) =>
+        /pix|qr|brcode|emv|copia/.test(part)
+      );
+
+      if (typeof child === "string") {
+        const candidate = child.trim();
+        if (!candidate) continue;
+
+        if (
+          PIX_PAYLOAD_FIELD_NAMES.has(normalizedKey) ||
+          (normalizedKey === "payload" && pixScoped)
+        ) {
+          payloadCandidates.push(candidate);
+        }
+        if (
+          PIX_IMAGE_FIELD_NAMES.has(normalizedKey) ||
+          (normalizedKey === "imagem" && pixScoped)
+        ) {
+          imageCandidates.push(candidate);
+        }
+        // Alguns contratos chamam o conteúdo simplesmente de QRCode. Como o
+        // validador distingue EMV de imagem, é seguro tentar ambos os formatos.
+        if (normalizedKey === "qrcode") {
+          payloadCandidates.push(candidate);
+        }
+        continue;
+      }
+
+      visit(child, path, depth + 1);
+    }
+  };
+
+  visit(raw, [], 0);
+  return { payloadCandidates, imageCandidates };
 };
 
 const normalizeBanesePixFromResponse = (
   raw: unknown,
   amount: number,
 ) => {
-  const { pixPayload, pixEncodedImage } = hasPixReturn(raw);
+  const { payloadCandidates, imageCandidates } = pixReturnCandidates(raw);
+  let pixPayload: string | null = null;
+  let pixEncodedImage: string | null = null;
 
-  if (!pixPayload || !pixEncodedImage) {
-    return {
-      pixPayload: null,
-      pixEncodedImage: null,
-    };
+  for (const candidate of payloadCandidates) {
+    try {
+      pixPayload = normalizeBanesePixPayload(candidate, amount).payload;
+      break;
+    } catch {
+      // O diagnóstico persiste apenas presença/validade, nunca o conteúdo.
+    }
+  }
+  for (const candidate of imageCandidates) {
+    try {
+      pixEncodedImage = normalizeBanesePixQrImage(candidate);
+      break;
+    } catch {
+      // O diagnóstico persiste apenas presença/validade, nunca o conteúdo.
+    }
   }
 
-  try {
-    const payload = normalizeBanesePixPayload(pixPayload, amount).payload;
-    const encodedImage = normalizeBanesePixQrImage(pixEncodedImage);
-    return {
-      pixPayload: payload,
-      pixEncodedImage: encodedImage,
-    };
-  } catch {
-    return {
-      pixPayload: null,
-      pixEncodedImage: null,
-    };
-  }
+  const complete = Boolean(pixPayload && pixEncodedImage);
+  return {
+    pixPayload: complete ? pixPayload : null,
+    pixEncodedImage: complete ? pixEncodedImage : null,
+    diagnostic: {
+      payloadCandidatePresent: payloadCandidates.length > 0,
+      imageCandidatePresent: imageCandidates.length > 0,
+      payloadValid: Boolean(pixPayload),
+      imageValid: Boolean(pixEncodedImage),
+      complete,
+    },
+  };
 };
+
+const normalizeBanesePixFromResponses = (
+  responses: Array<{ source: "creation" | "confirmation"; raw: unknown }>,
+  amount: number,
+) => {
+  const diagnostics: Array<Record<string, unknown>> = [];
+  for (const response of responses) {
+    const normalized = normalizeBanesePixFromResponse(response.raw, amount);
+    diagnostics.push({
+      source: response.source,
+      ...normalized.diagnostic,
+    });
+    if (normalized.pixPayload && normalized.pixEncodedImage) {
+      return {
+        pixPayload: normalized.pixPayload,
+        pixEncodedImage: normalized.pixEncodedImage,
+        diagnostic: {
+          source: response.source,
+          complete: true,
+          attempts: diagnostics,
+        },
+      };
+    }
+  }
+  return {
+    pixPayload: null,
+    pixEncodedImage: null,
+    diagnostic: {
+      source: null,
+      complete: false,
+      attempts: diagnostics,
+    },
+  };
+};
+
+const withProductionPix = (
+  result: AdapterCreateChargeResult,
+  pix: ReturnType<typeof normalizeBanesePixFromResponses>,
+): AdapterCreateChargeResult => ({
+  ...result,
+  pixPayload: pix.pixPayload,
+  pixEncodedImage: pix.pixEncodedImage,
+  raw: {
+    ...asRecord(result.raw),
+    // Diagnóstico deliberadamente sem payload, imagem ou credenciais.
+    pixDiagnostic: pix.diagnostic,
+  },
+});
 
 export const createBaneseBoletoCharge = async (
   input: AdapterCreateChargeInput,
@@ -130,18 +241,6 @@ export const createBaneseBoletoCharge = async (
     throw new BaneseAdapterConfigurationError(
       "Boleto Banese requer um recebivel persistido antes do registro bancario.",
     );
-  }
-
-  if (isProduction(input.environment)) {
-    const amountCents = Math.round(Number(input.amount) * 100);
-    if (
-      !Number.isSafeInteger(amountCents) || amountCents < 200 ||
-      amountCents > 1000
-    ) {
-      throw new BaneseAdapterConfigurationError(
-        "Boleto Banese em producao deve ficar entre R$2,00 e R$10,00.",
-      );
-    }
   }
 
   // Tudo que depende somente do pedido local precisa falhar antes da reserva.
@@ -209,12 +308,12 @@ export const createBaneseBoletoCharge = async (
         }
       }
       if (isProduction(input.environment)) {
-        const productionPix = normalizeBanesePixFromResponse(
-          confirmedRaw,
+        const productionPix = normalizeBanesePixFromResponses(
+          [{ source: "confirmation", raw: confirmedRaw }],
           input.amount,
         );
-        return {
-          ...boletoResultFromResponse(
+        return withProductionPix(
+          boletoResultFromResponse(
             input,
             payload,
             convenio,
@@ -222,9 +321,8 @@ export const createBaneseBoletoCharge = async (
             confirmedRaw,
             true,
           ),
-          pixPayload: productionPix.pixPayload,
-          pixEncodedImage: productionPix.pixEncodedImage,
-        };
+          productionPix,
+        );
       }
       return boletoResultFromResponse(
         input,
@@ -292,10 +390,6 @@ export const createBaneseBoletoCharge = async (
     }
   }
 
-  const pix = isProduction(input.environment)
-    ? normalizeBanesePixFromResponse(confirmedRaw, input.amount)
-    : { pixPayload: null, pixEncodedImage: null };
-
   const result = boletoResultFromResponse(
     input,
     payload,
@@ -305,11 +399,14 @@ export const createBaneseBoletoCharge = async (
     false,
   );
   if (isProduction(input.environment)) {
-    return {
-      ...result,
-      pixPayload: pix.pixPayload,
-      pixEncodedImage: pix.pixEncodedImage,
-    };
+    // O e-mail final do Banese confirma que o BolePix é devolvido no último
+    // passo da criação. A consulta posterior usada para confirmar juros/multa
+    // pode não repetir o QR; por isso a resposta original do POST prevalece.
+    const pix = normalizeBanesePixFromResponses([
+      { source: "creation", raw },
+      { source: "confirmation", raw: confirmedRaw },
+    ], input.amount);
+    return withProductionPix(result, pix);
   }
 
   return result;

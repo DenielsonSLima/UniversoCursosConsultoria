@@ -186,25 +186,10 @@ Deno.test("nao bloqueia criacao Banese por regra de ambiente em producao", async
   );
 });
 
-Deno.test("bloqueia em producao boletas fora da faixa 2 a 10", async () => {
-  await assert.rejects(
-    () =>
-      createBaneseBoletoCharge({
-        ...reservedBoletoInput(false),
-        environment: "production",
-        amount: 1.5,
-      }),
-    (error: any) => {
-      const message = String(error?.message || error);
-      return /2,00|2.00/i.test(message) && /10,00|10.00/i.test(message);
-    },
-  );
-});
-
-Deno.test("producao aceita retorno do boleto sem pix", async () => {
+Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; method: string }> = [];
-  const amount = 5.5;
+  const amount = 149.9;
   const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
   const payloadWithoutPix = JSON.stringify({
     NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
@@ -294,6 +279,64 @@ Deno.test("producao aceita retornos de pix no retorno da criacao", async () => {
       result.pixEncodedImage ?? "",
       /^data:image\/png;base64,/,
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("producao preserva BolePix do POST quando confirmacao financeira nao repete o QR", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 8.5;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const common = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+  };
+  const creationResponse = {
+    ...common,
+    BolePix: {
+      brCodeEMV: buildBanesePixPayloadFixture("TXID-POST", amount),
+      qrCode: `data:image/png;base64,${buildBanesePixImageFixture(1)}`,
+    },
+  };
+  const confirmationResponse = { ...common };
+
+  globalThis.fetch = async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method = init?.method ||
+      (input instanceof Request ? input.method : "GET");
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(
+      JSON.stringify(method === "POST" ? creationResponse : confirmationResponse),
+      { status: 200 },
+    );
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: {
+        nominalAmount: amount,
+        dueDate: BANESE_DOCUMENT_FIXTURE.dueDate,
+      },
+    });
+    assert.equal(typeof result.pixPayload, "string");
+    assert.equal(typeof result.pixEncodedImage, "string");
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(diagnostic?.complete, true);
   } finally {
     globalThis.fetch = originalFetch;
   }

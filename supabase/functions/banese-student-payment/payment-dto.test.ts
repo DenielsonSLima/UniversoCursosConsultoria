@@ -57,7 +57,7 @@ const rowAt = (
     gateway_financial_terms_confirmed_at: "2026-07-16T12:00:00Z",
     turmas: {
       nome: "Técnico em Administração",
-      cursos: { nome: "Curso Técnico" },
+      cursos: { nome: "Curso Técnico", modalidade: "TECNICO" },
     },
     ...overrides,
   };
@@ -96,6 +96,14 @@ Deno.test("remove Pix incondicionalmente no ambiente de homologacao", () => {
     copyAndPaste: null,
     qrCodeImage: null,
   });
+});
+
+Deno.test("devolve curso, turma e modalidade sem expor identificadores internos", () => {
+  const dto = sanitizeBaneseStudentCharge(rowAt(0), GROUP_MARKER);
+
+  assert.equal(dto.courseName, "Curso Técnico");
+  assert.equal(dto.courseModality, "TECNICO");
+  assert.equal(dto.className, "Técnico em Administração");
 });
 
 Deno.test("devolve somente termos financeiros bancarios confirmados", () => {

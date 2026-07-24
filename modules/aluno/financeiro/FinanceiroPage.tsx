@@ -15,6 +15,11 @@ import {
 import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
 import BanesePaymentStatePage from './banese/BanesePaymentStatePage';
 import useBanesePaymentDetails from './banese/hooks/useBanesePaymentDetails';
+import {
+  navigatePaymentWindow,
+  preparePaymentWindow,
+  renderPaymentWindowError,
+} from '../shared/paymentWindow';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -153,7 +158,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const getInstallmentModality = (inst: any) => {
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-    const rawModality = String(curso?.modalidade || '').toUpperCase();
+    const rawModality = String(inst.modalidade || inst.courseModality || curso?.modalidade || '').toUpperCase();
 
     if (['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'].includes(rawModality)) {
       return rawModality;
@@ -165,7 +170,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const getInstallmentCourseName = (inst: any) => {
     const turma = getInstallmentTurma(inst);
     const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-    return curso?.nome || 'Sem curso vinculado';
+    return inst.cursoNome || inst.courseName || curso?.nome || 'Sem curso vinculado';
   };
 
   const getInstallmentCourseId = (inst: any) => {
@@ -300,6 +305,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       if (!summary || !sameBankTitle) return [];
       return [toInstallmentRow({
         ...detail,
+        turmas: summary.turmas,
+        modalidade: detail.modalidade || summary.modalidade,
+        cursoNome: detail.cursoNome || summary.cursoNome,
+        turmaNome: detail.turmaNome || summary.turmaNome,
+        curso_id: detail.curso_id || summary.cursoId,
+        turma_id: detail.turma_id || summary.turma_id,
+        matricula_id: detail.matricula_id || summary.matricula_id,
         status: summary.status,
         gateway_status: summary.gateway_status,
         valor_pago: summary.valor_pago,
@@ -529,6 +541,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       return;
     }
 
+    const paymentWindow = eadPaymentMethod === 'BOLETO'
+      ? preparePaymentWindow()
+      : null;
     setIsStartingEadPayment(true);
     try {
       const result = await paymentCheckoutService.getPublicCheckout(
@@ -561,10 +576,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         return;
       }
 
+      if (eadPaymentMethod === 'BOLETO' && !checkoutUrl) {
+        throw new Error('O Banese registrou a cobrança, mas não retornou a rota autenticada do boleto.');
+      }
+
       if (eadPaymentMethod === 'BOLETO' && checkoutUrl) {
         invalidateAlunoPaymentQueries();
-        window.location.assign(checkoutUrl);
         setSelectedEadPayment(null);
+        if (!navigatePaymentWindow(paymentWindow, checkoutUrl)) {
+          setEadPaymentPanel(result as EadPaymentPanelData);
+          setNotice('O navegador bloqueou a nova aba. Use “Abrir boleto” para continuar sem sair do portal.');
+          setTimeout(() => setNotice(''), 5500);
+        }
         return;
       }
 
@@ -580,6 +603,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       setEadPaymentPanel(result as EadPaymentPanelData);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível preparar o pagamento EAD.';
+      renderPaymentWindowError(paymentWindow, message);
       setNotice(message);
       setTimeout(() => setNotice(''), 5500);
     } finally {

@@ -31,15 +31,15 @@ export type BaneseStudentPaymentRow = {
     | {
       nome?: string | null;
       cursos?:
-        | { nome?: string | null }
-        | Array<{ nome?: string | null }>
+        | { nome?: string | null; modalidade?: string | null }
+        | Array<{ nome?: string | null; modalidade?: string | null }>
         | null;
     }
     | Array<{
       nome?: string | null;
       cursos?:
-        | { nome?: string | null }
-        | Array<{ nome?: string | null }>
+        | { nome?: string | null; modalidade?: string | null }
+        | Array<{ nome?: string | null; modalidade?: string | null }>
         | null;
     }>
     | null;
@@ -86,6 +86,7 @@ export type BaneseStudentChargeDto = {
   bankStatus: string;
   environment: BaneseEnvironment;
   courseName: string | null;
+  courseModality: string | null;
   className: string | null;
   boleto: {
     digitableLine: string;
