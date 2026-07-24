@@ -81,6 +81,18 @@ test('não libera Pix de produção com retorno incompleto', () => {
   assert.equal(pix.state, 'pending');
   assert.equal(pix.payload, null);
   assert.equal(pix.imageSource, null);
+  assert.equal(pix.title, 'Pix não disponível neste título');
+  assert.match(pix.message, /somente parte do BolePix/i);
+});
+
+test('explica que boleto de produção sem BolePix precisa ser reemitido', () => {
+  const pix = getBanesePixPresentation(registeredRecord({
+    gateway_environment: 'production',
+    gateway_pix_payload: null,
+    gateway_pix_encoded_image: null,
+  }));
+  assert.equal(pix.state, 'pending');
+  assert.match(pix.message, /não fabrica um QR Code bancário/i);
 });
 
 test('rejeita Pix copia e cola sem estrutura ou CRC EMV válido', () => {
