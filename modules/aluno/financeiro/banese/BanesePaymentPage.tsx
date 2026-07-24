@@ -55,6 +55,7 @@ const BanesePaymentPage = ({ installment, installments, onBack, onRefresh }: Ban
   const boletoDocument = useBaneseBoletoDocument(
     record.id,
     Boolean(record.gateway_boleto_linha_digitavel && record.gateway_boleto_codigo_barras),
+    pix.state,
   );
   const carnetDocument = useBaneseCarnetDocument(
     carnetInstallments[0]?.id ?? record.id,
