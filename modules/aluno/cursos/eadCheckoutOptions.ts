@@ -36,7 +36,8 @@ export const resolveEadCheckoutOptions = (course: any): EadCheckoutOptions => {
   const maxParcelas = clampInstallments(configuredMaxParcelas, 21);
   const options: EadCheckoutPaymentOption[] = [];
 
-  if (metodos.pix !== false) options.push({ method: 'PIX', label: 'Pix' });
+  // O Pix Banese deste projeto é BolePix: ele acompanha o boleto registrado.
+  // A rota Pix avulsa permanece desativada e não deve ser oferecida no checkout.
   if (metodos.boleto !== false) options.push({ method: 'BOLETO', label: 'Boleto' });
   if (cardEnabled) options.push({ method: 'CREDIT_CARD', label: 'Cartão' });
 

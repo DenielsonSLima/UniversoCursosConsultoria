@@ -7,6 +7,7 @@ import {
   buildBanesePixImageFixture,
   buildBanesePixPayloadFixture,
 } from "../internal/testing/pix-fixture.ts";
+import { normalizeBanesePixPayload } from "../internal/pix-validation.ts";
 import {
   baneseDueDateFactor,
   calculateBaneseAsbaceDoubleDigit,
@@ -393,6 +394,13 @@ Deno.test("producao aceita GUI Banese minusculo e renderiza QR a partir do EMV o
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+Deno.test("aceita espaços permitidos pelo EMV no nome do recebedor Banese", () => {
+  const payload =
+    "00020101021226840014br.gov.bcb.pix2562qrcode-h.banese.b.br/jws/cobv/78923f2a35174d5a965f3c9442ddbe9f5204000053039865802BR5924ARACAJU PREF GABINETE DO6007ARACAJU62070503***6304A8E7";
+  const normalized = normalizeBanesePixPayload(payload, 149.9);
+  assert.equal(normalized.payload, payload);
 });
 
 Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
