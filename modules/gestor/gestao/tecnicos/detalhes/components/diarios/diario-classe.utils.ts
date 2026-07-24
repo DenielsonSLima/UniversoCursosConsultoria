@@ -78,14 +78,18 @@ export const buildPraticasMap = (aulas: DiarioAula[], dbPraticas: any[]): Record
   return map;
 };
 
-export const getStudentStats = (gradesMap: GradesMap, studentId: string): DiarioStudentStats => {
+export const getStudentStats = (
+  gradesMap: GradesMap,
+  studentId: string,
+): DiarioStudentStats => {
   const grade = gradesMap[studentId] || emptyGrade(0);
+
   return {
     faltas: grade.total_faltas,
     frequencia: grade.frequencia_percent,
     mediaParcial: grade.media_parcial,
     mediaFinal: grade.media_final,
-    resultado: grade.resultado_final,
+    resultado: grade.resultado_final || 'SEM_LANCAMENTO',
   };
 };
 

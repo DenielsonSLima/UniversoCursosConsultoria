@@ -1,4 +1,5 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { amountInWords } from '../../../shared/secretaria/document-template.helpers';
 import type { AcademicPreviewData, EmissionLog } from './historico-emissoes.types';
 
 interface TemplateParserContext {
@@ -43,7 +44,12 @@ export const parseEmissionTemplate = (
     : new Date(today.getTime() + validityDays * 24 * 60 * 60 * 1000);
   const formattedValidity = `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`;
   const emissionData = data.dados_emissao || {};
-  const academicData = ['transferencia', 'historico_escolar'].includes(data.documento)
+  const academicData = [
+    'boletim',
+    'atestado_conclusao_tecnico',
+    'transferencia',
+    'historico_escolar',
+  ].includes(data.documento)
     ? context.academicData
     : null;
   const academicStatus = (
@@ -52,6 +58,11 @@ export const parseEmissionTemplate = (
   ).toUpperCase();
   const completedHours = academicData?.cargaHorariaCumprida ?? Number(emissionData.courseHours || 0);
   const totalHours = academicData?.cargaHorariaTotal ?? Number(emissionData.courseHours || 0);
+  const irpfTotal = Number(emissionData.irpfTotal || 0);
+  const formattedIrpfTotal = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(irpfTotal);
 
   const replacements: Array<[RegExp, string]> = [
     [/{{ALUNO_NOME}}/g, (emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
@@ -71,6 +82,11 @@ export const parseEmissionTemplate = (
     [/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${currentTime}`],
     [/{{VALIDADE_DIAS}}/g, String(validityDays)],
     [/{{VALIDADE_DATA}}/g, formattedValidity],
+    [/{{ANO_CALENDARIO}}/g, String(emissionData.calendarYear || data.periodo_referencia || '')],
+    [/{{VALOR_TOTAL}}/g, formattedIrpfTotal],
+    [/{{VALOR_EXTENSO}}/g, amountInWords(irpfTotal)],
+    [/{{RESPONSAVEL_FINANCEIRO_NOME}}/g, (emissionData.responsibleName || emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
+    [/{{RESPONSAVEL_FINANCEIRO_CPF}}/g, emissionData.responsibleCpf || emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
     [/{{nome_aluno}}/g, (emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
     [/{{cpf}}/g, emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
     [/{{curso_nome}}/g, emissionData.courseName || ''],
@@ -84,12 +100,23 @@ export const parseEmissionTemplate = (
     [/{{ensino_medio_localidade_uf}}/g, emissionData.highSchoolLocation || 'Não informado'],
     [/{{ensino_medio_ano_conclusao}}/g, emissionData.highSchoolCompletionYear || 'Não informado'],
     [/{{TABELA_COMPONENTES_CURRICULARES}}/g, academicData?.componentesTable || ''],
+    [/{{TABELA_BOLETIM_TECNICO}}/g, academicData?.componentesTable || ''],
     [/{{TABELA_HISTORICO_ESCOLAR}}/g, academicData?.historicoTable || ''],
     [/{{CARGA_HORARIA_CUMPRIDA}}/g, String(completedHours)],
     [/{{CARGA_HORARIA_TOTAL}}/g, String(totalHours)],
     [/{{PERIODO_CURSO}}/g, academicData?.periodoCurso || emissionData.coursePeriod || '—'],
     [/{{OBSERVACOES_HISTORICO}}/g, academicData?.observacoesHistorico || '—'],
     [/{{INSTITUICAO_DESTINO}}/g, emissionData.destinationInstitution || 'A instituição de destino'],
+    [/{{CARGA_HORARIA_TOTAL}}/g, String(totalHours)],
+    [/{{DATA_CONCLUSAO}}/g, formatDate(emissionData.completionDate || academicData?.fimCurso || '')],
+    [/{{MEDIA_GERAL}}/g, academicData?.mediaGeral === null || academicData?.mediaGeral === undefined
+      ? '—'
+      : academicData.mediaGeral.toFixed(1)],
+    [/{{FREQUENCIA_GERAL}}/g, academicData?.frequenciaGeral === null || academicData?.frequenciaGeral === undefined
+      ? '—'
+      : `${academicData.frequenciaGeral.toFixed(0)}%`],
+    [/{{MODULO_PERIODO}}/g, academicData?.moduleNames.join(', ') || '—'],
+    [/{{ANO_LETIVO}}/g, String(new Date(data.emitido_em).getFullYear())],
   ];
 
   return replacements.reduce(

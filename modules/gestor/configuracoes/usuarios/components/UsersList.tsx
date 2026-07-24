@@ -88,6 +88,11 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
             horario_fim: newUser.horarioFim,
           }
         : null,
+      setor_comunicacao: newUser.setorComunicacao,
+      polo_comunicacao_id: newUser.podeVisualizarTodosSetores
+        ? null
+        : newUser.poloComunicacaoId,
+      pode_visualizar_todos_setores: newUser.podeVisualizarTodosSetores,
     };
   };
 

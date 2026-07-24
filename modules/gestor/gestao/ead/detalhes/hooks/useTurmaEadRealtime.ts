@@ -36,7 +36,7 @@ export const useTurmaEadRealtime = (turmaId: string) => {
 
     const channel = supabase
       .channel(`gestao-ead-turma-${turmaId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matriculas', filter: `turma_id=eq.${turmaId}` }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gestao_realtime_events', filter: `turma_id=eq.${turmaId}` }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inscricoes_online', filter: `turma_id=eq.${turmaId}` }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ead_aluno_progresso' }, refreshProgressIfCurrentTurma)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'certificados_academicos', filter: `turma_id=eq.${turmaId}` }, scheduleRefresh)

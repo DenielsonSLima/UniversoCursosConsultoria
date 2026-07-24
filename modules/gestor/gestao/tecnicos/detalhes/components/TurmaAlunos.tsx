@@ -30,6 +30,7 @@ import {
 import { getTechnicalEnrollmentMissingFields } from '../../../../../shared/utils/technicalEnrollmentRequirements';
 import { getMaceioIsoDate } from '../../technicalClassDates';
 import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
+import { useFinanceiroRulesCalculation } from './financeiro/hooks/useFinanceiroConfig';
 
 interface TurmaAlunosProps {
   turma: Turma;
@@ -75,7 +76,6 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const students = studentsQuery.data || [];
   const availableStudentsQuery = useAvailableStudents(
     turma.id,
-    students,
     showMatricularModal,
     searchTerm,
   );
@@ -85,6 +85,14 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   );
   const turmaFinanceiroConfig = financeiroConfigQuery.data;
   const previsaoQuery = usePrevisaoFinanceiraTurma(turma.id, !!pendingEnrollment && !!turmaFinanceiroConfig);
+  const enrollmentPreviewQuery = useFinanceiroRulesCalculation({
+    valorParcela: enrollmentFinance.valorParcela,
+    descontoPontualidade: enrollmentFinance.descontoPontualidade,
+    jurosAtraso: enrollmentFinance.jurosAtraso,
+    multaAtraso: enrollmentFinance.multaAtraso,
+    aplicarDescontoMensalidade: turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false,
+    aplicarMultaJurosMensalidade: turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false,
+  }, true, Boolean(pendingEnrollment && turmaFinanceiroConfig));
   const paymentOptionsQuery = useEnrollmentPaymentOptions(
     turma.id,
     !!pendingEnrollment
@@ -199,6 +207,15 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     if (!pendingEnrollment) return;
     if (!canEnroll || !turmaFinanceiroConfig || financeiroConfigQuery.isError) {
       toast.error('Configuração não carregada', 'Recarregue os dados financeiros antes de confirmar a matrícula.');
+      return;
+    }
+    if (
+      enrollmentPreviewQuery.isPending
+      || enrollmentPreviewQuery.isFetching
+      || enrollmentPreviewQuery.isError
+      || !enrollmentPreviewQuery.data
+    ) {
+      toast.error('Cálculo indisponível', 'Aguarde a prévia financeira oficial do servidor antes de confirmar.');
       return;
     }
     if (!enrollmentFinance.dataVencimentoMatricula) {
@@ -381,6 +398,9 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           finance={enrollmentFinance}
           turmaFinanceiroConfig={turmaFinanceiroConfig}
           previsao={previsaoQuery.data}
+          financialPreview={enrollmentPreviewQuery.data}
+          financialPreviewLoading={enrollmentPreviewQuery.isPending || enrollmentPreviewQuery.isFetching}
+          financialPreviewError={enrollmentPreviewQuery.isError}
           enrollmentFlags={enrollmentFlags}
           paymentMethod={enrollmentPaymentMethod}
           availablePaymentMethods={availablePaymentMethods}

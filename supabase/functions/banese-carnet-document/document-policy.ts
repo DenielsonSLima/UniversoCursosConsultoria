@@ -27,6 +27,7 @@ export type BaneseCarnetReceivableRow = {
   id: string;
   cliente_id: string | null;
   matricula_id: string | null;
+  turma_id: string | null;
   polo_id: string | null;
   descricao: string | null;
   tipo_lancamento: string | null;

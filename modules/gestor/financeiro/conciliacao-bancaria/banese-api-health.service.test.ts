@@ -4,6 +4,7 @@ import type { GatewayOverview } from '../../configuracoes/integracao-bancaria/in
 import { buildBaneseApiHealthEvidence } from './banese-api-health.ts';
 
 const overview = (): GatewayOverview => ({
+  integrationEnabled: true,
   providers: [],
   credentials: [{
     id: 'credential-id',

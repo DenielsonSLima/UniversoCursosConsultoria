@@ -58,6 +58,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
             {students.map((aluno, idx) => {
               const stats = getStats(aluno.id);
               const isCredited = stats.resultado === 'APROVEITADO';
+              const totalFaltas = stats.faltas;
               return (
                 <tr
                   key={aluno.id}
@@ -111,8 +112,8 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                         Equivalência
                       </span>
                     ) : (
-                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${stats.faltas > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {stats.faltas}
+                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${totalFaltas > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {totalFaltas}
                       </span>
                     )}
                   </td>

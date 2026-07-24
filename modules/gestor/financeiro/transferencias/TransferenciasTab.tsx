@@ -100,7 +100,7 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
   const [deleteTarget, setDeleteTarget] = useState<TransferenciaConta | null>(null);
   const pageSize = 8;
 
-  useFinanceiroRealtime();
+  useFinanceiroRealtime(poloId);
 
   const { accountsQuery, polosQuery } = useFinanceiroSharedQueries({ partners: false });
   const accounts = accountsQuery.data || [];

@@ -14,6 +14,8 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
     let refreshFinanceiro = false;
     const turmaKeys = [
       academicLifecycleKeys.turma(turmaId),
+      academicLifecycleKeys.grade(turmaId),
+      academicLifecycleKeys.diarios(turmaId),
       ['turma_financeiro_config', turmaId] as const,
       ['turma-financeiro', turmaId] as const,
       ['financeiro-alunos', turmaId] as const,
@@ -59,12 +61,27 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'turmas', filter: `id=eq.${turmaId}` },
+        { event: '*', schema: 'public', table: 'aulas_turma', filter: `turma_id=eq.${turmaId}` },
+        scheduleGradeRefresh,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'diario_frequencia', filter: `turma_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'matriculas', filter: `turma_id=eq.${turmaId}` },
+        { event: '*', schema: 'public', table: 'diario_notas', filter: `turma_id=eq.${turmaId}` },
+        () => scheduleRefresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: `turma_id=eq.${turmaId}` },
+        () => scheduleRefresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'gestao_realtime_events', filter: `turma_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
       .on(

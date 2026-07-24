@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { generateSafeUuid } from '../../../../../../lib/randomUuid';
 import { todayInMaceio } from './manual-settlement-date';
 
 export type ManualSettlementPaymentMethod = 'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO';
@@ -26,16 +27,8 @@ export const sanitizeCurrencyInput = (value: string) => value
 
 const hasPositiveCurrencyInput = (value: string) => /[1-9]/.test(value);
 
-const generateIdempotencyKey = () => {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-};
-
 export const useManualSettlementForm = (principalValue: number, initialAccountId = '') => {
-  const [idempotencyKey] = useState(() => generateIdempotencyKey());
+  const [idempotencyKey] = useState(generateSafeUuid);
   const [accountId, setAccountId] = useState(initialAccountId);
   const [paymentMethod, setPaymentMethod] = useState<ManualSettlementPaymentMethod>('DINHEIRO');
   const [paymentDate, setPaymentDate] = useState(todayInMaceio);

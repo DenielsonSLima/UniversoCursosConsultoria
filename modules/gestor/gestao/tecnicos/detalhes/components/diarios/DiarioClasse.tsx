@@ -1,20 +1,20 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse.tsx
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import { assinaturasService } from '../../../../../configuracoes/assinaturas/assinaturas.service';
 import DiarioClasseHeader from './DiarioClasseHeader';
+import DiarioClasseFooter from './DiarioClasseFooter';
 import DiarioConteudoTab from './DiarioConteudoTab';
 import DiarioFrequenciaTab from './DiarioFrequenciaTab';
 import DiarioObservacoesTab from './DiarioObservacoesTab';
-import DiarioPrintDocument from './DiarioPrintDocument';
 import DiarioResultadoTab from './DiarioResultadoTab';
+import DiarioExportModal from './export/DiarioExportModal';
 import TechnicalDataError from '../TechnicalDataError';
 import {
-  useAddDiarioAulaMutation,
   useDiarioAttendance,
   useDiarioAulas,
   useDiarioGrades,
@@ -29,17 +29,45 @@ import {
 } from './hooks/useDiarioClasse';
 import { useDiarioPdfDownload } from './hooks/useDiarioPdfDownload';
 import { useDiarioRealtime } from './hooks/useDiarioRealtime';
-import { DiarioClasseProps, DiarioActiveTab, GradesMap } from './diario-classe.types';
+import {
+  DiarioClasseProps,
+  DiarioActiveTab,
+  DiarioGradeResult,
+  GradesMap,
+  AttendanceMap,
+} from './diario-classe.types';
+import { DiarioExportMode } from './turma-diarios.types';
 import {
   buildAttendanceMap,
   buildGradesMap,
   buildPraticasMap,
   getStudentStats,
 } from './diario-classe.utils';
+import { useDiarioInstruments } from './hooks/useDiarioInstruments';
 import {
   getAcademicReadOnlyContent,
   isAcademicContextEditable,
 } from '../../academic-access.utils';
+
+const EMPTY_DIARIO_GRADE: DiarioGradeResult = {
+  p: null,
+  ti: null,
+  tg: null,
+  s: null,
+  cq: null,
+  o: null,
+  rec: null,
+  total_aulas: 0,
+  total_faltas: 0,
+  frequencia_percent: null,
+  media_parcial: null,
+  media_final: null,
+  resultado_final: 'SEM_LANCAMENTO',
+};
+
+const EMPTY_DIARIO_ROWS: never[] = [];
+
+type EditableGradeField = 'p' | 'ti' | 'tg' | 's' | 'cq' | 'o' | 'rec';
 
 const DiarioClasse: React.FC<DiarioClasseProps> = ({
   disciplina,
@@ -47,19 +75,25 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   turma,
   onBack,
   accessMode = 'GESTOR',
+  initialExportMode,
+  returnToListOnExportClose = false,
 }) => {
   const { toasts, removeToast, toast } = useToast();
   const effectiveAccessMode: 'GESTOR' | 'PROFESSOR' = accessMode === 'PROFESSOR'
     ? 'PROFESSOR'
     : 'GESTOR';
   const [activeTab, setActiveTab] = useState<DiarioActiveTab>('frequencia');
-  const printDocumentRef = useRef<HTMLDivElement>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(Boolean(initialExportMode));
+  const [exportMode, setExportMode] = useState<DiarioExportMode>(
+    initialExportMode || 'PREENCHIDO',
+  );
   const isReadOnly = !isAcademicContextEditable(turma?.status, disciplina?.periodoStatus);
   const readOnlyContent = getAcademicReadOnlyContent(turma?.status, disciplina?.periodoStatus);
   const readOnlyLabel = readOnlyContent.label;
   const readOnlyMessage = readOnlyContent.message;
 
-  const { data: diarioTemplate } = useDiarioTemplate(turma.cursoId);
+  const templateQuery = useDiarioTemplate(turma.cursoId);
+  const { data: diarioTemplate } = templateQuery;
   const { data: watermark } = useQuery({
     queryKey: ['polo-watermark', turma.poloId],
     queryFn: () => diariosService.getLandscapeWatermark(turma.poloId),
@@ -75,13 +109,30 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   const gradesQuery = useDiarioGrades(turma.id, disciplina.id);
   const praticasQuery = useDiarioPraticas(turma.id, disciplina.id);
   const observacoesQuery = useDiarioObservacoes(turma.id, disciplina.id);
-  const students = studentsQuery.data || [];
-  const aulas = aulasQuery.data || [];
-  const dbAttendance = attendanceQuery.data || [];
-  const dbGrades = gradesQuery.data || [];
-  const dbPraticas = praticasQuery.data || [];
+  const students = studentsQuery.data ?? EMPTY_DIARIO_ROWS;
+  const aulas = aulasQuery.data ?? EMPTY_DIARIO_ROWS;
+  const dbAttendance = attendanceQuery.data ?? EMPTY_DIARIO_ROWS;
+  const dbGrades = gradesQuery.data ?? EMPTY_DIARIO_ROWS;
+  const dbPraticas = praticasQuery.data ?? EMPTY_DIARIO_ROWS;
   const dbObservacoes = observacoesQuery.data ?? '';
   useDiarioRealtime(turma.id, disciplina.id);
+  const {
+    activeInstruments,
+    toggleInstrument: handleToggleInstrument,
+    query: instrumentsQuery,
+    saving: savingInstruments,
+  } = useDiarioInstruments({
+    turmaId: turma.id,
+    disciplinaId: disciplina.id,
+    canEdit: !isReadOnly,
+    onError: (error) => {
+      console.error('Erro ao salvar instrumentos avaliativos:', error);
+      toast.error(
+        'Instrumentos não salvos',
+        error?.message || 'Não foi possível atualizar os instrumentos avaliativos.',
+      );
+    },
+  });
 
   const attendanceMap = useMemo(
     () => buildAttendanceMap(students, aulas, dbAttendance),
@@ -96,12 +147,23 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     [aulas, dbPraticas],
   );
 
+  const [localAttendance, setLocalAttendance] = useState<AttendanceMap>({});
   const [localGrades, setLocalGrades] = useState<GradesMap>({});
   const [localPraticas, setLocalPraticas] = useState<Record<string, string>>({});
   const [localObservacoes, setLocalObservacoes] = useState('');
-  const [novaAulaTitulo, setNovaAulaTitulo] = useState('');
-  const [novaAulaData, setNovaAulaData] = useState('');
-  const [novaAulaCarga, setNovaAulaCarga] = useState('');
+
+  useEffect(() => {
+    setLocalAttendance({});
+  }, [dbAttendance]);
+
+  const effectiveAttendanceMap = useMemo(() => {
+    if (Object.keys(localAttendance).length === 0) return attendanceMap;
+    const merged: AttendanceMap = { ...attendanceMap };
+    Object.entries(localAttendance).forEach(([studentId, classMap]) => {
+      merged[studentId] = { ...(merged[studentId] || {}), ...(classMap as Record<string, 'P' | 'F' | null>) };
+    });
+    return merged;
+  }, [attendanceMap, localAttendance]);
 
   useEffect(() => {
     if (Object.keys(gradesMap).length > 0) setLocalGrades({ ...gradesMap });
@@ -115,24 +177,60 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     if (dbObservacoes !== undefined) setLocalObservacoes(dbObservacoes);
   }, [dbObservacoes]);
 
-  const toggleAttendanceMutation = useToggleDiarioAttendanceMutation(turma.id, disciplina.id);
-  const addAulaMutation = useAddDiarioAulaMutation(
+  const toggleAttendanceMutation = useToggleDiarioAttendanceMutation(
     turma.id,
     disciplina.id,
     (input) => {
-      setNovaAulaTitulo('');
-      setNovaAulaData('');
-      setNovaAulaCarga('');
-      toast.success('Aula salva', `${input.titulo} foi registrada no diário e na agenda.`);
+      const aluno = students.find((s) => s.id === input.alunoId);
+      const aula = aulas.find((a) => a.id === input.aulaId);
+      const alunoNome = aluno?.nome || 'Aluno';
+      const aulaLabel = aula?.dataLabel ? ` (${aula.dataLabel})` : '';
+
+      if (input.nextStatus === 'P') {
+        toast.success('Presença registrada', `Presença de ${alunoNome}${aulaLabel} salva.`);
+      } else if (input.nextStatus === 'F') {
+        toast.info('Falta registrada', `Falta de ${alunoNome}${aulaLabel} lançada.`);
+      }
     },
     (error) => {
-      console.error('Erro ao salvar aula no diário:', error);
-      toast.error('Aula não salva', error?.message || 'Não foi possível registrar a aula.');
+      console.error('Erro ao alternar frequência:', error);
+      toast.error('Frequência não salva', error?.message || 'Não consegui atualizar a presença/falta deste aluno. Tente novamente.');
     },
   );
-  const saveStudentGradesMutation = useSaveDiarioGradesMutation(turma.id, disciplina.id);
-  const savePraticaMutation = useSaveDiarioPraticaMutation(turma.id, disciplina.id);
-  const saveObservacoesMutation = useSaveDiarioObservacoesMutation(turma.id, disciplina.id);
+  const saveStudentGradesMutation = useSaveDiarioGradesMutation(
+    turma.id,
+    disciplina.id,
+    (input) => {
+      const aluno = students.find((s) => s.id === input.alunoId);
+      toast.success('Notas salvas', `Notas de ${aluno?.nome || 'aluno'} atualizadas com sucesso.`);
+    },
+    (error) => {
+      console.error('Erro ao salvar notas:', error);
+      toast.error('Notas não salvas', error?.message || 'Não foi possível atualizar as notas.');
+    },
+  );
+  const savePraticaMutation = useSaveDiarioPraticaMutation(
+    turma.id,
+    disciplina.id,
+    () => {
+      toast.success('Conteúdo salvo', 'Conteúdo da aula atualizado com sucesso.');
+    },
+    (error) => {
+      console.error('Erro ao salvar conteúdo:', error);
+      toast.error('Conteúdo não salvo', error?.message || 'Não foi possível atualizar o conteúdo.');
+    },
+  );
+  const saveObservacoesMutation = useSaveDiarioObservacoesMutation(
+    turma.id,
+    disciplina.id,
+    () => {
+      toast.success('Observações salvas', 'Observações do diário salvas com sucesso.');
+    },
+    (error) => {
+      console.error('Erro ao salvar observações:', error);
+      toast.error('Observações não salvas', error?.message || 'Não foi possível salvar as observações.');
+    },
+  );
 
   const handleToggleAttendance = (studentId: string, classId: string) => {
     if (isReadOnly) return;
@@ -143,72 +241,134 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
       );
       return;
     }
-    const current = attendanceMap[studentId]?.[classId] || null;
+    const current = effectiveAttendanceMap[studentId]?.[classId] || null;
     const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
-    toggleAttendanceMutation.mutate({ aulaId: classId, alunoId: studentId, nextStatus });
+
+    // Atualização otimista instantânea na UI (< 1ms)
+    setLocalAttendance((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] || effectiveAttendanceMap[studentId] || {}),
+        [classId]: nextStatus,
+      },
+    }));
+
+    toggleAttendanceMutation.mutate(
+      { aulaId: classId, alunoId: studentId, nextStatus },
+      {
+        onError: () => {
+          // Reverte o estado local em caso de erro no servidor
+          setLocalAttendance((prev) => {
+            const copy = { ...prev };
+            if (copy[studentId]) {
+              const studentCopy = { ...copy[studentId] };
+              delete studentCopy[classId];
+              copy[studentId] = studentCopy;
+            }
+            return copy;
+          });
+        },
+      },
+    );
   };
 
-  const handleAddAula = () => {
-    if (isReadOnly) return;
-    const titulo = novaAulaTitulo.trim();
-    const dataAula = novaAulaData.trim();
-    const cargaHoraria = Number(novaAulaCarga.replace(',', '.'));
-
-    if (!titulo || !dataAula || !novaAulaCarga.trim()) {
-      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
-      return;
-    }
-    if (!Number.isFinite(cargaHoraria) || cargaHoraria <= 0) {
-      toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
-      return;
-    }
-    addAulaMutation.mutate({ titulo, dataAula, cargaHoraria });
-  };
-
-  const handleLocalGradeChange = (studentId: string, field: string, value: string) => {
+  const handleLocalGradeChange = (studentId: string, field: EditableGradeField, value: string) => {
     if (isReadOnly) return;
     setLocalGrades((previous) => {
-      const studentFields = previous[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
-      let numeric: number | null = parseFloat(value);
-      if (isNaN(numeric)) numeric = field === 'rec' ? null : 0;
-      else numeric = Math.min(10, Math.max(0, numeric));
+      const studentFields = previous[studentId] || gradesMap[studentId] || EMPTY_DIARIO_GRADE;
+      const parsedValue = value.trim() === '' ? null : Number(value.replace(',', '.'));
+      const numeric = parsedValue === null || !Number.isFinite(parsedValue)
+        ? null
+        : Math.min(10, Math.max(0, parsedValue));
       return { ...previous, [studentId]: { ...studentFields, [field]: numeric } };
     });
   };
 
-  const handleSaveGrade = (studentId: string) => {
+  const handleSaveGrade = (studentId: string, field: EditableGradeField) => {
     if (isReadOnly) return;
-    const fields = localGrades[studentId] || { p: 0, ti: 0, tg: 0, s: 0, cq: 0, o: 0, rec: null };
+    const fields = localGrades[studentId] || gradesMap[studentId] || EMPTY_DIARIO_GRADE;
     saveStudentGradesMutation.mutate({
       alunoId: studentId,
-      fields: {
-        ...fields,
-        p: fields.p ?? 0,
-        ti: fields.ti ?? 0,
-        tg: fields.tg ?? 0,
-        s: fields.s ?? 0,
-        cq: fields.cq ?? 0,
-        o: fields.o ?? 0,
-      },
+      fields: { [field]: fields[field] },
     });
   };
 
-  const { downloadingPdf, downloadPdf } = useDiarioPdfDownload({
-    containerRef: printDocumentRef,
-    diarioTemplate,
+  const printProps = useMemo(() => ({
+    template: diarioTemplate!,
     turma,
     disciplina,
+    moduloNome,
+    students,
+    aulas,
+    attendanceMap,
+    gradesMap,
+    praticasMap,
+    observacoes: dbObservacoes,
+    activeInstruments,
+    watermark,
+    diretorSigUrl: diarioTemplate?.diretorAssinaturaRole ? centralSignatures?.[diarioTemplate.diretorAssinaturaRole] : null,
+    secretarioSigUrl: diarioTemplate?.secretarioAssinaturaRole ? centralSignatures?.[diarioTemplate.secretarioAssinaturaRole] : null,
+    exportMode,
+  }), [
+    activeInstruments,
+    attendanceMap,
+    aulas,
+    centralSignatures,
+    dbObservacoes,
+    diarioTemplate,
+    disciplina,
+    exportMode,
+    gradesMap,
+    moduloNome,
+    praticasMap,
+    students,
+    turma,
+    watermark,
+  ]);
+
+  const { downloadingPdf, printingPdf, downloadPdf, printPdf } = useDiarioPdfDownload({
+    printProps,
     toast,
   });
+  const hasPendingWrites = toggleAttendanceMutation.isPending
+    || saveStudentGradesMutation.isPending
+    || savePraticaMutation.isPending
+    || saveObservacoesMutation.isPending
+    || savingInstruments;
 
-  const coreQueries = [
+  const openExportModal = (mode: DiarioExportMode) => {
+    if (hasPendingWrites) {
+      toast.info('Aguarde o salvamento', 'O PDF será liberado assim que os registros forem confirmados.');
+      return;
+    }
+    setExportMode(mode);
+    setIsExportModalOpen(true);
+  };
+
+  const closeExportModal = () => {
+    setIsExportModalOpen(false);
+    if (returnToListOnExportClose) onBack();
+  };
+
+  const completeDiaryQueries = [
+    templateQuery,
     studentsQuery,
     aulasQuery,
     attendanceQuery,
     gradesQuery,
     praticasQuery,
     observacoesQuery,
+    instrumentsQuery,
   ];
+  const blankExportQueries = [
+    templateQuery,
+    studentsQuery,
+    aulasQuery,
+    instrumentsQuery,
+  ];
+  const coreQueries = initialExportMode === 'EM_BRANCO'
+    ? blankExportQueries
+    : completeDiaryQueries;
   const loading = coreQueries.some((query) => query.isLoading);
   const loadingError = coreQueries.some((query) => query.isError);
   const retrying = coreQueries.some((query) => query.isFetching);
@@ -241,19 +401,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
         moduloNome={moduloNome}
         turma={turma}
         onBack={onBack}
-        onDownloadPdf={downloadPdf}
-        downloadingPdf={downloadingPdf}
+        onOpenExportModal={() => openExportModal('PREENCHIDO')}
+        exportDisabled={hasPendingWrites}
         isReadOnly={isReadOnly}
         readOnlyLabel={readOnlyLabel}
         readOnlyMessage={readOnlyMessage}
-        novaAulaTitulo={novaAulaTitulo}
-        novaAulaData={novaAulaData}
-        novaAulaCarga={novaAulaCarga}
-        setNovaAulaTitulo={setNovaAulaTitulo}
-        setNovaAulaData={setNovaAulaData}
-        setNovaAulaCarga={setNovaAulaCarga}
-        onAddAula={handleAddAula}
-        addingAula={addAulaMutation.isPending}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
@@ -264,7 +416,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
             <DiarioFrequenciaTab
               students={students}
               aulas={aulas}
-              attendanceMap={attendanceMap}
+              attendanceMap={effectiveAttendanceMap}
               isReadOnly={isReadOnly}
               onToggleAttendance={handleToggleAttendance}
               getStats={(studentId) => getStudentStats(gradesMap, studentId)}
@@ -275,6 +427,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
               students={students}
               localGrades={localGrades}
               isReadOnly={isReadOnly}
+              activeInstruments={activeInstruments}
+              onToggleInstrument={handleToggleInstrument}
               getStats={(studentId) => getStudentStats(gradesMap, studentId)}
               onGradeChange={handleLocalGradeChange}
               onSaveGrade={handleSaveGrade}
@@ -302,50 +456,22 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
       </div>
 
       {diarioTemplate && (
-        <div className="diario-print-host fixed left-[-20000px] top-0 z-[-1]">
-          <DiarioPrintDocument
-            ref={printDocumentRef}
-            template={diarioTemplate}
-            turma={turma}
-            disciplina={disciplina}
-            moduloNome={moduloNome}
-            students={students}
-            aulas={aulas}
-            attendanceMap={attendanceMap}
-            gradesMap={gradesMap}
-            praticasMap={praticasMap}
-            observacoes={localObservacoes}
-            watermark={watermark}
-            diretorSigUrl={diarioTemplate.diretorAssinaturaRole ? centralSignatures?.[diarioTemplate.diretorAssinaturaRole] : null}
-            secretarioSigUrl={diarioTemplate.secretarioAssinaturaRole ? centralSignatures?.[diarioTemplate.secretarioAssinaturaRole] : null}
+        <>
+          <DiarioExportModal
+            isOpen={isExportModalOpen}
+            onClose={closeExportModal}
+            onDownloadPdf={downloadPdf}
+            onPrintPdf={printPdf}
+            downloadingPdf={downloadingPdf}
+            printingPdf={printingPdf}
+            printProps={printProps}
+            exportMode={exportMode}
           />
-        </div>
+        </>
       )}
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };
-
-const DiarioClasseFooter: React.FC<{ disciplina: any }> = ({ disciplina }) => (
-  <div className="bg-slate-50 p-6 md:px-8 border-t border-slate-200 mt-auto">
-    <div className="flex flex-col xl:flex-row justify-between items-center gap-8 text-xs font-bold text-slate-500 uppercase tracking-widest">
-      <div className="flex flex-wrap items-center gap-x-12 gap-y-4">
-        <div>Carga Horária Total: <span className="text-slate-700">{disciplina.cargaHoraria}H</span></div>
-        <div>Horas Lançadas: <span className="text-slate-700">{disciplina.horasRealizadas}H</span></div>
-        <div>Encerrado em: <span className="text-slate-700 border-b border-dashed border-slate-400 px-8 text-transparent">____/____/_____</span></div>
-      </div>
-      <div className="flex flex-wrap items-center gap-12 mt-4 xl:mt-0">
-        <div className="text-center">
-          <div className="w-56 border-b border-slate-400 mb-2 h-4"></div>
-          <p>Assinatura Professor(a)</p>
-        </div>
-        <div className="text-center">
-          <div className="w-56 border-b border-slate-400 mb-2 h-4"></div>
-          <p>Assinatura Coordenador(a)</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default DiarioClasse;

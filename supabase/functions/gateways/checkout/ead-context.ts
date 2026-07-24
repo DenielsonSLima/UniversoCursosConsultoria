@@ -20,6 +20,7 @@ import {
   normalizeProviderCode,
   UUID_RE,
 } from "./utils.ts";
+import { getGatewayRuntimeConfig } from "../runtime-config.ts";
 
 const BLOCKING_ENROLLMENT_STATUSES = new Set([
   "ATIVO",
@@ -76,12 +77,13 @@ const checkoutRouteModalidade = (value: unknown) => {
 export const resolveGatewayEnvironment = async (
   admin: any,
 ): Promise<GatewayEnvironment> => {
-  const { data, error } = await admin
-    .from("asaas_config")
-    .select("environment")
-    .maybeSingle();
-  if (error) throw error;
-  return normalizeEnvironment(data?.environment);
+  const runtimeConfig = await getGatewayRuntimeConfig(admin);
+  if (!runtimeConfig.enabled) {
+    throw new Error(
+      "As cobrancas online estao temporariamente desativadas nas configuracoes bancarias.",
+    );
+  }
+  return normalizeEnvironment(runtimeConfig.activeEnvironment);
 };
 
 const looksLikeRpcNotFound = (error: any) => {
@@ -195,13 +197,13 @@ export const resolvePaymentGatewayRoute = async (
     paymentMethod,
     configuredEnvironment,
   );
-  const availableEnvironments = [
+  const availableEnvironments: GatewayEnvironment[] = [
     ...new Set(
       availableRoutes
         .map((route: any) => String(route?.environment || ""))
         .filter(Boolean),
     ),
-  ].map(normalizedEnvironmentLabel);
+  ].map((value) => normalizeEnvironment(value));
 
   for (const routeEnvironment of paymentMethodPreferredEnvironment(paymentMethod)) {
     const environmentRoutes = (availableRoutes || []).filter((route: any) =>
@@ -258,7 +260,9 @@ export const resolvePaymentGatewayRoute = async (
   throw new Error(
     `Rota ${paymentMethod} de ${modalidade} nao esta ativa nos ambientes suportados. ${
       availableEnvironments.length
-        ? `Existen rotas ativas em: ${availableEnvironments.join(", ")}.`
+        ? `Existem rotas ativas em: ${
+          availableEnvironments.map(normalizedEnvironmentLabel).join(", ")
+        }.`
         : ""
     }`.trim(),
   );

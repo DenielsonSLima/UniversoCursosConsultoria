@@ -60,6 +60,16 @@ test('identifica os provedores somente para apresentação e ações da cobranç
   assert.equal(paymentGatewayLabel(mercadoPago), 'Mercado Pago');
 });
 
+test('reconhece link legado do portal como boleto Banese', () => {
+  const baneseLegacyLink = receivable({
+    origemPagamento: 'GATEWAY_EAD',
+    asaasInvoiceUrl: 'https://universocc.com.br/aluno?module=financeiro&banesePayment=receivable-id',
+  });
+
+  assert.equal(paymentGatewayCode(baneseLegacyLink), 'banese_card');
+  assert.equal(paymentGatewayLabel(baneseLegacyLink), 'Banese');
+});
+
 test('não apresenta comprovante Asaas para cobrança paga de outro provedor', () => {
   const banese = receivable({
     status: 'PAGO',

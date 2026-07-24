@@ -47,6 +47,7 @@ export interface Turma {
   jurosAtraso: number;
   multaAtraso: number;
   diaVencimentoPadrao?: number;
+  instrucaoBoletoCarne?: string;
   origemFinanceira?: 'LEGADO' | 'NORMAL';
   financeiroHerdado?: boolean;
   gerarCobrancasFuturas?: boolean;

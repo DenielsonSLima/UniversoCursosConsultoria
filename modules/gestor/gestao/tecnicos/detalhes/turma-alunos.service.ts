@@ -65,53 +65,17 @@ export const isValidStudentCpf = (value?: string | null) => {
 };
 
 export const turmaAlunosService = {
-  async getAvailableStudents(turmaId: string, enrolledIds: Set<string>, searchTerm: string): Promise<AvailableStudent[]> {
+  async getAvailableStudents(turmaId: string, searchTerm: string): Promise<AvailableStudent[]> {
     const normalizedSearch = searchTerm.trim().replace(/\s+/g, ' ');
-    if (!normalizedSearch) return [];
+    if (normalizedSearch.length < 2) return [];
 
-    const textSearch = normalizedSearch.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
-    const digitSearch = normalizedSearch.replace(/\D/g, '');
-    const searchFilters = [
-      textSearch ? `nome.ilike.%${textSearch}%` : null,
-      digitSearch ? `cpf_cnpj.ilike.%${digitSearch}%` : null,
-      digitSearch ? `telefone.ilike.%${digitSearch}%` : null,
-      digitSearch ? `responsavel_telefone.ilike.%${digitSearch}%` : null,
-    ].filter(Boolean);
-
-    if (searchFilters.length === 0) return [];
-
-    const excludedIds = new Set(enrolledIds);
-    const { data: turma, error: turmaError } = await supabase
-      .from('turmas')
-      .select('curso_id')
-      .eq('id', turmaId)
-      .maybeSingle();
-
-    if (turmaError) throw turmaError;
-    if (turma?.curso_id) {
-      const { data: courseEnrollments, error: courseEnrollmentsError } = await supabase
-        .from('matriculas')
-        .select('aluno_id, turmas!inner(curso_id)')
-        .eq('turmas.curso_id', turma.curso_id)
-        .in('status', ['PENDENTE', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO', 'ATIVO', 'TRANCADO', 'CONCLUIDO']);
-
-      if (courseEnrollmentsError) throw courseEnrollmentsError;
-      for (const enrollment of courseEnrollments || []) {
-        if (enrollment.aluno_id) excludedIds.add(enrollment.aluno_id);
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select('id, nome, cpf_cnpj, telefone, tipo_documento, rg, nome_mae, responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone, responsavel_email, responsavel_financeiro, situacao_ensino_medio, serie_ensino_medio_atual, escola_ensino_medio, ano_conclusao_ensino_medio, ano_previsto_conclusao_ensino_medio')
-      .eq('tipo', 'Aluno')
-      .eq('status', 'ATIVO')
-      .or(searchFilters.join(','))
-      .order('nome')
-      .limit(30);
-
+    const { data, error } = await supabase.rpc('search_gestao_available_students', {
+      p_turma_id: turmaId,
+      p_search: normalizedSearch,
+      p_limit: 30,
+    });
     if (error) throw error;
-    return ((data || []) as AvailableStudent[]).filter((student) => !excludedIds.has(student.id));
+    return (data || []) as AvailableStudent[];
   },
 
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {

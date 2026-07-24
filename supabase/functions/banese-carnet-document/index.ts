@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import {
   bearerTokenFromRequest,
@@ -25,6 +24,7 @@ import {
   selectBaneseCarnetDocumentRows,
 } from "./document-policy.ts";
 import { buildBaneseCarnetDocumentInputs } from "./document-input.ts";
+import { loadBaneseAcademicBillingContext } from "../banese/internal/technical-billing-context.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -275,11 +275,17 @@ Deno.serve(async (req: Request) => {
       selected,
       (candidatesResult.data ?? []) as BaneseCarnetReceivableRow[],
     );
+    const academicContext = await loadBaneseAcademicBillingContext(
+      admin,
+      selected.matricula_id,
+      selected.turma_id,
+    );
     const inputs = buildBaneseCarnetDocumentInputs(
       rows,
       payer,
       issuerResult.data as Record<string, unknown>,
       credentialResult.data.metadata,
+      academicContext,
     );
 
     const projectHost = new URL(supabaseUrl).hostname;

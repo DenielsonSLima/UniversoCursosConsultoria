@@ -39,6 +39,7 @@ import {
   tryNormalizeGatewayPaymentMethod,
   UUID_RE,
 } from "./checkout-utils.ts";
+import { getGatewayRuntimeConfig } from "../runtime-config.ts";
 
 export const handlePaymentCheckout = async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -344,16 +345,22 @@ export const handlePaymentCheckout = async (req: Request) => {
       ? false
       : turma.gerar_cobrancas_futuras === true;
 
-    const { data: config, error: configError } = await admin
+    const [{ data: config, error: configError }, runtimeConfig] = await Promise.all([
+      admin
       .from("asaas_config")
       .select(
-        "environment, notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled",
+        "notifications_enabled, notification_whatsapp_enabled, notification_email_enabled, notification_sms_enabled",
       )
-      .maybeSingle();
+      .maybeSingle(),
+      getGatewayRuntimeConfig(admin),
+    ]);
     if (configError) throw configError;
-    const environment: GatewayEnvironment = config?.environment === "production"
-      ? "production"
-      : "sandbox";
+    if (!runtimeConfig.enabled) {
+      throw new Error(
+        "As cobrancas online estao temporariamente desativadas nas configuracoes bancarias.",
+      );
+    }
+    const environment: GatewayEnvironment = runtimeConfig.activeEnvironment;
     const notificationsEnabled = config?.notifications_enabled === true ||
       config?.notification_whatsapp_enabled === true ||
       config?.notification_email_enabled === true ||

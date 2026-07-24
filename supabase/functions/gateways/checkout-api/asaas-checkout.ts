@@ -55,7 +55,6 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
     admin,
     json,
     state,
-    course,
     aluno,
     turma,
     matricula,
@@ -63,12 +62,10 @@ export const handleAsaasCheckout = async (context: CheckoutContext) => {
     isEadCheckout,
     keepTechnicalDocumentationPending,
     hasExplicitPaymentSelection,
-    cpfCnpj,
     dataVencimento,
     charge,
     receivableFeeFields,
     gatewayPaymentMethodForCharge,
-    technicalSchoolSnapshot,
   } = context;
 
   const { data: apiKey, error: secretError } = await admin.rpc(

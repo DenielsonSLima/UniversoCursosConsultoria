@@ -75,3 +75,9 @@ export interface SecretariaTurmaResumo {
   status: string;
   totalAlunos: number;
 }
+
+export interface SecretariaModuloResumo {
+  id: string;
+  nome: string;
+  ordem: number;
+}

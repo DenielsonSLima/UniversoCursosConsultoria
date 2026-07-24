@@ -1,5 +1,19 @@
 import { supabase } from '../../../../lib/supabase';
 
+export type PerfilSetorComunicacao =
+  | 'todos'
+  | 'pedagogico_coordenacao'
+  | 'financeiro'
+  | 'comercial_matriculas'
+  | 'secretaria'
+  | 'atendimento_geral';
+
+export interface PerfilCommunicationScope {
+  sector: PerfilSetorComunicacao;
+  poloId: string | null;
+  canViewAll: boolean;
+}
+
 export interface PerfilAcesso {
   id?: string;
   nome: string;
@@ -9,6 +23,8 @@ export interface PerfilAcesso {
     financeiroTabs?: string[];
     tabs?: Record<string, string[]>;
     allPolos: boolean;
+    poloIds?: string[];
+    communicationScope?: PerfilCommunicationScope;
   };
   restricao_horario: {
     dias: number[];

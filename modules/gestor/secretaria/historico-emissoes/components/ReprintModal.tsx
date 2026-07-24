@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Download, Loader2, Printer, X } from 'lucide-react';
+import { Award, ChevronLeft, ChevronRight, Download, Loader2, Printer, X } from 'lucide-react';
 import { sanitizedHtml } from '../../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../../components/DocumentHeader';
 import CertificadoPreview from '../../certificados/components/CertificadoPreview';
@@ -29,6 +29,16 @@ interface Props {
   onClose: () => void;
   onDownload: () => void;
   onPrint: () => void;
+  heading?: string;
+  subtitle?: string;
+  printLabel?: string;
+  navigationLabel?: string;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  previousDisabled?: boolean;
+  nextDisabled?: boolean;
+  unavailableHeading?: string;
+  unavailableNote?: string;
 }
 
 const ReprintModal: React.FC<Props> = ({
@@ -46,6 +56,16 @@ const ReprintModal: React.FC<Props> = ({
   onClose,
   onDownload,
   onPrint,
+  heading = 'Segunda Via de Documento',
+  subtitle,
+  printLabel = 'Imprimir (Registrar 2ª Via)',
+  navigationLabel,
+  onPrevious,
+  onNext,
+  previousDisabled = false,
+  nextDisabled = false,
+  unavailableHeading = 'Documento indisponível para reemissão',
+  unavailableNote = 'A impressão e o PDF foram bloqueados para evitar um documento acadêmico incompleto.',
 }) => {
   const parseTemplate = (text: string) => parseEmissionTemplate(text, emission, {
     academicData: academicPreviewData,
@@ -61,21 +81,53 @@ const ReprintModal: React.FC<Props> = ({
   const standardPages = parsedTemplateBody
     ? splitTemplatePages(parsedTemplateBody)
     : [null];
+  const hasConfiguredQrCode = Boolean(
+    templateConfig?.absoluteFields?.some((field: any) => field.type === 'qrcode')
+  );
 
   return (
     <div className="fixed inset-0 z-[130] flex animate-fadeIn bg-slate-900/60 backdrop-blur-sm" id="reprint-modal">
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white shadow-2xl animate-slideUp">
         <div className="flex shrink-0 flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
           <div>
-            <h4 className="text-sm font-black uppercase tracking-wide text-[#001a33]">Segunda Via de Documento</h4>
-            <p className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">Visualização do Código: {emission.codigo}</p>
+            <h4 className="text-sm font-black uppercase tracking-wide text-[#001a33]">{heading}</h4>
+            <p className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">
+              {subtitle || `Visualização do Código: ${emission.codigo}`}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {(onPrevious || onNext) && (
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={onPrevious}
+                  disabled={!onPrevious || previousDisabled || isLoading}
+                  aria-label="Documento anterior"
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                {navigationLabel && (
+                  <span className="min-w-16 px-1 text-center text-[9px] font-black uppercase tracking-wider text-slate-500">
+                    {navigationLabel}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={onNext}
+                  disabled={!onNext || nextDisabled || isLoading}
+                  aria-label="Próximo documento"
+                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
             <button onClick={onDownload} disabled={isDownloading || isLoading || isBlocked} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50">
               {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} PDF
             </button>
             <button onClick={onPrint} disabled={isReissuing || isLoading || isBlocked} className="inline-flex items-center gap-1.5 rounded-xl bg-[#001a33] px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors hover:bg-blue-900 disabled:opacity-50">
-              {isReissuing ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} Imprimir (Registrar 2ª Via)
+              {isReissuing ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} {printLabel}
             </button>
             <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"><X size={16} /></button>
           </div>
@@ -92,9 +144,9 @@ const ReprintModal: React.FC<Props> = ({
             {!isLoading && error && (
               <div className="flex min-h-[120mm] w-[210mm] max-w-full flex-col items-center justify-center rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-xl">
                 <Award className="mb-4 text-rose-500" size={38} />
-                <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">Documento indisponível para reemissão</h5>
+                <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">{unavailableHeading}</h5>
                 <p className="mt-3 max-w-md text-xs font-bold leading-relaxed text-slate-500">{error}</p>
-                <p className="mt-2 max-w-md text-[10px] font-semibold text-rose-600">A impressão e o PDF foram bloqueados para evitar um documento acadêmico incompleto.</p>
+                <p className="mt-2 max-w-md text-[10px] font-semibold text-rose-600">{unavailableNote}</p>
               </div>
             )}
 
@@ -176,6 +228,11 @@ const ReprintModal: React.FC<Props> = ({
                         {field.type === 'text' && <span dangerouslySetInnerHTML={sanitizedHtml(parseTemplate(field.value))} className="w-full break-words" />}
                       </div>
                     ))}
+                    {pageIndex === standardPages.length - 1 && !hasConfiguredQrCode && (
+                      <div className="absolute bottom-[16mm] right-[18mm] z-30 w-[24mm]">
+                        <QrCodeField code={emission.codigo} width={76} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

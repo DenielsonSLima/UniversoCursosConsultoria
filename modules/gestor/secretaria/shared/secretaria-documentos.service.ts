@@ -11,8 +11,10 @@ import {
   SecretariaContext,
   SecretariaDocumentoId,
   SecretariaMatriculaResumo,
+  SecretariaModuloResumo,
   SecretariaTurmaResumo,
 } from './secretaria-documentos.types';
+import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
 
 const normalizeSearchTerm = (term: string) =>
   term.trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ');
@@ -212,6 +214,30 @@ export const secretariaDocumentosService = {
     }));
   },
 
+  async getTurmaModulos(turmaId: string): Promise<SecretariaModuloResumo[]> {
+    const { data, error } = await supabase
+      .from('turmas_disciplinas')
+      .select('disciplinas!inner(modulos!inner(id, nome, created_at))')
+      .eq('turma_id', turmaId);
+    if (error) throw error;
+
+    const modulesById = new Map<string, SecretariaModuloResumo>();
+    (data || []).forEach((item: any) => {
+      const modulo = item.disciplinas?.modulos;
+      if (!modulo?.id || modulesById.has(modulo.id)) return;
+      modulesById.set(modulo.id, {
+        id: modulo.id,
+        nome: modulo.nome || 'Módulo',
+        ordem: new Date(modulo.created_at || 0).getTime(),
+      });
+    });
+
+    return [...modulesById.values()].sort((a, b) => {
+      if (a.ordem !== b.ordem) return a.ordem - b.ordem;
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+  },
+
   async registrarEmissao(input: {
     context: SecretariaContext;
     documento: SecretariaDocumentoId;
@@ -226,6 +252,8 @@ export const secretariaDocumentosService = {
     enrollmentStatuses?: string[];
     internshipOnly?: boolean;
     referencePeriod?: string;
+    moduleId?: string;
+    moduleName?: string;
   }) {
     let query = supabase
       .from('matriculas')
@@ -262,7 +290,64 @@ export const secretariaDocumentosService = {
       const eligibleKeys = new Set((estagios || []).map((estagio: any) => `${estagio.aluno_id}:${estagio.turma_id}`));
       matriculas = matriculas.filter((matricula: any) => eligibleKeys.has(`${matricula.aluno_id}:${matricula.turma_id}`));
     }
-    if (!matriculas.length) throw new Error('Nenhum aluno com entrada no estágio foi localizado para emissão do SES.');
+    if (!matriculas.length) {
+      throw new Error('Nenhuma matrícula compatível foi localizada para esta emissão.');
+    }
+
+    if (input.documento === 'termo_estagio') {
+      throw new Error(
+        'O termo de estágio exige concedente, vigência, jornada, plano de atividades e supervisor. '
+        + 'A emissão foi bloqueada porque esses dados ainda não possuem cadastro acadêmico completo.'
+      );
+    }
+
+    if (input.documento === 'rematricula') {
+      throw new Error(
+        'Rematrícula é um processo acadêmico, não uma emissão documental. '
+        + 'A geração isolada de código foi bloqueada até existir um fluxo que efetive e audite a rematrícula.'
+      );
+    }
+
+    const transferDestinationByEnrollment = new Map<string, string>();
+    if (input.documento === 'transferencia') {
+      await Promise.all(matriculas.map(async (matricula: any) => {
+        const { data, error } = await supabase
+          .from('transferencias_academicas')
+          .select('instituicao_destino')
+          .eq('matricula_origem_id', matricula.id)
+          .not('instituicao_destino', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        const destination = String(data?.instituicao_destino || '').trim();
+        if (!destination) {
+          throw new Error(
+            `A transferência de ${matricula.parceiros?.nome || 'o aluno'} ainda não possui instituição de destino registrada.`
+          );
+        }
+        transferDestinationByEnrollment.set(matricula.id, destination);
+      }));
+    }
+
+    const irpfPaymentsByEnrollment = new Map<string, any[]>();
+    if (input.documento === 'declaracao_irpf') {
+      await Promise.all(matriculas.map(async (matricula: any) => {
+        const { data, error } = await supabase.rpc('get_pagamentos_irpf_aluno', {
+          p_aluno_id: matricula.aluno_id,
+          p_ano: input.referencePeriod || '',
+          p_turma_id: matricula.turma_id,
+        });
+        if (error) throw error;
+        const payments = Array.isArray(data) ? data : [];
+        if (!payments.length) {
+          throw new Error(
+            `Não existem pagamentos confirmados para ${matricula.parceiros?.nome || 'o aluno'} no ano selecionado.`
+          );
+        }
+        irpfPaymentsByEnrollment.set(matricula.id, payments);
+      }));
+    }
 
     const shouldIssueValidation = input.documento !== 'cracha_periodo_eleitoral';
     if (!shouldIssueValidation) {
@@ -294,6 +379,102 @@ export const secretariaDocumentosService = {
       : [];
     const issuedAt = records[0]?.issuedAt || new Date().toISOString();
     const expiresAt = records[0]?.expiresAt || null;
+    const codes = records.map((record) => record.code);
+    let emissions: EmissionLog[] = [];
+
+    if (codes.length) {
+      const { data: emissionsData, error: emissionsError } = await supabase
+        .from('documentos_validacao')
+        .select(`
+          *,
+          aluno:parceiros(id, nome, cpf_cnpj, rg, data_nascimento, foto_url),
+          matricula:matriculas(id, status, turma:turmas(id, nome, codigo))
+        `)
+        .in('codigo', codes);
+      if (emissionsError) {
+        console.warn('[SecretariaDocumentos] Snapshot emitido não pôde ser relido; usando os dados já consolidados.', emissionsError);
+      }
+
+      const emissionsByCode = new Map(
+        ((emissionsData || []) as unknown as EmissionLog[]).map((emission) => [emission.codigo, emission])
+      );
+      emissions = codes
+        .map((code, index) => {
+          const matricula: any = matriculas[index];
+          const record = records[index];
+          const persisted = emissionsByCode.get(code);
+          const fallback: EmissionLog = {
+            id: code,
+            identidade: code,
+            codigo: code,
+            documento: input.documento,
+            matricula_id: matricula.id,
+            aluno_id: matricula.aluno_id,
+            polo_id: matricula.turmas?.polo_id || input.context.poloId,
+            periodo_referencia: input.referencePeriod || null,
+            referencia_externa: null,
+            status: 'ATIVO',
+            emitido_em: record?.issuedAt || issuedAt,
+            ultima_emissao_em: record?.lastIssuedAt || record?.issuedAt || issuedAt,
+            validade_ate: record?.expiresAt || null,
+            revogado_em: null,
+            emitido_por: input.context.userId,
+            quantidade_emissoes: record?.issueCount || 1,
+            dados_emissao: {
+              studentName: matricula.parceiros?.nome || '',
+              studentCpf: matricula.parceiros?.cpf_cnpj || '',
+              studentBirthDate: matricula.parceiros?.data_nascimento || '',
+              studentPhotoUrl: matricula.parceiros?.foto_url || null,
+              studentMatricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
+              courseName: matricula.turmas?.cursos?.nome || '',
+              className: matricula.turmas?.nome || '',
+              unitName: matricula.turmas?.polos?.nome || '',
+              enrollmentStatus: matricula.status || '',
+            },
+            aluno: {
+              id: matricula.aluno_id,
+              nome: matricula.parceiros?.nome || '',
+              cpf_cnpj: matricula.parceiros?.cpf_cnpj || '',
+              data_nascimento: matricula.parceiros?.data_nascimento || '',
+              foto_url: matricula.parceiros?.foto_url || null,
+            },
+            matricula: {
+              id: matricula.id,
+              status: matricula.status || '',
+              turma: {
+                id: matricula.turma_id,
+                nome: matricula.turmas?.nome || '',
+                codigo: matricula.turmas?.codigo || '',
+              },
+            },
+          };
+          const emission = persisted || fallback;
+          const payments = irpfPaymentsByEnrollment.get(matricula.id) || [];
+          return {
+            ...emission,
+            dados_emissao: {
+              ...(emission.dados_emissao || {}),
+              ...(input.documento === 'declaracao_irpf'
+                ? {
+                    calendarYear: input.referencePeriod,
+                    irpfTotal: Number(payments[0]?.total_anual_pago || 0),
+                  }
+                : {}),
+              ...(input.documento === 'transferencia'
+                ? {
+                    destinationInstitution: transferDestinationByEnrollment.get(emission.matricula_id),
+                  }
+                : {}),
+              ...(input.documento === 'boletim'
+                ? {
+                    moduleId: input.moduleId,
+                    moduleName: input.moduleName,
+                  }
+                : {}),
+            },
+          };
+        });
+    }
 
     return {
       documento: input.documento,
@@ -301,8 +482,10 @@ export const secretariaDocumentosService = {
       status: 'PREPARADO',
       issuedAt,
       expiresAt,
-      codes: records.map((record) => record.code),
+      codes,
+      emissions,
       items: matriculas.map((matricula: any, index: number) => ({
+        matriculaId: matricula.id,
         alunoId: matricula.aluno_id,
         nome: matricula.parceiros?.nome || '',
         cpf: matricula.parceiros?.cpf_cnpj || '',

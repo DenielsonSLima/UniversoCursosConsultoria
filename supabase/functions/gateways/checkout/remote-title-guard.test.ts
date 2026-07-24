@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  applyReceivableSnapshotFields,
   applyRemoteIdentitySnapshot,
   assertAsaasReceivableCancellationAllowed,
   assertGatewayTitleCanBeReset,
@@ -353,7 +354,8 @@ Deno.test("cancelador Asaas exige identidade legada coerente", () => {
 });
 
 Deno.test("cancelamento local preserva snapshot da identidade remota", () => {
-  const filters: Array<["eq" | "is", string, unknown]> = [];
+  const filters: Array<["eq" | "is" | "filter", string, unknown, unknown?]> =
+    [];
   const query = {
     eq(field: string, value: unknown) {
       filters.push(["eq", field, value]);
@@ -361,6 +363,10 @@ Deno.test("cancelamento local preserva snapshot da identidade remota", () => {
     },
     is(field: string, value: unknown) {
       filters.push(["is", field, value]);
+      return query;
+    },
+    filter(field: string, operator: string, value: unknown) {
+      filters.push(["filter", field, operator, value]);
       return query;
     },
   };
@@ -383,6 +389,55 @@ Deno.test("cancelamento local preserva snapshot da identidade remota", () => {
     ["is", "gateway_boleto_nosso_numero", null],
     ["eq", "asaas_payment_id", "pay_123"],
     ["is", "asaas_payment_link_id", null],
+  ]);
+});
+
+Deno.test("snapshot CAS serializa valores jsonb sem gerar object Object", () => {
+  const filters: Array<["eq" | "is" | "filter", string, unknown, unknown?]> =
+    [];
+  const query = {
+    eq(field: string, value: unknown) {
+      filters.push(["eq", field, value]);
+      return query;
+    },
+    is(field: string, value: unknown) {
+      filters.push(["is", field, value]);
+      return query;
+    },
+    filter(field: string, operator: string, value: unknown) {
+      filters.push(["filter", field, operator, value]);
+      return query;
+    },
+  };
+
+  assert.equal(
+    applyReceivableSnapshotFields(
+      query,
+      {
+        gateway_financial_terms: {
+          nominalAmount: 99.9,
+          dueDate: "2026-07-31",
+        },
+        gateway_creation_token: null,
+        status: "PENDENTE",
+      },
+      [
+        "gateway_financial_terms",
+        "gateway_creation_token",
+        "status",
+      ],
+    ),
+    query,
+  );
+  assert.deepEqual(filters, [
+    [
+      "filter",
+      "gateway_financial_terms",
+      "eq",
+      '{"nominalAmount":99.9,"dueDate":"2026-07-31"}',
+    ],
+    ["is", "gateway_creation_token", null],
+    ["eq", "status", "PENDENTE"],
   ]);
 });
 

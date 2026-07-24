@@ -6,10 +6,10 @@ import FinanceiroConfigEditor from './FinanceiroConfigEditor';
 import FinanceiroConfigSummary from './FinanceiroConfigSummary';
 import TechnicalDataError from '../TechnicalDataError';
 import {
-  buildFinanceiroCronograma,
   CronogramaItem,
   DEFAULT_FINANCEIRO_CONFIG,
   FinanceiroConfigData,
+  financeiroConfigService,
   mapSavedCronograma,
   shouldUseSavedCronograma,
 } from './financeiro-config.service';
@@ -23,12 +23,24 @@ interface FinanceiroConfigProps {
   turma: Turma;
 }
 
+const getPreviewFingerprint = (data: FinanceiroConfigData) => JSON.stringify([
+  data.valorParcela,
+  data.descontoPontualidade,
+  data.jurosAtraso,
+  data.multaAtraso,
+  data.aplicarDescontoMensalidade,
+  data.aplicarMultaJurosMensalidade,
+]);
+
 const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   const { toasts, removeToast, toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [config, setConfig] = useState<FinanceiroConfigData>(DEFAULT_FINANCEIRO_CONFIG);
   const [formData, setFormData] = useState({ ...config });
+  const [calculationFormData, setCalculationFormData] = useState({ ...config });
   const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
+  const [isGeneratingSchedule, setIsGeneratingSchedule] = useState(false);
+  const turmaLabel = [turma.codigo, turma.nome].filter(Boolean).join(' — ');
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -52,18 +64,57 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
     setFormData(configDb);
 
     if (shouldUseSavedCronograma(configDb.cronogramaFinanceiro, configDb.qtdParcelas)) {
+      setIsGeneratingSchedule(false);
       setCronograma(mapSavedCronograma(configDb.cronogramaFinanceiro));
       return;
     }
 
-    setCronograma(buildFinanceiroCronograma(configDb, turma.dataInicio));
-  }, [configDb, turma.dataInicio]);
+    let cancelled = false;
+    setIsGeneratingSchedule(true);
+    void financeiroConfigService.buildSchedule(configDb, turma.dataInicio)
+      .then((schedule) => {
+        if (!cancelled) setCronograma(schedule);
+      })
+      .catch((error: Error) => {
+        if (!cancelled) {
+          setCronograma([]);
+          toast.error('Cronograma indisponível', error.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsGeneratingSchedule(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configDb, toast, turma.dataInicio]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const timer = window.setTimeout(() => {
+      setCalculationFormData(formData);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [formData, isEditing]);
 
   const calculoConfigQuery = useFinanceiroRulesCalculation(configDb || config, false, Boolean(configDb));
-  const calculoFormQuery = useFinanceiroRulesCalculation(formData, true, isEditing);
+  const calculoFormQuery = useFinanceiroRulesCalculation(calculationFormData, true, isEditing);
+  const calculationReady = Boolean(
+    calculoFormQuery.data
+    && !calculoFormQuery.isFetching
+    && getPreviewFingerprint(calculationFormData) === getPreviewFingerprint(formData)
+  );
 
-  const generateCronograma = () => {
-    setCronograma(buildFinanceiroCronograma(formData, turma.dataInicio));
+  const generateCronograma = async (source = formData) => {
+    try {
+      setIsGeneratingSchedule(true);
+      setCronograma(await financeiroConfigService.buildSchedule(source, turma.dataInicio));
+    } catch (error: any) {
+      toast.error('Cronograma não gerado', error?.message || 'Não foi possível calcular as datas no servidor.');
+    } finally {
+      setIsGeneratingSchedule(false);
+    }
   };
 
   const handleSort = () => {
@@ -88,14 +139,22 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
   const handleEdit = () => {
     setIsEditing(true);
     setFormData({ ...config });
-    if (cronograma.length === 0) generateCronograma();
+    setCalculationFormData({ ...config });
+    if (cronograma.length === 0) void generateCronograma(config);
   };
 
   const handleSave = () => {
-    if (configQuery.isError || calculoFormQuery.isError) {
+    if (!formData.instrucaoBoletoCarne.trim()) {
+      toast.error(
+        'Instrução obrigatória',
+        'Informe a orientação que será impressa nos boletos e carnês desta turma.',
+      );
+      return;
+    }
+    if (configQuery.isError || calculoFormQuery.isError || !calculationReady) {
       toast.error(
         'Dados financeiros indisponíveis',
-        'Recarregue as regras financeiras antes de salvar qualquer alteração.',
+        'Aguarde a prévia oficial do servidor antes de salvar qualquer alteração.',
       );
       return;
     }
@@ -133,14 +192,16 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
       <>
         <FinanceiroConfigEditor
           calculo={calculoFormQuery.data}
+          calculationReady={calculationReady}
           cronograma={cronograma}
           formData={formData}
-          isSaving={saveMutation.isPending}
+          isSaving={saveMutation.isPending || isGeneratingSchedule}
+          turmaLabel={turmaLabel}
           onCancel={() => setIsEditing(false)}
           onDragEnd={handleSort}
           onDragEnter={(index) => { dragOverItem.current = index; }}
           onDragStart={(index) => { dragItem.current = index; }}
-          onGenerate={generateCronograma}
+          onGenerate={() => { void generateCronograma(); }}
           onSave={handleSave}
           onUpdateDate={handleUpdateItemDate}
           setFormData={setFormData}
@@ -177,6 +238,7 @@ const FinanceiroConfig: React.FC<FinanceiroConfigProps> = ({ turma }) => {
         config={config}
         cronograma={cronograma}
         onEdit={handleEdit}
+        turmaLabel={turmaLabel}
       />
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </>

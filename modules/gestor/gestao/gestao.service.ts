@@ -42,29 +42,25 @@ export const gestaoService = {
     };
 
     if (sortBy === 'ALUNOS_DESC') {
-      let rankingQuery = applyFilters(
-        supabase
-          .from('turmas')
-          .select('id, nome, cursos!inner(modalidade), matriculas(count)', { count: 'exact' }),
-      );
-      if (filters.modalidade === 'EAD') {
-        rankingQuery = rankingQuery.in('matriculas.status', ['ATIVO', 'CONCLUIDO']);
-      }
-      rankingQuery = rankingQuery.range(0, 9999);
-      const { data: rankingData, count, error: rankingError } = await rankingQuery;
+      const { data: rankingResult, error: rankingError } = await supabase.rpc('rank_gestao_turmas', {
+        p_modalidade: filters.modalidade,
+        p_status: filters.status,
+        p_polo_id: filters.poloId || null,
+        p_search: searchTerm || null,
+        p_data_inicial: filters.dataInicial || null,
+        p_data_final: filters.dataFinal || null,
+        p_offset: from,
+        p_limit: filters.pageSize,
+      });
       if (rankingError) throw rankingError;
 
-      const rankedIds = (rankingData || [])
-        .map((row: any) => ({
-          id: row.id,
-          nome: row.nome || '',
-          alunos: Number(row.matriculas?.[0]?.count || 0),
-        }))
-        .sort((a: any, b: any) => b.alunos - a.alunos || a.nome.localeCompare(b.nome, 'pt-BR'))
-        .slice(from, to + 1)
-        .map((row: any) => row.id);
+      const ranking = (rankingResult || {}) as {
+        data?: Array<{ id: string; alunos: number }>;
+        total?: number;
+      };
+      const rankedIds = (ranking.data || []).map((row) => row.id);
 
-      if (rankedIds.length === 0) return { data: [], total: count || 0 };
+      if (rankedIds.length === 0) return { data: [], total: Number(ranking.total || 0) };
 
       const { data: pageData, error: pageError } = await supabase
         .from('turmas')
@@ -81,7 +77,7 @@ export const gestaoService = {
       const enriched = filters.modalidade === 'TECNICO'
         ? await enrichTechnicalAcademicProgress(mapped)
         : mapped;
-      return { data: enriched, total: count || 0 };
+      return { data: enriched, total: Number(ranking.total || 0) };
     }
 
     let query = applyFilters(
@@ -127,6 +123,22 @@ export const gestaoService = {
     }
 
     return (data || []).map(mapTurma);
+  },
+
+  async getActivePresentialClasses(poloId?: string): Promise<Turma[]> {
+    let query = supabase
+      .from('turmas')
+      .select(TURMA_PAGE_SELECT)
+      .in('cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
+      .eq('status', 'EM_ANDAMENTO')
+      .order('nome', { ascending: true });
+
+    if (poloId) query = query.eq('polo_id', poloId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return enrichTechnicalAcademicProgress((data || []).map(mapTurma));
   },
 
   async createTurma(turma: Omit<Turma, 'id' | 'alunosMatriculados'>): Promise<Turma> {
@@ -334,7 +346,7 @@ export const gestaoService = {
   async getCursosByModalidade(modalidade: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('cursos')
-      .select('*')
+      .select('id, nome, modalidade')
       .eq('modalidade', modalidade)
       .eq('status', 'ativo')
       .order('nome', { ascending: true });
@@ -364,6 +376,7 @@ export const gestaoService = {
       aplicarDescontoRematricula?: boolean;
       aplicarMultaJurosRematricula?: boolean;
       diaVencimentoPadrao: number;
+      instrucaoBoletoCarne: string;
       cronogramaFinanceiro: any[];
     }
   ): Promise<void> {
@@ -384,6 +397,7 @@ export const gestaoService = {
         aplicar_desconto_rematricula: config.aplicarDescontoRematricula !== false,
         aplicar_multa_juros_rematricula: config.aplicarMultaJurosRematricula !== false,
         dia_vencimento_padrao: config.diaVencimentoPadrao,
+        instrucao_boleto_carne: config.instrucaoBoletoCarne.trim(),
         cronograma_financeiro: config.cronogramaFinanceiro
       })
       .eq('id', id);

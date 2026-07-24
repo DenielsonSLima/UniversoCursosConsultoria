@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { bearerTokenFromRequest, requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";

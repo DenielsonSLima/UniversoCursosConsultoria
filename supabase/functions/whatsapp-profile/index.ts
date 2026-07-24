@@ -1,7 +1,7 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireGestorAtivo, requireGestorGlobal, requireGestorTab } from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
+import { getWhatsAppMetaContext as getMetaContext } from "../_shared/whatsapp-connection.ts";
 
 type BusinessProfile = {
   about?: string;
@@ -25,11 +25,6 @@ const normalizeVertical = (value: unknown) => {
   const vertical = trim(value).toUpperCase();
   // Although Meta lists UNDEFINED in some responses, the profile update endpoint rejects it.
   return vertical && vertical !== "UNDEFINED" && allowedVerticals.has(vertical) ? vertical : "EDU";
-};
-
-const normalizeGraphVersion = (value: unknown) => {
-  const version = trim(value) || "v23.0";
-  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
 };
 
 const normalizeProfile = (profile: any): BusinessProfile => ({
@@ -58,34 +53,6 @@ const metaFetch = async (url: string, accessToken: string, init: RequestInit = {
     throw new Error(payload?.error?.message || "Falha ao comunicar com a Meta.");
   }
   return payload;
-};
-
-const getMetaContext = async (admin: any) => {
-  const { data: config, error: configError } = await admin
-    .from("mensageria_config")
-    .select("wa_phone_number_id, wa_graph_version, wa_app_id")
-    .eq("tipo", "whatsapp")
-    .maybeSingle();
-  if (configError) throw configError;
-
-  const { data: accessTokenSecret, error: secretError } = await admin.rpc(
-    "whatsapp_get_secret",
-    { p_secret_name: "whatsapp_meta_access_token" },
-  );
-  if (secretError) throw secretError;
-
-  const accessToken = trim(accessTokenSecret);
-  const phoneNumberId = trim(config?.wa_phone_number_id);
-  if (!accessToken || !phoneNumberId) {
-    throw new Error("API WhatsApp nao configurada para editar perfil.");
-  }
-
-  return {
-    accessToken,
-    phoneNumberId,
-    appId: trim(config?.wa_app_id),
-    graphVersion: normalizeGraphVersion(config?.wa_graph_version),
-  };
 };
 
 const readProfileFromMeta = async (context: Awaited<ReturnType<typeof getMetaContext>>) => {
@@ -192,12 +159,19 @@ Deno.serve(async (req: Request) => {
     requireGestorGlobal(gestor);
 
     const body = await req.json();
-    const context = await getMetaContext(admin);
+    const connectionId = trim(body?.conexaoId || body?.connectionId);
+    if (!connectionId) throw new Error("Selecione a linha do perfil WhatsApp.");
+    const context = await getMetaContext(admin, connectionId);
 
     if (body?.action === "save") {
       const savedProfile = await saveProfileToMeta(context, body.profile || {}, body.photo || null);
       try {
         const profile = await readProfileFromMeta(context);
+        await admin.from("whatsapp_conexoes").update({
+          business_profile_cache: profile,
+          profile_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", connectionId);
         return respondJson({ ok: true, profile });
       } catch (readError) {
         // Saving and reading the profile use different Meta permissions. Do not report a
@@ -215,6 +189,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const profile = await readProfileFromMeta(context);
+    await admin.from("whatsapp_conexoes").update({
+      business_profile_cache: profile,
+      profile_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", connectionId);
     return respondJson({ ok: true, profile });
   } catch (error) {
     console.error("whatsapp-profile error:", error);

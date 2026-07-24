@@ -77,7 +77,7 @@ export const academicLifecycleService = {
   async getPeriodos(turmaId: string): Promise<AcademicPeriod[]> {
     const { data, error } = await supabase
       .from('periodos_letivos')
-      .select('*')
+      .select('id, turma_id, modulo_id, nome, ordem, data_inicio, data_fim, status, fechado_em, reaberto_em')
       .eq('turma_id', turmaId)
       .order('ordem');
     if (error) throw error;

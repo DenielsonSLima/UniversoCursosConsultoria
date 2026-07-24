@@ -11,6 +11,10 @@ import type {
   GatewayPaymentMethod,
   GatewayProviderCode,
 } from "./router-adapter-runtime.ts";
+import { createPixGatewayCharge } from "./pix/index.ts";
+import { createBoletoGatewayCharge } from "./boleto/index.ts";
+import { createCardGatewayCharge } from "./cartao/index.ts";
+import { recoverAsaasCharge } from "../asaas/core/adapter.ts";
 
 export {
   assertGatewayChargeAdapterReady,
@@ -35,7 +39,6 @@ export const createGatewayCharge = async (
   const hydratedInput = await withProviderMetadata(input);
 
   if (hydratedInput.paymentMethod === "PIX") {
-    const { createPixGatewayCharge } = await import("./pix/index.ts");
     const result = await createPixGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
       normalizeGatewayAdapterResult(hydratedInput.providerCode, "PIX", result),
@@ -44,7 +47,6 @@ export const createGatewayCharge = async (
   }
 
   if (hydratedInput.paymentMethod === "BOLETO") {
-    const { createBoletoGatewayCharge } = await import("./boleto/index.ts");
     const result = await createBoletoGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
       normalizeGatewayAdapterResult(
@@ -57,7 +59,6 @@ export const createGatewayCharge = async (
   }
 
   if (hydratedInput.paymentMethod === "CREDIT_CARD") {
-    const { createCardGatewayCharge } = await import("./cartao/index.ts");
     const result = await createCardGatewayCharge(hydratedInput);
     return withIssuerSnapshot(
       normalizeGatewayAdapterResult(
@@ -81,7 +82,6 @@ export const recoverGatewayCharge = async (
     );
   }
   const hydratedInput = await withProviderMetadata(input);
-  const { recoverAsaasCharge } = await import("../asaas/core/adapter.ts");
   const result = await recoverAsaasCharge({
     ...hydratedInput,
     environment: hydratedInput.environment,

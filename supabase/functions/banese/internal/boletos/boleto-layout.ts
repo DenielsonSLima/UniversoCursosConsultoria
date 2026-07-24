@@ -183,13 +183,19 @@ export const drawBaneseBoletoSlip = async (
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
   instructions.slice(0, 5).forEach((instruction, index) => {
+    const isCashierWarning = /CAIXA/i.test(instruction);
     drawText(
       page,
       fonts,
       instruction,
       box.x + 8,
       y + detailsHeight - 22 - index * 10,
-      { size: 7, maxWidth: instructionsWidth - 16 },
+      {
+        size: 7,
+        bold: isCashierWarning,
+        color: isCashierWarning ? COLORS.sandbox : COLORS.black,
+        maxWidth: instructionsWidth - 16,
+      },
     );
   });
   if (

@@ -180,7 +180,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
 
   const receivableActions: ReceivableActionsContext = {
     baneseDetailsPending: operations.baneseDetailsMutation.isPending,
-    baneseDetailsReceivableId: operations.baneseDetailsMutation.variables,
+    baneseDetailsReceivableId: operations.baneseDetailsMutation.variables?.receivableId,
     refreshPending: operations.refreshMutation.isPending,
     syncPending: operations.syncMutation.isPending,
     onOpenPayment: operations.openPayment,

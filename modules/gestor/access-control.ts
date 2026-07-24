@@ -146,7 +146,10 @@ export const getEffectiveFinanceiroTabs = (
     if (scopedTabs.includes('receber') && legacyTabs.includes('receber')) {
       return scopedTabs.includes('conciliacao-bancaria')
         ? scopedTabs
-        : [...new Set([...scopedTabs, 'conciliacao-bancaria'])];
+        : [...new Set<FinanceiroTabId>([
+            ...scopedTabs,
+            'conciliacao-bancaria',
+          ])];
     }
 
     return scopedTabs;

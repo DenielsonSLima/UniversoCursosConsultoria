@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check, Clock, Info, Loader2, ShieldAlert } from 'lucide-react';
+import { Building2, Check, Clock, Headphones, Info, Loader2, ShieldAlert } from 'lucide-react';
+import { PerfilSetorComunicacao } from './perfis-acesso.service';
 
 const DAYS_OF_WEEK = [
   { value: 1, label: 'Segunda-feira' },
@@ -52,7 +53,7 @@ const SECRETARIA_TABS = [
   { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
   { id: 'declaracoes', label: 'Declaração de Matrícula' },
   { id: 'historico', label: 'Histórico de Emissões' },
-  { id: 'recebimentos', label: 'Recebimentos / Baixa' }
+  { id: 'recebimentos', label: 'Financeiro / Recebimentos' }
 ];
 
 const COMUNICACAO_TABS = [
@@ -70,14 +71,30 @@ interface PerfilAcessoFormProps {
   diasHorario: number[];
   horarioInicio: string;
   horarioFim: string;
+  polos: Array<{
+    id: string;
+    nomeFantasia: string;
+    cidade: string;
+    uf: string;
+  }>;
+  todosPolos: boolean;
+  polosAcesso: string[];
+  setorComunicacao: PerfilSetorComunicacao;
+  poloComunicacaoId: string | null;
+  podeVisualizarTodosSetores: boolean;
   isSaving: boolean;
   setNome: (value: string) => void;
   setDescricao: (value: string) => void;
+  setTodosPolos: (value: boolean) => void;
+  setSetorComunicacao: (value: PerfilSetorComunicacao) => void;
+  setPoloComunicacaoId: (value: string | null) => void;
+  setPodeVisualizarTodosSetores: (value: boolean) => void;
   setHorarioAtivo: (value: boolean) => void;
   setHorarioInicio: (value: string) => void;
   setHorarioFim: (value: string) => void;
   onToggleModule: (moduleId: string) => void;
   onToggleTab: (moduleId: string, tabId: string) => void;
+  onTogglePolo: (poloId: string) => void;
   onToggleDay: (day: number) => void;
   onClose: () => void;
   onSubmit: (event: React.FormEvent) => void;
@@ -93,14 +110,25 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
   diasHorario,
   horarioInicio,
   horarioFim,
+  polos,
+  todosPolos,
+  polosAcesso,
+  setorComunicacao,
+  poloComunicacaoId,
+  podeVisualizarTodosSetores,
   isSaving,
   setNome,
   setDescricao,
+  setTodosPolos,
+  setSetorComunicacao,
+  setPoloComunicacaoId,
+  setPodeVisualizarTodosSetores,
   setHorarioAtivo,
   setHorarioInicio,
   setHorarioFim,
   onToggleModule: toggleModule,
   onToggleTab: toggleTab,
+  onTogglePolo: togglePolo,
   onToggleDay: toggleDay,
   onClose: handleCloseForm,
   onSubmit: handleSave,
@@ -167,6 +195,73 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
                 );
               })}
             </div>
+          </div>
+
+          {/* ESCOPO DE POLOS */}
+          <div className="space-y-5">
+            <div className="border-b border-slate-100 pb-3">
+              <h4 className="flex items-center gap-2 text-base font-bold text-[#001a33]">
+                <Building2 size={18} className="text-blue-600" />
+                Polos permitidos
+              </h4>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                O usuário herda estas unidades ao receber o perfil.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setTodosPolos(!todosPolos)}
+              className={`flex w-full items-center justify-between rounded-2xl border px-5 py-4 text-left transition-colors ${
+                todosPolos
+                  ? 'border-blue-300 bg-blue-50 text-blue-950'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200'
+              }`}
+            >
+              <span>
+                <span className="block text-sm font-bold">Todos os polos</span>
+                <span className="mt-1 block text-xs font-medium text-slate-500">
+                  Use somente para funções com atuação multiunidade.
+                </span>
+              </span>
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                todosPolos ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white'
+              }`}>
+                {todosPolos && <Check size={13} strokeWidth={3} />}
+              </span>
+            </button>
+
+            {!todosPolos && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {polos.map((polo) => {
+                  const selected = polosAcesso.includes(polo.id);
+                  return (
+                    <button
+                      key={polo.id}
+                      type="button"
+                      onClick={() => togglePolo(polo.id)}
+                      className={`flex min-h-20 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${
+                        selected
+                          ? 'border-blue-400 bg-blue-50 text-blue-950'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'
+                      }`}
+                    >
+                      <span>
+                        <span className="block text-sm font-bold">{polo.nomeFantasia}</span>
+                        <span className="mt-1 block text-xs font-medium text-slate-500">
+                          {polo.cidade}/{polo.uf}
+                        </span>
+                      </span>
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                        selected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-300'
+                      }`}>
+                        {selected && <Check size={13} strokeWidth={3} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* CONTROLE DE ABAS INTERNAS */}
@@ -271,6 +366,81 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
               </div>
             </div>
           )}
+
+          {selectedModules.includes('comunicacao')
+            && (selectedTabs.comunicacao || []).includes('comunicacao-whatsapp')
+            && (
+              <div className="space-y-5">
+                <div className="border-b border-slate-100 pb-3">
+                  <h4 className="flex items-center gap-2 text-base font-bold text-[#001a33]">
+                    <Headphones size={18} className="text-emerald-600" />
+                    Escopo padrão do WhatsApp
+                  </h4>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    Define quais conversas o usuário poderá visualizar ao herdar este perfil.
+                  </p>
+                </div>
+
+                <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5">
+                  <span>
+                    <span className="block text-sm font-bold text-emerald-950">Gestor de todos os atendimentos</span>
+                    <span className="mt-1 block text-xs font-medium leading-relaxed text-emerald-700">
+                      Visualiza conversas de todos os polos e setores.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={podeVisualizarTodosSetores}
+                    onChange={(event) => setPodeVisualizarTodosSetores(event.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </label>
+
+                {!podeVisualizarTodosSetores && (
+                  <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 md:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                        <Headphones size={14} /> Setor permitido
+                      </span>
+                      <select
+                        value={setorComunicacao}
+                        onChange={(event) => setSetorComunicacao(event.target.value as PerfilSetorComunicacao)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
+                      >
+                        <option value="todos">Todos os setores do polo</option>
+                        <option value="comercial_matriculas">Comercial / Matrículas</option>
+                        <option value="secretaria">Secretaria</option>
+                        <option value="financeiro">Financeiro</option>
+                        <option value="pedagogico_coordenacao">Coordenação / Pedagógico</option>
+                        <option value="atendimento_geral">Atendimento geral</option>
+                      </select>
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                        <Building2 size={14} /> Polo do atendimento
+                      </span>
+                      <select
+                        value={poloComunicacaoId || ''}
+                        onChange={(event) => setPoloComunicacaoId(event.target.value || null)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
+                      >
+                        <option value="">Selecione o polo</option>
+                        {polos.map((polo) => (
+                          <option key={polo.id} value={polo.id}>
+                            {polo.nomeFantasia} — {polo.cidade}/{polo.uf}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <p className="text-xs font-medium leading-relaxed text-slate-500 md:col-span-2">
+                      A restrição é aplicada no banco: mensagens de outro polo ou setor não aparecem para o usuário.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
           {/* RESTRIÇÃO DE HORÁRIOS */}
           <div className="space-y-6">

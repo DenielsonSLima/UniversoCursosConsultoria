@@ -2,6 +2,37 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.6.0-beta.1] - 2026-07-24
+
+### Adicionado
+
+- Integração Banese por ambiente para emissão de boleto, consulta, cancelamento seguro e montagem privada de boleto e carnê.
+- Secretaria Financeira modular com operações individual, em lote e personalizada, agrupadas por aluno, matrícula e curso.
+- Instrumentos avaliativos persistentes, resultados acadêmicos canônicos e exportação modular dos diários.
+- Atendimento WhatsApp com múltiplas linhas, roteamento, editor de fluxo e agente de suporte a cursos.
+- Prévia acadêmica compartilhada para documentos emitidos pela Secretaria.
+
+### Alterado
+
+- Novas cobranças passam a usar Banese para boleto/Pix e Mercado Pago para cartão; Asaas e Banco Inter ficam restritos ao histórico.
+- Abertura do boleto pelo gestor ocorre em nova aba e utiliza o PDF montado pelo sistema.
+- Financeiro, Caixa, Secretaria e Gestão compartilham consultas protegidas, invalidação TanStack Query e atualização Realtime.
+- A página de recebimentos da Secretaria e os diários foram divididos em componentes, hooks, tipos, serviços e utilitários menores.
+
+### Corrigido
+
+- Baixa manual Banese passou a validar conta canônica, idempotência, identidade do título e confirmação do cancelamento remoto antes da baixa local.
+- Secretaria e Financeiro deixaram de divergir sobre cobranças em aberto.
+- Notas não lançadas permanecem nulas e o fechamento considera somente instrumentos ativos.
+- Webhooks legados preservam ownership, estados terminais e causa original de falhas para auditoria.
+
+### Segurança
+
+- Cálculos financeiros e validações de recebimento permanecem exclusivamente no backend.
+- Consultas financeiras, documentos, resultados acadêmicos e linhas do WhatsApp respeitam permissões e escopo de empresa/polo.
+- Pix Banese permanece bloqueado em homologação e CNAB240 exige código EDI7 real.
+- PDFs bancários são entregues por rota privada e credenciais não são expostas no frontend ou no repositório.
+
 ## [0.5.0-beta.1] - 2026-07-19
 
 ### Adicionado

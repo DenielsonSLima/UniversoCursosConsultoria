@@ -213,17 +213,12 @@ export const isCredentialConfiguredForRoute = async (
       String(credential?.metadata?.banesePixHomologacaoDisponivel || "")
         .toLowerCase() === "true";
     if (environment !== "production") {
-      let crtAccessToken: string | null = null;
-      try {
-        crtAccessToken = await getGatewaySecret(
-          admin,
-          providerCode,
-          environment,
-          "crt_access_token",
-        );
-      } catch {
-        crtAccessToken = null;
-      }
+      const crtAccessToken = await getGatewaySecret(
+        admin,
+        providerCode,
+        environment,
+        "crt_access_token",
+      ).catch(() => null);
       const hasConfiguredCrtToken = Boolean(
         crtAccessToken ||
         credential?.metadata?.baneseCrtAccessTokenConfigured === true ||

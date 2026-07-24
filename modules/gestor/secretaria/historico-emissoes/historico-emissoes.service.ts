@@ -188,7 +188,12 @@ export const historicoEmissoesService = {
 
   async loadPreview(emission: EmissionLog, fallbackPoloId: string): Promise<PreviewResources> {
     const poloId = emission.polo_id || fallbackPoloId;
-    const needsAcademic = ['historico_escolar', 'transferencia'].includes(emission.documento);
+    const needsAcademic = [
+      'boletim',
+      'atestado_conclusao_tecnico',
+      'historico_escolar',
+      'transferencia',
+    ].includes(emission.documento);
     const academicPreviewPromise = needsAcademic
       ? loadAcademicPreview(emission)
       : Promise.resolve(null);

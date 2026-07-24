@@ -80,6 +80,7 @@ export const createManualSettlementRepository = (
     const { data, error } = await admin
       .from("receivable_manual_settlements")
       .update({
+        state: attempt.state === "FAILED_SAFE" ? "STARTED" : attempt.state,
         lease_token: leaseToken,
         lease_expires_at: leaseExpiresAt,
         last_error: null,
@@ -133,6 +134,30 @@ export const createManualSettlementRepository = (
     if (!data) {
       throw new Error(
         "Falha ao preservar a revisão obrigatória da baixa manual.",
+      );
+    }
+  },
+
+  async markSafeFailure(attemptId, leaseToken, errorMessage) {
+    const { data, error } = await admin
+      .from("receivable_manual_settlements")
+      .update({
+        state: "FAILED_SAFE",
+        review_required_at: null,
+        lease_token: null,
+        lease_expires_at: null,
+        last_error: errorMessage.slice(0, 1000),
+      })
+      .eq("id", attemptId)
+      .eq("lease_token", leaseToken)
+      .eq("state", "STARTED")
+      .is("remote_canceled_at", null)
+      .select("id")
+      .maybeSingle();
+    throwIfError(error);
+    if (!data) {
+      throw new Error(
+        "Falha ao registrar que a baixa foi interrompida antes do cancelamento bancário.",
       );
     }
   },

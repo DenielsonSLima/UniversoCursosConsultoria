@@ -75,6 +75,8 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     icon: Landmark,
     accent: 'text-amber-700',
     softAccent: 'bg-amber-50',
+    technicalOnly: true,
+    allowBatch: false,
     referenceMode: 'irpf_annual',
   },
   historicoEscolar: {
@@ -101,6 +103,7 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     technicalOnly: true,
     activeEnrollmentOnly: true,
     activeTurmaOnly: true,
+    internshipOnly: true,
   },
   crachaPeriodoEleitoral: {
     id: 'cracha_periodo_eleitoral',
@@ -141,6 +144,7 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     technicalOnly: true,
     activeEnrollmentOnly: true,
     activeTurmaOnly: true,
+    internshipOnly: true,
   },
   transferencia: {
     id: 'transferencia',

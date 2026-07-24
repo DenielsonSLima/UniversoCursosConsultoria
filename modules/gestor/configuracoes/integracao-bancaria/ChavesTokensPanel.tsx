@@ -151,7 +151,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
   testConnection,
 }) => {
   const brand = PROVIDER_BRANDS[credentialProviderCode];
-  const webhookAvailable = credentialProviderCode !== 'banco_inter';
+  const webhookAvailable = credentialProviderCode === 'mercado_pago';
   const webhookUrl = webhookAvailable
     ? editCredential?.webhookUrl || overview?.webhookUrls?.[credentialProviderCode] || ''
     : '';
@@ -166,10 +166,10 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
           Mercado Pago e Banese ficam cadastrados uma vez por ambiente. A modalidade só escolhe qual banco usar.
         </InfoCard>
         <InfoCard icon={ServerCog} title="Sandbox e produção" tone={keysEnvironment === 'production' ? 'emerald' : 'amber'}>
-          Cada ambiente tem tokens próprios, webhook próprio e status próprio para evitar mistura de teste com cobrança real.
+          Cada ambiente tem credenciais e status próprios para evitar mistura de teste com cobrança real.
         </InfoCard>
-        <InfoCard icon={LinkIcon} title="Webhook individual">
-          Cada adaptador homologado recebe sua URL de retorno. Provedores ainda bloqueados não anunciam callback antes de existir um consumidor seguro.
+        <InfoCard icon={LinkIcon} title="Retorno por provedor">
+          Cobrança Banese usa consulta a PagamentosEfetivados; Mercado Pago só terá webhook depois da homologação completa.
         </InfoCard>
       </div>
 
@@ -201,7 +201,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
 
       <EnvironmentBanner
         environment={keysEnvironment}
-        title="Chaves, tokens e webhooks"
+        title="Chaves, tokens e retornos"
       />
 
       {credentialProviderCode === 'banco_inter' && (
@@ -545,7 +545,7 @@ const ChavesTokensPanel: React.FC<ChavesTokensPanelProps> = ({
                 Baixa e Liquidação Automática Banese
               </p>
               <p className="mt-1.5 text-xs font-semibold leading-relaxed text-emerald-950">
-                Conforme informado pelo banco, o Banese não utiliza Webhooks para notificações ativas de cobrança bancária. As liquidações são confirmadas automaticamente através da consulta diária à API de pagamentos efetivados e pelo arquivo de retorno CNAB240 (VAN EDI7).
+                Conforme informado pelo banco, o Banese não utiliza Webhooks para cobrança. A presença em PagamentosEfetivados é a confirmação canônica e prevalece sobre o código de situação; o CNAB240 chega depois pela VAN EDI7 em produção.
               </p>
             </div>
           ) : (

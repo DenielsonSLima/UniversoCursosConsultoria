@@ -1,6 +1,6 @@
 // File: modules/gestor/financeiro/resumo/ResumoTab.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Users, AlertTriangle } from 'lucide-react';
 import { financeiroService } from '../financeiro.service';
@@ -14,7 +14,13 @@ interface ResumoTabProps {
 
 const ResumoTab: React.FC<ResumoTabProps> = ({ poloId }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   useFinanceiroRealtime(poloId);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   // Fetch KPIs
   const { data: kpis, isLoading: isKpisLoading } = useQuery({
@@ -24,9 +30,10 @@ const ResumoTab: React.FC<ResumoTabProps> = ({ poloId }) => {
 
   // Fetch / Search student receivables
   const { data: receivables = [], isLoading: isSearchLoading } = useQuery({
-    queryKey: financeiroQueryKeys.alunoReceivablesSearch(searchTerm, poloId),
-    queryFn: () => financeiroService.searchAlunoReceivables(searchTerm, poloId || undefined),
-    enabled: searchTerm.trim().length >= 2
+    queryKey: financeiroQueryKeys.alunoReceivablesSearch(debouncedSearch, poloId),
+    queryFn: () => financeiroService.searchAlunoReceivables(debouncedSearch, poloId || undefined),
+    enabled: debouncedSearch.length >= 2,
+    staleTime: 60_000,
   });
 
   const formatCurrency = (value: number) => {

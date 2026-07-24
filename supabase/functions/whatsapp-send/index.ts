@@ -1,6 +1,9 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
+import {
+  requireGestorAtivo,
+  requireGestorForWhatsAppRoute,
+  requireGestorTab,
+} from "../_shared/authz.ts";
 import {
   buildCorsHeaders,
   getClientIp,
@@ -13,11 +16,7 @@ import {
   phoneBelongsToAluno,
   upsertWhatsAppConversation,
 } from "../_shared/whatsapp.ts";
-
-const normalizeGraphVersion = (value: unknown) => {
-  const version = String(value || "v23.0").trim();
-  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
-};
+import { getWhatsAppMetaContext } from "../_shared/whatsapp-connection.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -45,10 +44,13 @@ Deno.serve(async (req: Request) => {
     requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
 
     const body = await req.json();
+    const connectionId = String(body.conexaoId || body.connectionId || "")
+      .trim();
     const alunoId = String(body.alunoId || "").trim();
     const to = normalizeWhatsAppPhone(body.to);
     const message = String(body.message || "").trim();
 
+    if (!connectionId) throw new Error("Selecione a linha que enviará a mensagem.");
     if (!alunoId) throw new Error("Aluno obrigatorio para iniciar conversa WhatsApp.");
     if (!to) throw new Error("Telefone/WhatsApp do aluno invalido.");
     if (!message) throw new Error("Mensagem obrigatoria para envio WhatsApp.");
@@ -56,7 +58,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: aluno, error: alunoError } = await admin
       .from("parceiros")
-      .select("id, nome, tipo, telefone")
+      .select("id, nome, tipo, telefone, polo_id")
       .eq("id", alunoId)
       .eq("tipo", "Aluno")
       .maybeSingle();
@@ -68,33 +70,26 @@ Deno.serve(async (req: Request) => {
       throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
     }
 
-    const { data: config, error: configError } = await admin
-      .from("mensageria_config")
-      .select("wa_enabled, wa_status, wa_phone_number_id, wa_graph_version")
-      .eq("tipo", "whatsapp")
+    const { data: currentConversation, error: conversationError } = await admin
+      .from("whatsapp_conversas")
+      .select("setor,polo_id")
+      .eq("conexao_id", connectionId)
+      .eq("telefone", to)
       .maybeSingle();
-    if (configError) throw configError;
-
-    const { data: accessTokenSecret, error: secretError } = await admin.rpc(
-      "whatsapp_get_secret",
-      { p_secret_name: "whatsapp_meta_access_token" },
+    if (conversationError) throw conversationError;
+    requireGestorForWhatsAppRoute(
+      gestor,
+      currentConversation?.setor || "atendimento_geral",
+      currentConversation?.polo_id || aluno.polo_id || null,
     );
-    if (secretError) throw secretError;
 
-    const enabled = config?.wa_enabled === true && config?.wa_status === "configurado";
-    const accessToken = String(accessTokenSecret || "").trim();
-    const phoneNumberId = String(config?.wa_phone_number_id || "").trim();
-    if (!enabled || !accessToken || !phoneNumberId) {
-      throw new Error("API WhatsApp nao configurada ou token ausente.");
-    }
-
-    const graphVersion = normalizeGraphVersion(config?.wa_graph_version);
+    const meta = await getWhatsAppMetaContext(admin, connectionId);
     const metaResponse = await fetch(
-      `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
+      `https://graph.facebook.com/${meta.graphVersion}/${meta.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${meta.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -117,6 +112,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const conversation = await upsertWhatsAppConversation(admin, {
+      connectionId,
       phone: to,
       aluno,
       lastText: message,

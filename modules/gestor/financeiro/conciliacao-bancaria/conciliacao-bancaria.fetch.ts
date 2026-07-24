@@ -2,9 +2,6 @@ import { supabase } from '../../../../lib/supabase';
 import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import {
   BaneseSyncSummary,
-  BaneseTransactionAuditRow,
-  buildApiSyncSummary,
-  buildCnab240SyncSummary,
   EMPTY_API_SYNC_SUMMARY,
   getMaceioDateKey,
 } from './conciliacao-bancaria.utils';
@@ -122,24 +119,10 @@ export const fetchConciliacaoData = async (
     .order('updated_at', { ascending: false })
     .limit(20);
 
-  const apiSyncHistoryQuery = supabase
-    .from('payment_gateway_transactions')
-    .select('id, created_at, updated_at, last_error')
-    .eq('provider_code', 'banese_card')
-    .eq('environment', environment)
-    .eq('payment_method', 'BOLETO')
-    .not('raw_payload->reconciliation', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(5000);
-
-  const cnabSyncHistoryQuery = supabase
-    .from('payment_gateway_cnab_files')
-    .select('id, created_at, updated_at, imported_at, processed_at, status, processing_summary')
-    .eq('provider_code', 'banese_card')
-    .eq('environment', environment)
-    .eq('direction', 'RETORNO')
-    .order('created_at', { ascending: false })
-    .limit(5000);
+  const syncSummaryQuery = supabase.rpc(
+    'get_banese_reconciliation_sync_summary_secure',
+    { p_environment: environment },
+  );
 
   const [
     listResult,
@@ -147,16 +130,14 @@ export const fetchConciliacaoData = async (
     paidTodayCountResult,
     errorCountResult,
     transactionsResult,
-    apiSyncHistoryResult,
-    cnabSyncHistoryResult,
+    syncSummaryResult,
   ] = await Promise.all([
     listQuery,
     pendingCountQuery,
     paidTodayCountQuery,
     errorCountQuery,
     transactionsQuery,
-    apiSyncHistoryQuery,
-    cnabSyncHistoryQuery,
+    syncSummaryQuery,
   ]);
 
   if (listResult.error) throw listResult.error;
@@ -164,8 +145,7 @@ export const fetchConciliacaoData = async (
   if (paidTodayCountResult.error) throw paidTodayCountResult.error;
   if (errorCountResult.error) throw errorCountResult.error;
   if (transactionsResult.error) throw transactionsResult.error;
-  if (apiSyncHistoryResult.error) throw apiSyncHistoryResult.error;
-  if (cnabSyncHistoryResult.error) throw cnabSyncHistoryResult.error;
+  if (syncSummaryResult.error) throw syncSummaryResult.error;
 
   const receivables: BaneseReceivable[] = (listResult.data || []).map((row: any) => {
     const status = normalizeString(row.status).toUpperCase();
@@ -216,24 +196,11 @@ export const fetchConciliacaoData = async (
     apiSync: { ...EMPTY_API_SYNC_SUMMARY },
     cnab240Sync: { ...EMPTY_API_SYNC_SUMMARY },
   };
-  const apiSyncHistory = (apiSyncHistoryResult.data || []).map((row: any): BaneseTransactionAuditRow => ({
-    createdAt: typeof row.created_at === 'string' ? row.created_at : null,
-    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
-    lastError: typeof row.last_error === 'string' ? row.last_error : null,
-  }));
-  const cnabSyncHistory = (cnabSyncHistoryResult.data || []).map((row: any): BaneseTransactionAuditRow => ({
-    createdAt: typeof row.imported_at === 'string'
-      ? row.imported_at
-      : typeof row.created_at === 'string' ? row.created_at : null,
-    updatedAt: typeof row.processed_at === 'string'
-      ? row.processed_at
-      : typeof row.updated_at === 'string' ? row.updated_at : null,
-    lastError: row.status === 'REJECTED' || row.status === 'PARTIAL'
-      ? String(row.processing_summary?.error || row.status)
-      : null,
-  }));
-  const apiSync = buildApiSyncSummary(apiSyncHistory);
-  const cnab240Sync = buildCnab240SyncSummary(cnabSyncHistory);
+  const syncPayload = syncSummaryResult.data && typeof syncSummaryResult.data === 'object'
+    ? syncSummaryResult.data as Record<string, BaneseSyncSummary>
+    : {};
+  const apiSync = syncPayload.apiSync || { ...EMPTY_API_SYNC_SUMMARY };
+  const cnab240Sync = syncPayload.cnab240Sync || { ...EMPTY_API_SYNC_SUMMARY };
 
   return {
     receivables,

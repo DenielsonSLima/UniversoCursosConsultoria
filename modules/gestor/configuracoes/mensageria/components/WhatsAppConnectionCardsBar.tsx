@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, CheckCircle2, AlertCircle, Building2, CreditCard } from 'lucide-react';
+import { Smartphone, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
 import { WhatsAppConexao } from '../../../comunicacao/components/whatsapp/whatsapp.types';
 
 interface WhatsAppConnectionCardsBarProps {

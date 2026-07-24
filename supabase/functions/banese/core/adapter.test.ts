@@ -535,7 +535,11 @@ Deno.test("falha ambigua preserva marcador de titulo remoto possivel", async () 
   }
 });
 
-const cancellationFetch = (initialSituation: number) => {
+const cancellationFetch = (
+  initialSituation: number,
+  paymentConfirmed = initialSituation === 3,
+  paymentStatus = 200,
+) => {
   let situation = initialSituation;
   const calls: Array<{ url: string; method: string }> = [];
   const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -556,12 +560,14 @@ const cancellationFetch = (initialSituation: number) => {
     if (url.endsWith("/pagamentos/efetivados")) {
       return new Response(
         JSON.stringify({
-          PagamentosEfetivados: [{
-            ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
-            DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
-          }],
+          PagamentosEfetivados: paymentConfirmed
+            ? [{
+              ValorPago: BANESE_DOCUMENT_FIXTURE.amount,
+              DataPagamento: BANESE_DOCUMENT_FIXTURE.dueDate,
+            }]
+            : [],
         }),
-        { status: 200 },
+        { status: paymentStatus },
       );
     }
     return new Response(
@@ -595,7 +601,13 @@ Deno.test("baixa boleto aberto e confirma cancelamento no Banese", async () => {
     assert.equal(result.remoteStatus, "CANCELED");
     assert.equal(result.alreadyCanceled, false);
     assert.equal(calls.filter((call) => call.method === "PUT").length, 1);
-    assert.equal(calls.filter((call) => call.method === "GET").length, 2);
+    assert.equal(
+      calls.filter((call) =>
+        call.method === "GET" &&
+        !call.url.endsWith("/pagamentos/efetivados")
+      ).length,
+      2,
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -631,6 +643,46 @@ Deno.test("baixa Banese bloqueia boleto que o banco ja confirmou pago", async ()
           cancellationInput,
         ),
       /ja confirmou o pagamento/i,
+    );
+    assert.equal(calls.some((call) => call.method === "PUT"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("PagamentosEfetivados prevalece mesmo sem CodigoSituacaoBoleto 3", async () => {
+  const originalFetch = globalThis.fetch;
+  const { calls, fetcher } = cancellationFetch(2, true);
+  globalThis.fetch = fetcher as typeof fetch;
+  try {
+    await assert.rejects(
+      () =>
+        cancelBaneseBoleto(
+          adminForBaneseReservation(true),
+          "sandbox",
+          cancellationInput,
+        ),
+      /ja confirmou o pagamento/i,
+    );
+    assert.equal(calls.some((call) => call.method === "PUT"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("baixa Banese falha fechada se PagamentosEfetivados estiver indisponivel", async () => {
+  const originalFetch = globalThis.fetch;
+  const { calls, fetcher } = cancellationFetch(2, false, 503);
+  globalThis.fetch = fetcher as typeof fetch;
+  try {
+    await assert.rejects(
+      () =>
+        cancelBaneseBoleto(
+          adminForBaneseReservation(true),
+          "sandbox",
+          cancellationInput,
+        ),
+      /PagamentosEfetivados.*falhou.*503/i,
     );
     assert.equal(calls.some((call) => call.method === "PUT"), false);
   } finally {

@@ -698,26 +698,25 @@ export const createAsaasWebhookHandlers = (
       throw new Error(marked.asaas_last_error);
     }
 
-    let existingTransaction: Record<string, unknown> | null = null;
-    try {
-      existingTransaction = await loadAsaasGatewayTransaction(
-        admin,
-        environment,
-        String(payment.id),
-      );
-      assertAsaasGatewayTransactionOwnership(
-        existingTransaction,
-        receivable.id,
-      );
-    } catch (error) {
-      const marked = await persistWebhookReview(
-        receivable,
-        eventType,
-        payment.id,
-        error instanceof Error ? error.message : String(error),
-      );
-      throw new Error(marked.asaas_last_error);
-    }
+    const existingTransaction = await (async () => {
+      try {
+        const transaction = await loadAsaasGatewayTransaction(
+          admin,
+          environment,
+          String(payment.id),
+        );
+        assertAsaasGatewayTransactionOwnership(transaction, receivable.id);
+        return transaction;
+      } catch (error) {
+        const marked = await persistWebhookReview(
+          receivable,
+          eventType,
+          payment.id,
+          error instanceof Error ? error.message : String(error),
+        );
+        throw new Error(marked.asaas_last_error, { cause: error });
+      }
+    })();
 
     const syncedAt = new Date().toISOString();
     const canonicalFields = buildCanonicalAsaasWebhookFields({
@@ -765,7 +764,7 @@ export const createAsaasWebhookHandlers = (
           payment.id,
           error instanceof Error ? error.message : String(error),
         );
-        throw new Error(marked.asaas_last_error);
+        throw new Error(marked.asaas_last_error, { cause: error });
       }
 
       const preserved = await updateReceivableWithWebhookCas(
@@ -825,7 +824,7 @@ export const createAsaasWebhookHandlers = (
         payment.id,
         error instanceof Error ? error.message : String(error),
       );
-      throw new Error(marked.asaas_last_error);
+      throw new Error(marked.asaas_last_error, { cause: error });
     }
 
     const updatedReceivable = await updateReceivableWithWebhookCas(
@@ -906,14 +905,13 @@ export const createAsaasWebhookHandlers = (
       customer,
     });
     const cpfCnpj = customerProof.cpfCnpj;
-    let aluno: any = null;
     const { data: existingAluno, error: existingAlunoError } = await admin
       .from("parceiros")
       .select("*")
       .eq("cpf_cnpj", cpfCnpj)
       .maybeSingle();
     if (existingAlunoError) throw existingAlunoError;
-    aluno = existingAluno;
+    let aluno: any = existingAluno;
     if (
       aluno?.asaas_customer_id &&
       String(aluno.asaas_customer_id) !== customerProof.customerId

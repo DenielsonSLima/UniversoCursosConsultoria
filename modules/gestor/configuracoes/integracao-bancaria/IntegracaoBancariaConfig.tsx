@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
+import { supabase } from '../../../../lib/supabase';
 import ChavesTokensPanel from './ChavesTokensPanel';
 import EmissorFinanceiroPanel from './EmissorFinanceiroPanel';
 import IntegracaoBancariaHeader from './IntegracaoBancariaHeader';
@@ -9,7 +10,6 @@ import RotasBancariasPanel from './RotasBancariasPanel';
 import ResumoBancarioPanel from './ResumoBancarioPanel';
 import {
   BANCO_INTER_V3_DEFAULT_SCOPES,
-  BANESE_FIXED_BANKING_DATA,
   baneseFixedBankingData,
   CONFIGURABLE_PROVIDER_CODES,
   PROVIDER_ORDER,
@@ -93,15 +93,7 @@ const IntegracaoBancariaConfig: React.FC = () => {
     ? selectedRoute.providerCode
     : routeProviderCode;
   const headerProviderCode = activeTab === 'parametrizacao' ? credentialProviderCode : routedBrandCode;
-  const hasProductionPixOrBoleto = (overview?.routes || []).some(
-    (route) =>
-      route.enabled === true
-      && route.environment === 'production'
-      && (route.paymentMethod === 'PIX' || route.paymentMethod === 'BOLETO'),
-  );
-  const summaryEnvironment = overview?.activeEnvironment === 'sandbox' && hasProductionPixOrBoleto
-    ? 'production'
-    : overview?.activeEnvironment || routeEnvironment;
+  const summaryEnvironment = overview?.activeEnvironment || routeEnvironment;
   const activeEnvironment = activeTab === 'parametrizacao'
     ? keysEnvironment
     : activeTab === 'resumo'
@@ -122,8 +114,26 @@ const IntegracaoBancariaConfig: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'resumo' && overview?.activeEnvironment) {
       setRouteEnvironment(overview.activeEnvironment);
+      setKeysEnvironment(overview.activeEnvironment);
     }
   }, [activeTab, overview?.activeEnvironment]);
+
+  useEffect(() => {
+    const invalidateOverview = () => {
+      queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
+    };
+    const channel = supabase
+      .channel('integracao_bancaria_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_runtime_config' }, invalidateOverview)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_routes' }, invalidateOverview)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_credentials' }, invalidateOverview)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_gateway_issuer_config' }, invalidateOverview)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     const issuerId = overview?.issuerConfig?.issuerPoloId
@@ -188,11 +198,29 @@ const IntegracaoBancariaConfig: React.FC = () => {
 
   const routeMutation = useMutation({
     mutationFn: integracaoBancariaService.saveRoute,
-    onSuccess: () => {
+    onSuccess: (route) => {
       queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
-      toast.success('Rota atualizada', `${methodLabel(paymentMethod)} ${modalidadeLabel(modalidade)} agora usa ${routeProvider?.name || routeProviderCode}.`);
+      toast.success(
+        route.enabled ? 'Meio de pagamento ativado' : 'Meio de pagamento desativado',
+        `${methodLabel(route.paymentMethod)} · ${modalidadeLabel(route.modalidade)} · ${environmentLabel(route.environment)}.`,
+      );
     },
     onError: (err: any) => toast.error('Erro ao atualizar rota', err.message),
+  });
+
+  const runtimeMutation = useMutation({
+    mutationFn: integracaoBancariaService.saveRuntimeConfig,
+    onSuccess: (runtime) => {
+      setRouteEnvironment(runtime.activeEnvironment);
+      queryClient.invalidateQueries({ queryKey: ['integracao_bancaria'] });
+      toast.success(
+        runtime.enabled ? 'Integração bancária ativa' : 'Integração bancária inativa',
+        runtime.enabled
+          ? `O checkout está fixado em ${environmentLabel(runtime.activeEnvironment)}.`
+          : 'Nenhuma nova cobrança poderá ser criada.',
+      );
+    },
+    onError: (err: any) => toast.error('Erro ao alterar operação bancária', err.message),
   });
 
   const issuerMutation = useMutation({
@@ -323,6 +351,18 @@ const IntegracaoBancariaConfig: React.FC = () => {
 
   const activateRoute = () => {
     if (!routeProvider) return;
+    const nextEnabled = selectedRoute?.enabled !== true;
+    if (!nextEnabled) {
+      routeMutation.mutate({
+        modalidade,
+        paymentMethod,
+        environment: routeEnvironment,
+        providerCode: routeProviderCode,
+        credentialId: routeCredential?.id,
+        enabled: false,
+      });
+      return;
+    }
     if (!selectedProviderSupportsMethod) {
       toast.error('Rota incompatível', `${routeProvider.name} não atende ${methodLabel(paymentMethod)}.`);
       return;
@@ -342,25 +382,29 @@ const IntegracaoBancariaConfig: React.FC = () => {
       environment: routeEnvironment,
       providerCode: routeProviderCode,
       credentialId: routeCredential.id,
-      enabled: true,
+      enabled: nextEnabled,
     });
   };
 
-  const openRouteFromSummary = (
+  const toggleSummaryRoute = (
     nextModalidade: GatewayModalidade,
     nextMethod: GatewayPaymentMethod,
     nextEnvironment: GatewayEnvironment,
-    nextProviderCode?: GatewayProviderCode,
+    nextProviderCode: GatewayProviderCode,
+    enabled: boolean,
   ) => {
-    setActiveTab(nextModalidade);
-    setModalidade(nextModalidade);
-    setRouteEnvironment(nextEnvironment);
-    setPaymentMethod(nextMethod);
-    if (nextProviderCode && CONFIGURABLE_PROVIDER_CODES.has(nextProviderCode)) {
-      setRouteProviderCode(nextProviderCode);
-    } else {
-      setRouteProviderCode(nextMethod === 'CREDIT_CARD' ? 'mercado_pago' : 'banese_card');
-    }
+    const credential = getCredential(nextProviderCode, nextEnvironment);
+    routeMutation.mutate({
+      modalidade: nextModalidade,
+      paymentMethod: nextMethod,
+      environment: nextEnvironment,
+      providerCode: nextProviderCode,
+      credentialId: credential?.id || undefined,
+      enabled,
+      notes: enabled
+        ? 'Ativado no painel Resumo da integração bancária.'
+        : 'Desativado no painel Resumo da integração bancária.',
+    });
   };
 
   if (isLoading) {
@@ -412,8 +456,16 @@ const IntegracaoBancariaConfig: React.FC = () => {
             overview={overview}
             providers={providers}
             routeEnvironment={summaryEnvironment}
+            controlModalidade={modalidade}
+            runtimeMutationPending={runtimeMutation.isPending}
+            routeMutationPending={routeMutation.isPending}
             getCredential={getCredential}
-            onSelectRoute={openRouteFromSummary}
+            onChangeControlModalidade={setModalidade}
+            onChangeRuntime={(enabled, environment) => runtimeMutation.mutate({
+              enabled,
+              activeEnvironment: environment,
+            })}
+            onToggleRoute={toggleSummaryRoute}
           />
         </div>
       )}

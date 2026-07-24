@@ -62,10 +62,12 @@ export interface TemplateMensagem {
 }
 
 export interface WhatsAppEmbeddedSignupRequest {
+  connectionId: string;
   code: string;
   mode: 'coexistence';
   appId?: string;
   appSecret?: string;
+  verifyToken?: string;
   graphVersion?: string;
   configurationId?: string;
   sessionEvent: Record<string, unknown>;

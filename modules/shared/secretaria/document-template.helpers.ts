@@ -10,7 +10,7 @@ interface DocumentVariableContext {
   irpfPayments: Array<{ total_anual_pago?: number | string | null }>;
 }
 
-const amountInWords = (value: number): string => {
+export const amountInWords = (value: number): string => {
   if (value === 0) return 'zero reais';
   const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
   const tens = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];

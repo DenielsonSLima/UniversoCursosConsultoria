@@ -238,8 +238,16 @@ export const applyReceivableSnapshotFields = (
   let filtered = query;
   for (const field of fields) {
     const value = receivable?.[field];
-    filtered = value === null || value === undefined
-      ? filtered.is(field, null)
+    if (value === null || value === undefined) {
+      filtered = filtered.is(field, null);
+      continue;
+    }
+    // supabase-js converte objetos recebidos por `.eq()` em "[object Object]",
+    // que não é um literal JSON válido para colunas json/jsonb. `.filter()`
+    // permite enviar o snapshot serializado e manter a trava CAS também nesses
+    // campos, sem enfraquecer a proteção contra alterações concorrentes.
+    filtered = typeof value === "object"
+      ? filtered.filter(field, "eq", JSON.stringify(value))
       : filtered.eq(field, value);
   }
   return filtered;

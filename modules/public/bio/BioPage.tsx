@@ -15,8 +15,6 @@ import {
   Check,
   MapPin,
   ShieldCheck,
-  ChevronRight,
-  Sparkles,
   ExternalLink,
   Phone,
   ArrowRight

@@ -43,6 +43,10 @@ export interface TurmaAulaInput {
   dataAula: string;
 }
 
+export interface TurmaAulaUpdateInput extends TurmaAulaInput {
+  aulaId: string;
+}
+
 export interface TurmaAtividadeExtraClasseInput {
   disciplinaId: string;
   titulo: string;

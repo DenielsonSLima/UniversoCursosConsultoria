@@ -7,8 +7,6 @@ import type { ManualSettlementPayload } from '../manual-settlement/useManualSett
 import type { ModalidadeReceberOperations } from './useModalidadeReceberOperations';
 import { paymentGatewayLabel } from './modalidade-receber.utils';
 
-const BanesePaymentPage = React.lazy(() => import('../../../../../aluno/financeiro/banese/BanesePaymentPage'));
-
 interface ModalidadeReceberOverlaysProps {
   operations: ModalidadeReceberOperations;
   settlementAccounts: ContaBancaria[];
@@ -23,37 +21,16 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
     reversalItem,
     reversalReason,
     recreateAsaas,
-    banesePaymentRecords,
-    selectedBanesePaymentId,
     paymentMutation,
     reversalMutation,
     setReversalReason,
     setRecreateAsaas,
     closePaymentModal,
     closeReversalModal,
-    closeBanesePayment,
-    refreshBanesePayment,
   } = operations;
 
   return (
     <>
-      {selectedBanesePaymentId && banesePaymentRecords.length ? (
-        <React.Suspense fallback={(
-          <div className="fixed inset-0 z-[99999] grid place-items-center bg-[#f2f5f7] text-[#001a33]">
-            <div className="flex items-center gap-3 text-sm font-black uppercase tracking-wider">
-              <Loader2 className="animate-spin" size={20} /> Carregando cobrança Banese
-            </div>
-          </div>
-        )}>
-          <BanesePaymentPage
-            installment={banesePaymentRecords.find((record) => record.id === selectedBanesePaymentId) || banesePaymentRecords[0]}
-            installments={banesePaymentRecords}
-            onBack={closeBanesePayment}
-            onRefresh={refreshBanesePayment}
-          />
-        </React.Suspense>
-      ) : null}
-
       {selected && typeof document !== 'undefined' ? createPortal((
         <ManualSettlementModal
           key={selected.id}

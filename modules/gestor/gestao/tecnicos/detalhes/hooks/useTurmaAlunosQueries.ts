@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AcademicStudent, academicLifecycleService } from '../academic-lifecycle.service';
+import { academicLifecycleService } from '../academic-lifecycle.service';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { turmaAlunosService } from '../turma-alunos.service';
 import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
@@ -13,26 +13,31 @@ export const useTurmaStudents = (turmaId: string) => useQuery({
 
 export const useAvailableStudents = (
   turmaId: string,
-  students: AcademicStudent[],
   enabled: boolean,
   searchTerm: string,
 ) => {
   const normalizedSearchTerm = searchTerm.trim();
-  const hasSearch = normalizedSearchTerm.length > 0;
-  const enrolledIds = useMemo(
-    () => new Set(students.map((student) => student.aluno_id)),
-    [students],
-  );
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(normalizedSearchTerm);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [normalizedSearchTerm]);
+
+  const hasSearch = debouncedSearchTerm.length >= 2;
 
   const query = useQuery({
-    queryKey: [...academicLifecycleKeys.alunosDisponiveis(turmaId), normalizedSearchTerm],
-    queryFn: () => turmaAlunosService.getAvailableStudents(turmaId, enrolledIds, normalizedSearchTerm),
+    queryKey: [...academicLifecycleKeys.alunosDisponiveis(turmaId), debouncedSearchTerm],
+    queryFn: () => turmaAlunosService.getAvailableStudents(turmaId, debouncedSearchTerm),
     enabled: enabled && hasSearch,
+    staleTime: 30_000,
   });
 
   const filteredAvailableStudents = useMemo(() => {
-    const search = searchTerm.trim().toLocaleLowerCase('pt-BR');
-    const searchDigits = searchTerm.replace(/\D/g, '');
+    const search = debouncedSearchTerm.toLocaleLowerCase('pt-BR');
+    const searchDigits = debouncedSearchTerm.replace(/\D/g, '');
     if (!search) return [];
 
     return (query.data || []).filter((student) => {
@@ -49,7 +54,7 @@ export const useAvailableStudents = (
           || responsiblePhoneDigits.includes(searchDigits)
         ));
     });
-  }, [query.data, searchTerm]);
+  }, [debouncedSearchTerm, query.data]);
 
   return {
     ...query,

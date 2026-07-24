@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Check, Clock, Layers, Lock, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Building2, Check, Clock, Headphones, Layers, Lock, TrendingUp } from 'lucide-react';
 import { PerfilAcesso } from '../../perfis-acesso/perfis-acesso.service';
 import { NovoUsuarioFormData } from '../usuarios.types';
 import {
@@ -10,9 +10,16 @@ import {
 } from './user-access-options';
 
 interface UserAccessSectionsProps {
+  contextId: string;
   formData: NovoUsuarioFormData;
   perfis: PerfilAcesso[];
   selectedPerfil?: PerfilAcesso;
+  companies: Array<{
+    id: string;
+    nomeFantasia: string;
+    cidade: string;
+    uf: string;
+  }>;
   setFormData: React.Dispatch<React.SetStateAction<NovoUsuarioFormData>>;
   onTogglePermission: (id: string) => void;
   onToggleFinanceiroTab: (id: string) => void;
@@ -21,9 +28,11 @@ interface UserAccessSectionsProps {
 }
 
 const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
+  contextId,
   formData,
   perfis,
   selectedPerfil,
+  companies,
   setFormData,
   onTogglePermission,
   onToggleFinanceiroTab,
@@ -44,6 +53,10 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
         onChange={event => {
           const profileId = event.target.value;
           const nextProfile = perfis.find(perfil => perfil.id === profileId);
+          const profileAllowsAllPolos = contextId === 'global'
+            && Boolean(nextProfile?.permissoes?.allPolos);
+          const inheritedPoloIds = nextProfile?.permissoes?.poloIds || [];
+          const communicationScope = nextProfile?.permissoes?.communicationScope;
           setFormData(previous => ({
             ...previous,
             perfil_acesso_id: profileId || null,
@@ -54,6 +67,22 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
               ? nextProfile?.permissoes.financeiroTabs
               : nextProfile?.permissoes?.tabs?.financeiro || [],
             abasModulos: nextProfile?.permissoes?.tabs || {},
+            todosPolos: nextProfile ? profileAllowsAllPolos : previous.todosPolos,
+            polosAcesso: nextProfile
+              ? profileAllowsAllPolos
+                ? []
+                : inheritedPoloIds.length > 0
+                  ? inheritedPoloIds
+                  : contextId === 'global'
+                    ? previous.polosAcesso
+                    : [contextId]
+              : previous.polosAcesso,
+            setorComunicacao: communicationScope?.sector || previous.setorComunicacao,
+            poloComunicacaoId: communicationScope
+              ? communicationScope.canViewAll ? null : communicationScope.poloId
+              : previous.poloComunicacaoId,
+            podeVisualizarTodosSetores: communicationScope?.canViewAll
+              ?? previous.podeVisualizarTodosSetores,
           }));
         }}
         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-bold focus:border-blue-500 outline-none transition-all text-sm"
@@ -63,7 +92,7 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
       </select>
       {formData.perfil_acesso_id && (
         <div className="mt-1 space-y-1 text-[11px] text-blue-600 font-semibold">
-          <p>✓ O perfil é a base de acesso; polos e exceções continuam sendo definidos por usuário.</p>
+          <p>✓ Módulos, polos, setor do WhatsApp e horário foram herdados do perfil. Você ainda pode ajustar este usuário.</p>
           <p>
             Perfil ativo: {selectedPerfil?.nome || 'Carregando perfil'}
             {selectedPerfil && (
@@ -136,6 +165,87 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
         })}
       </>
     ) : <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">Módulos herdados do perfil selecionado.</div>}
+
+    {formData.permissoes.includes('comunicacao')
+      && (formData.abasModulos.comunicacao || []).includes('comunicacao-whatsapp')
+      && (
+        <div className="mt-8 border-t border-slate-100 pt-8">
+          <div className="mb-5 flex items-center gap-2 text-emerald-700">
+            <Headphones size={20} />
+            <h4 className="text-sm font-black uppercase tracking-wider">Escopo do atendimento WhatsApp</h4>
+          </div>
+
+          <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5">
+            <span>
+              <span className="block text-xs font-black uppercase tracking-wider text-emerald-900">Gestor de todos os atendimentos</span>
+              <span className="mt-1 block text-xs leading-relaxed text-emerald-700">
+                Visualiza todos os polos e setores. Indicado para supervisores e gestores gerais.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={formData.podeVisualizarTodosSetores}
+              onChange={event => setFormData(previous => ({
+                ...previous,
+                podeVisualizarTodosSetores: event.target.checked,
+                setorComunicacao: event.target.checked ? 'todos' : previous.setorComunicacao,
+                poloComunicacaoId: event.target.checked ? null : previous.poloComunicacaoId,
+              }))}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+            />
+          </label>
+
+          {!formData.podeVisualizarTodosSetores && (
+            <div className="mt-4 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <Headphones size={14} /> Setor permitido
+                </span>
+                <select
+                  value={formData.setorComunicacao}
+                  onChange={event => setFormData(previous => ({
+                    ...previous,
+                    setorComunicacao: event.target.value as NovoUsuarioFormData['setorComunicacao'],
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
+                >
+                  <option value="todos">Todos os setores do polo</option>
+                  <option value="comercial_matriculas">Comercial / Matrículas</option>
+                  <option value="secretaria">Secretaria</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="pedagogico_coordenacao">Coordenação / Pedagógico</option>
+                  <option value="atendimento_geral">Atendimento geral</option>
+                </select>
+              </label>
+
+              <label className="space-y-2">
+                <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <Building2 size={14} /> Polo permitido
+                </span>
+                <select
+                  value={formData.poloComunicacaoId || ''}
+                  onChange={event => setFormData(previous => ({
+                    ...previous,
+                    poloComunicacaoId: event.target.value || null,
+                  }))}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
+                >
+                  <option value="">Selecione o polo</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>
+                      {company.nomeFantasia} — {company.cidade}/{company.uf}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="md:col-span-2 text-[11px] font-semibold leading-relaxed text-slate-500">
+                O bloqueio é aplicado também no banco: conversas de outro polo ou setor não são retornadas para este usuário.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
     <div className="mt-8 border-t border-slate-100 pt-8">
       <div className="mb-5 flex items-center gap-2 text-purple-600"><Clock size={20} /><h4 className="text-sm font-black uppercase tracking-wider">Dias e horários deste usuário</h4></div>

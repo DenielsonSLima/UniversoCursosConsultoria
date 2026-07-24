@@ -7,6 +7,7 @@ import {
   TurmaAtividadeExtraClasseInput,
   TurmaAulaInput,
   TurmaAulaPlanejada,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
   TurmaGradeData,
   TurmaProfessorOption,
@@ -89,15 +90,15 @@ export const turmaGradeService = {
       cadastrosService.getGrade(cursoId),
       supabase
         .from('turmas_disciplinas')
-        .select('*')
+        .select('disciplina_id, professor_nome, professor_id, concluida')
         .eq('turma_id', turmaId),
       supabase
         .from('aulas_turma')
-        .select('*')
+        .select('id, disciplina_id, titulo, carga_horaria, data_aula, created_at')
         .eq('turma_id', turmaId),
       supabase
         .from('atividades_extra_classe')
-        .select('*')
+        .select('id, disciplina_id, titulo, tema, carga_horaria_compensacao, prazo_entrega, status')
         .eq('turma_id', turmaId)
         .neq('status', 'ARQUIVADA'),
       supabase
@@ -215,6 +216,30 @@ export const turmaGradeService = {
         carga_horaria: input.horas,
         data_aula: input.dataAula,
       })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      titulo: data.titulo,
+      cargaHoraria: parseFloat(data.carga_horaria),
+      dataAula: data.data_aula,
+    };
+  },
+
+  async updateAula(turmaId: string, input: TurmaAulaUpdateInput): Promise<TurmaAulaPlanejada> {
+    const { data, error } = await supabase
+      .from('aulas_turma')
+      .update({
+        titulo: input.titulo,
+        carga_horaria: input.horas,
+        data_aula: input.dataAula,
+      })
+      .eq('id', input.aulaId)
+      .eq('turma_id', turmaId)
+      .eq('disciplina_id', input.disciplinaId)
       .select()
       .single();
 

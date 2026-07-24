@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { asaasIntegrationService } from '../../../../../asaas/asaas.service';
-import type { BanesePaymentRecord } from '../../../../../aluno/financeiro/banese/banese-payment.types';
 import { copyTextToClipboard } from '../../../../../../lib/clipboard';
 import { printReciboDespesa } from '../../../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import { financeiroQueryKeys } from '../../../financeiro.queryKeys';
@@ -28,8 +27,6 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   const [reversalItem, setReversalItem] = useState<ContasReceber | null>(null);
   const [reversalReason, setReversalReason] = useState('');
   const [recreateAsaas, setRecreateAsaas] = useState(true);
-  const [banesePaymentRecords, setBanesePaymentRecords] = useState<BanesePaymentRecord[]>([]);
-  const [selectedBanesePaymentId, setSelectedBanesePaymentId] = useState<string | null>(null);
 
   const closePaymentModal = () => setSelected(null);
   const closeReversalModal = () => {
@@ -44,7 +41,6 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     onSuccess: async (result) => {
       const paidReceivable = selected;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
@@ -94,14 +90,16 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   });
 
   const baneseDetailsMutation = useMutation({
-    mutationFn: (receivableId: string) => gestorBanesePaymentService.getPaymentDetails(receivableId),
-    onSuccess: (records, receivableId) => {
-      setBanesePaymentRecords(records);
-      setSelectedBanesePaymentId(receivableId);
-    },
+    mutationFn: ({
+      receivableId,
+      preparedTab,
+    }: {
+      receivableId: string;
+      preparedTab: Window;
+    }) => gestorBanesePaymentService.openBoletoPdfInNewTab(receivableId, preparedTab),
     onError: (error: any) => toast.error(
-      'Cobrança Banese indisponível',
-      error?.message || 'Não foi possível carregar os dados bancários desta cobrança.',
+      'Boleto Banese indisponível',
+      error?.message || 'Não foi possível montar o boleto para impressão.',
     ),
   });
 
@@ -113,7 +111,6 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     onSuccess: async (result) => {
       const reversedReceivable = reversalItem;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['financeiro-tecnico-recebiveis'] }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.receivablesRoot }),
         queryClient.invalidateQueries({ queryKey: ['financeiro-aluno-receivables'] }),
         queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
@@ -165,26 +162,23 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
   };
 
   const openCharge = (item: ContasReceber) => {
-    if (paymentGatewayCode(item) === 'banese_card') {
+    if (['banese_card', 'banese'].includes(paymentGatewayCode(item) || '')) {
       if (!item.id) return;
-      baneseDetailsMutation.mutate(item.id);
+      const preparedTab = window.open('about:blank', '_blank');
+      if (!preparedTab) {
+        toast.error(
+          'Nova aba bloqueada',
+          'Permita pop-ups para este portal e tente abrir o boleto novamente.',
+        );
+        return;
+      }
+      preparedTab.opener = null;
+      baneseDetailsMutation.mutate({ receivableId: item.id, preparedTab });
       return;
     }
 
     const url = item.asaasBankSlipUrl || item.asaasInvoiceUrl;
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const closeBanesePayment = () => {
-    setSelectedBanesePaymentId(null);
-    setBanesePaymentRecords([]);
-  };
-
-  const refreshBanesePayment = async () => {
-    if (!selectedBanesePaymentId) return;
-    await refreshMutation.mutateAsync(selectedBanesePaymentId);
-    const records = await gestorBanesePaymentService.getPaymentDetails(selectedBanesePaymentId);
-    setBanesePaymentRecords(records);
   };
 
   const openAsaasReceipt = (item: ContasReceber) => {
@@ -241,8 +235,6 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     reversalItem,
     reversalReason,
     recreateAsaas,
-    banesePaymentRecords,
-    selectedBanesePaymentId,
     paymentMutation,
     syncMutation,
     refreshMutation,
@@ -255,8 +247,6 @@ export const useModalidadeReceberOperations = (toast: OperationToast) => {
     closeReversalModal,
     copyInvoiceUrl,
     openCharge,
-    closeBanesePayment,
-    refreshBanesePayment,
     openPaidReceipt,
     openReversal,
   };

@@ -26,6 +26,9 @@ const paymentGatewayLabels: Record<string, string> = {
 };
 
 export const paymentGatewayCode = (item: ContasReceber): string | null => {
+  const chargeUrl = String(item.asaasBankSlipUrl || item.asaasInvoiceUrl || '');
+  if (chargeUrl.includes('banesePayment=')) return 'banese_card';
+
   const explicitProvider = String(item.gatewayProvider || '').trim().toLowerCase();
   if (explicitProvider) return explicitProvider;
 
@@ -54,7 +57,7 @@ export const paymentGatewayLabel = (item: ContasReceber) => {
 };
 
 export const paymentGatewayStatusLabel = (item: ContasReceber) => {
-  const normalized = String(item.asaasStatus || item.gatewayStatus || '').toUpperCase();
+  const normalized = String(item.asaasStatus || '').toUpperCase();
   if (!normalized) {
     if (paymentGatewayCode(item) === 'banese_card' || paymentGatewayCode(item) === 'banese') {
       return 'Boleto/Pix Banese';

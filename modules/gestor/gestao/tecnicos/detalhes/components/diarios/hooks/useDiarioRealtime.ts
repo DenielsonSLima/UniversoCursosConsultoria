@@ -32,6 +32,20 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
         {
           event: '*',
           schema: 'public',
+          table: 'aulas_turma',
+          filter: `turma_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.aulas(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.praticas(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'diario_frequencia',
           filter: `turma_id=eq.${turmaId}`,
         },
@@ -49,6 +63,19 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           filter: `turma_id=eq.${turmaId}`,
         },
         scheduleRefresh(diarioClasseKeys.resultados(turmaId, disciplinaId)),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'turmas_disciplinas',
+          filter: `turma_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.instruments(turmaId, disciplinaId),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
       )
       .on(
         'postgres_changes',

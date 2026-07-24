@@ -7,25 +7,34 @@ type ToastApi = {
   error: (title: string, message?: string) => void;
 };
 
-export const useWhatsAppFlow = (queryClient: QueryClient, toast: ToastApi) => {
+export const useWhatsAppFlow = (
+  connectionId: string | null,
+  queryClient: QueryClient,
+  toast: ToastApi,
+) => {
   const settingsQuery = useQuery({
-    queryKey: ['whatsapp', 'fluxos', 'config'],
-    queryFn: whatsappService.getFlowSettings,
+    queryKey: ['whatsapp', connectionId, 'fluxos', 'config'],
+    queryFn: () => whatsappService.getFlowSettings(connectionId!),
+    enabled: Boolean(connectionId),
     staleTime: 0,
     refetchOnMount: 'always',
   });
 
   const sessionsQuery = useQuery({
-    queryKey: ['whatsapp', 'fluxos', 'sessions'],
-    queryFn: whatsappService.getFlowSessions,
+    queryKey: ['whatsapp', connectionId, 'fluxos', 'sessions'],
+    queryFn: () => whatsappService.getFlowSessions(connectionId!),
+    enabled: Boolean(connectionId),
     staleTime: 0,
     refetchOnMount: 'always',
   });
 
   const saveMutation = useMutation({
-    mutationFn: (settings: WhatsAppFlowSettings) => whatsappService.saveFlowSettings(settings),
+    mutationFn: (settings: WhatsAppFlowSettings) => {
+      if (!connectionId) throw new Error('Selecione uma linha.');
+      return whatsappService.saveFlowSettings(connectionId, settings);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'fluxos'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'fluxos'] });
       toast.success('Fluxo salvo', 'Atendimento automático atualizado.');
     },
     onError: (err: any) => toast.error('Erro ao salvar fluxo', err?.message || 'Não foi possível salvar o fluxo.'),
@@ -34,7 +43,7 @@ export const useWhatsAppFlow = (queryClient: QueryClient, toast: ToastApi) => {
   const pauseMutation = useMutation({
     mutationFn: whatsappService.pauseFlowForConversation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'fluxos'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'fluxos'] });
       toast.success('Robô pausado', 'A conversa foi enviada para atendimento humano.');
     },
     onError: (err: any) => toast.error('Erro ao pausar', err?.message || 'Não foi possível pausar o robô.'),
@@ -43,7 +52,7 @@ export const useWhatsAppFlow = (queryClient: QueryClient, toast: ToastApi) => {
   const resetMutation = useMutation({
     mutationFn: whatsappService.resetFlowForConversation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'fluxos'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'fluxos'] });
       toast.success('Robô retomado', 'Na próxima mensagem do aluno o fluxo será reiniciado.');
     },
     onError: (err: any) => toast.error('Erro ao retomar', err?.message || 'Não foi possível reiniciar o fluxo.'),

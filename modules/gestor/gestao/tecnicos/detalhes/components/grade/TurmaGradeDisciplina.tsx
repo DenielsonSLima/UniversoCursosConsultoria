@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen,
   CheckCircle2,
@@ -7,15 +7,18 @@ import {
   ClipboardCheck,
   CornerDownRight,
   Loader2,
+  Pencil,
   Save,
   Trash2,
   UserCheck,
   UserPlus,
+  X,
 } from 'lucide-react';
 import { Disciplina } from '../../../../../cadastros/cadastros.types';
 import {
   TurmaAtividadeExtraClasse,
   TurmaAulaPlanejada,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
 } from '../../turma-grade.types';
 import { formatGradeHours, TurmaGradeTheme } from './turma-grade-ui';
@@ -30,6 +33,7 @@ interface TurmaGradeDisciplinaProps {
   singleProfessor: boolean;
   isExpanded: boolean;
   isSaving: boolean;
+  updatingAulaId?: string;
   titulo: string;
   data: string;
   horas: string;
@@ -38,6 +42,7 @@ interface TurmaGradeDisciplinaProps {
   onToggleConcluida: () => void;
   onOpenProfessor: () => void;
   onDeleteAula: (aulaId: string) => void;
+  onUpdateAula: (input: TurmaAulaUpdateInput) => Promise<void>;
   onTituloChange: (value: string) => void;
   onDataChange: (value: string) => void;
   onHorasChange: (value: string) => void;
@@ -55,6 +60,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   singleProfessor,
   isExpanded,
   isSaving,
+  updatingAulaId,
   titulo,
   data,
   horas,
@@ -63,29 +69,24 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   onToggleConcluida,
   onOpenProfessor,
   onDeleteAula,
+  onUpdateAula,
   onTituloChange,
   onDataChange,
   onHorasChange,
   onExtraClasseChange,
   onAddPlanejamento,
 }) => {
-  const sumHorasAulas = aulas.reduce((total, aula) => total + Number(aula.cargaHoraria || 0), 0);
-  const sumHorasAtividades = atividades.reduce(
-    (total, atividade) => total + Number(atividade.cargaHoraria || 0),
-    0,
-  );
-  const sumHoras = sumHorasAulas + sumHorasAtividades;
-  const aulasCount = Number(metricas?.aulas_count || aulas.length);
-  const progressoDisciplina = disciplina.cargaHoraria > 0
-    ? Math.min(100, Math.round((sumHoras / disciplina.cargaHoraria) * 100))
-    : 0;
-  const horasStatus = sumHoras === disciplina.cargaHoraria
-    ? 'EXATA'
-    : sumHoras > disciplina.cargaHoraria
-      ? 'EXCESSO'
-      : 'PENDENTE';
-  const horasDiferenca = Math.abs(disciplina.cargaHoraria - sumHoras);
-  const isComplete = config.concluida;
+  const [editingAulaId, setEditingAulaId] = useState<string | null>(null);
+  const [editingTitulo, setEditingTitulo] = useState('');
+  const [editingData, setEditingData] = useState('');
+  const [editingHoras, setEditingHoras] = useState('');
+  const cargaHoraria = Number(metricas?.carga_horaria ?? disciplina.cargaHoraria ?? 0);
+  const horasRealizadas = Number(metricas?.horas_realizadas ?? 0);
+  const aulasCount = Number(metricas?.aulas_count ?? 0);
+  const progressoDisciplina = Number(metricas?.progresso_percent ?? 0);
+  const horasStatus = String(metricas?.horas_status ?? 'PENDENTE');
+  const horasDiferenca = Number(metricas?.horas_diferenca ?? cargaHoraria);
+  const isComplete = Boolean(metricas?.concluida ?? config.concluida);
   const progressColor = horasStatus === 'EXATA'
     ? theme.fill
     : horasStatus === 'EXCESSO'
@@ -96,6 +97,46 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
     : horasStatus === 'EXCESSO'
       ? 'text-red-600'
       : 'text-blue-600';
+
+  const startEditingAula = (aula: TurmaAulaPlanejada) => {
+    setEditingAulaId(aula.id);
+    setEditingTitulo(aula.titulo);
+    setEditingData(aula.dataAula || '');
+    setEditingHoras(String(aula.cargaHoraria).replace('.', ','));
+  };
+
+  const resetEditingAula = () => {
+    setEditingAulaId(null);
+    setEditingTitulo('');
+    setEditingData('');
+    setEditingHoras('');
+  };
+
+  const cancelEditingAula = () => {
+    if (updatingAulaId) return;
+    resetEditingAula();
+  };
+
+  const saveEditingAula = async () => {
+    if (!editingAulaId) return;
+    const horasValue = Number(editingHoras.replace(',', '.'));
+    if (!editingTitulo.trim() || !editingData.trim() || !Number.isFinite(horasValue) || horasValue <= 0) {
+      return;
+    }
+
+    try {
+      await onUpdateAula({
+        aulaId: editingAulaId,
+        disciplinaId: disciplina.id,
+        titulo: editingTitulo,
+        dataAula: editingData,
+        horas: horasValue,
+      });
+      resetEditingAula();
+    } catch {
+      // O toast da mutation mantém o contexto do erro e o formulário aberto para correção.
+    }
+  };
 
   return (
     <div className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/30 transition-colors">
@@ -119,10 +160,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                 : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
             </div>
             <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-              {disciplina.cargaHoraria} horas oficiais • {aulasCount} aulas ({formatGradeHours(sumHorasAulas)}h)
-              {atividades.length > 0
-                ? ` + ${atividades.length} extra-classe (${formatGradeHours(sumHorasAtividades)}h)`
-                : ''}
+              {formatGradeHours(cargaHoraria)} horas oficiais • {aulasCount} aulas
             </p>
           </div>
         </div>
@@ -130,7 +168,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
         <div className="flex items-center gap-4 shrink-0">
           <div onClick={onToggle} className="cursor-pointer flex flex-col items-end shrink-0">
             <span className={`text-[10px] font-black uppercase tracking-wider ${progressTextClass}`}>
-              {formatGradeHours(sumHoras)}h de {formatGradeHours(disciplina.cargaHoraria)}h
+              {formatGradeHours(horasRealizadas)}h de {formatGradeHours(cargaHoraria)}h
             </span>
             <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden mt-1">
               <div className={`h-full rounded-full ${progressColor}`} style={{ width: `${progressoDisciplina}%` }} />
@@ -192,50 +230,181 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2 mb-4 pl-4">
+          <div className="space-y-2.5 mb-4 pl-4">
             {aulas.length === 0 && atividades.length === 0 ? (
               <p className="text-xs text-slate-400 italic py-2">
                 Nenhuma aula ou atividade extra-classe cadastrada nesta turma ainda.
               </p>
             ) : (
               <>
-                {aulas.map((aula, index) => (
-                  <div key={aula.id} className={`flex items-center justify-between group pl-4 border-l-2 border-slate-200 ${theme.hoverBorderDark} transition-colors py-1.5 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm`}>
-                    <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                      <CornerDownRight size={12} className="text-slate-400 shrink-0" />
-                      <span className="font-semibold text-xs text-slate-500 shrink-0">
-                        Aula {index + 1} {aula.dataAula ? `(${new Date(`${aula.dataAula}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
-                      </span>
-                      <span className="truncate text-slate-600">{aula.titulo}</span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                        {formatGradeHours(aula.cargaHoraria)}h
-                      </span>
-                      <button
-                        onClick={() => onDeleteAula(aula.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
-                        title="Excluir aula"
+                {aulas.map((aula, index) => {
+                  const dataFormatada = aula.dataAula
+                    ? new Date(`${aula.dataAula}T00:00:00`).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })
+                    : null;
+
+                  if (editingAulaId === aula.id) {
+                    const isUpdating = updatingAulaId === aula.id;
+                    const canSave = editingTitulo.trim()
+                      && editingData.trim()
+                      && Number(editingHoras.replace(',', '.')) > 0;
+
+                    return (
+                      <div
+                        key={aula.id}
+                        className={`border-l-2 ${theme.border} bg-white rounded-r-xl border-y border-r border-slate-200 shadow-sm p-3`}
                       >
-                        <Trash2 size={14} />
-                      </button>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                            <Pencil size={13} className={theme.text} />
+                            Editando aula {index + 1}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={cancelEditingAula}
+                            disabled={isUpdating}
+                            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Cancelar edição"
+                            aria-label="Cancelar edição da aula"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_150px_90px_auto]">
+                          <input
+                            type="text"
+                            value={editingTitulo}
+                            onChange={(event) => setEditingTitulo(event.target.value)}
+                            disabled={isUpdating}
+                            className={`min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none ${theme.focusBorder}`}
+                            placeholder="Título da aula / conteúdo"
+                            aria-label="Título da aula"
+                          />
+                          <input
+                            type="date"
+                            value={editingData}
+                            onChange={(event) => setEditingData(event.target.value)}
+                            disabled={isUpdating}
+                            className={`rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none ${theme.focusBorder}`}
+                            aria-label="Data da aula"
+                          />
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            inputMode="decimal"
+                            value={editingHoras.replace(',', '.')}
+                            onChange={(event) => setEditingHoras(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' && canSave) void saveEditingAula();
+                            }}
+                            disabled={isUpdating}
+                            className={`rounded-xl border border-slate-200 bg-white px-2 py-2 text-center text-xs font-bold text-slate-700 outline-none ${theme.focusBorder}`}
+                            placeholder="Horas"
+                            aria-label="Carga horária da aula"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void saveEditingAula()}
+                            disabled={isUpdating || !canSave}
+                            className={`flex min-h-[36px] items-center justify-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${theme.bg} ${theme.text} ${theme.border} ${theme.hoverBg} hover:text-white disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            Salvar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={aula.id}
+                      className={`group pl-3.5 border-l-2 border-slate-300 ${theme.hoverBorderDark} transition-colors py-2 bg-white pr-3 rounded-r-xl border-y border-r border-slate-100 shadow-sm space-y-1`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <CornerDownRight size={13} className="text-slate-400 shrink-0" />
+                          <span className="font-bold text-slate-800">
+                            Aula {index + 1}
+                          </span>
+                          {dataFormatada && (
+                            <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/70">
+                              {dataFormatada}
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 font-mono">
+                            {formatGradeHours(aula.cargaHoraria)}h
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => startEditingAula(aula)}
+                            disabled={Boolean(updatingAulaId)}
+                            className={`cursor-pointer rounded p-1 transition-colors hover:bg-slate-100 ${theme.text} disabled:cursor-not-allowed disabled:opacity-50`}
+                            title="Editar aula"
+                            aria-label={`Editar aula ${index + 1}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteAula(aula.id)}
+                            disabled={Boolean(updatingAulaId)}
+                            className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer p-1 rounded hover:bg-red-50 shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Excluir aula"
+                            aria-label={`Excluir aula ${index + 1}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="pl-5 text-xs text-slate-600 font-normal leading-relaxed break-words">
+                        {aula.titulo}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {atividades.map((atividade, index) => (
-                  <div key={atividade.id} className="flex items-center justify-between group pl-4 border-l-2 border-emerald-300 transition-colors py-1.5 bg-emerald-50/60 pr-3 rounded-r-xl border-y border-r border-emerald-100 shadow-sm">
-                    <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                      <ClipboardCheck size={12} className="text-emerald-600 shrink-0" />
-                      <span className="font-semibold text-xs text-emerald-700 shrink-0">
-                        Extra {index + 1} {atividade.prazoEntrega ? `(${new Date(`${atividade.prazoEntrega}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''}:
-                      </span>
-                      <span className="truncate text-slate-600">{atividade.titulo}</span>
+                  );
+                })}
+                {atividades.map((atividade, index) => {
+                  const dataFormatada = atividade.prazoEntrega
+                    ? new Date(`${atividade.prazoEntrega}T00:00:00`).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })
+                    : null;
+
+                  return (
+                    <div
+                      key={atividade.id}
+                      className="group pl-3.5 border-l-2 border-emerald-400 transition-colors py-2 bg-emerald-50/50 pr-3 rounded-r-xl border-y border-r border-emerald-100 shadow-sm space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <ClipboardCheck size={13} className="text-emerald-600 shrink-0" />
+                          <span className="font-bold text-emerald-900">
+                            Extra {index + 1}
+                          </span>
+                          {dataFormatada && (
+                            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200/70">
+                              {dataFormatada}
+                            </span>
+                          )}
+                          <span className="text-[11px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200 font-mono">
+                            {formatGradeHours(atividade.cargaHoraria)}h
+                          </span>
+                        </div>
+                      </div>
+                      <div className="pl-5 text-xs text-slate-700 font-normal leading-relaxed break-words">
+                        {atividade.titulo}
+                      </div>
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-100">
-                      {formatGradeHours(atividade.cargaHoraria)}h
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>

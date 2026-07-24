@@ -8,19 +8,39 @@ import {
 
 export const financeiroConfigKeys = {
   turma: (turmaId: string) => ['turma_financeiro_config', turmaId] as const,
-  calculo: (config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>) => [
+  calculo: (config: Pick<
+    FinanceiroConfigData,
+    | 'valorParcela'
+    | 'descontoPontualidade'
+    | 'jurosAtraso'
+    | 'multaAtraso'
+    | 'aplicarDescontoMensalidade'
+    | 'aplicarMultaJurosMensalidade'
+  >) => [
     'calculo_regras_turma',
     config.valorParcela,
     config.descontoPontualidade,
     config.jurosAtraso,
     config.multaAtraso,
+    config.aplicarDescontoMensalidade,
+    config.aplicarMultaJurosMensalidade,
   ] as const,
-  calculoForm: (config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>) => [
+  calculoForm: (config: Pick<
+    FinanceiroConfigData,
+    | 'valorParcela'
+    | 'descontoPontualidade'
+    | 'jurosAtraso'
+    | 'multaAtraso'
+    | 'aplicarDescontoMensalidade'
+    | 'aplicarMultaJurosMensalidade'
+  >) => [
     'calculo_regras_turma_form',
     config.valorParcela,
     config.descontoPontualidade,
     config.jurosAtraso,
     config.multaAtraso,
+    config.aplicarDescontoMensalidade,
+    config.aplicarMultaJurosMensalidade,
   ] as const,
 };
 
@@ -34,7 +54,15 @@ export const useFinanceiroConfig = (turmaId: string) => useQuery(
 );
 
 export const useFinanceiroRulesCalculation = (
-  config: Pick<FinanceiroConfigData, 'valorParcela' | 'descontoPontualidade' | 'jurosAtraso' | 'multaAtraso'>,
+  config: Pick<
+    FinanceiroConfigData,
+    | 'valorParcela'
+    | 'descontoPontualidade'
+    | 'jurosAtraso'
+    | 'multaAtraso'
+    | 'aplicarDescontoMensalidade'
+    | 'aplicarMultaJurosMensalidade'
+  >,
   form = false,
   enabled = true,
 ) => useQuery({

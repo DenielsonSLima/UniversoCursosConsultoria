@@ -17,7 +17,16 @@ const parseDateOrDash = (value?: string | null): string => {
 const sortRows = (rows: AcademicComponentRow[]) =>
   [...rows].sort((a, b) => {
     if (a.moduleOrder !== b.moduleOrder) return a.moduleOrder - b.moduleOrder;
-    return (a.discipline || '').localeCompare(b.discipline || '');
+    const aDisciplineOrder = Number.isFinite(a.disciplineOrder)
+      ? Number(a.disciplineOrder)
+      : Number.MAX_SAFE_INTEGER;
+    const bDisciplineOrder = Number.isFinite(b.disciplineOrder)
+      ? Number(b.disciplineOrder)
+      : Number.MAX_SAFE_INTEGER;
+    if (aDisciplineOrder !== bDisciplineOrder) {
+      return aDisciplineOrder - bDisciplineOrder;
+    }
+    return (a.discipline || '').localeCompare(b.discipline || '', 'pt-BR');
   });
 
 const renderFrequency = (value: number | null) =>
@@ -103,26 +112,74 @@ export const loadAcademicPreview = async (
   }
 
   const { data, error } = await (supabase.rpc as any)(
-    'get_secretaria_historico_academico',
-    { p_matricula_id: emission.matricula_id }
+    'get_secretaria_documento_academico',
+    {
+      p_matricula_id: emission.matricula_id,
+      p_documento: emission.documento,
+    }
   );
   if (error) throw error;
   if (!data) throw new Error('O histórico acadêmico não retornou dados para esta matrícula.');
 
   const payload = data as AcademicPreviewRpcPayload;
-  const rows = Array.isArray(payload.componentes) ? payload.componentes : [];
+  const allRows = Array.isArray(payload.componentes) ? payload.componentes : [];
+  const selectedModuleId = emission.documento === 'boletim'
+    ? emission.periodo_referencia
+    : null;
+  const rows = selectedModuleId
+    ? allRows.filter((row) => row.moduleId === selectedModuleId)
+    : allRows;
+  if (selectedModuleId && !rows.length) {
+    throw new Error('O módulo selecionado não possui componentes curriculares nesta turma.');
+  }
   const inicio = parseDateOrDash(payload.inicioCurso);
   const fim = parseDateOrDash(payload.fimCurso);
+  const rowsWithGrade = rows.filter((row) => row.nota !== null);
+  const rowsWithFrequency = rows.filter((row) => row.frequencia !== null);
+  const selectedModuleAverage = rowsWithGrade.length
+    ? rowsWithGrade.reduce((sum, row) => sum + Number(row.nota), 0) / rowsWithGrade.length
+    : null;
+  const selectedModuleFrequencyWeight = rowsWithFrequency.reduce(
+    (sum, row) => sum + Math.max(Number(row.cargaHoraria) || 0, 1),
+    0
+  );
+  const selectedModuleFrequency = selectedModuleFrequencyWeight
+    ? rowsWithFrequency.reduce(
+        (sum, row) => sum + Number(row.frequencia) * Math.max(Number(row.cargaHoraria) || 0, 1),
+        0
+      ) / selectedModuleFrequencyWeight
+    : null;
+  const moduleHours = rows.reduce((sum, row) => sum + (Number(row.cargaHoraria) || 0), 0);
+  const completedModuleHours = rows
+    .filter((row) => ['Aprovado', 'Aproveitado'].includes(row.situacao))
+    .reduce((sum, row) => sum + (Number(row.cargaHoraria) || 0), 0);
+  const moduleNames = [...new Set(rows.map((row) => row.moduleName).filter(Boolean))];
 
   return {
     componentesTable: buildAcademicTableByDocument(rows),
     historicoTable: buildHistoricoTable(rows),
-    cargaHorariaCumprida: Number(payload.cargaHorariaCumprida || 0),
-    cargaHorariaTotal: Number(payload.cargaHorariaTotal || 0),
+    cargaHorariaCumprida: selectedModuleId
+      ? completedModuleHours
+      : Number(payload.cargaHorariaCumprida || 0),
+    cargaHorariaTotal: selectedModuleId
+      ? moduleHours
+      : Number(payload.cargaHorariaTotal || 0),
     periodoCurso: fim === '—' ? inicio : `${inicio} até ${fim}`,
     observacoesHistorico: rows.length
       ? 'Histórico emitido conforme os registros de notas e frequência no momento da emissão.'
       : 'Ainda não há histórico consolidado no sistema para esta matrícula.',
     situacaoAcademica: payload.situacaoAcademica || 'Em análise',
+    mediaGeral: selectedModuleId
+      ? selectedModuleAverage
+      : payload.mediaGeral === null || payload.mediaGeral === undefined
+        ? null
+        : Number(payload.mediaGeral),
+    frequenciaGeral: selectedModuleId
+      ? selectedModuleFrequency
+      : payload.frequenciaGeral === null || payload.frequenciaGeral === undefined
+        ? null
+        : Number(payload.frequenciaGeral),
+    fimCurso: payload.fimCurso || null,
+    moduleNames,
   };
 };

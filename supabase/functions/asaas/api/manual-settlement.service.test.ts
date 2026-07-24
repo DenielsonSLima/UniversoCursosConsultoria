@@ -4,6 +4,7 @@ import {
   normalizeManualSettlementRequest,
 } from "./manual-settlement-money.ts";
 import { settleReceivableManually } from "./manual-settlement.service.ts";
+import { RemoteCancellationPreflightError } from "../../gateways/api/remote-cancellation-errors.ts";
 import type {
   ManualSettlementAttempt,
   ManualSettlementRepository,
@@ -63,6 +64,9 @@ const actor: GestorAutorizado = {
   modules: ["financeiro"],
   financeiroTabs: ["receber"],
   tabs: { financeiro: ["receber"] },
+  communicationSector: "",
+  communicationPoloId: null,
+  canViewAllCommunication: false,
 };
 
 const fakeAdmin = () => ({
@@ -138,6 +142,7 @@ const fakeRepository = (options: {
   let settled = options.existingAttempt?.state === "COMPLETED";
   const events: string[] = [];
   let reviewError: string | null = null;
+  let safeError: string | null = null;
   let finalizeCalls = 0;
   const result: ManualSettlementResult = {
     success: true,
@@ -164,7 +169,13 @@ const fakeRepository = (options: {
       return attempt;
     },
     claimAttempt: async (current, token, expires) => {
-      attempt = { ...current, lease_token: token, lease_expires_at: expires };
+      attempt = {
+        ...current,
+        state: current.state === "FAILED_SAFE" ? "STARTED" : current.state,
+        lease_token: token,
+        lease_expires_at: expires,
+        last_error: null,
+      };
       return attempt;
     },
     markRemoteReady: async (_id, _token, input) => {
@@ -180,6 +191,16 @@ const fakeRepository = (options: {
       attempt = {
         ...attempt!,
         state: "REVIEW_REQUIRED",
+        last_error: error,
+      };
+    },
+    markSafeFailure: async (_id, _token, error) => {
+      safeError = error;
+      attempt = {
+        ...attempt!,
+        state: "FAILED_SAFE",
+        lease_token: null,
+        lease_expires_at: null,
         last_error: error,
       };
     },
@@ -210,6 +231,9 @@ const fakeRepository = (options: {
     events,
     get reviewError() {
       return reviewError;
+    },
+    get safeError() {
+      return safeError;
     },
     get finalizeCalls() {
       return finalizeCalls;
@@ -243,6 +267,17 @@ Deno.test("baixa local persiste composição e finaliza uma única vez", async (
   assert.equal(result.success, true);
   assert.equal(fake.finalizeCalls, 1);
   assert.deepEqual(fake.events, ["STARTED"]);
+});
+
+Deno.test("gera lease token padrão com crypto.randomUUID vinculado ao runtime", async () => {
+  const fake = fakeRepository();
+  const { leaseToken: _injectedLeaseToken, ...runtimeDependencies } =
+    dependencies(fake.repository);
+
+  const result = await settleReceivableManually(runtimeDependencies);
+
+  assert.equal(result.success, true);
+  assert.equal(fake.finalizeCalls, 1);
 });
 
 Deno.test("replay concluído não cancela nem consolida novamente", async () => {
@@ -286,6 +321,58 @@ Deno.test("falha remota Banese deixa revisão e nunca marca PAGO", async () => {
   assert.match(fake.reviewError || "", /Banese indisponível/);
   assert.equal(fake.finalizeCalls, 0);
   assert.deepEqual(fake.events, ["STARTED", "REMOTE_CANCELLATION_FAILED"]);
+});
+
+Deno.test("falha anterior à chamada Banese não bloqueia uma nova tentativa", async () => {
+  const banese = {
+    ...receivable,
+    gateway_provider: "banese_card",
+    gateway_environment: "sandbox",
+    gateway_payment_method: "BOLETO",
+    gateway_payment_id: "15x",
+    gateway_boleto_nosso_numero: "000000015",
+    gateway_status: "PENDING",
+  };
+  const fake = fakeRepository({ currentReceivable: banese });
+
+  await assert.rejects(
+    () =>
+      settleReceivableManually({
+        ...dependencies(fake.repository),
+        cancelBanese: async () => {
+          throw new RemoteCancellationPreflightError(
+            "Nosso Numero Banese invalido para baixa manual.",
+          );
+        },
+      }),
+    /banco não foi chamado.*Nosso Numero Banese invalido/i,
+  );
+
+  assert.match(fake.safeError || "", /Nosso Numero Banese invalido/i);
+  assert.equal(fake.reviewError, null);
+  assert.equal(fake.finalizeCalls, 0);
+  assert.deepEqual(fake.events, [
+    "STARTED",
+    "REMOTE_CANCELLATION_PREFLIGHT_FAILED",
+  ]);
+});
+
+Deno.test("a mesma chave pode retomar uma tentativa FAILED_SAFE", async () => {
+  const request = normalizeManualSettlementRequest(body, receivable, NOW);
+  const fingerprint = await manualSettlementFingerprint(request);
+  const failedSafe = {
+    ...attemptFrom({ request_fingerprint: fingerprint }),
+    state: "FAILED_SAFE" as const,
+    lease_token: null,
+    lease_expires_at: null,
+    last_error: "falha anterior segura",
+  };
+  const fake = fakeRepository({ existingAttempt: failedSafe });
+
+  const result = await settleReceivableManually(dependencies(fake.repository));
+
+  assert.equal(result.success, true);
+  assert.equal(fake.finalizeCalls, 1);
 });
 
 Deno.test("status bancário pago bloqueia antes de criar tentativa", async () => {

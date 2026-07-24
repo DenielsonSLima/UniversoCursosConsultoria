@@ -58,7 +58,7 @@ const SECRETARIA_TABS = [
   { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
   { id: 'declaracoes', label: 'Declaração de Matrícula' },
   { id: 'historico', label: 'Histórico de Emissões' },
-  { id: 'recebimentos', label: 'Recebimentos / Baixa' },
+  { id: 'recebimentos', label: 'Financeiro / Recebimentos' },
 ];
 
 const COMUNICACAO_TABS = [

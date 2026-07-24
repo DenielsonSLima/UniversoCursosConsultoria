@@ -10,6 +10,7 @@ import {
   useRemoveTurmaAulaMutation,
   useToggleDisciplinaConcluidaMutation,
   useTurmaGradeData,
+  useUpdateTurmaAulaMutation,
 } from '../hooks/useTurmaGrade';
 import {
   TurmaGradeDeleteAulaDialog,
@@ -17,10 +18,10 @@ import {
 } from './grade/TurmaGradeDialogs';
 import TurmaGradeModulo from './grade/TurmaGradeModulo';
 import {
-  formatGradeHours,
   getTurmaGradeTheme,
   TurmaGradeColorTheme,
 } from './grade/turma-grade-ui';
+import { TurmaAulaUpdateInput } from '../turma-grade.types';
 
 interface TurmaGradeProps {
   turma: Turma;
@@ -142,6 +143,23 @@ const TurmaGrade = ({
       toast.error('Aula não excluída', 'Não consegui remover esta aula do planejamento. Tente novamente.');
     },
   );
+  const updateAulaMutation = useUpdateTurmaAulaMutation(
+    turma.id,
+    () => {
+      toast.success('Aula atualizada', 'Título, data e carga horária foram atualizados no diário.');
+    },
+    (error) => {
+      console.error('Erro ao atualizar aula:', error);
+      const message = String(error?.message || '');
+      if (message.includes('Carga horaria excedida')) {
+        toast.info('Carga horária excedida', message.replace('Carga horaria', 'Carga horária'), {
+          contextLabel: 'Planejamento da grade',
+        });
+        return;
+      }
+      toast.error('Aula não atualizada', 'Não consegui salvar as alterações desta aula. Tente novamente.');
+    },
+  );
 
   useEffect(() => {
     const firstModuleId = cursoBase?.modulos?.[0]?.id;
@@ -180,18 +198,6 @@ const TurmaGrade = ({
     await toggleConcluidaMutation.mutateAsync({ disciplinaId, currentConfig });
   };
 
-  const getHorasPlanejadas = (disciplinaId: string) => {
-    const horasAulas = (aulas[disciplinaId] || []).reduce(
-      (total, aula) => total + Number(aula.cargaHoraria || 0),
-      0,
-    );
-    const horasAtividades = (atividadesExtraClasse[disciplinaId] || []).reduce(
-      (total, atividade) => total + Number(atividade.cargaHoraria || 0),
-      0,
-    );
-    return horasAulas + horasAtividades;
-  };
-
   const handleAddAula = async (disciplinaId: string) => {
     const titulo = newAulaTitulo[disciplinaId]?.trim();
     const horasStr = newAulaHoras[disciplinaId]?.trim();
@@ -204,24 +210,6 @@ const TurmaGrade = ({
     const horas = Number(horasStr.replace(',', '.'));
     if (!Number.isFinite(horas) || horas <= 0) {
       toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
-      return;
-    }
-
-    const disciplina = (cursoBase?.modulos || [])
-      .flatMap((modulo) => modulo.disciplinas)
-      .find((item) => item.id === disciplinaId);
-    const cargaOficial = Number(disciplina?.cargaHoraria || 0);
-    const horasRestantes = Math.max(0, cargaOficial - getHorasPlanejadas(disciplinaId));
-
-    if (cargaOficial > 0 && horas > horasRestantes) {
-      const excesso = horas - horasRestantes;
-      toast.info(
-        'Carga horária excedida',
-        horasRestantes > 0
-          ? `Restam ${formatGradeHours(horasRestantes)}h nesta disciplina. Esta inclusão excederia em ${formatGradeHours(excesso)}h a carga oficial de ${formatGradeHours(cargaOficial)}h.`
-          : `A disciplina já atingiu a carga oficial de ${formatGradeHours(cargaOficial)}h. Remova ou ajuste uma aula/atividade antes de lançar novas horas.`,
-        { contextLabel: newAulaExtraClasse[disciplinaId] ? 'Atividade extra-classe' : 'Planejamento da aula' },
-      );
       return;
     }
 
@@ -241,6 +229,28 @@ const TurmaGrade = ({
     }
 
     await addAulaMutation.mutateAsync({ disciplinaId, titulo, horas, dataAula: dataStr });
+  };
+
+  const handleUpdateAula = async (input: TurmaAulaUpdateInput) => {
+    const titulo = input.titulo.trim();
+    const dataAula = input.dataAula.trim();
+    const horas = Number(input.horas);
+
+    if (!titulo || !dataAula) {
+      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
+      return;
+    }
+    if (!Number.isFinite(horas) || horas <= 0) {
+      toast.info('Carga horária inválida', 'Use uma carga horária maior que zero.');
+      return;
+    }
+
+    await updateAulaMutation.mutateAsync({
+      ...input,
+      titulo,
+      dataAula,
+      horas,
+    });
   };
 
   const updateDraft = <T,>(
@@ -318,6 +328,7 @@ const TurmaGrade = ({
           theme={theme}
           savingAulaDisciplinaId={addAulaMutation.isPending ? addAulaMutation.variables?.disciplinaId : undefined}
           savingAtividadeDisciplinaId={addAtividadeExtraClasseMutation.isPending ? addAtividadeExtraClasseMutation.variables?.disciplinaId : undefined}
+          updatingAulaId={updateAulaMutation.isPending ? updateAulaMutation.variables?.aulaId : undefined}
           titulos={newAulaTitulo}
           datas={newAulaData}
           horas={newAulaHoras}
@@ -327,6 +338,7 @@ const TurmaGrade = ({
           onToggleConcluida={handleToggleConcluida}
           onOpenProfessor={(disciplinaId) => setShowDocenteModal({ isOpen: true, disciplinaId })}
           onDeleteAula={(disciplinaId, aulaId) => setAulaParaExcluir({ disciplinaId, aulaId })}
+          onUpdateAula={handleUpdateAula}
           onTituloChange={(id, value) => updateDraft(setNewAulaTitulo, id, value)}
           onDataChange={(id, value) => updateDraft(setNewAulaData, id, value)}
           onHorasChange={(id, value) => updateDraft(setNewAulaHoras, id, value)}

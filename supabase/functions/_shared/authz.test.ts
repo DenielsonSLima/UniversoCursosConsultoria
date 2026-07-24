@@ -50,6 +50,9 @@ const actor = (
   modules: ["inicio", "financeiro"],
   financeiroTabs: ["resumo", "receber", "conciliacao-bancaria"],
   tabs: {},
+  communicationSector: "",
+  communicationPoloId: null,
+  canViewAllCommunication: false,
   ...overrides,
 });
 

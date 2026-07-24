@@ -1009,39 +1009,30 @@ export const financeiroService = {
   },
 
   async searchAlunoReceivables(searchQuery: string, poloId?: string): Promise<any[]> {
-    let query = supabase
-      .from('contas_receber')
-      .select('id, descricao, valor, data_vencimento, data_pagamento, status, categoria, forma_pagamento, cliente_id, polo_id, parceiros!inner(nome, cpf_cnpj), polos!contas_receber_polo_id_fkey(nome)')
-      .eq('categoria', 'MENSALIDADE')
-      .in('status', ['PENDENTE', 'VENCIDO']);
+    const normalizedSearch = searchQuery.trim();
+    if (normalizedSearch.length < 2) return [];
 
-    if (poloId && poloId !== 'todos') {
-      query = query.eq('polo_id', poloId);
-    }
-
-    if (searchQuery) {
-      query = query.or(`descricao.ilike.%${searchQuery}%,parceiros.nome.ilike.%${searchQuery}%,parceiros.cpf_cnpj.ilike.%${searchQuery}%`);
-    }
-
-    const { data, error } = await query
-      .order('data_vencimento', { ascending: true })
-      .limit(500);
+    const { data, error } = await supabase.rpc('search_financeiro_aluno_receivables_secure', {
+      p_search: normalizedSearch,
+      p_polo_id: poloId && poloId !== 'todos' ? poloId : null,
+      p_limit: 50,
+    });
     if (error) {
       console.error('Erro ao buscar contas a receber de alunos:', error);
       throw error;
     }
 
-    return (data || []).map((cr: any) => ({
+    return (Array.isArray(data) ? data : []).map((cr: any) => ({
       id: cr.id,
-      poloNome: cr.polos?.nome || '',
+      poloNome: cr.polo_nome || '',
       descricao: cr.descricao,
       valor: Number(cr.valor),
       dataVencimento: cr.data_vencimento,
       dataPagamento: cr.data_pagamento,
       status: cr.status,
       categoria: cr.categoria,
-      clienteNome: cr.parceiros?.nome || 'Cliente Geral',
-      clienteCpf: cr.parceiros?.cpf_cnpj || '',
+      clienteNome: cr.cliente_nome || 'Cliente Geral',
+      clienteCpf: cr.cliente_cpf || '',
       formaPagamento: cr.forma_pagamento
     }));
   }

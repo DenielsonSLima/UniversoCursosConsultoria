@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   authorizationErrorHttpStatus,
@@ -15,6 +14,7 @@ import {
 } from "../../_shared/http.ts";
 import { getPaymentIssuerOverview, savePaymentIssuer } from "./issuer.ts";
 import {
+  assertHomologationStageRoute,
   assertProviderAdapterReady,
   assertProviderInFinancialScope,
   assertProviderMethodInFinancialScope,
@@ -46,6 +46,10 @@ import {
 } from "./credentials.ts";
 import { reconcileBaneseReceivable } from "./banese.ts";
 import { syncRouteAwareFutureInstallments } from "../../asaas/api/route-aware-future-sync.ts";
+import {
+  getGatewayRuntimeConfig,
+  saveGatewayRuntimeConfig,
+} from "../runtime-config.ts";
 
 Deno.serve(async (req: Request) => {
   const corsHeadersForRequest = buildCorsHeaders(req);
@@ -101,7 +105,7 @@ Deno.serve(async (req: Request) => {
         providersResult,
         credentialsResult,
         routesResult,
-        configResult,
+        runtimeConfig,
         issuerOverview,
       ] = await Promise.all([
         admin.from("payment_gateway_providers").select("*")
@@ -118,13 +122,12 @@ Deno.serve(async (req: Request) => {
           .order("modalidade", { ascending: true })
           .order("payment_method", { ascending: true })
           .order("environment", { ascending: true }),
-        admin.from("asaas_config").select("environment").maybeSingle(),
+        getGatewayRuntimeConfig(admin),
         getPaymentIssuerOverview(admin),
       ]);
       if (providersResult.error) throw providersResult.error;
       if (credentialsResult.error) throw credentialsResult.error;
       if (routesResult.error) throw routesResult.error;
-      if (configResult.error) throw configResult.error;
 
       const credentials = await Promise.all(
         (credentialsResult.data || []).map(async (credential: any) => {
@@ -196,7 +199,8 @@ Deno.serve(async (req: Request) => {
         providers: (providersResult.data || []).map(providerOverviewRow),
         credentials,
         routes: routesResult.data || [],
-        activeEnvironment: normalizeEnvironment(configResult.data?.environment),
+        integrationEnabled: runtimeConfig.enabled,
+        activeEnvironment: runtimeConfig.activeEnvironment,
         issuerConfig: issuerOverview.config,
         issuerCandidates: issuerOverview.candidates,
         activePolosCount: issuerOverview.active_polos_count,
@@ -205,6 +209,22 @@ Deno.serve(async (req: Request) => {
           banese_card: webhookUrlFor(supabaseUrl, "banese_card"),
         },
       });
+    }
+
+    if (action === "save-runtime-config") {
+      if (!gestor) throw new Error("Gestor nao identificado.");
+      const activeEnvironment = normalizeEnvironment(body.activeEnvironment);
+      if (activeEnvironment !== "sandbox") {
+        throw new Error(
+          "Producao permanece bloqueada nesta etapa. Mantenha o ambiente sandbox ate concluir a homologacao do boleto EAD.",
+        );
+      }
+      const runtimeConfig = await saveGatewayRuntimeConfig(admin, {
+        enabled: body.enabled === true,
+        activeEnvironment,
+        updatedBy: gestor.id,
+      });
+      return respondJson({ success: true, runtimeConfig });
     }
 
     if (action === "save-issuer") {
@@ -224,6 +244,7 @@ Deno.serve(async (req: Request) => {
       const metadata = enforceProviderFixedMetadata(
         providerCode,
         pickMetadata(body.metadata),
+        environment,
       );
       const current = await getCredential(admin, providerCode, environment);
       const checkedCurrent = current
@@ -274,7 +295,7 @@ Deno.serve(async (req: Request) => {
         ...currentMetadata,
         ...metadataWithSecretFlags,
         ...(providerCode === "banese_card"
-          ? enforceProviderFixedMetadata(providerCode, {})
+          ? enforceProviderFixedMetadata(providerCode, {}, environment)
           : {}),
       };
       // O merchantId do Mercado Pago vem do proprio /users/me. Por isso a
@@ -380,17 +401,13 @@ Deno.serve(async (req: Request) => {
       const routeEnabled = body.enabled !== false;
       assertProviderMethodInFinancialScope(providerCode, paymentMethod);
 
-      if (
-        routeEnabled && providerCode === "banese_card" &&
-        paymentMethod === "PIX" &&
-        environment === "sandbox"
-      ) {
-        throw new Error(
-          "Pix Banese nao pode ser ativado no sandbox: o servico esta indisponivel nesta faixa e permanece em producao.",
-        );
-      }
-
       if (routeEnabled) {
+        assertHomologationStageRoute(
+          modalidade,
+          paymentMethod,
+          providerCode,
+          environment,
+        );
         assertProviderAdapterReady(providerCode, paymentMethod, environment);
         if (!PROVIDERS[providerCode].supports.includes(paymentMethod)) {
           throw new Error(

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  DollarSign, TrendingUp, TrendingDown, Landmark, AlertTriangle, Activity, Info
+  DollarSign, TrendingUp, TrendingDown, Landmark, AlertTriangle, Info
 } from 'lucide-react';
 import { caixaDashboardQueryOptions, PRINCIPAL_POLO_ID } from './caixa.service';
 import { useCaixaRealtime } from './useCaixaRealtime';

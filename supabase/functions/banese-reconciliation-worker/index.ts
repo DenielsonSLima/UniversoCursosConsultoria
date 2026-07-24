@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reconcileBaneseReceivable } from "../gateways/api/banese.ts";
 import { syncRouteAwareFutureInstallments } from "../asaas/api/route-aware-future-sync.ts";
@@ -39,7 +38,15 @@ const readBatchSize = async (req: Request) => {
 };
 
 const safeError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const record = error && typeof error === "object"
+    ? error as Record<string, unknown>
+    : null;
+  const message = error instanceof Error
+    ? error.message
+    : [record?.message, record?.details, record?.hint, record?.code]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+      .join(" | ") || String(error);
   return message.replace(/[\r\n\t]+/g, " ").slice(0, 500);
 };
 

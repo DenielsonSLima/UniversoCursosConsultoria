@@ -28,6 +28,7 @@ import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries'
 import { useOutrosCreditosQueries } from './hooks/useOutrosCreditosQueries';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
+import { generateSafeUuid } from '../../../../lib/randomUuid';
 
 type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
 type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
@@ -84,14 +85,6 @@ const origemLabel = (item: ContasReceber) => {
 
 const isPendingOutrosCredito = (status: string) => PENDING_OUTROS_CREDIT_STATUSES.includes(status);
 
-const generateAttemptId = () => {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-};
-
 const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPoloId }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
@@ -114,9 +107,9 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   const [accountId, setAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
   const [receiveItem, setReceiveItem] = useState<ContasReceber | null>(null);
-  const [creationAttemptId, setCreationAttemptId] = useState(() => generateAttemptId());
+  const [creationAttemptId, setCreationAttemptId] = useState(generateSafeUuid);
 
-  useFinanceiroRealtime();
+  useFinanceiroRealtime(scopedPoloId || poloId);
 
   const summaryFilters = useMemo(() => ({
     poloId: scopedPoloId || undefined,
@@ -164,7 +157,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       ]);
       setIsModalOpen(false);
       resetForm();
-      setCreationAttemptId(generateAttemptId());
+      setCreationAttemptId(generateSafeUuid());
       toast.success(
         mode === 'GATEWAY' ? 'Crédito e link criados' : 'Crédito registrado',
         mode === 'GATEWAY' && created.asaasInvoiceUrl
@@ -226,7 +219,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   const openCreateModal = () => {
     resetForm();
-    setCreationAttemptId(generateAttemptId());
+    setCreationAttemptId(generateSafeUuid());
     setIsModalOpen(true);
   };
 
@@ -234,7 +227,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     if (createMutation.isPending) return;
     setIsModalOpen(false);
     resetForm();
-    setCreationAttemptId(generateAttemptId());
+    setCreationAttemptId(generateSafeUuid());
   };
 
   const baseFiltered = useMemo(() => {
@@ -273,17 +266,16 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     pending: summaryQuery.data?.pendingCount ?? pendingItems.length,
     canceled: summaryQuery.data?.canceledCount ?? canceledItems.length,
     all: summaryQuery.data?.allCount ?? baseFiltered.length,
-    receivedValue: summaryQuery.data?.receivedValue ?? receivedItems.reduce((s, i) => s + (i.valorPago ?? i.valor), 0),
-    pendingValue: summaryQuery.data?.pendingValue ?? pendingItems.reduce((s, i) => s + i.valor, 0),
+    receivedValue: summaryQuery.data?.receivedValue ?? 0,
+    pendingValue: summaryQuery.data?.pendingValue ?? 0,
   };
 
-  const kpis = useMemo(() => {
-    const total = baseFiltered.reduce((s, i) => s + i.valor, 0);
-    const recebido = receivedItems.reduce((s, i) => s + (i.valorPago ?? i.valor), 0);
-    const aReceber = pendingItems.reduce((s, i) => s + i.valor, 0);
-    const vencidos = baseFiltered.filter((i) => i.status === 'VENCIDO').length;
-    return { total, recebido, aReceber, vencidos };
-  }, [baseFiltered, pendingItems, receivedItems]);
+  const kpis = {
+    total: summaryQuery.data?.allValue ?? 0,
+    recebido: summaryQuery.data?.receivedValue ?? 0,
+    aReceber: summaryQuery.data?.pendingValue ?? 0,
+    vencidos: summaryQuery.data?.overdueCount ?? 0,
+  };
 
   const allGroups = useMemo(() => {
     if (groupMode === 'none') return [];

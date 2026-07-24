@@ -10,6 +10,7 @@ export type { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 const USER_SELECT =
   'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, ' +
   'permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, ' +
+  'setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_setores, ' +
   'perfis_acesso(nome, permissoes, restricao_horario), created_at';
 
 const resolvePerfilNome = (value: unknown) => {
@@ -41,6 +42,9 @@ const normalizeUser = (row: any): UsuarioSistema => {
     personalizar_permissoes: Boolean(row.personalizar_permissoes),
     // Mantém somente a regra individual; null significa herdar a agenda do perfil.
     restricao_horario: row.restricao_horario || null,
+    setor_comunicacao: row.setor_comunicacao || 'todos',
+    polo_comunicacao_id: row.polo_comunicacao_id || null,
+    pode_visualizar_todos_setores: Boolean(row.pode_visualizar_todos_setores),
   };
 };
 

@@ -25,6 +25,9 @@ export interface PortalAuthProfile {
   personalizar_permissoes?: boolean;
   isBlockedSchedule?: boolean;
   restricao_horario?: PortalScheduleRestriction | null;
+  setorComunicacao?: string | null;
+  poloComunicacaoId?: string | null;
+  podeVisualizarTodosSetores?: boolean;
 }
 
 export interface PortalProfileOptions {
@@ -266,6 +269,9 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     personalizar_permissoes: personalizarPermissoes,
     isBlockedSchedule: isBlocked,
     restricao_horario: restricao || null,
+    setorComunicacao: gestorRows.setor_comunicacao || 'todos',
+    poloComunicacaoId: gestorRows.polo_comunicacao_id || null,
+    podeVisualizarTodosSetores: Boolean(gestorRows.pode_visualizar_todos_setores),
   };
 };
 
@@ -302,7 +308,7 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   const { data: gestorRows, error: gestorError } = await supabase
     .from('usuarios_sistema')
-    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, perfis_acesso(permissoes, restricao_horario)')
+    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)')
     .ilike('email', email)
     .limit(1)
     .maybeSingle();

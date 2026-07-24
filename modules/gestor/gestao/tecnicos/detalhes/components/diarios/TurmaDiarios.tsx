@@ -1,180 +1,112 @@
 import React, { useState } from 'react';
-import { Layers, BookOpen, Loader2 } from 'lucide-react';
-import DiarioClasse from './DiarioClasse';
+import { BookOpen, Layers, Loader2 } from 'lucide-react';
 import { Turma } from '../../../../gestao.types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { academicLifecycleService } from '../../academic-lifecycle.service';
-import { academicLifecycleKeys } from '../../academic-lifecycle.keys';
+import DiarioClasse from './DiarioClasse';
 import TechnicalDataError from '../TechnicalDataError';
-
-interface Disciplina {
-  id: string;
-  nome: string;
-  professor: string;
-  horasRealizadas: number;
-  cargaHoraria: number;
-  progressoPercent: number;
-  periodoStatus: string;
-  concluida: boolean;
-}
-
-interface Modulo {
-  id: string;
-  nome: string;
-  disciplinas: Disciplina[];
-}
+import TurmaDiarioCard from './TurmaDiarioCard';
+import { useTurmaDiarios } from './hooks/useTurmaDiarios';
+import {
+  DiarioExportMode,
+  TurmaDiarioDisciplina,
+  TurmaDiarioSelection,
+} from './turma-diarios.types';
 
 interface TurmaDiariosProps {
   turma: Turma;
 }
 
 const TurmaDiarios: React.FC<TurmaDiariosProps> = ({ turma }) => {
-  const [activeModuloNome, setActiveModuloNome] = useState('');
-  const [activeDisciplina, setActiveDisciplina] = useState<Disciplina | null>(null);
-  const queryClient = useQueryClient();
+  const [selection, setSelection] = useState<TurmaDiarioSelection | null>(null);
+  const diariosQuery = useTurmaDiarios(turma.id);
+  const modules = diariosQuery.data || [];
 
-  const modulosQuery = useQuery<Modulo[]>({
-    queryKey: [...academicLifecycleKeys.diarios(turma.id), 'normalized-v2'],
-    queryFn: async () => {
-      const rows = await academicLifecycleService.getDiarios(turma.id);
-      const grouped = new Map<string, Modulo>();
-      rows.forEach((row: any) => {
-        if (!grouped.has(row.modulo_id)) {
-          grouped.set(row.modulo_id, {
-            id: row.modulo_id,
-            nome: row.modulo_nome,
-            disciplinas: [],
-          });
-        }
-        grouped.get(row.modulo_id)!.disciplinas.push({
-          id: row.disciplina_id,
-          nome: row.disciplina_nome,
-          professor: row.professor_nome,
-          horasRealizadas: Number(row.horas_realizadas),
-          cargaHoraria: Number(row.carga_horaria),
-          progressoPercent: Number(row.progresso_percent),
-          periodoStatus: row.periodo_status,
-          concluida: row.concluida,
-        });
-      });
-      return Array.from(grouped.values());
-    }
-  });
-  const modulosData = modulosQuery.data || [];
-  const modulos = (Array.isArray(modulosData) ? modulosData : []).map((modulo) => ({
-    ...modulo,
-    disciplinas: Array.isArray(modulo?.disciplinas) ? modulo.disciplinas : [],
-  }));
-
-  const handleOpenDiario = (disciplina: Disciplina, moduloNome: string) => {
-    setActiveModuloNome(moduloNome);
-    setActiveDisciplina(disciplina);
+  const selectDiary = (
+    disciplina: TurmaDiarioDisciplina,
+    moduloNome: string,
+    exportMode?: DiarioExportMode,
+  ) => {
+    setSelection({ disciplina, moduloNome, exportMode });
   };
 
-  const handleBack = () => {
-    setActiveDisciplina(null);
-    queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turma.id) });
-  };
-
-  if (modulosQuery.isLoading) {
+  if (diariosQuery.isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex items-center justify-center py-20">
         <Loader2 className="animate-spin text-[#001a33]" size={32} />
-        <span className="text-slate-500 font-bold ml-3">Carregando diários de classe...</span>
+        <span className="ml-3 font-bold text-slate-500">Carregando diários de classe...</span>
       </div>
     );
   }
 
-  if (modulosQuery.isError) {
+  if (diariosQuery.isError) {
     return (
       <TechnicalDataError
         title="Diários não carregados"
-        message="A grade foi ocultada para não informar incorretamente que a turma está sem disciplinas ou sem diários."
-        retrying={modulosQuery.isFetching}
-        onRetry={() => { void modulosQuery.refetch(); }}
+        message="A grade foi ocultada para não exibir dados acadêmicos incompletos."
+        retrying={diariosQuery.isFetching}
+        onRetry={() => { void diariosQuery.refetch(); }}
       />
     );
   }
 
-  if (activeDisciplina) {
-    return <DiarioClasse disciplina={activeDisciplina} moduloNome={activeModuloNome} turma={turma} onBack={handleBack} />;
+  if (selection) {
+    return (
+      <DiarioClasse
+        disciplina={selection.disciplina}
+        moduloNome={selection.moduloNome}
+        turma={turma}
+        onBack={() => setSelection(null)}
+        initialExportMode={selection.exportMode}
+        returnToListOnExportClose={Boolean(selection.exportMode)}
+      />
+    );
   }
 
   return (
-    <div className="">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-[#001a33] mb-1">Diários de Classe</h3>
-        <p className="text-slate-500 text-xs">Gerencie a frequência, notas e conteúdos programáticos das disciplinas.</p>
+    <section>
+      <div className="mb-7">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Gestão acadêmica</p>
+        <h3 className="mt-1 text-xl font-black text-[#001a33]">Diários de classe</h3>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Acompanhe o período, a presença geral e abra a versão preenchida ou manual de cada diário.
+        </p>
       </div>
 
-      {modulos.length === 0 || !modulos.some(m => m.disciplinas.length > 0) ? (
-        <div className="py-20 text-center text-slate-400 bg-white border border-slate-100 rounded-[2rem] shadow-sm flex flex-col items-center">
-          <BookOpen size={48} className="mb-4 opacity-50 text-slate-300" />
-          <p className="font-bold text-sm">Nenhuma disciplina cadastrada na grade deste curso.</p>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm">Configure a grade curricular do curso na aba de Cadastros para listar os diários aqui.</p>
+      {modules.length === 0 ? (
+        <div className="flex flex-col items-center rounded-[2rem] border border-slate-100 bg-white py-20 text-center text-slate-400 shadow-sm">
+          <BookOpen size={48} className="mb-4 text-slate-300" />
+          <p className="text-sm font-bold">Nenhuma disciplina cadastrada na grade deste curso.</p>
         </div>
       ) : (
         <div className="space-y-10">
-          {modulos.map((modulo) => {
-            if (modulo.disciplinas.length === 0) return null;
-            return (
-              <div key={modulo.id} className="">
-                <div className="flex items-center gap-3 mb-5 px-2">
-                  <div className="p-2 bg-slate-200/50 text-slate-500 rounded-lg">
-                    <Layers size={16} />
-                  </div>
-                  <h4 className="font-bold text-slate-700 text-sm uppercase tracking-widest">{modulo.nome}</h4>
+          {modules.map((module) => (
+            <section key={module.id}>
+              <div className="mb-4 flex items-center gap-3 px-1">
+                <div className="rounded-lg bg-slate-200/60 p-2 text-slate-500">
+                  <Layers size={15} />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {modulo.disciplinas.map(disc => {
-                    return (
-                      <div key={disc.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col group">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
-                            <BookOpen size={24} />
-                          </div>
-                          <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-100">
-                            {disc.horasRealizadas}H / {disc.cargaHoraria}H Realizadas
-                          </span>
-                        </div>
-
-                        <h5 className="font-black text-[#001a33] text-lg mb-1 leading-tight">{disc.nome}</h5>
-                        <p className="text-sm font-medium text-slate-500 mb-6">
-                          Docente: <span className={`font-bold ${disc.professor === 'Não atribuído' ? 'text-rose-500' : 'text-slate-700'}`}>{disc.professor}</span>
-                        </p>
-
-                        <div className="mt-auto space-y-3">
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-1000 ${disc.horasRealizadas > disc.cargaHoraria ? 'bg-rose-500' : 'bg-indigo-500'}`}
-                              style={{ width: `${disc.progressoPercent}%` }}
-                            ></div>
-                          </div>
-
-                          <div className="flex pt-4">
-                            <button
-                              onClick={() => handleOpenDiario(disc, modulo.nome)}
-                              className={`w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg ${
-                                disc.periodoStatus === 'FECHADO'
-                                  ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-none'
-                                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-600/20'
-                              }`}
-                            >
-                              <BookOpen size={14} /> {disc.periodoStatus === 'FECHADO' ? 'Ver diário fechado' : 'Acessar Diário'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <h4 className="text-xs font-black uppercase tracking-[0.18em] text-slate-600">
+                  {module.nome}
+                </h4>
+                <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-slate-400 ring-1 ring-slate-200">
+                  {module.disciplinas.length}
+                </span>
               </div>
-            );
-          })}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {module.disciplinas.map((disciplina) => (
+                  <TurmaDiarioCard
+                    key={disciplina.id}
+                    disciplina={disciplina}
+                    onOpen={() => selectDiary(disciplina, module.nome)}
+                    onOpenPdf={(mode) => selectDiary(disciplina, module.nome, mode)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

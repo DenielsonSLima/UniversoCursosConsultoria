@@ -1,14 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   ArrowDownLeft,
   ArrowUpRight,
-  FileCheck2,
   FileSpreadsheet,
-  Globe,
   Layers,
   RefreshCw,
-  ShieldAlert,
 } from 'lucide-react';
 import { integracaoBancariaService } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import BaneseCnabRemittancePanel from './BaneseCnabRemittancePanel';

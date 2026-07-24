@@ -7,6 +7,7 @@ import GestaoTecnicos from './tecnicos/GestaoTecnicos';
 import GestaoLivres from './livres/GestaoLivres';
 import GestaoEspecializacao from './especializacao/GestaoEspecializacao';
 import GestaoEad from './ead/GestaoEad';
+import { useGestaoRealtime } from './hooks/useGestaoRealtime';
 
 interface GestaoPageProps {
   poloId?: string;
@@ -17,6 +18,7 @@ interface GestaoPageProps {
 }
 
 const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop }) => {
+  useGestaoRealtime(poloId);
   const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
 

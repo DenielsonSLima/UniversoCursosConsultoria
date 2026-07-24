@@ -1,7 +1,9 @@
 import { FinanceiroConfigData } from './financeiro-config.service';
 
 export interface FinanceiroRulesCalculation {
+  desconto_aplicado: number;
   juros_calculados: number;
+  multa_aplicada: number;
   valor_com_atraso: number;
   valor_com_desconto: number;
 }

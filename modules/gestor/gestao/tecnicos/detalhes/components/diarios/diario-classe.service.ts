@@ -73,7 +73,7 @@ export const diarioClasseService = {
   async getAulas(turmaId: string, disciplinaId: string): Promise<DiarioAula[]> {
     const { data, error } = await supabase
       .from('aulas_turma')
-      .select('*')
+      .select('id, titulo, carga_horaria, data_aula, created_at')
       .eq('turma_id', turmaId)
       .eq('disciplina_id', disciplinaId);
 
@@ -188,22 +188,51 @@ export const diarioClasseService = {
     alunoId: string,
     fields: DiarioGradeFields,
   ) {
-    const { error } = await supabase
+    const patch: Record<string, number | null> = {};
+    const columnByField: Record<keyof DiarioGradeFields, string> = {
+      p: 'nota_p',
+      ti: 'nota_ti',
+      tg: 'nota_tg',
+      s: 'nota_s',
+      cq: 'nota_cq',
+      o: 'nota_o',
+      rec: 'nota_rec',
+    };
+    (Object.keys(columnByField) as (keyof DiarioGradeFields)[]).forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(fields, field)) {
+        patch[columnByField[field]] = fields[field] ?? null;
+      }
+    });
+
+    if (Object.keys(patch).length === 0) return;
+
+    const updateExisting = () => supabase
       .from('diario_notas')
-      .upsert({
+      .update(patch)
+      .eq('turma_id', turmaId)
+      .eq('disciplina_id', disciplinaId)
+      .eq('aluno_id', alunoId)
+      .select('aluno_id')
+      .maybeSingle();
+
+    const { data: updated, error: updateError } = await updateExisting();
+    if (updateError) throw updateError;
+    if (updated) return;
+
+    const { error: insertError } = await supabase
+      .from('diario_notas')
+      .insert({
         turma_id: turmaId,
         disciplina_id: disciplinaId,
         aluno_id: alunoId,
-        nota_p: fields.p,
-        nota_ti: fields.ti,
-        nota_tg: fields.tg,
-        nota_s: fields.s,
-        nota_cq: fields.cq,
-        nota_o: fields.o,
-        nota_rec: fields.rec,
-      }, { onConflict: 'turma_id,disciplina_id,aluno_id' });
+        ...patch,
+      });
 
-    if (error) throw error;
+    if (!insertError) return;
+    if (insertError.code !== '23505') throw insertError;
+
+    const { error: retryError } = await updateExisting();
+    if (retryError) throw retryError;
   },
 
   async savePratica(turmaId: string, disciplinaId: string, aulaId: string, text: string) {

@@ -1,19 +1,18 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { requireGestorAtivo, requireGestorTab } from "../_shared/authz.ts";
+import {
+  requireGestorAtivo,
+  requireGestorForWhatsAppRoute,
+  requireGestorTab,
+} from "../_shared/authz.ts";
 import { buildCorsHeaders, getClientIp, isRateLimitExceeded, json } from "../_shared/http.ts";
 import { insertWhatsAppMessage, normalizeWhatsAppPhone, phoneBelongsToAluno, upsertWhatsAppConversation } from "../_shared/whatsapp.ts";
+import { getWhatsAppMetaContext } from "../_shared/whatsapp-connection.ts";
 
 type MediaKind = "image" | "audio" | "document";
 type MediaFile = { base64?: string; type?: string; name?: string };
 
 const trim = (value: unknown) => String(value || "").trim();
 const allowedKinds = new Set(["image", "audio", "document"]);
-
-const normalizeGraphVersion = (value: unknown) => {
-  const version = trim(value) || "v23.0";
-  return /^v\d+\.\d+$/.test(version) ? version : "v23.0";
-};
 
 const decodeBase64 = (value: string) => {
   const binary = atob(value);
@@ -38,28 +37,7 @@ const createAdmin = () => {
   return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 };
 
-const getContext = async (admin: any) => {
-  const { data: config, error: configError } = await admin
-    .from("mensageria_config")
-    .select("wa_enabled, wa_status, wa_phone_number_id, wa_graph_version")
-    .eq("tipo", "whatsapp")
-    .maybeSingle();
-  if (configError) throw configError;
-
-  const { data: accessTokenSecret, error: secretError } = await admin.rpc(
-    "whatsapp_get_secret",
-    { p_secret_name: "whatsapp_meta_access_token" },
-  );
-  if (secretError) throw secretError;
-
-  const accessToken = trim(accessTokenSecret);
-  const phoneNumberId = trim(config?.wa_phone_number_id);
-  if (config?.wa_enabled !== true || config?.wa_status !== "configurado" || !accessToken || !phoneNumberId) {
-    throw new Error("API WhatsApp nao configurada ou token ausente.");
-  }
-
-  return { accessToken, phoneNumberId, graphVersion: normalizeGraphVersion(config?.wa_graph_version) };
-};
+const getContext = getWhatsAppMetaContext;
 
 const uploadMedia = async (
   context: Awaited<ReturnType<typeof getContext>>,
@@ -86,7 +64,9 @@ const uploadMedia = async (
 const sendMedia = async (admin: any, req: Request, body: any) => {
   const gestor = await requireGestorAtivo(req, admin);
   requireGestorTab(gestor, "comunicacao", "comunicacao-whatsapp");
-  const context = await getContext(admin);
+  const connectionId = trim(body.conexaoId || body.connectionId);
+  if (!connectionId) throw new Error("Selecione a linha que enviará a mídia.");
+  const context = await getContext(admin, connectionId);
   const kind = trim(body.kind) as MediaKind;
   if (!allowedKinds.has(kind)) throw new Error("Tipo de midia invalido.");
 
@@ -97,7 +77,7 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
 
   const { data: aluno, error: alunoError } = await admin
     .from("parceiros")
-    .select("id,nome,tipo,telefone")
+    .select("id,nome,tipo,telefone,polo_id")
     .eq("id", alunoId)
     .eq("tipo", "Aluno")
     .maybeSingle();
@@ -108,6 +88,18 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
   if (!allowedPhone) {
     throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
   }
+  const { data: currentConversation, error: conversationError } = await admin
+    .from("whatsapp_conversas")
+    .select("setor,polo_id")
+    .eq("conexao_id", connectionId)
+    .eq("telefone", to)
+    .maybeSingle();
+  if (conversationError) throw conversationError;
+  requireGestorForWhatsAppRoute(
+    gestor,
+    currentConversation?.setor || "atendimento_geral",
+    currentConversation?.polo_id || aluno.polo_id || null,
+  );
 
   const caption = trim(body.caption);
   const file = body.file || {};
@@ -136,7 +128,13 @@ const sendMedia = async (admin: any, req: Request, body: any) => {
   );
 
   const content = caption || (kind === "audio" ? "[audio]" : kind === "image" ? "[imagem]" : trim(file.name) || "[documento]");
-  const conversation = await upsertWhatsAppConversation(admin, { phone: to, aluno, lastText: content, direction: "saida" });
+  const conversation = await upsertWhatsAppConversation(admin, {
+    connectionId,
+    phone: to,
+    aluno,
+    lastText: content,
+    direction: "saida",
+  });
   await insertWhatsAppMessage(admin, {
     conversaId: conversation.id,
     alunoId: aluno.id,
@@ -179,7 +177,7 @@ const downloadMedia = async (context: Awaited<ReturnType<typeof getContext>>, me
 const getMessage = async (admin: any, messageId: string) => {
   const { data, error } = await admin
     .from("whatsapp_mensagens")
-    .select("id,message_type,raw_payload")
+    .select("id,message_type,raw_payload,whatsapp_conversas!inner(conexao_id,setor,polo_id)")
     .eq("id", messageId)
     .maybeSingle();
   if (error) throw error;
@@ -229,8 +227,20 @@ Deno.serve(async (req: Request) => {
     const action = trim(body.action);
     if (action === "send") return respondJson(await sendMedia(admin, req, body));
 
-    const context = await getContext(admin);
     const message = await getMessage(admin, trim(body.messageId));
+    const conversation = Array.isArray(message.whatsapp_conversas)
+      ? message.whatsapp_conversas[0]
+      : message.whatsapp_conversas;
+    const connectionId = trim(
+      conversation?.conexao_id || body.conexaoId || body.connectionId,
+    );
+    if (!connectionId) throw new Error("Mensagem sem linha WhatsApp vinculada.");
+    requireGestorForWhatsAppRoute(
+      gestor,
+      conversation?.setor,
+      conversation?.polo_id,
+    );
+    const context = await getContext(admin, connectionId);
     if (action === "download") {
       const { bytes: _bytes, ...media } = await downloadMedia(context, mediaIdFromMessage(message));
       return respondJson({ ok: true, media });

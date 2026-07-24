@@ -417,14 +417,20 @@ export const drawBaneseCarnetSlip = async (
   const instructions = input.instructions?.length
     ? input.instructions
     : ["Nao receber apos a data limite indicada pelo banco."];
-  instructions.slice(0, 2).forEach((instruction, index) => {
+  instructions.slice(0, 4).forEach((instruction, index) => {
+    const isCashierWarning = /CAIXA/i.test(instruction);
     drawText(
       page,
       fonts,
       instruction,
       bodyX + 7,
-      termsY - 17 - index * 8,
-      { size: 5.6, maxWidth: bodyWidth - pixWidth - 14 },
+      termsY - 17 - index * 7,
+      {
+        size: isCashierWarning ? 5.6 : 5.2,
+        bold: isCashierWarning,
+        color: isCashierWarning ? COLORS.sandbox : COLORS.black,
+        maxWidth: bodyWidth - pixWidth - 14,
+      },
     );
   });
   drawPixPanel(page, fonts, input, pixQr, {

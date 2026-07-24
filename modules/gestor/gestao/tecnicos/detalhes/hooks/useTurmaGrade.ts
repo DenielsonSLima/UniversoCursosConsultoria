@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
+import { diarioClasseKeys } from '../components/diarios/diario-classe.keys';
 import { turmaGradeService } from '../turma-grade.service';
 import {
   TurmaAtividadeExtraClasseInput,
   TurmaAulaInput,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
   TurmaProfessorOption,
 } from '../turma-grade.types';
@@ -17,6 +19,9 @@ const useTurmaGradeInvalidation = (turmaId: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulasByTurma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticasByTurma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
     ]);
   }, [queryClient, turmaId]);
@@ -126,6 +131,23 @@ export const useAddTurmaAtividadeExtraClasseMutation = (
 
   return useMutation({
     mutationFn: (input: TurmaAtividadeExtraClasseInput) => turmaGradeService.addAtividadeExtraClasse(turmaId, input),
+    onSuccess: async (_data, input) => {
+      await invalidate();
+      await onSuccess?.(input);
+    },
+    onError,
+  });
+};
+
+export const useUpdateTurmaAulaMutation = (
+  turmaId: string,
+  onSuccess?: (input: TurmaAulaUpdateInput) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const invalidate = useTurmaGradeInvalidation(turmaId);
+
+  return useMutation({
+    mutationFn: (input: TurmaAulaUpdateInput) => turmaGradeService.updateAula(turmaId, input),
     onSuccess: async (_data, input) => {
       await invalidate();
       await onSuccess?.(input);

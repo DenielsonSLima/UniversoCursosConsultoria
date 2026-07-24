@@ -17,6 +17,7 @@ import {
   type BaneseAccessToken,
   BaneseAdapterConfigurationError,
   BaneseAdapterError,
+  BaneseCancellationRequiresReviewError,
   type Environment,
   type SupabaseAdminRpcClient,
 } from "./types.ts";
@@ -70,10 +71,12 @@ const normalizeBanesePixFromResponse = (
 ) => {
   const { pixPayload, pixEncodedImage } = hasPixReturn(raw);
 
-  if (!pixPayload || !pixEncodedImage) return {
-    pixPayload: null,
-    pixEncodedImage: null,
-  };
+  if (!pixPayload || !pixEncodedImage) {
+    return {
+      pixPayload: null,
+      pixEncodedImage: null,
+    };
+  }
 
   try {
     const payload = normalizeBanesePixPayload(pixPayload, amount).payload;
@@ -362,33 +365,42 @@ export const queryBaneseBoleto = async (
     boleto.CodigoSituacaoBoleto ?? boleto.codigoSituacaoBoleto,
   );
   const remoteStatus = BANESE_BOLETO_STATUS[situationCode] || "UNKNOWN";
-  let payments: Array<Record<string, unknown>> = [];
+  let payments: Array<Record<string, unknown>>;
 
-  if (situationCode === 3) {
-    const paymentResponse = await fetch(
-      `${baseEndpoint}/pagamentos/efetivados`,
-      {
-        headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
-      },
-    );
-    const paymentRaw = await readResponseBody(paymentResponse);
-    if (!paymentResponse.ok) {
-      throw new BaneseAdapterError(
-        `Boleto Banese esta pago, mas a consulta dos pagamentos efetivados falhou (${paymentResponse.status}).`,
-      );
-    }
+  // O banco confirmou por e-mail que PagamentosEfetivados prevalece sobre
+  // CodigoSituacaoBoleto. Por isso a consulta não pode depender do código 3.
+  const paymentResponse = await fetch(
+    `${baseEndpoint}/pagamentos/efetivados`,
+    {
+      headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+    },
+  );
+  const paymentRaw = await readResponseBody(paymentResponse);
+  if (paymentResponse.ok) {
     const paymentRecord = asRecord(paymentRaw);
-    payments = Array.isArray(paymentRecord.PagamentosEfetivados)
-      ? paymentRecord.PagamentosEfetivados.map(asRecord)
+    const paymentItems = Array.isArray(paymentRaw)
+      ? paymentRaw
+      : paymentRecord.PagamentosEfetivados ??
+        paymentRecord.pagamentosEfetivados ??
+        [];
+    payments = Array.isArray(paymentItems)
+      ? paymentItems.map(asRecord).filter((item) =>
+        Object.keys(item).length > 0
+      )
       : [];
+  } else {
+    throw new BaneseAdapterError(
+      `A consulta canônica de PagamentosEfetivados do Banese falhou (${paymentResponse.status}); o estado financeiro do boleto não pôde ser confirmado.`,
+    );
   }
+  const paid = payments.length > 0;
 
   return {
     convenio,
     nossoNumero,
     situationCode,
-    remoteStatus,
-    paid: situationCode === 3,
+    remoteStatus: paid ? BANESE_BOLETO_STATUS[3] || "PAID" : remoteStatus,
+    paid,
     payments,
     financialTerms,
     raw: sanitizedBoletoSnapshot(boleto),
@@ -401,6 +413,7 @@ export const cancelBaneseBoleto = async (
   input: {
     convenio: unknown;
     nossoNumero: unknown;
+    onMutationStart?: () => void;
   },
 ) => {
   assertEnvironment(environment);
@@ -416,8 +429,8 @@ export const cancelBaneseBoleto = async (
     convenio,
     nossoNumero,
   });
-  if (current.situationCode === 3) {
-    throw new BaneseAdapterError(
+  if (current.paid) {
+    throw new BaneseCancellationRequiresReviewError(
       "O Banese ja confirmou o pagamento deste boleto. Atualize a conciliacao antes da baixa manual.",
     );
   }
@@ -432,7 +445,10 @@ export const cancelBaneseBoleto = async (
     };
   }
   if (current.situationCode !== 2) {
-    throw new BaneseAdapterError(
+    const ErrorType = current.situationCode === 0
+      ? BaneseAdapterError
+      : BaneseCancellationRequiresReviewError;
+    throw new ErrorType(
       `Boleto Banese nao pode ser baixado na situacao ${current.situationCode} (${current.remoteStatus}).`,
     );
   }
@@ -441,6 +457,7 @@ export const cancelBaneseBoleto = async (
   const endpoint = `${
     BANESE_BOLETO_ENDPOINTS[environment].baseUrl
   }/convenios/${convenio}/boletos/${nossoNumero}/baixa`;
+  input.onMutationStart?.();
   const response = await fetch(endpoint, {
     method: "PUT",
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
@@ -451,7 +468,7 @@ export const cancelBaneseBoleto = async (
     convenio,
     nossoNumero,
   });
-  if (confirmed.situationCode === 3) {
+  if (confirmed.paid) {
     throw new BaneseAdapterError(
       "O Banese confirmou pagamento durante a tentativa de baixa. O recebimento manual nao foi registrado.",
     );

@@ -21,6 +21,7 @@ export interface CapaCampo {
 export interface DiarioTemplate {
   capaUrl: string | null;
   contracapaUrl: string | null;
+  cabecalhoLogoUrl?: string | null;
   cabecalho: string;
   rodape: string;
   imprimirInstrucoes: boolean;

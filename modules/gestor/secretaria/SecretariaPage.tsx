@@ -111,8 +111,8 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     description: 'Auditoria dos documentos emitidos pela secretaria.',
   },
   'consulta-financeira': {
-    title: 'Recebimentos',
-    description: 'Pesquise qualquer pessoa, consulte dívidas em aberto e registre baixas manuais.',
+    title: 'Financeiro',
+    description: 'Recebimentos agrupados por aluno e curso, nos modos individual, lote e personalizado.',
   },
 };
 

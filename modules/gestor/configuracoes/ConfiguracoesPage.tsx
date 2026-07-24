@@ -12,8 +12,6 @@ import {
   Server,
   ArrowLeft,
   Tags,
-  Percent,
-  Calculator,
   MessageCircle,
   FileCode2,
   GraduationCap,
@@ -30,8 +28,6 @@ import SaldoInicialConfig from './saldo-inicial/SaldoInicialConfig';
 import IntegracaoBancariaConfig from './integracao-bancaria/IntegracaoBancariaConfig';
 import ApiStatusConfig from './api-status/ApiStatusConfig';
 import CategoriasConfig from './categorias/CategoriasConfig';
-import RegrasCobrancaConfig from './regras-cobranca/RegrasCobrancaConfig';
-import TaxasPagamentoConfig from './taxas-pagamento/TaxasPagamentoConfig';
 import MensageriaConfig from './mensageria/MensageriaConfig';
 import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensConfig';
 import PolosConfig from './polos/PolosConfig';
@@ -59,8 +55,6 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
     { id: 'saldo', title: 'Saldo Inicial', desc: 'Ajuste de caixa inicial', icon: <Wallet size={24} />, color: 'bg-teal-500' },
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
-    { id: 'regras-cobranca', title: 'Regras de Cobrança', desc: 'Juros, multas e descontos', icon: <Percent size={24} />, color: 'bg-yellow-500' },
-    { id: 'taxas-pagamento', title: 'Taxas e Formas Pgto', desc: 'Descontos de maquininhas', icon: <Calculator size={24} />, color: 'bg-fuchsia-500' },
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
@@ -82,8 +76,6 @@ const ConfiguracoesPage: React.FC = () => {
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
       case 'logs': return <LogsEventosConfig />;
-      case 'regras-cobranca': return <RegrasCobrancaConfig />;
-      case 'taxas-pagamento': return <TaxasPagamentoConfig />;
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;

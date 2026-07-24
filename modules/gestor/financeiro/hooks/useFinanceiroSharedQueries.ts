@@ -22,28 +22,32 @@ export function useFinanceiroSharedQueries(options: FinanceiroSharedQueriesOptio
   const accountsQuery = useQuery({
     queryKey: financeiroQueryKeys.contasBancariasSaldos,
     queryFn: () => financeiroService.getContasBancariasSaldos(),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
     enabled: accounts,
   });
 
   const polosQuery = useQuery({
     queryKey: financeiroQueryKeys.polos,
     queryFn: () => financeiroService.getPolos(),
-    staleTime: 60_000,
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
     enabled: polos,
   });
 
   const partnersQuery = useQuery({
     queryKey: financeiroQueryKeys.parceiros,
     queryFn: () => financeiroService.getParceiros(),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
     enabled: partners,
   });
 
   const turmasQuery = useQuery({
     queryKey: ['financeiro-shared-turmas', poloId || 'sem-polo'],
     queryFn: () => financeiroService.getTurmas(poloId || undefined),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
     enabled: turmas && Boolean(poloId),
   });
 

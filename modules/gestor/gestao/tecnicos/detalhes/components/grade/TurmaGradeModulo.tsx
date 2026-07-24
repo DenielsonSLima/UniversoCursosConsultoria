@@ -4,6 +4,7 @@ import { Modulo } from '../../../../../cadastros/cadastros.types';
 import {
   TurmaAtividadeExtraClasse,
   TurmaAulaPlanejada,
+  TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
 } from '../../turma-grade.types';
 import TurmaGradeDisciplina from './TurmaGradeDisciplina';
@@ -21,6 +22,7 @@ interface TurmaGradeModuloProps {
   theme: TurmaGradeTheme;
   savingAulaDisciplinaId?: string;
   savingAtividadeDisciplinaId?: string;
+  updatingAulaId?: string;
   titulos: Record<string, string>;
   datas: Record<string, string>;
   horas: Record<string, string>;
@@ -30,6 +32,7 @@ interface TurmaGradeModuloProps {
   onToggleConcluida: (disciplinaId: string) => void;
   onOpenProfessor: (disciplinaId: string) => void;
   onDeleteAula: (disciplinaId: string, aulaId: string) => void;
+  onUpdateAula: (input: TurmaAulaUpdateInput) => Promise<void>;
   onTituloChange: (disciplinaId: string, value: string) => void;
   onDataChange: (disciplinaId: string, value: string) => void;
   onHorasChange: (disciplinaId: string, value: string) => void;
@@ -49,6 +52,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
   theme,
   savingAulaDisciplinaId,
   savingAtividadeDisciplinaId,
+  updatingAulaId,
   titulos,
   datas,
   horas,
@@ -58,6 +62,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
   onToggleConcluida,
   onOpenProfessor,
   onDeleteAula,
+  onUpdateAula,
   onTituloChange,
   onDataChange,
   onHorasChange,
@@ -126,6 +131,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
                 singleProfessor={singleProfessor}
                 isExpanded={expandedDisciplines.has(disciplina.id)}
                 isSaving={savingAulaDisciplinaId === disciplina.id || savingAtividadeDisciplinaId === disciplina.id}
+                updatingAulaId={updatingAulaId}
                 titulo={titulos[disciplina.id] || ''}
                 data={datas[disciplina.id] || ''}
                 horas={horas[disciplina.id] || ''}
@@ -134,6 +140,7 @@ const TurmaGradeModulo: React.FC<TurmaGradeModuloProps> = ({
                 onToggleConcluida={() => onToggleConcluida(disciplina.id)}
                 onOpenProfessor={() => onOpenProfessor(disciplina.id)}
                 onDeleteAula={(aulaId) => onDeleteAula(disciplina.id, aulaId)}
+                onUpdateAula={onUpdateAula}
                 onTituloChange={(value) => onTituloChange(disciplina.id, value)}
                 onDataChange={(value) => onDataChange(disciplina.id, value)}
                 onHorasChange={(value) => onHorasChange(disciplina.id, value)}

@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  Eye,
   FileCheck2,
   Loader2,
   Printer,
@@ -27,8 +28,11 @@ import {
 } from './secretaria-documentos.types';
 import SecretariaAlunoSearchCard from './SecretariaAlunoSearchCard';
 import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPreview';
+import SecretariaIssuedDocumentModal from './SecretariaIssuedDocumentModal';
+import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
+import { irpfService } from '../../cadastros/modelos-documentos/irpf/irpf.service';
 import CrachaPeriodoEleitoralPreview from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
 import {
   crachaPeriodoEleitoralService,
@@ -55,22 +59,35 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedAluno, setSelectedAluno] = useState<SecretariaAlunoResumo | null>(null);
   const [selectedMatriculaId, setSelectedMatriculaId] = useState('');
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [selectedModuleId, setSelectedModuleId] = useState('');
+  const [isAcademicPreviewOpen, setIsAcademicPreviewOpen] = useState(false);
   const [selectedReferenceYear, setSelectedReferenceYear] = useState(() => getDefaultIrpfCalendarYear());
   const [crachaPrintLayout, setCrachaPrintLayout] = useState<'dobra' | 'duplex'>('dobra');
   const [isCrachaPrinting, setIsCrachaPrinting] = useState(false);
+  const [issuedEmissions, setIssuedEmissions] = useState<EmissionLog[]>([]);
+  const [isIssuedDocumentOpen, setIsIssuedDocumentOpen] = useState(false);
   const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const printContentRef = useRef<HTMLDivElement>(null);
 
   const isIrpfAnnual = definition.referenceMode === 'irpf_annual';
+  const isBoletim = definition.id === 'boletim';
   const isCrachaEstagio = definition.id === 'cracha_estagio';
   const isCrachaPeriodoEleitoral = definition.id === 'cracha_periodo_eleitoral';
   const isCrachaDocument = isCrachaEstagio || isCrachaPeriodoEleitoral;
+  const supportsIssuedDocumentPreview = !isCrachaDocument && definition.id !== 'rematricula';
   const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
   const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
   const enrollmentStatuses = definition.enrollmentStatuses || [];
+  const { data: irpfTemplate } = useQuery({
+    queryKey: ['secretaria-irpf-template', context.poloId],
+    queryFn: () => irpfService.getTemplate(context.poloId),
+    enabled: isIrpfAnnual,
+    staleTime: 60_000,
+  });
+  const irpfLiberacaoDate = irpfTemplate?.liberacaoDate as string | undefined;
   const irpfYearOptions = useMemo(
-    () => getIrpfCalendarYearOptions(undefined, new Date(), 10),
-    []
+    () => getIrpfCalendarYearOptions(irpfLiberacaoDate, new Date(), 10),
+    [irpfLiberacaoDate]
   );
   const selectedIrpfYear = irpfYearOptions.find((option) => option.year === selectedReferenceYear);
 
@@ -125,6 +142,23 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     staleTime: 60_000,
   });
 
+  const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
+  const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
+  const moduleTurmaId = mode === 'individual'
+    ? selectedMatricula?.turmaId || ''
+    : selectedTurmaId;
+  const { data: modules = [], isLoading: isLoadingModules } = useQuery({
+    queryKey: secretariaDocumentosKeys.modulos(
+      context,
+      definition.id,
+      moduleTurmaId || 'nenhuma'
+    ),
+    queryFn: () => secretariaDocumentosService.getTurmaModulos(moduleTurmaId),
+    enabled: isBoletim && !!moduleTurmaId,
+    staleTime: 60_000,
+  });
+  const selectedModule = modules.find((item) => item.id === selectedModuleId);
+
   const { data: crachaTemplate } = useQuery({
     queryKey: ['secretaria-cracha-template'],
     queryFn: () => crachaService.getTemplate(),
@@ -154,8 +188,17 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   }, [matriculas, selectedMatriculaId]);
 
   useEffect(() => {
+    if (!isIrpfAnnual || !irpfTemplate) return;
+    setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
+  }, [irpfLiberacaoDate, irpfTemplate, isIrpfAnnual]);
+
+  useEffect(() => {
     if (turmas.length && !selectedTurmaId) setSelectedTurmaId(turmas[0].id);
   }, [turmas, selectedTurmaId]);
+
+  useEffect(() => {
+    setSelectedModuleId('');
+  }, [moduleTurmaId]);
 
   useEffect(() => {
     const channel = supabase
@@ -194,22 +237,34 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         completedOnly: !!definition.completedOnly,
         enrollmentStatuses,
         internshipOnly: !!definition.internshipOnly,
-        referencePeriod: isIrpfAnnual ? String(selectedReferenceYear) : undefined,
+        referencePeriod: isBoletim
+          ? selectedModuleId
+          : isIrpfAnnual
+            ? String(selectedReferenceYear)
+            : undefined,
+        moduleId: isBoletim ? selectedModuleId : undefined,
+        moduleName: isBoletim ? selectedModule?.nome : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({
         queryKey: secretariaDocumentosKeys.emissions(context, definition.id),
       });
       setStep(3);
+      if (isCrachaDocument && data.items.length > 0) {
+        setIsCrachaPrinting(true);
+      }
+      if (supportsIssuedDocumentPreview && data.emissions.length > 0) {
+        setIssuedEmissions(data.emissions);
+        setIsIssuedDocumentOpen(true);
+      }
     },
   });
 
-  const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
-  const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
+  const hasRequiredModule = !isBoletim || !!selectedModule;
   const canContinue =
     mode === 'individual'
-      ? !!selectedAluno && !!selectedMatriculaId && (!isIrpfAnnual || !!selectedIrpfYear?.released) && isCrachaEleitoralAvailable
-      : !!selectedTurmaId && isCrachaEleitoralAvailable;
+      ? !!selectedAluno && !!selectedMatriculaId && hasRequiredModule && (!isIrpfAnnual || !!selectedIrpfYear?.released) && isCrachaEleitoralAvailable
+      : !!selectedTurmaId && hasRequiredModule && isCrachaEleitoralAvailable;
 
   const resetFlow = (nextMode = mode) => {
     setMode(nextMode);
@@ -218,7 +273,11 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSelectedAluno(null);
     setSelectedMatriculaId('');
     setSelectedTurmaId('');
-    setSelectedReferenceYear(getDefaultIrpfCalendarYear());
+    setSelectedModuleId('');
+    setIsAcademicPreviewOpen(false);
+    setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
+    setIssuedEmissions([]);
+    setIsIssuedDocumentOpen(false);
   };
 
   const crachaPrintItems = ((emissionMutation.data as any)?.items || []) as any[];
@@ -599,7 +658,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   ) : (
                     <select
                       value={selectedMatriculaId}
-                      onChange={(event) => setSelectedMatriculaId(event.target.value)}
+                      onChange={(event) => {
+                        setSelectedMatriculaId(event.target.value);
+                        setSelectedModuleId('');
+                      }}
                       className="w-full mt-2 p-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 text-sm font-bold text-slate-700"
                     >
                       {!matriculas.length && <option value="">Nenhuma matrícula compatível</option>}
@@ -608,7 +670,33 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                           {matricula.cursoNome} — {matricula.turmaNome} ({matricula.status})
                         </option>
                       ))}
-                    </select>
+                      </select>
+                  )}
+
+                  {isBoletim && selectedMatriculaId && (
+                    <div className="mt-5">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        Módulo do boletim
+                      </label>
+                      <select
+                        value={selectedModuleId}
+                        onChange={(event) => setSelectedModuleId(event.target.value)}
+                        disabled={isLoadingModules || !modules.length}
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">
+                          {isLoadingModules ? 'Carregando módulos...' : 'Selecione o módulo'}
+                        </option>
+                        {modules.map((module) => (
+                          <option key={module.id} value={module.id}>{module.nome}</option>
+                        ))}
+                      </select>
+                      {!isLoadingModules && !modules.length && (
+                        <p className="mt-2 text-[11px] font-semibold text-rose-600">
+                          Esta turma não possui módulos vinculados à grade curricular.
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {isIrpfAnnual && (
@@ -648,7 +736,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   {turmas.map((turma) => (
                     <button
                       key={turma.id}
-                      onClick={() => setSelectedTurmaId(turma.id)}
+                      onClick={() => {
+                        setSelectedTurmaId(turma.id);
+                        setSelectedModuleId('');
+                      }}
                       className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all ${selectedTurmaId === turma.id ? `${definition.softAccent} border-current ${definition.accent}` : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'}`}
                     >
                       <div>
@@ -659,6 +750,29 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                     </button>
                   ))}
                   {!turmas.length && <p className="py-12 text-center text-sm text-slate-400">Nenhuma turma compatível na unidade ativa.</p>}
+                </div>
+              )}
+              {isBoletim && selectedTurmaId && (
+                <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-700">
+                    Módulo do boletim
+                  </label>
+                  <select
+                    value={selectedModuleId}
+                    onChange={(event) => setSelectedModuleId(event.target.value)}
+                    disabled={isLoadingModules || !modules.length}
+                    className="mt-2 w-full rounded-xl border border-indigo-150 bg-white p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 disabled:text-slate-400"
+                  >
+                    <option value="">
+                      {isLoadingModules ? 'Carregando módulos...' : 'Selecione o módulo da turma'}
+                    </option>
+                    {modules.map((module) => (
+                      <option key={module.id} value={module.id}>{module.nome}</option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                    Todos os boletins deste lote serão gerados somente com as disciplinas do módulo escolhido.
+                  </p>
                 </div>
               )}
             </div>
@@ -689,6 +803,12 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   <div className="p-4 flex justify-between gap-4">
                     <span className="text-xs font-bold text-slate-400 uppercase">Ano-calendário</span>
                     <span className="text-sm font-black text-[#001a33]">{selectedReferenceYear}</span>
+                  </div>
+                )}
+                {isBoletim && (
+                  <div className="p-4 flex justify-between gap-4">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Módulo</span>
+                    <span className="text-sm font-black text-[#001a33] text-right">{selectedModule?.nome || 'Não selecionado'}</span>
                   </div>
                 )}
               </div>
@@ -726,16 +846,21 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   </button>
                 </div>
               )}
-              {emissionMutation.isError && (
-                <p className="mt-4 text-sm font-bold text-red-600">Não foi possível preparar a emissão. Verifique a conexão e tente novamente.</p>
-              )}
               {mode === 'individual' && selectedMatriculaId && definition.academicPreview && (
-                <div className="mt-6">
-                  <SecretariaAcademicDocumentPreview
-                    matriculaId={selectedMatriculaId}
-                    type={definition.academicPreview}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAcademicPreviewOpen(true)}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-indigo-700 transition-colors hover:bg-indigo-100"
+                >
+                  <Eye size={15} /> Visualizar prévia
+                </button>
+              )}
+              {emissionMutation.isError && (
+                <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
+                  {emissionMutation.error instanceof Error
+                    ? emissionMutation.error.message
+                    : 'Não foi possível preparar a emissão. Verifique a conexão e tente novamente.'}
+                </p>
               )}
             </div>
           )}
@@ -784,6 +909,15 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                   </div>
                 </div>
               )}
+              {supportsIssuedDocumentPreview && issuedEmissions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsIssuedDocumentOpen(true)}
+                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg hover:bg-blue-700"
+                >
+                  <Printer size={15} /> Abrir documento / PDF
+                </button>
+              )}
               <button onClick={() => resetFlow(mode)} className="mt-7 px-6 py-3 rounded-xl bg-[#001a33] text-white text-xs font-black uppercase tracking-widest">
                 Nova emissão
               </button>
@@ -801,7 +935,16 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             </button>
             <button
               disabled={!canContinue || emissionMutation.isPending}
-              onClick={() => step === 1 ? setStep(2) : emissionMutation.mutate()}
+              onClick={() => {
+                if (step === 1) {
+                  setStep(2);
+                  if (mode === 'individual' && definition.academicPreview) {
+                    setIsAcademicPreviewOpen(true);
+                  }
+                  return;
+                }
+                emissionMutation.mutate();
+              }}
               className="px-6 py-3 rounded-xl bg-[#001a33] text-white text-xs font-black uppercase tracking-wider disabled:opacity-40 flex items-center gap-2"
             >
               {emissionMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : step === 1 ? <ChevronRight size={15} /> : <FileCheck2 size={15} />}
@@ -810,6 +953,23 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           </div>
         )}
       </div>
+      {isIssuedDocumentOpen && issuedEmissions.length > 0 && (
+        <SecretariaIssuedDocumentModal
+          emissions={issuedEmissions}
+          poloId={context.poloId}
+          definition={definition}
+          onClose={() => setIsIssuedDocumentOpen(false)}
+        />
+      )}
+      {isAcademicPreviewOpen && mode === 'individual' && selectedMatriculaId && definition.academicPreview && (
+        <SecretariaAcademicDocumentPreview
+          matriculaId={selectedMatriculaId}
+          type={definition.academicPreview}
+          moduleId={isBoletim ? selectedModuleId : undefined}
+          moduleName={isBoletim ? selectedModule?.nome : undefined}
+          onClose={() => setIsAcademicPreviewOpen(false)}
+        />
+      )}
     </div>
     </div>
   );

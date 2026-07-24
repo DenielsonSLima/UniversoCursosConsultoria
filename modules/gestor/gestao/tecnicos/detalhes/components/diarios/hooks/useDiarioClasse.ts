@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diarioClasseKeys } from '../diario-classe.keys';
 import { diarioClasseService, DiarioAulaInput, DiarioGradeFields } from '../diario-classe.service';
+import { academicLifecycleKeys } from '../../../academic-lifecycle.keys';
 
 const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
   const queryClient = useQueryClient();
@@ -9,12 +10,15 @@ const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
     attendanceAndResults: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.frequencia(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.alunos(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
     ]),
     results: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
     aulasAndResults: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulas(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
     ]),
     praticas: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
     observacoes: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.observacoes(turmaId, disciplinaId) }),
@@ -80,7 +84,12 @@ export const useDiarioObservacoes = (turmaId: string, disciplinaId: string) => u
   queryFn: () => diarioClasseService.getObservacoes(turmaId, disciplinaId),
 });
 
-export const useToggleDiarioAttendanceMutation = (turmaId: string, disciplinaId: string) => {
+export const useToggleDiarioAttendanceMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (input: { aulaId: string; alunoId: string; nextStatus: 'P' | 'F' }) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
   const invalidate = useInvalidateDiario(turmaId, disciplinaId);
 
   return useMutation({
@@ -92,35 +101,66 @@ export const useToggleDiarioAttendanceMutation = (turmaId: string, disciplinaId:
         input.alunoId,
         input.nextStatus,
       ),
-    onSuccess: invalidate.attendanceAndResults,
+    onSuccess: async (_data, variables) => {
+      await invalidate.attendanceAndResults();
+      await onSuccess?.(variables);
+    },
+    onError,
   });
 };
 
-export const useSaveDiarioGradesMutation = (turmaId: string, disciplinaId: string) => {
+export const useSaveDiarioGradesMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (input: { alunoId: string; fields: DiarioGradeFields }) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
   const invalidate = useInvalidateDiario(turmaId, disciplinaId);
 
   return useMutation({
     mutationFn: (input: { alunoId: string; fields: DiarioGradeFields }) =>
       diarioClasseService.saveStudentGrades(turmaId, disciplinaId, input.alunoId, input.fields),
-    onSuccess: invalidate.results,
+    onSuccess: async (_data, variables) => {
+      await invalidate.results();
+      await onSuccess?.(variables);
+    },
+    onError,
   });
 };
 
-export const useSaveDiarioPraticaMutation = (turmaId: string, disciplinaId: string) => {
+export const useSaveDiarioPraticaMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (input: { aulaId: string; text: string }) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
   const invalidate = useInvalidateDiario(turmaId, disciplinaId);
 
   return useMutation({
     mutationFn: (input: { aulaId: string; text: string }) =>
       diarioClasseService.savePratica(turmaId, disciplinaId, input.aulaId, input.text),
-    onSuccess: invalidate.praticas,
+    onSuccess: async (_data, variables) => {
+      await invalidate.praticas();
+      await onSuccess?.(variables);
+    },
+    onError,
   });
 };
 
-export const useSaveDiarioObservacoesMutation = (turmaId: string, disciplinaId: string) => {
+export const useSaveDiarioObservacoesMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (text: string) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
   const invalidate = useInvalidateDiario(turmaId, disciplinaId);
 
   return useMutation({
     mutationFn: (text: string) => diarioClasseService.saveObservacoes(turmaId, disciplinaId, text),
-    onSuccess: invalidate.observacoes,
+    onSuccess: async (_data, text) => {
+      await invalidate.observacoes();
+      await onSuccess?.(text);
+    },
+    onError,
   });
 };

@@ -63,94 +63,89 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     onConfirmed: confirmEadPayment,
   });
 
-  // Fetch actual contas_receber from Supabase
+  // O backend devolve o extrato e os valores financeiros canonicos.
   const {
-    data: dbRecords = [],
+    data: financeiroData,
     isLoading,
     isError: isFinanceiroError,
     refetch: refetchFinanceiro,
-  } = useQuery<any[]>({
+  } = useQuery<{
+    rows: any[];
+    summary: {
+      totalPaid: number;
+      totalPending: number;
+      openByModality: Array<{ modality: string; count: number; total: number }>;
+    };
+  }>({
     queryKey: ['aluno-financeiro', alunoId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contas_receber')
-        .select(`
-          id,
-          cliente_id,
-          matricula_id,
-          turma_id,
-          descricao,
-          categoria,
-          tipo_lancamento,
-          parcela_numero,
-          valor,
-          valor_pago,
-          data_vencimento,
-          data_pagamento,
-          status,
-          forma_pagamento,
-          origem_pagamento,
-          asaas_invoice_url,
-          asaas_status,
-          asaas_transaction_receipt_url,
-          gateway_provider,
-          gateway_environment,
-          gateway_payment_method,
-          gateway_payment_id,
-          gateway_status,
-          gateway_bank_slip_url,
-          gateway_invoice_url,
-          gateway_boleto_linha_digitavel,
-          gateway_boleto_codigo_barras,
-          gateway_boleto_nosso_numero,
-          turmas!left(
-            id,
-            curso_id,
-            nome,
-            valor_parcela,
-            qtd_parcelas,
-            desconto_pontualidade,
-            juros_atraso,
-            multa_atraso,
-            aplicar_desconto_matricula,
-            aplicar_multa_juros_matricula,
-            aplicar_desconto_mensalidade,
-            aplicar_multa_juros_mensalidade,
-            aplicar_desconto_rematricula,
-            aplicar_multa_juros_rematricula,
-            cursos!left(
-              id,
-              modalidade,
-              nome
-            )
-          ),
-          matriculas!left(
-            desconto_pontualidade_individual,
-            juros_atraso_individual,
-            multa_atraso_individual
-          ),
-          parceiros!left(nome, cpf_cnpj)
-        `)
-        .eq('cliente_id', alunoId)
-        .order('data_vencimento', { ascending: true });
+      const { data, error } = await supabase.rpc(
+        'get_aluno_financeiro_portal_secure',
+        { p_aluno_id: alunoId },
+      );
       
       if (error) throw error;
-      return data || [];
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return {
+          rows: [],
+          summary: { totalPaid: 0, totalPending: 0, openByModality: [] },
+        };
+      }
+      const payload = data as Record<string, any>;
+      return {
+        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        summary: {
+          totalPaid: Number(payload.summary?.totalPaid || 0),
+          totalPending: Number(payload.summary?.totalPending || 0),
+          openByModality: Array.isArray(payload.summary?.openByModality)
+            ? payload.summary.openByModality.map((item: any) => ({
+                modality: String(item.modality || 'OUTROS'),
+                count: Number(item.count || 0),
+                total: Number(item.total || 0),
+              }))
+            : [],
+        },
+      };
     },
-    staleTime: 30_000,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
+  const dbRecords = financeiroData?.rows || [];
+  const canonicalSummary = financeiroData?.summary || {
+    totalPaid: 0,
+    totalPending: 0,
+    openByModality: [],
+  };
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`aluno_financeiro_realtime_${alunoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'finance_realtime_events',
+          filter: `aluno_id=eq.${alunoId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ['aluno-financeiro', alunoId],
+            exact: true,
+            refetchType: 'active',
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [alunoId, queryClient]);
 
   const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
   const installments = dbRecords.filter((record) => !hiddenStatuses.includes(String(record.status || '').toUpperCase()));
   const modalityOrder: string[] = ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO', 'OUTROS'];
-
-  const toNumber = (value: any, fallback = 0) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-
-  const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
   const getInstallmentTurma = (inst: any) =>
     Array.isArray(inst.turmas) ? inst.turmas[0] : inst.turmas;
@@ -253,85 +248,6 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     return modality === 'EAD' ? 'Cobrança EAD' : 'Cobrança';
   };
 
-  const getFinancePolicy = (inst: any, modality: string) => {
-    const turma = getInstallmentTurma(inst) || {};
-    const matricula = Array.isArray(inst.matriculas) ? inst.matriculas[0] : inst.matriculas;
-    const type = String(inst.tipo_lancamento || '').toUpperCase();
-    const description = String(inst.descricao || '').toLowerCase();
-    const discount = toNumber(matricula?.desconto_pontualidade_individual ?? turma.desconto_pontualidade, 0);
-    const interestPercent = toNumber(matricula?.juros_atraso_individual ?? turma.juros_atraso, 0);
-    const lateFee = toNumber(matricula?.multa_atraso_individual ?? turma.multa_atraso, 0);
-
-    const isMatricula = type === 'MATRICULA' || description.includes('matricula') || description.includes('matrícula');
-    const isRematricula = type === 'REMATRICULA' || description.includes('rematricula') || description.includes('rematrícula');
-    const isParcela = type === 'PARCELA' || description.includes('mensalidade');
-
-    const canDiscount = modality !== 'EAD' && (
-      (isMatricula && turma.aplicar_desconto_matricula === true) ||
-      (isParcela && turma.aplicar_desconto_mensalidade !== false) ||
-      (isRematricula && turma.aplicar_desconto_rematricula !== false)
-    );
-
-    const canLateCharge = modality !== 'EAD' && (
-      (isMatricula && turma.aplicar_multa_juros_matricula !== false) ||
-      (isParcela && turma.aplicar_multa_juros_mensalidade !== false) ||
-      (isRematricula && turma.aplicar_multa_juros_rematricula !== false)
-    );
-
-    return {
-      discount: canDiscount ? discount : 0,
-      interestPercent: canLateCharge ? interestPercent : 0,
-      lateFee: canLateCharge ? lateFee : 0,
-      canDiscount,
-      canLateCharge
-    };
-  };
-
-  const buildFinancialSummary = (inst: any, modality: string, isOverdue: boolean) => {
-    const status = String(inst.status || '').toUpperCase();
-    const baseValue = toNumber(inst.valor, 0);
-    const paidValue = toNumber(inst.valor_pago, baseValue);
-    if (hasRegisteredBaneseBoleto(inst)) {
-      return {
-        baseValue,
-        paidValue,
-        punctualDiscount: 0,
-        totalUntilDue: baseValue,
-        interestPercent: 0,
-        interestValue: 0,
-        lateFeeValue: 0,
-        totalWithLate: baseValue,
-        highlightValue: status === 'PAGO' ? paidValue : baseValue,
-        highlightLabel: status === 'PAGO' ? 'Valor pago' : 'Valor do boleto',
-        hasDiscount: false,
-        hasLateCharge: false,
-        canLateCharge: false,
-      };
-    }
-    const policy = getFinancePolicy(inst, modality);
-    const punctualDiscount = status === 'PAGO' ? 0 : Math.min(baseValue, Math.max(0, policy.discount));
-    const totalUntilDue = roundMoney(Math.max(0, baseValue - punctualDiscount));
-    const interestValue = isOverdue ? roundMoney(baseValue * (policy.interestPercent / 100)) : 0;
-    const lateFeeValue = isOverdue ? Math.max(0, policy.lateFee) : 0;
-    const totalWithLate = roundMoney(baseValue + interestValue + lateFeeValue);
-
-    return {
-      baseValue,
-      paidValue,
-      punctualDiscount,
-      totalUntilDue,
-      interestPercent: policy.interestPercent,
-      interestValue,
-      lateFeeValue,
-      totalWithLate,
-      highlightValue: status === 'PAGO' ? paidValue : isOverdue ? totalWithLate : totalUntilDue,
-      highlightLabel: status === 'PAGO' ? 'Valor pago' : isOverdue ? 'Total em atraso' : 'Total até o vencimento',
-      hasDiscount: punctualDiscount > 0,
-      hasLateCharge: interestValue > 0 || lateFeeValue > 0,
-      canLateCharge: policy.canLateCharge
-    };
-  };
-
   const toInstallmentRow = (inst: any) => {
     const modality = getInstallmentModality(inst);
     const turma = getInstallmentTurma(inst);
@@ -339,7 +255,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const isOverdue = String(inst.status || '').toUpperCase() === 'VENCIDO' || (String(inst.status || '').toUpperCase() === 'PENDENTE' && Boolean(dueDate) && dueDate < today);
-    const financialSummary = buildFinancialSummary(inst, modality, isOverdue);
+    const financialSummary = inst.financial_summary;
     return {
       ...inst,
       modalidade: modality,
@@ -388,6 +304,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         gateway_status: summary.gateway_status,
         valor_pago: summary.valor_pago,
         data_pagamento: summary.data_pagamento,
+        financial_summary: summary.financial_summary,
       })];
     })
     : [];
@@ -468,18 +385,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     TODOS: filteredBySearchDateModality.length
   };
 
-  const openSummaryByModality = modalityOrder.map((modality) => {
-    const items = installmentRows.filter((inst) => {
-      const status = String(inst.status || '').toUpperCase();
-      return inst.modalidade === modality && (status === 'PENDENTE' || status === 'VENCIDO' || inst.isOverdue);
-    });
-
-    return {
-      modality,
-      count: items.length,
-      total: items.reduce((sum, inst) => sum + Number(inst.financialSummary?.highlightValue || inst.valor || 0), 0),
-    };
-  }).filter((item) => item.count > 0);
+  const openSummaryByModality = modalityOrder
+    .map((modality) => canonicalSummary.openByModality.find((item) => item.modality === modality))
+    .filter((item): item is { modality: string; count: number; total: number } => Boolean(item));
 
   const filteredInstallments = filteredBySearchDateModality.filter((inst) => {
     const status = String(inst.status || '').toUpperCase();
@@ -559,14 +467,8 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setCurrentPage(page);
   };
 
-  // Calculations
-  const totalPaid = installments
-    .filter(i => i.status === 'PAGO')
-    .reduce((acc, i) => acc + Number(i.valor), 0);
-
-  const totalPending = installments
-    .filter(i => i.status === 'PENDENTE' || i.status === 'VENCIDO')
-    .reduce((acc, i) => acc + Number(i.valor), 0);
+  const totalPaid = canonicalSummary.totalPaid;
+  const totalPending = canonicalSummary.totalPending;
 
   const copyPaymentLink = async (url?: string | null) => {
     if (!url) {
@@ -1424,7 +1326,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                   Escolha como pagar
                 </h3>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
-                  O curso será liberado somente após confirmação do gateway bancário via webhook.
+                  O curso será liberado somente após a confirmação bancária canônica do pagamento.
                 </p>
               </div>
               <button

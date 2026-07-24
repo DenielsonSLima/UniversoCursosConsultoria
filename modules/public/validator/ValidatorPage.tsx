@@ -126,7 +126,11 @@ const ValidatorPage: React.FC = () => {
             {status === 'valid' && result?.type === 'carteirinha' && (
               <CarteirinhaValidationResult result={result} />
             )}
-            {status === 'valid' && result && ['declaracao_matricula', 'declaracao_frequencia'].includes(result.type) && (
+            {status === 'valid' && result && [
+              'declaracao_matricula',
+              'declaracao_frequencia',
+              'atestado_conclusao_tecnico',
+            ].includes(result.type) && (
               <DeclaracaoValidationResult result={result as AcademicDocumentValidationResult} />
             )}
             {status === 'valid' && result?.type === 'boletim' && (

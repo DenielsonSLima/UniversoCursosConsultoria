@@ -7,6 +7,15 @@ import {
 } from "../permissions.ts";
 import type { HandlerContext } from "../types.ts";
 
+const COMMUNICATION_SECTORS = new Set([
+  "todos",
+  "pedagogico_coordenacao",
+  "financeiro",
+  "comercial_matriculas",
+  "secretaria",
+  "atendimento_geral",
+]);
+
 export const handleUpsertGestorUser = async (
   context: HandlerContext,
   incomingUser: Record<string, unknown>,
@@ -34,6 +43,14 @@ export const handleUpsertGestorUser = async (
   );
   const allPolos = permissions.allPolos;
   const poloIds = allPolos ? [] : normalizeStringArray(incomingUser.polo_ids);
+  const canViewAllCommunication = incomingUser.pode_visualizar_todos_setores ===
+    true;
+  const communicationSector = String(
+    incomingUser.setor_comunicacao || "todos",
+  ).trim();
+  const communicationPoloId = canViewAllCommunication
+    ? null
+    : String(incomingUser.polo_comunicacao_id || "").trim() || null;
   let profilePermissions:
     | ReturnType<typeof normalizePermissionsPayload>
     | null = null;
@@ -82,6 +99,23 @@ export const handleUpsertGestorUser = async (
     return json({
       success: false,
       error: "Selecione ao menos um módulo para o usuário.",
+    }, 400);
+  }
+  if (!COMMUNICATION_SECTORS.has(communicationSector)) {
+    return json({
+      success: false,
+      error: "Setor de atendimento WhatsApp inválido.",
+    }, 400);
+  }
+  if (
+    effectivePermissions.modules.includes("comunicacao") &&
+    effectivePermissions.tabs?.comunicacao?.includes("comunicacao-whatsapp") &&
+    !canViewAllCommunication &&
+    !communicationPoloId
+  ) {
+    return json({
+      success: false,
+      error: "Selecione o polo de atendimento WhatsApp do usuário.",
     }, 400);
   }
 
@@ -145,6 +179,9 @@ export const handleUpsertGestorUser = async (
     perfil_acesso_id: perfilAcessoId,
     personalizar_permissoes: personalizarPermissoes,
     restricao_horario: incomingUser.restricao_horario || null,
+    setor_comunicacao: communicationSector,
+    polo_comunicacao_id: communicationPoloId,
+    pode_visualizar_todos_setores: canViewAllCommunication,
   };
 
   if (!userPayload.nome) {
@@ -158,7 +195,7 @@ export const handleUpsertGestorUser = async (
     .from("usuarios_sistema")
     .insert(userPayload)
     .select(
-      "id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, created_at",
+      "id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_setores, created_at",
     )
     .single();
 

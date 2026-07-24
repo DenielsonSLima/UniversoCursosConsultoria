@@ -17,6 +17,9 @@ const queryResultFor = (
   if (table === "asaas_config") {
     return { environment: "sandbox" };
   }
+  if (table === "payment_gateway_runtime_config") {
+    return { enabled: true, active_environment: "sandbox" };
+  }
   if (table === "cursos") {
     return {
       id: COURSE_ID,

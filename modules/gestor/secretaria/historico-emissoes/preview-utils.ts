@@ -31,7 +31,8 @@ export const getPreviewStudent = (emission: EmissionLog, poloInfo: any) => {
 
 export const downloadEmissionPdf = async (
   container: HTMLDivElement,
-  emission: EmissionLog
+  emission: EmissionLog,
+  filenamePrefix = '2-via'
 ) => {
   const certificatePages = Array.from(
     container.querySelectorAll('[data-certificate-pdf-page="true"]')
@@ -73,5 +74,5 @@ export const downloadEmissionPdf = async (
     );
   }
 
-  pdf.save(`2-via-${emission.documento}-${emission.codigo}.pdf`);
+  pdf.save(`${filenamePrefix}-${emission.documento}-${emission.codigo}.pdf`);
 };

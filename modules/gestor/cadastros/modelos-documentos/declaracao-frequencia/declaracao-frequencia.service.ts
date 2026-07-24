@@ -6,7 +6,18 @@ const DEFAULT_QR_CONFIG = {
   separator: '-',
 };
 
-export const FREQUENCIA_DEFAULT_TEXT = `<p>Declaramos, para os devidos fins, que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>Declaramos ainda que o(a) referido(a) aluno(a) apresenta frequência regular nas atividades acadêmicas do curso, conforme os registros desta instituição, no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Por ser expressão da verdade, firmamos a presente declaração para os fins que se fizerem necessários.</p>`;
+export const FREQUENCIA_DEFAULT_TEXT = `<p>Declaramos, para os devidos fins, que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>Conforme os resultados acadêmicos consolidados, a frequência geral do(a) estudante é de <b>{{FREQUENCIA_GERAL}}</b>, no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Por ser expressão da verdade, firmamos a presente declaração para os fins que se fizerem necessários.</p>`;
+
+const normalizeFrequencyTemplate = (template: any) => {
+  const textContent = String(template?.textContent || '');
+  if (!textContent.includes('apresenta frequência regular nas atividades acadêmicas do curso')) {
+    return template;
+  }
+  return {
+    ...template,
+    textContent: FREQUENCIA_DEFAULT_TEXT,
+  };
+};
 
 export const frequenciaDefaultTemplate = {
   ...JSON.parse(JSON.stringify(defaultTemplate)),
@@ -22,7 +33,7 @@ export const declaracaoFrequenciaService = {
         .eq('id', 'declaracao_frequencia')
         .maybeSingle();
 
-      if (!error && data?.conteudo) return data.conteudo;
+      if (!error && data?.conteudo) return normalizeFrequencyTemplate(data.conteudo);
 
       if (poloId) {
         const { data: legacyData, error: legacyError } = await supabase
@@ -31,7 +42,7 @@ export const declaracaoFrequenciaService = {
           .eq('id', `declaracao_frequencia_${poloId}`)
           .maybeSingle();
 
-        if (!legacyError && legacyData?.conteudo) return legacyData.conteudo;
+        if (!legacyError && legacyData?.conteudo) return normalizeFrequencyTemplate(legacyData.conteudo);
       }
     } catch (error) {
       console.error('[declaracaoFrequenciaService] Erro ao buscar template compartilhado:', error);

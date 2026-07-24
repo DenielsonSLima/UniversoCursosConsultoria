@@ -89,6 +89,13 @@ export class BaneseAdapterConfigurationError extends BaneseAdapterError {
   }
 }
 
+export class BaneseCancellationRequiresReviewError extends BaneseAdapterError {
+  constructor(message: string) {
+    super(message);
+    this.name = "BaneseCancellationRequiresReviewError";
+  }
+}
+
 export class BaneseAdapterNotImplementedError extends Error {
   constructor(feature: string) {
     super(`Adapter Banese Card ainda nao implementado para ${feature}.`);

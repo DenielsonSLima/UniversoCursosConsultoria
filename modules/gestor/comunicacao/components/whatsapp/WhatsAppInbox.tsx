@@ -15,6 +15,7 @@ import { fileToBase64 } from './inbox/mediaUtils';
 import { useWhatsAppTypingPresence } from './inbox/useWhatsAppTypingPresence';
 
 interface WhatsAppInboxProps {
+  connectionId: string;
   conversations: WhatsAppConversation[];
   messages: WhatsAppMessage[];
   flowSessions: WhatsAppFlowSession[];
@@ -32,6 +33,7 @@ interface WhatsAppInboxProps {
 }
 
 const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
+  connectionId,
   conversations,
   messages,
   flowSessions,
@@ -126,15 +128,15 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
 
     for (const conversation of sendableSelectedConversations) {
       try {
-        await whatsappService.sendMessage({ alunoId: conversation.aluno_id!, to: conversation.telefone, message });
+        await whatsappService.sendMessage({ connectionId, alunoId: conversation.aluno_id!, to: conversation.telefone, message });
         sent += 1;
       } catch (error: any) {
         failures.push(`${conversation.contato_nome}: ${error?.message || 'falha no envio'}`);
       }
     }
 
-    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
-    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'conversas'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'mensagens'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
     if (sent > 0) setSelectedIds(new Set());
     return { sent, skipped: selectedConversations.length - sendableSelectedConversations.length, failures };
@@ -147,14 +149,15 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   const sendMedia = async ({ file, kind, caption }: { file: File; kind: 'image' | 'audio' | 'document'; caption: string }) => {
     if (!activeConversation?.aluno_id) throw new Error('Esta conversa ainda não está vinculada a um aluno cadastrado.');
     await whatsappService.sendMediaMessage({
+      connectionId,
       alunoId: activeConversation.aluno_id,
       to: activeConversation.telefone,
       kind,
       caption,
       file: { base64: await fileToBase64(file), type: file.type || 'application/octet-stream', name: file.name },
     });
-    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] });
-    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens', activeConversation.id] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'conversas'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'mensagens', activeConversation.id] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
   };
 

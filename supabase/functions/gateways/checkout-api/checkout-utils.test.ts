@@ -104,7 +104,13 @@ Deno.test("resolvedor tecnico bloqueia rota Mercado Pago legada habilitada", asy
   const query: any = {
     select: () => query,
     eq: () => query,
+    neq: () => query,
+    order: () => Promise.resolve({ data: [response.data], error: null }),
     maybeSingle: () => Promise.resolve(response),
+    then: (
+      resolve: (value: { data: any[]; error: null }) => unknown,
+      reject: (error: unknown) => unknown,
+    ) => Promise.resolve({ data: [response.data], error: null }).then(resolve, reject),
   };
 
   await assert.rejects(

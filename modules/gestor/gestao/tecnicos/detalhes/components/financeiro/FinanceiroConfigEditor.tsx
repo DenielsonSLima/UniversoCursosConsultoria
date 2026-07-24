@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, RefreshCw, Save, Settings } from 'lucide-react';
+import { Calendar, FileText, RefreshCw, Save, Settings } from 'lucide-react';
 import FinanceiroCronogramaItem from './FinanceiroCronogramaItem';
 import { CronogramaItem, FinanceiroConfigData } from './financeiro-config.service';
 import {
@@ -10,9 +10,11 @@ import {
 
 interface FinanceiroConfigEditorProps {
   calculo?: FinanceiroRulesCalculation;
+  calculationReady: boolean;
   cronograma: CronogramaItem[];
   formData: FinanceiroConfigData;
   isSaving: boolean;
+  turmaLabel: string;
   onCancel: () => void;
   onDragEnd: () => void;
   onDragEnter: (index: number) => void;
@@ -25,9 +27,11 @@ interface FinanceiroConfigEditorProps {
 
 const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
   calculo,
+  calculationReady,
   cronograma,
   formData,
   isSaving,
+  turmaLabel,
   onCancel,
   onDragEnd,
   onDragEnter,
@@ -177,6 +181,38 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
             </div>
           </div>
 
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+            <div className="mb-3 flex items-start gap-3">
+              <div className="rounded-xl bg-amber-100 p-2 text-amber-700">
+                <FileText size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-[#001a33]">
+                  Instrução do boleto e do carnê
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                  A turma <strong>{turmaLabel}</strong> será identificada automaticamente no documento.
+                </p>
+              </div>
+            </div>
+            <textarea
+              name="instrucaoBoletoCarne"
+              value={formData.instrucaoBoletoCarne}
+              maxLength={180}
+              rows={3}
+              onChange={(event) => setFormData((previous) => ({
+                ...previous,
+                instrucaoBoletoCarne: event.target.value,
+              }))}
+              className="w-full resize-none rounded-xl border border-amber-200 bg-white p-3 text-sm font-bold leading-relaxed text-slate-700 outline-none transition-colors focus:border-amber-500"
+              placeholder="Informe a orientação que será impressa nos documentos."
+            />
+            <div className="mt-2 flex items-center justify-between gap-4 text-[10px] font-semibold text-slate-500">
+              <span>Esta orientação sairá em destaque nos boletos e carnês da turma.</span>
+              <span>{formData.instrucaoBoletoCarne.length}/180</span>
+            </div>
+          </div>
+
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
             <span className="text-[10px] text-[#001a33] font-bold uppercase tracking-wider block border-b border-slate-100 pb-1.5">
               Simulação de Recebimento (1 Parcela - Cálculo via RPC)
@@ -189,7 +225,7 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
               <span className="font-extrabold text-sm text-emerald-600">
                 {calculo
                   ? formatCurrencyBRL(calculo.valor_com_desconto)
-                  : formatCurrencyBRL(Math.max(0, formData.valorParcela - formData.descontoPontualidade))}
+                  : 'Calculando no servidor...'}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-50">
@@ -198,13 +234,15 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
                 <span className="text-[10px] text-slate-500">
                   Parcela + Juros de {formData.jurosAtraso}% ({calculo
                     ? formatCurrencyBRL(calculo.juros_calculados)
-                    : formatCurrencyBRL(formData.valorParcela * (formData.jurosAtraso / 100))}) + Multa de {formatCurrencyBRL(formData.multaAtraso)}
+                    : 'calculando...'}) + Multa aplicada de {calculo
+                      ? formatCurrencyBRL(calculo.multa_aplicada)
+                      : 'calculando...'}
                 </span>
               </div>
               <span className="font-extrabold text-sm text-rose-600">
                 {calculo
                   ? formatCurrencyBRL(calculo.valor_com_atraso)
-                  : formatCurrencyBRL(formData.valorParcela + (formData.valorParcela * (formData.jurosAtraso / 100)) + formData.multaAtraso)}
+                  : 'Calculando no servidor...'}
               </span>
             </div>
           </div>
@@ -257,10 +295,10 @@ const FinanceiroConfigEditor: React.FC<FinanceiroConfigEditorProps> = ({
         </button>
         <button
           onClick={onSave}
-          disabled={cronograma.length === 0 || isSaving}
+          disabled={cronograma.length === 0 || isSaving || !calculationReady}
           className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold uppercase text-xs hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save size={16} /> {isSaving ? 'Salvando...' : 'Salvar Regra Financeira'}
+          <Save size={16} /> {isSaving ? 'Salvando...' : calculationReady ? 'Salvar Regra Financeira' : 'Aguardando cálculo'}
         </button>
       </div>
     </div>

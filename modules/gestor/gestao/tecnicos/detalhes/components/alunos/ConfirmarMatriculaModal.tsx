@@ -3,6 +3,7 @@ import { Calendar, CircleDollarSign, DollarSign, Percent, ReceiptText, X } from 
 import { Turma } from '../../../../gestao.types';
 import { TurmaFinanceiroMatriculaConfig, PrevisaoFinanceiraTurma } from '../../turma-alunos.service';
 import type { GatewayPaymentMethod } from '../../../../../../asaas/asaas.service';
+import type { FinanceiroRulesCalculation } from '../financeiro/financeiro-config.utils';
 
 export type EnrollmentStep = 'MATRICULA' | 'PARCELAS';
 
@@ -24,6 +25,9 @@ interface ConfirmarMatriculaModalProps {
   finance: EnrollmentFinance;
   turmaFinanceiroConfig?: TurmaFinanceiroMatriculaConfig;
   previsao?: PrevisaoFinanceiraTurma;
+  financialPreview?: FinanceiroRulesCalculation;
+  financialPreviewLoading: boolean;
+  financialPreviewError: boolean;
   enrollmentFlags: {
     financeiro_herdado: boolean;
     gerar_cobranca_inicial: boolean;
@@ -126,6 +130,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   finance,
   turmaFinanceiroConfig,
   previsao,
+  financialPreview,
+  financialPreviewLoading,
+  financialPreviewError,
   enrollmentFlags,
   paymentMethod,
   availablePaymentMethods,
@@ -141,15 +148,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
   onConfirm,
 }) => {
   const environmentLabel = (paymentOptionsEnvironment || 'sandbox').toUpperCase();
-  const aplicaDescontoMensalidade = turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false;
-  const aplicaEncargosMensalidade = turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false;
-  const descontoMensalidade = aplicaDescontoMensalidade ? finance.descontoPontualidade : 0;
-  const jurosMensais = aplicaEncargosMensalidade
-    ? finance.valorParcela * (finance.jurosAtraso / 100)
-    : 0;
-  const multaMensalidade = aplicaEncargosMensalidade ? finance.multaAtraso : 0;
-  const mensalidadeComDesconto = Math.max(0, finance.valorParcela - descontoMensalidade);
-  const mensalidadeEmAtraso = finance.valorParcela + jurosMensais + multaMensalidade;
+  const descontoMensalidade = Number(financialPreview?.desconto_aplicado || 0);
+  const jurosMensais = Number(financialPreview?.juros_calculados || 0);
+  const multaMensalidade = Number(financialPreview?.multa_aplicada || 0);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -382,12 +383,24 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                 <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Resumo financeiro individual</p>
                 <div className="mt-3 grid gap-2 text-xs font-bold text-emerald-900 md:grid-cols-3">
                   <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-emerald-600">Matrícula</span>{formatCurrency(finance.valorMatricula)}</div>
-                  <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-emerald-600">Mensalidade em dia</span>{formatCurrency(mensalidadeComDesconto)}</div>
-                  <div className="rounded-xl bg-white/70 p-3"><span className="block text-[9px] uppercase text-rose-500">Após 1 mês</span>{formatCurrency(mensalidadeEmAtraso)}</div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <span className="block text-[9px] uppercase text-emerald-600">Mensalidade em dia</span>
+                    {financialPreview ? formatCurrency(financialPreview.valor_com_desconto) : 'Calculando no servidor...'}
+                  </div>
+                  <div className="rounded-xl bg-white/70 p-3">
+                    <span className="block text-[9px] uppercase text-rose-500">Após 1 mês</span>
+                    {financialPreview ? formatCurrency(financialPreview.valor_com_atraso) : 'Calculando no servidor...'}
+                  </div>
                 </div>
                 <p className="mt-3 text-[10px] font-semibold leading-relaxed text-emerald-700">
-                  Mensalidade de {formatCurrency(finance.valorParcela)}; desconto aplicado de {formatCurrency(descontoMensalidade)}; juros aplicados de {formatPercent(aplicaEncargosMensalidade ? finance.jurosAtraso : 0)} ({formatCurrency(jurosMensais)}) e multa aplicada de {formatCurrency(multaMensalidade)}. {getResumoPrevisao(previsao)}
+                  Mensalidade de {formatCurrency(finance.valorParcela)}; desconto aplicado de {formatCurrency(descontoMensalidade)}; juros configurados de {formatPercent(finance.jurosAtraso)} ({formatCurrency(jurosMensais)}) e multa aplicada de {formatCurrency(multaMensalidade)}. {getResumoPrevisao(previsao)}
                 </p>
+                {financialPreviewLoading && (
+                  <p className="mt-2 text-[10px] font-bold text-blue-700">Atualizando a prévia oficial no servidor...</p>
+                )}
+                {financialPreviewError && (
+                  <p className="mt-2 text-[10px] font-bold text-rose-700">A prévia oficial está indisponível; a confirmação foi bloqueada.</p>
+                )}
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
                   <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-emerald-700">
                     <input

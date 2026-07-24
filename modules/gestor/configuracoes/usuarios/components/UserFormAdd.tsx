@@ -85,6 +85,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     diasHorario: [1, 2, 3, 4, 5, 6],
     horarioInicio: '08:00',
     horarioFim: '18:00',
+    setorComunicacao: 'todos',
+    poloComunicacaoId: contextId === 'global' ? null : contextId,
+    podeVisualizarTodosSetores: false,
   });
 
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -138,6 +141,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       diasHorario: initialUser.restricao_horario?.dias || [1, 2, 3, 4, 5, 6],
       horarioInicio: initialUser.restricao_horario?.horario_inicio || '08:00',
       horarioFim: initialUser.restricao_horario?.horario_fim || '18:00',
+      setorComunicacao: initialUser.setor_comunicacao || 'todos',
+      poloComunicacaoId: initialUser.polo_comunicacao_id || (contextId === 'global' ? null : contextId),
+      podeVisualizarTodosSetores: Boolean(initialUser.pode_visualizar_todos_setores),
     }));
   }, [contextId, initialUser]);
 
@@ -332,6 +338,12 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       alert('O início e o fim do horário individual não podem ser iguais.');
       return;
     }
+    const hasWhatsAppAccess = formData.permissoes.includes('comunicacao')
+      && (formData.abasModulos.comunicacao || []).includes('comunicacao-whatsapp');
+    if (hasWhatsAppAccess && !formData.podeVisualizarTodosSetores && !formData.poloComunicacaoId) {
+      alert('Selecione o polo de atendimento do WhatsApp para este usuário.');
+      return;
+    }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
   };
 
@@ -367,9 +379,11 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
           onTogglePolo={togglePolo}
         />
         <UserAccessSections
+          contextId={contextId}
           formData={formData}
           perfis={perfis}
           selectedPerfil={selectedPerfil}
+          companies={companies}
           setFormData={setFormData}
           onTogglePermission={togglePermission}
           onToggleFinanceiroTab={toggleFinanceiroTab}

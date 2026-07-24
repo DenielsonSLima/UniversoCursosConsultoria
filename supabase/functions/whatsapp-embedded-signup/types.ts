@@ -3,19 +3,24 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 export type AdminClient = SupabaseClient;
 
 export interface EmbeddedSignupBody {
+  connectionId?: unknown;
   code?: unknown;
   mode?: unknown;
   appId?: unknown;
   appSecret?: unknown;
+  verifyToken?: unknown;
   graphVersion?: unknown;
   configurationId?: unknown;
   sessionEvent?: unknown;
 }
 
-export interface CurrentWhatsAppConfig {
-  wa_app_id?: string | null;
-  wa_embedded_signup_config_id?: string | null;
-  wa_graph_version?: string | null;
+export interface CurrentWhatsAppConnection {
+  id: string;
+  nome?: string | null;
+  app_id?: string | null;
+  embedded_signup_config_id?: string | null;
+  graph_version?: string | null;
+  is_matriz_financeira?: boolean;
 }
 
 export type PhoneNumberStatus = Record<string, unknown> & {

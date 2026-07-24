@@ -18,6 +18,9 @@ const gestor = (
   modules: ["financeiro"],
   financeiroTabs: ["outros-creditos"],
   tabs: {},
+  communicationSector: "",
+  communicationPoloId: null,
+  canViewAllCommunication: false,
   ...overrides,
 });
 

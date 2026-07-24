@@ -110,7 +110,7 @@ export const useCourseCheckout = ({
         }
         setEadPaymentPanel({ url, payment, matriculaId, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
         setCheckoutError(awaitingWebhook
-          ? 'Pagamento localizado. O curso será liberado assim que o webhook do gateway bancário confirmar no sistema.'
+          ? 'Pagamento localizado. O curso será liberado assim que a confirmação bancária canônica for registrada no sistema.'
           : alreadyPending
             ? 'Você já tinha uma cobrança EAD em aberto. Reabrimos os dados de pagamento.'
             : '');

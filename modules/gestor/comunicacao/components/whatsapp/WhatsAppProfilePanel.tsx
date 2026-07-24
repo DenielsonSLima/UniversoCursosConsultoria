@@ -44,7 +44,11 @@ const normalizeProfile = (profile?: WhatsAppBusinessProfile | null): WhatsAppBus
   vertical: categories.some((category) => category.value === profile?.vertical) ? profile!.vertical : 'EDU',
 });
 
-const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => {
+const WhatsAppProfilePanel: React.FC<{ apiReady: boolean; connectionId: string; connectionName: string }> = ({
+  apiReady,
+  connectionId,
+  connectionName,
+}) => {
   const queryClient = useQueryClient();
   const [profile, setProfile] = useState<WhatsAppBusinessProfile>(emptyProfile);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -52,8 +56,8 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
   const { data, isFetching, refetch } = useQuery({
-    queryKey: ['whatsapp', 'perfil-meta'],
-    queryFn: whatsappService.getBusinessProfile,
+    queryKey: ['whatsapp', connectionId, 'perfil-meta'],
+    queryFn: () => whatsappService.getBusinessProfile(connectionId),
     enabled: apiReady,
     staleTime: 60_000,
   });
@@ -82,14 +86,14 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
         ...profile,
         websites: profile.websites.map((site) => site.trim()).filter(Boolean),
       };
-      return whatsappService.saveBusinessProfile({ profile: cleaned, photo });
+      return whatsappService.saveBusinessProfile({ connectionId, profile: cleaned, photo });
     },
     onSuccess: (fresh) => {
       setPhotoFile(null);
       setPhotoTransform(defaultProfilePhotoTransform);
       setProfile(normalizeProfile(fresh));
       setMessage({ tone: 'ok', text: 'Perfil WhatsApp salvo na Meta.' });
-      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'perfil-meta'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', connectionId, 'perfil-meta'] });
     },
     onError: (error: any) => {
       setMessage({ tone: 'error', text: error?.message || 'Não foi possível salvar o perfil na Meta.' });
@@ -130,8 +134,8 @@ const WhatsAppProfilePanel: React.FC<{ apiReady: boolean }> = ({ apiReady }) => 
               <UserCircle size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold tracking-tight text-[#001a33]">Perfil WhatsApp</h3>
-              <p className="mt-1 text-sm font-medium text-slate-500">Dados públicos exibidos para alunos no WhatsApp Business.</p>
+              <h3 className="text-xl font-bold tracking-tight text-[#001a33]">Perfil de {connectionName}</h3>
+              <p className="mt-1 text-sm font-medium text-slate-500">Foto e dados públicos exclusivos desta linha no WhatsApp Business.</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

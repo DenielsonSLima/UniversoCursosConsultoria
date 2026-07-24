@@ -1,7 +1,17 @@
 import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
+import { DiarioExportMode } from './turma-diarios.types';
 
 export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes';
+
+export interface ActiveInstruments {
+  p: boolean;
+  ti: boolean;
+  tg: boolean;
+  s: boolean;
+  cq: boolean;
+  o: boolean;
+}
 
 export type AttendanceStatus = 'P' | 'F' | null;
 export type AttendanceMap = Record<string, Record<string, AttendanceStatus>>;
@@ -38,6 +48,8 @@ export interface DiarioClasseProps {
   turma: any;
   onBack: () => void;
   accessMode?: 'GESTOR' | 'PROFESSOR';
+  initialExportMode?: DiarioExportMode;
+  returnToListOnExportClose?: boolean;
 }
 
 export interface DiarioPrintDocumentProps {
@@ -51,7 +63,9 @@ export interface DiarioPrintDocumentProps {
   gradesMap: GradesMap;
   praticasMap: Record<string, string>;
   observacoes: string;
+  activeInstruments?: ActiveInstruments;
   watermark?: any;
   diretorSigUrl?: string | null;
   secretarioSigUrl?: string | null;
+  exportMode?: DiarioExportMode;
 }

@@ -5,11 +5,8 @@ import {
   Calculator,
   Calendar,
   CheckCircle2,
-  Download,
-  Loader2,
   LockKeyhole,
   Printer,
-  Save,
 } from 'lucide-react';
 import { DiarioActiveTab } from './diario-classe.types';
 
@@ -18,19 +15,11 @@ interface DiarioClasseHeaderProps {
   moduloNome: string;
   turma: any;
   onBack: () => void;
-  onDownloadPdf: () => void;
-  downloadingPdf: boolean;
+  onOpenExportModal: () => void;
+  exportDisabled: boolean;
   isReadOnly: boolean;
   readOnlyLabel: string;
   readOnlyMessage: string;
-  novaAulaTitulo: string;
-  novaAulaData: string;
-  novaAulaCarga: string;
-  setNovaAulaTitulo: (value: string) => void;
-  setNovaAulaData: (value: string) => void;
-  setNovaAulaCarga: (value: string) => void;
-  onAddAula: () => void;
-  addingAula: boolean;
   activeTab: DiarioActiveTab;
   setActiveTab: (tab: DiarioActiveTab) => void;
 }
@@ -40,19 +29,11 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
   moduloNome,
   turma,
   onBack,
-  onDownloadPdf,
-  downloadingPdf,
+  onOpenExportModal,
+  exportDisabled,
   isReadOnly,
   readOnlyLabel,
   readOnlyMessage,
-  novaAulaTitulo,
-  novaAulaData,
-  novaAulaCarga,
-  setNovaAulaTitulo,
-  setNovaAulaData,
-  setNovaAulaCarga,
-  onAddAula,
-  addingAula,
   activeTab,
   setActiveTab,
 }) => (
@@ -71,11 +52,12 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
         </div>
       </div>
       <div className="flex gap-2">
-        <button onClick={onDownloadPdf} disabled={downloadingPdf} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 shadow-sm disabled:opacity-60">
-          {downloadingPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Baixar PDF
-        </button>
-        <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 shadow-sm">
-          <Printer size={16} /> Imprimir Diário
+        <button
+          onClick={onOpenExportModal}
+          disabled={exportDisabled}
+          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md shadow-blue-600/20 transition-all hover:scale-[1.02] disabled:cursor-wait disabled:opacity-50 disabled:hover:scale-100"
+        >
+          <Printer size={16} /> Imprimir / Exportar Diário
         </button>
         <button
           type="button"
@@ -126,64 +108,6 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
         </div>
       </div>
     </div>
-
-    {!isReadOnly && (
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm">
-        <div className="flex flex-col xl:flex-row xl:items-end gap-3">
-          <div className="flex-1 min-w-[220px]">
-            <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Descrição da aula</label>
-            <input
-              type="text"
-              value={novaAulaTitulo}
-              onChange={(event) => setNovaAulaTitulo(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') document.getElementById(`diario-aula-data-${disciplina.id}`)?.focus();
-              }}
-              placeholder="Conteúdo ministrado..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
-            />
-          </div>
-          <div className="w-full sm:w-44">
-            <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Data da aula</label>
-            <input
-              id={`diario-aula-data-${disciplina.id}`}
-              type="date"
-              value={novaAulaData}
-              onChange={(event) => setNovaAulaData(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') document.getElementById(`diario-aula-carga-${disciplina.id}`)?.focus();
-              }}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs font-bold text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
-            />
-          </div>
-          <div className="w-full sm:w-36">
-            <label className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1.5 block">Carga horária</label>
-            <input
-              id={`diario-aula-carga-${disciplina.id}`}
-              type="number"
-              min="0"
-              step="0.5"
-              value={novaAulaCarga}
-              onChange={(event) => setNovaAulaCarga(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') onAddAula();
-              }}
-              placeholder="Hrs"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-center text-xs font-black text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={onAddAula}
-            disabled={addingAula}
-            className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-          >
-            {addingAula ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            Salvar aula
-          </button>
-        </div>
-      </div>
-    )}
 
     <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-6 bg-slate-200/50 p-1.5 rounded-2xl border border-slate-100">
       <TabButton active={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')} activeClass="text-blue-600" icon={<Calendar size={18} />}>

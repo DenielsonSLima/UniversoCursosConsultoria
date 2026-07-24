@@ -72,6 +72,7 @@ export const phoneBelongsToAluno = async (admin: any, alunoId: string, phone: st
 export const upsertWhatsAppConversation = async (
   admin: any,
   input: {
+    connectionId?: string | null;
     phone: string;
     aluno?: any | null;
     contactName?: string | null;
@@ -83,6 +84,18 @@ export const upsertWhatsAppConversation = async (
 ) => {
   const phone = normalizeWhatsAppPhone(input.phone);
   if (!phone) throw new Error("Telefone WhatsApp invalido.");
+
+  let connectionId = String(input.connectionId || "").trim();
+  if (!connectionId) {
+    const { data: defaultConnection, error: defaultConnectionError } = await admin
+      .from("whatsapp_conexoes")
+      .select("id")
+      .eq("is_default", true)
+      .maybeSingle();
+    if (defaultConnectionError) throw defaultConnectionError;
+    connectionId = String(defaultConnection?.id || "").trim();
+  }
+  if (!connectionId) throw new Error("Linha WhatsApp padrão não configurada.");
 
   const contactName = String(
     input.aluno?.nome || input.contactName || phone,
@@ -97,6 +110,7 @@ export const upsertWhatsAppConversation = async (
   const { data: existing, error: existingError } = await admin
     .from("whatsapp_conversas")
     .select("*")
+    .eq("conexao_id", connectionId)
     .eq("telefone", phone)
     .maybeSingle();
   if (existingError) throw existingError;
@@ -132,6 +146,7 @@ export const upsertWhatsAppConversation = async (
   const { data, error } = await admin
     .from("whatsapp_conversas")
     .insert({
+      conexao_id: connectionId,
       aluno_id: input.aluno?.id || null,
       contato_nome: contactName,
       telefone: phone,

@@ -114,7 +114,7 @@ const DespesasVariaveisTab: React.FC<{ poloId?: string | null }> = ({ poloId: sc
   const [showForm, setShowForm] = useState(false);
   const [baixaItem, setBaixaItem] = useState<DespesaLancamento | null>(null);
 
-  useDespesasRealtime();
+  useDespesasRealtime(scopedPoloId);
 
   const { accountsQuery, polosQuery, partnersQuery, turmasQuery } = useFinanceiroSharedQueries({ turmas: true, poloId: scopedPoloId });
   const polos = polosQuery.data || [];

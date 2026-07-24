@@ -94,7 +94,7 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       if (activePoloId && record.polo_id && record.polo_id !== activePoloId) return;
       receivablesChanged = true;
       if (record.turma_id) turmaIds.add(record.turma_id);
-      if (record.cliente_id) alunoIds.add(record.cliente_id);
+      if (record.aluno_id || record.cliente_id) alunoIds.add(record.aluno_id || record.cliente_id);
       schedule();
     };
 
@@ -111,20 +111,34 @@ export function useFinanceiroRealtime(poloId?: string | null) {
     channel = channel.on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
-        table: 'contas_receber',
+        table: 'finance_realtime_events',
         ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
       },
       onReceivableChange,
     );
     channel = channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contas_bancarias' }, onAccountChange)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transferencias_contas' }, () => {
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contas_bancarias',
+      }, onAccountChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transferencias_contas',
+        ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
+      }, () => {
         transfersChanged = true;
         schedule();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'despesas_lancamentos' }, () => {
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'despesas_lancamentos',
+        ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
+      }, () => {
         expensesChanged = true;
         schedule();
       })

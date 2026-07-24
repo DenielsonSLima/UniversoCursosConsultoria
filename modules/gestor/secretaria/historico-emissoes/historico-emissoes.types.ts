@@ -33,8 +33,10 @@ export interface EmissionLog {
   };
 }
 export interface AcademicComponentRow {
+  moduleId: string | null;
   moduleName: string;
   moduleOrder: number;
+  disciplineOrder?: number;
   discipline: string;
   cargaHoraria: number;
   nota: number | null;
@@ -50,6 +52,10 @@ export interface AcademicPreviewData {
   periodoCurso: string;
   observacoesHistorico: string;
   situacaoAcademica: string;
+  mediaGeral: number | null;
+  frequenciaGeral: number | null;
+  fimCurso: string | null;
+  moduleNames: string[];
 }
 
 export interface AcademicPreviewRpcPayload {
@@ -59,6 +65,8 @@ export interface AcademicPreviewRpcPayload {
   inicioCurso?: string | null;
   fimCurso?: string | null;
   situacaoAcademica?: string;
+  mediaGeral?: number | null;
+  frequenciaGeral?: number | null;
 }
 
 export interface TurmaFilter {

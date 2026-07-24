@@ -1,6 +1,7 @@
 // File: modules/gestor/secretaria/declaracao-matricula/SecretariaDeclaracaoMatriculaPage.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CreditCard, Users, Search, Printer, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -39,7 +40,7 @@ interface Aluno {
 }
 
 const TEMPLATE_DEFAULT = {
-  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino.</p><br><p>O referido curso é realizado na modalidade presencial no polo de <b>{{POLO_NOME}}</b>.</p><br><p>Atestamos que o aluno apresenta frequência regular e está em dia com suas obrigações acadêmicas.</p>`,
+  textContent: `<p>Declaramos para os devidos fins que o(a) aluno(a) <b>{{ALUNO_NOME}}</b>, portador(a) do CPF nº <b>{{ALUNO_CPF}}</b>, <b>{{ALUNO_DOCUMENTO_TIPO}}</b> nº <b>{{ALUNO_RG}}</b>, nascido(a) em <b>{{ALUNO_NASCIMENTO}}</b>, registrado(a) sob a matrícula nº <b>{{ALUNO_MATRICULA}}</b>, encontra-se regularmente matriculado(a) no curso de <b>{{CURSO_NOME}}</b>, na turma <b>{{TURMA_NOME}}</b>, nesta instituição de ensino, no polo de <b>{{POLO_NOME}}</b>.</p>`,
   absoluteFields: [],
   validityDays: 30,
   v: 2
@@ -89,7 +90,27 @@ const SecretariaDeclaracaoMatriculaPage = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
   const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
+  const [frequenciesByStudent, setFrequenciesByStudent] = useState<Record<string, number>>({});
   const printContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isPrinting) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isDownloading) {
+        setIsPrinting(false);
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isDownloading, isPrinting]);
 
   const matchesAlunoSearch = (aluno: Aluno, term: string) => {
     const normalized = term.trim().toUpperCase();
@@ -125,10 +146,15 @@ const SecretariaDeclaracaoMatriculaPage = ({
       setTurmas(filteredTurmas);
       
       const mapped = await Promise.all(
-        (dbAlunos || []).map(async (p) => {
+        (dbAlunos || []).map(async (p): Promise<Aluno | null> => {
           const matriculas = await parceirosService.getMatriculas(p.id);
-          const activeMat = matriculas.find(m => m.status?.toUpperCase() === 'ATIVO') || matriculas[0];
-          const turmaIds = matriculas.map(m => m.turma_id);
+          const eligibleMatriculas = matriculas.filter((matricula) => (
+            matricula.status?.toUpperCase() === 'ATIVO'
+            && matricula.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO'
+          ));
+          const activeMat = eligibleMatriculas[0];
+          if (!activeMat) return null;
+          const turmaIds = eligibleMatriculas.map((matricula) => matricula.turma_id);
           
           return {
             id: p.id,
@@ -157,7 +183,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
         })
       );
 
-      setAlunos(mapped);
+      setAlunos(mapped.filter((aluno): aluno is Aluno => aluno !== null));
     } catch (err) {
       console.error('Erro ao carregar dados acadêmicos:', err);
     } finally {
@@ -220,6 +246,25 @@ const SecretariaDeclaracaoMatriculaPage = ({
 
     setIsPreparingValidation(true);
     try {
+      if (documentType === 'declaracao_frequencia') {
+        const frequencyEntries = await Promise.all(eligibleTargets.map(async (aluno) => {
+          const { data, error } = await (supabase.rpc as any)('get_secretaria_documento_academico', {
+            p_matricula_id: aluno.enrollmentId,
+            p_documento: 'declaracao_frequencia',
+          });
+          if (error) throw error;
+          const frequency = data?.frequenciaGeral;
+          if (frequency === null || frequency === undefined) {
+            throw new Error(`A frequência de ${aluno.nome} ainda não está consolidada.`);
+          }
+          return [aluno.id, Number(frequency)] as const;
+        }));
+        setFrequenciesByStudent((current) => ({
+          ...current,
+          ...Object.fromEntries(frequencyEntries),
+        }));
+      }
+
       const validityDays = templateConfig.validityDays || 30;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + validityDays);
@@ -244,7 +289,11 @@ const SecretariaDeclaracaoMatriculaPage = ({
       setIsPrinting(true);
     } catch (error) {
       console.error('Erro ao registrar emissão de declaração:', error);
-      alert('Não foi possível gerar os códigos de validação das declarações.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar as declarações.'
+      );
     } finally {
       setIsPreparingValidation(false);
     }
@@ -469,6 +518,12 @@ const SecretariaDeclaracaoMatriculaPage = ({
     parsed = parsed.replace(/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${horaAtual}`);
     parsed = parsed.replace(/{{VALIDADE_DIAS}}/g, String(validityDays));
     parsed = parsed.replace(/{{VALIDADE_DATA}}/g, validadeFormatada);
+    parsed = parsed.replace(
+      /{{FREQUENCIA_GERAL}}/g,
+      frequenciesByStudent[aluno.id] === undefined
+        ? 'Não consolidada'
+        : `${frequenciesByStudent[aluno.id].toFixed(2).replace('.', ',')}%`
+    );
 
     return parsed;
   };
@@ -575,46 +630,53 @@ const SecretariaDeclaracaoMatriculaPage = ({
     );
   }
 
-  if (isPrinting) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 z-[9999] overflow-y-auto custom-scrollbar flex flex-col" id="print-layout">
+  if (isPrinting && typeof document !== 'undefined') {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-hidden bg-slate-950"
+        id="print-layout"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Visualizador: ${documentTitle}`}
+      >
         {/* Barra superior de Ações */}
-        <div className="bg-slate-800 text-white p-4 shadow-md sticky top-0 flex justify-between items-center z-[10000] print:hidden">
-          <div className="flex items-center gap-4">
+        <div className="z-10 flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white shadow-md sm:flex-row sm:items-center sm:justify-between sm:px-6 print:hidden">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <button
               onClick={() => setIsPrinting(false)}
-              className="p-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+              aria-label="Fechar visualizador"
             >
               <ArrowLeft size={16} /> Voltar
             </button>
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-white">Visualizador de Documentos</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-black uppercase tracking-widest text-white">Visualizador de Documentos</h3>
+              <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">
                 Emissão: {documentTitle} ({rawAlunosParaImprimir.length} pág.)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-5 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all border border-white/15 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/20 disabled:opacity-60 sm:px-5 sm:py-3 sm:text-xs"
             >
               {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              {isDownloading ? 'Gerando...' : 'Fazer Download PDF'}
+              <span>{isDownloading ? 'Gerando...' : 'Download PDF'}</span>
             </button>
             <button
               onClick={triggerBrowserPrint}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg"
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs"
             >
-              <Printer size={16} /> Confirmar Impressão
+              <Printer size={16} /> <span>Imprimir</span>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 bg-slate-900 p-8 overflow-y-auto flex flex-col items-center">
-          <div ref={printContentRef} className="print-content flex flex-col items-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center overflow-auto bg-slate-900 p-3 custom-scrollbar sm:p-8">
+          <div ref={printContentRef} className="print-content flex min-w-max flex-col items-center">
             {renderA4Pages()}
           </div>
         </div>
@@ -664,7 +726,8 @@ const SecretariaDeclaracaoMatriculaPage = ({
             margin: 0;
           }
         `}} />
-      </div>
+      </div>,
+      document.body,
     );
   }
 

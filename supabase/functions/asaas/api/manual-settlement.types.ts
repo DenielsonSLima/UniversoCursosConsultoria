@@ -9,6 +9,7 @@ export type ManualSettlementPaymentMethod =
 export type ManualSettlementState =
   | "STARTED"
   | "REMOTE_CANCELED_LOCAL_PENDING"
+  | "FAILED_SAFE"
   | "REVIEW_REQUIRED"
   | "COMPLETED"
   | "REVERSED";
@@ -150,6 +151,11 @@ export interface ManualSettlementRepository {
     input: Record<string, unknown>,
   ): Promise<ManualSettlementAttempt>;
   markReviewRequired(
+    attemptId: string,
+    leaseToken: string,
+    error: string,
+  ): Promise<void>;
+  markSafeFailure(
     attemptId: string,
     leaseToken: string,
     error: string,

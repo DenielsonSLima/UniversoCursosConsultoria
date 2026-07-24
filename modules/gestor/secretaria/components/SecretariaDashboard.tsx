@@ -39,7 +39,7 @@ const cards = [
   { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Crachá do aluno liberado após a entrada no estágio.', icon: Vote, color: 'cyan' },
   { id: 'termo-estagio', title: 'Termo de Estágio', desc: 'Termo de compromisso individual ou em lote.', icon: BriefcaseBusiness, color: 'teal' },
   { id: 'rematricula', title: 'Rematrícula', desc: 'Preparação do processo por aluno ou turma.', icon: RefreshCcw, color: 'violet' },
-  { id: 'consulta-financeira', title: 'Recebimentos', desc: 'Consulte todas as dívidas em aberto e registre a baixa.', icon: CircleDollarSign, color: 'cyan' },
+  { id: 'consulta-financeira', title: 'Financeiro', desc: 'Recebimentos por aluno e curso: individual, lote ou personalizado.', icon: CircleDollarSign, color: 'cyan' },
   { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
   { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
   { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
