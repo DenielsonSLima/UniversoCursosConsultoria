@@ -35,6 +35,7 @@ import {
   normalizeBanesePixPayload,
   normalizeBanesePixQrImage,
 } from "../../internal/pix-validation.ts";
+import { renderOfficialBanesePixQr } from "../../internal/official-pix-qr.ts";
 
 const isProduction = (environment: Environment) => environment === "production";
 
@@ -117,7 +118,7 @@ const pixReturnCandidates = (raw: unknown) => {
   return { payloadCandidates, imageCandidates };
 };
 
-const normalizeBanesePixFromResponse = (
+const normalizeBanesePixFromResponse = async (
   raw: unknown,
   amount: number,
 ) => {
@@ -142,6 +143,13 @@ const normalizeBanesePixFromResponse = (
     }
   }
 
+  let imageSource: "bank" | "generated_from_official_emv" | null =
+    pixEncodedImage ? "bank" : null;
+  if (pixPayload && !pixEncodedImage) {
+    pixEncodedImage = await renderOfficialBanesePixQr(pixPayload);
+    imageSource = "generated_from_official_emv";
+  }
+
   const complete = Boolean(pixPayload && pixEncodedImage);
   return {
     pixPayload: complete ? pixPayload : null,
@@ -151,18 +159,22 @@ const normalizeBanesePixFromResponse = (
       imageCandidatePresent: imageCandidates.length > 0,
       payloadValid: Boolean(pixPayload),
       imageValid: Boolean(pixEncodedImage),
+      imageSource,
       complete,
     },
   };
 };
 
-const normalizeBanesePixFromResponses = (
+const normalizeBanesePixFromResponses = async (
   responses: Array<{ source: "creation" | "confirmation"; raw: unknown }>,
   amount: number,
 ) => {
   const diagnostics: Array<Record<string, unknown>> = [];
   for (const response of responses) {
-    const normalized = normalizeBanesePixFromResponse(response.raw, amount);
+    const normalized = await normalizeBanesePixFromResponse(
+      response.raw,
+      amount,
+    );
     diagnostics.push({
       source: response.source,
       ...normalized.diagnostic,
@@ -192,7 +204,7 @@ const normalizeBanesePixFromResponses = (
 
 const withProductionPix = (
   result: AdapterCreateChargeResult,
-  pix: ReturnType<typeof normalizeBanesePixFromResponses>,
+  pix: Awaited<ReturnType<typeof normalizeBanesePixFromResponses>>,
 ): AdapterCreateChargeResult => ({
   ...result,
   pixPayload: pix.pixPayload,
@@ -308,7 +320,7 @@ export const createBaneseBoletoCharge = async (
         }
       }
       if (isProduction(input.environment)) {
-        const productionPix = normalizeBanesePixFromResponses(
+        const productionPix = await normalizeBanesePixFromResponses(
           [{ source: "confirmation", raw: confirmedRaw }],
           input.amount,
         );
@@ -402,7 +414,7 @@ export const createBaneseBoletoCharge = async (
     // O e-mail final do Banese confirma que o BolePix é devolvido no último
     // passo da criação. A consulta posterior usada para confirmar juros/multa
     // pode não repetir o QR; por isso a resposta original do POST prevalece.
-    const pix = normalizeBanesePixFromResponses([
+    const pix = await normalizeBanesePixFromResponses([
       { source: "creation", raw },
       { source: "confirmation", raw: confirmedRaw },
     ], input.amount);

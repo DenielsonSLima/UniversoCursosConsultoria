@@ -105,7 +105,7 @@ export const normalizeBanesePixPayload = (
         return findSingleField(
           parseEmvFields(field.value, "Conta Pix Banese"),
           "00",
-        ) ===
+        )?.toUpperCase() ===
           "BR.GOV.BCB.PIX";
       } catch {
         return false;

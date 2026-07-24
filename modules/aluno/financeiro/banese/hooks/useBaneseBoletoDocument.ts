@@ -1,28 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../../../../lib/supabase';
-
-const readFunctionError = async (error: unknown) => {
-  const context = (error as { context?: { json?: () => Promise<{ error?: string }> } })?.context;
-  const body = context?.json ? await context.json().catch(() => null) : null;
-  return body?.error || (error instanceof Error ? error.message : 'Não foi possível gerar o boleto Banese.');
-};
+import { fetchBaneseBoletoDocument } from '../../../shared/baneseBoletoDocument';
 
 const useBaneseBoletoDocument = (receivableId: string, enabled = true) => {
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const query = useQuery<Blob>({
     queryKey: ['banese-boleto-document', receivableId],
     enabled: enabled && Boolean(receivableId),
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke<Blob>('banese-boleto-document', {
-        body: { receivableId },
-      });
-      if (error) throw new Error(await readFunctionError(error));
-      if (!(data instanceof Blob) || data.type !== 'application/pdf') {
-        throw new Error('O servidor não retornou um PDF Banese válido.');
-      }
-      return data;
-    },
+    queryFn: () => fetchBaneseBoletoDocument(receivableId),
     staleTime: 5 * 60_000,
     retry: 1,
   });

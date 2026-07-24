@@ -342,6 +342,59 @@ Deno.test("producao preserva BolePix do POST quando confirmacao financeira nao r
   }
 });
 
+Deno.test("producao aceita GUI Banese minusculo e renderiza QR a partir do EMV oficial", async () => {
+  const originalFetch = globalThis.fetch;
+  const amount = 129.9;
+  const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
+  const officialPayload = buildBanesePixPayloadFixture(
+    "TXID-BANESE",
+    amount,
+    "br.gov.bcb.pix",
+  );
+  const creationResponse = {
+    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    NumeroLinhaDigitavel: values.digitableLine,
+    NumeroCodigoBarras: values.barcode,
+    CodigoSituacaoBoleto: 2,
+    ValorNominal: amount,
+    DataVencimento: BANESE_DOCUMENT_FIXTURE.dueDate,
+    convenio: values.agreement,
+    BolePix: {
+      qrCode: officialPayload,
+    },
+  };
+
+  globalThis.fetch = async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/autenticacao/")) {
+      return new Response(
+        JSON.stringify({ access_token: "token-teste", token_type: "Bearer" }),
+        { status: 200 },
+      );
+    }
+    return new Response(JSON.stringify(creationResponse), { status: 200 });
+  };
+
+  try {
+    const result = await createBaneseBoletoCharge({
+      ...reservedBoletoInput(false),
+      environment: "production",
+      amount,
+      financialTerms: null,
+    });
+    assert.equal(result.pixPayload, officialPayload);
+    assert.match(result.pixEncodedImage ?? "", /^data:image\/png;base64,/);
+    const diagnostic = (result.raw as any)?.pixDiagnostic;
+    assert.equal(diagnostic?.source, "creation");
+    assert.equal(
+      diagnostic?.attempts?.[0]?.imageSource,
+      "generated_from_official_emv",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("descarta retorno de pix no formato de linha/barras", async () => {
   const originalFetch = globalThis.fetch;
   const amount = 8.5;

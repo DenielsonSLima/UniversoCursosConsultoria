@@ -16,10 +16,11 @@ import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese
 import BanesePaymentStatePage from './banese/BanesePaymentStatePage';
 import useBanesePaymentDetails from './banese/hooks/useBanesePaymentDetails';
 import {
-  navigatePaymentWindow,
   preparePaymentWindow,
+  renderPdfInPaymentWindow,
   renderPaymentWindowError,
 } from '../shared/paymentWindow';
+import { fetchBaneseBoletoDocument } from '../shared/baneseBoletoDocument';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -583,9 +584,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       if (eadPaymentMethod === 'BOLETO' && checkoutUrl) {
         invalidateAlunoPaymentQueries();
         setSelectedEadPayment(null);
-        if (!navigatePaymentWindow(paymentWindow, checkoutUrl)) {
+        try {
+          const pdf = await fetchBaneseBoletoDocument(String(checkoutResult?.receivableId || ''));
+          if (!renderPdfInPaymentWindow(paymentWindow, pdf)) {
+            throw new Error('O navegador bloqueou a nova aba do boleto.');
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+          renderPaymentWindowError(paymentWindow, message);
           setEadPaymentPanel(result as EadPaymentPanelData);
-          setNotice('O navegador bloqueou a nova aba. Use “Abrir boleto” para continuar sem sair do portal.');
+          setNotice(`${message} Use “Abrir boleto” para tentar novamente sem sair do portal.`);
           setTimeout(() => setNotice(''), 5500);
         }
         return;

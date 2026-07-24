@@ -38,6 +38,32 @@ export const navigatePaymentWindow = (
   }
 };
 
+export const renderPdfInPaymentWindow = (
+  paymentWindow: Window | null,
+  pdf: Blob,
+) => {
+  if (!paymentWindow || paymentWindow.closed) return false;
+
+  const documentUrl = URL.createObjectURL(pdf);
+  try {
+    paymentWindow.opener = null;
+    paymentWindow.location.replace(documentUrl);
+    paymentWindow.focus();
+    // Mantém o documento disponível para impressão/download e libera a URL
+    // depois de uma janela confortável de uso.
+    window.setTimeout(() => URL.revokeObjectURL(documentUrl), 60 * 60_000);
+    return true;
+  } catch {
+    URL.revokeObjectURL(documentUrl);
+    try {
+      paymentWindow.close();
+    } catch {
+      // A página principal exibirá o fallback autenticado.
+    }
+    return false;
+  }
+};
+
 export const renderPaymentWindowError = (
   paymentWindow: Window | null,
   message: string,

@@ -10,8 +10,10 @@ import type { TechnicalProfileGate } from '../cursosPage.types';
 import {
   navigatePaymentWindow,
   preparePaymentWindow,
+  renderPdfInPaymentWindow,
   renderPaymentWindowError,
 } from '../../shared/paymentWindow';
+import { fetchBaneseBoletoDocument } from '../../shared/baneseBoletoDocument';
 
 interface UseCourseCheckoutInput {
   alunoId?: string;
@@ -97,7 +99,7 @@ export const useCourseCheckout = ({
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: ({ url, payment, requestedPaymentMethod, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+    onSuccess: async ({ url, payment, requestedPaymentMethod, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
       setEadCheckoutReview(null);
       const paymentMethod = String(payment?.method || requestedPaymentMethod || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
@@ -105,10 +107,19 @@ export const useCourseCheckout = ({
       const usesInlinePaymentPanel = paymentProvider === 'asaas' || (paymentMethod === 'PIX' && hasPixQrCode);
       if (paymentMethod === 'BOLETO') {
         invalidateStudentCourseAccess();
-        if (!navigatePaymentWindow(checkoutWindow, url)) {
+        try {
+          const pdf = await fetchBaneseBoletoDocument(String(receivableId || ''));
+          if (!renderPdfInPaymentWindow(checkoutWindow, pdf)) {
+            throw new Error('O navegador bloqueou a nova aba do boleto.');
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+          renderPaymentWindowError(checkoutWindow, message);
           setEadPaymentPanel({ url, payment, matriculaId, receivableId, alreadyPaid, alreadyPending, awaitingWebhook });
-          setCheckoutError('O navegador bloqueou a nova aba. Use o botão “Abrir boleto” para continuar sem sair do portal.');
-        } else if (alreadyPending) {
+          setCheckoutError(`${message} Use o botão “Abrir boleto” para tentar novamente sem sair do portal.`);
+          return;
+        }
+        if (alreadyPending) {
           setCheckoutError('Você já tinha uma cobrança em aberto para este curso. Reabrimos o boleto existente.');
         }
         return;
