@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import EadPaymentModal from '../../../ead/components/EadPaymentModal';
 import {
+  buildEadCheckoutSubmission,
   defaultEadCheckoutMethod,
   formatEadCheckoutMoney,
   resolveEadCheckoutOptions,
@@ -353,7 +354,7 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   <p className="mt-1 text-2xl font-black text-[#001a33]">{formatEadCheckoutMoney(options.amount)}</p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {options.options.map(option => {
                     const active = selectedMethod === option.method;
                     const Icon = option.method === 'CREDIT_CARD' ? CreditCard : option.method === 'BOLETO' ? FileText : Zap;
@@ -400,7 +401,9 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-xs font-bold leading-relaxed text-slate-600">
                   {selectedMethod === 'CREDIT_CARD'
                     ? `Cartão selecionado: ${selectedInstallments}x de ${formatEadCheckoutMoney(installmentValue)} sobre o valor do curso. Juros do gateway podem alterar o total no checkout.`
-                    : `${selectedMethod === 'PIX' ? 'Pix' : 'Boleto'} selecionado: cobrança única de ${formatEadCheckoutMoney(options.amount)}.`}
+                    : selectedMethod === 'PIX'
+                      ? `Pix selecionado: será emitido um único Boleto com Pix de ${formatEadCheckoutMoney(options.amount)} e o QR Code oficial aparecerá nesta tela.`
+                      : `Boleto com Pix selecionado: o PDF completo da cobrança de ${formatEadCheckoutMoney(options.amount)} será aberto em uma nova aba.`}
                 </div>
 
                 {checkoutError && (
@@ -423,10 +426,11 @@ const CourseCatalogView: React.FC<CourseCatalogViewProps> = ({ view }) => {
                   disabled={checkoutMutation.isPending || options.options.length === 0}
                   onClick={() => {
                     const review = eadCheckoutReview;
-                    startCheckout(review.course, null, {
-                      method: selectedMethod,
-                      installments: selectedInstallments,
-                    });
+                    startCheckout(
+                      review.course,
+                      null,
+                      buildEadCheckoutSubmission(selectedMethod, selectedInstallments),
+                    );
                   }}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:bg-slate-300"
                 >
