@@ -10,6 +10,7 @@ import {
 
 export interface EadPaymentPanelData {
   url?: string | null;
+  presentation?: 'BOLETO' | 'PIX';
   receivableId?: string | null;
   matriculaId?: string | null;
   alreadyPaid?: boolean;
@@ -76,7 +77,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
   const hasPixQrCode = Boolean(payment.pixQrCode?.payload || payment.pixQrCode?.encodedImage);
-  const showInlinePix = isPix && (provider === 'asaas' || hasPixQrCode);
+  const wantsInlineBolePix = panel.presentation === 'PIX' && isBoleto;
+  const showInlinePix = wantsInlineBolePix || (isPix && (provider === 'asaas' || hasPixQrCode));
+  const showBoletoAction = isBoleto && !wantsInlineBolePix;
   const recipientName = payment.recipient?.name || 'Universo Cursos e Consultoria';
   const recipientDocument = payment.recipient?.document || '13.278.137/0001-54';
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
@@ -176,8 +179,11 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                     className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
                   />
                 ) : (
-                  <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                    <QrCode size={76} />
+                  <div className="mx-auto flex h-56 w-56 flex-col items-center justify-center rounded-2xl bg-white px-6 text-emerald-600 shadow-sm">
+                    <QrCode size={64} />
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      Aguardando QR oficial
+                    </p>
                   </div>
                 )}
                 <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-emerald-700">Pix copia e cola</p>
@@ -189,7 +195,8 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                 <button
                   type="button"
                   onClick={copyPix}
-                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
+                  disabled={!payment.pixQrCode?.payload}
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   <Copy size={14} />
                   Copiar Pix
@@ -257,7 +264,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
             </div>
           )}
 
-          {isBoleto && (
+          {showBoletoAction && (
             <div className="rounded-3xl border border-blue-100 bg-blue-50/60 p-5">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
