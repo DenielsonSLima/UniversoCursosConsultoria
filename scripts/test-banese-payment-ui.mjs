@@ -4,23 +4,30 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 
-const outputFile = join(tmpdir(), 'universo-banese-payment-utils.test.mjs');
-const testFile = 'modules/aluno/financeiro/banese/banese-payment.utils.test.ts';
+const testFiles = [
+  'modules/aluno/financeiro/banese/banese-payment.utils.test.ts',
+  'modules/aluno/financeiro/banese/hooks/useBaneseBoletoDocument.test.ts',
+];
+const outputFiles = testFiles.map((_, index) =>
+  join(tmpdir(), `universo-banese-payment-${index}.test.mjs`)
+);
 
 try {
-  await build({
-    entryPoints: [testFile],
-    outfile: outputFile,
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    logLevel: 'silent',
-  });
+  await Promise.all(testFiles.map((testFile, index) =>
+    build({
+      entryPoints: [testFile],
+      outfile: outputFiles[index],
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      logLevel: 'silent',
+    })
+  ));
 
-  const result = spawnSync(process.execPath, ['--test', outputFile], {
+  const result = spawnSync(process.execPath, ['--test', ...outputFiles], {
     stdio: 'inherit',
   });
   process.exitCode = result.status ?? 1;
 } finally {
-  await rm(outputFile, { force: true });
+  await Promise.all(outputFiles.map((outputFile) => rm(outputFile, { force: true })));
 }
