@@ -89,6 +89,7 @@ export const useCourseCheckout = ({
         url: result.url,
         payment: result.payment,
         requestedPaymentMethod: String(paymentSelection?.method || '').toUpperCase(),
+        requestedPresentation: paymentSelection?.presentation,
         matriculaId: result.matriculaId,
         receivableId: result.receivableId,
         checkoutWindow,
@@ -99,12 +100,33 @@ export const useCourseCheckout = ({
       };
     },
     onMutate: () => setCheckoutError(''),
-    onSuccess: async ({ url, payment, requestedPaymentMethod, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
+    onSuccess: async ({ url, payment, requestedPaymentMethod, requestedPresentation, matriculaId, receivableId, checkoutWindow, sameTab, alreadyPaid, alreadyPending, awaitingWebhook }) => {
       setEadCheckoutReview(null);
       const paymentMethod = String(payment?.method || requestedPaymentMethod || '').toUpperCase();
       const paymentProvider = String((payment as any)?.provider || 'asaas').toLowerCase();
       const hasPixQrCode = Boolean((payment as any)?.pixQrCode?.payload || (payment as any)?.pixQrCode?.encodedImage);
       const usesInlinePaymentPanel = paymentProvider === 'asaas' || (paymentMethod === 'PIX' && hasPixQrCode);
+      const wantsInlineBolePix = requestedPresentation === 'PIX' && paymentMethod === 'BOLETO';
+      if (wantsInlineBolePix) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setEadPaymentPanel({
+          url,
+          payment,
+          presentation: 'PIX',
+          matriculaId,
+          receivableId,
+          alreadyPaid,
+          alreadyPending,
+          awaitingWebhook,
+        });
+        setCheckoutError(awaitingWebhook
+          ? 'Pagamento localizado. O curso será liberado assim que a confirmação bancária canônica for registrada no sistema.'
+          : alreadyPending
+            ? 'Você já tinha um Boleto com Pix em aberto. Reabrimos o QR Code da mesma cobrança.'
+            : '');
+        invalidateStudentCourseAccess();
+        return;
+      }
       if (paymentMethod === 'BOLETO') {
         invalidateStudentCourseAccess();
         try {
@@ -176,7 +198,10 @@ export const useCourseCheckout = ({
       }
     }
     const paymentMethod = String(paymentSelection?.method || '').toUpperCase();
-    const opensBoletoInNewTab = isEadCheckout && paymentMethod === 'BOLETO';
+    const wantsInlineBolePix = paymentSelection?.presentation === 'PIX';
+    const opensBoletoInNewTab = isEadCheckout
+      && paymentMethod === 'BOLETO'
+      && !wantsInlineBolePix;
     const checkoutWindow = !isEadCheckout || opensBoletoInNewTab
       ? preparePaymentWindow()
       : null;
