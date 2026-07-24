@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpRight, CheckCircle2, Copy, FileText, QrCode, X } from 'lucide-react';
+import { fetchBaneseBoletoDocument } from '../../aluno/shared/baneseBoletoDocument';
+import {
+  preparePaymentWindow,
+  renderPaymentWindowError,
+  renderPdfInPaymentWindow,
+} from '../../aluno/shared/paymentWindow';
 
 export interface EadPaymentPanelData {
   url?: string | null;
@@ -57,10 +63,16 @@ const formatDateDisplay = (value?: string | null) => {
 
 const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => {
   const [pixCopied, setPixCopied] = useState(false);
+  const [boletoError, setBoletoError] = useState('');
+  const [isOpeningBoleto, setIsOpeningBoleto] = useState(false);
   const payment = panel.payment || {};
   const method = String(payment.method || '').toUpperCase();
   const provider = String(payment.provider || 'asaas').toLowerCase();
-  const providerName = provider === 'mercado_pago' ? 'Mercado Pago' : provider === 'banese_card' ? 'Banese Card' : 'Asaas';
+  const providerName = provider === 'mercado_pago'
+    ? 'Mercado Pago'
+    : provider.startsWith('banese')
+      ? 'Banese'
+      : 'Asaas';
   const isPix = method === 'PIX';
   const isBoleto = method === 'BOLETO';
   const hasPixQrCode = Boolean(payment.pixQrCode?.payload || payment.pixQrCode?.encodedImage);
@@ -91,6 +103,24 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
     }
     setPixCopied(true);
     window.setTimeout(() => setPixCopied(false), 2200);
+  };
+
+  const openBaneseBoleto = async () => {
+    const paymentWindow = preparePaymentWindow();
+    setBoletoError('');
+    setIsOpeningBoleto(true);
+    try {
+      const pdf = await fetchBaneseBoletoDocument(String(panel.receivableId || ''));
+      if (!renderPdfInPaymentWindow(paymentWindow, pdf)) {
+        throw new Error('O navegador bloqueou a nova aba do boleto.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível abrir o boleto Banese.';
+      renderPaymentWindowError(paymentWindow, message);
+      setBoletoError(message);
+    } finally {
+      setIsOpeningBoleto(false);
+    }
   };
 
   if (typeof document === 'undefined') return null;
@@ -240,21 +270,28 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
                   </p>
                 </div>
               </div>
-              {payment.bankSlipUrl && (
-                <a
-                  href={payment.bankSlipUrl}
-                  target="_blank"
-                  rel="noreferrer"
+              {provider.startsWith('banese') ? (
+                <button
+                  type="button"
+                  onClick={openBaneseBoleto}
+                  disabled={isOpeningBoleto}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
                 >
                   <ArrowUpRight size={14} />
-                  Abrir boleto
+                  {isOpeningBoleto ? 'Preparando PDF...' : 'Abrir boleto'}
+                </button>
+              ) : payment.bankSlipUrl ? (
+                <a href={payment.bankSlipUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-700">
+                  <ArrowUpRight size={14} /> Abrir boleto
                 </a>
-              )}
+              ) : null}
+              {boletoError ? (
+                <p className="mt-3 text-xs font-bold text-red-600">{boletoError}</p>
+              ) : null}
             </div>
           )}
 
-          {officialUrl && (
+          {officialUrl && !isBoleto && (
             <a
               href={officialUrl}
               target="_blank"
