@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBaneseBoletoDocument } from '../../../shared/baneseBoletoDocument';
+import {
+  baneseBoletoDocumentQueryKey,
+  type BanesePixState,
+} from './banese-document-query-key';
 
-const useBaneseBoletoDocument = (receivableId: string, enabled = true) => {
+const useBaneseBoletoDocument = (
+  receivableId: string,
+  enabled = true,
+  pixState: BanesePixState = 'pending',
+) => {
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const query = useQuery<Blob>({
-    queryKey: ['banese-boleto-document', receivableId],
+    // O Pix oficial pode ficar disponível depois que o primeiro PDF foi
+    // solicitado. A revisão no cache força a regeneração do documento quando
+    // o BolePix passa de pendente para disponível.
+    queryKey: baneseBoletoDocumentQueryKey(receivableId, pixState),
     enabled: enabled && Boolean(receivableId),
     queryFn: () => fetchBaneseBoletoDocument(receivableId),
     staleTime: 5 * 60_000,
