@@ -8,10 +8,11 @@ import FinanceiroCardItem from './FinanceiroCardItem';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
 import { paymentCheckoutService } from '../../asaas/asaas.service';
 import EadPaymentModal, { EadPaymentPanelData } from '../../ead/components/EadPaymentModal';
+import { useEadPaymentConfirmationWatcher } from '../../ead/hooks/useEadPaymentConfirmationWatcher';
 import {
-  invalidateAlunoEadPaymentQueries,
-  useEadPaymentConfirmationWatcher,
-} from '../../ead/hooks/useEadPaymentConfirmationWatcher';
+  alunoCourseAccessKeys,
+  invalidateAlunoCourseAccessQueries,
+} from '../shared/aluno-course-access.queries';
 import { getBanesePaymentActionLabel, hasRegisteredBaneseBoleto } from './banese/banese-payment.utils';
 import BanesePaymentStatePage from './banese/BanesePaymentStatePage';
 import useBanesePaymentDetails from './banese/hooks/useBanesePaymentDetails';
@@ -52,7 +53,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const invalidateAlunoPaymentQueries = React.useCallback(() => {
-    invalidateAlunoEadPaymentQueries(queryClient, alunoId);
+    invalidateAlunoCourseAccessQueries(queryClient, alunoId);
   }, [alunoId, queryClient]);
 
   const confirmEadPayment = React.useCallback(() => {
@@ -83,7 +84,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       openByModality: Array<{ modality: string; count: number; total: number }>;
     };
   }>({
-    queryKey: ['aluno-financeiro', alunoId],
+    queryKey: alunoCourseAccessKeys.finance(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
         'get_aluno_financeiro_portal_secure',
@@ -136,7 +137,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
         },
         () => {
           void queryClient.invalidateQueries({
-            queryKey: ['aluno-financeiro', alunoId],
+            queryKey: alunoCourseAccessKeys.finance(alunoId),
             exact: true,
             refetchType: 'active',
           });
