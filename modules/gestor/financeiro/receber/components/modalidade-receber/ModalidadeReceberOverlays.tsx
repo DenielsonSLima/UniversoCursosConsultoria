@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, X } from 'lucide-react';
 import type { ContaBancaria } from '../../../financeiro.service';
 import ManualSettlementModal from '../manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
+import InstitutionalReceiptModal from './InstitutionalReceiptModal';
 import type { ModalidadeReceberOperations } from './useModalidadeReceberOperations';
 import { paymentGatewayLabel } from './modalidade-receber.utils';
 
@@ -19,6 +20,7 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
   const {
     selected,
     reversalItem,
+    receiptItem,
     reversalReason,
     recreateAsaas,
     paymentMutation,
@@ -26,6 +28,7 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
     setReversalReason,
     setRecreateAsaas,
     closePaymentModal,
+    closeReceiptModal,
     closeReversalModal,
   } = operations;
 
@@ -44,6 +47,13 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
           error={paymentMutation.error instanceof Error ? paymentMutation.error.message : null}
           onClose={closePaymentModal}
           onConfirm={(payload: ManualSettlementPayload) => paymentMutation.mutate(payload)}
+        />
+      ), document.body) : null}
+
+      {receiptItem && typeof document !== 'undefined' ? createPortal((
+        <InstitutionalReceiptModal
+          item={receiptItem}
+          onClose={closeReceiptModal}
         />
       ), document.body) : null}
 
