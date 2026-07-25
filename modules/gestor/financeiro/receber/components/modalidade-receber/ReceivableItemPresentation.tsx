@@ -76,7 +76,7 @@ export const ReceivableActionButtons: React.FC<ItemProps> = ({ item, actions }) 
               ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
               : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
           }`}
-          title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Imprimir recibo interno da Universo'}
+          title={paidThroughAsaas ? 'Abrir comprovante oficial do Asaas' : 'Visualizar recibo interno da Universo'}
         >
           {paidThroughAsaas ? <ExternalLink size={12} /> : <ReceiptText size={12} />}
           {paidThroughAsaas ? 'Comprovante Asaas' : 'Recibo Universo'}
