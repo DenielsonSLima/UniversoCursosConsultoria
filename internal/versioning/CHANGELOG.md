@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.6.0-beta.2] - 2026-07-25
+
+### Alterado
+
+- O portal do aluno passou a centralizar as consultas afetadas pela liberação de curso e a atualizá-las por Realtime com invalidação direcionada do TanStack Query.
+- O Nosso Número Banese passou a ser persistido no formato canônico de nove dígitos em recebíveis, transações e inscrições online.
+
+### Corrigido
+
+- Pagamentos Banese confirmados pelo banco agora ativam automaticamente matrículas de EAD, curso livre e especialização, sem depender da projeção auxiliar da inscrição online.
+- Inscrições antigas com Nosso Número sem zeros à esquerda são recuperadas automaticamente sem serem confundidas com uma segunda cobrança.
+- A confirmação exibida ao aluno só informa curso liberado depois que a matrícula realmente está ativa.
+
+### Segurança
+
+- A identidade remota continua imutável; somente representações numéricas equivalentes do mesmo Nosso Número Banese podem ser promovidas ao formato canônico.
+- Cursos técnicos continuam aguardando análise documental mesmo após a confirmação financeira.
+
 ## [0.6.0-beta.1] - 2026-07-24
 
 ### Adicionado
