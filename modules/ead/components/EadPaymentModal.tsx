@@ -7,6 +7,7 @@ import {
   renderPaymentWindowError,
   renderPdfInPaymentWindow,
 } from '../../aluno/shared/paymentWindow';
+import { normalizeEadPaymentQrImageSource } from './eadPaymentQrImage';
 
 export interface EadPaymentPanelData {
   url?: string | null;
@@ -85,6 +86,7 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const displayValue = payment.displayValue || formatCurrencyDisplay(payment.value);
   const dueDate = formatDateDisplay(payment.dueDate);
   const pixExpiration = formatDateDisplay(payment.pixQrCode?.expirationDate);
+  const pixQrImageSource = normalizeEadPaymentQrImageSource(payment.pixQrCode?.encodedImage);
   const officialUrl = payment.invoiceUrl || panel.url || payment.bankSlipUrl || null;
   const expirationLabel = pixExpiration || dueDate || `Informado pelo ${providerName}`;
 
@@ -172,9 +174,9 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
           {showInlinePix && (
             <div className="grid gap-4 rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4 lg:grid-cols-[280px_1fr]">
               <div className="text-center">
-                {payment.pixQrCode?.encodedImage ? (
+                {pixQrImageSource ? (
                   <img
-                    src={`data:image/png;base64,${payment.pixQrCode.encodedImage}`}
+                    src={pixQrImageSource}
                     alt="QR Code Pix"
                     className="mx-auto h-56 w-56 rounded-2xl bg-white p-3 shadow-sm"
                   />
