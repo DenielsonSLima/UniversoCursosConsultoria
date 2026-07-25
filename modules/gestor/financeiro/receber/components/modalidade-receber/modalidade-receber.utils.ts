@@ -103,6 +103,11 @@ export const formatOptionalCurrency = (
 export const formatReceivableDate = (value: string) =>
   value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—';
 
+export const formatNextPendingDueDate = (
+  pendingCount: number,
+  nextDue: string,
+) => pendingCount > 0 && nextDue ? formatReceivableDate(nextDue) : '—';
+
 export const paymentOriginLabel = (item: ContasReceber) => {
   if (item.origemPagamento === 'PRESENCIAL') {
     return ['DELETED', 'CANCELED'].includes(String(item.asaasStatus || '').toUpperCase())
