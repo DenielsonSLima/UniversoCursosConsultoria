@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../gestor/parceiros/parceiros.service';
-import { Award, KeyRound, Landmark, Link2, Mail, Phone, ShieldCheck, User, Wallet } from 'lucide-react';
+import { Award, FileSignature, KeyRound, Landmark, Link2, Mail, Phone, ShieldCheck, User, Wallet } from 'lucide-react';
 import GoogleIdentityCard from '../../shared/auth/GoogleIdentityCard';
 import { loginService } from '../../login/login.service';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
+import ProfessorSignaturePanel from './ProfessorSignaturePanel';
 
 interface PerfilPageProps {
   professorId: string;
 }
 
-type PerfilTab = 'dados' | 'seguranca' | 'google';
+type PerfilTab = 'dados' | 'assinatura' | 'seguranca' | 'google';
 
 const maskDate = (value: string) => value
   .replace(/\D/g, '')
@@ -155,6 +156,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
 
   const tabItems: { id: PerfilTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dados', label: 'Dados e Pagamento', icon: <User size={15} /> },
+    { id: 'assinatura', label: 'Minha Assinatura', icon: <FileSignature size={15} /> },
     { id: 'seguranca', label: 'Segurança', icon: <KeyRound size={15} /> },
     { id: 'google', label: 'Conta Google', icon: <Link2 size={15} /> },
   ];
@@ -624,6 +626,13 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
               </form>
             </div>
           </div>
+        )}
+
+        {activeTab === 'assinatura' && (
+          <ProfessorSignaturePanel
+            professorId={professorId}
+            professorName={profile?.nomeCompleto || profile?.nome || 'Professor(a)'}
+          />
         )}
 
         {activeTab === 'google' && (

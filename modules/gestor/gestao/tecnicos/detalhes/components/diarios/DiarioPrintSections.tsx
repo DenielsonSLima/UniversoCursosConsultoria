@@ -247,8 +247,8 @@ export const DiarioPrintContentPages: React.FC<ContentPagesProps> = ({
                 </p>
               </div>
               <div className="diario-signatures">
-                <div className="diario-signature-line">{disciplina.professor || 'Professor(a)'}<br /><span>Assinatura do(a) professor(a)</span></div>
-                <div className="diario-signature-line">Coordenação do curso<br /><span>Assinatura do(a) coordenador(a)</span></div>
+                <div className="diario-signature-line"><span>ASSINATURA DO PROFESSOR</span></div>
+                <div className="diario-signature-line"><span>ASSINATURA DO COORDENADOR DO CURSO</span></div>
               </div>
             </>
           )}
