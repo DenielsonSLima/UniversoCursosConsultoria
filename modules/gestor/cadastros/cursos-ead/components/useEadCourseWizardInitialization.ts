@@ -18,12 +18,6 @@ export const useEadCourseWizardInitialization = (
     setFinanceiroPix,
     setFinanceiroBoleto,
     setFinanceiroCartao,
-    setFinanceiroParcelado,
-    setFinanceiroParcelasPadrao,
-    setFinanceiroMaxParcelas,
-    setFinanceiroTaxaPagaPor,
-    setFinanceiroRepassarCustoParcelamento,
-    setFinanceiroConsiderarTaxaNoCheckout,
     setDescricao,
     setImagemUrl,
     setVersao,
@@ -66,12 +60,6 @@ export const useEadCourseWizardInitialization = (
       setFinanceiroPix(financeiroConfig.metodosRecebimento.pix);
       setFinanceiroBoleto(financeiroConfig.metodosRecebimento.boleto);
       setFinanceiroCartao(financeiroConfig.metodosRecebimento.cartao);
-      setFinanceiroParcelado(financeiroConfig.cartao.aceitar);
-      setFinanceiroParcelasPadrao(financeiroConfig.parcelasPadrao.toString());
-      setFinanceiroMaxParcelas(financeiroConfig.cartao.maxParcelas.toString());
-      setFinanceiroTaxaPagaPor(financeiroConfig.taxaPagaPor);
-      setFinanceiroRepassarCustoParcelamento(financeiroConfig.cartao.repassarCustoParcelamento === true);
-      setFinanceiroConsiderarTaxaNoCheckout(financeiroConfig.considerarTaxaNoCheckout === true);
 
       const config: EadConfig = curso.ead_config || {
         cronograma: [],
