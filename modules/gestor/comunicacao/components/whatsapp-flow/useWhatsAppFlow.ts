@@ -59,12 +59,15 @@ export const useWhatsAppFlow = (
   });
 
   const closeMutation = useMutation({
-    mutationFn: whatsappService.closeConversation,
+    mutationFn: whatsappService.requestConversationRating,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp'] });
-      toast.success('Atendimento encerrado', 'A conversa foi movida para Finalizadas.');
+      toast.success(
+        'Avaliação enviada',
+        'A conversa será encerrada após a nota do aluno ou em 1 hora sem resposta.',
+      );
     },
-    onError: (err: any) => toast.error('Erro ao encerrar', err?.message || 'Não foi possível encerrar o atendimento.'),
+    onError: (err: any) => toast.error('Erro ao solicitar avaliação', err?.message || 'Não foi possível enviar a pesquisa.'),
   });
 
   const reopenMutation = useMutation({

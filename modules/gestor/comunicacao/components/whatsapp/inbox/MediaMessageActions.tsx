@@ -3,6 +3,7 @@ import { AlertCircle, Download, FileText, Image, Loader2, Play, Wand2 } from 'lu
 import { whatsappService } from '../whatsapp.service';
 import { WhatsAppMessage } from '../whatsapp.types';
 import { mediaDataUrl, mediaPayloadFor } from './mediaUtils';
+import WhatsAppAudioPlayer from './WhatsAppAudioPlayer';
 
 interface MediaMessageActionsProps {
   message: WhatsAppMessage;
@@ -37,7 +38,7 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
   }, [media.filename, media.mime, message.id, preview]);
 
   useEffect(() => {
-    if (media.type !== 'image' || preview || !media.id) return;
+    if (!['image', 'audio'].includes(media.type) || preview || !media.id) return;
     const element = containerRef.current;
     if (!element) return;
     const observer = new window.IntersectionObserver((entries) => {
@@ -87,13 +88,19 @@ const MediaMessageActions: React.FC<MediaMessageActionsProps> = ({ message, outg
           loading="lazy"
         />
       )}
+      {loading && media.type === 'audio' && !preview && (
+        <div className={`flex min-h-12 min-w-[280px] items-center gap-3 rounded-full px-4 ${outgoing ? 'bg-white/10' : 'bg-slate-100'}`}>
+          <Loader2 size={18} className="animate-spin opacity-70" />
+          <span className="text-xs font-bold opacity-70">Carregando áudio...</span>
+        </div>
+      )}
       {preview && media.type === 'audio' && (
-        <audio controls src={preview.url} className="w-full min-w-[260px]" />
+        <WhatsAppAudioPlayer src={preview.url} outgoing={outgoing} />
       )}
 
       <div className={`flex flex-wrap gap-2 text-xs font-bold ${textClass}`}>
         {media.type === 'image' && !preview && !loading && <MediaButton icon={Image} label="Carregar imagem" className={buttonClass} loading={loading} onClick={loadMedia} />}
-        {media.type === 'audio' && <MediaButton icon={Play} label="Ouvir áudio" className={buttonClass} loading={loading} onClick={loadMedia} />}
+        {media.type === 'audio' && !preview && !loading && <MediaButton icon={Play} label="Carregar áudio" className={buttonClass} loading={loading} onClick={loadMedia} />}
         {media.type === 'audio' && <MediaButton icon={Wand2} label="Transcrever" className={buttonClass} loading={loading} onClick={transcribe} />}
         {media.type === 'document' && <MediaButton icon={FileText} label="Abrir PDF" className={buttonClass} loading={loading} onClick={download} />}
         {media.type !== 'document' && preview && <MediaButton icon={Download} label="Baixar" className={buttonClass} loading={false} onClick={download} />}

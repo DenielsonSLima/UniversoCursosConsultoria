@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Bot, CheckCircle2, MessageCircle, PauseCircle, RefreshCcw } from 'lucide-react';
-import { WhatsAppConversation, WhatsAppFlowSession, WhatsAppMessage } from './whatsapp.types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bot, CheckCircle2, Clock3, MessageCircle, PauseCircle, RefreshCcw } from 'lucide-react';
+import { WhatsAppConversation, WhatsAppFlowSession, WhatsAppMessage, WhatsAppSector } from './whatsapp.types';
 import { formatPhone, normalizePhone } from './whatsapp.utils';
 import { whatsappService } from './whatsapp.service';
 import BatchMessageModal, { BatchSendResult } from './inbox/BatchMessageModal';
@@ -11,6 +11,7 @@ import ConversationToolbar, { ConversationStatusFilter } from './inbox/Conversat
 import MessageComposer from './inbox/MessageComposer';
 import MessageThread from './inbox/MessageThread';
 import TypingIndicator from './inbox/TypingIndicator';
+import TransferConversationMenu from './inbox/TransferConversationMenu';
 import { fileToBase64 } from './inbox/mediaUtils';
 import { useWhatsAppTypingPresence } from './inbox/useWhatsAppTypingPresence';
 
@@ -30,6 +31,12 @@ interface WhatsAppInboxProps {
   onResetFlow: (conversationId: string) => void;
   onCloseConversation: (conversationId: string) => void;
   onReopenConversation: (conversationId: string) => void;
+  onTransferConversation: (input: {
+    conversationId: string;
+    setor: WhatsAppSector;
+    poloId: string;
+    motivo?: string;
+  }) => Promise<void>;
 }
 
 const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
@@ -48,6 +55,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   onResetFlow,
   onCloseConversation,
   onReopenConversation,
+  onTransferConversation,
 }) => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -55,6 +63,11 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const { data: routingPolos = [] } = useQuery({
+    queryKey: ['whatsapp', 'routing-polos'],
+    queryFn: whatsappService.getRoutingPolos,
+    staleTime: 5 * 60_000,
+  });
   const activeConversation = conversations.find((item) => item.id === activeConversationId) || null;
   const flowByConversation = useMemo(
     () => new Map(flowSessions.map((session) => [session.conversa_id, session])),
@@ -147,10 +160,11 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
   }, [activeConversationId, sendTyping]);
 
   const sendMedia = async ({ file, kind, caption }: { file: File; kind: 'image' | 'audio' | 'document'; caption: string }) => {
-    if (!activeConversation?.aluno_id) throw new Error('Esta conversa ainda não está vinculada a um aluno cadastrado.');
+    if (!activeConversation) throw new Error('Selecione uma conversa.');
     await whatsappService.sendMediaMessage({
       connectionId,
       alunoId: activeConversation.aluno_id,
+      conversationId: activeConversation.id,
       to: activeConversation.telefone,
       kind,
       caption,
@@ -241,6 +255,11 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
               )}
               {activeConversation.status === 'aberta' ? (
                 <>
+                  <TransferConversationMenu
+                    conversation={activeConversation}
+                    polos={routingPolos}
+                    onTransfer={onTransferConversation}
+                  />
                   <button
                     type="button"
                     onClick={() => onPauseFlow(activeConversation.id)}
@@ -253,11 +272,16 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
                   <button
                     type="button"
                     onClick={() => onCloseConversation(activeConversation.id)}
-                    className="inline-flex min-h-[34px] items-center gap-2 rounded-xl bg-emerald-50 px-3 text-[11px] font-bold uppercase text-emerald-700 transition-colors hover:bg-emerald-100"
-                    title="Encerrar e mover a conversa para Finalizadas"
+                    disabled={activeConversation.status_atendimento === 'aguardando_avaliacao'}
+                    className="inline-flex min-h-[34px] items-center gap-2 rounded-xl bg-emerald-50 px-3 text-[11px] font-bold uppercase text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                    title={activeConversation.status_atendimento === 'aguardando_avaliacao' ? 'Aguardando a nota do aluno' : 'Enviar pesquisa de satisfação e encerrar'}
                   >
-                    <CheckCircle2 size={14} />
-                    Encerrar
+                    {activeConversation.status_atendimento === 'aguardando_avaliacao'
+                      ? <Clock3 size={14} />
+                      : <CheckCircle2 size={14} />}
+                    {activeConversation.status_atendimento === 'aguardando_avaliacao'
+                      ? 'Aguardando nota'
+                      : 'Encerrar'}
                   </button>
                 </>
               ) : (

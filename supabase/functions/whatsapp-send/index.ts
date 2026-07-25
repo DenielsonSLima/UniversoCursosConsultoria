@@ -46,41 +46,74 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const connectionId = String(body.conexaoId || body.connectionId || "")
       .trim();
-    const alunoId = String(body.alunoId || "").trim();
-    const to = normalizeWhatsAppPhone(body.to);
+    const conversationId = String(
+      body.conversaId || body.conversationId || "",
+    ).trim();
+    let alunoId = String(body.alunoId || "").trim();
+    let to = normalizeWhatsAppPhone(body.to);
     const message = String(body.message || "").trim();
 
     if (!connectionId) throw new Error("Selecione a linha que enviará a mensagem.");
-    if (!alunoId) throw new Error("Aluno obrigatorio para iniciar conversa WhatsApp.");
-    if (!to) throw new Error("Telefone/WhatsApp do aluno invalido.");
     if (!message) throw new Error("Mensagem obrigatoria para envio WhatsApp.");
     if (message.length > 4096) throw new Error("Mensagem WhatsApp muito longa.");
 
-    const { data: aluno, error: alunoError } = await admin
-      .from("parceiros")
-      .select("id, nome, tipo, telefone, polo_id")
-      .eq("id", alunoId)
-      .eq("tipo", "Aluno")
-      .maybeSingle();
-    if (alunoError) throw alunoError;
-    if (!aluno) throw new Error("Aluno nao encontrado.");
-
-    const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
-    if (!allowedPhone) {
-      throw new Error("Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.");
+    let currentConversation: any | null = null;
+    if (conversationId) {
+      const { data, error } = await admin
+        .from("whatsapp_conversas")
+        .select(
+          "id,conexao_id,telefone,aluno_id,contato_nome,setor,polo_id,status_atendimento,data_inicio_atendimento",
+        )
+        .eq("id", conversationId)
+        .eq("conexao_id", connectionId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Conversa nao encontrada nesta linha.");
+      currentConversation = data;
+      to = normalizeWhatsAppPhone(data.telefone);
+      alunoId = String(data.aluno_id || alunoId || "").trim();
+    }
+    if (!to) throw new Error("Telefone/WhatsApp invalido.");
+    if (!conversationId && !alunoId) {
+      throw new Error("Aluno obrigatorio para iniciar uma nova conversa WhatsApp.");
     }
 
-    const { data: currentConversation, error: conversationError } = await admin
-      .from("whatsapp_conversas")
-      .select("setor,polo_id")
-      .eq("conexao_id", connectionId)
-      .eq("telefone", to)
-      .maybeSingle();
-    if (conversationError) throw conversationError;
+    let aluno: any | null = null;
+    if (alunoId) {
+      const { data, error } = await admin
+        .from("parceiros")
+        .select("id, nome, tipo, telefone, polo_id")
+        .eq("id", alunoId)
+        .eq("tipo", "Aluno")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Aluno nao encontrado.");
+      aluno = data;
+      if (!conversationId) {
+        const allowedPhone = await phoneBelongsToAluno(admin, aluno.id, to);
+        if (!allowedPhone) {
+          throw new Error(
+            "Telefone informado nao pertence ao aluno nem ao responsavel financeiro cadastrado na ficha.",
+          );
+        }
+      }
+    }
+    if (!currentConversation) {
+      const { data, error } = await admin
+        .from("whatsapp_conversas")
+        .select(
+          "id,conexao_id,telefone,aluno_id,contato_nome,setor,polo_id,status_atendimento,data_inicio_atendimento",
+        )
+        .eq("conexao_id", connectionId)
+        .eq("telefone", to)
+        .maybeSingle();
+      if (error) throw error;
+      currentConversation = data;
+    }
     requireGestorForWhatsAppRoute(
       gestor,
       currentConversation?.setor || "atendimento_geral",
-      currentConversation?.polo_id || aluno.polo_id || null,
+      currentConversation?.polo_id || aluno?.polo_id || null,
     );
 
     const meta = await getWhatsAppMetaContext(admin, connectionId);
@@ -115,12 +148,13 @@ Deno.serve(async (req: Request) => {
       connectionId,
       phone: to,
       aluno,
+      contactName: currentConversation?.contato_nome || aluno?.nome || to,
       lastText: message,
       direction: "saida",
     });
     await insertWhatsAppMessage(admin, {
       conversaId: conversation.id,
-      alunoId: aluno.id,
+      alunoId: aluno?.id || conversation.aluno_id || null,
       metaMessageId: metaPayload?.messages?.[0]?.id || null,
       direction: "saida",
       senderType: "gestor",
@@ -132,10 +166,38 @@ Deno.serve(async (req: Request) => {
       read: true,
     });
 
+    if (
+      ["bot_triagem", "pendente_setor"].includes(
+        String(currentConversation?.status_atendimento || ""),
+      )
+    ) {
+      const startedAt = new Date().toISOString();
+      const { error: assignmentError } = await admin
+        .from("whatsapp_conversas")
+        .update({
+          atendente_id: gestor.id,
+          status_atendimento: "em_atendimento",
+          data_inicio_atendimento:
+            currentConversation?.data_inicio_atendimento || startedAt,
+          updated_at: startedAt,
+        })
+        .eq("id", conversation.id);
+      if (assignmentError) throw assignmentError;
+      const { error: pauseFlowError } = await admin
+        .from("whatsapp_flow_sessions")
+        .update({
+          status: "handoff",
+          handoff_required: true,
+          updated_at: startedAt,
+        })
+        .eq("conversa_id", conversation.id);
+      if (pauseFlowError) throw pauseFlowError;
+    }
+
     return respondJson({
       ok: true,
       conversaId: conversation.id,
-      alunoId: aluno.id,
+      alunoId: aluno?.id || conversation.aluno_id || null,
       to,
       meta: {
         messageId: metaPayload?.messages?.[0]?.id || null,

@@ -53,20 +53,37 @@ export interface WhatsAppConexao {
   updated_at: string;
 }
 
-export const isWhatsAppConnectionReady = (connection?: WhatsAppConexao | null) =>
+export const isWhatsAppConnectionOutboundReady = (
+  connection?: WhatsAppConexao | null,
+) =>
   Boolean(
     connection?.status === 'ativo' &&
     connection.phone_number_id &&
-    connection.waba_id &&
-    connection.app_id &&
-    connection.token_configured &&
+    connection.token_configured,
+  );
+
+export const isWhatsAppConnectionWebhookReady = (
+  connection?: WhatsAppConexao | null,
+) =>
+  Boolean(
+    isWhatsAppConnectionOutboundReady(connection) &&
+    connection?.waba_id &&
+    connection?.app_id &&
     connection.app_secret_configured &&
     connection.verify_token_configured &&
     connection.webhook_verified_at &&
-    connection.waba_subscribed_at &&
+    connection.waba_subscribed_at,
+  );
+
+export const isWhatsAppConnectionReady = (connection?: WhatsAppConexao | null) =>
+  Boolean(
+    isWhatsAppConnectionOutboundReady(connection) &&
     (
-      connection.connection_mode !== 'coexistence' ||
-      connection.coexistence_verified_at
+      connection?.connection_mode !== 'coexistence' ||
+      (
+        isWhatsAppConnectionWebhookReady(connection) &&
+        connection.coexistence_verified_at
+      )
     ),
   );
 
@@ -97,8 +114,15 @@ export interface WhatsAppConversation {
   tempo_total_atendimento_seg?: number | null;
   csat_score?: number | null;
   csat_comentario?: string | null;
+  csat_requested_at?: string | null;
   data_inicio_atendimento?: string | null;
   data_fim_atendimento?: string | null;
+}
+
+export interface WhatsAppRoutingPolo {
+  id: string;
+  nome: string;
+  cidade: string | null;
 }
 
 export interface WhatsAppFlowSettings {
@@ -182,7 +206,7 @@ export interface WhatsAppFlowSession {
   conversa_id: string;
   telefone: string;
   aluno_id: string | null;
-  status: 'awaiting_cpf' | 'menu' | 'course_agent' | 'choosing_receivable' | 'choosing_irpf_year' | 'handoff' | 'closed';
+  status: 'awaiting_cpf' | 'menu' | 'course_agent' | 'choosing_receivable' | 'choosing_irpf_year' | 'awaiting_csat' | 'handoff' | 'closed';
   verified_at: string | null;
   attempts: number;
   selected_payment_method: 'link' | 'pix' | null;
