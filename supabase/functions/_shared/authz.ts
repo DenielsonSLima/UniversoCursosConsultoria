@@ -231,10 +231,17 @@ export const requireGestorForWhatsAppRoute = (
   poloId?: string | null,
 ) => {
   if (gestor.canViewAllCommunication) return;
-  if (
-    gestor.communicationPoloId &&
-    gestor.communicationPoloId !== (poloId || null)
-  ) {
+  if (!gestor.communicationPoloId) {
+    throw new Error(
+      "Usuário sem polo de comunicação não pode operar o WhatsApp.",
+    );
+  }
+  if (!poloId) {
+    throw new Error(
+      "Atendimento WhatsApp sem polo não pode ser operado por usuário restrito.",
+    );
+  }
+  if (gestor.communicationPoloId !== poloId) {
     throw new Error(
       "Atendimento WhatsApp pertence a outro polo.",
     );

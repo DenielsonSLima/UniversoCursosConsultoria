@@ -38,6 +38,23 @@ export type CourseAgentAnswer =
   | { kind: "course"; match: CourseAgentCatalogMatch }
   | null;
 
+export type CourseAgentModalityKey =
+  | "graduacao_ead"
+  | "curso_livre"
+  | "tecnico"
+  | "especializacao";
+
+export type GuidedCourseOption = {
+  id: string;
+  name: string;
+  modality: string;
+  area: string;
+  description: string;
+  workload: number | null;
+  durationMonths: number | null;
+  price: number | null;
+};
+
 const DEFAULT_SETTINGS: CourseAgentSettings = {
   enabled: false,
   confidenceThreshold: 0.3,
@@ -53,17 +70,82 @@ const DEFAULT_SETTINGS: CourseAgentSettings = {
 };
 
 export const COURSE_AGENT_MENU = [
-  "*Cursos disponíveis e dúvidas*",
-  "Consulte informações publicadas ou escreva sua pergunta.",
+  "*Qual modalidade você procura?*",
+  "Vou filtrar o catálogo antes de mostrar as opções.",
   "",
-  "1️⃣ Cursos técnicos",
-  "2️⃣ Graduação",
-  "3️⃣ Pós-graduação",
-  "4️⃣ Cursos livres / EAD",
-  "5️⃣ Fazer uma pergunta",
+  "1️⃣ Graduação EAD",
+  "2️⃣ Cursos livres (online)",
+  "3️⃣ Cursos técnicos",
+  "4️⃣ Especialização / Pós-graduação",
+  "5️⃣ Já sei o nome do curso",
   "6️⃣ Falar com o Comercial",
   "0️⃣ Voltar ao menu principal",
 ].join("\n");
+
+const COURSE_AGENT_MODALITIES: Record<
+  CourseAgentModalityKey,
+  { label: string; databaseValues: string[]; areaExamples: string }
+> = {
+  graduacao_ead: {
+    label: "Graduação EAD",
+    databaseValues: ["SUPERIOR"],
+    areaExamples: "gestão, tecnologia, educação ou saúde",
+  },
+  curso_livre: {
+    label: "Cursos livres (online)",
+    databaseValues: ["EAD", "LIVRE", "CURSO LIVRE"],
+    areaExamples:
+      "saúde, educação, tecnologia, administração, vendas, beleza ou segurança",
+  },
+  tecnico: {
+    label: "Cursos técnicos",
+    databaseValues: ["TECNICO", "TÉCNICO"],
+    areaExamples: "saúde ou gestão",
+  },
+  especializacao: {
+    label: "Especialização / Pós-graduação",
+    databaseValues: ["ESPECIALIZACAO", "ESPECIALIZAÇÃO", "POS", "PÓS"],
+    areaExamples: "educação, saúde, gestão ou tecnologia",
+  },
+};
+
+export const courseAgentModalityForChoice = (
+  choice: number | null,
+): CourseAgentModalityKey | null => {
+  if (choice === 1) return "graduacao_ead";
+  if (choice === 2) return "curso_livre";
+  if (choice === 3) return "tecnico";
+  if (choice === 4) return "especializacao";
+  return null;
+};
+
+export const courseAgentModalityFromText = (
+  value: unknown,
+): CourseAgentModalityKey | null => {
+  const input = normalizeSearchText(value);
+  if (/\b(tecnico|tecnica)\b/.test(input)) return "tecnico";
+  if (/\b(especializacao|pos|pos graduacao)\b/.test(input)) {
+    return "especializacao";
+  }
+  if (/\b(livre|livres|profissionalizante)\b/.test(input)) {
+    return "curso_livre";
+  }
+  if (/\b(ead|graduacao|faculdade|superior)\b/.test(input)) {
+    return "graduacao_ead";
+  }
+  return null;
+};
+
+export const courseAgentModalityLabel = (key: CourseAgentModalityKey) =>
+  COURSE_AGENT_MODALITIES[key]?.label || "Cursos";
+
+export const courseAgentAreaPrompt = (key: CourseAgentModalityKey) =>
+  [
+    `Certo: *${courseAgentModalityLabel(key)}*.`,
+    `Qual área ou profissão interessa? Exemplos: ${COURSE_AGENT_MODALITIES[key].areaExamples}.`,
+    "",
+    "Escreva a área com suas palavras. Envie 0 para voltar ao menu principal.",
+  ].join("\n");
 
 const finiteConfidence = (value: unknown) => {
   const number = Number(value || 0);
@@ -191,6 +273,162 @@ export const getPublicCoursesByGroup = async (
     .limit(Math.max(1, Math.min(20, limit)));
   if (error) throw error;
   return data || [];
+};
+
+const normalizeSearchText = (value: unknown) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isCourseInGuidedModality = (
+  course: Record<string, unknown>,
+  modality: CourseAgentModalityKey,
+) => {
+  const normalizedModality = normalizeSearchText(course.modalidade);
+  const allowed = COURSE_AGENT_MODALITIES[modality].databaseValues
+    .map(normalizeSearchText);
+  if (!allowed.includes(normalizedModality)) return false;
+  if (modality !== "graduacao_ead") return true;
+  return normalizeSearchText(course.area).includes("100 online");
+};
+
+const guidedCourseScore = (
+  course: Record<string, unknown>,
+  interest: string,
+) => {
+  const query = normalizeSearchText(interest);
+  if (!query) return 0;
+  const name = normalizeSearchText(course.nome);
+  const area = normalizeSearchText(course.area);
+  const description = normalizeSearchText(course.descricao);
+  const tokens = query.split(" ").filter((token) => token.length >= 3);
+  let score = 0;
+  if (area === query) score += 50;
+  else if (area.includes(query)) score += 30;
+  if (name === query) score += 60;
+  else if (name.includes(query)) score += 35;
+  if (description.includes(query)) score += 10;
+  for (const token of tokens) {
+    if (area.includes(token)) score += 8;
+    if (name.includes(token)) score += 6;
+    if (description.includes(token)) score += 2;
+  }
+  return score;
+};
+
+export const rankGuidedCourses = (
+  courses: Array<Record<string, unknown>>,
+  modality: CourseAgentModalityKey,
+  interest: string,
+  limit = 5,
+): GuidedCourseOption[] =>
+  courses
+    .filter((course) => isCourseInGuidedModality(course, modality))
+    .map((course) => ({ course, score: guidedCourseScore(course, interest) }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) =>
+      right.score - left.score ||
+      String(left.course.nome || "").localeCompare(
+        String(right.course.nome || ""),
+        "pt-BR",
+      )
+    )
+    .slice(0, Math.max(1, Math.min(8, limit)))
+    .map(({ course }) => ({
+      id: String(course.id || ""),
+      name: String(course.nome || "Curso"),
+      modality: String(course.modalidade || ""),
+      area: String(course.area || ""),
+      description: String(course.descricao || ""),
+      workload: Number(course.carga_horaria || 0) || null,
+      durationMonths: Number(course.duracao_meses || 0) || null,
+      price: Number(course.valor || 0) || null,
+    }))
+    .filter((course) => Boolean(course.id));
+
+export const getGuidedCourseMatches = async (
+  admin: any,
+  modality: CourseAgentModalityKey,
+  interest: string,
+  limit = 5,
+) => {
+  const { data, error } = await admin
+    .from("cursos")
+    .select(
+      "id,nome,modalidade,area,descricao,carga_horaria,duracao_meses,valor",
+    )
+    .eq("publicar_site", true)
+    .ilike("status", "ativo")
+    .in("modalidade", COURSE_AGENT_MODALITIES[modality].databaseValues)
+    .order("nome")
+    .limit(200);
+  if (error) throw error;
+  return rankGuidedCourses(data || [], modality, interest, limit);
+};
+
+export const getGuidedCourseById = async (
+  admin: any,
+  courseId: string,
+): Promise<CourseAgentCatalogMatch | null> => {
+  const { data, error } = await admin
+    .from("cursos")
+    .select(
+      "id,nome,modalidade,area,descricao,carga_horaria,duracao_meses,valor",
+    )
+    .eq("id", courseId)
+    .eq("publicar_site", true)
+    .ilike("status", "ativo")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    course_id: String(data.id),
+    course_name: String(data.nome || "Curso"),
+    modality: data.modalidade,
+    area: data.area,
+    description: data.descricao,
+    workload: Number(data.carga_horaria || 0) || null,
+    duration_months: Number(data.duracao_meses || 0) || null,
+    course_price: Number(data.valor || 0) || null,
+    confidence: 1,
+    public_classes: [],
+  };
+};
+
+export const formatGuidedCourseOptions = (
+  courses: GuidedCourseOption[],
+  modality: CourseAgentModalityKey,
+  interest: string,
+  showPrices = true,
+) => {
+  const label = courseAgentModalityLabel(modality);
+  if (courses.length === 0) {
+    return [
+      `Não encontrei *${label.toLocaleLowerCase("pt-BR")}* publicado para “${String(interest).slice(0, 80)}”.`,
+      "Tente outra área ou profissão. Se preferir, digite 6 para falar com o Comercial.",
+    ].join("\n\n");
+  }
+  const options = courses.map((course, index) => {
+    const details = [
+      course.workload ? `${course.workload}h` : "",
+      showPrices && course.price ? money(course.price) : "",
+    ].filter(Boolean);
+    return `${index + 1}️⃣ *${course.name}*${
+      details.length ? ` — ${details.join(" · ")}` : ""
+    }`;
+  });
+  return [
+    `Encontrei estas opções de *${label}* para “${String(interest).slice(0, 80)}”:`,
+    "",
+    ...options,
+    "",
+    "Responda com o número do curso para ver os detalhes.",
+    "Para pesquisar outra área, escreva *outra área*. Para falar com o Comercial, digite 6.",
+  ].join("\n");
 };
 
 export const formatPublicCourseList = (

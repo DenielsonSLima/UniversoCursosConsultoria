@@ -33,10 +33,16 @@ import {
 import {
   COURSE_AGENT_MENU,
   CourseAgentSettings,
+  CourseAgentModalityKey,
+  courseAgentAreaPrompt,
+  courseAgentModalityForChoice,
+  courseAgentModalityFromText,
+  courseAgentModalityLabel,
   formatCourseDetails,
-  formatPublicCourseList,
+  formatGuidedCourseOptions,
   getCourseAgentSettings,
-  getPublicCoursesByGroup,
+  getGuidedCourseById,
+  getGuidedCourseMatches,
   logCourseAgentEvent,
   matchCourseAgentKnowledge,
   selectCourseAgentAnswer,
@@ -98,6 +104,84 @@ const handoff = async (admin: any, settings: any, session: any, input: FlowInput
     text: settings.handoff_message,
   });
   await logEvent(admin, next, "handoff", { reason });
+};
+
+const processCsatResponse = async (
+  admin: any,
+  session: any,
+  input: FlowInput,
+) => {
+  const score = parseMenuNumber(input.content);
+  if (score === null || score < 0 || score > 5) {
+    const next = await saveSession(admin, {
+      ...session,
+      conversa_id: input.conversation.id,
+      telefone: input.phone,
+      aluno_id:
+        session?.aluno_id ||
+        input.alunoByPhone?.id ||
+        input.conversation?.aluno_id ||
+        null,
+      status: "awaiting_csat",
+      handoff_required: false,
+      attempts: Number(session?.attempts || 0) + 1,
+    });
+    await sendFlowText(admin, {
+      conversation: input.conversation,
+      aluno: input.alunoByPhone,
+      phone: input.phone,
+      text:
+        "Para concluir, responda somente com uma nota de *0 a 5*, em que 0 é muito insatisfeito e 5 é muito satisfeito.",
+    });
+    return next;
+  }
+
+  await sendFlowText(admin, {
+    conversation: input.conversation,
+    aluno: input.alunoByPhone,
+    phone: input.phone,
+    text:
+      score >= 4
+        ? "Obrigado pela avaliação! Ficamos felizes em ajudar. Atendimento encerrado."
+        : "Obrigado pela avaliação. Ela foi registrada e será usada para melhorarmos. Atendimento encerrado.",
+  });
+
+  const closedAt = new Date().toISOString();
+  const { error: conversationError } = await admin
+    .from("whatsapp_conversas")
+    .update({
+      status: "arquivada",
+      status_atendimento: "solucionada",
+      csat_score: score,
+      unread_count: 0,
+      closed_at: closedAt,
+      closed_reason: "csat_response",
+      updated_at: closedAt,
+    })
+    .eq("id", input.conversation.id);
+  if (conversationError) throw conversationError;
+
+  const next = await saveSession(admin, {
+    ...session,
+    conversa_id: input.conversation.id,
+    telefone: input.phone,
+    aluno_id:
+      session?.aluno_id ||
+      input.alunoByPhone?.id ||
+      input.conversation?.aluno_id ||
+      null,
+    status: "closed",
+    handoff_required: false,
+    attempts: 0,
+    data: {
+      ...(session?.data || {}),
+      csatScore: score,
+      closedReason: "csat_response",
+      closedAt,
+    },
+  });
+  await logEvent(admin, next, "csat_received", { score });
+  return next;
 };
 
 const flowText = (text: unknown, input: FlowInput) =>
@@ -651,6 +735,53 @@ const routeCourseAgentToCommercial = async (
   reason: string,
 ) => {
   const connectionId = String(input.conversation?.conexao_id || "").trim();
+  const routedPoloId = String(
+    session?.data?.poloId || input.conversation?.polo_id || "",
+  ).trim();
+  if (!routedPoloId) {
+    const next = await saveSession(admin, {
+      ...session,
+      conversa_id: input.conversation.id,
+      telefone: input.phone,
+      aluno_id:
+        session?.aluno_id ||
+        input.alunoByPhone?.id ||
+        input.conversation?.aluno_id ||
+        null,
+      status: "course_agent",
+      handoff_required: false,
+      attempts: 0,
+      data: {
+        ...(session?.data || {}),
+        courseAgentActive: true,
+        courseAgentStage: "polo",
+        courseAgentPendingHandoffReason: reason,
+      },
+    });
+    await sendFlowText(admin, {
+      conversation: input.conversation,
+      aluno: input.alunoByPhone,
+      phone: input.phone,
+      text:
+        `Para encaminhar ao Comercial correto, qual unidade fica melhor para você?\n\n${POLO_MENU}`,
+    });
+    return next;
+  }
+
+  const interest = String(session?.data?.courseAgentInterest || "").trim();
+  const selectedCourse = String(
+    session?.data?.courseAgentSelectedCourseName || "",
+  ).trim();
+  const selectedModality = String(
+    session?.data?.courseAgentModality || "",
+  ).trim();
+  const subjectDetails = [
+    selectedCourse,
+    interest && interest !== selectedCourse ? interest : "",
+    selectedModality && !selectedCourse
+      ? courseAgentModalityLabel(selectedModality as CourseAgentModalityKey)
+      : "",
+  ].filter(Boolean);
   await safeLogCourseAgentEvent(admin, {
     connectionId,
     conversationId: input.conversation.id,
@@ -665,9 +796,11 @@ const routeCourseAgentToCommercial = async (
     input,
     {
       setor: "comercial_matriculas",
-      poloId: String(session?.data?.poloId || "").trim() || null,
-      subAssunto: "Dúvida sobre cursos",
-      institution: "universo",
+      poloId: routedPoloId,
+      subAssunto: subjectDetails.length > 0
+        ? `Interesse em curso — ${subjectDetails.join(" — ").slice(0, 180)}`
+        : "Dúvida sobre cursos",
+      institution: String(input.conversation?.instituicao || "universo"),
     },
   );
 };
@@ -706,6 +839,10 @@ const startCourseAgent = async (
     data: {
       ...(session?.data || {}),
       courseAgentActive: true,
+      courseAgentStage: "modality",
+      courseAgentModality: null,
+      courseAgentInterest: null,
+      courseAgentOptions: [],
       courseAgentClarifications: 0,
       courseAgentAwaitingQuestion: false,
     },
@@ -762,19 +899,40 @@ const processCourseAgent = async (
       }
       return showBuilderNode(admin, builder, startNode, session, input, {
         courseAgentActive: false,
+        courseAgentStage: null,
+        courseAgentModality: null,
+        courseAgentInterest: null,
+        courseAgentOptions: [],
         courseAgentClarifications: 0,
         courseAgentAwaitingQuestion: false,
       });
     }
     return askRoutingStage(admin, session, input, "main_menu", settings.menu_message, {
       courseAgentActive: false,
+      courseAgentStage: null,
+      courseAgentModality: null,
+      courseAgentInterest: null,
+      courseAgentOptions: [],
       courseAgentClarifications: 0,
       courseAgentAwaitingQuestion: false,
     });
   }
 
-  if (choice && choice >= 1 && choice <= 4) {
-    const courses = await getPublicCoursesByGroup(admin, choice);
+  if (
+    choice === 6 ||
+    /\b(comercial|vendedor|matricula|matrícula)\b/i.test(input.content)
+  ) {
+    return routeCourseAgentToCommercial(
+      admin,
+      settings,
+      courseSettings,
+      session,
+      input,
+      "requested_commercial",
+    );
+  }
+
+  if (/\boutra\s+modalidade\b/i.test(input.content)) {
     const next = await saveSession(admin, {
       ...session,
       status: "course_agent",
@@ -782,6 +940,10 @@ const processCourseAgent = async (
       data: {
         ...(session?.data || {}),
         courseAgentActive: true,
+        courseAgentStage: "modality",
+        courseAgentModality: null,
+        courseAgentInterest: null,
+        courseAgentOptions: [],
         courseAgentClarifications: 0,
         courseAgentAwaitingQuestion: false,
       },
@@ -790,24 +952,110 @@ const processCourseAgent = async (
       conversation: input.conversation,
       aluno: input.alunoByPhone,
       phone: input.phone,
-      text: formatPublicCourseList(courses, choice),
-    });
-    await safeLogCourseAgentEvent(admin, {
-      connectionId,
-      conversationId: input.conversation.id,
-      eventType: "listed_courses",
-      details: { group: choice, count: courses.length },
+      text: COURSE_AGENT_MENU,
     });
     return next;
   }
 
-  if (choice === 5) {
+  const stage = String(session?.data?.courseAgentStage || "modality");
+  if (stage === "polo") {
+    let polo: any | null = null;
+    let poloLabel = "";
+    if (choice && choice >= 1 && choice <= 4) {
+      poloLabel = POLO_CHOICES[choice];
+      polo = await findPoloByLabel(admin, poloLabel);
+    } else if (choice === 5) {
+      polo = await findDefaultRoutingPolo(admin);
+      poloLabel = "Outra cidade";
+    }
+    if (!polo?.id) {
+      await sendFlowText(admin, {
+        conversation: input.conversation,
+        aluno: input.alunoByPhone,
+        phone: input.phone,
+        text:
+          `Escolha uma unidade para eu encaminhar ao Comercial responsável.\n\n${POLO_MENU}`,
+      });
+      return session;
+    }
     const next = await saveSession(admin, {
       ...session,
       status: "course_agent",
+      attempts: 0,
+      data: {
+        ...(session?.data || {}),
+        poloId: polo.id,
+        poloLabel,
+      },
+    });
+    return routeCourseAgentToCommercial(
+      admin,
+      settings,
+      courseSettings,
+      next,
+      input,
+      String(
+        session?.data?.courseAgentPendingHandoffReason ||
+          "guided_course_handoff",
+      ),
+    );
+  }
+
+  if (stage === "modality") {
+    const modality = courseAgentModalityForChoice(choice) ||
+      courseAgentModalityFromText(input.content);
+    if (modality) {
+      const next = await saveSession(admin, {
+        ...session,
+        status: "course_agent",
+        attempts: 0,
+        data: {
+          ...(session?.data || {}),
+          courseAgentActive: true,
+          courseAgentStage: "area",
+          courseAgentModality: modality,
+          courseAgentInterest: null,
+          courseAgentOptions: [],
+          courseAgentClarifications: 0,
+          courseAgentAwaitingQuestion: false,
+        },
+      });
+      await sendFlowText(admin, {
+        conversation: input.conversation,
+        aluno: input.alunoByPhone,
+        phone: input.phone,
+        text: courseAgentAreaPrompt(modality),
+      });
+      return next;
+    }
+
+    if (choice !== 5) {
+      const next = await saveSession(admin, {
+        ...session,
+        status: "course_agent",
+        attempts: Number(session?.attempts || 0) + 1,
+      });
+      await sendFlowText(admin, {
+        conversation: input.conversation,
+        aluno: input.alunoByPhone,
+        phone: input.phone,
+        text: `Escolha uma modalidade para eu filtrar o catálogo.\n\n${COURSE_AGENT_MENU}`,
+      });
+      return next;
+    }
+
+    const next = await saveSession(admin, {
+      ...session,
+      status: "course_agent",
+      attempts: 0,
       data: {
         ...(session?.data || {}),
         courseAgentActive: true,
+        courseAgentStage: "question",
+        courseAgentModality: null,
+        courseAgentInterest: null,
+        courseAgentOptions: [],
+        courseAgentClarifications: 0,
         courseAgentAwaitingQuestion: true,
       },
     });
@@ -820,15 +1068,177 @@ const processCourseAgent = async (
     return next;
   }
 
-  if (choice === 6) {
-    return routeCourseAgentToCommercial(
+  const selectedModality = String(
+    session?.data?.courseAgentModality || "",
+  ) as CourseAgentModalityKey;
+  const hasSelectedModality = [
+    "graduacao_ead",
+    "curso_livre",
+    "tecnico",
+    "especializacao",
+  ].includes(selectedModality);
+
+  if (stage === "area" || stage === "course_choice") {
+    if (!hasSelectedModality) {
+      const next = await saveSession(admin, {
+        ...session,
+        status: "course_agent",
+        attempts: 0,
+        data: {
+          ...(session?.data || {}),
+          courseAgentActive: true,
+          courseAgentStage: "modality",
+          courseAgentModality: null,
+          courseAgentInterest: null,
+          courseAgentOptions: [],
+        },
+      });
+      await sendFlowText(admin, {
+        conversation: input.conversation,
+        aluno: input.alunoByPhone,
+        phone: input.phone,
+        text: COURSE_AGENT_MENU,
+      });
+      return next;
+    }
+
+    if (stage === "course_choice") {
+      const options = Array.isArray(session?.data?.courseAgentOptions)
+        ? session.data.courseAgentOptions
+        : [];
+      const selected = choice ? options[choice - 1] : null;
+      if (selected?.id) {
+        const course = await getGuidedCourseById(admin, String(selected.id));
+        if (course) {
+          const next = await saveSession(admin, {
+            ...session,
+            status: "course_agent",
+            attempts: 0,
+            data: {
+              ...(session?.data || {}),
+              courseAgentActive: true,
+              courseAgentStage: "question",
+              courseAgentSelectedCourseId: course.course_id,
+              courseAgentSelectedCourseName: course.course_name,
+              courseAgentClarifications: 0,
+              courseAgentAwaitingQuestion: true,
+            },
+          });
+          await sendFlowText(admin, {
+            conversation: input.conversation,
+            aluno: input.alunoByPhone,
+            phone: input.phone,
+            text: `${formatCourseDetails(course, courseSettings)}\n\nAgora vou encaminhar seu interesse para um atendente do Comercial.`,
+          });
+          await safeLogCourseAgentEvent(admin, {
+            connectionId,
+            conversationId: input.conversation.id,
+            eventType: "matched_course",
+            query: String(session?.data?.courseAgentInterest || ""),
+            confidence: 1,
+            courseId: course.course_id,
+            details: {
+              modality: selectedModality,
+              selectedFromGuidedSearch: true,
+            },
+          });
+          return routeCourseAgentToCommercial(
+            admin,
+            settings,
+            courseSettings,
+            next,
+            input,
+            "guided_course_selected",
+          );
+        }
+      }
+    }
+
+    if (/\boutra\s+[aá]rea\b/i.test(input.content)) {
+      const next = await saveSession(admin, {
+        ...session,
+        status: "course_agent",
+        attempts: 0,
+        data: {
+          ...(session?.data || {}),
+          courseAgentActive: true,
+          courseAgentStage: "area",
+          courseAgentInterest: null,
+          courseAgentOptions: [],
+          courseAgentClarifications: 0,
+        },
+      });
+      await sendFlowText(admin, {
+        conversation: input.conversation,
+        aluno: input.alunoByPhone,
+        phone: input.phone,
+        text: courseAgentAreaPrompt(selectedModality),
+      });
+      return next;
+    }
+
+    const interest = input.content.trim().slice(0, 120);
+    const courses = await getGuidedCourseMatches(
       admin,
-      settings,
-      courseSettings,
-      session,
-      input,
-      "requested_commercial",
+      selectedModality,
+      interest,
+      5,
     );
+    const clarifications = Number(
+      session?.data?.courseAgentClarifications || 0,
+    );
+    const next = await saveSession(admin, {
+      ...session,
+      status: "course_agent",
+      attempts: courses.length > 0 ? 0 : Number(session?.attempts || 0) + 1,
+      data: {
+        ...(session?.data || {}),
+        courseAgentActive: true,
+        courseAgentStage: courses.length > 0 ? "course_choice" : "area",
+        courseAgentInterest: interest,
+        courseAgentOptions: courses,
+        courseAgentClarifications: courses.length > 0
+          ? 0
+          : clarifications + 1,
+        courseAgentAwaitingQuestion: false,
+      },
+    });
+    await sendFlowText(admin, {
+      conversation: input.conversation,
+      aluno: input.alunoByPhone,
+      phone: input.phone,
+      text: formatGuidedCourseOptions(
+        courses,
+        selectedModality,
+        interest,
+        courseSettings.showPrices,
+      ),
+    });
+    await safeLogCourseAgentEvent(admin, {
+      connectionId,
+      conversationId: input.conversation.id,
+      eventType: courses.length > 0 ? "listed_courses" : "unmatched",
+      query: interest,
+      details: {
+        modality: selectedModality,
+        modalityLabel: courseAgentModalityLabel(selectedModality),
+        count: courses.length,
+      },
+    });
+    if (
+      courses.length === 0 &&
+      clarifications >= courseSettings.maxClarifications
+    ) {
+      return routeCourseAgentToCommercial(
+        admin,
+        settings,
+        courseSettings,
+        next,
+        input,
+        "guided_search_unmatched",
+      );
+    }
+    return next;
   }
 
   const matches = await matchCourseAgentKnowledge(
@@ -880,6 +1290,9 @@ const processCourseAgent = async (
       data: {
         ...(session?.data || {}),
         courseAgentActive: true,
+        courseAgentStage: "question",
+        courseAgentSelectedCourseId: answer.match.course_id,
+        courseAgentSelectedCourseName: answer.match.course_name,
         courseAgentClarifications: 0,
         courseAgentAwaitingQuestion: false,
       },
@@ -898,7 +1311,14 @@ const processCourseAgent = async (
       confidence: answer.match.confidence,
       courseId: answer.match.course_id,
     });
-    return next;
+    return routeCourseAgentToCommercial(
+      admin,
+      settings,
+      courseSettings,
+      next,
+      input,
+      "course_matched",
+    );
   }
 
   const clarifications = Number(session?.data?.courseAgentClarifications || 0);
@@ -1348,10 +1768,16 @@ const processUniverseRouting = async (
 export const processWhatsAppFlow = async (admin: any, input: FlowInput) => {
   const connectionId = String(input.conversation?.conexao_id || "").trim();
   const settings = await getFlowSettings(admin, connectionId || null);
-  if (!settings.enabled) return;
   const builder = parseFlowBuilder(settings.routing_config?.flow_builder);
 
   const storedSession = await getSession(admin, input.conversation.id);
+  if (
+    storedSession?.status === "awaiting_csat" ||
+    input.conversation?.status_atendimento === "aguardando_avaliacao"
+  ) {
+    return processCsatResponse(admin, storedSession, input);
+  }
+  if (!settings.enabled) return;
   const session = storedSession?.status === "closed" ? null : storedSession;
   if (session?.handoff_required || session?.status === "handoff") return;
 

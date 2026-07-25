@@ -1,8 +1,8 @@
 {
-  "version": "0.6.0-beta.2",
+  "version": "0.6.0-beta.3",
   "display": "BETA",
   "stage": "beta",
-  "revision": 2,
+  "revision": 3,
   "releasedAt": "2026-07-25",
-  "summary": "Baixa automática Banese com liberação acadêmica e atualização em tempo real no portal do aluno"
+  "summary": "Atendimento WhatsApp com fluxos guiados, mídias, transferência por setor e pesquisa de satisfação"
 }

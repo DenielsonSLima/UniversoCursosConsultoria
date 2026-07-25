@@ -3,6 +3,7 @@ import {
   authorizationErrorHttpStatus,
   type GestorAutorizado,
   requireGestorAtivo,
+  requireGestorForWhatsAppRoute,
   requireGlobalFinancialTabAccess,
 } from "./authz.ts";
 
@@ -104,6 +105,60 @@ Deno.test("nega papel operacional mesmo com modulo, aba e escopo global", () => 
       "conciliacao-bancaria",
     ),
     /Acesso financeiro global nao autorizado/,
+  );
+});
+
+Deno.test("WhatsApp falha fechado quando usuário restrito não tem polo", () => {
+  assert.throws(
+    () =>
+      requireGestorForWhatsAppRoute(
+        actor({
+          communicationPoloId: null,
+          canViewAllCommunication: false,
+        }),
+        "atendimento_geral",
+        "polo-da-conversa",
+      ),
+    /sem polo de comunicação/,
+  );
+});
+
+Deno.test("WhatsApp exige polo da conversa e respeita polo e setor", () => {
+  const scoped = actor({
+    communicationPoloId: "polo-a",
+    communicationSector: "financeiro",
+    canViewAllCommunication: false,
+  });
+
+  assert.throws(
+    () => requireGestorForWhatsAppRoute(scoped, "financeiro", null),
+    /Atendimento WhatsApp sem polo/,
+  );
+  assert.throws(
+    () => requireGestorForWhatsAppRoute(scoped, "financeiro", "polo-b"),
+    /outro polo/,
+  );
+  assert.throws(
+    () =>
+      requireGestorForWhatsAppRoute(
+        scoped,
+        "atendimento_geral",
+        "polo-a",
+      ),
+    /outro setor/,
+  );
+  assert.doesNotThrow(() =>
+    requireGestorForWhatsAppRoute(scoped, "financeiro", "polo-a")
+  );
+});
+
+Deno.test("WhatsApp mantém acesso amplo quando a permissão global existe", () => {
+  assert.doesNotThrow(() =>
+    requireGestorForWhatsAppRoute(
+      actor({ canViewAllCommunication: true }),
+      "financeiro",
+      null,
+    )
   );
 });
 

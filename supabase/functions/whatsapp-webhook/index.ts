@@ -201,29 +201,23 @@ const processFlowSafely = async (
     });
   } catch (flowError) {
     console.error("whatsapp-flow error:", flowError);
-    await admin.from("whatsapp_flow_events").insert({
+    const details = flowError && typeof flowError === "object"
+      ? {
+        message: String((flowError as any).message || "Erro inesperado no fluxo WhatsApp."),
+        code: String((flowError as any).code || ""),
+        details: String((flowError as any).details || ""),
+        hint: String((flowError as any).hint || ""),
+      }
+      : { message: String(flowError || "Erro inesperado no fluxo WhatsApp.") };
+    const { error: eventError } = await admin.from("whatsapp_flow_events").insert({
       conversa_id: input.conversation.id,
       aluno_id: input.aluno?.id || null,
       event_type: "flow_error",
-      details: {
-        message: flowError instanceof Error
-          ? flowError.message
-          : "Erro inesperado no fluxo WhatsApp.",
-      },
+      details,
     });
+    if (eventError) console.error("whatsapp-flow event log error:", eventError);
+    throw flowError;
   }
-};
-
-const scheduleFlowTasks = async (tasks: FlowTask[]) => {
-  const run = async () => {
-    for (const task of tasks) await task();
-  };
-  const waitUntil = (globalThis as any).EdgeRuntime?.waitUntil;
-  if (typeof waitUntil === "function") {
-    waitUntil(run());
-    return;
-  }
-  await run();
 };
 
 const processMessage = async (
@@ -260,7 +254,11 @@ const processMessage = async (
     read: false,
   });
 
-  if (!insertedMessage || message?.type === "unsupported") return null;
+  const flowEligibleTypes = new Set(["text", "button", "interactive"]);
+  if (
+    !insertedMessage ||
+    !flowEligibleTypes.has(String(message?.type || "").toLowerCase())
+  ) return null;
   return () =>
     processFlowSafely(admin, { conversation, aluno, phone, content });
 };
@@ -599,6 +597,8 @@ const processWebhookPayload = async (
       }
     }
 
+    for (const task of flowTasks) await task();
+
     const { error: processedError } = await admin
       .from("whatsapp_webhook_events")
       .update({
@@ -609,7 +609,6 @@ const processWebhookPayload = async (
       .eq("id", eventId);
     if (processedError) throw processedError;
 
-    await scheduleFlowTasks(flowTasks);
   } catch (error) {
     await admin
       .from("whatsapp_webhook_events")

@@ -42,6 +42,7 @@ const statusLabel: Record<WhatsAppFlowSession['status'], string> = {
   course_agent: 'Agente de cursos',
   choosing_receivable: 'Escolhendo parcela',
   choosing_irpf_year: 'Escolhendo ano IRPF',
+  awaiting_csat: 'Aguardando avaliação',
   handoff: 'Atendente',
   closed: 'Encerrado',
 };

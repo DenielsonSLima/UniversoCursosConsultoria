@@ -1,5 +1,6 @@
+/* global MediaRecorder, MediaStream */
 import React, { useEffect, useRef, useState } from 'react';
-import { FileText, Image, Mic, Paperclip, Send, X } from 'lucide-react';
+import { FileText, Image, Mic, Paperclip, Send, Square, X } from 'lucide-react';
 import { WhatsAppConversation, WhatsAppMediaKind } from '../whatsapp.types';
 import { normalizePhone } from '../whatsapp.utils';
 import { mediaKindFromFile } from './mediaUtils';
@@ -13,7 +14,15 @@ interface MessageComposerProps {
   onSendMedia: (input: { file: File; kind: WhatsAppMediaKind; caption: string }) => Promise<void>;
 }
 
-const accept = 'image/*,audio/*,application/pdf,.pdf';
+const accept = [
+  'image/*',
+  'audio/*',
+  'application/pdf',
+  '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv',
+].join(',');
+
+const formatRecordingTime = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
 const MessageComposer: React.FC<MessageComposerProps> = ({
   activeConversation,
@@ -24,9 +33,15 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   onSendMedia,
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
   const [reply, setReply] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   useEffect(() => {
     setReply('');
@@ -34,9 +49,15 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
     sendTyping(false);
   }, [activeConversation?.id, sendTyping]);
 
+  useEffect(() => () => {
+    if (recordingTimerRef.current) window.clearInterval(recordingTimerRef.current);
+    recorderRef.current?.stop();
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
   if (!activeConversation) return null;
 
-  const disabled = closed || !activeConversation.aluno_id || !apiReady;
+  const disabled = closed || !apiReady;
   const canSend = Boolean(!disabled && (reply.trim() || file) && normalizePhone(activeConversation.telefone));
 
   const pickIcon = (kind: WhatsAppMediaKind) => {
@@ -70,6 +91,52 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
 
   const selectedKind = file ? mediaKindFromFile(file) : null;
 
+  const stopRecording = () => {
+    recorderRef.current?.stop();
+  };
+
+  const startRecording = async () => {
+    if (disabled || recording || !navigator.mediaDevices?.getUserMedia) return;
+    const Recorder = window.MediaRecorder;
+    if (!Recorder) return;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream;
+    const preferredTypes = [
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+    ];
+    const mimeType = preferredTypes.find((type) => Recorder.isTypeSupported(type));
+    const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+    recorderRef.current = recorder;
+    chunksRef.current = [];
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunksRef.current.push(event.data);
+    };
+    recorder.onstop = () => {
+      const type = recorder.mimeType || mimeType || 'audio/mp4';
+      const extension = type.includes('ogg') ? 'ogg' : type.includes('webm') ? 'webm' : 'm4a';
+      const blob = new Blob(chunksRef.current, { type });
+      if (blob.size > 0) {
+        setFile(new File([blob], `audio-${Date.now()}.${extension}`, { type }));
+      }
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      chunksRef.current = [];
+      setRecording(false);
+      if (recordingTimerRef.current) window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    };
+    recorder.start(250);
+    setRecordingSeconds(0);
+    setRecording(true);
+    recordingTimerRef.current = window.setInterval(
+      () => setRecordingSeconds((current) => current + 1),
+      1_000,
+    );
+  };
+
   return (
     <div className="border-t border-slate-100 bg-white p-4">
       {file && selectedKind && (
@@ -84,18 +151,54 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         </div>
       )}
 
+      {recording && (
+        <div className="mb-3 flex min-h-12 items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 text-rose-700">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" />
+          <span className="text-xs font-black uppercase tracking-wide">Gravando áudio</span>
+          <div className="flex flex-1 items-center gap-1 overflow-hidden">
+            {Array.from({ length: 24 }, (_, index) => (
+              <span
+                key={index}
+                className="w-1 rounded-full bg-rose-300"
+                style={{ height: `${8 + ((index * 7) % 18)}px` }}
+              />
+            ))}
+          </div>
+          <span className="text-xs font-black tabular-nums">{formatRecordingTime(recordingSeconds)}</span>
+          <button
+            type="button"
+            onClick={stopRecording}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white hover:bg-rose-700"
+            title="Parar gravação"
+          >
+            <Square size={13} fill="currentColor" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-3">
         <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(event) => setFile(event.target.files?.[0] || null)} />
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-40" title="Anexar áudio, foto ou PDF">
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled || recording} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-40" title="Anexar áudio, foto ou documento">
           <Paperclip size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={recording ? stopRecording : startRecording}
+          disabled={disabled || Boolean(file)}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors disabled:opacity-40 ${
+            recording ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+          }`}
+          title={recording ? 'Parar gravação' : 'Gravar áudio'}
+        >
+          {recording ? <Square size={14} fill="currentColor" /> : <Mic size={17} />}
         </button>
         <textarea
           value={reply}
           onChange={(event) => updateReply(event.target.value)}
           onBlur={() => sendTyping(false)}
           rows={1}
-          placeholder={closed ? 'Atendimento finalizado' : file ? 'Legenda opcional...' : activeConversation.aluno_id ? 'Escreva sua resposta...' : 'Contato sem aluno vinculado'}
-          disabled={disabled}
+          placeholder={closed ? 'Atendimento finalizado' : recording ? 'Gravando mensagem de voz...' : file ? 'Legenda opcional...' : 'Escreva sua resposta...'}
+          disabled={disabled || recording}
           className="max-h-28 min-h-[44px] flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-50"
         />
         <button onClick={send} disabled={sending || !canSend} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40">

@@ -22,8 +22,14 @@ export const normalizeCpf = (value: unknown) => {
 };
 
 export const parseMenuNumber = (value: unknown) => {
-  const match = String(value || "").trim().match(/^\s*(\d{1,2})\s*$/);
-  return match ? Number(match[1]) : null;
+  const input = String(value || "").trim();
+  const numeric = input.match(/^(\d{1,2})$/);
+  if (numeric) return Number(numeric[1]);
+
+  const labeled = input.match(
+    /^(?:op(?:ç|c)[aã]o\s+)?(\d{1,2})(?:\s*[-–—.):]\s*|\s+)[\p{L}\p{M}][\p{L}\p{M}\s/+&-]{0,60}$/iu,
+  );
+  return labeled ? Number(labeled[1]) : null;
 };
 
 export const detectAttendantRequest = (value: unknown) =>

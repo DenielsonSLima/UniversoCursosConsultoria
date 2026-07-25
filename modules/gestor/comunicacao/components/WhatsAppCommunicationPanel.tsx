@@ -14,7 +14,7 @@ import { useBirthdayAgent } from './whatsapp-agents/useBirthdayAgent';
 import CourseSupportAgentPanel from './whatsapp-agents/CourseSupportAgentPanel';
 import { useCourseAgent } from './whatsapp-agents/useCourseAgent';
 import { whatsappService } from './whatsapp/whatsapp.service';
-import { isWhatsAppConnectionReady, WhatsAppContact } from './whatsapp/whatsapp.types';
+import { isWhatsAppConnectionReady, WhatsAppContact, WhatsAppSector } from './whatsapp/whatsapp.types';
 import { defaultMessageFor, normalizePhone } from './whatsapp/whatsapp.utils';
 import { useWhatsAppRealtime } from './whatsapp/useWhatsAppRealtime';
 import { installWhatsAppSoundUnlock, isWhatsAppSoundEnabled, playIncomingWhatsAppSound, setWhatsAppSoundEnabled } from './whatsapp/inbox/notificationSound';
@@ -384,13 +384,33 @@ const WhatsAppCommunicationPanel: React.FC = () => {
 
   const sendConversationReply = async (message: string) => {
     const conversation = conversations.find((item) => item.id === activeConversationId);
-    if (!conversation?.aluno_id) throw new Error('Esta conversa ainda não está vinculada a um aluno cadastrado.');
+    if (!conversation) throw new Error('Selecione uma conversa.');
 
-    await whatsappService.sendMessage({ connectionId: activeConnectionId!, alunoId: conversation.aluno_id, to: conversation.telefone, message });
+    await whatsappService.sendMessage({
+      connectionId: activeConnectionId!,
+      alunoId: conversation.aluno_id,
+      conversationId: conversation.id,
+      to: conversation.telefone,
+      message,
+    });
     toast.success('Resposta enviada', `Mensagem enviada para ${conversation.contato_nome}.`);
     queryClient.invalidateQueries({ queryKey: ['whatsapp', activeConnectionId, 'conversas'] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', activeConnectionId, 'mensagens', activeConversationId] });
     queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
+  };
+
+  const transferConversation = async (input: {
+    conversationId: string;
+    setor: WhatsAppSector;
+    poloId: string;
+    motivo?: string;
+  }) => {
+    await whatsappService.transferConversation(input);
+    queryClient.invalidateQueries({ queryKey: ['whatsapp'] });
+    toast.success(
+      'Atendimento transferido',
+      'A conversa agora está visível para o setor e polo selecionados.',
+    );
   };
 
   const deleteWhatsAppConversations = async (conversationIds: string[]) => {
@@ -470,7 +490,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
       />
 
       {activeTab === 'conversas' && activeConnectionId && (
-        <WhatsAppInbox connectionId={activeConnectionId} conversations={conversations} messages={conversationMessages} flowSessions={whatsappFlow.sessions} activeConversationId={activeConversationId} apiReady={apiReady} loadingConversations={loadingConversations} loadingMessages={loadingConversationMessages} onSelectConversation={selectConversation} onSendReply={sendConversationReply} onDeleteConversations={deleteWhatsAppConversations} onPauseFlow={whatsappFlow.pause} onResetFlow={whatsappFlow.reset} onCloseConversation={whatsappFlow.close} onReopenConversation={whatsappFlow.reopen} />
+        <WhatsAppInbox connectionId={activeConnectionId} conversations={conversations} messages={conversationMessages} flowSessions={whatsappFlow.sessions} activeConversationId={activeConversationId} apiReady={apiReady} loadingConversations={loadingConversations} loadingMessages={loadingConversationMessages} onSelectConversation={selectConversation} onSendReply={sendConversationReply} onDeleteConversations={deleteWhatsAppConversations} onPauseFlow={whatsappFlow.pause} onResetFlow={whatsappFlow.reset} onCloseConversation={whatsappFlow.close} onReopenConversation={whatsappFlow.reopen} onTransferConversation={transferConversation} />
       )}
 
       {activeTab === 'automacoes' && (

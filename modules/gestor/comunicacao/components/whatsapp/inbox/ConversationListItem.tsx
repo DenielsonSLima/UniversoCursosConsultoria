@@ -4,6 +4,14 @@ import { WhatsAppConversation, WhatsAppFlowSession } from '../whatsapp.types';
 import { formatMessageDate, formatMessageTime, formatPhone } from '../whatsapp.utils';
 import ContactAvatar from './ContactAvatar';
 
+const sectorLabel = (sector: WhatsAppConversation['setor']) => ({
+  comercial_matriculas: 'Comercial',
+  secretaria: 'Secretaria',
+  financeiro: 'Financeiro',
+  pedagogico_coordenacao: 'Coordenação',
+  atendimento_geral: 'Atendimento',
+}[String(sector || '')] || '');
+
 interface ConversationListItemProps {
   conversation: WhatsAppConversation;
   flowSession?: WhatsAppFlowSession;
@@ -43,11 +51,23 @@ const ConversationListItem: React.FC<ConversationListItemProps> = ({
             </span>
           </div>
           <p className="mt-1 truncate text-xs font-medium text-slate-500">{conversation.ultimo_texto || formatPhone(conversation.telefone)}</p>
-          {flowSession && (
-            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${isHandoff ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-              {isHandoff ? 'Atendente' : 'Robô ativo'}
-            </span>
-          )}
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+            {conversation.setor && (
+              <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">
+                {sectorLabel(conversation.setor)}
+              </span>
+            )}
+            {flowSession && (
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${isHandoff ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                {isHandoff ? 'Aguardando atendente' : 'Robô ativo'}
+              </span>
+            )}
+            {conversation.sub_assunto && (
+              <span className="max-w-full truncate text-[10px] font-semibold text-slate-400">
+                {conversation.sub_assunto}
+              </span>
+            )}
+          </div>
         </div>
         {conversation.unread_count > 0 && (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold text-white">
