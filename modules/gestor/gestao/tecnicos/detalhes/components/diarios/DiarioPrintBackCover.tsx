@@ -89,20 +89,17 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
           </div>
 
           <div className="relative z-10 grid grid-cols-2 gap-12 text-center border-t border-[#071a33]/10 pt-4 text-[9pt]">
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="border-b border-slate-400 w-full mb-1"></div>
-              <p className="font-bold">{template.diretorNome || '—'}</p>
-              <p className="text-[7pt] text-slate-500 uppercase font-black">{template.diretorCargo || 'Diretor(a) Geral'}</p>
-            </div>
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="border-b border-slate-400 w-full mb-1"></div>
-              <p className="font-bold">{template.secretarioNome || '—'}</p>
-              <p className="text-[7pt] text-slate-500 uppercase font-black">{template.secretarioCargo || 'Secretaria Acadêmica'}</p>
-            </div>
+            <ManualSignatureLine label="ASSINATURA DO PROFESSOR" />
+            <ManualSignatureLine label="ASSINATURA DO COORDENADOR DO CURSO" />
           </div>
 
           {template.contracapaCampos
-            ?.filter((field) => field.visible && field.isImage)
+            ?.filter((field) =>
+              field.visible
+              && field.isImage
+              && field.id !== 'signature_diretor'
+              && field.id !== 'signature_secretario',
+            )
             .map((field) => (
               <img
                 key={field.id}
@@ -125,5 +122,12 @@ const DiarioPrintBackCover: React.FC<DiarioPrintBackCoverProps> = ({
     </section>
   );
 };
+
+const ManualSignatureLine: React.FC<{ label: string }> = ({ label }) => (
+  <div className="flex h-14 flex-col items-center justify-end">
+    <div className="mb-1 w-full border-b border-slate-400" />
+    <p className="text-[7pt] font-black text-slate-500">{label}</p>
+  </div>
+);
 
 export default DiarioPrintBackCover;
