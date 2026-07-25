@@ -21,7 +21,6 @@ export interface CapaCampo {
 export interface DiarioTemplate {
   capaUrl: string | null;
   contracapaUrl: string | null;
-  cabecalhoLogoUrl?: string | null;
   cabecalho: string;
   rodape: string;
   imprimirInstrucoes: boolean;
@@ -30,12 +29,6 @@ export interface DiarioTemplate {
   capaCampos?: CapaCampo[];
   contracapaCampos?: CapaCampo[];
   imprimirValidacaoContracapa?: boolean;
-  diretorNome?: string;
-  diretorCargo?: string;
-  secretarioNome?: string;
-  secretarioCargo?: string;
-  diretorAssinaturaRole?: 'diretoriaGeral' | 'secretaria' | 'coordenacao' | 'financeiro' | null;
-  secretarioAssinaturaRole?: 'diretoriaGeral' | 'secretaria' | 'coordenacao' | 'financeiro' | null;
   mensagemValidacao?: string;
   qrCodeSize?: number;
 }
@@ -246,34 +239,6 @@ export const DEFAULT_CONTRACAPA_CAMPOS: CapaCampo[] = [
     bold: true,
     align: 'center',
   },
-  {
-    id: 'contracapaDiretor',
-    label: '',
-    valuePlaceholder: 'Diretor(a) Geral',
-    x: 10,
-    y: 80,
-    width: 35,
-    fontSize: 9,
-    visible: true,
-    color: '#071a33',
-    bold: true,
-    align: 'center',
-    borderTop: true,
-  },
-  {
-    id: 'contracapaSecretario',
-    label: '',
-    valuePlaceholder: 'Secretária Acadêmica',
-    x: 55,
-    y: 80,
-    width: 35,
-    fontSize: 9,
-    visible: true,
-    color: '#071a33',
-    bold: true,
-    align: 'center',
-    borderTop: true,
-  },
 ];
 
 export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
@@ -287,17 +252,32 @@ export const DEFAULT_DIARIO_TEMPLATE: DiarioTemplate = {
   capaCampos: DEFAULT_CAPA_CAMPOS,
   contracapaCampos: DEFAULT_CONTRACAPA_CAMPOS,
   imprimirValidacaoContracapa: true,
-  diretorNome: 'Prof. Denielson S. Lima',
-  diretorCargo: 'Diretor(a) Geral',
-  secretarioNome: 'Maria Eduarda Santos',
-  secretarioCargo: 'Secretário(a) Acadêmico(a)',
-  diretorAssinaturaRole: null,
-  secretarioAssinaturaRole: null,
   mensagemValidacao: 'Este diário de classe eletrônico foi gerado e assinado digitalmente nos termos do Regimento Escolar da instituição e da legislação de validação de documentos acadêmicos do Ministério da Educação.',
   qrCodeSize: 28,
 };
 
 const templateId = (key: string) => `diario_${key}`;
+const LEGACY_SIGNATURE_FIELD_IDS = new Set([
+  'signature_diretor',
+  'signature_secretario',
+  'contracapaDiretor',
+  'contracapaSecretario',
+]);
+
+const sanitizeDiarioTemplate = (template: Record<string, any>): DiarioTemplate => {
+  const sanitized = { ...template };
+  delete sanitized.diretorNome;
+  delete sanitized.diretorCargo;
+  delete sanitized.secretarioNome;
+  delete sanitized.secretarioCargo;
+  delete sanitized.diretorAssinaturaRole;
+  delete sanitized.secretarioAssinaturaRole;
+  delete sanitized.assinatura1Origem;
+  delete sanitized.assinatura2Origem;
+  sanitized.contracapaCampos = (sanitized.contracapaCampos || DEFAULT_CONTRACAPA_CAMPOS)
+    .filter((field: CapaCampo) => !LEGACY_SIGNATURE_FIELD_IDS.has(field.id));
+  return sanitized as DiarioTemplate;
+};
 
 export const diariosService = {
   async getCursos(): Promise<DiarioCurso[]> {
@@ -329,12 +309,12 @@ export const diariosService = {
 
     if (error) throw error;
     
-    const parsedConteudo = (data?.conteudo || {}) as Partial<DiarioTemplate>;
-    return {
+    const parsedConteudo = sanitizeDiarioTemplate((data?.conteudo || {}) as Record<string, any>);
+    return sanitizeDiarioTemplate({
       ...DEFAULT_DIARIO_TEMPLATE,
       ...parsedConteudo,
       capaCampos: parsedConteudo.capaCampos || DEFAULT_CAPA_CAMPOS,
-    };
+    });
   },
 
   async saveTemplate(cursoIdOrModality: string, conteudo: DiarioTemplate): Promise<void> {
@@ -354,7 +334,7 @@ export const diariosService = {
       .from('documentos_templates')
       .upsert({
         id: templateId(key),
-        conteudo,
+        conteudo: sanitizeDiarioTemplate(conteudo as unknown as Record<string, any>),
         updated_at: new Date().toISOString(),
       });
 
