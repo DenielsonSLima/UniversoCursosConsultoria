@@ -3,6 +3,7 @@
 // Cache em memória apenas (não persiste entre sessões de página).
 
 import { supabase } from '../../../../lib/supabase';
+import { assinaturasRegistryService } from './assinaturas-registry.service';
 
 export interface AssinaturasData {
   diretoriaGeral: string;
@@ -71,7 +72,29 @@ export const assinaturasService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        _memCache = normalizeSignatureMetadata({ ...DEFAULT_ASSINATURAS, ...data.conteudo } as AssinaturasData);
+        const legacy = normalizeSignatureMetadata({
+          ...DEFAULT_ASSINATURAS,
+          ...data.conteudo,
+        } as AssinaturasData);
+
+        try {
+          const linked = await assinaturasRegistryService.getLegacyMap();
+          _memCache = normalizeSignatureMetadata({
+            ...legacy,
+            diretoriaGeral: linked.diretoriaGeral?.previewUrl || '',
+            diretoriaGeralNome: linked.diretoriaGeral?.name || '',
+            diretoriaGeralCargo: linked.diretoriaGeral?.role || DEFAULT_ASSINATURAS.diretoriaGeralCargo,
+            secretaria: linked.secretaria?.previewUrl || '',
+            secretariaNome: linked.secretaria?.name || '',
+            secretariaCargo: linked.secretaria?.role || DEFAULT_ASSINATURAS.secretariaCargo,
+            coordenacao: linked.coordenacao?.previewUrl || '',
+            coordenacaoNome: linked.coordenacao?.name || '',
+            coordenacaoCargo: linked.coordenacao?.role || '',
+          });
+        } catch (registryError) {
+          console.warn('[assinaturasService] Cadastro vinculado indisponível; usando configuração legada:', registryError);
+          _memCache = legacy;
+        }
         _memCacheTs = now;
         return _memCache;
       }
