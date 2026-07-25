@@ -2,16 +2,13 @@ import { supabase } from '../../../../lib/supabase';
 import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 import {
   BaneseSyncSummary,
+  type CanalBaixaConciliacao,
   EMPTY_API_SYNC_SUMMARY,
+  classifySettlementChannel,
   getMaceioDateKey,
 } from './conciliacao-bancaria.utils';
 
-export type CanalBaixaConciliacao =
-  | 'API_BANESE'
-  | 'CNAB240'
-  | 'CAIXA_MANUAL'
-  | 'MERCADO_PAGO'
-  | 'PENDENTE';
+export type { CanalBaixaConciliacao } from './conciliacao-bancaria.utils';
 
 export interface BaneseReceivable {
   id: string;
@@ -23,6 +20,7 @@ export interface BaneseReceivable {
   valorPago?: number;
   gatewaySyncedAt?: string;
   gatewayLastError?: string;
+  gatewayStatus?: string;
   nossoNumero?: string;
   canalBaixa?: CanalBaixaConciliacao;
 }
@@ -90,7 +88,7 @@ export const fetchConciliacaoData = async (
 ): Promise<ConciliacaoDataResponse> => {
   const listQuery = supabase
     .from('contas_receber')
-    .select('id, descricao, status, valor, data_vencimento, data_pagamento, valor_pago, gateway_synced_at, gateway_last_error, gateway_boleto_nosso_numero, gateway_payment_id, gateway_payment_method, updated_at')
+    .select('id, descricao, status, valor, data_vencimento, data_pagamento, valor_pago, origem_pagamento, forma_pagamento, manual_settlement_id, manual_settlement_reversed_at, gateway_provider, gateway_status, gateway_synced_at, gateway_last_error, gateway_boleto_nosso_numero, gateway_payment_id, gateway_payment_method, gateway_submission_channel, updated_at')
     .eq('gateway_provider', 'banese_card')
     .eq('gateway_environment', environment)
     .eq('gateway_payment_method', 'BOLETO')
@@ -150,19 +148,16 @@ export const fetchConciliacaoData = async (
   const receivables: BaneseReceivable[] = (listResult.data || []).map((row: any) => {
     const status = normalizeString(row.status).toUpperCase();
     const syncedAt = normalizeString(row.gateway_synced_at) === '-' ? undefined : toSafeText(row.gateway_synced_at);
-    let canalBaixa: CanalBaixaConciliacao = 'PENDENTE';
-
-    if (status === 'PAGO') {
-      if (row.gateway_provider === 'mercado_pago' || row.gateway_payment_method === 'CREDIT_CARD') {
-        canalBaixa = 'MERCADO_PAGO';
-      } else if (row.raw_payload?.cnab || row.raw_payload?.source === 'cnab' || row.raw_payload?.reconciliation?.source === 'cnab240') {
-        canalBaixa = 'CNAB240';
-      } else if (syncedAt || row.gateway_payment_id) {
-        canalBaixa = 'API_BANESE';
-      } else {
-        canalBaixa = 'CAIXA_MANUAL';
-      }
-    }
+    const canalBaixa = classifySettlementChannel({
+      status,
+      origemPagamento: row.origem_pagamento,
+      manualSettlementId: row.manual_settlement_id,
+      manualSettlementReversedAt: row.manual_settlement_reversed_at,
+      gatewayProvider: row.gateway_provider,
+      gatewayPaymentMethod: row.gateway_payment_method,
+      gatewayStatus: row.gateway_status,
+      gatewaySubmissionChannel: row.gateway_submission_channel,
+    });
 
     return {
       id: toSafeText(row.id),
@@ -174,6 +169,7 @@ export const fetchConciliacaoData = async (
       valorPago: row.valor_pago != null ? Number(row.valor_pago) : undefined,
       gatewaySyncedAt: syncedAt,
       gatewayLastError: normalizeString(row.gateway_last_error),
+      gatewayStatus: normalizeString(row.gateway_status),
       nossoNumero: normalizeString(row.gateway_boleto_nosso_numero || row.gateway_payment_id || ''),
       canalBaixa,
     };
