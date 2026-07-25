@@ -193,7 +193,8 @@ Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async
   const amount = 149.9;
   const values = makeBaneseBarcodePack(amount, BANESE_DOCUMENT_FIXTURE.dueDate);
   const payloadWithoutPix = JSON.stringify({
-    NossoNumero: BANESE_DOCUMENT_FIXTURE.ourNumber,
+    // A API pode desserializar o campo numérico sem os zeros à esquerda.
+    NossoNumero: Number(BANESE_DOCUMENT_FIXTURE.ourNumber),
     NumeroLinhaDigitavel: values.digitableLine,
     NumeroCodigoBarras: values.barcode,
     CodigoSituacaoBoleto: 2,
@@ -226,6 +227,11 @@ Deno.test("producao aceita valor comercial acima de 10 e retorno sem pix", async
       financialTerms: null,
     };
     const result = await createBaneseBoletoCharge(productionInput);
+    assert.equal(result.id, BANESE_DOCUMENT_FIXTURE.ourNumber);
+    assert.equal(
+      result.bankSlipOurNumber,
+      BANESE_DOCUMENT_FIXTURE.ourNumber,
+    );
     assert.equal(result.pixPayload, null);
     assert.equal(result.pixEncodedImage, null);
     const postCalls = calls.filter((call) =>

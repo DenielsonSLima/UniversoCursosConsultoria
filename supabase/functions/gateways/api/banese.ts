@@ -374,6 +374,7 @@ export const reconcileBaneseReceivable = async (
     },
   );
   const receivableUpdate: Record<string, unknown> = {
+    gateway_payment_id: snapshotNossoNumero,
     gateway_status: snapshot.remoteStatus,
     gateway_financial_terms: confirmedFinancialTerms,
     gateway_financial_terms_confirmed_at:
@@ -499,6 +500,7 @@ export const reconcileBaneseReceivable = async (
           .update({
             ...transactionPayload,
             ...recoveredTransactionBankNumbers,
+            remote_payment_id: snapshotNossoNumero,
             bank_slip_our_number: snapshotNossoNumero,
             raw_payload: {
               ...(transaction.raw_payload &&
@@ -553,6 +555,10 @@ export const reconcileBaneseReceivable = async (
 
   let futureSyncWarning: string | null = null;
   if (snapshot.paid && String(updated.status || "").toUpperCase() === "PAGO") {
+    // A liberação acadêmica decorre diretamente do pagamento confirmado pelo
+    // banco. Falhas na projeção auxiliar de inscricoes_online devem permanecer
+    // auditáveis, mas não podem impedir o acesso de EAD/Livre/Especialização.
+    await activateEnrollmentAfterPayment({ admin } as any, updated);
     await syncOnlineInscriptionPayment({ admin } as any, {
       receivable: updated,
       gatewayProvider: "banese_card",
@@ -563,7 +569,6 @@ export const reconcileBaneseReceivable = async (
       legacyPaymentMethod: String(updated.forma_pagamento || settlementMethod),
       pendingStatus: "AGUARDANDO_PAGAMENTO",
     });
-    await activateEnrollmentAfterPayment({ admin } as any, updated);
 
     if (
       dependencies.syncFutureInstallments &&

@@ -12,6 +12,7 @@ import {
   isLibraryUrl,
   matchesLibrarySearch
 } from './libraryAccess';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 
 interface BibliotecaPageProps {
   alunoId: string;
@@ -28,7 +29,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
   // 1. Busca as matrículas ativas do aluno para obter cursos, turmas e polos
   const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
-    queryKey: ['aluno-biblioteca-matriculas', alunoId],
+    queryKey: alunoCourseAccessKeys.libraryEnrollments(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')

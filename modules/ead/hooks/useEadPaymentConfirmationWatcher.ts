@@ -1,17 +1,13 @@
 import { useEffect } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { invalidateAlunoCourseAccessQueries } from '../../aluno/shared/aluno-course-access.queries';
 import type { EadPaymentPanelData } from '../components/EadPaymentModal';
 
 const RECEIVABLE_PAID_STATUSES = new Set(['PAGO', 'RECEIVED', 'CONFIRMED']);
 const ENROLLMENT_ACCESS_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 
 const normalizeStatus = (status?: string | null) => String(status || '').toUpperCase();
-
-const getRealtimeRowStatus = (row: unknown) => {
-  if (!row || typeof row !== 'object') return '';
-  return normalizeStatus(String((row as Record<string, unknown>).status || ''));
-};
 
 const isPaidReceivable = (row: any) => (
   RECEIVABLE_PAID_STATUSES.has(normalizeStatus(row?.status)) ||
@@ -21,12 +17,8 @@ const isPaidReceivable = (row: any) => (
 
 const isActiveEnrollment = (row: any) => ENROLLMENT_ACCESS_STATUSES.has(normalizeStatus(row?.status));
 
-export const invalidateAlunoEadPaymentQueries = (queryClient: QueryClient, alunoId?: string | null) => {
-  if (!alunoId) return;
-  queryClient.invalidateQueries({ queryKey: ['aluno-cursos-disponiveis', alunoId] });
-  queryClient.invalidateQueries({ queryKey: ['aluno-financeiro', alunoId] });
-  queryClient.invalidateQueries({ queryKey: ['aluno-matriculas', alunoId] });
-};
+/** @deprecated Use invalidateAlunoCourseAccessQueries. */
+export const invalidateAlunoEadPaymentQueries = invalidateAlunoCourseAccessQueries;
 
 interface UseEadPaymentConfirmationWatcherOptions {
   alunoId?: string | null;
@@ -70,6 +62,7 @@ export const useEadPaymentConfirmationWatcher = ({
     const checkPaymentStatus = async () => {
       if (stopped || confirmed) return;
       try {
+        let paymentConfirmed = false;
         if (receivableId) {
           const { data } = await supabase
             .from('contas_receber')
@@ -78,32 +71,25 @@ export const useEadPaymentConfirmationWatcher = ({
             .maybeSingle();
 
           if (isPaidReceivable(data)) {
-            confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
-            return;
+            paymentConfirmed = true;
           }
         }
 
         if (matriculaId) {
-          const [{ data: matricula }, { data: inscricoes }] = await Promise.all([
-            supabase
-              .from('matriculas')
-              .select('status')
-              .eq('id', matriculaId)
-              .maybeSingle(),
-            supabase
-              .from('inscricoes_online')
-              .select('status')
-              .eq('matricula_id', matriculaId)
-              .order('updated_at', { ascending: false })
-              .limit(1),
-          ]);
+          const { data: matricula } = await supabase
+            .from('matriculas')
+            .select('status')
+            .eq('id', matriculaId)
+            .maybeSingle();
 
-          if (
-            isActiveEnrollment(matricula) ||
-            RECEIVABLE_PAID_STATUSES.has(normalizeStatus(inscricoes?.[0]?.status))
-          ) {
+          if (isActiveEnrollment(matricula)) {
             confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
           }
+          return;
+        }
+
+        if (paymentConfirmed) {
+          confirmOnce('Pagamento confirmado automaticamente.');
         }
       } catch (error) {
         console.warn('Nao foi possivel conferir confirmacao do Pix EAD:', error);
@@ -119,34 +105,23 @@ export const useEadPaymentConfirmationWatcher = ({
         (payload) => {
           invalidate();
           if (isPaidReceivable(payload.new)) {
-            confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
+            void checkPaymentStatus();
           }
         },
       );
     }
 
     if (matriculaId) {
-      channel = channel
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'matriculas', filter: `id=eq.${matriculaId}` },
-          (payload) => {
-            invalidate();
-            if (isActiveEnrollment(payload.new)) {
-              confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
-            }
-          },
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'inscricoes_online', filter: `matricula_id=eq.${matriculaId}` },
-          (payload) => {
-            invalidate();
-            if (RECEIVABLE_PAID_STATUSES.has(getRealtimeRowStatus(payload.new))) {
-              confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
-            }
-          },
-        );
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matriculas', filter: `id=eq.${matriculaId}` },
+        (payload) => {
+          invalidate();
+          if (isActiveEnrollment(payload.new)) {
+            confirmOnce('Pagamento confirmado automaticamente. Curso liberado em Meus Cursos.');
+          }
+        },
+      );
     }
 
     channel.subscribe();

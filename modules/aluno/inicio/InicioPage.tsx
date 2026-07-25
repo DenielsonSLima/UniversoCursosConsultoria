@@ -11,6 +11,7 @@ import {
   toggleStudentPinnedCourse,
   type StudentCourseAccessItem,
 } from '../cursos/courseAccessHistory';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 
 type InicioUpcomingEvent = {
   id: string;
@@ -53,7 +54,7 @@ interface InicioPageProps {
 const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCourse }) => {
   // Query to count enrolled classes
   const { data: matriculasCount = 0 } = useQuery({
-    queryKey: ['aluno-matriculas-count', alunoId],
+    queryKey: alunoCourseAccessKeys.homeEnrollmentCount(alunoId),
     queryFn: async () => {
       const { count, error } = await supabase
         .from('matriculas')
@@ -68,7 +69,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
 
   // 2. Informações de matrícula para contexto de acesso
   const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
-    queryKey: ['aluno-inicio-matriculas', alunoId],
+    queryKey: alunoCourseAccessKeys.homeEnrollments(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('matriculas')
@@ -251,7 +252,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
   });
 
   const { data: financeiroResumo, isLoading: loadingFinanceiro } = useQuery<any>({
-    queryKey: ['aluno-inicio-financeiro-resumo', alunoId],
+    queryKey: alunoCourseAccessKeys.homeFinanceSummary(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_receber')

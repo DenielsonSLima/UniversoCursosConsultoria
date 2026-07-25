@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { CalendarEvent, DEFAULT_EVENT_TYPES } from '../../gestor/calendario/calendario.types';
 import CalendarioReadOnly from '../../shared/components/CalendarioReadOnly';
 import { CalendarDays } from 'lucide-react';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 
 interface CalendarioAlunoPageProps {
   alunoId: string;
@@ -11,7 +12,7 @@ interface CalendarioAlunoPageProps {
 
 const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) => {
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['aluno-calendario', alunoId],
+    queryKey: alunoCourseAccessKeys.calendar(alunoId),
     enabled: !!alunoId,
     queryFn: async () => {
       // 1. Buscar turmas do aluno via matrículas

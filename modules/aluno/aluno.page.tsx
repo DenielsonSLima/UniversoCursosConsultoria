@@ -5,6 +5,7 @@ import ConfirmModal from '../shared/components/ConfirmModal';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 import AlunoPortalShell from './components/AlunoPortalShell';
+import { useAlunoCourseAccessRealtime } from './hooks/useAlunoCourseAccessRealtime';
 import { useAlunoCalendarEligibility, useAlunoUnreadChats } from './hooks/useAlunoPortalData';
 import { useAlunoPortalProfile } from './hooks/useAlunoPortalProfile';
 import type { PerfilTabId } from './perfil/perfil.types';
@@ -63,6 +64,7 @@ const AlunoPage: React.FC = () => {
   const alunoId = isAuthorized ? profile?.id || '' : '';
   const canViewCalendar = useAlunoCalendarEligibility(alunoId, isAuthorized);
   const unreadChatsCount = useAlunoUnreadChats(alunoId, isAuthorized);
+  useAlunoCourseAccessRealtime(alunoId, isAuthorized);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {

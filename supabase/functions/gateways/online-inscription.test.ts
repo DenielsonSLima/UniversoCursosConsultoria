@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   hasRepairableOnlineInscriptionIdentity,
+  normalizeGatewayPaymentIdentity,
   repairOnlineInscription,
 } from "./online-inscription.ts";
 
@@ -342,6 +343,77 @@ Deno.test("promove id provisório do link para pagamento real sem trocar o link"
   assert.equal(
     runtime.rows.get("enrollment-1")?.gateway_payment_link_id,
     "preference-1",
+  );
+});
+
+Deno.test("normaliza zeros à esquerda do Nosso Número Banese sem aceitar outra cobrança", async () => {
+  const canonicalOurNumber = "000000074";
+  const runtime = createAdmin([{
+    id: "inscription-existing",
+    matricula_id: "enrollment-1",
+    receivable_id: "receivable-1",
+    gateway_provider: "banese_card",
+    gateway_environment: "production",
+    gateway_payment_id: "74",
+    gateway_payment_link_id: null,
+    status: "AGUARDANDO_PAGAMENTO",
+  }]);
+  const baneseReceivable = {
+    ...receivable,
+    forma_pagamento: "BOLETO",
+    gateway_provider: "banese_card",
+    gateway_environment: "production",
+    gateway_payment_method: "BOLETO",
+    gateway_payment_id: "74",
+    gateway_boleto_nosso_numero: canonicalOurNumber,
+    gateway_payment_link_id: null,
+  };
+
+  await repairOnlineInscription({
+    admin: runtime.admin,
+    receivable: baneseReceivable,
+    paymentId: canonicalOurNumber,
+    academic,
+  });
+
+  assert.equal(
+    runtime.rows.get("enrollment-1")?.gateway_payment_id,
+    canonicalOurNumber,
+  );
+  assert.equal(
+    normalizeGatewayPaymentIdentity("banese_card", "74"),
+    canonicalOurNumber,
+  );
+  assert.equal(
+    normalizeGatewayPaymentIdentity("mercado_pago", "74"),
+    "74",
+  );
+});
+
+Deno.test("mantém identidade remota estrita fora do Banese", async () => {
+  const runtime = createAdmin([{
+    id: "inscription-existing",
+    matricula_id: "enrollment-1",
+    receivable_id: "receivable-1",
+    gateway_provider: "mercado_pago",
+    gateway_environment: "sandbox",
+    gateway_payment_id: "74",
+    gateway_payment_link_id: null,
+    status: "AGUARDANDO_PAGAMENTO",
+  }]);
+
+  await assert.rejects(
+    () =>
+      repairOnlineInscription({
+        admin: runtime.admin,
+        receivable: {
+          ...receivable,
+          gateway_payment_id: "000000074",
+          gateway_payment_link_id: null,
+        },
+        academic,
+      }),
+    /pagamento remoto canonico diferente/,
   );
 });
 

@@ -1,16 +1,14 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-
-const calendarEligibilityKey = (alunoId: string) =>
-  ['aluno', alunoId, 'calendario', 'elegibilidade'] as const;
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 
 const unreadChatsKey = (alunoId: string) =>
   ['aluno', alunoId, 'comunicacao', 'chamados-nao-lidos'] as const;
 
 export const useAlunoCalendarEligibility = (alunoId: string, enabled: boolean) => {
   const { data = false } = useQuery({
-    queryKey: calendarEligibilityKey(alunoId),
+    queryKey: alunoCourseAccessKeys.calendarEligibility(alunoId),
     enabled: enabled && Boolean(alunoId),
     queryFn: async () => {
       const { data: enrollments, error } = await supabase

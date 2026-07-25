@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { alunoCourseAccessKeys } from '../../shared/aluno-course-access.queries';
 import type {
   AulaTurmaAluno,
   CertificadoAluno,
@@ -56,7 +57,7 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
   const selectedIsEad = isEadMatricula(selectedMatricula);
 
   const matriculasQuery = useQuery<MatriculaAluno[]>({
-    queryKey: ['aluno-matriculas', alunoId],
+    queryKey: alunoCourseAccessKeys.enrollments(alunoId),
     enabled: Boolean(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
@@ -346,7 +347,11 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
       .channel(`aluno_matriculas_realtime_${alunoId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'matriculas', filter: `aluno_id=eq.${alunoId}`,
-      }, () => queryClient.invalidateQueries({ queryKey: ['aluno-matriculas', alunoId] }))
+      }, () => queryClient.invalidateQueries({
+        queryKey: alunoCourseAccessKeys.enrollments(alunoId),
+        exact: true,
+        refetchType: 'active',
+      }))
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [alunoId, queryClient]);
