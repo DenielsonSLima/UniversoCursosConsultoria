@@ -75,6 +75,7 @@ const TurmaFinanceiro: React.FC<TurmaFinanceiroProps> = ({ turma }) => {
 
       {/* Lista de Alunos com Status Financeiro */}
       <FinanceiroAlunosList
+        turma={turma}
         alunos={dashboardQuery.data?.alunos || []}
         isLoading={dashboardQuery.isLoading}
         isError={dashboardQuery.isError}

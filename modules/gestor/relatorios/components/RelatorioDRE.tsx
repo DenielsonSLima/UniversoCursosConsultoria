@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Printer, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import DocumentHeader from '../../components/DocumentHeader';
+import ReportWatermark from './ReportWatermark';
 
 interface RelatorioDREProps {
   company: any;
@@ -197,25 +198,7 @@ const RelatorioDRE: React.FC<RelatorioDREProps> = ({ company, polo }) => {
             id="print-area"
           >
             {/* Watermark (Marca d'água) */}
-            {polo?.watermark_url ? (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-                <img 
-                  src={polo.watermark_url} 
-                  alt="Watermark" 
-                  style={{
-                    opacity: polo.watermark_opacity ?? 0.1,
-                    width: `${polo.watermark_scale ?? 50}%`,
-                    transform: 'rotate(-45deg)'
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none opacity-[0.03]">
-                <h1 className="text-6xl font-black rotate-[-45deg] tracking-widest text-slate-900 text-center">
-                  UNIVERSO CURSOS E CONSULTORIA
-                </h1>
-              </div>
-            )}
+            <ReportWatermark polo={polo} orientation="portrait" />
 
             {/* Document Header */}
             <DocumentHeader 

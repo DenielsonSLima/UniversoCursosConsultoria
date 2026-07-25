@@ -5,6 +5,63 @@ import type {
 } from './conciliacao-bancaria.types';
 import type { GatewayEnvironment } from '../../configuracoes/integracao-bancaria/integracao-bancaria.service';
 
+export type CanalBaixaConciliacao =
+  | 'API_BANESE'
+  | 'CNAB240'
+  | 'CAIXA_MANUAL'
+  | 'MERCADO_PAGO'
+  | 'PENDENTE';
+
+interface SettlementChannelEvidence {
+  status?: string | null;
+  origemPagamento?: string | null;
+  manualSettlementId?: string | null;
+  manualSettlementReversedAt?: string | null;
+  gatewayProvider?: string | null;
+  gatewayPaymentMethod?: string | null;
+  gatewayStatus?: string | null;
+  gatewaySubmissionChannel?: string | null;
+}
+
+const BANESE_PAID_STATUSES = new Set([
+  'PAID',
+  'PAGO',
+  'RECEIVED',
+  'CONFIRMED',
+  'LIQUIDATED',
+]);
+
+export const classifySettlementChannel = (
+  evidence: SettlementChannelEvidence,
+): CanalBaixaConciliacao => {
+  if (String(evidence.status || '').toUpperCase() !== 'PAGO') return 'PENDENTE';
+
+  const paymentOrigin = String(evidence.origemPagamento || '').toUpperCase();
+  const hasActiveManualSettlement = Boolean(
+    evidence.manualSettlementId && !evidence.manualSettlementReversedAt,
+  );
+  if (paymentOrigin === 'PRESENCIAL' || hasActiveManualSettlement) {
+    return 'CAIXA_MANUAL';
+  }
+
+  const provider = String(evidence.gatewayProvider || '').toLowerCase();
+  const paymentMethod = String(evidence.gatewayPaymentMethod || '').toUpperCase();
+  if (provider === 'mercado_pago' || paymentMethod === 'CREDIT_CARD') {
+    return 'MERCADO_PAGO';
+  }
+
+  if (String(evidence.gatewaySubmissionChannel || '').toUpperCase() === 'CNAB') {
+    return 'CNAB240';
+  }
+
+  const gatewayStatus = String(evidence.gatewayStatus || '').toUpperCase();
+  if (provider === 'banese_card' && BANESE_PAID_STATUSES.has(gatewayStatus)) {
+    return 'API_BANESE';
+  }
+
+  return 'CAIXA_MANUAL';
+};
+
 export interface BaneseSyncSummary {
   lastConsultaAt: string | null;
   lastSincronizacaoAt: string | null;

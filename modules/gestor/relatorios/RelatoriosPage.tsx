@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, Sparkles, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark } from 'lucide-react';
+import { Users, Building, BookOpen, DollarSign, BarChart3, FileText, ArrowLeft, ChevronRight, AlertTriangle, Award, GraduationCap, ClipboardList, CheckCircle2, Landmark, ShieldCheck } from 'lucide-react';
 import { empresasService } from '../configuracoes/empresas/empresas.service';
 import { polosService } from '../configuracoes/polos/polos.service';
 
@@ -13,13 +13,14 @@ import RelatorioDRE from './components/RelatorioDRE';
 import RelatorioInadimplencia from './components/RelatorioInadimplencia';
 import RelatorioEstagios from './components/RelatorioEstagios';
 import RelatorioFinanceiroTurmaMensal from './components/RelatorioFinanceiroTurmaMensal';
+import RelatorioFinanceiroPreEstagio from './components/RelatorioFinanceiroPreEstagio';
 import RelatorioAlunosCursando from './components/RelatorioAlunosCursando';
 import RelatorioAlunosFinalizados from './components/RelatorioAlunosFinalizados';
 import RelatorioMatriculaInicial from './components/RelatorioMatriculaInicial';
 import RelatorioSituacaoAluno from './components/RelatorioSituacaoAluno';
 import RelatorioLucroTurma from './components/RelatorioLucroTurma';
 
-type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
+type ReportType = 'turmas' | 'polos' | 'cursos' | 'financeiro' | 'dre' | 'inadimplencia' | 'estagios' | 'financeiro-turma-mensal' | 'financeiro-pre-estagio' | 'alunos-cursando' | 'alunos-finalizados' | 'matricula-inicial' | 'situacao-aluno' | 'lucro-turma';
 
 interface ReportMenuItem {
   id: ReportType;
@@ -107,6 +108,13 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
       category: 'financeiro'
     },
     {
+      id: 'financeiro-pre-estagio',
+      label: 'Financeiro da Turma para Estágio',
+      description: 'Conferência dos alunos ativos e das parcelas do curso pagas, abertas e vencidas antes do estágio.',
+      icon: <ShieldCheck size={22} />,
+      category: 'financeiro'
+    },
+    {
       id: 'lucro-turma',
       label: 'DRE / Resultado de Turma',
       description: 'Análise consolidada de lucro confrontando receitas de mensalidades e despesas da turma.',
@@ -161,6 +169,8 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
         return <RelatorioEstagios company={company} polo={polo} />;
       case 'financeiro-turma-mensal':
         return <RelatorioFinanceiroTurmaMensal company={company} polo={polo} />;
+      case 'financeiro-pre-estagio':
+        return <RelatorioFinanceiroPreEstagio company={company} polo={polo} />;
       case 'lucro-turma':
         return <RelatorioLucroTurma company={company} polo={polo} />;
       case 'alunos-cursando':
@@ -212,12 +222,6 @@ const RelatoriosPage: React.FC<RelatoriosPageProps> = ({ poloId }) => {
             </p>
           </div>
         </div>
-
-        {polo && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#001a33]/5 border border-[#001a33]/15 text-[#001a33] rounded-xl text-[10px] font-black uppercase tracking-wider">
-            <Sparkles size={11} /> Unidade Ativa: {polo.nome}
-          </div>
-        )}
       </div>
 
       {/* Main Content Area */}

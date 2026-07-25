@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { ContasReceber } from '../../../financeiro.service';
 import {
+  formatNextPendingDueDate,
   formatOptionalCurrency,
   getPersistedGatewayFee,
   getPersistedGatewayNet,
@@ -85,4 +86,9 @@ test('não apresenta comprovante Asaas para cobrança paga de outro provedor', (
 
   assert.equal(isPaidThroughAsaas(banese), false);
   assert.equal(isPaidThroughAsaas(asaas), true);
+});
+
+test('não apresenta próximo vencimento quando o grupo está totalmente quitado', () => {
+  assert.equal(formatNextPendingDueDate(0, '2026-07-31'), '—');
+  assert.equal(formatNextPendingDueDate(1, '2026-07-31'), '31/07/2026');
 });

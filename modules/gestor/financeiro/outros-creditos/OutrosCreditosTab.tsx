@@ -401,7 +401,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       pendingCount: pendingItems.length,
       receivedCount: receivedItems.length,
       canceledCount: canceledItems.length,
-      nextDue: sortedByDue.find((item) => item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status))?.dataVencimento || sortedByDue[0]?.dataVencimento || '',
+      nextDue: sortedByDue.find((item) => item.status !== 'PAGO' && !['CANCELADO', 'ESTORNADO'].includes(item.status))?.dataVencimento || '',
       first: items[0],
     };
   };

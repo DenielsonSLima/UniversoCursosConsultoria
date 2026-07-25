@@ -6,6 +6,7 @@ import {
   canConfirmBaneseCnabReturn,
   canResumeBaneseCnabReturn,
   canRevalidateBaneseCnabReturn,
+  classifySettlementChannel,
   countRetryableBaneseCnabReturnRecords,
   describeCnabAvailabilityError,
   getMaceioDateKey,
@@ -13,6 +14,35 @@ import {
   summarizeBaneseCnabReturn,
   validateBaneseCnabReturnFile,
 } from './conciliacao-bancaria.utils.ts';
+
+test('prioriza a baixa manual mesmo quando o título Banese foi sincronizado e cancelado', () => {
+  assert.equal(classifySettlementChannel({
+    status: 'PAGO',
+    origemPagamento: 'PRESENCIAL',
+    manualSettlementId: 'settlement-id',
+    gatewayProvider: 'banese_card',
+    gatewayPaymentMethod: 'BOLETO',
+    gatewayStatus: 'CANCELED',
+  }), 'CAIXA_MANUAL');
+});
+
+test('só classifica API Banese quando o status bancário confirma pagamento', () => {
+  assert.equal(classifySettlementChannel({
+    status: 'PAGO',
+    gatewayProvider: 'banese_card',
+    gatewayPaymentMethod: 'BOLETO',
+    gatewayStatus: 'PAID',
+    gatewaySubmissionChannel: 'API',
+  }), 'API_BANESE');
+
+  assert.equal(classifySettlementChannel({
+    status: 'PAGO',
+    gatewayProvider: 'banese_card',
+    gatewayPaymentMethod: 'BOLETO',
+    gatewayStatus: 'CANCELED',
+    gatewaySubmissionChannel: 'API',
+  }), 'CAIXA_MANUAL');
+});
 
 test('explica o bloqueio do CNAB por falta de EDI7 sem marcar a API como indisponível', () => {
   const notice = describeCnabAvailabilityError(
