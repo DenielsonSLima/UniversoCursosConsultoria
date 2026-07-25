@@ -1,20 +1,9 @@
-import { parseBRLPrice } from './eadCourseWizard.helpers';
-import { buildEadFinancialSimulation, clampEadInstallments } from './eadFinancialConfig';
 import type { EadCourseWizardState } from './useEadCourseWizardState';
 
 export const useEadCourseWizardDerived = (state: EadCourseWizardState) => {
   const {
     nome,
     cargaHoraria,
-    valorText,
-    financeiroPix,
-    financeiroBoleto,
-    financeiroCartao,
-    financeiroParcelado,
-    financeiroParcelasPadrao,
-    financeiroMaxParcelas,
-    financeiroRepassarCustoParcelamento,
-    financeiroConsiderarTaxaNoCheckout,
     cronograma,
   } = state;
 
@@ -54,38 +43,11 @@ export const useEadCourseWizardDerived = (state: EadCourseWizardState) => {
     width: `${297 * (certificatePreviewZoom / 100)}mm`,
     height: `${210 * (certificatePreviewZoom / 100)}mm`,
   };
-  const financeiroPreviewValue = parseBRLPrice(valorText) || 0;
-  const financeiroPreviewInstallments = financeiroCartao && financeiroParcelado
-    ? Math.max(
-        clampEadInstallments(parseInt(financeiroParcelasPadrao) || 1),
-        clampEadInstallments(parseInt(financeiroMaxParcelas) || 1)
-      )
-    : 1;
-  const financeiroPreviewBillingType = financeiroCartao
-    ? 'CREDIT_CARD'
-    : financeiroPix
-      ? 'PIX'
-      : 'BOLETO';
-  const financeiroSimulation = buildEadFinancialSimulation(
-    financeiroPreviewValue,
-    financeiroPreviewInstallments,
-    {
-      billingType: financeiroPreviewBillingType,
-      includeFeeInCheckout: financeiroConsiderarTaxaNoCheckout,
-      shouldPassInstallmentCost: financeiroPreviewBillingType === 'CREDIT_CARD' && financeiroCartao && financeiroRepassarCustoParcelamento,
-    }
-  );
-  const financeiroMultipleMethods = [financeiroPix, financeiroBoleto, financeiroCartao].filter(Boolean).length > 1;
 
   return {
     gradeCurricularPreview,
     previewTemplateValues,
     certificatePreviewZoom,
     certificatePreviewFrameStyle,
-    financeiroPreviewValue,
-    financeiroPreviewInstallments,
-    financeiroPreviewBillingType,
-    financeiroSimulation,
-    financeiroMultipleMethods,
   };
 };
