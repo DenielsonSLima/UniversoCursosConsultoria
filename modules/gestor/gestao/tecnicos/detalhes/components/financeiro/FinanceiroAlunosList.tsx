@@ -1,14 +1,17 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/components/financeiro/FinanceiroAlunosList.tsx
 
 import React, { useState } from 'react';
-import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Download, Loader2, Copy, ExternalLink } from 'lucide-react';
+import { Search, MoreHorizontal, CheckCircle2, AlertTriangle, XCircle, FileText, Loader2, Copy, ExternalLink } from 'lucide-react';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import AlunoFinanceiroExtrato from './extrato/AlunoFinanceiroExtrato';
 import { AlunoFinanceiro } from './financeiro-alunos.service';
 import TechnicalDataError from '../TechnicalDataError';
+import FinancialReportExportButton from '../../../../../financeiro/components/FinancialReportPreview';
+import { Turma } from '../../../../gestao.types';
 
 
 interface FinanceiroAlunosListProps {
+  turma: Turma;
   alunos: AlunoFinanceiro[];
   isLoading: boolean;
   isError: boolean;
@@ -20,6 +23,7 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
+  turma,
   alunos,
   isLoading,
   isError,
@@ -33,6 +37,46 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
     a.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
     a.matricula.includes(searchTerm)
   );
+  const statusLabel = (status: AlunoFinanceiro['status']) => {
+    if (status === 'inadimplente') return 'Inadimplente';
+    if (status === 'atrasado') return 'Atrasado';
+    return 'Em dia';
+  };
+  const alunosEmDia = filteredAlunos.filter((aluno) => aluno.status === 'em_dia').length;
+  const alunosComPendencia = filteredAlunos.length - alunosEmDia;
+  const parcelasPagas = filteredAlunos.reduce((total, aluno) => total + aluno.parcelasPagas, 0);
+  const parcelasPrevistas = filteredAlunos.reduce((total, aluno) => total + aluno.totalParcelas, 0);
+  const exportRows = filteredAlunos.map((aluno) => ({
+    id: aluno.id,
+    cells: [
+      <div key="aluno">
+        <p className="font-black text-[#001a33]">{aluno.nome}</p>
+        <p className="mt-0.5 text-[8px] font-bold uppercase text-slate-400">{statusLabel(aluno.status)}</p>
+      </div>,
+      <span key="matricula" className="font-mono text-[9px]">{aluno.matricula}</span>,
+      <div key="valores">
+        <p className="font-black text-emerald-700">Mat. {formatCurrency(aluno.valorMatricula)}</p>
+        <p className="mt-0.5 font-bold text-slate-500">
+          Mens. {aluno.valorMensalidade > 0 ? formatCurrency(aluno.valorMensalidade) : 'Aguardando baixa'}
+        </p>
+      </div>,
+      <span key="progresso" className="font-black text-[#001a33]">
+        {aluno.parcelasPagas}/{aluno.totalParcelas}
+      </span>,
+      <span
+        key="status"
+        className={`inline-flex rounded-lg border px-2 py-1 text-[8px] font-black uppercase ${
+          aluno.status === 'em_dia'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : aluno.status === 'atrasado'
+              ? 'border-amber-200 bg-amber-50 text-amber-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+        }`}
+      >
+        {statusLabel(aluno.status)}
+      </span>,
+    ],
+  }));
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -110,9 +154,40 @@ const FinanceiroAlunosList: React.FC<FinanceiroAlunosListProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase hover:bg-slate-200 transition-colors">
-            <Download size={16} /> <span className="hidden md:inline">Exportar</span>
-          </button>
+          <FinancialReportExportButton
+            buttonLabel="Exportar"
+            buttonClassName="border-0 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            title="Situação Financeira dos Alunos"
+            subtitle="Acompanhamento das mensalidades e da conciliação financeira dos alunos vinculados à turma."
+            rightTitle="Relatório Financeiro da Turma"
+            rightType="Situação dos Alunos"
+            recordLabel="aluno(s)"
+            fileName={`situacao-financeira-${turma.codigo || turma.nome}`}
+            poloId={turma.poloId}
+            tone="blue"
+            columns={[
+              { label: 'Aluno' },
+              { label: 'Matrícula' },
+              { label: 'Valores' },
+              { label: 'Pagas / total', align: 'center' },
+              { label: 'Status', align: 'center' },
+            ]}
+            rows={exportRows}
+            filters={[
+              { label: 'Turma', value: `${turma.nome}${turma.codigo ? ` (${turma.codigo})` : ''}` },
+              { label: 'Curso', value: turma.cursoNome },
+              { label: 'Unidade / Polo', value: turma.poloNome || 'Matriz' },
+            ]}
+            summaryCards={[
+              { label: 'Alunos listados', value: filteredAlunos.length, tone: 'blue' },
+              { label: 'Em dia', value: alunosEmDia, tone: 'emerald' },
+              { label: 'Com pendência', value: alunosComPendencia, tone: alunosComPendencia > 0 ? 'rose' : 'slate' },
+              { label: 'Parcelas pagas', value: `${parcelasPagas}/${parcelasPrevistas}`, tone: 'blue' },
+            ]}
+            footerNote={searchTerm
+              ? `Relatório filtrado pela busca: "${searchTerm}".`
+              : 'Relação completa dos alunos exibidos na situação financeira da turma.'}
+          />
         </div>
       </div>
 
