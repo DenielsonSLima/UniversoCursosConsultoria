@@ -1,25 +1,16 @@
 import React from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, PenLine, Upload } from 'lucide-react';
 import { DiarioTemplate } from '../diarios.service';
-import { DiarioSignatureRole, DiarioUploadKind } from '../diarios-editor.types';
+import { DiarioUploadKind } from '../diarios-editor.types';
 
 interface DiarioBackCoverSettingsPanelProps {
-  applyCentralSignature: (slot: 1 | 2, roleId: DiarioSignatureRole) => void;
   contracapaCustomImageRef: React.RefObject<HTMLInputElement | null>;
   form: DiarioTemplate;
   setForm: React.Dispatch<React.SetStateAction<DiarioTemplate>>;
   uploading: DiarioUploadKind | null;
 }
 
-const signatureRoles = [
-  { id: 'diretoriaGeral', label: 'Diretoria' },
-  { id: 'secretaria', label: 'Secretaria' },
-  { id: 'coordenacao', label: 'Coordenação' },
-  { id: 'financeiro', label: 'Financeiro' },
-] as const;
-
 const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> = ({
-  applyCentralSignature,
   contracapaCustomImageRef,
   form,
   setForm,
@@ -55,30 +46,16 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
       />
     </label>
 
-    <SignatureSettings
-      cargo={form.diretorCargo || ''}
-      cargoPlaceholder="Ex: Diretor Geral"
-      name={form.diretorNome || ''}
-      namePlaceholder="Ex: Prof. Denielson S. Lima"
-      onCargoChange={(value) => setForm({ ...form, diretorCargo: value })}
-      onNameChange={(value) => setForm({ ...form, diretorNome: value })}
-      onSelectRole={(roleId) => applyCentralSignature(1, roleId)}
-      selectedRole={form.diretorAssinaturaRole}
-      slot={1}
-      title="ASSINATURA 1 (ESQUERDA)"
-    />
-    <SignatureSettings
-      cargo={form.secretarioCargo || ''}
-      cargoPlaceholder="Ex: Secretária Acadêmica"
-      name={form.secretarioNome || ''}
-      namePlaceholder="Ex: Maria Eduarda Santos"
-      onCargoChange={(value) => setForm({ ...form, secretarioCargo: value })}
-      onNameChange={(value) => setForm({ ...form, secretarioNome: value })}
-      onSelectRole={(roleId) => applyCentralSignature(2, roleId)}
-      selectedRole={form.secretarioAssinaturaRole}
-      slot={2}
-      title="ASSINATURA 2 (DIREITA)"
-    />
+    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+      <div className="mb-2 flex items-center gap-2 text-blue-800">
+        <PenLine size={15} />
+        <p className="text-[10px] font-black uppercase tracking-widest">Assinaturas manuais da contracapa</p>
+      </div>
+      <p className="text-[10px] font-semibold leading-relaxed text-blue-700">
+        A impressão usa duas linhas fixas e vazias: <strong>ASSINATURA DO PROFESSOR</strong> e{' '}
+        <strong>ASSINATURA DO COORDENADOR DO CURSO</strong>.
+      </p>
+    </div>
 
     <div className="border-t border-slate-100 pt-3 space-y-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-700">LOGOTIPOS E IMAGENS</p>
@@ -106,77 +83,6 @@ const DiarioBackCoverSettingsPanel: React.FC<DiarioBackCoverSettingsPanelProps> 
         onChange={(event) => setForm({ ...form, qrCodeSize: parseInt(event.target.value) })}
         className="w-full accent-blue-600"
       />
-    </div>
-  </div>
-);
-
-interface SignatureSettingsProps {
-  cargo: string;
-  cargoPlaceholder: string;
-  name: string;
-  namePlaceholder: string;
-  onCargoChange: (value: string) => void;
-  onNameChange: (value: string) => void;
-  onSelectRole: (roleId: DiarioSignatureRole) => void;
-  selectedRole?: DiarioSignatureRole | null;
-  slot: 1 | 2;
-  title: string;
-}
-
-const SignatureSettings: React.FC<SignatureSettingsProps> = ({
-  cargo,
-  cargoPlaceholder,
-  name,
-  namePlaceholder,
-  onCargoChange,
-  onNameChange,
-  onSelectRole,
-  selectedRole,
-  slot,
-  title,
-}) => (
-  <div className="border-t border-slate-100 pt-3 space-y-3">
-    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700">{title}</p>
-    <div className="grid gap-2">
-      <label className="block">
-        <span className="mb-0.5 block text-[9px] font-bold text-slate-400 uppercase">Nome do Assinante</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-          placeholder={namePlaceholder}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-blue-400 focus:bg-white"
-        />
-      </label>
-      <label className="block">
-        <span className="mb-0.5 block text-[9px] font-bold text-slate-400 uppercase">Cargo / Função</span>
-        <input
-          type="text"
-          value={cargo}
-          onChange={(event) => onCargoChange(event.target.value)}
-          placeholder={cargoPlaceholder}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-blue-400 focus:bg-white"
-        />
-      </label>
-    </div>
-    <div className="flex flex-col gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-      <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">USAR ASSINATURA CENTRAL</span>
-      <div className="grid grid-cols-2 gap-1">
-        {signatureRoles.map((role) => (
-          <button
-            key={`s${slot}-${role.id}`}
-            type="button"
-            onClick={() => onSelectRole(role.id)}
-            className={`py-1 px-1.5 rounded-lg border text-[9px] font-bold transition-all truncate ${
-              selectedRole === role.id
-                ? 'bg-blue-600 border-blue-600 text-white shadow-sm font-black'
-                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
-            }`}
-          >
-            {role.label}
-          </button>
-        ))}
-      </div>
     </div>
   </div>
 );
