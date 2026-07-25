@@ -10,6 +10,43 @@ export const handleDeletePartner = async (
   const shouldDeleteAuthUser = ["Aluno", "Professor"].includes(partner.tipo) &&
     Boolean(email);
   let authUserDeleted = false;
+  let authUserBefore: any = null;
+
+  const { count: documentHistoryCount, error: documentHistoryError } =
+    await admin
+      .from("documentos_aluno_lotes")
+      .select("id", { count: "exact", head: true })
+      .eq("aluno_id", partner.id);
+  if (documentHistoryError) {
+    return json({
+      success: false,
+      error:
+        "Não foi possível verificar o histórico documental antes da exclusão.",
+    }, 500);
+  }
+
+  if ((documentHistoryCount || 0) > 0) {
+    const { error: deactivateError } = await admin
+      .from("parceiros")
+      .update({ status: "INATIVO" })
+      .eq("id", partner.id);
+    if (deactivateError) {
+      return json({
+        success: false,
+        error: deactivateError.message ||
+          "Não foi possível inativar o parceiro com histórico documental.",
+      }, 500);
+    }
+    return json({
+      success: true,
+      action: "deactivate-partner",
+      partnerDeleted: false,
+      partnerDeactivated: true,
+      authUserDeleted: false,
+      message:
+        "Parceiro inativado. O cadastro, o login e o histórico documental foram preservados para auditoria.",
+    });
+  }
 
   if (shouldDeleteAuthUser) {
     if (email === gestorEmail) {
@@ -20,9 +57,8 @@ export const handleDeletePartner = async (
       }, 400);
     }
 
-    let authUser: any;
     try {
-      authUser = await findAuthUserByEmail(admin, email);
+      authUserBefore = await findAuthUserByEmail(admin, email);
     } catch (error) {
       return json({
         success: false,
@@ -31,22 +67,11 @@ export const handleDeletePartner = async (
           : "Não foi possível localizar o usuário no Supabase Auth.",
       }, 500);
     }
-
-    if (authUser?.id) {
-      const { error: deleteAuthError } = await admin.auth.admin.deleteUser(
-        authUser.id,
-      );
-      if (deleteAuthError) {
-        return json({
-          success: false,
-          error: deleteAuthError.message ||
-            "Não foi possível excluir o usuário no Supabase Auth.",
-        }, 500);
-      }
-      authUserDeleted = true;
-    }
   }
 
+  // O banco executa a remoção conservadora do Auth no mesmo DELETE de
+  // parceiros. A ordem é intencional: se alguma FK de auditoria bloquear a
+  // exclusão, o usuário continua com acesso e não fica órfão.
   const { error: deletePartnerError } = await admin
     .from("parceiros")
     .delete()
@@ -56,8 +81,19 @@ export const handleDeletePartner = async (
     return json({
       success: false,
       error: deletePartnerError.message ||
-        "Não foi possível excluir o parceiro.",
+        "Não foi possível excluir o parceiro. Arquive e exclua os documentos administrativos antes de tentar novamente.",
     }, 500);
+  }
+
+  if (authUserBefore?.id) {
+    try {
+      const authUserAfter = await findAuthUserByEmail(admin, email);
+      authUserDeleted = !authUserAfter;
+    } catch {
+      // A exclusão principal já foi confirmada. Uma falha apenas na leitura de
+      // verificação não deve transformar o resultado transacional em erro.
+      authUserDeleted = false;
+    }
   }
 
   return json({
@@ -68,7 +104,7 @@ export const handleDeletePartner = async (
     message: shouldDeleteAuthUser
       ? authUserDeleted
         ? "Parceiro e usuário de autenticação excluídos com sucesso."
-        : "Parceiro excluído. Nenhum usuário correspondente foi encontrado no Supabase Auth."
+        : "Parceiro excluído. O usuário de autenticação foi preservado pelas regras de vínculo."
       : "Parceiro excluído com sucesso.",
   });
 };

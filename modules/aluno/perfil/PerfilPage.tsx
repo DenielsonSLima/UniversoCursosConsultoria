@@ -11,6 +11,7 @@ import { PerfilPageProps, PerfilTabId, PerfilUpdatePayload } from './perfil.type
 import { alunoVacinasService } from '../../shared/vacinas/vacinas.service';
 import { SaveAlunoVacinaInput } from '../../shared/vacinas/vacinas.types';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
+import { useDocumentosAlunoRealtime } from '../../shared/documentos-aluno/use-documentos-aluno-realtime';
 
 const tabs: Array<{ id: PerfilTabId; label: string; icon: React.ReactNode }> = [
   { id: 'perfil', label: 'Meu perfil', icon: <User size={15} /> },
@@ -29,6 +30,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<PerfilTabId>(initialTab);
+  useDocumentosAlunoRealtime(alunoId);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -39,7 +41,13 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
     queryFn: () => alunoPerfilService.getProfile(alunoId),
   });
 
-  const { data: documentos = [], isLoading: loadingDocs } = useQuery({
+  const {
+    data: documentosPainel,
+    isLoading: loadingDocs,
+    isError: documentsError,
+    error: documentsQueryError,
+    refetch: refetchDocuments,
+  } = useQuery({
     queryKey: alunoPerfilKeys.documents(alunoId),
     queryFn: () => alunoPerfilService.getDocuments(alunoId),
   });
@@ -76,8 +84,8 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   });
 
   const uploadDocumentMutation = useMutation({
-    mutationFn: ({ docName, file }: { docName: string; file: File }) =>
-      alunoPerfilService.uploadDocument(alunoId, docName, file),
+    mutationFn: ({ documentoId, files }: { documentoId: string; files: File[] }) =>
+      alunoPerfilService.uploadSeparateDocuments(documentoId, files),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
       toast.success('Documento enviado', 'A secretaria fará a homologação do arquivo.', {
@@ -93,6 +101,72 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
         avatarName: profile?.nomeCompleto || profile?.nome,
         contextLabel: 'Documentos do aluno',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
+    },
+  });
+
+  const uploadPdfMutation = useMutation({
+    mutationFn: ({ documentoIds, file }: { documentoIds: string[]; file: File }) =>
+      alunoPerfilService.uploadConsolidatedPdf(documentoIds, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
+      toast.success('PDF recebido', 'A secretaria organizará as páginas de cada documento.', {
+        avatarUrl: profile?.foto,
+        avatarName: profile?.nomeCompleto || profile?.nome,
+        contextLabel: 'Documentos do aluno',
+      });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error(
+        'PDF não enviado',
+        error instanceof Error ? error.message : 'Revise o arquivo e tente novamente.',
+        {
+          avatarUrl: profile?.foto,
+          avatarName: profile?.nomeCompleto || profile?.nome,
+          contextLabel: 'Documentos do aluno',
+        },
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
+    },
+  });
+
+  const cancelDocumentBatchMutation = useMutation({
+    mutationFn: ({
+      loteId,
+      arquivos,
+    }: {
+      loteId: string;
+      arquivos: Array<{ bucket: string; path: string }>;
+    }) => alunoPerfilService.cancelDocumentBatch(loteId, arquivos),
+    onSuccess: () => {
+      toast.success(
+        'Envio cancelado',
+        'O envio incompleto foi liberado e você pode começar novamente.',
+        {
+          avatarUrl: profile?.foto,
+          avatarName: profile?.nomeCompleto || profile?.nome,
+          contextLabel: 'Documentos do aluno',
+        },
+      );
+    },
+    onError: (error) => {
+      toast.error(
+        'Não foi possível concluir a limpeza',
+        error instanceof Error ? error.message : 'Atualize a tela e tente novamente.',
+        {
+          avatarUrl: profile?.foto,
+          avatarName: profile?.nomeCompleto || profile?.nome,
+          contextLabel: 'Documentos do aluno',
+        },
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: alunoPerfilKeys.documents(alunoId) });
     },
   });
 
@@ -142,7 +216,27 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
     },
   });
 
-  if (loadingProfile || loadingDocs || loadingVacinaContexts || loadingVacinas) {
+  if (documentsError) {
+    return (
+      <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-black text-red-700">Não foi possível carregar seus documentos.</p>
+        <p className="mt-2 text-xs font-medium text-slate-500">
+          {documentsQueryError instanceof Error
+            ? documentsQueryError.message
+            : 'Tente novamente em alguns instantes.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => void refetchDocuments()}
+          className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  if (loadingProfile || loadingDocs || loadingVacinaContexts || loadingVacinas || !documentosPainel) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
@@ -188,9 +282,37 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
 
       {activeTab === 'documentos' && (
         <PerfilDocumentosTab
-          documentos={documentos}
-          uploading={uploadDocumentMutation.isPending}
-          onUpload={(input) => uploadDocumentMutation.mutate(input)}
+          painel={documentosPainel}
+          cancellingLotId={
+            cancelDocumentBatchMutation.isPending
+              ? cancelDocumentBatchMutation.variables?.loteId || null
+              : null
+          }
+          uploadingKey={
+            uploadPdfMutation.isPending
+              ? 'pdf_unico'
+              : uploadDocumentMutation.isPending
+                ? uploadDocumentMutation.variables?.documentoId || null
+                : null
+          }
+          onUploadSeparado={(documentoId, files) =>
+            uploadDocumentMutation.mutateAsync({ documentoId, files })}
+          onUploadPdf={(file) => {
+            const blockedDocumentIds = new Set(
+              documentosPainel.lotesPdf
+                .filter((lote) =>
+                  ['preparando', 'aguardando_mapeamento'].includes(lote.status))
+                .flatMap((lote) => lote.documentoIds),
+            );
+            const documentoIds = documentosPainel.itens
+              .filter((item) =>
+                ['nao_enviado', 'recusado'].includes(item.status)
+                && !blockedDocumentIds.has(item.id))
+              .map((item) => item.id);
+            return uploadPdfMutation.mutateAsync({ documentoIds, file });
+          }}
+          onCancelLote={(loteId, arquivos) =>
+            cancelDocumentBatchMutation.mutateAsync({ loteId, arquivos })}
         />
       )}
 

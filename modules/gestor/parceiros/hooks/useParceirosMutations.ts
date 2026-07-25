@@ -164,7 +164,10 @@ export const useParceirosMutations = ({
     mutationFn: (id: string) => parceirosService.delete(id),
     onSuccess: (result: any) => {
       invalidatePartners();
-      toast.success('Parceiro excluído!', result?.message || 'O registro foi removido com sucesso.');
+      toast.success(
+        result?.partnerDeactivated ? 'Parceiro inativado' : 'Parceiro excluído!',
+        result?.message || 'A operação foi concluída com sucesso.',
+      );
       setDeletingParceiro(null);
     },
     onError: (error: any) => toast.error('Erro ao excluir', error?.message || 'Não foi possível remover o registro.')

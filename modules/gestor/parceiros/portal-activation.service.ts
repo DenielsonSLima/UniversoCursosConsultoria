@@ -44,8 +44,9 @@ type InviteStudentResult = {
 
 type DeletePartnerResult = {
   success: boolean;
-  action?: 'delete-partner';
+  action?: 'delete-partner' | 'deactivate-partner';
   partnerDeleted?: boolean;
+  partnerDeactivated?: boolean;
   authUserDeleted?: boolean;
   message?: string;
 };

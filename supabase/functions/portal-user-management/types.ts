@@ -13,6 +13,7 @@ export type FunctionResponse = {
   action?: string;
   userId?: string | null;
   partnerDeleted?: boolean;
+  partnerDeactivated?: boolean;
   authUserDeleted?: boolean;
   inviteSent?: boolean;
   recoveryEmailSent?: boolean;
