@@ -15,7 +15,7 @@ import type {
   ViewMode,
 } from './modalidade-receber.types';
 import { formatEnrollment } from './modalidade-receber.enrollment';
-import { formatReceivableDate } from './modalidade-receber.utils';
+import { formatNextPendingDueDate } from './modalidade-receber.utils';
 
 interface ReceivablesListProps {
   viewMode: ViewMode;
@@ -204,7 +204,9 @@ export const ReceivablesList: React.FC<ReceivablesListProps> = ({
                         </span>
                         <span className="text-right text-xs font-bold text-slate-600">
                           <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Próximo vencimento</span>
-                          <span className="text-[10px] text-slate-400">{group.nextDue ? formatReceivableDate(group.nextDue) : '—'}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {formatNextPendingDueDate(group.pendingCount, group.nextDue)}
+                          </span>
                         </span>
                       </button>
                     </td>
