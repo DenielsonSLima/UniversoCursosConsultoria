@@ -680,6 +680,8 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
     cliente_id: alunoId,
     tipo_lancamento: "MATRICULA",
     forma_pagamento: "BOLETO",
+    // Reproduz o retorno real que removeu zeros à esquerda no checkout.
+    gateway_payment_id: String(Number(NOSSO_NUMERO)),
   });
   const admin = fakeAdmin(receivable);
   admin.tables.inscricoes_online = [{
@@ -691,7 +693,7 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
     receivable_id: RECEIVABLE_ID,
     gateway_provider: "banese_card",
     gateway_environment: "sandbox",
-    gateway_payment_id: NOSSO_NUMERO,
+    gateway_payment_id: String(Number(NOSSO_NUMERO)),
     status: "AGUARDANDO_PAGAMENTO",
     forma_pagamento: "BOLETO",
     pago_em: null,
@@ -724,13 +726,22 @@ Deno.test("liquidacao canonica Banese libera curso EAD automaticamente", async (
   });
 
   assert.equal(receivable.status, "PAGO");
+  assert.equal(receivable.gateway_payment_id, NOSSO_NUMERO);
   assert.equal(receivable.data_pagamento, "2026-08-16");
   assert.equal(admin.tables.inscricoes_online[0].status, "PAGO");
+  assert.equal(
+    admin.tables.inscricoes_online[0].gateway_payment_id,
+    NOSSO_NUMERO,
+  );
   assert.equal(
     admin.tables.inscricoes_online[0].pago_em,
     "2026-08-16",
   );
   assert.equal(admin.tables.matriculas[0].status, "ATIVO");
+  assert.equal(
+    admin.tables.payment_gateway_transactions[0].remote_payment_id,
+    NOSSO_NUMERO,
+  );
 });
 
 Deno.test("rejeita liquidacao fora dos termos financeiros confirmados", async () => {
