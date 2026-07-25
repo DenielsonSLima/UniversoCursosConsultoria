@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reconcileBaneseReceivable } from "../gateways/api/banese.ts";
+import { normalizeGatewayPaymentIdentity } from "../gateways/online-inscription.ts";
 import { syncRouteAwareFutureInstallments } from "../asaas/api/route-aware-future-sync.ts";
 import { requireGatewayEnvironment } from "../gateways/api/environment.ts";
 
@@ -135,6 +136,107 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const {
+    data: pendingPaidProjections,
+    error: pendingPaidProjectionsError,
+  } =
+    await admin
+      .from("inscricoes_online")
+      .select("receivable_id, gateway_payment_id")
+      .eq("gateway_provider", "banese_card")
+      .neq("status", "PAGO")
+      .not("receivable_id", "is", null)
+      .order("updated_at", { ascending: true })
+      .limit(MAX_BATCH_SIZE * 5);
+  if (pendingPaidProjectionsError) {
+    console.error("banese paid projection retry query failed", {
+      message: safeError(pendingPaidProjectionsError),
+    });
+  }
+
+  const projectionByReceivableId = new Map(
+    (pendingPaidProjections || []).map((item) => [
+      String(item.receivable_id),
+      item,
+    ]),
+  );
+  const pendingProjectionReceivableIds = [
+    ...projectionByReceivableId.keys(),
+  ];
+  const { data: paidProjectionQueue, error: paidProjectionQueueError } =
+    pendingProjectionReceivableIds.length
+      ? await admin
+        .from("contas_receber")
+        .select("id, gateway_payment_id, gateway_boleto_nosso_numero")
+        .in("id", pendingProjectionReceivableIds)
+        .eq("status", "PAGO")
+        .eq("gateway_provider", "banese_card")
+        .limit(MAX_BATCH_SIZE * 5)
+      : { data: [], error: null };
+  if (paidProjectionQueueError) {
+    console.error("banese paid receivable retry query failed", {
+      message: safeError(paidProjectionQueueError),
+    });
+  }
+
+  const repairablePaidProjectionIds = (paidProjectionQueue || [])
+    .filter((item) => {
+      const receivablePaymentId = normalizeGatewayPaymentIdentity(
+        "banese_card",
+        item.gateway_payment_id,
+      );
+      const ourNumber = normalizeGatewayPaymentIdentity(
+        "banese_card",
+        item.gateway_boleto_nosso_numero,
+      );
+      const inscriptionPaymentId = normalizeGatewayPaymentIdentity(
+        "banese_card",
+        projectionByReceivableId.get(String(item.id))?.gateway_payment_id,
+      );
+      return Boolean(
+        receivablePaymentId &&
+          ourNumber &&
+          inscriptionPaymentId &&
+          receivablePaymentId === ourNumber &&
+          inscriptionPaymentId === ourNumber,
+      );
+    })
+    .slice(0, MAX_BATCH_SIZE)
+    .map((item) => String(item.id));
+
+  let projectionRetried = 0;
+  let projectionRecovered = 0;
+  for (const receivableId of repairablePaidProjectionIds) {
+    projectionRetried += 1;
+    try {
+      await reconcileBaneseReceivable(admin, receivableId, {
+        syncFutureInstallments: (matriculaId, environment) =>
+          syncRouteAwareFutureInstallments(
+            admin,
+            matriculaId,
+            environment,
+          ),
+      });
+      projectionRecovered += 1;
+    } catch (error) {
+      const message = safeError(error);
+      console.error("banese paid projection retry failed", {
+        receivableId,
+        message,
+      });
+      await admin
+        .from("contas_receber")
+        .update({
+          gateway_last_error:
+            `Pagamento Banese conciliado; inscricao online pendente: ${message}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", receivableId)
+        .eq("status", "PAGO")
+        .eq("gateway_provider", "banese_card");
+    }
+  }
+
   const { data: futureSyncQueue, error: futureSyncQueueError } = await admin
     .from("contas_receber")
     .select("id, matricula_id, gateway_environment")
@@ -207,6 +309,8 @@ Deno.serve(async (req: Request) => {
     reconciled,
     paid,
     failed,
+    projectionRetried,
+    projectionRecovered,
     futureRetried,
     futureRecovered,
   });
