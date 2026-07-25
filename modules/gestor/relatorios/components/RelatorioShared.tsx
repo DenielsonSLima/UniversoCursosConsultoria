@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
 import DocumentHeader from '../../components/DocumentHeader';
+import ReportWatermark from './ReportWatermark';
 
 export const MODALIDADE_LABELS: Record<string, string> = {
   todos: 'Todas',
@@ -130,25 +131,7 @@ export const A4ReportShell: React.FC<{
         className="bg-white w-[210mm] min-w-[210mm] min-h-[297mm] shadow-lg p-10 relative flex flex-col print:shadow-none print:p-0 print:w-auto print:max-w-none print:min-h-0 text-slate-800 shrink-0"
         id="print-area"
       >
-        {polo?.watermark_url ? (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-            <img
-              src={polo.watermark_url}
-              alt="Watermark"
-              style={{
-                opacity: polo.watermark_opacity ?? 0.1,
-                width: `${polo.watermark_scale ?? 50}%`,
-                transform: 'rotate(-45deg)',
-              }}
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none opacity-[0.03]">
-            <h1 className="text-6xl font-black rotate-[-45deg] tracking-widest text-slate-900 text-center">
-              UNIVERSO CURSOS E CONSULTORIA
-            </h1>
-          </div>
-        )}
+        <ReportWatermark polo={polo} orientation="portrait" />
 
         <DocumentHeader
           company={company}
