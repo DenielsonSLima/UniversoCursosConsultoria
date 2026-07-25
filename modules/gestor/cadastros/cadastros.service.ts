@@ -43,7 +43,7 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   },
   cartao: {
     aceitar: true,
-    maxParcelas: 2,
+    maxParcelas: 1,
     aplicarDescontoPontualidade: false,
     repassarCustoParcelamento: false
   },
