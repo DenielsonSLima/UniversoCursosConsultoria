@@ -3,7 +3,6 @@ import type React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../../lib/supabase';
 import { useToast } from '../../../../parceiros/components/shared/ToastNotification';
-import { assinaturasService, AssinaturasData } from '../../../../configuracoes/assinaturas/assinaturas.service';
 import {
   CapaCampo,
   DEFAULT_CAPA_CAMPOS,
@@ -11,7 +10,7 @@ import {
   DiarioTemplate,
   diariosService,
 } from '../diarios.service';
-import { DiarioEditorTab, DiarioSignatureRole, DiarioUploadKind } from '../diarios-editor.types';
+import { DiarioEditorTab, DiarioUploadKind } from '../diarios-editor.types';
 
 const queryKeys = {
   cursos: ['diario-templates', 'cursos'] as const,
@@ -50,11 +49,6 @@ export const useDiarioTemplateEditor = () => {
       if (data?.id) return diariosService.getLandscapeWatermark(data.id);
       return null;
     },
-  });
-
-  const { data: centralSignatures } = useQuery({
-    queryKey: ['central-signatures'],
-    queryFn: () => assinaturasService.getSignatures(),
   });
 
   useEffect(() => {
@@ -215,44 +209,6 @@ export const useDiarioTemplateEditor = () => {
     });
   };
 
-  const applyCentralSignature = (slot: 1 | 2, roleId: DiarioSignatureRole) => {
-    if (!centralSignatures) return;
-    const url = centralSignatures[roleId] || '';
-    const nomeKey = `${roleId}Nome` as keyof AssinaturasData;
-    const cargoKey = `${roleId}Cargo` as keyof AssinaturasData;
-    const nome = (centralSignatures[nomeKey] as string) || '';
-    const cargo = (centralSignatures[cargoKey] as string) || '';
-
-    if (!url) {
-      toast.error('Assinatura não cadastrada', 'Adicione a imagem de assinatura correspondente em Configurações.');
-      return;
-    }
-
-    setForm((previous) => {
-      const updated: Partial<DiarioTemplate> = {};
-      if (slot === 1) {
-        updated.diretorNome = nome || previous.diretorNome;
-        updated.diretorCargo = cargo || previous.diretorCargo;
-        updated.diretorAssinaturaRole = roleId;
-      } else {
-        updated.secretarioNome = nome || previous.secretarioNome;
-        updated.secretarioCargo = cargo || previous.secretarioCargo;
-        updated.secretarioAssinaturaRole = roleId;
-      }
-
-      const fieldId = slot === 1 ? 'signature_diretor' : 'signature_secretario';
-      const currentFields = previous.contracapaCampos || [];
-      const exists = currentFields.some((field) => field.id === fieldId);
-      const nextFields = exists
-        ? currentFields.map((field) => (field.id === fieldId ? { ...field, imageUrl: url, visible: true } : field))
-        : [...currentFields, createSignatureField(slot, fieldId, url)];
-
-      setSelectedFieldId(fieldId);
-      return { ...previous, ...updated, contracapaCampos: nextFields };
-    });
-    toast.success('Assinatura aplicada', 'O nome, cargo e a assinatura digitalizada foram sincronizados e posicionados.');
-  };
-
   const capaCampos = form.capaCampos || DEFAULT_CAPA_CAMPOS;
   const currentFields = activeTab === 'capa' ? capaCampos : (form.contracapaCampos || []);
   const currentField = currentFields.find((field) => field.id === selectedFieldId);
@@ -260,7 +216,7 @@ export const useDiarioTemplateEditor = () => {
   const getPxFontSize = (ptSize: number) => (ptSize * 1.333 * canvasWidth) / 1122;
 
   return {
-    activeTab, applyCentralSignature, canvasRef, capaCampos, capaInputRef, contracapaCustomImageRef,
+    activeTab, canvasRef, capaCampos, capaInputRef, contracapaCustomImageRef,
     contracapaInputRef, cursos, currentField, draggingField, form, getPxFontSize, handleMouseDown,
     handleUpload, loadingCursos, loadingTemplate, previewWatermark, removeToast, saveMutation,
     selectedCurso, selectedFieldId, selectedModality, setActiveTab, setForm, setSelectedCurso,
@@ -268,19 +224,3 @@ export const useDiarioTemplateEditor = () => {
     snapToGrid, toasts, updateFieldProperty, uploading,
   };
 };
-
-const createSignatureField = (slot: 1 | 2, fieldId: string, url: string): CapaCampo => ({
-  id: fieldId,
-  label: slot === 1 ? 'Assinatura Diretor' : 'Assinatura Secretário',
-  valuePlaceholder: '',
-  x: slot === 1 ? 23 : 65,
-  y: 72,
-  width: 15,
-  fontSize: 10,
-  visible: true,
-  color: '#071a33',
-  bold: false,
-  isImage: true,
-  imageUrl: url,
-  mixBlendMode: 'multiply',
-});
