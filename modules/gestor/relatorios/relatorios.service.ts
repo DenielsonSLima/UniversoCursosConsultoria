@@ -1,4 +1,5 @@
 import { supabase } from '../../../lib/supabase';
+import { formatMatricula } from '../../../lib/academicUtils';
 
 export type RelatorioModalidade = 'todos' | 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
 export type RelatorioFinanceiroStatus = 'todos' | 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'CANCELADO';
@@ -30,6 +31,36 @@ export interface RelatorioFinanceiroMensalItem {
   diasAtraso: number;
   asaasStatus?: string | null;
   asaasInvoiceUrl?: string | null;
+}
+
+export type RelatorioFinanceiroPreEstagioSituacao = 'QUITADO' | 'PENDENTE' | 'CADASTRO_INCOMPLETO';
+
+export interface RelatorioFinanceiroPreEstagioItem {
+  matriculaId: string;
+  alunoId: string;
+  alunoNome: string;
+  alunoCpf: string;
+  matricula: string;
+  parcelasPrevistas: number;
+  parcelasRegistradas: number;
+  parcelasPagas: number;
+  parcelasEmAberto: number;
+  parcelasVencidas: number;
+  parcelasNaoGeradas: number;
+  valorEmAberto: number;
+  situacao: RelatorioFinanceiroPreEstagioSituacao;
+}
+
+export interface RelatorioFinanceiroPreEstagioData {
+  turma: {
+    id: string;
+    nome: string;
+    codigo: string;
+    cursoNome: string;
+    modalidade: string;
+    parcelasPrevistas: number;
+  };
+  alunos: RelatorioFinanceiroPreEstagioItem[];
 }
 
 export interface RelatorioMatriculaAcademicaItem {
@@ -171,6 +202,117 @@ export const relatoriosService = {
         asaasInvoiceUrl: row.asaas_invoice_url,
       };
     });
+  },
+
+  async getFinanceiroPreEstagioTurma(turmaId: string): Promise<RelatorioFinanceiroPreEstagioData> {
+    const { data: matriculas, error: matriculasError } = await supabase
+      .from('matriculas')
+      .select(`
+        id,
+        aluno_id,
+        data_matricula,
+        status,
+        parceiros!inner(nome, cpf_cnpj, polo_id),
+        turmas!inner(
+          id, nome, codigo, qtd_parcelas, polo_id,
+          cursos!inner(nome, modalidade)
+        )
+      `)
+      .eq('turma_id', turmaId)
+      .in('status', ['ATIVO', 'ativo'])
+      .order('data_matricula', { ascending: true });
+
+    if (matriculasError) throw matriculasError;
+
+    const activeEnrollments = matriculas || [];
+    const enrollmentIds = activeEnrollments.map((row: any) => row.id);
+    const studentIds = activeEnrollments.map((row: any) => row.aluno_id);
+
+    let receivables: any[] = [];
+    if (enrollmentIds.length) {
+      const { data, error } = await supabase
+        .from('contas_receber')
+        .select('id, matricula_id, cliente_id, status, parcela_numero, data_vencimento, valor, valor_pago')
+        .eq('turma_id', turmaId)
+        .eq('tipo_lancamento', 'PARCELA')
+        .or(`matricula_id.in.(${enrollmentIds.join(',')}),cliente_id.in.(${studentIds.join(',')})`)
+        .order('parcela_numero', { ascending: true });
+
+      if (error) throw error;
+      receivables = data || [];
+    }
+
+    const firstEnrollment: any = activeEnrollments[0];
+    const turma = firstEnrollment?.turmas || {};
+    const curso = turma.cursos || {};
+    const configuredInstallments = Math.max(0, Number(turma.qtd_parcelas || 0));
+    const today = new Date().toISOString().slice(0, 10);
+    const finalStatuses = new Set(['CANCELADO', 'ESTORNADO', 'DEVOLVIDO']);
+
+    const alunos = activeEnrollments.map((row: any): RelatorioFinanceiroPreEstagioItem => {
+      const aluno = row.parceiros || {};
+      const studentReceivables = receivables.filter((receivable: any) => (
+        receivable.matricula_id === row.id
+        || (!receivable.matricula_id && receivable.cliente_id === row.aluno_id)
+      ));
+      const validReceivables = studentReceivables.filter((receivable: any) => (
+        !finalStatuses.has(String(receivable.status || '').toUpperCase())
+      ));
+      const parcelasPagas = validReceivables.filter((receivable: any) => (
+        String(receivable.status || '').toUpperCase() === 'PAGO'
+      )).length;
+      const parcelasEmAberto = validReceivables.length - parcelasPagas;
+      const parcelasVencidas = validReceivables.filter((receivable: any) => {
+        const status = String(receivable.status || '').toUpperCase();
+        return status === 'VENCIDO'
+          || (status === 'PENDENTE' && Boolean(receivable.data_vencimento) && receivable.data_vencimento < today);
+      }).length;
+      const parcelasPrevistas = Math.max(configuredInstallments, validReceivables.length);
+      const parcelasNaoGeradas = Math.max(0, parcelasPrevistas - validReceivables.length);
+      const valorEmAberto = validReceivables
+        .filter((receivable: any) => String(receivable.status || '').toUpperCase() !== 'PAGO')
+        .reduce(
+          (total: number, receivable: any) => total + Math.max(
+            0,
+            Number(receivable.valor || 0) - Number(receivable.valor_pago || 0),
+          ),
+          0,
+        );
+
+      const situacao: RelatorioFinanceiroPreEstagioSituacao = parcelasPrevistas === 0 || parcelasNaoGeradas > 0
+        ? 'CADASTRO_INCOMPLETO'
+        : parcelasEmAberto > 0
+          ? 'PENDENTE'
+          : 'QUITADO';
+
+      return {
+        matriculaId: row.id,
+        alunoId: row.aluno_id,
+        alunoNome: aluno.nome || 'Aluno',
+        alunoCpf: aluno.cpf_cnpj || '',
+        matricula: formatMatricula(row.id, row.data_matricula, aluno.polo_id || turma.polo_id),
+        parcelasPrevistas,
+        parcelasRegistradas: validReceivables.length,
+        parcelasPagas,
+        parcelasEmAberto,
+        parcelasVencidas,
+        parcelasNaoGeradas,
+        valorEmAberto,
+        situacao,
+      };
+    });
+
+    return {
+      turma: {
+        id: turma.id || turmaId,
+        nome: turma.nome || turma.codigo || 'Turma',
+        codigo: turma.codigo || '',
+        cursoNome: curso.nome || 'Curso',
+        modalidade: curso.modalidade || 'TECNICO',
+        parcelasPrevistas: configuredInstallments,
+      },
+      alunos: alunos.sort((a, b) => a.alunoNome.localeCompare(b.alunoNome, 'pt-BR')),
+    };
   },
 
   async getMatriculasAcademicas(filters: {
