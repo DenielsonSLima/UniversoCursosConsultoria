@@ -2,6 +2,32 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.6.0-beta.3] - 2026-07-25
+
+### Adicionado
+
+- Atendimento WhatsApp com envio e recebimento de áudios e documentos, gravação pelo navegador e player com progresso, duração, busca e velocidade.
+- Transferência de conversas por setor e polo, respeitando o escopo de comunicação configurado para cada usuário.
+- Pesquisa de satisfação de 0 a 5 no encerramento, com finalização automática depois da resposta ou após uma hora sem retorno.
+- Fluxo comercial guiado por modalidade, área, curso e polo, evitando listas extensas de cursos para o possível aluno.
+
+### Alterado
+
+- A prontidão da Cloud API para envio passou a ser independente das credenciais de webhook exigidas para recebimento e coexistência.
+- O início de conversa passou a ocupar corretamente a área disponível e a preservar a visualização dos dados do aluno.
+- O robô passa a pausar quando a conversa é assumida ou transferida para atendimento humano.
+
+### Corrigido
+
+- Respostas de mídia da Meta agora identificam token temporário expirado em vez de mostrar somente erro genérico da Edge Function.
+- Mensagens de mídia recebidas deixaram de ser tratadas como respostas de texto pelo fluxo automático.
+- O webhook passou a preservar falhas de processamento e só marca o evento como processado depois da execução do fluxo.
+
+### Segurança
+
+- Operações humanas no WhatsApp falham de forma fechada quando o usuário restrito não possui polo ou tenta acessar outro polo ou setor.
+- Credenciais da Meta permanecem protegidas no Vault e não são expostas no frontend nem no histórico de mensagens.
+
 ## [0.6.0-beta.2] - 2026-07-25
 
 ### Alterado
