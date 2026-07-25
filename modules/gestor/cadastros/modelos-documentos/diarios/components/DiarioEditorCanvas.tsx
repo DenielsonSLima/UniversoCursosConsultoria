@@ -134,7 +134,12 @@ const DiarioEditorCanvas: React.FC<DiarioEditorCanvasProps> = ({
           <>
             <BackCoverValidationCard form={form} />
             {(form.contracapaCampos || [])
-              .filter((field) => field.visible && field.isImage)
+              .filter((field) =>
+                field.visible
+                && field.isImage
+                && field.id !== 'signature_diretor'
+                && field.id !== 'signature_secretario',
+              )
               .map((field) => (
                 <DraggableField
                   key={field.id}
@@ -287,17 +292,16 @@ const BackCoverValidationCard: React.FC<{ form: DiarioTemplate }> = ({ form }) =
       </div>
     </div>
     <div className="grid grid-cols-2 gap-8 text-center border-t border-[#071a33]/10 pt-2 text-[8px]">
-      <SignatureLine name={form.diretorNome} role={form.diretorCargo || 'Diretor(a) Geral'} />
-      <SignatureLine name={form.secretarioNome} role={form.secretarioCargo || 'Secretaria Acadêmica'} />
+      <SignatureLine label="ASSINATURA DO PROFESSOR" />
+      <SignatureLine label="ASSINATURA DO COORDENADOR DO CURSO" />
     </div>
   </div>
 );
 
-const SignatureLine: React.FC<{ name?: string; role: string }> = ({ name, role }) => (
+const SignatureLine: React.FC<{ label: string }> = ({ label }) => (
   <div className="flex flex-col items-center justify-end h-10">
     <div className="border-b border-slate-400 w-full mb-0.5" />
-    <p className="font-bold leading-none">{name || '—'}</p>
-    <p className="text-[6.5px] text-slate-500 uppercase font-black mt-0.5 leading-none">{role}</p>
+    <p className="text-[6.5px] font-black leading-none text-slate-500">{label}</p>
   </div>
 );
 
