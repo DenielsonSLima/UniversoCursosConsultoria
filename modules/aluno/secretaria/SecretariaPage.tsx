@@ -16,6 +16,7 @@ import { usePoloInstitutionalData } from '../../shared/polo-institutional/use-po
 import AcademicResultsModal from '../../shared/secretaria/AcademicResultsModal';
 import TemplateDocumentModal from '../../shared/secretaria/TemplateDocumentModal';
 import { secretariaAcademicResultsService } from '../../shared/secretaria/academic-results.service';
+import { selectDefaultAcademicModule } from '../../shared/secretaria/academic-results.modules';
 import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValidationUrl } from '../../shared/secretaria/document-template.helpers';
 import AlunoIdentityDocuments, { AlunoIdentityTab } from './components/AlunoIdentityDocuments';
 import AlunoSecretariaServicesPanel from './components/AlunoSecretariaServicesPanel';
@@ -44,6 +45,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const [internshipBadgeTemplate, setInternshipBadgeTemplate] = useState<any>(null);
   const [electionBadgeTemplate, setElectionBadgeTemplate] = useState<any>(null);
   const [bulletinOpen, setBulletinOpen] = useState(false);
+  const [selectedBulletinPeriodId, setSelectedBulletinPeriodId] = useState('');
   const [declarationOpen, setDeclarationOpen] = useState(false);
   const [irpfOpen, setIrpfOpen] = useState(false);
   const [selectedIrpfYear, setSelectedIrpfYear] = useState(getDefaultIrpfCalendarYear);
@@ -79,13 +81,47 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const badgeValidation = useDocumentValidationCode(identityEnrollment ? { type: 'cracha_estagio', enrollmentId: identityEnrollment.id } : null, tab === 'cracha' && eligibility.canEmitInternshipBadge);
   const declarationValidation = useDocumentValidationCode(declarationEnrollment ? { type: 'declaracao_matricula', enrollmentId: declarationEnrollment.id } : null, declarationOpen && eligibility.canEmitEnrollmentDeclaration);
 
-  const { data: academicResults = [] } = useQuery({
-    queryKey: ['secretaria', 'academic-results', 'self', alunoId, bulletinEnrollment?.turma_id],
-    queryFn: () => bulletinEnrollment?.turma_id
-      ? secretariaAcademicResultsService.getForAuthenticatedStudent(bulletinEnrollment.turma_id)
+  const bulletinTurmaId = bulletinEnrollment?.turma_id;
+  const bulletinModulesQuery = useQuery({
+    queryKey: ['secretaria', 'academic-modules', 'self', alunoId, bulletinTurmaId],
+    queryFn: () => bulletinTurmaId
+      ? secretariaAcademicResultsService.getAvailableModulesForAuthenticatedStudent(bulletinTurmaId)
       : Promise.resolve([]),
-    enabled: eligibility.canEmitBulletin && !!bulletinEnrollment?.turma_id,
+    enabled: bulletinOpen && eligibility.canEmitBulletin && !!bulletinTurmaId,
+    staleTime: 60_000,
   });
+  const bulletinModules = bulletinModulesQuery.data || [];
+  const selectedBulletinModule = bulletinModules.find(
+    (module) => module.periodId === selectedBulletinPeriodId,
+  );
+  const selectedBulletinDisciplineIds = selectedBulletinModule?.disciplines.map(
+    (discipline) => discipline.id,
+  ) || [];
+  const academicResultsQuery = useQuery({
+    queryKey: [
+      'secretaria',
+      'academic-results',
+      'self',
+      alunoId,
+      bulletinTurmaId,
+      selectedBulletinPeriodId,
+      selectedBulletinDisciplineIds,
+    ],
+    queryFn: () => bulletinTurmaId && selectedBulletinModule
+      ? secretariaAcademicResultsService.getForAuthenticatedStudent(
+        bulletinTurmaId,
+        selectedBulletinModule,
+      )
+      : Promise.resolve([]),
+    enabled: (
+      bulletinOpen
+      && eligibility.canEmitBulletin
+      && !!bulletinTurmaId
+      && !!selectedBulletinModule
+    ),
+    staleTime: 60_000,
+  });
+  const academicResults = academicResultsQuery.data || [];
   const { data: declarationTemplate } = useQuery({
     queryKey: ['print-declaracao-template', declarationPoloId],
     queryFn: () => declarationPoloId ? declaracaoService.getTemplate(declarationPoloId) : null,
@@ -122,6 +158,22 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     const defaultYear = getDefaultIrpfCalendarYear(irpfReleaseDate);
     setSelectedIrpfYear((year) => isIrpfYearReleased(year, irpfReleaseDate) ? year : defaultYear);
   }, [irpfReleaseDate]);
+  useEffect(() => {
+    if (!bulletinOpen || bulletinModulesQuery.isLoading) return;
+    const nextModule = selectDefaultAcademicModule(
+      bulletinModules,
+      selectedBulletinPeriodId,
+    );
+    setSelectedBulletinPeriodId(nextModule?.periodId || '');
+  }, [
+    bulletinModules,
+    bulletinModulesQuery.isLoading,
+    bulletinOpen,
+    selectedBulletinPeriodId,
+  ]);
+  useEffect(() => {
+    setSelectedBulletinPeriodId('');
+  }, [bulletinTurmaId]);
   useEffect(() => {
     void Promise.all([carteirinhaService.getTemplate(), crachaService.getTemplate(), crachaPeriodoEleitoralService.getTemplate()]).then(([card, badge, election]) => {
       setStudentCardTemplate(card || { corPrimaria: '#001a33', corSecundaria: '#3b82f6', textoFrente: 'CIE - Documento do Estudante', textoVerso: 'Uso pessoal e intransferível.', tipoCurso: 'Técnico', exibirRotulos: true });
@@ -181,7 +233,26 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
       <div className="flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 to-slate-900 p-5 text-white shadow-lg sm:flex-row sm:items-center sm:p-7"><div><span className="rounded-lg border border-blue-500/20 bg-blue-600/30 px-3 py-1 text-[9px] font-black uppercase tracking-wider text-blue-300">Secretaria Digital</span><h2 className="mt-1 text-xl font-black uppercase tracking-tight sm:text-2xl">Serviços Acadêmicos</h2><p className="text-xs font-medium text-slate-300">Emita declarações, faça solicitações e acesse seus documentos.</p></div><div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 font-mono font-bold"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Minha Matrícula</p><p className="mt-1.5 text-base tracking-widest text-white">{formattedEnrollment}</p></div></div>
       <AlunoIdentityDocuments tab={tab} canStudentCard={eligibility.canEmitStudentCard} canInternshipBadge={eligibility.canEmitInternshipBadge} canElectionBadge={electionAvailable} studentCardTemplate={studentCardTemplate} internshipBadgeTemplate={internshipBadgeTemplate} electionBadgeTemplate={electionBadgeTemplate} alunoData={alunoData} electionAlunoData={electionAlunoData} studentCardCode={cardValidation.data?.code} internshipBadgeCode={badgeValidation.data?.code} downloadingStudentCard={downloadingCard} onTabChange={setTab} onDownloadStudentCard={() => void onDownloadCard()} onPrintRegistered={printRegistered} />
       {tab === 'servicos' ? <AlunoSecretariaServicesPanel eligibility={eligibility} solicitacoes={solicitacoes} prazos={prazos} selectedType={selectedRequestType} submitting={createRequest.isPending} onSelectedTypeChange={setSelectedRequestType} onSubmit={(event) => { event.preventDefault(); if (eligibility.allowedRequests.includes(selectedRequestType)) createRequest.mutate(selectedRequestType); }} onOpenBulletin={() => setBulletinOpen(true)} onOpenDeclaration={() => setDeclarationOpen(true)} onOpenIrpf={onOpenIrpf} /> : null}
-      <AcademicResultsModal open={bulletinOpen} onClose={() => setBulletinOpen(false)} results={academicResults} courseName={bulletinEnrollment?.turmas?.cursos?.nome} classCode={bulletinEnrollment?.turmas?.codigo} poloName={bulletinEnrollment?.turmas?.polos?.nome} />
+      <AcademicResultsModal
+        open={bulletinOpen}
+        onClose={() => setBulletinOpen(false)}
+        results={academicResults}
+        courseName={bulletinEnrollment?.turmas?.cursos?.nome}
+        classCode={bulletinEnrollment?.turmas?.codigo}
+        poloName={bulletinEnrollment?.turmas?.polos?.nome}
+        modules={bulletinModules}
+        selectedPeriodId={selectedBulletinPeriodId}
+        onModuleChange={setSelectedBulletinPeriodId}
+        isLoading={bulletinModulesQuery.isLoading || academicResultsQuery.isLoading}
+        isError={bulletinModulesQuery.isError || academicResultsQuery.isError}
+        onRetry={() => {
+          if (bulletinModulesQuery.isError) {
+            void bulletinModulesQuery.refetch();
+            return;
+          }
+          void academicResultsQuery.refetch();
+        }}
+      />
       <TemplateDocumentModal open={declarationOpen && eligibility.canEmitEnrollmentDeclaration} onClose={() => setDeclarationOpen(false)} title="Declaração de Cursando" documentTitle="Declaração de Matrícula" printAreaId="print-area-declaracao" code={declarationValidation.data?.code || declarationCode} validationUrl={declarationUrl} template={declarationTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} onPrint={() => printRegistered(declarationValidation.data?.code, 'declaração')} />
       <TemplateDocumentModal open={irpfOpen} onClose={() => setIrpfOpen(false)} title="Declaração de Rendimentos (IRPF)" documentTitle="Declaração de Anuidade / Rendimentos Escolares" printAreaId="print-area-irpf" code={irpfValidation.data?.code || irpfCode} validationUrl={irpfUrl} template={irpfTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} accent="emerald" printDisabled={!irpfReleased || !irpfPayments.length} onPrint={() => printRegistered(irpfValidation.data?.code, 'declaração de IRPF')} beforeDocument={<div className="w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg print:hidden"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ano-calendário</p><select value={selectedIrpfYear} onChange={(event) => setSelectedIrpfYear(Number(event.target.value))} className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-[#001a33]">{irpfYearOptions.map((option) => <option key={option.year} value={option.year}>{option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}</option>)}</select></div>} />
       {toast ? <div className="fixed right-6 top-6 z-[9999]"><div className={`flex items-center gap-3 rounded-2xl border px-6 py-3.5 text-white shadow-2xl ${toast.type === 'success' ? 'bg-emerald-500/95' : toast.type === 'warning' ? 'bg-amber-500/95' : 'bg-red-500/95'}`}>{toast.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}<span className="text-xs font-black uppercase tracking-wider">{toast.message}</span></div></div> : null}
