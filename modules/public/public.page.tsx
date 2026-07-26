@@ -12,6 +12,12 @@ import Footer from './components/Footer';
 import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../login/portal-session';
 import { supabase } from '../../lib/supabase';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
+import {
+  clearOAuthReturnParams,
+  clearPendingOAuthReturn,
+  hasOAuthReturnInUrl,
+  readPendingOAuthReturn,
+} from '../shared/auth/oauth-return-state';
 import OpenTechnicalEnrollmentsSection from './landing-pages/cursos-tecnicos/components/OpenTechnicalEnrollmentsSection';
 
 const resolvePortalRoute = (profile: PortalAuthProfile) => {
@@ -27,15 +33,14 @@ const navigateToLoginWithError = (searchParams: URLSearchParams, errorCode: stri
   return `/login?${nextParams.toString()}`;
 };
 
-const hasOAuthReturnInUrl = () => (
-  window.location.search.includes('code=') ||
-  window.location.hash.includes('access_token')
-);
-
 const PublicPage: React.FC = () => {
   const navigate = useNavigate();
   const { hash } = useLocation();
-  const [isProcessingOAuth, setIsProcessingOAuth] = React.useState(hasOAuthReturnInUrl);
+  const [pendingGoogleReturn] = React.useState(() => readPendingOAuthReturn('aluno'));
+  const [hasExternalAuthReturn] = React.useState(
+    () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
+  );
+  const [isProcessingOAuth, setIsProcessingOAuth] = React.useState(hasExternalAuthReturn);
 
   React.useEffect(() => {
     if (hash) {
@@ -50,18 +55,20 @@ const PublicPage: React.FC = () => {
   }, [hash]);
 
   React.useEffect(() => {
-    const hasOAuthReturn = hasOAuthReturnInUrl();
-    if (!hasOAuthReturn) return;
+    if (!hasExternalAuthReturn) return;
 
     let mounted = true;
     setIsProcessingOAuth(true);
 
     const finishGoogleReturn = async () => {
+      let isLeavingPublicPage = false;
+
       try {
         const { data } = await supabase.auth.getSession();
         if (!data.session) {
           if (mounted) {
             const search = new URLSearchParams(window.location.search);
+            isLeavingPublicPage = true;
             navigate(navigateToLoginWithError(search, 'no_session'), { replace: true });
           }
           return;
@@ -72,13 +79,14 @@ const PublicPage: React.FC = () => {
           await supabase.auth.signOut();
           if (mounted) {
             const search = new URLSearchParams(window.location.search);
+            isLeavingPublicPage = true;
             navigate(navigateToLoginWithError(search, 'no_profile'), { replace: true });
           }
           return;
         }
 
         const search = new URLSearchParams(window.location.search);
-        const redirect = search.get('redirect');
+        const redirect = search.get('redirect') || pendingGoogleReturn?.redirectPath;
         const fallback = resolvePortalRoute(profile);
         const decodedRedirect = (() => {
           if (!redirect) return null;
@@ -99,6 +107,7 @@ const PublicPage: React.FC = () => {
           const nextParams = new URLSearchParams();
           nextParams.set('next', next);
           if (mounted) {
+            isLeavingPublicPage = true;
             navigate(`/primeiro-acesso?${nextParams.toString()}`, { replace: true });
           }
           return;
@@ -106,16 +115,24 @@ const PublicPage: React.FC = () => {
 
         savePortalSession(profile);
         if (mounted) {
+          isLeavingPublicPage = true;
           navigate(decodedRedirect || fallback, { replace: true });
         }
       } catch {
         if (mounted) {
           const search = new URLSearchParams(window.location.search);
+          isLeavingPublicPage = true;
           navigate(navigateToLoginWithError(search, 'google_error'), { replace: true });
         }
       } finally {
         if (mounted) {
-          setIsProcessingOAuth(false);
+          clearPendingOAuthReturn('aluno');
+          clearOAuthReturnParams();
+          // Preserve a tela de validação enquanto a rota de destino é carregada.
+          // Caso contrário, a home aparece rapidamente entre o callback e o portal.
+          if (!isLeavingPublicPage) {
+            setIsProcessingOAuth(false);
+          }
         }
       }
     };
@@ -124,7 +141,7 @@ const PublicPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [navigate, hash]);
+  }, [hasExternalAuthReturn, navigate, pendingGoogleReturn]);
 
   if (isProcessingOAuth) {
     return <AccessCheckingScreen portal="Aluno" />;

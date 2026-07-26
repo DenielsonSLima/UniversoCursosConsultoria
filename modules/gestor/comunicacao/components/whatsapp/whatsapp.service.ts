@@ -91,15 +91,41 @@ const getFunctionErrorMessage = async (error: any, fallback: string) => {
 
 export const whatsappService = {
   async getContacts(): Promise<WhatsAppContact[]> {
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select('id,nome,tipo,email,telefone,cpf_cnpj,cidade,status,foto_url,polos(nome,cidade,estado)')
-      .eq('tipo', 'Aluno')
-      .order('nome', { ascending: true });
+    const [contactsResult, enrollmentsResult] = await Promise.all([
+      supabase
+        .from('parceiros')
+        .select('id,nome,tipo,email,telefone,cpf_cnpj,cidade,status,foto_url,polos(nome,cidade,estado)')
+        .eq('tipo', 'Aluno')
+        .order('nome', { ascending: true }),
+      supabase
+        .from('matriculas')
+        .select('id,aluno_id,status,turma_id,turmas(id,nome,codigo,cursos(id,nome,modalidade))'),
+    ]);
 
-    if (error) throw error;
+    if (contactsResult.error) throw contactsResult.error;
+    if (enrollmentsResult.error) throw enrollmentsResult.error;
 
-    return (data || []).map((row: any) => {
+    const enrollmentsByStudent = new Map<string, any[]>();
+    (enrollmentsResult.data || []).forEach((enrollment: any) => {
+      const studentId = String(enrollment.aluno_id || '');
+      if (!studentId) return;
+      const turma = Array.isArray(enrollment.turmas) ? enrollment.turmas[0] : enrollment.turmas;
+      const curso = Array.isArray(turma?.cursos) ? turma.cursos[0] : turma?.cursos;
+      const current = enrollmentsByStudent.get(studentId) || [];
+      current.push({
+        id: enrollment.id,
+        status: String(enrollment.status || ''),
+        turmaId: String(enrollment.turma_id || turma?.id || ''),
+        turmaNome: String(turma?.nome || ''),
+        turmaCodigo: String(turma?.codigo || ''),
+        cursoId: String(curso?.id || ''),
+        cursoNome: String(curso?.nome || ''),
+        modalidade: String(curso?.modalidade || '').toUpperCase(),
+      });
+      enrollmentsByStudent.set(studentId, current);
+    });
+
+    return (contactsResult.data || []).map((row: any) => {
       const polo = Array.isArray(row.polos) ? row.polos[0] : row.polos;
       const poloNome = polo?.nome
         ? [polo.nome, [polo.cidade, polo.estado].filter(Boolean).join('/')]
@@ -118,6 +144,7 @@ export const whatsappService = {
         status: row.status,
         foto: row.foto_url,
         poloNome,
+        matriculas: enrollmentsByStudent.get(row.id) || [],
       };
     });
   },

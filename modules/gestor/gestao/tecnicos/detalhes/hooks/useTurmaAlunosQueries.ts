@@ -11,6 +11,12 @@ export const useTurmaStudents = (turmaId: string) => useQuery({
   staleTime: 15_000,
 });
 
+export const useTurmaMovements = (turmaId: string) => useQuery({
+  queryKey: academicLifecycleKeys.movimentacoes(turmaId),
+  queryFn: () => academicLifecycleService.getMovimentacoes(turmaId),
+  staleTime: 15_000,
+});
+
 export const useAvailableStudents = (
   turmaId: string,
   enabled: boolean,

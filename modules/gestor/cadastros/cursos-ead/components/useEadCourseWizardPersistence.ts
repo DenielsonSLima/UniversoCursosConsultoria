@@ -23,9 +23,6 @@ export const useEadCourseWizardPersistence = ({
     area,
     cargaHoraria,
     valorText,
-    financeiroPix,
-    financeiroBoleto,
-    financeiroCartao,
     descricao,
     imagemUrl,
     versao,
@@ -60,11 +57,6 @@ export const useEadCourseWizardPersistence = ({
     const valorParsed = parseBRLPrice(valorText);
     if (!valorParsed || valorParsed <= 0) {
       showToast('Informe o valor do curso EAD. O preço é obrigatório para exibição no catálogo e geração da cobrança.', 'warning');
-      return;
-    }
-
-    if (!financeiroPix && !financeiroBoleto && !financeiroCartao) {
-      showToast('Selecione pelo menos uma forma de recebimento para o checkout do curso.', 'warning');
       return;
     }
 
@@ -167,9 +159,9 @@ export const useEadCourseWizardPersistence = ({
       considerarTaxaNoCheckout: false,
       taxaPagaPor: 'aluno',
       metodosRecebimento: {
-        pix: financeiroPix,
-        boleto: financeiroBoleto,
-        cartao: financeiroCartao
+        pix: true,
+        boleto: true,
+        cartao: false
       },
       descontoMetodo: {
         pix: false,
@@ -177,7 +169,7 @@ export const useEadCourseWizardPersistence = ({
         cartao: false
       },
       cartao: {
-        aceitar: financeiroCartao,
+        aceitar: false,
         maxParcelas: 1,
         aplicarDescontoPontualidade: false,
         repassarCustoParcelamento: false

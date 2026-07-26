@@ -1,12 +1,14 @@
 import React from 'react';
 import {
   ArrowRight,
+  ChevronLeft,
   CheckCircle2,
   Eye,
   EyeOff,
   IdCard,
   Loader2,
   Lock,
+  MapPin,
   Phone,
   ShieldCheck,
 } from 'lucide-react';
@@ -30,6 +32,15 @@ type Props = {
   confirmPassword: string;
   showSignupConfirmPassword: boolean;
   acceptedTerms: boolean;
+  signupStep: 'dados' | 'endereco';
+  cep: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cepStatus: 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
   passwordChecks: PasswordChecks;
   onModeChange: (mode: AuthMode) => void;
   onLoginIdentifierChange: (value: string) => void;
@@ -45,7 +56,16 @@ type Props = {
   onConfirmPasswordChange: (value: string) => void;
   onToggleSignupConfirmPassword: () => void;
   onAcceptedTermsChange: (value: boolean) => void;
+  onCepChange: (value: string) => void;
+  onEnderecoChange: (value: string) => void;
+  onNumeroChange: (value: string) => void;
+  onComplementoChange: (value: string) => void;
+  onBairroChange: (value: string) => void;
+  onCidadeChange: (value: string) => void;
+  onUfChange: (value: string) => void;
+  onSignupBack: () => void;
   onLogin: React.FormEventHandler;
+  onSignupNext: React.FormEventHandler;
   onSignup: React.FormEventHandler;
   onGoogleLogin: () => void;
 };
@@ -69,6 +89,15 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   confirmPassword,
   showSignupConfirmPassword,
   acceptedTerms,
+  signupStep,
+  cep,
+  endereco,
+  numero,
+  complemento,
+  bairro,
+  cidade,
+  uf,
+  cepStatus,
   passwordChecks,
   onModeChange,
   onLoginIdentifierChange,
@@ -84,7 +113,16 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   onConfirmPasswordChange,
   onToggleSignupConfirmPassword,
   onAcceptedTermsChange,
+  onCepChange,
+  onEnderecoChange,
+  onNumeroChange,
+  onComplementoChange,
+  onBairroChange,
+  onCidadeChange,
+  onUfChange,
+  onSignupBack,
   onLogin,
+  onSignupNext,
   onSignup,
   onGoogleLogin,
 }) => (
@@ -95,7 +133,9 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         <p className="mt-1 text-sm font-semibold leading-relaxed text-slate-500">
           {mode === 'login'
             ? 'Entre para continuar sua matrícula online.'
-            : 'Cadastro rápido para compra de cursos online.'}
+            : signupStep === 'dados'
+              ? 'Informe seus dados de acesso para continuar.'
+              : 'Complete o endereço exigido para emissão do Banese.'}
         </p>
       </div>
       <div className="hidden rounded-2xl bg-blue-50 p-3 text-blue-600 sm:block">
@@ -197,8 +237,15 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           Entrar com Google
         </button>
       </form>
-    ) : (
-      <form onSubmit={onSignup} className="grid gap-4 sm:grid-cols-2">
+    ) : signupStep === 'dados' ? (
+      <form onSubmit={onSignupNext} className="grid gap-4 sm:grid-cols-2">
+        <div className="flex items-center gap-3 sm:col-span-2" aria-label="Etapa 1 de 2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white">1</span>
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full w-1/2 rounded-full bg-blue-600" />
+          </div>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-400">2</span>
+        </div>
         <label className="block sm:col-span-2">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Nome completo</span>
           <input type="text" name="name" autoComplete="name" required value={nome} onChange={(event) => onNomeChange(event.target.value)} placeholder="Seu nome completo" className={inputClassName} />
@@ -259,9 +306,100 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </span>
         </label>
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-800 sm:col-span-2">
-          <CheckCircle2 className="mb-2 inline-block" size={16} /> Este cadastro libera compras online. Dados técnicos podem ser completados depois no seu perfil.
+          <CheckCircle2 className="mb-2 inline-block" size={16} /> Na próxima etapa, informe o endereço necessário para emissão do boleto.
         </div>
-        <button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60 sm:col-span-2">
+        <button type="submit" className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 sm:col-span-2">
+          Próximo: endereço
+          <ArrowRight size={16} />
+        </button>
+      </form>
+    ) : (
+      <form onSubmit={onSignup} className="grid gap-4 sm:grid-cols-6">
+        <div className="flex items-center gap-3 sm:col-span-6" aria-label="Etapa 2 de 2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <CheckCircle2 size={14} />
+          </span>
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full w-full rounded-full bg-blue-600" />
+          </div>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white">2</span>
+        </div>
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-900 sm:col-span-6">
+          <MapPin className="mr-1.5 inline-block text-blue-600" size={16} />
+          Comece pelo CEP. Logradouro, bairro, cidade e UF serão preenchidos automaticamente. Informe o número e, se houver, o complemento.
+        </div>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">CEP</span>
+          <div className="relative">
+            <input
+              type="text"
+              name="postal-code"
+              autoComplete="postal-code"
+              inputMode="numeric"
+              maxLength={9}
+              required
+              value={cep}
+              onChange={(event) => onCepChange(event.target.value)}
+              placeholder="00000-000"
+              className={`${inputClassName} pr-11`}
+              autoFocus
+            />
+            {cepStatus === 'loading' && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-blue-500" size={18} />}
+          </div>
+        </label>
+
+        <label className="block sm:col-span-4">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Endereço</span>
+          <input type="text" name="street-address" autoComplete="street-address" required value={endereco} onChange={(event) => onEnderecoChange(event.target.value)} placeholder="Rua, avenida..." className={inputClassName} />
+        </label>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Número</span>
+          <input type="text" name="address-number" autoComplete="address-line2" required value={numero} onChange={(event) => onNumeroChange(event.target.value)} placeholder="123 ou S/N" className={inputClassName} />
+        </label>
+
+        <label className="block sm:col-span-4">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Complemento <span className="normal-case tracking-normal text-slate-300">(opcional)</span></span>
+          <input type="text" name="address-complement" value={complemento} onChange={(event) => onComplementoChange(event.target.value)} placeholder="Apto, bloco, referência..." className={inputClassName} />
+        </label>
+
+        <label className="block sm:col-span-3">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Bairro</span>
+          <input type="text" name="address-level3" autoComplete="address-level3" required value={bairro} onChange={(event) => onBairroChange(event.target.value)} placeholder="Bairro" className={inputClassName} />
+        </label>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Cidade</span>
+          <input type="text" name="address-level2" autoComplete="address-level2" required value={cidade} onChange={(event) => onCidadeChange(event.target.value)} placeholder="Cidade" className={inputClassName} />
+        </label>
+
+        <label className="block sm:col-span-1">
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">UF</span>
+          <input type="text" name="address-level1" autoComplete="address-level1" maxLength={2} required value={uf} onChange={(event) => onUfChange(event.target.value)} placeholder="SE" className={`${inputClassName} text-center`} />
+        </label>
+
+        {cepStatus !== 'idle' && (
+          <p className={`text-[10px] font-bold sm:col-span-6 ${
+            cepStatus === 'resolved'
+              ? 'text-emerald-600'
+              : cepStatus === 'loading'
+                ? 'text-blue-600'
+                : 'text-amber-600'
+          }`}>
+            {cepStatus === 'resolved' && 'CEP localizado. Confira o endereço e informe o número.'}
+            {cepStatus === 'loading' && 'Consultando CEP...'}
+            {cepStatus === 'not-found' && 'CEP não encontrado. Confira o CEP ou preencha o endereço manualmente.'}
+            {cepStatus === 'error' && 'Não foi possível consultar o CEP agora. Preencha o endereço manualmente.'}
+          </p>
+        )}
+
+        <button type="button" onClick={onSignupBack} disabled={loading} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60 sm:col-span-2">
+          <ChevronLeft size={16} />
+          Voltar
+        </button>
+        <button type="submit" disabled={loading} className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60 sm:col-span-4">
           {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
           Criar cadastro e continuar
         </button>

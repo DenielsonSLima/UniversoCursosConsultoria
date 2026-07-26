@@ -9,20 +9,34 @@ interface FichaCardProps {
 
 const FichaCard: React.FC<FichaCardProps> = ({ ficha, onEdit, onDelete }) => {
   return (
-    <div className="bg-white rounded-3xl p-5 border border-slate-200 hover:border-blue-400 hover:shadow-lg transition-all group flex flex-col h-full animate-fadeIn cursor-pointer" onClick={() => onEdit(ficha)}>
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Editar modelo ${ficha.nome}`}
+      className="group flex h-full cursor-pointer flex-col rounded-3xl border border-slate-200 bg-white p-5 transition-all animate-fadeIn hover:border-blue-400 hover:shadow-lg focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+      onClick={() => onEdit(ficha)}
+      onKeyDown={(event) => {
+        if (event.currentTarget !== event.target) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onEdit(ficha);
+      }}
+    >
       <div className="flex justify-between items-start mb-4">
         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
           <FileSignature size={24} />
         </div>
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit(ficha); }}
+            aria-label={`Editar ${ficha.nome}`}
             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
           >
             <Edit size={16} />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(ficha.id); }}
+            aria-label={`Excluir ${ficha.nome}`}
             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
           >
             <Trash2 size={16} />
@@ -40,9 +54,9 @@ const FichaCard: React.FC<FichaCardProps> = ({ ficha, onEdit, onDelete }) => {
              {ficha.tipoCurso}
            </span>
            <span className={`text-[9px] font-bold uppercase tracking-widest self-start px-2 py-0.5 rounded-md ${
-             ficha.status === 'ativo' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+             ficha.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
            }`}>
-             {ficha.status === 'ativo' ? 'Ativo' : 'Inativo'}
+             {ficha.status === 'ATIVO' ? 'Ativo' : 'Inativo'}
            </span>
         </div>
       </div>

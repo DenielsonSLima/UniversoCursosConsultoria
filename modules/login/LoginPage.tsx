@@ -9,35 +9,28 @@ import { supabase } from '../../lib/supabase';
 import DailabsSignature from '../shared/components/DailabsSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import {
+  clearOAuthReturnParams,
+  clearPendingOAuthReturn,
+  getOAuthReturnError,
+  readPendingOAuthReturn,
+  hasOAuthReturnInUrl,
+} from '../shared/auth/oauth-return-state';
+import {
   INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES,
   getRandomMotivationalPhrase,
 } from './motivationalPhrases';
 
-const hasOAuthReturnInUrl = () => (
-  window.location.hash.includes('access_token') ||
-  window.location.search.includes('code=')
-);
-
-const getOAuthReturnCode = () => {
-  const searchCode = new URLSearchParams(window.location.search).get('code');
-  if (searchCode) {
-    return searchCode;
-  }
-
-  if (!window.location.hash) {
-    return null;
-  }
-
-  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-  const hashParams = new URLSearchParams(hash);
-  return hashParams.get('code');
-};
-
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [pendingGoogleReturn] = useState(
+    () => readPendingOAuthReturn('institucional'),
+  );
+  const [hasExternalAuthReturn] = useState(
+    () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasOAuthReturnInUrl);
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [loginStep, setLoginStep] = useState<'credentials' | 'role_select' | 'polo_select'>('credentials');
@@ -48,11 +41,13 @@ const LoginPage: React.FC = () => {
   const [pendingProfessor, setPendingProfessor] = useState<PortalAuthProfile | null>(null);
 
   const decodeRedirectPath = () => {
-    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    const redirect =
+      new URLSearchParams(window.location.search).get('redirect') ||
+      pendingGoogleReturn?.redirectPath;
     if (!redirect) return null;
     try {
       const decoded = decodeURIComponent(redirect);
-      return decoded.startsWith('/') ? decoded : null;
+      return decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : null;
     } catch {
       return null;
     }
@@ -66,7 +61,7 @@ const LoginPage: React.FC = () => {
     return '/gestor';
   };
 
-  const handleAuthenticatedProfile = async (profile: PortalAuthProfile) => {
+  const handleAuthenticatedProfile = async (profile: PortalAuthProfile): Promise<boolean> => {
     if (profile.tipo === 'Professor' && (profile.poloIds || []).length > 1) {
       const { data: polosData, error: polosError } = await supabase
         .from('polos')
@@ -83,12 +78,13 @@ const LoginPage: React.FC = () => {
         setSelectedPoloId(profile.activePoloId || polosData[0].id);
         setPendingProfessor(profile);
         setLoginStep('polo_select');
-        return;
+        return false;
       }
     }
 
     savePortalSession(profile);
-    navigate(getPostLoginRoute(profile));
+    navigate(getPostLoginRoute(profile), { replace: true });
+    return true;
   };
 
   const resolveInstitutionalAccess = async () => {
@@ -132,37 +128,31 @@ const LoginPage: React.FC = () => {
     let mounted = true;
 
     const finishGoogleReturn = async () => {
+      let isLeavingLoginPage = false;
+
       try {
-        const hasOAuthReturn = hasOAuthReturnInUrl();
-        let session = null;
+        if (!hasExternalAuthReturn) return;
 
-        if (hasOAuthReturn) {
-          const authCode = getOAuthReturnCode();
-
-          if (authCode) {
-            const { data: exchangedData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
-
-            if (exchangeError) {
-              throw new Error(exchangeError.message || 'Não foi possível concluir a troca de sessão do Google.');
-            }
-
-            session = exchangedData.session;
-          }
-        }
-
-        if (!session) {
-          const { data } = await supabase.auth.getSession();
-          session = data?.session;
-        }
-
-        if (!session) {
-          if (hasOAuthReturn) {
-            setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
-          }
+        const authReturnError = getOAuthReturnError();
+        if (authReturnError) {
+          setErrorMessage(
+            decodeURIComponent(String(authReturnError).replace(/\+/g, ' ')),
+          );
           return;
         }
 
-        if (!hasOAuthReturn) return;
+        // O cliente Supabase já processa o callback durante a inicialização.
+        // getSession aguarda esse processamento e evita uma segunda troca PKCE.
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          throw new Error(sessionError.message);
+        }
+        const session = data?.session;
+
+        if (!session) {
+          setErrorMessage('Não foi possível recuperar a sessão do Google. Tente novamente.');
+          return;
+        }
 
         const profile = await resolveInstitutionalAccess();
         if (!mounted) return;
@@ -174,12 +164,18 @@ const LoginPage: React.FC = () => {
           return;
         }
 
-        await handleAuthenticatedProfile(profile);
+        isLeavingLoginPage = await handleAuthenticatedProfile(profile);
       } catch (error) {
         if (!mounted) return;
         setErrorMessage(error instanceof Error ? error.message : 'Não foi possível concluir o login com Google.');
       } finally {
-        if (mounted) setCheckingExternalLogin(false);
+        if (mounted) {
+          clearPendingOAuthReturn('institucional');
+          clearOAuthReturnParams();
+          // Se o perfil já disparou a navegação, a validação deve permanecer
+          // montada até a próxima rota assumir, evitando o flash do formulário.
+          if (!isLeavingLoginPage) setCheckingExternalLogin(false);
+        }
       }
     };
 
@@ -187,7 +183,7 @@ const LoginPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [hasExternalAuthReturn]);
 
   const handleLogin = async (credentials: LoginCredentials) => {
     setIsLoading(true);
@@ -227,7 +223,7 @@ const LoginPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      await loginService.loginWithGoogle('/sistema/login');
+      await loginService.loginWithGoogle('/sistema/login', decodeRedirectPath());
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível iniciar o login com Google.';
       setErrorMessage(message);

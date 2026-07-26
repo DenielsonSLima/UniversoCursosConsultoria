@@ -1,9 +1,10 @@
 import React from 'react';
-import { Clock3, History, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock3, FileText, History, Loader2 } from 'lucide-react';
+import { AcademicMovement } from '../../academic-lifecycle.service';
 import TechnicalDataError from '../TechnicalDataError';
 
 interface AcademicMovementsSectionProps {
-  movements: any[];
+  movements: AcademicMovement[];
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
@@ -48,11 +49,23 @@ const AcademicMovementsSection: React.FC<AcademicMovementsSectionProps> = ({
                     {movement.tipo.replaceAll('_', ' ')}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">{movement.motivo}</p>
+                  {movement.observacao && (
+                    <p className="mt-2 flex items-start gap-1.5 whitespace-pre-wrap rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                      <FileText size={12} className="mt-0.5 shrink-0 text-slate-400" />
+                      {movement.observacao}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="text-left md:text-right">
-                <p className="text-[10px] font-bold text-slate-500">{new Date(movement.created_at).toLocaleString('pt-BR')}</p>
+                <p className="flex items-center gap-1 text-[10px] font-black text-blue-700 md:justify-end">
+                  <CalendarDays size={12} />
+                  {new Date(`${movement.data_movimentacao}T12:00:00`).toLocaleDateString('pt-BR')}
+                </p>
                 <p className="mt-1 text-[9px] text-slate-400">{movement.status_anterior || 'INÍCIO'} → {movement.status_novo}</p>
+                <p className="mt-1 flex items-center gap-1 text-[9px] text-slate-400 md:justify-end">
+                  <Clock3 size={10} /> Registrado em {new Date(movement.created_at).toLocaleString('pt-BR')}
+                </p>
               </div>
             </div>
           ))}

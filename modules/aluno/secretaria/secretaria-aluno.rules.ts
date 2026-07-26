@@ -39,6 +39,9 @@ export const isAlunoSecretariaTechnical = (matricula?: AlunoSecretariaMatricula 
 export const isAlunoSecretariaOnline = (matricula?: AlunoSecretariaMatricula | null) =>
   ONLINE_MODALITIES.has(getAlunoSecretariaModalidade(matricula));
 
+export const isAlunoSecretariaEad = (matricula?: AlunoSecretariaMatricula | null) =>
+  getAlunoSecretariaModalidade(matricula) === 'EAD';
+
 export const isAlunoSecretariaActiveEnrollment = (matricula?: AlunoSecretariaMatricula | null) =>
   normalizeAlunoSecretariaText(matricula?.status) === ACTIVE_STATUS;
 
@@ -60,6 +63,10 @@ export const buildAlunoSecretariaEligibility = (
 ): AlunoSecretariaEligibility => {
   const sorted = [...(matriculas || [])];
   const activeAny = sorted.find(isAlunoSecretariaActiveEnrollment) || null;
+  const activeDeclarationEnrollment = sorted.find((matricula) => (
+    isAlunoSecretariaActiveEnrollment(matricula)
+    && !isAlunoSecretariaEad(matricula)
+  )) || null;
   const activeTechnical = sorted.find(isAlunoSecretariaActiveTechnical) || null;
   const internshipTurmaIds = new Set((estagios || []).map((estagio) => estagio.turma_id));
   const activeInternshipEnrollment = sorted.find((matricula) => (
@@ -69,8 +76,8 @@ export const buildAlunoSecretariaEligibility = (
   )) || null;
   const historicalTechnical = sorted.find(isAlunoSecretariaHistoricalTechnical) || null;
   const onlineEnrollments = sorted.filter(isAlunoSecretariaOnline);
-  const declarationEnrollment = activeTechnical || activeAny;
-  const primaryEnrollment = declarationEnrollment || historicalTechnical || sorted[0] || null;
+  const declarationEnrollment = activeTechnical || activeDeclarationEnrollment;
+  const primaryEnrollment = activeTechnical || activeAny || historicalTechnical || sorted[0] || null;
   const hasAnyTechnicalEnrollment = sorted.some(isAlunoSecretariaTechnical);
   const hasOnlineOnlyAccess = onlineEnrollments.length > 0 && !hasAnyTechnicalEnrollment;
 
@@ -90,7 +97,7 @@ export const buildAlunoSecretariaEligibility = (
   if (canRequestTransfer) allowedRequests.push('Transferência');
 
   const blockedSummary = hasOnlineOnlyAccess
-    ? 'Cursos EAD, livres e especializações não liberam carteirinha, crachá, boletim técnico, transferência ou IRPF nesta secretaria.'
+    ? 'Cursos EAD não liberam declaração de cursando. Cursos EAD, livres e especializações também não liberam carteirinha, crachá, boletim técnico, transferência ou IRPF nesta secretaria.'
     : !hasAnyTechnicalEnrollment
       ? 'Nenhuma matrícula técnica foi localizada para liberar documentos acadêmicos restritos.'
       : !activeTechnical

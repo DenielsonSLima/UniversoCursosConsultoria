@@ -14,7 +14,9 @@ export type ValidatableDocumentType =
   | 'certificado_livre'
   | 'certificado_ead'
   | 'certificado_especializacao'
-  | 'diario_classe';
+  | 'diario_classe'
+  | 'pasta_identificacao'
+  | 'ficha_matricula';
 
 export interface DocumentValidationPolicy {
   prefix: string;
@@ -29,6 +31,11 @@ export interface IssueDocumentInput {
   sourceReference?: string;
   referencePeriod?: string;
   registerReissue?: boolean;
+}
+
+export interface IssueDocumentBatchInput
+  extends Omit<IssueDocumentInput, 'enrollmentId'> {
+  enrollmentIds: string[];
 }
 
 export interface IssuedDocumentValidation {

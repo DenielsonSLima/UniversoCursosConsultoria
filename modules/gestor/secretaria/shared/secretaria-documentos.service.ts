@@ -7,6 +7,12 @@ import {
   isCrachaEleitoralTemplateAvailable,
 } from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import {
+  fichasMatriculaService,
+} from '../../cadastros/ficha-matricula/fichas-matricula.service';
+import {
+  pastaIdentificacaoService,
+} from '../../cadastros/ficha-matricula/document-layouts';
+import {
   SecretariaAlunoResumo,
   SecretariaContext,
   SecretariaDocumentoId,
@@ -31,6 +37,56 @@ const enrollmentStatusRank = (status?: string) => {
   if (normalized === 'CONCLUIDO') return 2;
   return 3;
 };
+
+const buildStudentRegistrationSnapshot = (matricula: any) => ({
+  studentName: matricula.parceiros?.nome || '',
+  studentSocialName: matricula.parceiros?.nome_social || '',
+  studentCpf: matricula.parceiros?.cpf_cnpj || '',
+  studentBirthDate: matricula.parceiros?.data_nascimento || '',
+  studentPhotoUrl: matricula.parceiros?.foto_url || null,
+  studentEmail: matricula.parceiros?.email || '',
+  studentPhone: matricula.parceiros?.telefone || '',
+  studentSex: matricula.parceiros?.sexo || '',
+  studentMaritalStatus: matricula.parceiros?.estado_civil || '',
+  studentRaceColor: matricula.parceiros?.raca_cor || '',
+  studentRg: matricula.parceiros?.rg || '',
+  studentDocumentType: matricula.parceiros?.tipo_documento || '',
+  studentRgIssuer: matricula.parceiros?.orgao_emissor || '',
+  studentRgState: matricula.parceiros?.rg_uf_emissao || '',
+  studentRgIssueDate: matricula.parceiros?.rg_data_emissao || '',
+  studentNationality: matricula.parceiros?.nacionalidade || '',
+  studentBirthplace: matricula.parceiros?.naturalidade || '',
+  studentVoterId: matricula.parceiros?.titulo_eleitor || '',
+  studentReservist: matricula.parceiros?.reservista || '',
+  studentMotherName: matricula.parceiros?.nome_mae || '',
+  studentFatherName: matricula.parceiros?.nome_pai || '',
+  studentPcd: matricula.parceiros?.pcd ? 'SIM' : 'NÃO',
+  studentPcdType: matricula.parceiros?.pcd_tipo || '',
+  studentZipCode: matricula.parceiros?.cep || '',
+  studentStreet: matricula.parceiros?.endereco || '',
+  studentAddressNumber: matricula.parceiros?.numero || '',
+  studentAddressComplement: matricula.parceiros?.complemento || '',
+  studentDistrict: matricula.parceiros?.bairro || '',
+  studentCity: matricula.parceiros?.cidade || '',
+  studentState: matricula.parceiros?.uf || '',
+  studentResponsibleName: matricula.parceiros?.responsavel_nome || '',
+  studentResponsibleCpf: matricula.parceiros?.responsavel_cpf || '',
+  studentResponsibleRelation: matricula.parceiros?.responsavel_parentesco || '',
+  studentResponsiblePhone: matricula.parceiros?.responsavel_telefone || '',
+  studentNotes: matricula.parceiros?.observacao || '',
+  studentMatricula: formatMatricula(
+    matricula.id,
+    matricula.data_matricula,
+    matricula.turmas?.polo_id
+  ),
+  courseName: matricula.turmas?.cursos?.nome || '',
+  courseModality: matricula.turmas?.cursos?.modalidade || '',
+  classShift: matricula.turmas?.turno || '',
+  className: matricula.turmas?.nome || '',
+  unitName: matricula.turmas?.polos?.nome || '',
+  enrollmentStatus: matricula.status || '',
+  enrollmentDate: matricula.data_matricula || '',
+});
 
 const getAlunoEnrollmentSummaries = async (poloId: string, alunoIds: string[]) => {
   if (!alunoIds.length) return new Map<string, any>();
@@ -114,7 +170,7 @@ export const secretariaDocumentosService = {
   ): Promise<SecretariaMatriculaResumo[]> {
     let query = supabase
       .from('matriculas')
-      .select('id, status, data_matricula, turma_id, turmas!inner(id, nome, codigo, status, polo_id, cursos!inner(nome, modalidade))')
+      .select('id, status, data_matricula, turma_id, turmas!inner(id, nome, codigo, status, polo_id, cursos!inner(id, nome, modalidade))')
       .eq('aluno_id', alunoId)
       .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
@@ -147,6 +203,7 @@ export const secretariaDocumentosService = {
       turmaId: matricula.turma_id,
       turmaNome: matricula.turmas?.nome || '',
       turmaCodigo: matricula.turmas?.codigo || '',
+      cursoId: matricula.turmas?.cursos?.id || '',
       cursoNome: matricula.turmas?.cursos?.nome || '',
       modalidade: matricula.turmas?.cursos?.modalidade || '',
       poloId: matricula.turmas?.polo_id || poloId,
@@ -161,7 +218,7 @@ export const secretariaDocumentosService = {
   ): Promise<SecretariaTurmaResumo[]> {
     let query = supabase
       .from('turmas')
-      .select('id, nome, codigo, turno, status, cursos!inner(nome, modalidade)')
+      .select('id, nome, codigo, turno, status, cursos!inner(id, nome, modalidade)')
       .or(`polo_id.eq.${poloId},polo_id.is.null`)
       .order('nome', { ascending: true });
 
@@ -206,6 +263,7 @@ export const secretariaDocumentosService = {
       id: turma.id,
       nome: turma.nome,
       codigo: turma.codigo,
+      cursoId: turma.cursos?.id || '',
       cursoNome: turma.cursos?.nome || '',
       modalidade: turma.cursos?.modalidade || '',
       turno: turma.turno,
@@ -241,9 +299,10 @@ export const secretariaDocumentosService = {
   async registrarEmissao(input: {
     context: SecretariaContext;
     documento: SecretariaDocumentoId;
-    modo: 'individual' | 'lote';
+    modo: 'individual' | 'lote' | 'custom';
     alunoId?: string;
     matriculaId?: string;
+    matriculaIds?: string[];
     turmaId?: string;
     technicalOnly?: boolean;
     activeEnrollmentOnly?: boolean;
@@ -259,15 +318,29 @@ export const secretariaDocumentosService = {
       .from('matriculas')
       .select(`
         id, status, data_matricula, aluno_id, turma_id,
-        parceiros!inner(nome, cpf_cnpj, data_nascimento, foto_url),
-        turmas!inner(nome, codigo, polo_id, cursos!inner(nome, modalidade), polos!inner(nome))
+        parceiros!inner(
+          nome, nome_social, cpf_cnpj, email, telefone, foto_url,
+          data_nascimento, sexo, estado_civil, raca_cor,
+          rg, tipo_documento, orgao_emissor, rg_uf_emissao, rg_data_emissao,
+          nacionalidade, naturalidade, titulo_eleitor, reservista,
+          nome_mae, nome_pai, pcd, pcd_tipo,
+          cep, endereco, numero, complemento, bairro, cidade, uf,
+          responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone,
+          observacao
+        ),
+        turmas!inner(nome, codigo, turno, polo_id, cursos!inner(id, nome, modalidade), polos!inner(nome))
       `)
       .or(`polo_id.eq.${input.context.poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
     if (input.modo === 'individual') {
       query = query.eq('id', input.matriculaId!);
-    } else {
+    } else if (input.modo === 'lote') {
       query = query.eq('turma_id', input.turmaId!);
+    } else {
+      if (!input.matriculaIds?.length) {
+        throw new Error('Adicione pelo menos um aluno à lista personalizada.');
+      }
+      query = query.in('id', input.matriculaIds);
     }
     if (input.technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
     if (input.activeEnrollmentOnly) query = query.eq('status', 'ATIVO');
@@ -290,8 +363,32 @@ export const secretariaDocumentosService = {
       const eligibleKeys = new Set((estagios || []).map((estagio: any) => `${estagio.aluno_id}:${estagio.turma_id}`));
       matriculas = matriculas.filter((matricula: any) => eligibleKeys.has(`${matricula.aluno_id}:${matricula.turma_id}`));
     }
+    if (input.modo === 'custom' && input.matriculaIds?.length) {
+      const selectedOrder = new Map(input.matriculaIds.map((id, index) => [id, index]));
+      matriculas = [...matriculas].sort(
+        (a: any, b: any) =>
+          (selectedOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER)
+          - (selectedOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      );
+    }
     if (!matriculas.length) {
       throw new Error('Nenhuma matrícula compatível foi localizada para esta emissão.');
+    }
+
+    if (input.documento === 'boletim') {
+      if (!input.moduleId || input.referencePeriod !== input.moduleId) {
+        throw new Error('Selecione um módulo válido para preparar o boletim.');
+      }
+      const turmaIds = [...new Set(
+        matriculas.map((matricula: any) => matricula.turma_id).filter(Boolean)
+      )];
+      if (turmaIds.length !== 1) {
+        throw new Error('O boletim personalizado aceita somente alunos da mesma turma.');
+      }
+      const turmaModules = await secretariaDocumentosService.getTurmaModulos(turmaIds[0]);
+      if (!turmaModules.some((module) => module.id === input.moduleId)) {
+        throw new Error('O módulo selecionado não pertence à turma dos alunos.');
+      }
     }
 
     if (input.documento === 'termo_estagio') {
@@ -357,8 +454,57 @@ export const secretariaDocumentosService = {
       }
     }
 
+    let registrationTemplateSnapshot: any = null;
+    let registrationTemplateName = '';
+    if (input.documento === 'pasta_identificacao') {
+      registrationTemplateSnapshot = await pastaIdentificacaoService.getTemplate(
+        input.context.poloId
+      );
+      registrationTemplateName = 'Pasta de Identificação Geral';
+    }
+    if (input.documento === 'ficha_matricula') {
+      if (!input.referencePeriod) {
+        throw new Error('Selecione um modelo ativo de ficha de matrícula.');
+      }
+      const selectedModel = await fichasMatriculaService.getById(input.referencePeriod);
+      if (!selectedModel || selectedModel.status !== 'ATIVO') {
+        throw new Error('O modelo selecionado não está mais ativo ou foi removido.');
+      }
+
+      const application = String(selectedModel.tipoCurso || 'TODOS').trim().toUpperCase();
+      const incompatibleEnrollment = matriculas.find((matricula: any) => {
+        const modality = String(matricula.turmas?.cursos?.modalidade || '').trim().toUpperCase();
+        const courseId = matricula.turmas?.cursos?.id || null;
+        if (selectedModel.cursoEspecificoId && selectedModel.cursoEspecificoId !== courseId) {
+          return true;
+        }
+        return application !== 'TODOS' && application !== modality;
+      });
+      if (incompatibleEnrollment) {
+        throw new Error(
+          `O modelo “${selectedModel.nome}” não é compatível com o curso de `
+          + `${(incompatibleEnrollment as any).parceiros?.nome || 'um dos alunos selecionados'}.`
+        );
+      }
+
+      registrationTemplateSnapshot = selectedModel.templateConfig;
+      registrationTemplateName = selectedModel.nome;
+    }
+
+    const isRegistrationDocument = (
+      input.documento === 'pasta_identificacao'
+      || input.documento === 'ficha_matricula'
+    );
     const records = shouldIssueValidation
-      ? await Promise.all(
+      ? isRegistrationDocument
+        ? await documentValidationService.issueRegistrationBatch({
+            type: input.documento as ValidatableDocumentType,
+            enrollmentIds: matriculas.map((matricula: any) => matricula.id),
+            issuedBy: input.context.userId,
+            referencePeriod: input.referencePeriod,
+            registerReissue: true,
+          })
+        : await Promise.all(
           matriculas.map((matricula: any) => {
             const validationType = input.documento as ValidatableDocumentType;
             return documentValidationService.issue({
@@ -377,6 +523,7 @@ export const secretariaDocumentosService = {
           })
         )
       : [];
+
     const issuedAt = records[0]?.issuedAt || new Date().toISOString();
     const expiresAt = records[0]?.expiresAt || null;
     const codes = records.map((record) => record.code);
@@ -421,15 +568,17 @@ export const secretariaDocumentosService = {
             emitido_por: input.context.userId,
             quantidade_emissoes: record?.issueCount || 1,
             dados_emissao: {
-              studentName: matricula.parceiros?.nome || '',
-              studentCpf: matricula.parceiros?.cpf_cnpj || '',
-              studentBirthDate: matricula.parceiros?.data_nascimento || '',
-              studentPhotoUrl: matricula.parceiros?.foto_url || null,
-              studentMatricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
-              courseName: matricula.turmas?.cursos?.nome || '',
-              className: matricula.turmas?.nome || '',
-              unitName: matricula.turmas?.polos?.nome || '',
-              enrollmentStatus: matricula.status || '',
+              ...buildStudentRegistrationSnapshot(matricula),
+              ...(input.documento === 'pasta_identificacao'
+                || input.documento === 'ficha_matricula'
+                ? {
+                    documentTemplateId: input.documento === 'ficha_matricula'
+                      ? input.referencePeriod
+                      : 'pasta_identificacao_aluno',
+                    documentTemplateName: registrationTemplateName,
+                    documentTemplateSnapshot: registrationTemplateSnapshot,
+                  }
+                : {}),
             },
             aluno: {
               id: matricula.aluno_id,
@@ -450,10 +599,17 @@ export const secretariaDocumentosService = {
           };
           const emission = persisted || fallback;
           const payments = irpfPaymentsByEnrollment.get(matricula.id) || [];
+          const isAuthoritativeRegistrationSnapshot = Boolean(persisted) && (
+            input.documento === 'pasta_identificacao'
+            || input.documento === 'ficha_matricula'
+          );
           return {
             ...emission,
             dados_emissao: {
               ...(emission.dados_emissao || {}),
+              ...(!isAuthoritativeRegistrationSnapshot
+                ? buildStudentRegistrationSnapshot(matricula)
+                : {}),
               ...(input.documento === 'declaracao_irpf'
                 ? {
                     calendarYear: input.referencePeriod,

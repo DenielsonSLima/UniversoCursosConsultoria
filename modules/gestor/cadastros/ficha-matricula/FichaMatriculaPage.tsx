@@ -1,141 +1,139 @@
-// File: modules/gestor/cadastros/ficha-matricula/FichaMatriculaPage.tsx
+import React, { useState } from 'react';
+import {
+  Download,
+  FileSignature,
+  FolderKanban,
+  IdCard,
+} from 'lucide-react';
+import {
+  FICHA_CADASTRAL_VARIABLES,
+  fichaCadastralService,
+} from '../modelos-documentos/ficha-cadastral/ficha-cadastral.service';
+import {
+  FICHA_ALUNO_VARIABLES,
+  pastaIdentificacaoService,
+} from './document-layouts';
+import DirectDocumentEditor from './components/DirectDocumentEditor';
+import { fichaMatriculaTemplateService } from './ficha-matricula-template.service';
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
-import FichaCard from './components/FichaCard';
-import FichaEditor from './components/FichaEditor';
-import { fichasMatriculaService } from './fichas-matricula.service';
+type DocumentModel = 'ficha-cadastral' | 'pasta-identificacao' | 'ficha-matricula';
+
+const models = [
+  {
+    id: 'ficha-cadastral',
+    title: 'Ficha Cadastral do Aluno',
+    description: 'Cadastro completo do aluno com foto, dados pessoais, acadêmicos e assinaturas.',
+    icon: IdCard,
+    iconClass: 'bg-blue-600 shadow-blue-600/20',
+    hoverClass: 'group-hover:text-blue-600',
+  },
+  {
+    id: 'pasta-identificacao',
+    title: 'Pasta de Identificação',
+    description: 'Capa A4 da pasta ou envelope com foto e identificação cadastral do aluno.',
+    icon: FolderKanban,
+    iconClass: 'bg-cyan-700 shadow-cyan-700/20',
+    hoverClass: 'group-hover:text-cyan-700',
+  },
+  {
+    id: 'ficha-matricula',
+    title: 'Ficha de Matrícula',
+    description: 'Ficha geral com foto, dados acadêmicos, termo, campos extras e assinaturas.',
+    icon: FileSignature,
+    iconClass: 'bg-emerald-600 shadow-emerald-600/20',
+    hoverClass: 'group-hover:text-emerald-600',
+  },
+] as const;
 
 const FichaMatriculaPage: React.FC = () => {
-  const [fichas, setFichas] = useState<any[]>([]);
-  const [editingFicha, setEditingFicha] = useState<any>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [activeModel, setActiveModel] = useState<DocumentModel | null>(null);
 
-  useEffect(() => {
-    loadFichas();
-  }, []);
-
-  const loadFichas = async () => {
-    setLoading(true);
-    try {
-      const data = await fichasMatriculaService.getAll();
-      setFichas(data);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao carregar fichas de matrícula do Supabase.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (ficha: any) => {
-    setEditingFicha(ficha);
-    setIsCreating(false);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este modelo?')) {
-      try {
-        await fichasMatriculaService.delete(id);
-        loadFichas();
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao excluir modelo de ficha.');
-      }
-    }
-  };
-
-  const handleSave = async (savedFicha: any) => {
-    try {
-      if (isCreating) {
-        await fichasMatriculaService.create(savedFicha);
-      } else {
-        await fichasMatriculaService.update(savedFicha);
-      }
-      setEditingFicha(null);
-      setIsCreating(false);
-      loadFichas();
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar modelo de ficha.');
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingFicha(null);
-    setIsCreating(false);
-  };
-
-  if (editingFicha || isCreating) {
+  if (activeModel === 'ficha-cadastral') {
     return (
-      <div className="animate-fadeIn">
-         <FichaEditor 
-           ficha={editingFicha} 
-           onSave={handleSave} 
-           onCancel={handleCancel} 
-         />
-      </div>
+      <DirectDocumentEditor
+        onBack={() => setActiveModel(null)}
+        service={fichaCadastralService}
+        editorTitle="Editor da Ficha Cadastral do Aluno"
+        documentTitle="Ficha Cadastral do Aluno"
+        variables={FICHA_CADASTRAL_VARIABLES}
+        validationPrefix="FICHA"
+      />
+    );
+  }
+
+  if (activeModel === 'pasta-identificacao') {
+    return (
+      <DirectDocumentEditor
+        onBack={() => setActiveModel(null)}
+        service={pastaIdentificacaoService}
+        editorTitle="Editor da Pasta de Identificação"
+        documentTitle="Pasta de Identificação do Aluno"
+        variables={FICHA_ALUNO_VARIABLES}
+        validationPrefix="PASTA"
+      />
+    );
+  }
+
+  if (activeModel === 'ficha-matricula') {
+    return (
+      <DirectDocumentEditor
+        onBack={() => setActiveModel(null)}
+        service={fichaMatriculaTemplateService}
+        editorTitle="Editor da Ficha de Matrícula"
+        documentTitle="Ficha de Matrícula"
+        variables={FICHA_ALUNO_VARIABLES}
+        validationPrefix="FICHA-MAT"
+        enableEnrollmentSettings
+      />
     );
   }
 
   return (
-    <div className="animate-fadeIn max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">
-            Ficha de Matrícula
-          </h2>
-          <p className="text-slate-500 font-medium text-sm mt-1">Configure modelos de fichas de matrícula, termos e campos extras.</p>
+    <div className="mx-auto max-w-7xl animate-fadeIn">
+      <div className="mb-10">
+        <div className="mb-2 flex items-center gap-2 text-blue-600">
+          <IdCard size={20} />
+          <span className="text-xs font-bold uppercase tracking-[0.2em]">Cadastros acadêmicos</span>
         </div>
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Plus size={16} /> Novo Modelo
-        </button>
+        <h2 className="text-3xl font-black uppercase tracking-tight text-[#001a33]">
+          Ficha Cadastral
+        </h2>
+        <p className="mt-1 font-medium text-slate-500">
+          Configure os modelos cadastrais utilizados no cadastro e na matrícula do aluno.
+        </p>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="animate-spin text-[#001a33]" size={32} />
-        </div>
-      ) : fichas.length === 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div 
-            onClick={() => setIsCreating(true)}
-            className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-300 transition-all min-h-[220px] group"
-          >
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-3">
-              <Plus size={24} />
-            </div>
-            <h4 className="text-sm font-bold text-slate-600 uppercase tracking-widest">Criar Novo Modelo</h4>
-            <p className="text-xs text-slate-400 mt-2">Clique para configurar</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {fichas.map(ficha => (
-            <FichaCard 
-              key={ficha.id} 
-              ficha={ficha} 
-              onEdit={handleEdit} 
-              onDelete={handleDelete} 
-            />
-          ))}
-          
-          <div 
-            onClick={() => setIsCreating(true)}
-            className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-300 transition-all min-h-[220px] group"
-          >
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-3">
-              <Plus size={24} />
-            </div>
-            <h4 className="text-sm font-bold text-slate-600 uppercase tracking-widest">Criar Novo Modelo</h4>
-            <p className="text-xs text-slate-400 mt-2">Clique para configurar</p>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {models.map((model) => {
+          const Icon = model.icon;
+          return (
+            <button
+              key={model.id}
+              type="button"
+              onClick={() => setActiveModel(model.id)}
+              className="group relative flex h-full min-h-72 flex-col items-start overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/10"
+            >
+              <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-lg ${model.iconClass}`}>
+                <Icon size={25} />
+              </div>
+
+              <h3 className={`mb-2 text-lg font-black text-[#001a33] transition-colors ${model.hoverClass}`}>
+                {model.title}
+              </h3>
+              <p className="mb-6 text-sm font-medium leading-relaxed text-slate-500">
+                {model.description}
+              </p>
+
+              <div className="mt-auto flex w-full items-center justify-between border-t border-slate-100 pt-4">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 transition-colors group-hover:text-blue-600">
+                  Configurar
+                </span>
+                <Download size={16} className="text-slate-300 transition-colors group-hover:text-blue-600" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

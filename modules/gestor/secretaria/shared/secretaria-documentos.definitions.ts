@@ -10,10 +10,33 @@ import {
   RefreshCcw,
   ScrollText,
   Vote,
+  FolderKanban,
+  FileSignature,
 } from 'lucide-react';
 import { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
 
 export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoDefinition> = {
+  pastaIdentificacao: {
+    id: 'pasta_identificacao',
+    title: 'Pasta de Identificação',
+    description: 'Capa A4 da pasta do aluno com foto e dados cadastrais.',
+    singularLabel: 'Pasta de Identificação',
+    actionLabel: 'Preparar pasta',
+    icon: FolderKanban,
+    accent: 'text-cyan-700',
+    softAccent: 'bg-cyan-50',
+  },
+  fichaMatricula: {
+    id: 'ficha_matricula',
+    title: 'Ficha de Matrícula',
+    description: 'Ficha completa do ingresso com foto, termo e assinaturas.',
+    singularLabel: 'Ficha de Matrícula',
+    actionLabel: 'Preparar ficha',
+    icon: FileSignature,
+    accent: 'text-blue-700',
+    softAccent: 'bg-blue-50',
+    templateSelection: 'ficha_matricula',
+  },
   declaracaoMatricula: {
     id: 'declaracao_matricula',
     title: 'Declaração de Matrícula',

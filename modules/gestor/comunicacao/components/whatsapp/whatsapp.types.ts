@@ -252,6 +252,18 @@ export interface WhatsAppContact {
   status: string | null;
   foto: string | null;
   poloNome: string;
+  matriculas: WhatsAppContactEnrollment[];
+}
+
+export interface WhatsAppContactEnrollment {
+  id: string;
+  status: string;
+  turmaId: string;
+  turmaNome: string;
+  turmaCodigo: string;
+  cursoId: string;
+  cursoNome: string;
+  modalidade: string;
 }
 
 export interface WhatsAppBusinessProfile {

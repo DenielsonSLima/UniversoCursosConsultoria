@@ -49,7 +49,7 @@ const CADASTROS_TABS = [
   { id: 'cadastros-livres', label: 'Cursos Livres' },
   { id: 'cadastros-tecnicos', label: 'Cursos Técnicos' },
   { id: 'cadastros-superior', label: 'Ensino Superior' },
-  { id: 'cadastros-ficha', label: 'Ficha Matrícula' },
+  { id: 'cadastros-ficha', label: 'Ficha Cadastral' },
   { id: 'cadastros-modelos', label: 'Modelos Documentos' },
 ];
 
@@ -59,6 +59,7 @@ const SECRETARIA_TABS = [
   { id: 'declaracoes', label: 'Declaração de Matrícula' },
   { id: 'historico', label: 'Histórico de Emissões' },
   { id: 'recebimentos', label: 'Financeiro / Recebimentos' },
+  { id: 'fichas', label: 'Pasta de Identificação e Ficha de Matrícula' },
 ];
 
 const COMUNICACAO_TABS = [

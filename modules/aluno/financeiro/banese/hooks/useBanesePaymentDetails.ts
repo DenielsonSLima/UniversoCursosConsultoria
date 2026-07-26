@@ -23,6 +23,7 @@ type StudentChargeDto = {
   bankStatus: string;
   environment: 'sandbox' | 'production';
   courseName: string | null;
+  courseModality: string | null;
   className: string | null;
   boleto: { digitableLine: string; barcode: string };
   financialTerms: BaneseFinancialTerms;
@@ -85,6 +86,7 @@ const mapCharge = (
   gateway_group_marker: dto.group.marker,
   gateway_group_kind: dto.group.kind,
   cursoNome: charge.courseName,
+  modalidade: charge.courseModality,
   turmaNome: charge.className,
   parceiros: {
     nome: dto.payer.name,

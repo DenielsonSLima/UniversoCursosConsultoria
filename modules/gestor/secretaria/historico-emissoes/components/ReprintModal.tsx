@@ -1,5 +1,7 @@
-import React from 'react';
-import { Award, ChevronLeft, ChevronRight, Download, Loader2, Printer, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import QRCode from 'qrcode';
+import { ArrowLeft, Award, ChevronLeft, ChevronRight, Download, Loader2, Printer, X } from 'lucide-react';
 import { sanitizedHtml } from '../../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../../components/DocumentHeader';
 import CertificadoPreview from '../../certificados/components/CertificadoPreview';
@@ -39,6 +41,7 @@ interface Props {
   nextDisabled?: boolean;
   unavailableHeading?: string;
   unavailableNote?: string;
+  fullscreenViewer?: boolean;
 }
 
 const ReprintModal: React.FC<Props> = ({
@@ -66,6 +69,7 @@ const ReprintModal: React.FC<Props> = ({
   nextDisabled = false,
   unavailableHeading = 'Documento indisponível para reemissão',
   unavailableNote = 'A impressão e o PDF foram bloqueados para evitar um documento acadêmico incompleto.',
+  fullscreenViewer = false,
 }) => {
   const parseTemplate = (text: string) => parseEmissionTemplate(text, emission, {
     academicData: academicPreviewData,
@@ -84,31 +88,75 @@ const ReprintModal: React.FC<Props> = ({
   const hasConfiguredQrCode = Boolean(
     templateConfig?.absoluteFields?.some((field: any) => field.type === 'qrcode')
   );
+  const absoluteFieldsForPage = (pageIndex: number) => (
+    (templateConfig?.absoluteFields || []).filter((field: any) => {
+      const fieldPage = Math.max(0, Math.floor(Number(field.y || 0) / 1123));
+      return Math.min(standardPages.length - 1, fieldPage) === pageIndex;
+    })
+  );
 
-  return (
-    <div className="fixed inset-0 z-[130] flex animate-fadeIn bg-slate-900/60 backdrop-blur-sm" id="reprint-modal">
-      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white shadow-2xl animate-slideUp">
-        <div className="flex shrink-0 flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+  useEffect(() => {
+    if (!fullscreenViewer) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isDownloading && !isReissuing) onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [fullscreenViewer, isDownloading, isReissuing, onClose]);
+
+  const modal = (
+    <div
+      className={fullscreenViewer
+        ? 'fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen animate-fadeIn bg-slate-950'
+        : 'fixed inset-0 z-[130] flex animate-fadeIn bg-slate-900/60 backdrop-blur-sm'}
+      id="reprint-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label={heading}
+    >
+      <div className={`flex h-full min-h-0 w-full flex-col overflow-hidden shadow-2xl animate-slideUp ${fullscreenViewer ? 'bg-slate-950' : 'bg-white'}`}>
+        <div className={`flex shrink-0 flex-col gap-3 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between sm:px-6 ${fullscreenViewer ? 'border-b border-white/10 bg-slate-800 text-white shadow-md' : 'border-b border-slate-200 bg-slate-50 sm:py-4'}`}>
           <div>
-            <h4 className="text-sm font-black uppercase tracking-wide text-[#001a33]">{heading}</h4>
-            <p className="mt-0.5 text-[9px] font-bold uppercase text-slate-400">
-              {subtitle || `Visualização do Código: ${emission.codigo}`}
-            </p>
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              {fullscreenViewer && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+                  aria-label="Fechar visualizador"
+                >
+                  <ArrowLeft size={16} /> Voltar
+                </button>
+              )}
+              <div className="min-w-0">
+                <h4 className={`truncate text-sm font-black uppercase tracking-wide ${fullscreenViewer ? 'text-white' : 'text-[#001a33]'}`}>{heading}</h4>
+                <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                  {subtitle || `Visualização do Código: ${emission.codigo}`}
+                </p>
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {(onPrevious || onNext) && (
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <div className={`flex items-center gap-1 rounded-xl p-1 shadow-sm ${fullscreenViewer ? 'border border-white/15 bg-white/10' : 'border border-slate-200 bg-white'}`}>
                 <button
                   type="button"
                   onClick={onPrevious}
                   disabled={!onPrevious || previousDisabled || isLoading}
                   aria-label="Documento anterior"
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+                  className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${fullscreenViewer ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
                   <ChevronLeft size={14} />
                 </button>
                 {navigationLabel && (
-                  <span className="min-w-16 px-1 text-center text-[9px] font-black uppercase tracking-wider text-slate-500">
+                  <span className={`min-w-16 px-1 text-center text-[9px] font-black uppercase tracking-wider ${fullscreenViewer ? 'text-slate-300' : 'text-slate-500'}`}>
                     {navigationLabel}
                   </span>
                 )}
@@ -117,23 +165,26 @@ const ReprintModal: React.FC<Props> = ({
                   onClick={onNext}
                   disabled={!onNext || nextDisabled || isLoading}
                   aria-label="Próximo documento"
-                  className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-35"
+                  className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${fullscreenViewer ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
                   <ChevronRight size={14} />
                 </button>
               </div>
             )}
-            <button onClick={onDownload} disabled={isDownloading || isLoading || isBlocked} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50">
-              {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} PDF
+            <button onClick={onDownload} disabled={isDownloading || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50 ${fullscreenViewer ? 'border border-white/15 bg-white/10 text-white hover:bg-white/20 sm:px-5 sm:py-3 sm:text-xs' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+              {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+              {fullscreenViewer ? 'Download PDF' : 'PDF'}
             </button>
-            <button onClick={onPrint} disabled={isReissuing || isLoading || isBlocked} className="inline-flex items-center gap-1.5 rounded-xl bg-[#001a33] px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors hover:bg-blue-900 disabled:opacity-50">
+            <button onClick={onPrint} disabled={isReissuing || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors disabled:opacity-50 ${fullscreenViewer ? 'bg-blue-600 hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs' : 'bg-[#001a33] hover:bg-blue-900'}`}>
               {isReissuing ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} {printLabel}
             </button>
-            <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"><X size={16} /></button>
+            {!fullscreenViewer && (
+              <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"><X size={16} /></button>
+            )}
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 justify-center overflow-y-auto bg-slate-100 p-3 custom-scrollbar sm:p-6 lg:p-8">
+        <div className={`flex min-h-0 flex-1 justify-center overflow-auto p-3 custom-scrollbar sm:p-6 lg:p-8 ${fullscreenViewer ? 'bg-slate-900' : 'bg-slate-100'}`}>
           <div ref={printContentRef} className="print-content-container">
             {isLoading && (
               <div className="flex h-[297mm] w-[210mm] max-w-full flex-col items-center justify-center bg-white text-slate-400">
@@ -215,16 +266,33 @@ const ReprintModal: React.FC<Props> = ({
                       </div>
                     )}
                     <DocumentHeader polo={poloInfo} orientation="portrait" />
-                    <div className="relative z-10 mb-12 mt-6 text-center"><h2 className="text-2xl font-bold uppercase text-[#001a33] underline decoration-2 decoration-blue-600 underline-offset-4">{DOCUMENT_TABS.find((tab) => tab.key === emission.documento)?.label || 'DOCUMENTO'}</h2></div>
+                    {pageIndex === 0 && (
+                      <div className="relative z-10 mb-12 mt-6 text-center">
+                        <h2 className="text-2xl font-bold uppercase text-[#001a33] underline decoration-2 decoration-blue-600 underline-offset-4">
+                          {DOCUMENT_TABS.find((tab) => tab.key === emission.documento)?.label || 'DOCUMENTO'}
+                        </h2>
+                      </div>
+                    )}
                     {pageBody !== null ? (
                       <div className="relative z-20 mb-20 text-justify text-lg leading-loose text-black" dangerouslySetInnerHTML={sanitizedHtml(pageBody)} />
                     ) : (
                       <div className="relative z-20 mb-20 text-justify text-sm leading-relaxed text-black"><p>Declaramos para os devidos fins que o(a) aluno(a) <b>{(emission.dados_emissao?.studentName || emission.aluno?.nome || '').toUpperCase()}</b>, portador(a) do CPF nº <b>{emission.dados_emissao?.studentCpf || emission.aluno?.cpf_cnpj || 'Não informado'}</b>, regularmente matriculado(a) no curso de <b>{emission.dados_emissao?.courseName || ''}</b>, na turma <b>{emission.dados_emissao?.className || ''}</b>, encontra-se regular com suas obrigações acadêmicas.</p></div>
                     )}
-                    {pageIndex === standardPages.length - 1 && templateConfig?.absoluteFields?.map((field: any) => (
-                      <div key={field.id} className="absolute z-30" style={{ left: field.x, top: field.y, color: '#000', width: field.width ? `${field.width}px` : 'auto', height: 'auto', ...field.style }}>
+                    {absoluteFieldsForPage(pageIndex).map((field: any) => (
+                      <div
+                        key={field.id}
+                        className="absolute z-30"
+                        style={{
+                          left: field.x,
+                          top: Number(field.y || 0) - (pageIndex * 1123),
+                          color: '#000',
+                          width: field.width ? `${field.width}px` : 'auto',
+                          height: field.height ? `${field.height}px` : 'auto',
+                          ...field.style,
+                        }}
+                      >
                         {field.type === 'qrcode' && <QrCodeField code={emission.codigo} width={field.width} />}
-                        {field.type === 'image' && <img src={field.value} alt="Assinatura" className="h-auto w-full object-contain" style={{ width: field.width ? `${field.width}px` : '150px' }} />}
+                        {field.type === 'image' && <img src={parseTemplate(field.value)} alt="Elemento visual" className="h-full w-full object-contain" />}
                         {field.type === 'text' && <span dangerouslySetInnerHTML={sanitizedHtml(parseTemplate(field.value))} className="w-full break-words" />}
                       </div>
                     ))}
@@ -243,17 +311,42 @@ const ReprintModal: React.FC<Props> = ({
       <style dangerouslySetInnerHTML={{ __html: buildPrintCss(isCertificate) }} />
     </div>
   );
+
+  return fullscreenViewer && typeof document !== 'undefined'
+    ? createPortal(modal, document.body)
+    : modal;
 };
 
-const QrCodeField: React.FC<{ code: string; width?: number }> = ({ code, width }) => (
-  <div className="flex w-full flex-col items-center justify-center rounded border border-slate-100 bg-white p-1 text-center">
-    <div className="mb-0.5 flex aspect-square w-full items-center justify-center bg-white" style={{ width: width ? `${width}px` : '80px' }}>
-      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`https://www.universocc.com.br/validador?q=${code}`)}`} alt="QR Code" className="h-full w-full object-contain" />
+const QrCodeField: React.FC<{ code: string; width?: number }> = ({ code, width }) => {
+  const [src, setSrc] = useState('');
+  const validationUrl = `https://www.universocc.com.br/validador?q=${code}`;
+
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(validationUrl, { width: 320, margin: 1, errorCorrectionLevel: 'M' })
+      .then((url) => {
+        if (active) setSrc(url);
+      })
+      .catch(() => {
+        if (active) setSrc('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [validationUrl]);
+
+  return (
+    <div className="flex w-full flex-col items-center justify-center rounded border border-slate-100 bg-white p-1 text-center">
+      <div className="mb-0.5 flex aspect-square w-full items-center justify-center bg-white" style={{ width: width ? `${width}px` : '80px' }}>
+        {src
+          ? <img src={src} alt="QR Code" className="h-full w-full object-contain" />
+          : <span className="text-[6px] font-black uppercase text-slate-300">Gerando QR</span>}
+      </div>
+      <p className="text-[6px] font-bold uppercase leading-none tracking-wide text-slate-400">CÓD. VALIDAÇÃO</p>
+      <p className="mt-0.5 text-[8px] font-black leading-none tracking-wider text-blue-600">{code}</p>
     </div>
-    <p className="text-[6px] font-bold uppercase leading-none tracking-wide text-slate-400">CÓD. VALIDAÇÃO</p>
-    <p className="mt-0.5 text-[8px] font-black leading-none tracking-wider text-blue-600">{code}</p>
-  </div>
-);
+  );
+};
 
 const splitTemplatePages = (html: string) => {
   const pages = html

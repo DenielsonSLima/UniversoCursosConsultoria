@@ -48,15 +48,14 @@ export const diarioClasseService = {
   async getStudents(
     turmaId: string,
     disciplinaId: string,
-    accessMode: 'GESTOR' | 'PROFESSOR',
+    _accessMode: 'GESTOR' | 'PROFESSOR',
   ): Promise<DiarioStudent[]> {
-    const rpcName = accessMode === 'PROFESSOR'
-      ? 'get_diario_alunos'
-      : 'get_turma_alunos_academico';
-    const params = accessMode === 'PROFESSOR'
-      ? { p_turma_id: turmaId, p_disciplina_id: disciplinaId }
-      : { p_turma_id: turmaId };
-    const { data, error } = await supabase.rpc(rpcName, params);
+    // Gestor e professor precisam consumir a mesma relação temporal por disciplina.
+    // A autorização continua sendo decidida pela RPC no banco.
+    const { data, error } = await supabase.rpc('get_diario_alunos', {
+      p_turma_id: turmaId,
+      p_disciplina_id: disciplinaId,
+    });
 
     if (error) throw error;
 

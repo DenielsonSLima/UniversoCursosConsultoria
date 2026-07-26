@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" role="img" aria-labelledby="title description">
+  <title id="title">Aluno sem foto</title>
+  <desc id="description">Espaço reservado para a foto três por quatro do aluno.</desc>
+  <rect width="300" height="400" fill="#f1f5f9"/>
+  <circle cx="150" cy="132" r="58" fill="#cbd5e1"/>
+  <path d="M48 328c10-76 51-116 102-116s92 40 102 116" fill="#cbd5e1"/>
+  <rect x="28" y="28" width="244" height="344" rx="12" fill="none" stroke="#94a3b8" stroke-width="4" stroke-dasharray="12 10"/>
+  <text x="150" y="356" text-anchor="middle" fill="#475569" font-family="Arial, sans-serif" font-size="22" font-weight="700">SEM FOTO</text>
+</svg>

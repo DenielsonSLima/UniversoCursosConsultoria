@@ -91,12 +91,7 @@ export const assertProviderAdapterReady = (
   if (providerCode !== "banese_card") return;
   if (paymentMethod === "PIX") {
     throw new Error(
-      "Pix/BolePix Banese permanece bloqueado nesta etapa. Em producao, ele somente sera liberado formalmente no retorno do proprio boleto.",
-    );
-  }
-  if (paymentMethod === "BOLETO" && environment === "production") {
-    throw new Error(
-      "Boleto Banese de producao permanece bloqueado nesta etapa. Use o sandbox ate concluir o teste EAD e a validacao do PDF.",
+      "O BolePix Banese e emitido pela rota BOLETO em producao. Nao existe uma cobranca PIX Banese separada neste convenio.",
     );
   }
   if (paymentMethod === "CREDIT_CARD") {
@@ -116,10 +111,10 @@ export const assertHomologationStageRoute = (
     modalidade === "EAD" &&
     paymentMethod === "BOLETO" &&
     providerCode === "banese_card" &&
-    environment === "sandbox"
+    (environment === "sandbox" || environment === "production")
   ) return;
   throw new Error(
-    "Nesta etapa, somente Cursos EAD com boleto Banese no sandbox podem ser ativados.",
+    "Nesta etapa, somente Cursos EAD com boleto Banese podem ser ativados. Em producao, o Pix e devolvido no proprio BolePix.",
   );
 };
 

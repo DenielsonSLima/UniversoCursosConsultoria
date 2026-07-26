@@ -38,6 +38,8 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
 
   const currentEmission = emissions[currentIndex] || null;
   const totalEmissions = emissions.length;
+  const usesFullscreenViewer =
+    definition.id === 'ficha_matricula' || definition.id === 'pasta_identificacao';
 
   useEffect(() => {
     setCurrentIndex((index) => Math.min(index, Math.max(0, emissions.length - 1)));
@@ -116,9 +118,11 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
         void handleDownload();
       }}
       onPrint={handlePrint}
-      heading={`${definition.singularLabel} emitido`}
-      subtitle={`Código de validação: ${currentEmission.codigo}`}
-      printLabel="Imprimir documento"
+      heading={usesFullscreenViewer ? 'Visualizador de documentos' : `${definition.singularLabel} emitido`}
+      subtitle={usesFullscreenViewer
+        ? `Emissão: ${definition.singularLabel} (${totalEmissions} ${totalEmissions === 1 ? 'pág.' : 'págs.'})`
+        : `Código de validação: ${currentEmission.codigo}`}
+      printLabel={usesFullscreenViewer ? 'Imprimir' : 'Imprimir documento'}
       navigationLabel={totalEmissions > 1 ? `${currentIndex + 1} de ${totalEmissions}` : undefined}
       onPrevious={totalEmissions > 1 ? () => setCurrentIndex((index) => Math.max(0, index - 1)) : undefined}
       onNext={totalEmissions > 1 ? () => setCurrentIndex((index) => Math.min(totalEmissions - 1, index + 1)) : undefined}
@@ -126,6 +130,7 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
       nextDisabled={currentIndex === totalEmissions - 1}
       unavailableHeading="Documento emitido indisponível"
       unavailableNote="A impressão e o PDF foram bloqueados para evitar a entrega de um documento incompleto."
+      fullscreenViewer={usesFullscreenViewer}
     />
   );
 };

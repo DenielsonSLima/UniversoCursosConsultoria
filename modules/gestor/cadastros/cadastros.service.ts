@@ -36,13 +36,18 @@ export const DEFAULT_EAD_FINANCEIRO_CONFIG: CursoFinanceiroConfig = {
   parcelasPadrao: 1,
   descontoPontualidade: 0,
   considerarTaxaNoCheckout: false,
+  metodosRecebimento: {
+    pix: true,
+    boleto: true,
+    cartao: false
+  },
   descontoMetodo: {
     pix: false,
     boleto: false,
     cartao: false
   },
   cartao: {
-    aceitar: true,
+    aceitar: false,
     maxParcelas: 1,
     aplicarDescontoPontualidade: false,
     repassarCustoParcelamento: false

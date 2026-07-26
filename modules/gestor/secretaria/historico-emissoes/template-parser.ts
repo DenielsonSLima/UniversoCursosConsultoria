@@ -1,4 +1,5 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { escapeHtmlText } from '../../../../lib/htmlSanitizer';
 import { amountInWords } from '../../../shared/secretaria/document-template.helpers';
 import type { AcademicPreviewData, EmissionLog } from './historico-emissoes.types';
 
@@ -63,19 +64,126 @@ export const parseEmissionTemplate = (
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(irpfTotal);
+  const studentAddress = [
+    emissionData.studentStreet,
+    emissionData.studentAddressNumber,
+    emissionData.studentAddressComplement,
+    emissionData.studentDistrict,
+    [emissionData.studentCity, emissionData.studentState].filter(Boolean).join('/'),
+  ].filter(Boolean).join(' - ');
+  const poloAddress = [
+    [
+      context.poloInfo?.endereco,
+      context.poloInfo?.numero,
+    ].filter(Boolean).join(', '),
+    context.poloInfo?.bairro,
+    [
+      context.poloInfo?.cidade,
+      context.poloInfo?.estado || context.poloInfo?.uf,
+    ].filter(Boolean).join('/'),
+    context.poloInfo?.cep ? `CEP: ${context.poloInfo.cep}` : '',
+  ].filter(Boolean).join(' - ');
+  const enrollmentFormTerm = String(
+    context.templateConfig?.enrollmentFormTerm
+    || 'Solicito minha matrícula e declaro verdadeiros os dados informados.'
+  )
+    .split(/\r?\n/)
+    .map((line) => escapeHtmlText(line))
+    .join('<br>');
+  const enrollmentFormCustomFields = Array.isArray(
+    context.templateConfig?.enrollmentFormCustomFields
+  )
+    ? context.templateConfig.enrollmentFormCustomFields
+    : [];
+  const enrollmentFormCustomFieldsHtml = enrollmentFormCustomFields.length
+    ? `
+      <section style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:7px;">
+        ${enrollmentFormCustomFields
+          .filter((field: any) => String(field?.label || '').trim())
+          .map((field: any) => `
+            <div style="border-bottom:1px solid #0f172a;padding:0 3px 5px;font-size:9px;color:#475569;text-transform:uppercase;">
+              ${escapeHtmlText(String(field.label).trim())}
+            </div>
+          `)
+          .join('')}
+      </section>
+    `
+    : '';
+  const enrollmentFormSignaturesHtml =
+    context.templateConfig?.enrollmentFormRequiresSignature === false
+      ? ''
+      : `
+        <section style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;text-align:center;font-size:8px;color:#0f172a;">
+          <div style="border-top:1px solid #0f172a;padding-top:5px;">ASSINATURA DO ALUNO OU RESPONSÁVEL</div>
+          <div style="border-top:1px solid #0f172a;padding-top:5px;">DEFERIMENTO DA DIRETORIA</div>
+        </section>
+      `;
 
   const replacements: Array<[RegExp, string]> = [
+    [/{{FICHA_TERMO}}/g, enrollmentFormTerm],
+    [/{{FICHA_CAMPOS_EXTRAS}}/g, enrollmentFormCustomFieldsHtml],
+    [/{{FICHA_ASSINATURAS}}/g, enrollmentFormSignaturesHtml],
     [/{{ALUNO_NOME}}/g, (emissionData.studentName || data.aluno?.nome || '').toUpperCase()],
+    [
+      /{{ALUNO_FOTO_URL}}/g,
+      emissionData.studentPhotoUrl || data.aluno?.foto_url || '/sem-foto-aluno.svg',
+    ],
+    [/{{ALUNO_NOME_SOCIAL}}/g, emissionData.studentSocialName || 'Não informado'],
     [/{{ALUNO_CPF}}/g, emissionData.studentCpf || data.aluno?.cpf_cnpj || 'Não informado'],
     [/{{ALUNO_DOCUMENTO_TIPO}}/g, 'RG'],
-    [/{{ALUNO_RG}}/g, data.aluno?.rg || 'Não informado'],
+    [/{{ALUNO_RG}}/g, emissionData.studentRg || data.aluno?.rg || 'Não informado'],
     [/{{ALUNO_NASCIMENTO}}/g, formatDate(emissionData.studentBirthDate || data.aluno?.data_nascimento)],
-    [/{{ALUNO_MATRICULA}}/g, emissionData.studentMatricula || formatMatricula(data.matricula_id, data.emitido_em, data.polo_id)],
+    [/{{ALUNO_SEXO}}/g, emissionData.studentSex || 'Não informado'],
+    [/{{ALUNO_ESTADO_CIVIL}}/g, emissionData.studentMaritalStatus || 'Não informado'],
+    [/{{ALUNO_RACA_COR}}/g, emissionData.studentRaceColor || 'NÃO DECLARADA'],
+    [/{{ALUNO_NACIONALIDADE}}/g, emissionData.studentNationality || 'Não informada'],
+    [/{{ALUNO_NATURALIDADE}}/g, emissionData.studentBirthplace || 'Não informada'],
+    [/{{ALUNO_MAE}}/g, emissionData.studentMotherName || 'Não informada'],
+    [/{{ALUNO_PAI}}/g, emissionData.studentFatherName || 'Não informado'],
+    [/{{ALUNO_PCD}}/g, emissionData.studentPcd || 'NÃO'],
+    [/{{ALUNO_PCD_TIPO}}/g, emissionData.studentPcdType || 'Não se aplica'],
+    [/{{ALUNO_EMAIL}}/g, emissionData.studentEmail || 'Não informado'],
+    [/{{ALUNO_TELEFONE}}/g, emissionData.studentPhone || 'Não informado'],
+    [/{{ALUNO_ENDERECO}}/g, studentAddress || 'Não informado'],
+    [/{{ALUNO_LOGRADOURO}}/g, emissionData.studentStreet || 'Não informado'],
+    [/{{ALUNO_NUMERO}}/g, emissionData.studentAddressNumber || 'S/N'],
+    [/{{ALUNO_COMPLEMENTO}}/g, emissionData.studentAddressComplement || '—'],
+    [/{{ALUNO_BAIRRO}}/g, emissionData.studentDistrict || 'Não informado'],
+    [/{{ALUNO_CIDADE}}/g, emissionData.studentCity || 'Não informada'],
+    [/{{ALUNO_UF}}/g, emissionData.studentState || '—'],
+    [/{{ALUNO_CEP}}/g, emissionData.studentZipCode || 'Não informado'],
+    [/{{ALUNO_TIPO_DOCUMENTO}}/g, emissionData.studentDocumentType || 'RG'],
+    [/{{ALUNO_RG_ORGAO}}/g, emissionData.studentRgIssuer || 'Não informado'],
+    [/{{ALUNO_RG_UF}}/g, emissionData.studentRgState || '—'],
+    [/{{ALUNO_RG_EMISSAO}}/g, formatDate(emissionData.studentRgIssueDate)],
+    [/{{ALUNO_TITULO_ELEITOR}}/g, emissionData.studentVoterId || 'Não informado'],
+    [/{{ALUNO_RESERVISTA}}/g, emissionData.studentReservist || 'Não informado'],
+    [/{{ALUNO_RESPONSAVEL}}/g, emissionData.studentResponsibleName || 'Não informado'],
+    [/{{ALUNO_RESPONSAVEL_CPF}}/g, emissionData.studentResponsibleCpf || 'Não informado'],
+    [/{{ALUNO_RESPONSAVEL_PARENTESCO}}/g, emissionData.studentResponsibleRelation || 'Não informado'],
+    [/{{ALUNO_RESPONSAVEL_TELEFONE}}/g, emissionData.studentResponsiblePhone || 'Não informado'],
+    [/{{ALUNO_OBSERVACOES}}/g, emissionData.studentNotes || ''],
+    [
+      /{{ALUNO_MATRICULA}}/g,
+      emissionData.studentMatricula
+      || formatMatricula(
+        data.matricula_id,
+        emissionData.enrollmentDate || data.emitido_em,
+        data.polo_id,
+      ),
+    ],
     [/{{CURSO_NOME}}/g, emissionData.courseName || ''],
+    [/{{CURSO_MODALIDADE}}/g, emissionData.courseModality || ''],
+    [/{{CURSO_TURNO}}/g, emissionData.classShift || ''],
+    [/{{MATRICULA_STATUS}}/g, formatEnrollmentStatus(emissionData.enrollmentStatus || data.matricula?.status)],
     [/{{TURMA_NOME}}/g, emissionData.className || ''],
     [/{{POLO_NOME}}/g, emissionData.unitName || context.poloInfo?.nome || 'Universo Cursos e Consultoria'],
     [/{{POLO_CNPJ}}/g, context.poloInfo?.cnpj || ''],
+    [/{{POLO_ENDERECO_COMPLETO}}/g, poloAddress || 'Endereço não informado'],
+    [/{{POLO_TELEFONE}}/g, context.poloInfo?.telefone || 'Não informado'],
+    [/{{POLO_EMAIL}}/g, context.poloInfo?.email || 'Não informado'],
     [/{{CIDADE_POLO}}/g, context.poloInfo?.cidade || 'Aracaju'],
+    [/{{LOCAL_DOCUMENTO}}/g, [context.poloInfo?.cidade, context.poloInfo?.estado || context.poloInfo?.uf].filter(Boolean).join('/')],
     [/{{DATA_ATUAL}}/g, dateInFull],
     [/{{HORA_ATUAL}}/g, currentTime],
     [/{{SITUACAO_ACADEMICA}}/g, academicStatus],

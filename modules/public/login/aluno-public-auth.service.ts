@@ -1,5 +1,9 @@
 import { supabase } from '../../../lib/supabase';
 import { buildAuthRedirectUrl } from '../../../lib/app-url';
+import {
+  clearPendingOAuthReturn,
+  rememberPendingOAuthReturn,
+} from '../../shared/auth/oauth-return-state';
 import { loginService } from '../../login/login.service';
 import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
@@ -13,6 +17,13 @@ export interface PublicAlunoSignupData {
   dataNascimento: string;
   password: string;
   acceptedTerms: boolean;
+  cep: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
   redirectPath?: string;
 }
 
@@ -24,7 +35,14 @@ interface FinalizeAlunoFirstAccessData {
   newPassword?: string;
 }
 
-type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password'>;
+type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath'>;
+type LegacyPublicAlunoProfileData = Omit<
+  PublicAlunoProfileData,
+  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+> & Partial<Pick<
+  PublicAlunoProfileData,
+  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+>>;
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 export const getSafePublicAlunoRedirectPath = (value?: string | null, fallback = '/aluno') => {
@@ -94,11 +112,26 @@ const getFriendlyAuthRedirectError = (message: string) => {
   return decoded || 'Não foi possível concluir a confirmação do e-mail. Tente entrar novamente.';
 };
 
-const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
+const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => {
   const email = normalizeEmail(data.email);
   const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
+  const cep = onlyDigits(data.cep || '');
+  const endereco = String(data.endereco || '').trim().toLocaleUpperCase('pt-BR');
+  const numero = String(data.numero || '').trim().toLocaleUpperCase('pt-BR');
+  const complemento = String(data.complemento || '').trim().toLocaleUpperCase('pt-BR');
+  const bairro = String(data.bairro || '').trim().toLocaleUpperCase('pt-BR');
+  const cidade = String(data.cidade || '').trim().toLocaleUpperCase('pt-BR');
+  const uf = String(data.uf || '').trim().toLocaleUpperCase('pt-BR').slice(0, 2);
+  const hasCompleteAddress = (
+    cep.length === 8
+    && Boolean(endereco)
+    && Boolean(numero)
+    && Boolean(bairro)
+    && Boolean(cidade)
+    && uf.length === 2
+  );
 
-  const { error } = await supabase.rpc('finalizar_cadastro_publico_aluno', {
+  const baseRpcPayload = {
     p_nome: nome,
     p_email: email,
     p_telefone: onlyDigits(data.telefone),
@@ -106,7 +139,19 @@ const finalizePublicAlunoSignup = async (data: PublicAlunoProfileData) => {
     p_data_nascimento: data.dataNascimento,
     p_aceitou_termos: data.acceptedTerms,
     p_termos_versao: TERMS_VERSION,
-  });
+  };
+  const { error } = hasCompleteAddress
+    ? await supabase.rpc('finalizar_cadastro_publico_aluno', {
+        ...baseRpcPayload,
+        p_cep: cep,
+        p_endereco: endereco,
+        p_numero: numero,
+        p_complemento: complemento,
+        p_bairro: bairro,
+        p_cidade: cidade,
+        p_uf: uf,
+      })
+    : await supabase.rpc('finalizar_cadastro_publico_aluno', baseRpcPayload);
 
   if (error) {
     throw new Error(getFriendlySignupError(error.message));
@@ -135,6 +180,13 @@ const finalizePublicSignupFromMetadata = async () => {
     cpf: String(metadata.cpf || ''),
     dataNascimento: String(metadata.dataNascimento || ''),
     acceptedTerms: metadata.acceptedTerms === true,
+    cep: String(metadata.cep || ''),
+    endereco: String(metadata.endereco || ''),
+    numero: String(metadata.numero || ''),
+    complemento: String(metadata.complemento || ''),
+    bairro: String(metadata.bairro || ''),
+    cidade: String(metadata.cidade || ''),
+    uf: String(metadata.uf || ''),
   });
 };
 
@@ -149,9 +201,9 @@ export const alunoPublicAuthService = {
     });
     if (error) throw new Error(error);
 
-    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    let profile = await finalizePublicSignupFromMetadata();
     if (!profile) {
-      profile = await finalizePublicSignupFromMetadata();
+      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     }
 
     if (!profile || profile.tipo !== 'Aluno') {
@@ -163,24 +215,34 @@ export const alunoPublicAuthService = {
   },
 
   async loginWithGoogle(redirectPath = '/aluno') {
-    const redirectTo = buildAuthRedirectUrl(`/login?redirect=${encodeURIComponent(redirectPath)}`);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+    const safeRedirectPath = getSafePublicAlunoRedirectPath(redirectPath);
+    rememberPendingOAuthReturn('aluno', safeRedirectPath);
+
+    // O callback precisa ser uma URL fixa da allowlist do Supabase. O destino
+    // final fica no sessionStorage e não participa da validação do redirectTo.
+    const redirectTo = buildAuthRedirectUrl('/login');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
-      },
-    });
-    if (error) throw new Error(getFriendlyOAuthError(error.message));
+      });
+      if (error) throw new Error(getFriendlyOAuthError(error.message));
+    } catch (error) {
+      clearPendingOAuthReturn('aluno');
+      throw error;
+    }
   },
 
   async finishExternalLogin() {
-    let profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
+    let profile = await finalizePublicSignupFromMetadata();
     if (!profile) {
-      profile = await finalizePublicSignupFromMetadata();
+      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     }
 
     if (!profile || profile.tipo !== 'Aluno') {
@@ -202,6 +264,13 @@ export const alunoPublicAuthService = {
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
     const acceptedTerms = data.acceptedTerms;
+    const cep = onlyDigits(data.cep);
+    const endereco = data.endereco.trim().toLocaleUpperCase('pt-BR');
+    const numero = data.numero.trim().toLocaleUpperCase('pt-BR');
+    const complemento = data.complemento.trim().toLocaleUpperCase('pt-BR');
+    const bairro = data.bairro.trim().toLocaleUpperCase('pt-BR');
+    const cidade = data.cidade.trim().toLocaleUpperCase('pt-BR');
+    const uf = data.uf.trim().toLocaleUpperCase('pt-BR').slice(0, 2);
     const requestedRedirectPath = data.redirectPath
       ? getSafePublicAlunoRedirectPath(data.redirectPath)
       : null;
@@ -232,6 +301,17 @@ export const alunoPublicAuthService = {
       throw new Error('Informe a data de nascimento para concluir o cadastro.');
     }
 
+    if (
+      cep.length !== 8
+      || !endereco
+      || !numero
+      || !bairro
+      || !cidade
+      || uf.length !== 2
+    ) {
+      throw new Error('Complete CEP, endereço, número, bairro, cidade e UF para concluir o cadastro.');
+    }
+
     const finalizeSignup = async () => finalizePublicAlunoSignup({
       nome,
       email,
@@ -239,6 +319,13 @@ export const alunoPublicAuthService = {
       cpf,
       dataNascimento,
       acceptedTerms,
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
     });
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -255,6 +342,13 @@ export const alunoPublicAuthService = {
           dataNascimento,
           acceptedTerms,
           termsVersion: TERMS_VERSION,
+          cep,
+          endereco,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          uf,
         },
       },
     });
