@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diarioClasseKeys } from '../diario-classe.keys';
 import { diarioClasseService, DiarioAulaInput, DiarioGradeFields } from '../diario-classe.service';
 import { academicLifecycleKeys } from '../../../academic-lifecycle.keys';
+import { gestaoQueryKeys } from '../../../../../gestao.query-keys';
+import { AttendanceStatus, DiarioLockScope } from '../diario-classe.types';
 
 const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
   const queryClient = useQueryClient();
@@ -19,6 +21,8 @@ const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
     ]),
     praticas: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
     observacoes: () => queryClient.invalidateQueries({ queryKey: diarioClasseKeys.observacoes(turmaId, disciplinaId) }),
@@ -84,16 +88,55 @@ export const useDiarioObservacoes = (turmaId: string, disciplinaId: string) => u
   queryFn: () => diarioClasseService.getObservacoes(turmaId, disciplinaId),
 });
 
+export const useDiarioClosure = (turmaId: string, disciplinaId: string) => useQuery({
+  queryKey: diarioClasseKeys.fechamento(turmaId, disciplinaId),
+  queryFn: () => diarioClasseService.getClosureState(turmaId, disciplinaId),
+});
+
+export const useSetDiarioClosureMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (bloqueio: DiarioLockScope) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      bloqueio: DiarioLockScope;
+      motivo?: string;
+      confirmarPendencias?: boolean;
+    }) =>
+      diarioClasseService.setClosureLock(
+        turmaId,
+        disciplinaId,
+        input.bloqueio,
+        input.motivo,
+        input.confirmarPendencias,
+      ),
+    onSuccess: async (_data, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: diarioClasseKeys.fechamento(turmaId, disciplinaId) }),
+        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+        queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.periodos(turmaId) }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+        queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
+      ]);
+      await onSuccess?.(input.bloqueio);
+    },
+    onError,
+  });
+};
+
 export const useToggleDiarioAttendanceMutation = (
   turmaId: string,
   disciplinaId: string,
-  onSuccess?: (input: { aulaId: string; alunoId: string; nextStatus: 'P' | 'F' }) => void | Promise<void>,
+  onSuccess?: (input: { aulaId: string; alunoId: string; nextStatus: AttendanceStatus }) => void | Promise<void>,
   onError?: (error: any) => void,
 ) => {
   const invalidate = useInvalidateDiario(turmaId, disciplinaId);
 
   return useMutation({
-    mutationFn: (input: { aulaId: string; alunoId: string; nextStatus: 'P' | 'F' }) =>
+    mutationFn: (input: { aulaId: string; alunoId: string; nextStatus: AttendanceStatus }) =>
       diarioClasseService.toggleAttendance(
         turmaId,
         disciplinaId,
