@@ -1,3 +1,4 @@
+-- Versao registrada pelo MCP Supabase: 20260726160446.
 begin;
 
 -- O fallback de cadastro existe para criar o perfil que ainda nao existe.
