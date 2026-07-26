@@ -6,6 +6,8 @@ export interface EventType {
   isSystem?: boolean; // Se true, não pode ser deletado (ex: Feriado)
 }
 
+export type CalendarEventVisibility = 'GENERAL' | 'PROFESSOR' | 'TURMA' | 'PERSONAL';
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -20,10 +22,13 @@ export interface CalendarEvent {
   disciplinaName?: string | null;
   cargaHoraria?: number | null;
   turno?: string | null;
+  poloId?: string | null;
+  visibility?: CalendarEventVisibility;
 }
 
 // Dados iniciais padrão (Seed)
 export const DEFAULT_EVENT_TYPES: EventType[] = [
+  { id: 'pes', label: 'Pessoal', color: '#2563eb', isSystem: true },
   { id: 'inst', label: 'Institucional', color: '#001a33', isSystem: true },
   { id: 'ped', label: 'Pedagógico', color: '#059669', isSystem: true },
   { id: 'fer', label: 'Feriado', color: '#dc2626', isSystem: true },

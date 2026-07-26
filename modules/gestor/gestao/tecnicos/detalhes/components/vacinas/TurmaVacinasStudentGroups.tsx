@@ -93,8 +93,8 @@ const TurmaVacinasStudentGroups: React.FC<TurmaVacinasStudentGroupsProps> = ({
       {groups.map((group) => (
         <section key={group.id} className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
-            <h4 className="text-xs font-black uppercase tracking-[0.18em] text-[#001a33]">{group.title}</h4>
-            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-[#001a33]">{group.title}</h4>
+            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               {group.rows.length} aluno(s)
             </span>
           </div>
@@ -118,32 +118,32 @@ const TurmaVacinasStudentGroups: React.FC<TurmaVacinasStudentGroupsProps> = ({
                     className="grid w-full grid-cols-1 items-center gap-3 px-4 py-3 text-left lg:grid-cols-[minmax(220px,1.4fr)_150px_150px_90px_minmax(170px,1fr)_145px_34px]"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#001a33]">{aluno?.nome || 'Aluno sem nome'}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Aluno</p>
+                      <p className="truncate text-sm font-bold leading-5 text-[#001a33]">{aluno?.nome || 'Aluno sem nome'}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Aluno</p>
                     </div>
                     <div>
-                      <p className="font-mono text-xs font-black text-slate-700">{formattedCpf}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">CPF</p>
+                      <p className="text-xs font-semibold tabular-nums text-slate-700">{formattedCpf}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">CPF</p>
                     </div>
                     <div>
-                      <p className="truncate text-xs font-black text-slate-700">{formattedMatricula}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Matrícula</p>
+                      <p className="truncate text-xs font-semibold tabular-nums text-slate-700">{formattedMatricula}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Matrícula</p>
                     </div>
                     <div>
-                      <p className="text-xs font-black text-slate-700">{age === null ? '-' : `${age} anos`}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Idade</p>
+                      <p className="text-xs font-semibold tabular-nums text-slate-700">{age === null ? '-' : `${age} anos`}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Idade</p>
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-slate-700">{aluno?.nome_mae || 'Não informada'}</p>
-                      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Mãe</p>
+                      <p className="truncate text-xs font-semibold text-slate-700">{aluno?.nome_mae || 'Não informada'}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Mãe</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {liberado ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-700">
                           <CheckCircle2 size={11} /> {aprovadas}/{totalDoses}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700">
                           <ShieldAlert size={11} /> {pendentes.length} pend.
                         </span>
                       )}

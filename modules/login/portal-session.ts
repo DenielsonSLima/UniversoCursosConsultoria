@@ -281,14 +281,20 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
   if (!email) return null;
 
   const partnerSelect = 'id, nome, email, tipo, polo_id, polo_ids, status, foto_url';
+  const shouldQueryPartners = !options.allowedRoles?.length
+    || options.allowedRoles.some((role) => role === 'Aluno' || role === 'Professor');
+  let partnerRows: any[] = [];
 
-  const { data: partnerRows, error: partnerError } = await supabase
-    .from('parceiros')
-    .select(partnerSelect)
-    .ilike('email', email)
-    .in('tipo', ['Aluno', 'Professor']);
+  if (shouldQueryPartners) {
+    const { data, error } = await supabase
+      .from('parceiros')
+      .select(partnerSelect)
+      .ilike('email', email)
+      .in('tipo', ['Aluno', 'Professor']);
 
-  if (partnerError) throw new Error(partnerError.message);
+    if (error) throw new Error(error.message);
+    partnerRows = data || [];
+  }
 
   const orderedPartnerRoles = options.preferredRole && options.preferredRole !== 'Gestor'
     ? [options.preferredRole, ...(['Professor', 'Aluno'] as PortalRole[]).filter((role) => role !== options.preferredRole)]
@@ -296,7 +302,7 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   for (const role of orderedPartnerRoles) {
     if (!isRoleAllowed(role, options.allowedRoles)) continue;
-    const selectedPartner = (partnerRows || []).find((p) => p.tipo === role);
+    const selectedPartner = partnerRows.find((p) => p.tipo === role);
     const partnerWithAvatar = selectedPartner?.tipo === 'Aluno'
       ? await syncAlunoGoogleAvatar(selectedPartner, authenticatedUser)
       : selectedPartner;

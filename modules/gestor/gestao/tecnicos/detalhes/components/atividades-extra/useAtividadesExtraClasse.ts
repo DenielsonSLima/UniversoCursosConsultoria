@@ -20,6 +20,8 @@ import {
   normalizeAtividadeErrorMessage,
 } from './atividadesExtraClasse.utils';
 import { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
+import { gestaoQueryKeys } from '../../../../gestao.query-keys';
+import type { Turma } from '../../../../gestao.types';
 
 export const useAtividadesExtraClasse = ({
   turmaId,
@@ -76,7 +78,8 @@ export const useAtividadesExtraClasse = ({
 
   const turmaStatus = String(turmaCurso?.status || '').toUpperCase();
   const cursoRelation = Array.isArray(turmaCurso?.curso) ? turmaCurso.curso[0] : turmaCurso?.curso;
-  const isTecnico = String(cursoRelation?.modalidade || 'TECNICO').toUpperCase() === 'TECNICO';
+  const modalidade = String(cursoRelation?.modalidade || 'TECNICO').toUpperCase() as Turma['modalidade'];
+  const isTecnico = modalidade === 'TECNICO';
   const isPreparacao = isTecnico && isAtividadeTurmaPreparacao(turmaStatus);
   const isOperacionalSelecionada = isTecnico
     ? isAtividadeContextoOperacional(turmaStatus, disciplinaSelecionada?.periodoStatus)
@@ -109,10 +112,19 @@ export const useAtividadesExtraClasse = ({
             ? 'Selecione uma disciplina com período ABERTO ou EM FECHAMENTO para publicar.'
             : null;
 
-  const invalidate = async () => {
+  const invalidateActivity = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
+    ]);
+  };
+
+  const invalidateProgress = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality(modalidade) }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
     ]);
   };
 
@@ -128,7 +140,7 @@ export const useAtividadesExtraClasse = ({
         ...createAtividadeFormInitialState(disciplinaIdRestrita || prev.disciplinaId),
         disciplinaId: disciplinaIdRestrita || prev.disciplinaId,
       }));
-      await invalidate();
+      await invalidateProgress();
       if (createAsDraft) {
         toast.success('Rascunho salvo', 'A atividade poderá ser publicada quando o período estiver operacional.');
       } else {
@@ -157,7 +169,7 @@ export const useAtividadesExtraClasse = ({
       ? atividadesExtraClasseService.deleteDraft(atividade.id)
       : atividadesExtraClasseService.archiveAtividade(atividade.id),
     onSuccess: async (_data, atividade) => {
-      await invalidate();
+      await invalidateProgress();
       if (atividade.status === 'RASCUNHO') {
         toast.success('Rascunho excluído', 'O rascunho foi removido sem afetar alunos.');
       } else {
@@ -170,7 +182,7 @@ export const useAtividadesExtraClasse = ({
   const publishMutation = useMutation({
     mutationFn: (atividadeId: string) => atividadesExtraClasseService.publishAtividade(atividadeId),
     onSuccess: async () => {
-      await invalidate();
+      await invalidateProgress();
       toast.success('Atividade publicada', 'O rascunho já está disponível aos alunos.');
     },
     onError: () => toast.error(
@@ -196,7 +208,7 @@ export const useAtividadesExtraClasse = ({
       });
     },
     onSuccess: async () => {
-      await invalidate();
+      await invalidateActivity();
       toast.success('Correção salva', 'A resposta foi atualizada para o aluno.');
     },
     onError: (err: unknown) => toast.error(
@@ -210,9 +222,14 @@ export const useAtividadesExtraClasse = ({
   useEffect(() => {
     if (!turmaId) return undefined;
 
-    const invalidateRealtime = () => {
+    const invalidateActivityRealtime = () => {
       void queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) });
       void queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.turma(turmaId) });
+    };
+    const invalidateProgressRealtime = () => {
+      invalidateActivityRealtime();
+      void queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality(modalidade) });
+      void queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() });
     };
 
     const channel = supabase
@@ -220,12 +237,12 @@ export const useAtividadesExtraClasse = ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: `turma_id=eq.${turmaId}` },
-        invalidateRealtime,
+        invalidateProgressRealtime,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividade_extra_classe_respostas' },
-        invalidateRealtime,
+        invalidateActivityRealtime,
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') setRealtimeError(null);
@@ -237,7 +254,7 @@ export const useAtividadesExtraClasse = ({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [modo, professorId, queryClient, turmaId]);
+  }, [modalidade, modo, professorId, queryClient, turmaId]);
 
   return {
     atividades,

@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
   ArrowLeft,
   BookOpen,
-  Calendar,
+  CalendarRange,
   ChevronRight,
   ClipboardEdit,
+  Clock3,
   GraduationCap,
   Loader2,
-  NotebookTabs,
   RefreshCw,
-  ShieldCheck,
-  Users,
 } from 'lucide-react';
 import DiarioClasse from '../../gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse';
 import {
-  ProfessorDisciplinaAssignment,
   useProfessorDisciplinas,
   useProfessorDisciplinasRealtime,
 } from '../hooks/useProfessorDisciplinas';
@@ -29,11 +26,23 @@ interface TurmasPageProps {
 }
 
 const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
-  const [selectedAssignment, setSelectedAssignment] = useState<ProfessorDisciplinaAssignment | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio' | 'atividades'>('diario');
   const assignmentsQuery = useProfessorDisciplinas(professorId, poloId);
   const { data: assignments = [], isLoading: loadingAssignments, isError } = assignmentsQuery;
-  useProfessorDisciplinasRealtime(professorId, poloId);
+  const selectedAssignment = assignments.find(
+    (assignment) => assignment.id === selectedAssignmentId,
+  ) || null;
+  useProfessorDisciplinasRealtime(
+    professorId,
+    poloId,
+    assignments.map((assignment) => assignment.turmaId),
+  );
+
+  useEffect(() => {
+    setSelectedAssignmentId(null);
+    setActiveDetailTab('diario');
+  }, [poloId, professorId]);
 
   if (loadingAssignments) {
     return (
@@ -71,7 +80,6 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
           </div>
         </div>
       ) : !selectedAssignment ? (
-        // Grid: Teacher Classes List
         assignments.length === 0 ? (
           <div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
             <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -83,107 +91,123 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {assignments.map((assignment) => {
-              return (
-                <div 
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                {assignments.length} {assignments.length === 1 ? 'disciplina vinculada' : 'disciplinas vinculadas'}
+              </p>
+              <p className="hidden text-[10px] font-bold text-slate-400 sm:block">
+                Selecione uma disciplina para acessar o diário
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {assignments.map((assignment) => (
+                <article
                   key={assignment.id}
-                  className="bg-white rounded-[2.5rem] border border-slate-100 hover:border-purple-500 shadow-sm p-6 hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                  className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[1.75rem] border border-purple-100 bg-white p-5 shadow-[0_12px_34px_-26px_rgba(76,29,149,0.5)] transition duration-300 hover:-translate-y-1 hover:border-purple-300 hover:shadow-[0_24px_52px_-30px_rgba(124,58,237,0.55)]"
                 >
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-purple-100">
+                  <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-purple-500/10 blur-3xl transition-transform duration-700 group-hover:scale-150" />
+
+                  <div className="relative z-10 flex flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2 text-purple-700">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-50 ring-1 ring-purple-100">
+                          <BookOpen size={15} />
+                        </span>
+                        <p className="truncate text-[10px] font-black uppercase tracking-[0.12em]" title={assignment.turmaNome}>
+                          {assignment.turmaNome}
+                        </p>
+                      </div>
+                      {!assignment.canEdit && (
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-amber-700 ring-1 ring-amber-100">
+                          {assignment.accessLabel}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <h3 className="min-h-[46px] text-[16px] font-black leading-[1.35] text-[#001a33] transition-colors group-hover:text-purple-700">
                         {assignment.disciplinaNome}
-                      </span>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] text-slate-400 font-bold font-mono">
-                          {assignment.cargaHoraria || 0}h total
-                        </span>
-                        {!assignment.canEdit && (
-                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-700">
-                            {assignment.accessLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-bold text-[#001a33] leading-tight group-hover:text-purple-600 transition-colors">
-                        {assignment.turmaNome}
                       </h3>
-                      <p className="text-xs text-slate-450 font-bold uppercase tracking-wider mt-1">
-                        Curso: {assignment.cursoNome}
+                      <p className="mt-2 flex items-center gap-1.5 truncate text-[11px] font-bold text-slate-500" title={assignment.cursoNome}>
+                        <GraduationCap size={13} className="shrink-0 text-purple-600" />
+                        <span className="truncate">{assignment.cursoNome}</span>
+                      </p>
+                      <p className="mt-1 truncate text-[10px] font-semibold text-slate-400" title={assignment.turmaNome}>
+                        {assignment.turmaNome} · {assignment.turno}
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-xs font-medium text-slate-500">
-                      <div className="flex items-center gap-2">
-                        <NotebookTabs size={14} className="text-slate-400" />
-                        <span>
-                          {assignment.totalAulas} aulas
-                          {assignment.totalAtividades > 0 ? ` + ${assignment.totalAtividades} extra` : ''}
-                        </span>
+                    {assignment.primeiraAulaLabel && assignment.ultimaAulaLabel && (
+                      <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/90 p-3">
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                          <CalendarRange size={13} className="text-purple-600" />
+                          Período da disciplina
+                        </div>
+                        <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Primeira aula</p>
+                            <p className="mt-0.5 text-xs font-black text-[#001a33]">{assignment.primeiraAulaLabel}</p>
+                          </div>
+                          <div className="mb-1 h-px w-5 bg-slate-200" />
+                          <div className="text-right">
+                            <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Última aula</p>
+                            <p className="mt-0.5 text-xs font-black text-[#001a33]">{assignment.ultimaAulaLabel}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-slate-400" />
-                        <span>{assignment.proximaAulaLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users size={14} className="text-slate-400" />
-                        <span>{assignment.turmaCodigo}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck size={14} className="text-slate-400" />
-                        <span>{assignment.status}</span>
-                      </div>
-                    </div>
+                    )}
 
-                    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <span>Horas lançadas</span>
-                        <span className="text-purple-600">{assignment.horasLancadas}h / {assignment.cargaHoraria || 0}h</span>
+                    <div className="mt-3 rounded-2xl border border-purple-100 bg-purple-50/60 p-3">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-purple-700">
+                            <Clock3 size={12} />
+                            Carga até hoje
+                          </p>
+                          <p className="mt-1 text-lg font-black text-[#001a33]">
+                            {assignment.cargaHorariaDada}h
+                          </p>
+                        </div>
+                        <p className="text-right text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          Encontros realizados
+                          <span className="mt-0.5 block text-xs text-[#001a33]">
+                            {assignment.totalAulasDadas}
+                          </span>
+                        </p>
                       </div>
-                      <div className="mt-2 h-2 rounded-full bg-white overflow-hidden">
-                        <div className="h-full rounded-full bg-purple-600" style={{ width: `${assignment.progressoPercent}%` }} />
-                      </div>
-                      <p className="mt-3 text-[11px] font-bold text-slate-500">
-                        Próxima aula: <span className="text-[#001a33]">{assignment.proximaAulaTitulo}</span>
-                      </p>
                     </div>
 
                     {assignment.isEstagio && (
-                      <div className="flex gap-2 rounded-2xl bg-teal-50 border border-teal-100 p-3 text-[11px] text-teal-800">
-                        <Activity size={15} className="shrink-0 mt-0.5" />
-                        <span>
-                          Esta disciplina possui {assignment.cargaHorariaEstagio}h de estágio. A ficha supervisionada está disponível neste acesso.
-                        </span>
+                      <div className="mt-3 flex items-center gap-2 rounded-xl border border-teal-100 bg-teal-50 px-3 py-2 text-[9px] font-bold text-teal-800">
+                        <Activity size={13} className="shrink-0" />
+                        {assignment.cargaHorariaEstagio}h de estágio supervisionado
                       </div>
                     )}
-                  </div>
 
-                  <button 
-                    onClick={() => {
-                      setSelectedAssignment(assignment);
-                      setActiveDetailTab('diario');
-                    }}
-                    className={`mt-6 w-full flex items-center justify-center gap-2 py-3 font-bold text-xs uppercase tracking-widest rounded-xl transition-all ${
-                      !assignment.canEdit
-                        ? 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
-                        : 'bg-slate-50 group-hover:bg-purple-600 text-slate-600 group-hover:text-white'
-                    }`}
-                  >
-                    <span>{assignment.canEdit ? 'Abrir diário da disciplina' : 'Consultar diário'}</span>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              );
-            })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAssignmentId(assignment.id);
+                        setActiveDetailTab('diario');
+                      }}
+                      className="mt-auto flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] px-3 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-white transition hover:bg-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-100"
+                    >
+                      <BookOpen size={13} />
+                      {assignment.canEdit ? 'Abrir diário' : 'Consultar diário'}
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
         )
       ) : (
         <div className="space-y-6">
           <button 
-            onClick={() => setSelectedAssignment(null)}
+            onClick={() => setSelectedAssignmentId(null)}
             className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-purple-600 uppercase tracking-widest group mb-4"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -198,7 +222,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
                 </span>
                 <h3 className="text-xl font-bold text-[#001a33] mt-2">{selectedAssignment.turmaNome}</h3>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
-                  {selectedAssignment.cursoNome} • {selectedAssignment.turmaCodigo}
+                  {selectedAssignment.cursoNome} • {selectedAssignment.turno}
                 </p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -207,16 +231,16 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
                   <p className="font-black text-[#001a33]">{selectedAssignment.cargaHoraria || 0}h</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Aulas</p>
-                  <p className="font-black text-[#001a33]">{selectedAssignment.totalAulas}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ministrada</p>
+                  <p className="font-black text-[#001a33]">{selectedAssignment.cargaHorariaDada}h</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Próxima</p>
-                  <p className="font-black text-[#001a33]">{selectedAssignment.proximaAulaLabel}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Primeira aula</p>
+                  <p className="font-black text-[#001a33]">{selectedAssignment.primeiraAulaLabel || 'Sem registro'}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Turno</p>
-                  <p className="font-black text-[#001a33]">{selectedAssignment.turno}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Última aula</p>
+                  <p className="font-black text-[#001a33]">{selectedAssignment.ultimaAulaLabel || 'Sem registro'}</p>
                 </div>
               </div>
             </div>
@@ -302,7 +326,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
               disciplina={selectedAssignment.disciplinaForDiario}
               moduloNome={selectedAssignment.raw?.modulo_nome || selectedAssignment.raw?.modulo || 'Modulo da disciplina'}
               turma={selectedAssignment.turmaForDiario}
-              onBack={() => setSelectedAssignment(null)}
+              onBack={() => setSelectedAssignmentId(null)}
               accessMode="PROFESSOR"
             />
           )}

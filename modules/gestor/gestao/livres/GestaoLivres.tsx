@@ -135,7 +135,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
         ) : (
             list.turmas.map(turma => (
                 <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
-                  <TurmaCard turma={turma} colorTheme="amber" showPoloDetails onDelete={setDeleteTarget} />
+                  <TurmaCard turma={turma} colorTheme="amber" onDelete={setDeleteTarget} />
                 </div>
             ))
         )}

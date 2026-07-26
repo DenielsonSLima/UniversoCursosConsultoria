@@ -40,13 +40,13 @@ interface OutrosCreditosTabProps {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const PENDING_OUTROS_CREDIT_STATUSES = [
+const PENDING_OUTROS_CREDIT_STATUSES: ReadonlySet<string> = new Set([
   'PENDENTE',
   'VENCIDO',
   'SUSPENSO',
   'AGUARDANDO_CONFIRMACAO',
   'AGUARDANDO_PAGAMENTO',
-] as const;
+]);
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -83,7 +83,7 @@ const origemLabel = (item: ContasReceber) => {
   return 'Conta local';
 };
 
-const isPendingOutrosCredito = (status: string) => PENDING_OUTROS_CREDIT_STATUSES.includes(status);
+const isPendingOutrosCredito = (status: string) => PENDING_OUTROS_CREDIT_STATUSES.has(status);
 
 const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPoloId }) => {
   const queryClient = useQueryClient();

@@ -66,7 +66,7 @@ const AdicionarAlunoEadModal: React.FC<AdicionarAlunoEadModalProps> = ({
         dialogRef.current.querySelectorAll<HTMLElement>(
           'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
         ),
-      );
+      ) as HTMLElement[];
       if (focusable.length === 0) return;
 
       const first = focusable[0];

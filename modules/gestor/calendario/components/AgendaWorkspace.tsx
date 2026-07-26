@@ -280,6 +280,7 @@ const AgendaColumn: React.FC<AgendaColumnProps> = ({
 };
 
 interface AgendaWorkspaceProps {
+  variant?: 'manager' | 'professor';
   currentYear: number;
   currentMonthIndex: number;
   today: Date;
@@ -304,13 +305,14 @@ interface AgendaWorkspaceProps {
   onChangeMonth: (direction: -1 | 1) => void;
   onFocusDate: (date: Date) => void;
   onOpenDate: (date: Date) => void;
-  onManageTypes: () => void;
+  onManageTypes?: () => void;
   onExportCsv: () => void;
   onExportIcs: () => void;
   onExportPdf: () => void;
 }
 
 const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
+  variant = 'manager',
   currentYear,
   currentMonthIndex,
   today,
@@ -340,6 +342,7 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
   onExportIcs,
   onExportPdf,
 }) => {
+  const isProfessor = variant === 'professor';
   const previousMonth = getPreviousMonth(currentYear, currentMonthIndex);
   const focusedDateKey = toDateKey(focusedDate);
   const todayKey = toDateKey(today);
@@ -347,6 +350,10 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
   const manualEvents = events.filter(event => !event.id.startsWith('class-') && !event.id.startsWith('official-'));
   const classEvents = events.filter(event => event.id.startsWith('class-'));
   const officialEvents = events.filter(event => event.id.startsWith('official-'));
+  const personalEvents = manualEvents.filter(event => event.visibility === 'PERSONAL');
+  const institutionalEvents = manualEvents.filter(event => event.visibility !== 'PERSONAL');
+  const generalEvents = [...institutionalEvents, ...officialEvents]
+    .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'pt-BR'));
   const visibleTeachers = Array.from(new Set(events.map(event => event.professorName).filter(Boolean) as string[])).slice(0, 5);
 
   return (
@@ -361,12 +368,20 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
           <div className="min-w-64">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Planejamento acadêmico</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">Agenda e calendário</h1>
-            <p className="mt-1 text-[13px] font-normal text-slate-500">Aulas, eventos internos e datas oficiais em uma visão operacional.</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">
+              {isProfessor ? 'Planejamento docente' : 'Planejamento acadêmico'}
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              {isProfessor ? 'Minha agenda e calendário' : 'Agenda e calendário'}
+            </h1>
+            <p className="mt-1 text-[13px] font-normal text-slate-500">
+              {isProfessor
+                ? 'Suas aulas, seus compromissos e as datas gerais da instituição.'
+                : 'Aulas, eventos internos e datas oficiais em uma visão operacional.'}
+            </p>
           </div>
 
-          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className={`grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 ${isProfessor ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mês</span>
               <select value={currentMonthIndex} onChange={event => onMonthChange(Number(event.target.value))} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
@@ -374,14 +389,14 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
             </label>
-            <label className="relative">
+            {!isProfessor ? <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Professor</span>
               <select value={selectedTeacherId} onChange={event => onTeacherChange(event.target.value)} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
                 <option value="">Todos</option>
                 {teachers.map(teacher => <option key={teacher.id} value={teacher.id}>{teacher.nome}</option>)}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
-            </label>
+            </label> : null}
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Turma</span>
               <select value={selectedTurmaId} onChange={event => onTurmaChange(event.target.value)} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
@@ -407,7 +422,7 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
             <button type="button" onClick={onExportCsv} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Download size={13} /> CSV</button>
             <button type="button" onClick={onExportIcs} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Share2 size={13} /> ICS</button>
             <button type="button" onClick={onExportPdf} disabled={isExportingPdf} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-50"><FileDown size={13} /> PDF</button>
-            <button type="button" onClick={() => onOpenDate(focusedDate)} className="flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700"><Plus size={14} /> Novo evento</button>
+            <button type="button" onClick={() => onOpenDate(focusedDate)} className="flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700"><Plus size={14} /> {isProfessor ? 'Novo evento pessoal' : 'Novo evento'}</button>
           </div>
         </div>
       </section>
@@ -433,9 +448,9 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
         <div className="grid gap-3 border-t border-slate-100 px-4 py-4 text-[11px] font-medium text-slate-600 lg:grid-cols-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-[#001a33]">Origem</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-600" /> Manual</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-600" /> {isProfessor ? 'Meu evento' : 'Manual'}</span>
             <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Aula</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Oficial</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Geral</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-[#001a33]">Categorias</span>
@@ -443,10 +458,14 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-[#001a33]">Professores</span>
-              {visibleTeachers.length === 0 ? <span>Sem responsável</span> : visibleTeachers.map(name => <span key={name}>• {name}</span>)}
+              <span className="font-semibold text-[#001a33]">{isProfessor ? 'Visibilidade' : 'Professores'}</span>
+              {isProfessor
+                ? <span>Somente você cria e exclui seus eventos pessoais.</span>
+                : visibleTeachers.length === 0
+                  ? <span>Sem responsável</span>
+                  : visibleTeachers.map(name => <span key={name}>• {name}</span>)}
             </div>
-            <button type="button" onClick={onManageTypes} className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50" title="Gerenciar categorias"><Settings size={14} /></button>
+            {!isProfessor && onManageTypes ? <button type="button" onClick={onManageTypes} className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50" title="Gerenciar categorias"><Settings size={14} /></button> : null}
           </div>
         </div>
       </section>
@@ -455,19 +474,32 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
         <div className="grid gap-4 xl:grid-cols-3">{[1, 2, 3].map(item => <div key={item} className="h-[470px] animate-pulse rounded-2xl bg-white shadow-sm" />)}</div>
       ) : (
         <div className="grid gap-4 xl:grid-cols-3">
-          <AgendaColumn eyebrow="Agenda" title="Eventos manuais" icon={CalendarDays} events={manualEvents} focusedDate={focusedDate}
-            getTypeInfo={getTypeInfo} emptyCurrent="Nenhum evento manual neste dia." emptyFuture="Nenhum evento manual futuro." onOpenDate={onOpenDate} />
-          <AgendaColumn eyebrow="Aulas e atividades" title="Programação pedagógica" icon={BookOpen} events={classEvents} focusedDate={focusedDate}
-            getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma aula programada neste dia." emptyFuture="Nenhuma aula futura encontrada." onOpenDate={onOpenDate} />
-          <AgendaColumn eyebrow="Calendário oficial" title="Feriados e datas comemorativas" icon={Landmark} events={officialEvents} focusedDate={focusedDate}
-            getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma data oficial neste dia." emptyFuture="Nenhuma data oficial futura." onOpenDate={onOpenDate} />
+          {isProfessor ? (
+            <>
+              <AgendaColumn eyebrow="Minha agenda" title="Meus eventos pessoais" icon={CalendarDays} events={personalEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Você não criou nenhum evento para este dia." emptyFuture="Nenhum evento pessoal futuro." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Minhas aulas" title="Programação das minhas turmas" icon={BookOpen} events={classEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma aula sua programada neste dia." emptyFuture="Nenhuma aula futura encontrada." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Agenda geral" title="Instituição, feriados e datas oficiais" icon={Landmark} events={generalEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhum evento geral neste dia." emptyFuture="Nenhum evento geral futuro." onOpenDate={onOpenDate} />
+            </>
+          ) : (
+            <>
+              <AgendaColumn eyebrow="Agenda" title="Eventos manuais" icon={CalendarDays} events={manualEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhum evento manual neste dia." emptyFuture="Nenhum evento manual futuro." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Aulas e atividades" title="Programação pedagógica" icon={BookOpen} events={classEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma aula programada neste dia." emptyFuture="Nenhuma aula futura encontrada." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Calendário oficial" title="Feriados e datas comemorativas" icon={Landmark} events={officialEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma data oficial neste dia." emptyFuture="Nenhuma data oficial futura." onOpenDate={onOpenDate} />
+            </>
+          )}
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-medium text-slate-500 shadow-sm">
         <span className="flex items-center gap-2"><Clock3 size={13} /> Selecione um dia para atualizar as três colunas.</span>
-        <button type="button" onClick={onManageTypes} className="flex items-center gap-2 rounded-lg px-2 py-1.5 font-semibold uppercase text-blue-700 hover:bg-blue-50"><ListPlus size={13} /> Gerenciar categorias</button>
-        <span className="flex items-center gap-2"><SlidersHorizontal size={13} /> Os filtros afetam calendário, agenda e exportações.</span>
+        {!isProfessor && onManageTypes ? <button type="button" onClick={onManageTypes} className="flex items-center gap-2 rounded-lg px-2 py-1.5 font-semibold uppercase text-blue-700 hover:bg-blue-50"><ListPlus size={13} /> Gerenciar categorias</button> : null}
+        <span className="flex items-center gap-2"><SlidersHorizontal size={13} /> {isProfessor ? 'Mês e categoria afetam sua agenda e as exportações.' : 'Os filtros afetam calendário, agenda e exportações.'}</span>
       </div>
     </div>
   );

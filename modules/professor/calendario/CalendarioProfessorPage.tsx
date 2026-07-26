@@ -1,145 +1,331 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { supabase } from '../../../lib/supabase';
-import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
-import { CalendarEvent } from '../../gestor/calendario/calendario.types';
-import { DEFAULT_EVENT_TYPES } from '../../gestor/calendario/calendario.types';
-import CalendarioReadOnly from '../../shared/components/CalendarioReadOnly';
-import { CalendarDays } from 'lucide-react';
+import {
+  getBrazilianOfficialEvents,
+  OFFICIAL_EVENT_TYPES,
+  toDateKey,
+} from '../../gestor/calendario/calendario.official';
+import { createAnnualCalendarPdf } from '../../gestor/calendario/calendario.pdf';
+import { calendarioService } from '../../gestor/calendario/calendario.service';
+import type { CalendarEvent, EventType } from '../../gestor/calendario/calendario.types';
+import AgendaWorkspace from '../../gestor/calendario/components/AgendaWorkspace';
+import CalendarPdfPreviewModal from '../../gestor/calendario/components/CalendarPdfPreviewModal';
+import EventModal from '../../gestor/calendario/components/EventModal';
+import {
+  professorCalendarQueryKey,
+  professorCalendarQueryOptions,
+} from './calendario-professor.queries';
 
 interface CalendarioProfessorPageProps {
   professorId: string;
+  poloId: string;
 }
 
-const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ professorId }) => {
-  const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['professor-calendario', professorId],
-    enabled: !!professorId,
-    queryFn: async () => {
-      // 1. Buscar disciplinas atribuídas ao professor
-      const { data: disciplinas, error: errDisc } = await supabase
-        .from('turmas_disciplinas')
-        .select('turma_id, disciplina_id, professor_nome')
-        .eq('professor_id', professorId);
+const escapeICS = (value: string) => value
+  .replace(/\\/g, '\\\\')
+  .replace(/\n/g, '\\n')
+  .replace(/,/g, '\\,')
+  .replace(/;/g, '\\;');
 
-      if (errDisc) throw errDisc;
+const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({
+  professorId,
+  poloId,
+}) => {
+  const today = useMemo(() => new Date(), []);
+  const queryClient = useQueryClient();
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(today.getMonth());
+  const [focusedDate, setFocusedDate] = useState(today);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; fileName: string } | null>(null);
 
-      const turmaIds = [...new Set((disciplinas || []).map(d => d.turma_id).filter(Boolean))];
-      const disciplinaIds = [...new Set((disciplinas || []).map(d => d.disciplina_id).filter(Boolean))];
-      const assignmentPairs = new Set((disciplinas || []).map((d: any) => `${d.turma_id}:${d.disciplina_id}`));
+  const { data, isLoading } = useQuery(professorCalendarQueryOptions(professorId, poloId));
+  const persistedAndClassEvents = data?.events || [];
+  const eventTypes = data?.eventTypes || [];
+  const turmas = data?.turmas || [];
 
-      // 2. Buscar aulas agendadas dessas turmas
-      let classEvents: CalendarEvent[] = [];
-      if (turmaIds.length > 0 && disciplinaIds.length > 0) {
-        const [
-          { data: aulas, error: errAulas },
-          { data: turmasData, error: errTurmas },
-          { data: disciplinasData, error: errDisciplinas },
-        ] = await Promise.all([
-          supabase
-          .from('aulas_turma')
-          .select(`
-            id,
-            titulo,
-            carga_horaria,
-            sessao,
-            data_aula,
-            turma_id,
-            disciplina_id
-          `)
-          .in('turma_id', turmaIds)
-          .in('disciplina_id', disciplinaIds)
-          .not('data_aula', 'is', null),
-          supabase
-            .from('turmas')
-            .select('id, nome, codigo, turno')
-            .in('id', turmaIds),
-          supabase
-            .from('disciplinas')
-            .select('id, nome')
-            .in('id', disciplinaIds),
-        ]);
+  useEffect(() => {
+    setSelectedTurmaId('');
+    setSelectedCategoryId('');
+  }, [poloId]);
 
-        if (errAulas) throw errAulas;
-        if (errTurmas) throw errTurmas;
-        if (errDisciplinas) throw errDisciplinas;
+  useEffect(() => () => {
+    if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url);
+  }, [pdfPreview]);
 
-        const turmaById = new Map((turmasData || []).map((turma: any) => [turma.id, turma]));
-        const disciplinaNames = new Map((disciplinasData || []).map((disciplina: any) => [disciplina.id, disciplina.nome]));
-        const professorNames = new Map((disciplinas || []).map((disciplina: any) => [`${disciplina.turma_id}:${disciplina.disciplina_id}`, disciplina.professor_nome || 'Professor']));
+  useEffect(() => {
+    if (!professorId || !poloId) return undefined;
 
-        classEvents = groupAcademicClassMeetings((aulas || []) as any[])
-          .filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`))
-          .map((a: any) => {
-            const turma = turmaById.get(a.turma_id) || {};
-            const turmaNome = turma.nome || 'Turma';
-            const disciplinaNome = disciplinaNames.get(a.disciplina_id) || 'Disciplina';
-            const professorName = professorNames.get(`${a.turma_id}:${a.disciplina_id}`) || 'Professor';
-            const cargaHoraria = Number(a.carga_horaria || 0);
-            const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
-            const sessoesLabel = formatAcademicSessions(a.sessoes);
+    const invalidate = () => {
+      void queryClient.invalidateQueries({
+        queryKey: professorCalendarQueryKey(professorId, poloId),
+      });
+    };
 
-            return {
-              id: `class-${a.id}`,
-              title: `${turmaNome} — ${disciplinaNome}`,
-              description: [
-                `Aula: ${a.titulo || 'Aula cadastrada'}`,
-                `Professor: ${professorName}`,
-                `Turma: ${turmaNome}${turma.codigo ? ` (${turma.codigo})` : ''}`,
-                `Carga horária: ${cargaLabel}`,
-                sessoesLabel ? `Sessões: ${sessoesLabel}` : null,
-                turma.turno ? `Turno: ${turma.turno}` : null,
-              ].filter(Boolean).join(' • '),
-              date: a.data_aula,
-              typeId: 'ped',
-              professorId,
-              professorName,
-              turmaId: a.turma_id,
-              turmaName: turmaNome,
-              disciplinaId: a.disciplina_id,
-              disciplinaName: disciplinaNome,
-              cargaHoraria,
-              turno: turma.turno || null,
-            };
-          });
-      }
+    const channel = supabase
+      .channel(`professor_calendar_${professorId}_${poloId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'calendar_events', filter: `polo_id=eq.${poloId}` },
+        invalidate,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'aulas_turma' },
+        invalidate,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'turmas_disciplinas',
+          filter: `professor_id=eq.${professorId}`,
+        },
+        invalidate,
+      )
+      .subscribe();
 
-      // 3. Buscar eventos públicos (sem turmaId vinculado — feriados, recessos, institucionais)
-      // O service ainda usa mock, então buscamos direto via Supabase se houver tabela,
-      // ou usamos o mock do service para eventos globais.
-      // Como o service usa mock, importamos os dados de mock como fallback.
-      // Por ora retornamos apenas os classEvents + mock global para consistência.
-      const { calendarioService } = await import('../../gestor/calendario/calendario.service');
-      const globalEvents = await calendarioService.getEvents();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [poloId, professorId, queryClient]);
 
-      // Filtrar apenas eventos sem turmaId específico (públicos globais)
-      const publicEvents = globalEvents.filter(e => !e.turmaId);
+  const allEventTypes = useMemo(() => {
+    const typeMap = new Map<string, EventType>();
+    OFFICIAL_EVENT_TYPES.forEach(type => typeMap.set(type.id, type));
+    eventTypes.forEach(type => typeMap.set(type.id, type));
+    return Array.from(typeMap.values());
+  }, [eventTypes]);
 
-      return [...publicEvents, ...classEvents];
-    },
-  });
+  const personalEventTypeOptions = useMemo(
+    () => allEventTypes.filter(type => ['pes', 'evt', 'ped', 'inst'].includes(type.id)),
+    [allEventTypes],
+  );
 
-  const eventTypes = DEFAULT_EVENT_TYPES;
+  const officialEvents = useMemo(
+    () => getBrazilianOfficialEvents(currentYear),
+    [currentYear],
+  );
+
+  const visibleEvents = useMemo(
+    () => [
+      ...persistedAndClassEvents.filter(event => (
+        !selectedTurmaId || event.turmaId === selectedTurmaId
+      )),
+      ...officialEvents,
+    ]
+      .filter(event => !selectedCategoryId || event.typeId === selectedCategoryId)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'pt-BR')),
+    [officialEvents, persistedAndClassEvents, selectedCategoryId, selectedTurmaId],
+  );
+
+  const visibleYearEvents = useMemo(
+    () => visibleEvents.filter(event => event.date.startsWith(`${currentYear}-`)),
+    [currentYear, visibleEvents],
+  );
+
+  const monthEvents = useMemo(
+    () => visibleYearEvents.filter(event => Number(event.date.slice(5, 7)) === currentMonthIndex + 1),
+    [currentMonthIndex, visibleYearEvents],
+  );
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    visibleEvents.forEach(event => {
+      const current = map.get(event.date) || [];
+      current.push(event);
+      map.set(event.date, current);
+    });
+    return map;
+  }, [visibleEvents]);
+
+  const getTypeInfo = useCallback((typeId: string): EventType => (
+    allEventTypes.find(type => type.id === typeId)
+    || { id: 'other', label: 'Outro', color: '#94a3b8' }
+  ), [allEventTypes]);
+
+  const focusMonth = (year: number, monthIndex: number) => {
+    setCurrentYear(year);
+    setCurrentMonthIndex(monthIndex);
+    setFocusedDate(new Date(year, monthIndex, 1));
+  };
+
+  const changeMonth = (direction: -1 | 1) => {
+    const nextMonth = new Date(currentYear, currentMonthIndex + direction, 1);
+    focusMonth(nextMonth.getFullYear(), nextMonth.getMonth());
+  };
+
+  const openDay = (date: Date) => {
+    setFocusedDate(date);
+    setSelectedDate(date);
+    setIsEventModalOpen(true);
+  };
+
+  const handleAddEvent = async (event: Omit<CalendarEvent, 'id'>) => {
+    await calendarioService.addEvent({
+      ...event,
+      poloId,
+      professorId,
+      turmaId: null,
+      visibility: 'PERSONAL',
+    }, poloId);
+    await queryClient.invalidateQueries({
+      queryKey: professorCalendarQueryKey(professorId, poloId),
+    });
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    const event = persistedAndClassEvents.find(item => item.id === id);
+    if (!event || event.visibility !== 'PERSONAL' || event.professorId !== professorId) return;
+
+    await calendarioService.deleteEvent(id);
+    await queryClient.invalidateQueries({
+      queryKey: professorCalendarQueryKey(professorId, poloId),
+    });
+  };
+
+  const exportToICS = () => {
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Universo Cursos//Agenda do Professor//PT-BR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+    ];
+
+    visibleYearEvents.forEach(event => {
+      const nextDate = new Date(`${event.date}T12:00:00`);
+      nextDate.setDate(nextDate.getDate() + 1);
+      lines.push(
+        'BEGIN:VEVENT',
+        `UID:${escapeICS(event.id)}-${currentYear}@universocursos.com.br`,
+        `DTSTART;VALUE=DATE:${event.date.replace(/-/g, '')}`,
+        `DTEND;VALUE=DATE:${toDateKey(nextDate).replace(/-/g, '')}`,
+        `SUMMARY:${escapeICS(event.title)}`,
+        `DESCRIPTION:${escapeICS(event.description || '')}`,
+        'END:VEVENT',
+      );
+    });
+    lines.push('END:VCALENDAR');
+
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `minha-agenda-${currentYear}.ics`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Data', 'Evento', 'Categoria', 'Turma', 'Descrição'];
+    const rows = visibleYearEvents.map(event => [
+      event.date,
+      event.title,
+      getTypeInfo(event.typeId).label,
+      event.turmaName || 'Geral/pessoal',
+      event.description || '',
+    ]);
+    const content = [headers, ...rows]
+      .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([`\ufeff${content}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `minha-agenda-${currentYear}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    setIsExportingPdf(true);
+    try {
+      const document = createAnnualCalendarPdf({
+        year: currentYear,
+        events: visibleYearEvents,
+        eventTypes: allEventTypes,
+      });
+      const url = URL.createObjectURL(document.blob);
+      setPdfPreview({ url, fileName: `minha-agenda-${currentYear}.pdf` });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-          <CalendarDays className="text-purple-600" />
-          Minha Agenda
-        </h2>
-        <p className="text-xs text-slate-450 font-medium mt-1">
-          Visualize suas aulas agendadas, feriados e eventos institucionais. Somente suas turmas são exibidas.
-        </p>
-      </div>
-
-      <CalendarioReadOnly
-        events={events}
-        eventTypes={eventTypes}
+    <>
+      <AgendaWorkspace
+        variant="professor"
+        currentYear={currentYear}
+        currentMonthIndex={currentMonthIndex}
+        today={today}
+        focusedDate={focusedDate}
+        events={visibleEvents}
+        monthEvents={monthEvents}
+        eventsByDate={eventsByDate}
+        eventTypes={allEventTypes}
+        teachers={[]}
+        turmas={turmas}
+        selectedTeacherId=""
+        selectedTurmaId={selectedTurmaId}
+        selectedCategoryId={selectedCategoryId}
         isLoading={isLoading}
+        isExportingPdf={isExportingPdf}
+        getTypeInfo={getTypeInfo}
+        onTeacherChange={() => undefined}
+        onTurmaChange={setSelectedTurmaId}
+        onCategoryChange={setSelectedCategoryId}
+        onClearFilters={() => {
+          setSelectedTurmaId('');
+          setSelectedCategoryId('');
+        }}
+        onMonthChange={monthIndex => focusMonth(currentYear, monthIndex)}
+        onChangeMonth={changeMonth}
+        onFocusDate={setFocusedDate}
+        onOpenDate={openDay}
+        onExportCsv={exportToCSV}
+        onExportIcs={exportToICS}
+        onExportPdf={exportToPDF}
       />
-    </div>
+
+      {selectedDate ? (
+        <EventModal
+          variant="professor"
+          professorId={professorId}
+          isOpen={isEventModalOpen}
+          onClose={() => setIsEventModalOpen(false)}
+          selectedDate={selectedDate}
+          eventsOnDate={eventsByDate.get(toDateKey(selectedDate)) || []}
+          eventTypes={allEventTypes}
+          eventTypeOptions={personalEventTypeOptions}
+          teachers={[]}
+          turmas={turmas}
+          canDeleteEvent={event => (
+            event.visibility === 'PERSONAL'
+            && event.professorId === professorId
+          )}
+          onAddEvent={handleAddEvent}
+          onDeleteEvent={handleDeleteEvent}
+        />
+      ) : null}
+
+      {pdfPreview ? (
+        <CalendarPdfPreviewModal
+          url={pdfPreview.url}
+          fileName={pdfPreview.fileName}
+          year={currentYear}
+          onClose={() => setPdfPreview(null)}
+        />
+      ) : null}
+    </>
   );
 };
 

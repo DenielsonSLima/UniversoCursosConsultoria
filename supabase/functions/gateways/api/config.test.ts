@@ -28,23 +28,21 @@ Deno.test("mantem Mercado Pago bloqueado ate recuperar criacao ambigua", () => {
   );
   assert.throws(
     () => assertStoredProviderAdapterReady("banese_card", "PIX", "sandbox"),
-    /Pix\/BolePix Banese permanece bloqueado/i,
+    /rota BOLETO/i,
   );
-  assert.throws(
-    () =>
-      assertStoredProviderAdapterReady(
-        "banese_card",
-        "BOLETO",
-        "production",
-      ),
-    /sandbox/i,
+  assert.doesNotThrow(() =>
+    assertStoredProviderAdapterReady(
+      "banese_card",
+      "BOLETO",
+      "production",
+    )
   );
   assert.doesNotThrow(() =>
     assertStoredProviderAdapterReady("banese_card", "BOLETO", "sandbox")
   );
   assert.throws(
     () => assertStoredProviderAdapterReady("banese_card", "PIX", "production"),
-    /Pix\/BolePix Banese permanece bloqueado/i,
+    /rota BOLETO/i,
   );
   assert.throws(
     () => assertProviderAdapterReady("banese_card", "CREDIT_CARD", "sandbox"),
@@ -56,7 +54,7 @@ Deno.test("mantem Mercado Pago bloqueado ate recuperar criacao ambigua", () => {
   );
 });
 
-Deno.test("etapa de homologacao ativa somente boleto Banese EAD sandbox", () => {
+Deno.test("etapa ativa boleto Banese EAD em sandbox e producao", () => {
   assert.doesNotThrow(() =>
     assertHomologationStageRoute(
       "EAD",
@@ -75,15 +73,13 @@ Deno.test("etapa de homologacao ativa somente boleto Banese EAD sandbox", () => 
       ),
     /somente Cursos EAD/i,
   );
-  assert.throws(
-    () =>
-      assertHomologationStageRoute(
-        "EAD",
-        "BOLETO",
-        "banese_card",
-        "production",
-      ),
-    /somente Cursos EAD/i,
+  assert.doesNotThrow(() =>
+    assertHomologationStageRoute(
+      "EAD",
+      "BOLETO",
+      "banese_card",
+      "production",
+    )
   );
 });
 

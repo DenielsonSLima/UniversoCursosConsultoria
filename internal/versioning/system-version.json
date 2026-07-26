@@ -1,8 +1,8 @@
 {
-  "version": "0.7.0-beta.2",
+  "version": "2.2.3-beta.1",
   "display": "BETA",
   "stage": "beta",
-  "revision": 2,
+  "revision": 1,
   "releasedAt": "2026-07-26",
-  "summary": "Boletim técnico do aluno por módulo, sem períodos ainda planejados"
+  "summary": "Troca de polo segura, escopada e alinhada ao padrão visual de validação"
 }

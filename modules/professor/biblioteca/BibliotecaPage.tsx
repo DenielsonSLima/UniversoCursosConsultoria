@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Sparkles, Folder, FileText, Lock } from 'lucide-react';
+import { BookOpen, Folder, FileText, Lock } from 'lucide-react';
 
 import FileExplorer from '../../gestor/biblioteca/components/FileExplorer';
 import UploadModal from '../../gestor/biblioteca/components/UploadModal';
@@ -88,18 +88,6 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
       <div className="min-h-[450px]">
         {activeTab === 'meus-arquivos' ? (
           <div className="space-y-4">
-            <div className="bg-purple-50/50 border border-purple-100 p-5 rounded-[2rem] flex items-center gap-4 shadow-sm mb-4">
-              <div className="p-3 bg-purple-100 text-purple-750 rounded-2xl">
-                <Sparkles size={20} className="text-purple-700" />
-              </div>
-              <div>
-                <h4 className="font-black text-purple-900 uppercase">Meu Repositório de Aula</h4>
-                <p className="text-[11px] font-medium text-slate-600 leading-normal">
-                  Nesta aba você tem total controle sobre seus arquivos. Crie subpastas, faça uploads e gerencie as regras de liberação para seus alunos.
-                </p>
-              </div>
-            </div>
-
             <FileExplorer 
               teacherId={professorId} 
               onPreviewClick={handleOpenPreview}

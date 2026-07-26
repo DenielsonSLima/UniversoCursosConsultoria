@@ -28,18 +28,20 @@ const getPoloCleanName = (polo: any) => {
 
 interface CaixaPageProps {
   poloId?: string | null;
+  poloName?: string;
   isGlobal?: boolean;
 }
 
-const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
+const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, poloName, isGlobal = false }) => {
   const [selectedPolo, setSelectedPolo] = useState<string>(
     isGlobal ? (poloId || 'todos') : (poloId || '')
   );
 
   // Fetch Polos list
   const { data: polos = [] } = useQuery({
-    queryKey: ['caixa-polos-list'],
+    queryKey: ['caixa-polos-list', 'global'],
     queryFn: financeiroService.getPolos,
+    enabled: isGlobal,
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
   });
@@ -50,8 +52,8 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, isGlobal = false }) => {
 
   const visiblePolos = useMemo(() => {
     if (isGlobal) return polos;
-    return polos.filter((polo: any) => polo.id === poloId);
-  }, [isGlobal, poloId, polos]);
+    return poloId ? [{ id: poloId, nome: poloName || 'Polo atual' }] : [];
+  }, [isGlobal, poloId, poloName, polos]);
 
   useCaixaRealtime(selectedPolo);
 

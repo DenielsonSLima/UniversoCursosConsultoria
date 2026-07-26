@@ -108,7 +108,6 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
                   key={turma.id}
                   turma={turma}
                   colorTheme="purple"
-                  showPoloDetails={false}
                   onClick={() => openTurma(turma)}
                 />
             ))

@@ -5,6 +5,7 @@ import { formatMessageTime } from '../whatsapp.utils';
 import MediaMessageActions from './MediaMessageActions';
 import MessageReceipt from './MessageReceipt';
 import { isMediaMessage, isMediaPlaceholder } from './mediaUtils';
+import WhatsAppMessageText from './WhatsAppMessageText';
 
 interface MessageThreadProps {
   activeConversation: WhatsAppConversation | null;
@@ -116,7 +117,7 @@ const MessageThread: React.FC<MessageThreadProps> = ({ activeConversation, messa
                   {media && <MediaMessageActions message={message} outgoing={outgoing} />}
                   {showText && (
                     <p className={`whitespace-pre-wrap text-[14.2px] font-normal leading-[19px] ${media ? 'mt-1.5' : ''}`}>
-                      <span>{message.conteudo}</span>
+                      <WhatsAppMessageText>{message.conteudo}</WhatsAppMessageText>
                       <span
                         aria-hidden="true"
                         className={`inline-block h-[11px] ${outgoing ? 'w-[64px]' : 'w-[38px]'}`}
