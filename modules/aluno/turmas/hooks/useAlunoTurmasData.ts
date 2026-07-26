@@ -237,7 +237,7 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     queryFn: async () => {
       const { data, error } = await supabase
         .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, disciplina_id')
+        .select('id, titulo, carga_horaria, data_aula, disciplina_id, sessao')
         .eq('turma_id', selectedTurmaId!)
         .order('created_at', { ascending: true });
       if (error) throw error;
