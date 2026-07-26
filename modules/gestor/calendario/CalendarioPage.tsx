@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import { getBrazilianOfficialEvents, OFFICIAL_EVENT_TYPES, toDateKey } from './calendario.official';
 import { createAnnualCalendarPdf } from './calendario.pdf';
 import { calendarioService } from './calendario.service';
@@ -62,6 +63,7 @@ const CalendarioPage: React.FC = () => {
             id,
             titulo,
             carga_horaria,
+            sessao,
             data_aula,
             turma_id,
             disciplina_id,
@@ -88,13 +90,14 @@ const CalendarioPage: React.FC = () => {
           };
         });
 
-        classEvents = dbAulas.map((aula: any) => {
+        classEvents = groupAcademicClassMeetings(dbAulas as any[]).map((aula: any) => {
           const config = configMap[`${aula.turma_id}-${aula.disciplina_id}`] || { nome: 'Não atribuído', id: null };
           const turma = Array.isArray(aula.turmas) ? aula.turmas[0] : aula.turmas;
           const disciplina = Array.isArray(aula.disciplinas) ? aula.disciplinas[0] : aula.disciplinas;
           const turmaNome = turma?.nome || 'Turma';
           const disciplinaNome = disciplina?.nome || 'Disciplina';
           const cargaHoraria = Number(aula.carga_horaria || 0);
+          const sessoesLabel = formatAcademicSessions(aula.sessoes);
 
           return {
             id: `class-${aula.id}`,
@@ -104,6 +107,7 @@ const CalendarioPage: React.FC = () => {
               `Professor: ${config.nome}`,
               turma?.codigo ? `Turma: ${turmaNome} (${turma.codigo})` : `Turma: ${turmaNome}`,
               cargaHoraria ? `Carga horária: ${cargaHoraria}h` : null,
+              sessoesLabel ? `Sessões: ${sessoesLabel}` : null,
               turma?.turno ? `Turno: ${turma.turno}` : null,
             ].filter(Boolean).join(' • '),
             date: aula.data_aula,

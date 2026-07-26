@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   LockKeyhole,
   Printer,
+  ShieldCheck,
 } from 'lucide-react';
 import { DiarioActiveTab } from './diario-classe.types';
 
@@ -109,39 +110,49 @@ const DiarioClasseHeader: React.FC<DiarioClasseHeaderProps> = ({
       </div>
     </div>
 
-    <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-6 bg-slate-200/50 p-1.5 rounded-2xl border border-slate-100">
-      <TabButton active={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')} activeClass="text-blue-600" icon={<Calendar size={18} />}>
+    <nav
+      aria-label="Seções do diário"
+      className="mb-6 flex max-w-full flex-nowrap items-center gap-6 overflow-x-auto border-b border-slate-200 bg-white px-5 pb-2 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200"
+    >
+      <TabButton active={activeTab === 'frequencia'} onClick={() => setActiveTab('frequencia')} icon={<Calendar size={15} />}>
         Frequência
       </TabButton>
-      <TabButton active={activeTab === 'resultado'} onClick={() => setActiveTab('resultado')} activeClass="text-emerald-600" icon={<Calculator size={18} />}>
+      <TabButton active={activeTab === 'resultado'} onClick={() => setActiveTab('resultado')} icon={<Calculator size={15} />}>
         Notas e Resultados
       </TabButton>
-      <TabButton active={activeTab === 'conteudo'} onClick={() => setActiveTab('conteudo')} activeClass="text-purple-600" icon={<BookOpen size={18} />}>
+      <TabButton active={activeTab === 'conteudo'} onClick={() => setActiveTab('conteudo')} icon={<BookOpen size={15} />}>
         Conteúdo das Aulas
       </TabButton>
-      <TabButton active={activeTab === 'observacoes'} onClick={() => setActiveTab('observacoes')} activeClass="text-orange-600" icon={<BookOpen size={18} />}>
+      <TabButton active={activeTab === 'observacoes'} onClick={() => setActiveTab('observacoes')} icon={<BookOpen size={15} />}>
         Observações
       </TabButton>
-    </div>
+      <TabButton active={activeTab === 'fechamento'} onClick={() => setActiveTab('fechamento')} icon={<ShieldCheck size={15} />}>
+        Fechamento
+      </TabButton>
+    </nav>
   </>
 );
 
 interface TabButtonProps {
   active: boolean;
   onClick: () => void;
-  activeClass: string;
   icon: React.ReactNode;
   children: React.ReactNode;
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ active, onClick, activeClass, icon, children }) => (
+const TabButton: React.FC<TabButtonProps> = ({ active, onClick, icon, children }) => (
   <button
+    type="button"
     onClick={onClick}
-    className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-sm font-bold uppercase tracking-wider transition-all ${
-      active ? `bg-white ${activeClass} shadow-sm` : 'text-slate-500 hover:text-slate-700'
+    aria-current={active ? 'page' : undefined}
+    className={`relative flex h-12 shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-blue-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+      active
+        ? 'text-[#001a33] after:scale-x-100'
+        : 'text-slate-400 after:scale-x-0 hover:text-blue-700 hover:after:scale-x-50'
     }`}
   >
-    {icon} {children}
+    <span className={active ? 'text-blue-600' : undefined}>{icon}</span>
+    {children}
   </button>
 );
 

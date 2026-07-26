@@ -79,12 +79,77 @@ const DiarioPrintStyles: React.FC = () => (
     .diario-table th, .diario-table td { border: .25mm solid #202735; padding: 1.35mm 1.2mm; vertical-align: middle; line-height: 1.2; }
     .diario-table th { background: #eef4fa; font-weight: 900; text-transform: uppercase; text-align: center; }
     .diario-table td { color: #111827; }
-    .diario-frequency-table { font-size: 6.6pt; }
+    .diario-frequency-table {
+      color-scheme: light;
+      font-size: 6.6pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
     .diario-frequency-table th,
     .diario-frequency-table td { padding: 1.05mm 0.9mm; line-height: 1.2; }
+    .diario-frequency-table thead th {
+      background-color: #eef4fa !important;
+      background-image: none !important;
+      color: #071a33 !important;
+      forced-color-adjust: none;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .diario-frequency-static {
+      background-color: #eef4fa !important;
+      color: #071a33 !important;
+    }
+    .diario-frequency-date {
+      display: inline;
+      color: #071a33 !important;
+      font-style: normal;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .diario-frequency-secondary {
+      display: inline;
+      margin-left: 0.7mm;
+      color: #64748b !important;
+      font-size: 5.2pt;
+      font-style: italic;
+      font-weight: 400;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+    .diario-frequency-meeting {
+      background-color: #eef4fa !important;
+      color: #071a33 !important;
+      border-bottom-width: .2mm !important;
+    }
+    .diario-frequency-session {
+      background-color: #f8fafc !important;
+      padding: .55mm .45mm !important;
+      color: #1d4ed8 !important;
+      font-size: 5.7pt;
+      letter-spacing: .05em;
+    }
     .diario-result-table { font-size: 6.6pt; }
     .diario-result-table th,
     .diario-result-table td { padding: 1.05mm 0.9mm; line-height: 1.2; }
+    .diario-result-legend {
+      margin-top: 3mm;
+      color: #071a33;
+      font-size: 6.8pt;
+      line-height: 1.45;
+    }
+    .diario-result-legend strong {
+      display: block;
+      margin-bottom: 1mm;
+    }
+    .diario-result-legend span {
+      display: block;
+    }
+    .diario-content-table td {
+      min-height: 9mm;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
     .diario-table th > div,
     .diario-table td > div,
     .diario-table th > span,
@@ -95,7 +160,11 @@ const DiarioPrintStyles: React.FC = () => (
       margin-top: 0;
     }
     .diario-frequency-student,
-    .diario-result-student { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 57mm; }
+    .diario-result-student { white-space: nowrap; overflow: hidden; max-width: 57mm; }
+    .diario-frequency-student strong {
+      display: inline;
+    }
+    .diario-result-student { text-overflow: ellipsis; }
     .diario-table tbody tr:nth-child(even) td { background-color: #f8fafc; }
     .diario-table tbody tr:nth-child(odd) td { background-color: #ffffff; }
     .diario-footer { position: absolute; bottom: 5mm; left: 19mm; right: 14mm; display: flex; justify-content: space-between; border-top: .25mm solid #94a3b8; padding-top: 1.5mm; font-size: 6.5pt; color: #64748b; }

@@ -187,7 +187,6 @@ const GestaoTecnicos: React.FC<GestaoTecnicosProps> = ({ onToggleDetails, poloId
                   <TurmaCard
                     turma={turma}
                     colorTheme="emerald"
-                    showPoloDetails
                     showDisciplineProgress
                     onDelete={setDeleteTarget}
                   />

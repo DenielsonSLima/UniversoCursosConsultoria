@@ -30,6 +30,7 @@ export interface TurmaDiarioDisciplina {
   primeiraAula: string | null;
   ultimaAula: string | null;
   presencaGeralPercent: number | null;
+  bloqueioDiario: 'ABERTO' | 'PROFESSOR' | 'TOTAL';
 }
 
 export interface TurmaDiarioModulo {

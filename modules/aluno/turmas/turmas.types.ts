@@ -62,6 +62,7 @@ export interface AulaTurmaAluno {
   carga_horaria?: number | string | null;
   data_aula?: string | null;
   disciplina_id?: string | null;
+  sessao?: 'M' | 'T' | 'N' | 'U' | string | null;
 }
 
 export interface FrequenciaAluno {

@@ -23,6 +23,7 @@ const useTurmaGradeInvalidation = (turmaId: string) => {
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticasByTurma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
     ]);
   }, [queryClient, turmaId]);
 };

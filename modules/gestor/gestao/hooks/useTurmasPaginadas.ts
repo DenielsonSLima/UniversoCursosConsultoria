@@ -31,8 +31,9 @@ export const useTurmasPaginadas = (modalidade: Turma['modalidade'], poloId?: str
   const query = useQuery({
     queryKey: gestaoQueryKeys.classPage(filters),
     queryFn: () => gestaoService.getTurmasPage(filters),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
+    refetchInterval: 5 * 60_000,
     placeholderData: keepPreviousData,
   });
 

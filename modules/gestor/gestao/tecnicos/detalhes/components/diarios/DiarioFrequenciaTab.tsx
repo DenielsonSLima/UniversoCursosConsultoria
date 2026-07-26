@@ -19,7 +19,10 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
   isReadOnly,
   onToggleAttendance,
   getStats,
-}) => (
+}) => {
+  const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
+
+  return (
   <div>
     {students.length === 0 ? (
       <div className="py-20 text-center text-slate-400 flex flex-col items-center">
@@ -38,20 +41,39 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr>
-              <th className="p-4 border-b border-slate-200 border-r w-12 text-center text-xs font-black text-slate-400">Nº</th>
-              <th className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase">Nome do Aluno</th>
-              <th className="p-4 border-b border-slate-200 text-center text-xs font-black text-slate-400 border-r" colSpan={aulas.length}>AULAS LANÇADAS</th>
-              <th className="p-4 border-b border-slate-200 text-center text-xs font-black text-slate-400 w-32">TOTAL FALTAS</th>
+              <th rowSpan={3} className="p-4 border-b border-slate-200 border-r w-12 text-center text-xs font-black text-slate-400">Nº</th>
+              <th rowSpan={3} className="p-4 border-b border-slate-200 border-r min-w-[250px] text-xs font-black text-[#001a33] uppercase">Nome do Aluno</th>
+              <th className="p-4 border-b border-slate-200 text-center text-xs font-black text-slate-400 border-r" colSpan={totalSessoes}>AULAS LANÇADAS</th>
+              <th rowSpan={3} className="p-4 border-b border-slate-200 text-center text-xs font-black text-slate-400 w-32">TOTAL FALTAS</th>
             </tr>
             <tr>
-              <th className="p-2 border-b border-slate-200 border-r bg-slate-50"></th>
-              <th className="p-2 border-b border-slate-200 border-r bg-slate-50"></th>
               {aulas.map((aula) => (
-                <th key={aula.id} className="p-2 border-b border-slate-200 border-r bg-slate-50 text-center text-[10px] font-bold text-slate-600 min-w-[65px] truncate" title={aula.titulo}>
-                  {aula.dataLabel}
+                <th
+                  key={aula.id}
+                  colSpan={aula.sessoes.length}
+                  className="border-b border-r border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-[10px] font-black text-slate-700"
+                  title={aula.titulo}
+                >
+                  <span>{aula.dataLabel}</span>
+                  <span className="ml-1 text-[9px] font-medium italic text-slate-400">
+                    ({String(aula.cargaHoraria).padStart(2, '0')}HRS)
+                  </span>
                 </th>
               ))}
-              <th className="p-2 border-b border-slate-200 bg-slate-50 text-center"></th>
+            </tr>
+            <tr>
+              {aulas.flatMap((aula) => aula.sessoes.map((sessao) => (
+                <th
+                  key={sessao.id}
+                  className="min-w-[65px] border-b border-r border-slate-200 bg-white px-2 py-1 text-center text-[10px] font-black text-blue-700"
+                  title={`${sessao.periodo === 'M' ? 'Manhã' : sessao.periodo === 'T' ? 'Tarde' : sessao.periodo === 'N' ? 'Noite' : 'Aula única'} — ${sessao.cargaHoraria}h`}
+                >
+                  {sessao.periodo === 'U' ? 'ÚNICA' : sessao.periodo}
+                  <span className="ml-1 text-[8px] font-medium italic text-slate-400">
+                    {sessao.cargaHoraria}h
+                  </span>
+                </th>
+              )))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -75,12 +97,13 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                       )}
                     </div>
                   </td>
-                  {aulas.map((aula) => {
-                    const attendanceStatus = attendanceMap[aluno.id]?.[aula.id] || null;
+                  {aulas.flatMap((aula) => aula.sessoes.map((sessao) => {
+                    const attendanceStatus = attendanceMap[aluno.id]?.[sessao.id] || null;
                     const foiFalta = attendanceStatus === 'F';
                     const foiPresente = attendanceStatus === 'P';
+                    const foiJustificada = attendanceStatus === 'J';
                     return (
-                      <td key={aula.id} className="p-2 border-r border-slate-100 text-center">
+                      <td key={sessao.id} className="p-2 border-r border-slate-100 text-center">
                         {isCredited ? (
                           <span
                             className="mx-auto inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-100 px-1.5 text-[9px] font-black text-violet-700"
@@ -90,22 +113,25 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                           </span>
                         ) : (
                           <button
-                            onClick={() => onToggleAttendance(aluno.id, aula.id)}
+                            onClick={() => onToggleAttendance(aluno.id, sessao.id)}
                             disabled={isReadOnly}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto text-xs font-bold transition-all ${
                               foiFalta
                                 ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                                 : foiPresente
                                   ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100'
-                                  : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
+                                  : foiJustificada
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                    : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100'
                             } disabled:cursor-not-allowed disabled:opacity-70`}
+                            title={foiJustificada ? 'Falta justificada' : foiFalta ? 'Falta' : foiPresente ? 'Presença' : 'Sem lançamento'}
                           >
-                            {foiFalta ? 'F' : foiPresente ? 'P' : '—'}
+                            {foiFalta ? 'F' : foiPresente ? 'P' : foiJustificada ? 'J' : '—'}
                           </button>
                         )}
                       </td>
                     );
-                  })}
+                  }))}
                   <td className="p-3 text-center">
                     {isCredited ? (
                       <span className="inline-flex items-center justify-center rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-black uppercase text-violet-700">
@@ -125,6 +151,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default DiarioFrequenciaTab;

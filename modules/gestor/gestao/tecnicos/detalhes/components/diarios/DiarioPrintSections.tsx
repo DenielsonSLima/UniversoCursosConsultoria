@@ -3,7 +3,11 @@ import { DiarioAula, DiarioStudent } from './diario-classe.service';
 import { DiarioPrintDocumentProps } from './diario-classe.types';
 import { getStudentStats } from './diario-classe.utils';
 import { DEFAULT_ACTIVE_INSTRUMENTS } from './diario-instruments';
-import { chunks } from './diario-print.utils';
+import {
+  chunks,
+  DIARIO_RESULT_LEGEND_TEXT,
+  DIARIO_RESULT_LEGEND_TITLE,
+} from './diario-print.utils';
 import DiarioPrintPage from './DiarioPrintPage';
 
 type PrintBaseProps = Pick<
@@ -21,6 +25,23 @@ const compactPrintPageProps = {
   logoAlignRight: true,
 };
 
+const groupAulasBySessionLimit = (aulas: DiarioAula[], limit: number) => {
+  const groups: DiarioAula[][] = [];
+  let current: DiarioAula[] = [];
+  let sessions = 0;
+  aulas.forEach((aula) => {
+    if (current.length > 0 && sessions + aula.sessoes.length > limit) {
+      groups.push(current);
+      current = [];
+      sessions = 0;
+    }
+    current.push(aula);
+    sessions += aula.sessoes.length;
+  });
+  if (current.length > 0) groups.push(current);
+  return groups;
+};
+
 export const DiarioPrintFrequencyPages: React.FC<FrequencyPagesProps> = ({
   template,
   turma,
@@ -33,12 +54,12 @@ export const DiarioPrintFrequencyPages: React.FC<FrequencyPagesProps> = ({
   exportMode,
 }) => {
   const isBlank = exportMode === 'EM_BRANCO';
-  const aulaGroups = chunks<DiarioAula>(aulas, 10);
+  const aulaGroups = groupAulasBySessionLimit(aulas, 10);
 
-  const getRowsPerPage = (aulasNoBloco: number) => {
-    if (aulasNoBloco <= 4) return 30;
-    if (aulasNoBloco <= 6) return 24;
-    if (aulasNoBloco <= 8) return 22;
+  const getRowsPerPage = (sessoesNoBloco: number) => {
+    if (sessoesNoBloco <= 4) return 30;
+    if (sessoesNoBloco <= 6) return 24;
+    if (sessoesNoBloco <= 8) return 22;
     return 18;
   };
 
@@ -46,7 +67,8 @@ export const DiarioPrintFrequencyPages: React.FC<FrequencyPagesProps> = ({
     <>
       {aulaGroups.flatMap((aulaGroup, aulaIndex) =>
         (() => {
-          const studentGroups = chunks<DiarioStudent>(students, getRowsPerPage(aulaGroup.length));
+          const sessoesNoBloco = aulaGroup.reduce((total, aula) => total + aula.sessoes.length, 0);
+          const studentGroups = chunks<DiarioStudent>(students, getRowsPerPage(sessoesNoBloco));
 
           return studentGroups.map((studentGroup, studentIndex) => (
             <DiarioPrintPage
@@ -62,14 +84,24 @@ export const DiarioPrintFrequencyPages: React.FC<FrequencyPagesProps> = ({
               <table className="diario-table diario-frequency-table">
                 <thead>
                   <tr>
-                    <th style={{ width: '8mm' }}>Nº</th>
-                    <th style={{ width: '60mm' }}>Aluno(a)</th>
+                    <th rowSpan={2} className="diario-frequency-static" style={{ width: '8mm' }}>Nº</th>
+                    <th rowSpan={2} className="diario-frequency-static" style={{ width: '60mm' }}>Aluno(a)</th>
                     {aulaGroup.map((aula) => (
-                      <th key={aula.id} className="text-center py-1">
-                        <div>{`${aula.dataLabel} (${String(aula.cargaHoraria).padStart(2, '0')}hrs)`}</div>
+                      <th key={aula.id} colSpan={aula.sessoes.length} className="diario-frequency-meeting text-center py-1">
+                        <span className="diario-frequency-date">{aula.dataLabel}</span>
+                        <span className="diario-frequency-secondary">
+                          ({String(aula.cargaHoraria).padStart(2, '0')}HRS)
+                        </span>
                       </th>
                     ))}
-                    <th style={{ width: '15mm' }}>Faltas</th>
+                    <th rowSpan={2} className="diario-frequency-static" style={{ width: '15mm' }}>Faltas</th>
+                  </tr>
+                  <tr>
+                    {aulaGroup.flatMap((aula) => aula.sessoes.map((sessao) => (
+                      <th key={sessao.id} className="diario-frequency-session text-center">
+                        {sessao.periodo === 'U' ? 'Única' : sessao.periodo}
+                      </th>
+                    )))}
                   </tr>
                 </thead>
                 <tbody>
@@ -77,16 +109,16 @@ export const DiarioPrintFrequencyPages: React.FC<FrequencyPagesProps> = ({
                     const totalFaltas = gradesMap[student.id]?.total_faltas;
                     return (
                       <tr key={student.id}>
-                        <td className="text-center">{studentIndex * getRowsPerPage(aulaGroup.length) + index + 1}</td>
+                        <td className="text-center">{studentIndex * getRowsPerPage(sessoesNoBloco) + index + 1}</td>
                         <td className="diario-frequency-student">
                           <strong>{student.nome}</strong>
-                          <span className="text-[6pt] text-slate-500"> ({student.matricula})</span>
+                          <span className="diario-frequency-secondary">({student.matricula})</span>
                         </td>
-                        {aulaGroup.map((aula) => (
-                          <td key={aula.id} className="text-center font-bold">
-                            {isBlank ? '' : attendanceMap[student.id]?.[aula.id] || '—'}
+                        {aulaGroup.flatMap((aula) => aula.sessoes.map((sessao) => (
+                          <td key={sessao.id} className="text-center font-bold">
+                            {isBlank ? '' : attendanceMap[student.id]?.[sessao.id] || '—'}
                           </td>
-                        ))}
+                        )))}
                         <td className="text-center font-bold">
                           {isBlank || totalFaltas === null || totalFaltas === undefined ? '' : totalFaltas}
                         </td>
@@ -124,9 +156,12 @@ export const DiarioPrintResultPages: React.FC<ResultPagesProps> = ({
 
   return (
     <>
-      {chunks<DiarioStudent>(students, rowsPerPage).map((studentGroup, groupIndex) => (
-        <DiarioPrintPage
-          key={`result-${groupIndex}`}
+      {chunks<DiarioStudent>(students, rowsPerPage).map((studentGroup, groupIndex, groups) => {
+        const isLastGroup = groupIndex === groups.length - 1;
+
+        return (
+          <DiarioPrintPage
+            key={`result-${groupIndex}`}
             template={template}
             turma={turma}
             disciplina={disciplina}
@@ -182,8 +217,15 @@ export const DiarioPrintResultPages: React.FC<ResultPagesProps> = ({
               })}
             </tbody>
           </table>
-        </DiarioPrintPage>
-      ))}
+          {isLastGroup && (
+            <div className="diario-result-legend">
+              <strong>{DIARIO_RESULT_LEGEND_TITLE}</strong>
+              <span>{DIARIO_RESULT_LEGEND_TEXT}</span>
+            </div>
+          )}
+          </DiarioPrintPage>
+        );
+      })}
     </>
   );
 };
@@ -218,7 +260,7 @@ export const DiarioPrintContentPages: React.FC<ContentPagesProps> = ({
             pageLabel={`Conteúdo ${groupIndex + 1}`}
             {...compactPrintPageProps}
           >
-          <table className="diario-table">
+          <table className="diario-table diario-content-table">
             <thead>
               <tr>
                 <th style={{ width: '24mm' }}>Dia/Mês</th>
@@ -229,7 +271,7 @@ export const DiarioPrintContentPages: React.FC<ContentPagesProps> = ({
             </thead>
             <tbody>
               {aulaGroup.map((aula) => (
-                <tr key={aula.id} style={{ height: '9mm' }}>
+                <tr key={aula.id}>
                   <td className="text-center font-bold">{aula.dataLabel}</td>
                   <td>{aula.titulo}</td>
                   <td>{praticasMap[aula.id] || '—'}</td>
@@ -268,7 +310,7 @@ export const DiarioPrintInstructionsPage: React.FC<PrintBaseProps> = (props) => 
     <div className="grid grid-cols-2 gap-8 text-[10pt] leading-relaxed">
       <ol className="list-decimal space-y-3 pl-5">
         <li>Registre o conteúdo e a prática pedagógica na mesma data da aula.</li>
-        <li>Na frequência, utilize P para presença e F para falta.</li>
+        <li>Na frequência, utilize P para presença, F para falta e J para falta justificada.</li>
         <li>Confira todos os lançamentos antes do fechamento do período.</li>
       </ol>
       <ol start={4} className="list-decimal space-y-3 pl-5">

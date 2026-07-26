@@ -12,4 +12,5 @@ export const diarioClasseKeys = {
   praticasByTurma: (turmaId: string) => ['diario-praticas', turmaId] as const,
   praticas: (turmaId: string, disciplinaId: string) => ['diario-praticas', turmaId, disciplinaId] as const,
   observacoes: (turmaId: string, disciplinaId: string) => ['diario-observacoes', turmaId, disciplinaId] as const,
+  fechamento: (turmaId: string, disciplinaId: string) => ['diario-fechamento', turmaId, disciplinaId] as const,
 };

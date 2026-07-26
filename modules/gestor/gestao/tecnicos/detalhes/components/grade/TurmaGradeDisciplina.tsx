@@ -339,6 +339,15 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                           <span className="text-[11px] font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 font-mono">
                             {formatGradeHours(aula.cargaHoraria)}h
                           </span>
+                          {aula.sessoes.length > 1 && aula.sessoes.map((sessao) => (
+                            <span
+                              key={sessao.id}
+                              className="rounded border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[10px] font-black text-blue-700"
+                              title={`${sessao.periodo === 'M' ? 'Manhã' : sessao.periodo === 'T' ? 'Tarde' : 'Noite'} — ${formatGradeHours(sessao.cargaHoraria)}h`}
+                            >
+                              {sessao.periodo} {formatGradeHours(sessao.cargaHoraria)}h
+                            </span>
+                          ))}
                         </div>
                         <div className="flex items-center gap-1">
                           <button
@@ -454,6 +463,11 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                 if (event.key === 'Enter') onAddPlanejamento();
               }}
             />
+            {!isExtraClasse && Number(horas.replace(',', '.')) === 8 && (
+              <span className="shrink-0 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-blue-700">
+                M 4h + T 4h
+              </span>
+            )}
             <button
               type="button"
               onClick={onAddPlanejamento}

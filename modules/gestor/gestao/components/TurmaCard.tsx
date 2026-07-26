@@ -1,12 +1,11 @@
 
 import React, { useState } from 'react';
-import { Users, Calendar, Clock, MoreVertical, GraduationCap, MapPin, CheckCircle2, TrendingUp, BookOpen, PlayCircle, Trash2 } from 'lucide-react';
+import { Users, Calendar, Clock, MoreVertical, GraduationCap, CheckCircle2, TrendingUp, BookOpen, PlayCircle, Trash2 } from 'lucide-react';
 import { Turma } from '../gestao.types';
 
 interface TurmaCardProps {
   turma: Turma;
   colorTheme: string; // 'emerald' | 'amber' | 'rose' | 'purple'
-  showPoloDetails?: boolean;
   showDisciplineProgress?: boolean;
   onClick?: () => void;
   onDelete?: React.Dispatch<Turma>;
@@ -15,7 +14,6 @@ interface TurmaCardProps {
 const TurmaCard: React.FC<TurmaCardProps> = ({
   turma,
   colorTheme,
-  showPoloDetails = true,
   showDisciplineProgress = false,
   onClick,
   onDelete,
@@ -110,24 +108,6 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
       </div>
 
       <div className="flex flex-col gap-3 mb-6 relative z-10 flex-1">
-        {showPoloDetails && turma.poloNome && (
-           <div className="flex items-start justify-between gap-3 text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl">
-             <div className="flex items-center gap-2 pt-0.5 shrink-0">
-                <MapPin size={14} className="text-slate-400" />
-                <span>Polo</span>
-             </div>
-             <div className="min-w-0 text-right">
-               <span className="block font-black text-[#001a33] truncate" title={turma.poloNome}>{turma.poloNome}</span>
-               <span className="block mt-0.5 text-[9px] font-bold text-slate-400">
-                 CNPJ: {turma.poloCnpj || 'Não informado'}
-               </span>
-               <span className="block text-[9px] font-bold uppercase text-slate-400">
-                 {[turma.poloCidade, turma.poloEstado].filter(Boolean).join(' - ') || 'Localização não informada'}
-               </span>
-             </div>
-           </div>
-        )}
-        
         <div className="flex items-center justify-between text-xs font-medium text-slate-600 bg-slate-50 p-2 rounded-xl">
            <div className="flex items-center gap-2">
               <Calendar size={14} className="text-slate-400" />
@@ -158,13 +138,30 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
 
             <div className="flex items-start gap-2 border-t border-white/70 pt-2">
               <PlayCircle size={14} className={`${colors.text} mt-0.5 shrink-0`} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
+                {turma.moduloAtual && (
+                  <div className="mb-2">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                      Módulo atual{turma.moduloAtualOrdem ? ` ${turma.moduloAtualOrdem}` : ''}
+                    </p>
+                    <p
+                      className="mt-0.5 truncate text-[10px] font-bold text-slate-600"
+                      title={turma.moduloAtual}
+                    >
+                      {turma.moduloAtual}
+                    </p>
+                  </div>
+                )}
                 <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">
-                  {turma.totalDisciplinas === 0
+                  {turma.progressoAcademicoDisponivel !== true
+                    ? 'Progresso indisponível'
+                    : turma.totalDisciplinas === 0
                     ? 'Grade não configurada'
                     : turma.disciplinaAtual
-                      ? `Atual ${turma.disciplinaAtualOrdem}/${turma.totalDisciplinas}`
-                      : 'Grade concluída'}
+                      ? `Disciplina atual ${turma.disciplinaAtualOrdem}/${turma.totalDisciplinas}`
+                      : turma.gradeConcluida === true
+                        ? 'Grade concluída'
+                        : 'Progresso indisponível'}
                 </p>
                 {turma.disciplinaAtual && (
                   <p

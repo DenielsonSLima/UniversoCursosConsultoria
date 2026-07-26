@@ -120,25 +120,32 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
           </div>
 
           {/* Navegação de Abas */}
-          <div className="flex overflow-x-auto gap-1 pb-1 scrollbar-hide">
+          <nav
+            aria-label="Seções da turma"
+            className="-mx-1 flex max-w-full flex-nowrap items-center gap-5 overflow-x-auto px-1 pb-2 [scrollbar-color:#94a3b8_#e2e8f0] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb:hover]:bg-slate-500 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
                 onMouseEnter={() => prefetchTab(tab.id)}
                 onFocus={() => prefetchTab(tab.id)}
                 onTouchStart={() => prefetchTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                  activeTab === tab.id 
-                    ? 'bg-[#001a33] text-white shadow-lg shadow-blue-900/20' 
-                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`relative flex h-11 shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-blue-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                  activeTab === tab.id
+                    ? 'text-[#001a33] after:scale-x-100'
+                    : 'text-slate-400 after:scale-x-0 hover:text-blue-700 hover:after:scale-x-50'
                 }`}
               >
-                {tab.icon}
+                <span className={activeTab === tab.id ? 'text-blue-600' : undefined}>
+                  {tab.icon}
+                </span>
                 {tab.label}
               </button>
             ))}
-          </div>
+          </nav>
         </div>
       </div>
 

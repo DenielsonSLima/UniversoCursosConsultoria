@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import { BookOpen, GraduationCap, MessageSquare, Calendar, Clock, AlertTriangle, CheckCircle2, WalletCards, History, Pin, PlayCircle, Image as ImageIcon } from 'lucide-react';
 import { canAccessLibraryDocumentAsAluno } from '../biblioteca/libraryAccess';
 import {
@@ -301,16 +302,16 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
       const today = toLocalDateKey(new Date());
       const { data, error } = await supabase
         .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, turma_id, disciplina_id')
+        .select('id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id')
         .in('turma_id', activeTurmaIds)
         .not('data_aula', 'is', null)
         .gte('data_aula', today)
         .order('data_aula', { ascending: true })
-        .limit(6);
+        .limit(12);
 
       if (error) throw error;
 
-      const aulas = data || [];
+      const aulas = groupAcademicClassMeetings((data || []) as any[]).slice(0, 6);
       const disciplinaIds = [...new Set(aulas.map((aula: any) => aula.disciplina_id).filter(Boolean))];
       const [{ data: disciplinasData, error: disciplinasError }, { data: configsData, error: configsError }] = await Promise.all([
         disciplinaIds.length > 0
@@ -337,6 +338,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
         const disciplinaNome = disciplinaNames.get(aula.disciplina_id) || 'Disciplina';
         const config = configMap.get(`${aula.turma_id}-${aula.disciplina_id}`) || {};
         const cargaHoraria = Number(aula.carga_horaria || 0);
+        const sessoesLabel = formatAcademicSessions(aula.sessoes);
 
         return {
           id: `aula-${aula.id}`,
@@ -346,6 +348,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           detail: [
             config.professor_nome ? `Prof. ${config.professor_nome}` : null,
             cargaHoraria > 0 ? `${cargaHoraria}h` : null,
+            sessoesLabel,
             turma.turno ? `Turno ${turma.turno}` : null,
           ].filter(Boolean).join(' • '),
         };

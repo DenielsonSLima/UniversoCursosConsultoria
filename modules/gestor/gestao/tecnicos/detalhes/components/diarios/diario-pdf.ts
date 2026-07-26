@@ -5,10 +5,21 @@ import {
   getDocumentValidationUrl,
 } from '../../../../../../shared/document-validation/document-validation.url';
 import type { DiarioGradeResult, DiarioPrintDocumentProps } from './diario-classe.types';
+import type { DiarioAula } from './diario-classe.service';
 import { getDiarioValidationCode, getStudentStats } from './diario-classe.utils';
 import { DEFAULT_ACTIVE_INSTRUMENTS } from './diario-instruments';
-import { chunks, moduloNumero } from './diario-print.utils';
-import { drawTable, fitText } from './diario-pdf-table';
+import {
+  chunks,
+  DIARIO_RESULT_LEGEND_TEXT,
+  DIARIO_RESULT_LEGEND_TITLE,
+  moduloNumero,
+} from './diario-print.utils';
+import {
+  drawGroupedFrequencyTable,
+  drawTable,
+  fitText,
+  measureTableRowHeights,
+} from './diario-pdf-table';
 
 const PAGE_WIDTH = 297;
 const PAGE_HEIGHT = 210;
@@ -18,6 +29,23 @@ const CONTENT_WIDTH = PAGE_WIDTH - CONTENT_LEFT - CONTENT_RIGHT;
 const NAVY = '#071a33';
 
 type PdfImage = { bytes: Uint8Array; format: 'PNG' | 'JPEG' | 'WEBP' };
+
+const groupAulasBySessionLimit = (aulas: DiarioAula[], limit: number) => {
+  const groups: DiarioAula[][] = [];
+  let current: DiarioAula[] = [];
+  let sessions = 0;
+  aulas.forEach((aula) => {
+    if (current.length > 0 && sessions + aula.sessoes.length > limit) {
+      groups.push(current);
+      current = [];
+      sessions = 0;
+    }
+    current.push(aula);
+    sessions += aula.sessoes.length;
+  });
+  if (current.length > 0) groups.push(current);
+  return groups;
+};
 
 const hexToRgb = (hex: string): [number, number, number] => {
   const normalized = hex.replace('#', '');
@@ -292,26 +320,42 @@ const drawBackCover = (
 
 const drawFrequencyPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: PdfImage | null) => {
   const isBlank = props.exportMode === 'EM_BRANCO';
-  chunks(props.aulas, 10).forEach((aulaGroup, aulaIndex) => {
-    const rowsPerPage = aulaGroup.length <= 4 ? 30 : aulaGroup.length <= 6 ? 24 : aulaGroup.length <= 8 ? 22 : 18;
+  groupAulasBySessionLimit(props.aulas, 10).forEach((aulaGroup, aulaIndex) => {
+    const sessoesNoBloco = aulaGroup.reduce((total, aula) => total + aula.sessoes.length, 0);
+    const rowsPerPage = sessoesNoBloco <= 4 ? 30 : sessoesNoBloco <= 6 ? 24 : sessoesNoBloco <= 8 ? 22 : 18;
     chunks(props.students, rowsPerPage).forEach((students, studentIndex) => {
       drawStandardPage(pdf, props, 'Registro de Frequência', `Frequência ${aulaIndex + 1}.${studentIndex + 1}`, logo);
       const rows = students.map((student, index) => {
         const totalFaltas = props.gradesMap[student.id]?.total_faltas;
         return [
           String(studentIndex * rowsPerPage + index + 1),
-          `${student.nome} (${student.matricula})`,
-          ...aulaGroup.map((aula) => isBlank ? '' : props.attendanceMap[student.id]?.[aula.id] || '—'),
+          student.nome,
+          ...aulaGroup.flatMap((aula) => aula.sessoes.map(
+            (sessao) => isBlank ? '' : props.attendanceMap[student.id]?.[sessao.id] || '—',
+          )),
           isBlank || totalFaltas === null || totalFaltas === undefined ? '' : String(totalFaltas),
         ];
       });
-      drawTable(pdf, {
-        headers: ['Nº', 'Aluno(a)', ...aulaGroup.map((aula) => `${aula.dataLabel} (${String(aula.cargaHoraria).padStart(2, '0')}hrs)`), 'Faltas'],
+      drawGroupedFrequencyTable(pdf, {
+        meetings: aulaGroup.map((aula) => ({
+          label: aula.dataLabel,
+          secondary: `(${String(aula.cargaHoraria).padStart(2, '0')}HRS)`,
+          sessions: aula.sessoes.map((sessao) => ({
+            label: sessao.periodo === 'U' ? 'ÚNICA' : sessao.periodo,
+            secondary: '',
+          })),
+        })),
         rows,
-        widths: [8, 60, ...aulaGroup.map(() => 30), 15],
+        rowSecondary: students.map((student) => [
+          '',
+          `(${student.matricula})`,
+          ...aulaGroup.flatMap((aula) => aula.sessoes.map(() => '')),
+          '',
+        ]),
+        widths: [8, 60, ...aulaGroup.flatMap((aula) => aula.sessoes.map(() => 30)), 15],
         startY: 36,
-        fontSize: aulaGroup.length > 8 ? 5.4 : 6,
-        rowHeight: (198 - 36 - 8) / rowsPerPage,
+        fontSize: sessoesNoBloco > 8 ? 5.4 : 6,
+        rowHeight: (198 - 36 - 9.5) / rowsPerPage,
       });
     });
   });
@@ -320,7 +364,19 @@ const drawFrequencyPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: P
 const drawResultPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: PdfImage | null) => {
   const active = props.activeInstruments || DEFAULT_ACTIVE_INSTRUMENTS;
   const isBlank = props.exportMode === 'EM_BRANCO';
-  chunks(props.students, 30).forEach((students, groupIndex) => {
+  const studentGroups = chunks(props.students, 30);
+  const defaultRowHeight = (198 - 36 - 8) / 30;
+  const finalTableBottomLimit = 176;
+
+  studentGroups.forEach((students, groupIndex) => {
+    const isLastGroup = groupIndex === studentGroups.length - 1;
+    const finalPageRowHeight = students.length > 0
+      ? (finalTableBottomLimit - 36 - 8) / students.length
+      : defaultRowHeight;
+    const rowHeight = isLastGroup
+      ? Math.min(defaultRowHeight, finalPageRowHeight)
+      : defaultRowHeight;
+
     drawStandardPage(pdf, props, 'Notas e Resultado Final', `Resultados ${groupIndex + 1}`, logo);
     const value = (enabled: boolean, grade: number | null | undefined) =>
       isBlank ? '' : enabled && grade !== null && grade !== undefined ? Number(grade).toFixed(1) : '—';
@@ -350,34 +406,99 @@ const drawResultPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: PdfI
       widths: [7, 75, 12, 12, 12, 12, 12, 12, 13, 13, 13, 12, 14, 35],
       startY: 36,
       fontSize: 5.4,
-      rowHeight: (198 - 36 - 8) / 30,
+      rowHeight,
     });
+
+    if (isLastGroup) {
+      const legendY = 36 + 8 + students.length * rowHeight + 5;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6.4);
+      setTextColor(pdf, NAVY);
+      pdf.text(DIARIO_RESULT_LEGEND_TITLE, CONTENT_LEFT, legendY);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.2);
+      const legendLines = pdf.splitTextToSize(DIARIO_RESULT_LEGEND_TEXT, CONTENT_WIDTH);
+      pdf.text(legendLines, CONTENT_LEFT, legendY + 4.2, { lineHeightFactor: 1.35 });
+    }
   });
 };
 
 const drawContentPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: PdfImage | null) => {
-  chunks(props.aulas, 10).forEach((aulas, groupIndex, groups) => {
+  const widths = [24, 115, 115, 18];
+  const fontSize = 7;
+  const contentRows = props.aulas.map((aula) => [
+    aula.dataLabel,
+    aula.titulo,
+    props.praticasMap[aula.id] || '—',
+    `${aula.cargaHoraria}h`,
+  ]);
+  const rowHeights = measureTableRowHeights(
+    pdf,
+    contentRows,
+    widths,
+    fontSize,
+    [1, 2],
+    9,
+  );
+  const entries = props.aulas.map((aula, index) => ({
+    aula,
+    row: contentRows[index],
+    height: rowHeights[index],
+  }));
+  const regularPageCapacity = 198 - 36 - 8;
+  const finalPageCapacity = 151 - 36 - 8;
+  const maxRowsPerPage = 10;
+  let finalGroupStart = entries.length;
+  let finalGroupHeight = 0;
+
+  while (
+    finalGroupStart > 0
+    && entries.length - finalGroupStart < maxRowsPerPage
+    && finalGroupHeight + entries[finalGroupStart - 1].height <= finalPageCapacity
+  ) {
+    finalGroupStart -= 1;
+    finalGroupHeight += entries[finalGroupStart].height;
+  }
+  if (entries.length > 0 && finalGroupStart === entries.length) {
+    finalGroupStart -= 1;
+  }
+
+  const contentGroups: typeof entries[] = [];
+  let currentGroup: typeof entries = [];
+  let currentGroupHeight = 0;
+
+  entries.slice(0, finalGroupStart).forEach((entry) => {
+    const wouldOverflow = currentGroup.length >= maxRowsPerPage
+      || currentGroupHeight + entry.height > regularPageCapacity;
+    if (wouldOverflow && currentGroup.length > 0) {
+      contentGroups.push(currentGroup);
+      currentGroup = [];
+      currentGroupHeight = 0;
+    }
+    currentGroup.push(entry);
+    currentGroupHeight += entry.height;
+  });
+  if (currentGroup.length > 0) contentGroups.push(currentGroup);
+  if (entries.length > 0) contentGroups.push(entries.slice(finalGroupStart));
+
+  contentGroups.forEach((group, groupIndex, groups) => {
     drawStandardPage(pdf, props, 'Conteúdo Programático e Prática Pedagógica', `Conteúdo ${groupIndex + 1}`, logo);
     const last = groupIndex === groups.length - 1;
     const tableEndY = last ? 151 : 198;
-    const contentRowHeight = (tableEndY - 36 - 8) / 10;
     drawTable(pdf, {
       headers: ['Dia/Mês', 'Conteúdo programático', 'Prática pedagógica', 'C.H.'],
-      rows: aulas.map((aula) => [
-        aula.dataLabel,
-        aula.titulo,
-        props.praticasMap[aula.id] || '—',
-        `${aula.cargaHoraria}h`,
-      ]),
-      widths: [24, 115, 115, 18],
+      rows: group.map((entry) => entry.row),
+      widths,
       startY: 36,
       endY: tableEndY,
-      fontSize: 7,
-      rowHeight: contentRowHeight,
+      fontSize,
+      rowHeights: group.map((entry) => entry.height),
+      wrapColumns: [1, 2],
       alignments: ['center', 'left', 'left', 'center'],
     });
     if (last) {
-      const tableBottom = 36 + 8 + aulas.length * contentRowHeight;
+      const tableBottom = 36 + 8 + group.reduce((sum, entry) => sum + entry.height, 0);
       const observationsY = tableBottom + 6;
       const observationsHeight = 23;
       pdf.setDrawColor(...hexToRgb('#94a3b8'));
@@ -412,7 +533,7 @@ const drawInstructions = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: Pdf
   drawStandardPage(pdf, props, 'Instruções de Preenchimento', 'Instruções', logo);
   const instructions = [
     '1. Registre o conteúdo e a prática pedagógica na mesma data da aula.',
-    '2. Na frequência, utilize P para presença e F para falta.',
+    '2. Na frequência, utilize P para presença, F para falta e J para falta justificada.',
     '3. Confira todos os lançamentos antes do fechamento do período.',
     '4. Alterações após o fechamento exigem reabertura formal e justificativa.',
     '5. O resultado final é calculado pelo sistema conforme as regras acadêmicas.',

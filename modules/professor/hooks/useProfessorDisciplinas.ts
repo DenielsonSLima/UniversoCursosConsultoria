@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import {
   getAcademicReadOnlyContent,
   isAcademicContextEditable,
@@ -97,7 +98,7 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
       ] = await Promise.all([
         supabase
           .from('aulas_turma')
-          .select('id, turma_id, disciplina_id, titulo, carga_horaria, data_aula, created_at')
+          .select('id, turma_id, disciplina_id, titulo, carga_horaria, sessao, data_aula, created_at')
           .in('turma_id', turmaIds)
           .in('disciplina_id', disciplinaIds)
           .order('data_aula', { ascending: true }),
@@ -112,7 +113,9 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
 
       if (aulasError) throw aulasError;
       if (atividadesError) throw atividadesError;
-      aulas = (aulasData || []).filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`));
+      aulas = groupAcademicClassMeetings(
+        (aulasData || []).filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`)) as any[],
+      );
       atividades = (atividadesData || []).filter((atividade: any) => assignmentPairs.has(`${atividade.turma_id}:${atividade.disciplina_id}`));
     }
 
