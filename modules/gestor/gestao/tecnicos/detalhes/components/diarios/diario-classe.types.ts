@@ -2,7 +2,23 @@ import { DiarioTemplate } from '../../../../../cadastros/modelos-documentos/diar
 import { DiarioAula, DiarioStudent } from './diario-classe.service';
 import { DiarioExportMode } from './turma-diarios.types';
 
-export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes';
+export type DiarioActiveTab = 'frequencia' | 'resultado' | 'conteudo' | 'observacoes' | 'fechamento';
+export type DiarioLockScope = 'ABERTO' | 'PROFESSOR' | 'TOTAL';
+
+export interface DiarioClosureState {
+  bloqueio: DiarioLockScope;
+  status: 'EM_ANDAMENTO' | 'AGUARDANDO_REVISAO' | 'EM_REVISAO' | 'FECHADO';
+  horas_realizadas: number;
+  carga_horaria: number;
+  progresso_percent: number;
+  bloqueado_em: string | null;
+  motivo: string | null;
+  alunos_ativos: number;
+  aulas_realizadas: number;
+  frequencias_pendentes: number;
+  notas_pendentes: number;
+  pode_fechar: boolean;
+}
 
 export interface ActiveInstruments {
   p: boolean;
@@ -13,7 +29,7 @@ export interface ActiveInstruments {
   o: boolean;
 }
 
-export type AttendanceStatus = 'P' | 'F' | null;
+export type AttendanceStatus = 'P' | 'F' | 'J' | null;
 export type AttendanceMap = Record<string, Record<string, AttendanceStatus>>;
 
 export interface DiarioGradeResult {
