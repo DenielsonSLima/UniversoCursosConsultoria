@@ -9,18 +9,20 @@ import { CalendarDays } from 'lucide-react';
 
 interface CalendarioProfessorPageProps {
   professorId: string;
+  poloId: string;
 }
 
-const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ professorId }) => {
+const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ professorId, poloId }) => {
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ['professor-calendario', professorId],
-    enabled: !!professorId,
+    queryKey: ['professor-calendario', professorId, poloId],
+    enabled: Boolean(professorId && poloId),
     queryFn: async () => {
       // 1. Buscar disciplinas atribuídas ao professor
       const { data: disciplinas, error: errDisc } = await supabase
         .from('turmas_disciplinas')
-        .select('turma_id, disciplina_id, professor_nome')
-        .eq('professor_id', professorId);
+        .select('turma_id, disciplina_id, professor_nome, turmas!inner(polo_id)')
+        .eq('professor_id', professorId)
+        .eq('turmas.polo_id', poloId);
 
       if (errDisc) throw errDisc;
 
