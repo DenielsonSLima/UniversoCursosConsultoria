@@ -172,7 +172,7 @@ const DiarioResultadoTab: React.FC<DiarioResultadoTabProps> = ({
           <span><strong>REC</strong> - Recuperação Semestral</span>
         </div>
         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-[11px] font-bold leading-relaxed text-blue-900">
-          💡 A Média Parcial é calculada somando os pontos obtidos nos instrumentos ativos da disciplina (limitada a 10.0). Instrumentos anulados são desconsiderados do cálculo e da exibição.
+          A Média Parcial é calculada somando os pontos obtidos nos instrumentos ativos da disciplina (limitada a 10.0). Instrumentos anulados são desconsiderados do cálculo e da exibição.
         </div>
       </div>
     </div>
