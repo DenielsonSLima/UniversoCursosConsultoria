@@ -1,8 +1,8 @@
 {
-  "version": "0.7.0-beta.1",
+  "version": "0.7.0-beta.2",
   "display": "BETA",
   "stage": "beta",
-  "revision": 1,
+  "revision": 2,
   "releasedAt": "2026-07-26",
-  "summary": "Diários técnicos com sessões por turno, revisão, fechamento e exportação acadêmica corrigida"
+  "summary": "Boletim técnico do aluno por módulo, sem períodos ainda planejados"
 }
