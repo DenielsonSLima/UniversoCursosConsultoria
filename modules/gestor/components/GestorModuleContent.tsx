@@ -81,7 +81,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
 
   switch (activeModule) {
     case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
-    case 'calendario': return <CalendarioPage />;
+    case 'calendario': return <CalendarioPage poloId={scopedPoloId} />;
     case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={isGlobal} onRequestScrollTop={onRequestScrollTop} />;
     case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={allowedCadastroTabs} />;
     case 'cadastros-checklist': return <ChecklistEstagioPage />;
@@ -94,7 +94,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'cadastros-modelos': return <ModelosDocumentosPage />;
     case 'gestao': return <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} />;
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
-    case 'caixa': return <CaixaPage poloId={scopedPoloId} isGlobal={isGlobal} />;
+    case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'biblioteca': return <BibliotecaPage />;
     case 'comunicacao': return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') ? <ComunicacaoPage gestorProfile={profile} channel="mensagem" /> : <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;

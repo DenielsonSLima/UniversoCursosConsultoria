@@ -30,6 +30,7 @@ const GestaoResumo: React.FC<GestaoResumoProps> = ({ poloId }) => {
     queryKey: gestaoQueryKeys.activeClasses(poloId),
     queryFn: () => gestaoService.getActivePresentialClasses(poloId),
     staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
   });
 
   const isLoading = summaryQuery.isLoading || activeClassesQuery.isLoading;

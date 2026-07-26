@@ -135,7 +135,7 @@ const GestaoEspecializacao: React.FC<GestaoEspecializacaoProps> = ({ onToggleDet
         ) : (
             list.turmas.map(turma => (
                 <div key={turma.id} onClick={() => handleSelectTurma(turma)} className="cursor-pointer">
-                  <TurmaCard turma={turma} colorTheme="rose" showPoloDetails onDelete={setDeleteTarget} />
+                  <TurmaCard turma={turma} colorTheme="rose" onDelete={setDeleteTarget} />
                 </div>
             ))
         )}

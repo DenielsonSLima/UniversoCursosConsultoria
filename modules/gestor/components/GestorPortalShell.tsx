@@ -293,7 +293,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
       )}
 
       <main className="flex-1 overflow-auto relative w-full lg:pt-0 pt-16 flex flex-col">
-        <header className="sticky top-0 z-10 flex min-h-[84px] items-center justify-between border-b border-slate-200 bg-white px-8 py-3 shadow-sm">
+        <header className="sticky top-0 z-30 flex min-h-[84px] items-center justify-between border-b border-slate-200 bg-white px-8 py-3 shadow-sm">
           <div className="flex items-center gap-4">
              <h2 className="text-xl font-bold text-[#001a33] uppercase tracking-tight flex items-center gap-2">
               <span className="hidden sm:inline">

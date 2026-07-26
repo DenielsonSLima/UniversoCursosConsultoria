@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../../../lib/supabase';
-import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import { getBrazilianOfficialEvents, OFFICIAL_EVENT_TYPES, toDateKey } from './calendario.official';
 import { createAnnualCalendarPdf } from './calendario.pdf';
+import { gestorCalendarQueryOptions } from './calendario.queries';
 import { calendarioService } from './calendario.service';
 import type { CalendarEvent, EventType } from './calendario.types';
 import AgendaWorkspace from './components/AgendaWorkspace';
@@ -17,15 +18,15 @@ const escapeICS = (value: string) => value
   .replace(/,/g, '\\,')
   .replace(/;/g, '\\;');
 
-const CalendarioPage: React.FC = () => {
+interface CalendarioPageProps {
+  poloId?: string | null;
+}
+
+const CalendarioPage: React.FC<CalendarioPageProps> = ({ poloId }) => {
   const today = useMemo(() => new Date(), []);
+  const queryClient = useQueryClient();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonthIndex, setCurrentMonthIndex] = useState(today.getMonth());
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [turmas, setTurmas] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; fileName: string } | null>(null);
 
@@ -38,104 +39,41 @@ const CalendarioPage: React.FC = () => {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isTypeManagerOpen, setIsTypeManagerOpen] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [eventsData, typesData] = await Promise.all([
-        calendarioService.getEvents(),
-        calendarioService.getEventTypes(),
-      ]);
-
-      const [{ data: dbTeachers }, { data: dbTurmas }, { data: dbAulas, error: errorAulas }] = await Promise.all([
-        supabase
-          .from('parceiros')
-          .select('id, nome')
-          .eq('tipo', 'Professor')
-          .eq('status', 'ATIVO')
-          .order('nome', { ascending: true }),
-        supabase
-          .from('turmas')
-          .select('id, nome, codigo, turno')
-          .order('nome', { ascending: true }),
-        supabase
-          .from('aulas_turma')
-          .select(`
-            id,
-            titulo,
-            carga_horaria,
-            sessao,
-            data_aula,
-            turma_id,
-            disciplina_id,
-            turmas ( nome, codigo, turno ),
-            disciplinas ( nome )
-          `)
-          .not('data_aula', 'is', null),
-      ]);
-
-      setTeachers(dbTeachers || []);
-      setTurmas(dbTurmas || []);
-
-      let classEvents: CalendarEvent[] = [];
-      if (!errorAulas && dbAulas?.length) {
-        const { data: dbConfigs } = await supabase
-          .from('turmas_disciplinas')
-          .select('turma_id, disciplina_id, professor_nome, professor_id');
-
-        const configMap: Record<string, { nome: string; id: string | null }> = {};
-        dbConfigs?.forEach(config => {
-          configMap[`${config.turma_id}-${config.disciplina_id}`] = {
-            nome: config.professor_nome || 'Não atribuído',
-            id: config.professor_id || null,
-          };
-        });
-
-        classEvents = groupAcademicClassMeetings(dbAulas as any[]).map((aula: any) => {
-          const config = configMap[`${aula.turma_id}-${aula.disciplina_id}`] || { nome: 'Não atribuído', id: null };
-          const turma = Array.isArray(aula.turmas) ? aula.turmas[0] : aula.turmas;
-          const disciplina = Array.isArray(aula.disciplinas) ? aula.disciplinas[0] : aula.disciplinas;
-          const turmaNome = turma?.nome || 'Turma';
-          const disciplinaNome = disciplina?.nome || 'Disciplina';
-          const cargaHoraria = Number(aula.carga_horaria || 0);
-          const sessoesLabel = formatAcademicSessions(aula.sessoes);
-
-          return {
-            id: `class-${aula.id}`,
-            title: `${turmaNome} — ${disciplinaNome}`,
-            description: [
-              aula.titulo || 'Aula cadastrada',
-              `Professor: ${config.nome}`,
-              turma?.codigo ? `Turma: ${turmaNome} (${turma.codigo})` : `Turma: ${turmaNome}`,
-              cargaHoraria ? `Carga horária: ${cargaHoraria}h` : null,
-              sessoesLabel ? `Sessões: ${sessoesLabel}` : null,
-              turma?.turno ? `Turno: ${turma.turno}` : null,
-            ].filter(Boolean).join(' • '),
-            date: aula.data_aula,
-            typeId: 'ped',
-            professorId: config.id,
-            professorName: config.nome,
-            turmaId: aula.turma_id,
-            turmaName: turmaNome,
-            disciplinaId: aula.disciplina_id,
-            disciplinaName: disciplinaNome,
-            cargaHoraria,
-            turno: turma?.turno || null,
-          };
-        });
-      }
-
-      setEvents([...eventsData, ...classEvents]);
-      setEventTypes(typesData);
-    } catch (error) {
-      console.error('Erro ao carregar eventos do calendário:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const {
+    data: calendarData,
+    isLoading,
+    refetch: refetchCalendar,
+  } = useQuery(gestorCalendarQueryOptions(poloId));
+  const events = calendarData?.events || [];
+  const eventTypes = calendarData?.eventTypes || [];
+  const teachers = calendarData?.teachers || [];
+  const turmas = calendarData?.turmas || [];
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    setSelectedTeacherId('');
+    setSelectedTurmaId('');
+    setSelectedCategoryId('');
+  }, [poloId]);
+
+  useEffect(() => {
+    if (!poloId) return undefined;
+
+    const invalidate = () => {
+      void queryClient.invalidateQueries({ queryKey: ['gestor-calendario', poloId] });
+    };
+    const channel = supabase
+      .channel(`gestor_calendar_${poloId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'calendar_events', filter: `polo_id=eq.${poloId}` },
+        invalidate,
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [poloId, queryClient]);
 
   useEffect(() => () => {
     if (pdfPreview?.url) URL.revokeObjectURL(pdfPreview.url);
@@ -216,29 +154,29 @@ const CalendarioPage: React.FC = () => {
   };
 
   const handleAddEvent = async (event: Omit<CalendarEvent, 'id'>) => {
-    await calendarioService.addEvent(event);
-    await loadData();
+    await calendarioService.addEvent(event, poloId);
+    await refetchCalendar();
   };
 
   const handleDeleteEvent = async (id: string) => {
     if (id.startsWith('official-') || id.startsWith('class-')) return;
     await calendarioService.deleteEvent(id);
-    await loadData();
+    await refetchCalendar();
   };
 
   const handleAddType = async (data: { label: string; color: string }) => {
     await calendarioService.createEventType(data);
-    await loadData();
+    await refetchCalendar();
   };
 
   const handleDeleteType = async (id: string) => {
     await calendarioService.deleteEventType(id);
-    await loadData();
+    await refetchCalendar();
   };
 
   const handleUpdateTypeColor = async (id: string, color: string) => {
     await calendarioService.updateEventType(id, { color });
-    await loadData();
+    await refetchCalendar();
   };
 
   const exportToICS = () => {

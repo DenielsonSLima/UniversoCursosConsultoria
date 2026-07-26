@@ -934,6 +934,7 @@ export const financeiroService = {
     const { data, error } = await supabase
       .from('polos')
       .select('id, nome, cnpj, cidade, estado, is_matriz')
+      .eq('status', 'ativo')
       .order('nome', { ascending: true });
     if (error) {
       console.error('Erro ao buscar polos no financeiro:', error);

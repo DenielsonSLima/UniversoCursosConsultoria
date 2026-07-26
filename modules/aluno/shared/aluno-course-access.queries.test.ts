@@ -5,6 +5,10 @@ import {
   invalidateAlunoCourseAccessQueries,
 } from './aluno-course-access.queries.ts';
 
+declare const Deno: {
+  test(name: string, testFunction: () => void | Promise<void>): void;
+};
+
 Deno.test('centraliza todas as consultas afetadas pela liberação de curso', () => {
   const alunoId = 'student-1';
   const keys = alunoCourseAccessQueryKeys(alunoId);

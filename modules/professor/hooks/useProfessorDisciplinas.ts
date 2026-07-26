@@ -1,11 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
-import {
-  getAcademicReadOnlyContent,
-  isAcademicContextEditable,
-} from '../../gestor/gestao/tecnicos/detalhes/academic-access.utils';
 
 export interface ProfessorDisciplinaAssignment {
   id: string;
@@ -22,11 +17,16 @@ export interface ProfessorDisciplinaAssignment {
   cargaHoraria: number;
   cargaHorariaEstagio: number;
   totalAulas: number;
+  totalAulasDadas: number;
   totalAtividades: number;
+  cargaHorariaDada: number;
+  cargaDadaPercent: number;
   horasLancadas: number;
   progressoPercent: number;
-  proximaAulaLabel: string;
-  proximaAulaTitulo: string;
+  primeiraAula: string | null;
+  ultimaAula: string | null;
+  primeiraAulaLabel: string;
+  ultimaAulaLabel: string;
   isEstagio: boolean;
   canEdit: boolean;
   accessLabel: string;
@@ -36,35 +36,22 @@ export interface ProfessorDisciplinaAssignment {
   disciplinaForDiario: any;
 }
 
+type ProfessorDisciplinaPortalRow = Omit<
+  ProfessorDisciplinaAssignment,
+  'primeiraAulaLabel' | 'ultimaAulaLabel'
+>;
+
 export const professorDisciplinasKeys = {
   all: ['professor-disciplinas'] as const,
   list: (professorId: string, poloId: string) =>
     [...professorDisciplinasKeys.all, professorId, poloId, 'list'] as const,
 };
 
-const toArrayItem = (value: any) => Array.isArray(value) ? value[0] : value;
-
 const formatDate = (value?: string | null) => {
-  if (!value) return 'A definir';
+  if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return 'A definir';
+  if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const toNumber = (value: unknown, fallback = 0) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const getMaceioIsoDate = () => {
-  const parts = new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Maceio',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
 };
 
 export const useProfessorDisciplinas = (professorId: string, poloId: string) => useQuery<ProfessorDisciplinaAssignment[]>({
@@ -72,224 +59,83 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
   enabled: Boolean(professorId && poloId),
   staleTime: 15_000,
   queryFn: async () => {
-    const { data, error } = await supabase
-      .from('turmas_disciplinas')
-      .select('*, turmas!inner(*, cursos!inner(*)), disciplinas(*)')
-      .eq('professor_id', professorId)
-      .eq('turmas.polo_id', poloId)
-      .eq('turmas.cursos.modalidade', 'TECNICO');
+    const { data, error } = await supabase.rpc('get_professor_disciplinas_portal', {
+      p_polo_id: poloId,
+    });
 
     if (error) throw error;
 
-    const rows = data || [];
-    const turmaIds = Array.from(new Set(rows.map((row: any) => row.turma_id).filter(Boolean)));
-    const disciplinaIds = Array.from(new Set(rows.map((row: any) => row.disciplina_id).filter(Boolean)));
-    const periodoIds = Array.from(new Set(rows.map((row: any) => row.periodo_letivo_id).filter(Boolean)));
-    const assignmentPairs = new Set(rows.map((row: any) => `${row.turma_id}:${row.disciplina_id}`));
-    const today = getMaceioIsoDate();
+    if (!Array.isArray(data)) return [];
 
-    let aulas: any[] = [];
-    let atividades: any[] = [];
-    const periodoStatusMap = new Map<string, string>();
-    if (turmaIds.length > 0 && disciplinaIds.length > 0) {
-      const [
-        { data: aulasData, error: aulasError },
-        { data: atividadesData, error: atividadesError },
-      ] = await Promise.all([
-        supabase
-          .from('aulas_turma')
-          .select('id, turma_id, disciplina_id, titulo, carga_horaria, sessao, data_aula, created_at')
-          .in('turma_id', turmaIds)
-          .in('disciplina_id', disciplinaIds)
-          .order('data_aula', { ascending: true }),
-        supabase
-          .from('atividades_extra_classe')
-          .select('id, turma_id, disciplina_id, titulo, carga_horaria_compensacao, prazo_entrega, created_at')
-          .in('turma_id', turmaIds)
-          .in('disciplina_id', disciplinaIds)
-          .eq('status', 'PUBLICADA')
-          .order('prazo_entrega', { ascending: true }),
-      ]);
-
-      if (aulasError) throw aulasError;
-      if (atividadesError) throw atividadesError;
-      aulas = groupAcademicClassMeetings(
-        (aulasData || []).filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`)) as any[],
-      );
-      atividades = (atividadesData || []).filter((atividade: any) => assignmentPairs.has(`${atividade.turma_id}:${atividade.disciplina_id}`));
-    }
-
-    if (periodoIds.length > 0) {
-      const { data: periodosData, error: periodosError } = await supabase
-        .from('periodos_letivos')
-        .select('id, status')
-        .in('id', periodoIds);
-
-      if (periodosError) throw periodosError;
-      (periodosData || []).forEach((periodo: any) => {
-        periodoStatusMap.set(periodo.id, periodo.status || 'FECHADO');
-      });
-    }
-
-    return rows.map((row: any) => {
-      const turma = toArrayItem(row.turmas) || {};
-      const curso = toArrayItem(turma.cursos) || {};
-      const disciplina = toArrayItem(row.disciplinas) || {};
-      const aulasDaDisciplina = aulas.filter(
-        (aula) => aula.turma_id === row.turma_id && aula.disciplina_id === row.disciplina_id,
-      );
-      const atividadesDaDisciplina = atividades.filter(
-        (atividade) => atividade.turma_id === row.turma_id && atividade.disciplina_id === row.disciplina_id,
-      );
-      const proximaAula = aulasDaDisciplina.find((aula) => !aula.data_aula || aula.data_aula >= today);
-      const cargaHoraria = toNumber(row.carga_horaria ?? disciplina.carga_horaria, 0);
-      const cargaHorariaEstagio = toNumber(
-        row.carga_horaria_estagio
-          ?? disciplina.carga_horaria_estagio
-          ?? disciplina.cargaHorariaEstagio,
-        0,
-      );
-      const horasAulas = aulasDaDisciplina.reduce(
-        (total, aula) => total + toNumber(aula.carga_horaria, 0),
-        0,
-      );
-      const horasAtividades = atividadesDaDisciplina
-        .filter((atividade) => !atividade.prazo_entrega || atividade.prazo_entrega <= today)
-        .reduce(
-        (total, atividade) => total + toNumber(atividade.carga_horaria_compensacao, 0),
-        0,
-      );
-      const horasLancadas = horasAulas + horasAtividades;
-      const progressoPercent = cargaHoraria > 0
-        ? Math.min(100, Math.round((horasLancadas / cargaHoraria) * 100))
-        : 0;
-      const disciplinaNome = disciplina.nome || row.disciplina_nome || 'Disciplina';
-      const turmaNome = turma.nome || 'Turma sem nome';
-      const cursoNome = curso.nome || 'Curso nao informado';
-      const turmaCodigo = turma.codigo || 'Sem codigo';
-      const modalidade = String(curso.modalidade || turma.modalidade || 'TECNICO').toUpperCase();
-      const isEstagio = cargaHorariaEstagio > 0;
-      const turmaStatus = turma.status || 'STATUS_INDEFINIDO';
-      const periodoStatus = periodoStatusMap.get(row.periodo_letivo_id)
-        || row.periodo_status
-        || 'STATUS_INDEFINIDO';
-      const canEdit = isAcademicContextEditable(turmaStatus, periodoStatus);
-      const accessContent = getAcademicReadOnlyContent(turmaStatus, periodoStatus);
-
-      const turmaForDiario = {
-        id: row.turma_id,
-        codigo: turmaCodigo,
-        nome: turmaNome,
-        cursoId: curso.id || turma.curso_id || '',
-        cursoNome,
-        modalidade,
-        poloId: turma.polo_id || '',
-        poloNome: turma.polo_nome || '',
-        dataInicio: turma.data_inicio || '',
-        dataPrevisaoTermino: turma.data_previsao_termino || '',
-        turno: turma.turno || 'EAD',
-        status: turmaStatus,
-        alunosMatriculados: toNumber(turma.alunos_matriculados, 0),
-        vagasTotais: toNumber(turma.vagas_totais, 0),
-        valorMatricula: toNumber(turma.valor_matricula, 0),
-        valorRematricula: toNumber(turma.valor_rematricula, 0),
-        qtdParcelas: toNumber(turma.qtd_parcelas, 0),
-        valorParcela: toNumber(turma.valor_parcela, 0),
-        descontoPontualidade: toNumber(turma.desconto_pontualidade, 0),
-        jurosAtraso: toNumber(turma.juros_atraso, 0),
-        multaAtraso: toNumber(turma.multa_atraso, 0),
-      };
-
-      const disciplinaForDiario = {
-        id: row.disciplina_id,
-        nome: disciplinaNome,
-        professor: row.professor_nome || 'Professor',
-        horasRealizadas: horasLancadas,
-        cargaHoraria,
-        progressoPercent,
-        periodoStatus,
-        concluida: Boolean(row.concluida),
-        cargaHorariaEstagio,
-      };
-
-      return {
-        id: `${row.turma_id}-${row.disciplina_id}`,
-        turmaId: row.turma_id,
-        disciplinaId: row.disciplina_id,
-        turmaNome,
-        turmaCodigo,
-        cursoNome,
-        cursoId: curso.id || turma.curso_id || '',
-        modalidade,
-        turno: turma.turno || 'Geral',
-        status: turmaStatus,
-        disciplinaNome,
-        cargaHoraria,
-        cargaHorariaEstagio,
-        totalAulas: aulasDaDisciplina.length,
-        totalAtividades: atividadesDaDisciplina.length,
-        horasLancadas,
-        progressoPercent,
-        proximaAulaLabel: formatDate(proximaAula?.data_aula),
-        proximaAulaTitulo: proximaAula?.titulo || 'Proxima aula a definir pela secretaria',
-        isEstagio,
-        canEdit,
-        accessLabel: canEdit ? 'Lançamentos liberados' : accessContent.label,
-        accessMessage: canEdit ? '' : accessContent.message,
-        raw: row,
-        turmaForDiario,
-        disciplinaForDiario,
-      };
-    }).sort((a, b) => a.disciplinaNome.localeCompare(b.disciplinaNome, 'pt-BR'));
+    return (data as ProfessorDisciplinaPortalRow[]).map((row) => ({
+      ...row,
+      primeiraAulaLabel: formatDate(row.primeiraAula),
+      ultimaAulaLabel: formatDate(row.ultimaAula),
+    }));
   },
 });
 
-export const useProfessorDisciplinasRealtime = (professorId: string, poloId: string) => {
+export const useProfessorDisciplinasRealtime = (
+  professorId: string,
+  poloId: string,
+  turmaIds: string[],
+) => {
   const queryClient = useQueryClient();
+  const turmaIdsKey = [...new Set(turmaIds)].sort().join(',');
 
   useEffect(() => {
     if (!professorId || !poloId) return undefined;
 
+    let invalidateTimer: ReturnType<typeof setTimeout> | undefined;
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: professorDisciplinasKeys.list(professorId, poloId) });
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      invalidateTimer = setTimeout(() => {
+        void queryClient.invalidateQueries({
+          queryKey: professorDisciplinasKeys.list(professorId, poloId),
+        });
+      }, 250);
     };
 
     const channel = supabase
-      .channel(`professor_disciplinas_realtime_${professorId}`)
+      .channel(`professor_disciplinas_realtime_${professorId}_${poloId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'turmas_disciplinas', filter: `professor_id=eq.${professorId}` },
         invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'aulas_turma' },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'atividades_extra_classe' },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'atividade_extra_classe_respostas' },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'diario_notas' },
-        invalidate,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'diario_frequencia' },
-        invalidate,
-      )
-      .subscribe();
+      );
+
+    if (turmaIdsKey) {
+      const turmaFilter = `turma_id=in.(${turmaIdsKey})`;
+      const turmaPrimaryKeyFilter = `id=in.(${turmaIdsKey})`;
+
+      channel
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'aulas_turma', filter: turmaFilter },
+          invalidate,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'atividades_extra_classe', filter: turmaFilter },
+          invalidate,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'periodos_letivos', filter: turmaFilter },
+          invalidate,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'turmas', filter: turmaPrimaryKeyFilter },
+          invalidate,
+        );
+    }
+
+    channel.subscribe();
 
     return () => {
+      if (invalidateTimer) clearTimeout(invalidateTimer);
       supabase.removeChannel(channel);
     };
-  }, [poloId, professorId, queryClient]);
+  }, [poloId, professorId, queryClient, turmaIdsKey]);
 };

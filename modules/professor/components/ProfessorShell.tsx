@@ -66,39 +66,59 @@ const formatPoloDetails = (polo: ProfessorPolo) =>
 
 const ProfessorNavigation: React.FC<{
   activeModule: string;
-  onLogout: () => void;
   onModuleChange: (moduleId: string) => void;
-}> = ({ activeModule, onLogout, onModuleChange }) => (
-  <>
-    <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-      {MENU_ITEMS.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onModuleChange(item.id)}
-          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group ${
-            activeModule === item.id
-              ? 'bg-[#092744] text-white shadow-lg shadow-purple-950/30 font-black border border-purple-400/35 ring-1 ring-purple-500/20'
-              : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
-          }`}
-        >
-          <div className={`${activeModule === item.id ? 'text-purple-300' : 'text-slate-400 group-hover:text-purple-400'}`}>
-            {item.icon}
-          </div>
-          <span className="text-sm tracking-wide">{item.label}</span>
-        </button>
-      ))}
-    </nav>
-
-    <div className="p-4 border-t border-white/10">
+}> = ({ activeModule, onModuleChange }) => (
+  <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
+    {MENU_ITEMS.map((item) => (
       <button
-        onClick={onLogout}
-        className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider"
+        key={item.id}
+        onClick={() => onModuleChange(item.id)}
+        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group ${
+          activeModule === item.id
+            ? 'bg-[#092744] text-white shadow-lg shadow-purple-950/30 font-black border border-purple-400/35 ring-1 ring-purple-500/20'
+            : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
+        }`}
       >
-        <LogOut size={18} />
-        <span>Sair</span>
+        <div className={`${activeModule === item.id ? 'text-purple-300' : 'text-slate-400 group-hover:text-purple-400'}`}>
+          {item.icon}
+        </div>
+        <span className="text-sm tracking-wide">{item.label}</span>
+      </button>
+    ))}
+  </nav>
+);
+
+const ProfessorAccountCard: React.FC<{
+  professorEmail: string;
+  professorNome: string;
+  onLogout: () => void;
+}> = ({ professorEmail, professorNome, onLogout }) => (
+  <div className="border-t border-white/10 p-4">
+    <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 transition-colors duration-300 hover:bg-white/10">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-sm font-black text-white shadow-md">
+          {professorNome.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-xs font-bold leading-tight text-white" title={professorNome}>
+            {professorNome}
+          </p>
+          <p className="mt-1 truncate text-[10px] text-slate-400" title={professorEmail}>
+            {professorEmail}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onLogout}
+        title="Sair"
+        aria-label="Sair do portal do professor"
+        className="shrink-0 rounded-xl p-2 text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-purple-400/60"
+      >
+        <LogOut size={16} />
       </button>
     </div>
-  </>
+  </div>
 );
 
 const PoloSelector: React.FC<{
@@ -203,17 +223,12 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
         </div>
       </div>
 
-      <div className="p-4.5 border-b border-white/5 mx-3 mt-4 bg-white/5 rounded-2xl flex items-center gap-3">
-        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-white shadow-md">
-          {professorNome.slice(0, 2).toUpperCase()}
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-black truncate">{professorNome}</p>
-          <p className="text-[10px] text-slate-450 font-medium truncate">{professorEmail}</p>
-        </div>
-      </div>
-
-      <ProfessorNavigation activeModule={activeModule} onLogout={onLogout} onModuleChange={onModuleChange} />
+      <ProfessorNavigation activeModule={activeModule} onModuleChange={onModuleChange} />
+      <ProfessorAccountCard
+        professorEmail={professorEmail}
+        professorNome={professorNome}
+        onLogout={onLogout}
+      />
     </aside>
 
     <div className="lg:hidden fixed top-0 w-full bg-[#001a33] text-white z-30 px-4 py-3 flex justify-between items-center shadow-lg">
@@ -255,15 +270,11 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
             ))}
           </nav>
 
-          <div className="border-t border-white/10 pt-4">
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center justify-center gap-2 text-slate-400 hover:text-red-400 py-3 rounded-xl transition-all text-sm font-bold uppercase tracking-wider"
-            >
-              <LogOut size={18} />
-              <span>Sair</span>
-            </button>
-          </div>
+          <ProfessorAccountCard
+            professorEmail={professorEmail}
+            professorNome={professorNome}
+            onLogout={onLogout}
+          />
         </aside>
       </div>
     ) : null}

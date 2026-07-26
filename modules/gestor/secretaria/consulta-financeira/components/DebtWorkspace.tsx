@@ -19,13 +19,16 @@ type DebtWorkspaceProps = {
   onReceive: (item: SecretariaFinanceiraRecebivel) => void;
 };
 
+type ReceivableCardProps = {
+  key?: string;
+  item: SecretariaFinanceiraRecebivel;
+  onReceive: DebtWorkspaceProps['onReceive'];
+};
+
 const ReceivableCard = ({
   item,
   onReceive,
-}: {
-  item: SecretariaFinanceiraRecebivel;
-  onReceive: DebtWorkspaceProps['onReceive'];
-}) => (
+}: ReceivableCardProps) => (
   <div className="grid gap-4 border-t border-slate-100 px-4 py-4 md:grid-cols-[minmax(0,1fr)_160px_110px] md:items-center">
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">

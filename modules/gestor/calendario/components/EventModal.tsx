@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import { CalendarEvent, EventType } from '../calendario.types';
+import { toDateKey } from '../calendario.official';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -9,16 +10,34 @@ interface EventModalProps {
   selectedDate: Date;
   eventsOnDate: CalendarEvent[];
   eventTypes: EventType[];
+  eventTypeOptions?: EventType[];
   teachers: any[];
   turmas: any[];
-  onAddEvent: (event: any) => void;
-  onDeleteEvent: (id: string) => void;
+  variant?: 'manager' | 'professor';
+  professorId?: string;
+  canDeleteEvent?: (event: CalendarEvent) => boolean;
+  onAddEvent: (event: Omit<CalendarEvent, 'id'>) => void | Promise<void>;
+  onDeleteEvent: (id: string) => void | Promise<void>;
 }
 
 const EventModal: React.FC<EventModalProps> = ({ 
-  isOpen, onClose, selectedDate, eventsOnDate, eventTypes, teachers, turmas, onAddEvent, onDeleteEvent 
+  isOpen,
+  onClose,
+  selectedDate,
+  eventsOnDate,
+  eventTypes,
+  eventTypeOptions,
+  teachers,
+  turmas,
+  variant = 'manager',
+  professorId,
+  canDeleteEvent,
+  onAddEvent,
+  onDeleteEvent,
 }) => {
   const [showForm, setShowForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -29,25 +48,34 @@ const EventModal: React.FC<EventModalProps> = ({
 
   if (!isOpen) return null;
 
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const isProfessor = variant === 'professor';
+  const selectableEventTypes = eventTypeOptions || eventTypes;
+  const dateStr = toDateKey(selectedDate);
   const displayDate = selectedDate.toLocaleDateString('pt-BR', { 
     weekday: 'long', day: 'numeric', month: 'long' 
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.typeId) return;
 
-    onAddEvent({
-      ...formData,
-      date: dateStr,
-      professorId: formData.professorId || null,
-      turmaId: formData.turmaId || null
-    });
-    
-    // Reset
-    setFormData({ title: '', description: '', typeId: '', professorId: '', turmaId: '' });
-    setShowForm(false);
+    setIsSaving(true);
+    setFormError('');
+    try {
+      await onAddEvent({
+        ...formData,
+        date: dateStr,
+        professorId: isProfessor ? professorId || null : formData.professorId || null,
+        turmaId: isProfessor ? null : formData.turmaId || null,
+        visibility: isProfessor ? 'PERSONAL' : undefined,
+      });
+      setFormData({ title: '', description: '', typeId: '', professorId: '', turmaId: '' });
+      setShowForm(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Não foi possível salvar o evento.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Helper para pegar cor e nome do tipo
@@ -68,7 +96,9 @@ const EventModal: React.FC<EventModalProps> = ({
              <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight capitalize">
                {displayDate}
              </h3>
-             <p className="text-xs text-slate-500 font-medium">Observações e eventos.</p>
+             <p className="text-xs text-slate-500 font-medium">
+               {isProfessor ? 'Sua agenda pessoal e os compromissos deste dia.' : 'Observações e eventos.'}
+             </p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
             <X size={20} />
@@ -126,10 +156,14 @@ const EventModal: React.FC<EventModalProps> = ({
                         )}
                     </div>
                 </div>
-                {!event.id.startsWith('class-') && !event.id.startsWith('official-') && (
+                {(canDeleteEvent
+                  ? canDeleteEvent(event)
+                  : !event.id.startsWith('class-') && !event.id.startsWith('official-')) && (
                   <button 
-                      onClick={() => onDeleteEvent(event.id)}
+                      onClick={() => void onDeleteEvent(event.id)}
                       className="opacity-0 group-hover:opacity-100 p-2 text-slate-350 hover:text-red-500 transition-all"
+                      title="Excluir evento"
+                      aria-label={`Excluir ${event.title}`}
                   >
                       <Trash2 size={16} />
                   </button>
@@ -160,7 +194,7 @@ const EventModal: React.FC<EventModalProps> = ({
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
                 <div className="flex flex-wrap gap-2">
-                    {eventTypes.map(type => (
+                    {selectableEventTypes.map(type => (
                         <button
                             key={type.id}
                             type="button"
@@ -181,8 +215,7 @@ const EventModal: React.FC<EventModalProps> = ({
                 </div>
               </div>
 
-              {/* Turma Dropdown (Opcional) */}
-              <div className="space-y-1">
+              {!isProfessor ? <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Turma (Opcional)</label>
                 <select
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 bg-white cursor-pointer"
@@ -194,10 +227,9 @@ const EventModal: React.FC<EventModalProps> = ({
                     <option key={t.id} value={t.id}>{t.nome} ({t.codigo})</option>
                   ))}
                 </select>
-              </div>
+              </div> : null}
 
-              {/* Professor Dropdown (Opcional) */}
-              <div className="space-y-1">
+              {!isProfessor ? <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Professor (Opcional)</label>
                 <select
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 bg-white cursor-pointer"
@@ -209,7 +241,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     <option key={t.id} value={t.id}>{t.nome}</option>
                   ))}
                 </select>
-              </div>
+              </div> : null}
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Detalhes</label>
@@ -221,6 +253,12 @@ const EventModal: React.FC<EventModalProps> = ({
                 />
               </div>
 
+              {formError ? (
+                <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+                  {formError}
+                </p>
+              ) : null}
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button 
                   type="button" 
@@ -231,10 +269,10 @@ const EventModal: React.FC<EventModalProps> = ({
                 </button>
                 <button 
                   type="submit" 
-                  disabled={!formData.title || !formData.typeId}
+                  disabled={!formData.title || !formData.typeId || isSaving}
                   className="px-4 py-2 rounded-lg bg-[#001a33] text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-900 transition-colors shadow-lg disabled:opacity-50"
                 >
-                  Salvar
+                  {isSaving ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>
@@ -244,7 +282,7 @@ const EventModal: React.FC<EventModalProps> = ({
             onClick={() => setShowForm(true)}
             className="w-full py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg flex items-center justify-center gap-2"
           >
-            <Plus size={16} /> Adicionar Observação
+            <Plus size={16} /> {isProfessor ? 'Adicionar evento pessoal' : 'Adicionar observação'}
           </button>
         )}
       </div>

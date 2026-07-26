@@ -40,18 +40,16 @@ simula um QR na homologacao.
 
 ## Confirmacao do pagamento
 
-O Banese confirmou que existe webhook, mas recomendou a consulta da situacao do
-boleto na API como mecanismo principal por ser mais estavel. Assim, o desenho e:
+O Banese corrigiu a resposta inicial: cobrança por boleto não possui webhook.
+Assim, o desenho é:
 
-1. consulta ativa da API como fonte principal;
-2. webhook apenas para antecipar uma nova consulta;
+1. consulta ativa de `PagamentosEfetivados`;
+2. presença nesse endpoint prevalece sobre `CodigoSituacaoBoleto`;
 3. baixa local somente depois de validar o detalhe, a data e o valor pago.
 
-Enquanto a equipe tecnica do banco nao confirmar o criterio definitivo, o
-sistema exige de forma conservadora `CodigoSituacaoBoleto = 3` e pelo menos um
-item consistente em `PagamentosEfetivados`. O webhook Banese permanece
-desabilitado ate serem recebidos o contrato do payload e o metodo oficial de
-autenticacao.
+O código `3` isolado não confirma a baixa. Um item consistente em
+`PagamentosEfetivados` confirma o pagamento mesmo que o código ainda esteja
+defasado.
 
 ## Etapas da integracao
 
@@ -67,7 +65,7 @@ autenticacao.
    do mesmo grupo antes de gerar o arquivo, sem misturar Asaas ou outro emissor.
 5. Conciliacao automatica de boletos em worker agendado, usando a consulta da
    API recomendada pelo Banese.
-6. Webhook como acelerador depois do contrato tecnico de autenticacao e payload.
+6. CNAB240 como contingência operacional D+1 via EDI7 em produção.
 
 O Banese nao fornece PDF ou URL de documento. A tela incorpora exclusivamente o
 Blob PDF montado pelo endpoint privado `banese-boleto-document`; campos URL do

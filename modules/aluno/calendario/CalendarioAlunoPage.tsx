@@ -125,7 +125,10 @@ const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) =>
       // 3. Eventos públicos globais (feriados, recessos, institucionais)
       const { calendarioService } = await import('../../gestor/calendario/calendario.service');
       const globalEvents = await calendarioService.getEvents();
-      const publicEvents = globalEvents.filter(e => !e.turmaId);
+      const publicEvents = globalEvents.filter(event => (
+        event.visibility === 'GENERAL'
+        || (event.visibility === 'TURMA' && turmaIds.includes(event.turmaId || ''))
+      ));
 
       return [...publicEvents, ...classEvents];
     },
