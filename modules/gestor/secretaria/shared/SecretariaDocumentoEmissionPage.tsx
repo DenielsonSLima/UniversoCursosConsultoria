@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
+  AlertTriangle,
   CheckCircle2,
   ChevronRight,
   CreditCard,
@@ -9,6 +10,7 @@ import {
   FileCheck2,
   Loader2,
   Printer,
+  RefreshCw,
   Search,
   Trash2,
   Users,
@@ -44,6 +46,7 @@ import {
   isCrachaEleitoralTemplateAvailable,
 } from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
+import { getSecretariaErrorMessage } from './secretaria-error';
 
 interface SecretariaDocumentoEmissionPageProps {
   definition: SecretariaDocumentoDefinition;
@@ -105,35 +108,41 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
   const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
   const enrollmentStatuses = definition.enrollmentStatuses || [];
-  const { data: irpfTemplate } = useQuery({
+  const irpfTemplateQuery = useQuery({
     queryKey: ['secretaria-irpf-template', context.poloId],
     queryFn: () => irpfService.getTemplate(context.poloId),
     enabled: isIrpfAnnual,
     staleTime: 60_000,
   });
+  const { data: irpfTemplate } = irpfTemplateQuery;
   const irpfLiberacaoDate = irpfTemplate?.liberacaoDate as string | undefined;
   const irpfYearOptions = useMemo(
     () => getIrpfCalendarYearOptions(irpfLiberacaoDate, new Date(), 10),
     [irpfLiberacaoDate]
   );
   const selectedIrpfYear = irpfYearOptions.find((option) => option.year === selectedReferenceYear);
-  const { data: fichaTemplates = [], isLoading: isLoadingFichaTemplates } = useQuery({
+  const fichaTemplatesQuery = useQuery({
     queryKey: ['secretaria', 'ficha-matricula', 'active-models'],
     queryFn: fichasMatriculaService.getActive,
     enabled: selectsFichaTemplate,
     staleTime: 30_000,
   });
+  const {
+    data: fichaTemplates = [],
+    isLoading: isLoadingFichaTemplates,
+  } = fichaTemplatesQuery;
   const selectedFichaTemplate = fichaTemplates.find((model) => model.id === selectedTemplateId);
 
   const normalizedTerm = useDebouncedValue(searchTerm.trim(), 300);
-  const { data: alunos = [], isFetching: isSearching } = useQuery({
+  const alunosQuery = useQuery({
     queryKey: secretariaDocumentosKeys.search(context, definition.id, normalizedTerm),
     queryFn: () => secretariaDocumentosService.searchAlunos(context.poloId, normalizedTerm),
     enabled: mode !== 'lote' && normalizedTerm.length >= 2,
     staleTime: 30_000,
   });
+  const { data: alunos = [], isFetching: isSearching } = alunosQuery;
 
-  const { data: matriculas = [], isLoading: isLoadingMatriculas } = useQuery({
+  const matriculasQuery = useQuery({
     queryKey: secretariaDocumentosKeys.matriculas(
       context,
       definition.id,
@@ -157,8 +166,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     enabled: !!selectedAluno,
     staleTime: 60_000,
   });
+  const { data: matriculas = [], isLoading: isLoadingMatriculas } = matriculasQuery;
 
-  const { data: turmas = [], isLoading: isLoadingTurmas } = useQuery({
+  const turmasQuery = useQuery({
     queryKey: secretariaDocumentosKeys.turmas(
       context,
       definition.id,
@@ -175,6 +185,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     enabled: mode === 'lote',
     staleTime: 60_000,
   });
+  const { data: turmas = [], isLoading: isLoadingTurmas } = turmasQuery;
 
   const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
@@ -221,7 +232,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     : mode === 'custom'
       ? customSelections[0]?.matricula.turmaId || ''
       : selectedMatricula?.turmaId || '';
-  const { data: modules = [], isLoading: isLoadingModules } = useQuery({
+  const modulesQuery = useQuery({
     queryKey: secretariaDocumentosKeys.modulos(
       context,
       definition.id,
@@ -231,21 +242,42 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     enabled: isBoletim && !!moduleTurmaId,
     staleTime: 60_000,
   });
+  const { data: modules = [], isLoading: isLoadingModules } = modulesQuery;
   const selectedModule = modules.find((item) => item.id === selectedModuleId);
 
-  const { data: crachaTemplate } = useQuery({
+  const crachaTemplateQuery = useQuery({
     queryKey: ['secretaria-cracha-template'],
     queryFn: () => crachaService.getTemplate(),
     enabled: isCrachaEstagio,
     staleTime: 60_000,
   });
+  const { data: crachaTemplate } = crachaTemplateQuery;
 
-  const { data: crachaEleitoralTemplate } = useQuery({
+  const crachaEleitoralTemplateQuery = useQuery({
     queryKey: ['secretaria-cracha-periodo-eleitoral-template'],
     queryFn: () => crachaPeriodoEleitoralService.getTemplate(),
     enabled: isCrachaPeriodoEleitoral,
     staleTime: 60_000,
   });
+  const { data: crachaEleitoralTemplate } = crachaEleitoralTemplateQuery;
+
+  const enabledDataQueries = [
+    isIrpfAnnual ? irpfTemplateQuery : null,
+    selectsFichaTemplate ? fichaTemplatesQuery : null,
+    mode !== 'lote' && normalizedTerm.length >= 2 ? alunosQuery : null,
+    selectedAluno ? matriculasQuery : null,
+    mode === 'lote' ? turmasQuery : null,
+    isBoletim && moduleTurmaId ? modulesQuery : null,
+    isCrachaEstagio ? crachaTemplateQuery : null,
+    isCrachaPeriodoEleitoral ? crachaEleitoralTemplateQuery : null,
+  ].filter(Boolean);
+  const failedDataQuery = enabledDataQueries.find((query) => query?.isError);
+  const dataLoadError = failedDataQuery?.error;
+  const retryFailedDataQueries = () => {
+    enabledDataQueries
+      .filter((query) => query?.isError)
+      .forEach((query) => { void query?.refetch(); });
+  };
 
   const isCrachaEleitoralAvailable = isCrachaPeriodoEleitoral
     ? isCrachaEleitoralTemplateAvailable(crachaEleitoralTemplate, availabilityNow)
@@ -741,6 +773,30 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           </div>
         )}
 
+        {dataLoadError && (
+          <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+            <div className="flex min-w-0 items-start gap-3">
+              <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} />
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider">Dados temporariamente indisponíveis</p>
+                <p className="mt-1 text-xs font-semibold">
+                  {getSecretariaErrorMessage(
+                    dataLoadError,
+                    'Não foi possível carregar os dados necessários para esta emissão.',
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={retryFailedDataQueries}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-amber-800"
+            >
+              <RefreshCw size={13} /> Tentar novamente
+            </button>
+          </div>
+        )}
+
       <div className="border-t border-slate-100">
         {!usesDirectDocumentViewer && (
         <div className="grid grid-cols-3 border-b border-slate-100 bg-slate-50/70">
@@ -916,9 +972,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
               {usesDirectDocumentViewer && emissionMutation.isError && (
                 <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-                  {emissionMutation.error instanceof Error
-                    ? emissionMutation.error.message
-                    : 'Não foi possível preparar a visualização. Verifique a conexão e tente novamente.'}
+                  {getSecretariaErrorMessage(
+                    emissionMutation.error,
+                    'Não foi possível preparar a visualização.',
+                  )}
                 </p>
               )}
             </div>
@@ -1227,9 +1284,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
           {usesDirectDocumentViewer && mode !== 'individual' && emissionMutation.isError && (
             <p className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-              {emissionMutation.error instanceof Error
-                ? emissionMutation.error.message
-                : 'Não foi possível preparar a visualização. Verifique a conexão e tente novamente.'}
+              {getSecretariaErrorMessage(
+                emissionMutation.error,
+                'Não foi possível preparar a visualização.',
+              )}
             </p>
           )}
 
@@ -1341,9 +1399,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
               )}
               {emissionMutation.isError && (
                 <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-                  {emissionMutation.error instanceof Error
-                    ? emissionMutation.error.message
-                    : 'Não foi possível preparar a emissão. Verifique a conexão e tente novamente.'}
+                  {getSecretariaErrorMessage(
+                    emissionMutation.error,
+                    'Não foi possível preparar a emissão.',
+                  )}
                 </p>
               )}
             </div>
