@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRightLeft, History, PauseCircle, RotateCcw, Trash2, UserX } from 'lucide-react';
 import { formatMatricula } from '../../../../../../../lib/academicUtils';
+import { formatCpf } from '../../../../../../../lib/documentFormatters';
 import { AcademicMovement, AcademicStudent } from '../../academic-lifecycle.service';
 
 interface TurmaAlunosTableProps {
@@ -71,7 +72,7 @@ const TurmaAlunosTable: React.FC<TurmaAlunosTableProps> = ({
                   <div>
                     <span className="font-bold text-[#001a33] text-sm block">{student.nome}</span>
                     <span className="text-[10px] text-slate-500">
-                      CPF: {student.cpf || 'Não informado'}
+                      CPF: {formatCpf(student.cpf) || 'Não informado'}
                     </span>
                   </div>
                 </div>
