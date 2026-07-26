@@ -31,7 +31,9 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
   onOpenPdf,
 }) => {
   const isUnassigned = disciplina.professor === 'Não atribuído';
-  const isClosed = disciplina.periodoStatus === 'FECHADO';
+  const isClosed = disciplina.periodoStatus === 'FECHADO' || disciplina.bloqueioDiario === 'TOTAL';
+  const isReview = disciplina.bloqueioDiario === 'PROFESSOR';
+  const isAwaitingReview = !isClosed && !isReview && disciplina.progressoPercent >= 100;
   const isExcess = disciplina.horasStatus === 'EXCESSO';
 
   return (
@@ -45,10 +47,14 @@ const TurmaDiarioCard: React.FC<TurmaDiarioCardProps> = ({
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] ${
             isClosed
               ? 'bg-slate-100 text-slate-600'
-              : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+              : isReview
+                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+                : isAwaitingReview
+                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
+                  : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
           }`}>
             {isClosed && <LockKeyhole size={10} />}
-            {isClosed ? 'Fechado' : 'Em andamento'}
+            {isClosed ? 'Fechado' : isReview ? 'Em revisão' : isAwaitingReview ? 'Aguardando revisão' : 'Em andamento'}
           </span>
         </div>
 
