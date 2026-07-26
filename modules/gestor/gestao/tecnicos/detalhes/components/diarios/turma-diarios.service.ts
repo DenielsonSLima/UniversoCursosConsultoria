@@ -5,7 +5,10 @@ import {
   TurmaDiarioRpcRow,
 } from './turma-diarios.types';
 
-const toDisciplina = (row: TurmaDiarioRpcRow): TurmaDiarioDisciplina => ({
+const toDisciplina = (
+  row: TurmaDiarioRpcRow,
+  bloqueioDiario: 'ABERTO' | 'PROFESSOR' | 'TOTAL',
+): TurmaDiarioDisciplina => ({
   id: row.disciplina_id,
   nome: row.disciplina_nome,
   professor: row.professor_nome,
@@ -20,9 +23,13 @@ const toDisciplina = (row: TurmaDiarioRpcRow): TurmaDiarioDisciplina => ({
   presencaGeralPercent: row.presenca_geral_percent === null
     ? null
     : Number(row.presenca_geral_percent),
+  bloqueioDiario,
 });
 
-const groupByModulo = (rows: TurmaDiarioRpcRow[]): TurmaDiarioModulo[] => {
+const groupByModulo = (
+  rows: TurmaDiarioRpcRow[],
+  locks: Map<string, 'ABERTO' | 'PROFESSOR' | 'TOTAL'>,
+): TurmaDiarioModulo[] => {
   const modules = new Map<string, TurmaDiarioModulo>();
 
   rows.forEach((row) => {
@@ -31,7 +38,7 @@ const groupByModulo = (rows: TurmaDiarioRpcRow[]): TurmaDiarioModulo[] => {
       nome: row.modulo_nome,
       disciplinas: [],
     };
-    module.disciplinas.push(toDisciplina(row));
+    module.disciplinas.push(toDisciplina(row, locks.get(row.disciplina_id) || 'ABERTO'));
     modules.set(row.modulo_id, module);
   });
 
@@ -40,10 +47,21 @@ const groupByModulo = (rows: TurmaDiarioRpcRow[]): TurmaDiarioModulo[] => {
 
 export const turmaDiariosService = {
   async getByTurma(turmaId: string): Promise<TurmaDiarioModulo[]> {
-    const { data, error } = await supabase.rpc('get_diarios_turma', {
-      p_turma_id: turmaId,
-    });
-    if (error) throw error;
-    return groupByModulo((data || []) as TurmaDiarioRpcRow[]);
+    const [diariosResult, locksResult] = await Promise.all([
+      supabase.rpc('get_diarios_turma', { p_turma_id: turmaId }),
+      supabase
+        .from('turmas_disciplinas')
+        .select('disciplina_id, bloqueio_diario')
+        .eq('turma_id', turmaId),
+    ]);
+    if (diariosResult.error) throw diariosResult.error;
+    if (locksResult.error) throw locksResult.error;
+    const locks = new Map<string, 'ABERTO' | 'PROFESSOR' | 'TOTAL'>(
+      (locksResult.data || []).map((row: any) => [
+        row.disciplina_id,
+        row.bloqueio_diario || 'ABERTO',
+      ]),
+    );
+    return groupByModulo((diariosResult.data || []) as TurmaDiarioRpcRow[], locks);
   },
 };
