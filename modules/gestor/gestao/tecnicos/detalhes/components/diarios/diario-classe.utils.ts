@@ -26,12 +26,14 @@ export const buildAttendanceMap = (
   students.forEach((student) => {
     map[student.id] = {};
     aulas.forEach((aula) => {
-      map[student.id][aula.id] = null;
+      aula.sessoes.forEach((sessao) => {
+        map[student.id][sessao.id] = null;
+      });
     });
   });
   dbAttendance.forEach((frequency) => {
     if (map[frequency.aluno_id]) {
-      map[frequency.aluno_id][frequency.aula_id] = frequency.status as 'P' | 'F';
+      map[frequency.aluno_id][frequency.aula_id] = frequency.status as 'P' | 'F' | 'J';
     }
   });
   return map;
@@ -43,8 +45,9 @@ export const buildGradesMap = (
   dbGrades: any[],
 ): GradesMap => {
   const map: GradesMap = {};
+  const totalSessoes = aulas.reduce((total, aula) => total + aula.sessoes.length, 0);
   students.forEach((student) => {
-    map[student.id] = emptyGrade(aulas.length);
+    map[student.id] = emptyGrade(totalSessoes);
   });
   dbGrades.forEach((grade) => {
     if (!map[grade.aluno_id]) return;
@@ -69,11 +72,14 @@ export const buildGradesMap = (
 
 export const buildPraticasMap = (aulas: DiarioAula[], dbPraticas: any[]): Record<string, string> => {
   const map: Record<string, string> = {};
+  const encontroPorSessao = new Map<string, string>();
   aulas.forEach((aula) => {
     map[aula.id] = 'Aula expositiva / Prática padrão';
+    aula.sessoes.forEach((sessao) => encontroPorSessao.set(sessao.id, aula.id));
   });
   dbPraticas.forEach((practice) => {
-    map[practice.aula_id] = practice.pratica_pedagogica;
+    const encontroId = encontroPorSessao.get(practice.aula_id);
+    if (encontroId) map[encontroId] = practice.pratica_pedagogica;
   });
   return map;
 };
