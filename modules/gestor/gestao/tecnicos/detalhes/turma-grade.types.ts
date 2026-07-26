@@ -16,6 +16,15 @@ export interface TurmaAulaPlanejada {
   titulo: string;
   cargaHoraria: number;
   dataAula?: string;
+  sessoes: TurmaAulaSessao[];
+}
+
+export type TurmaAulaPeriodo = 'M' | 'T' | 'N' | 'U';
+
+export interface TurmaAulaSessao {
+  id: string;
+  periodo: TurmaAulaPeriodo;
+  cargaHoraria: number;
 }
 
 export interface TurmaAtividadeExtraClasse {
