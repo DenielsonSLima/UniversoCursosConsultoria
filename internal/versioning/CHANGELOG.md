@@ -2,6 +2,31 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.7.0-beta.1] - 2026-07-26
+
+### Adicionado
+
+- Encontros de aula com sessões independentes por turno, permitindo registrar manhã e tarde no mesmo dia sem duplicar a carga horária da disciplina.
+- Fluxo de revisão e fechamento do diário com travas distintas para professor e Gestão, confirmação auditável e reabertura controlada.
+- Registro de falta justificada e reflexo das aulas técnicas nos calendários da Gestão, do professor e do aluno.
+
+### Alterado
+
+- Diários de 8 horas passam a exibir sessões de 4 horas para manhã e tarde; encontros de 6 horas permanecem como aula única.
+- Cards acadêmicos passam a usar o progresso canônico da carga horária e a indicar módulo, disciplina atual e situação de revisão.
+- Navegação dos detalhes da turma e das abas do diário foi ajustada para telas menores com rolagem horizontal acessível.
+
+### Corrigido
+
+- Cabeçalhos, cores, quebras de texto, matrículas, cargas horárias e legenda da exportação PDF dos diários.
+- Frequência, totais de faltas e pendências do fechamento passaram a considerar corretamente cada sessão lançada.
+- Conteúdo programático, datas, notas, presenças e situação dos alunos dos diários importados da turma ENF T-40 INT.
+
+### Segurança
+
+- Cálculos acadêmicos, validações de carga horária e regras de fechamento permanecem centralizados no backend.
+- Alterações em diários fechados respeitam as travas e permissões da Gestão, preservando auditoria e atualização canônica.
+
 ## [0.6.0-beta.3] - 2026-07-25
 
 ### Adicionado
