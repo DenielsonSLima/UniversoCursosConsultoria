@@ -13,6 +13,7 @@ import type {
   PreviewResources,
 } from '../historico-emissoes/historico-emissoes.types';
 import type { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
+import { getSecretariaErrorMessage } from './secretaria-error';
 
 interface SecretariaIssuedDocumentModalProps {
   emissions: EmissionLog[];
@@ -95,11 +96,12 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
     gcTime: 30 * 60_000,
   });
   const preview = currentPreviewQuery.data || EMPTY_PREVIEW;
-  const previewError = currentPreviewQuery.error instanceof Error
-    ? currentPreviewQuery.error.message
-    : currentPreviewQuery.isError
-      ? 'Não foi possível carregar o documento emitido.'
-      : null;
+  const previewError = currentPreviewQuery.isError
+    ? getSecretariaErrorMessage(
+        currentPreviewQuery.error,
+        'Não foi possível carregar o documento emitido.',
+      )
+    : null;
   const error = previewError;
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import { boletimService } from '../../cadastros/modelos-documentos/boletim/bolet
 import { atestadoConclusaoService } from '../../cadastros/modelos-documentos/atestado-conclusao/atestado-conclusao.service';
 import { loadAcademicPreview } from '../historico-emissoes/academic-preview';
 import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
+import { getSecretariaErrorMessage } from './secretaria-error';
 
 interface Props {
   matriculaId: string;
@@ -178,7 +179,7 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
           <div className="flex min-h-72 w-full max-w-xl flex-col items-center justify-center rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-2xl">
             <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">Prévia indisponível</h5>
             <p className="mt-3 text-xs font-bold leading-relaxed text-rose-600">
-              {error instanceof Error ? error.message : 'Não foi possível montar a prévia acadêmica.'}
+              {getSecretariaErrorMessage(error, 'Não foi possível montar a prévia acadêmica.')}
             </p>
           </div>
         )}

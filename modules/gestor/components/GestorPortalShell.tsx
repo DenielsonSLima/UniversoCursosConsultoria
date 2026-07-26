@@ -203,8 +203,8 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                   {profile?.nome || 'Administrador'}
                 </p>
                 <p className="text-[10px] text-slate-400 truncate mt-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Online
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Sessão ativa
                 </p>
               </div>
             </div>
