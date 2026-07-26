@@ -2,6 +2,28 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.2] - 2026-07-26
+
+### Adicionado
+
+- Componente compartilhado de abas financeiras com navegação por teclado, rolagem responsiva e indicador ativo por linha inferior.
+- Rastreabilidade da data de emissão e dos ajustes aplicados aos recebíveis financeiros.
+
+### Alterado
+
+- Todas as abas e subabas do módulo Financeiro passaram a usar o mesmo padrão visual de texto com linha inferior, preservando as cores semânticas de cada área.
+- Consultas, listas e relatórios financeiros passaram a exibir os valores canônicos enriquecidos devolvidos pelo backend.
+
+### Corrigido
+
+- O fluxo Banese/BolePix passou a preservar melhor snapshots financeiros, valores ajustados e a origem dos dados exibidos.
+- Registros financeiros de teste foram removidos sem afetar o título Banese de homologação preservado.
+
+### Segurança
+
+- Validações financeiras e snapshots de cobrança permanecem centralizados no backend, sem confiar em cálculos do frontend.
+- Planilhas operacionais com dados de turmas e bundles locais de diagnóstico permanecem fora do repositório público.
+
 ## [2.2.3-beta.1] - 2026-07-26
 
 ### Adicionado

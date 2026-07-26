@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Building, ShoppingBag } from 'lucide-react';
 import DespesasFixasTab from './fixas/DespesasFixasTab';
 import DespesasVariaveisTab from './variaveis/DespesasVariaveisTab';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 type ExpenseType = 'fixas' | 'variaveis';
 
@@ -37,23 +38,14 @@ const DespesasTab: React.FC<DespesasTabProps> = ({ poloId }) => {
         <p className="text-slate-500 text-xs font-bold uppercase">Gestão operacional de custos fixos e variáveis.</p>
       </div>
 
-      {/* Subtabs header */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-2">
-        {subtabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveExpenseTab(tab.id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-              activeExpenseTab === tab.id
-                ? 'bg-rose-600 text-white border-rose-600 shadow-md'
-                : 'text-slate-500 hover:bg-slate-50 border-transparent'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <FinancialUnderlineTabs
+        items={subtabs}
+        value={activeExpenseTab}
+        onChange={setActiveExpenseTab}
+        ariaLabel="Tipos de despesas"
+        indicatorClassName="bg-rose-600"
+        activeIconClassName="text-rose-600"
+      />
 
       <div className="mt-4">
         {renderSubTab()}

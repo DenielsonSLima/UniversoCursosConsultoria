@@ -29,6 +29,7 @@ import { useOutrosCreditosQueries } from './hooks/useOutrosCreditosQueries';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
 type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
@@ -525,29 +526,19 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       </div>
 
       {/* Tabs de status */}
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {[
-          { id: 'pending' as const, label: 'A receber', count: totals.pending },
-          { id: 'received' as const, label: 'Recebidos', count: totals.received },
-          { id: 'canceled' as const, label: 'Cancelados', count: totals.canceled },
-          { id: 'all' as const, label: 'Todos', count: totals.all },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border flex items-center gap-2 ${
-              statusScope === tab.id
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${statusScope === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
-      </div>
+      <FinancialUnderlineTabs
+        items={[
+          { id: 'pending' as const, label: 'A receber', badge: totals.pending, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+          { id: 'received' as const, label: 'Recebidos', badge: totals.received, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+          { id: 'canceled' as const, label: 'Cancelados', badge: totals.canceled, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+          { id: 'all' as const, label: 'Todos', badge: totals.all, badgeClassName: 'bg-emerald-50 text-emerald-700' },
+        ]}
+        value={statusScope}
+        onChange={setStatusScope}
+        ariaLabel="Situação dos outros créditos"
+        indicatorClassName="bg-emerald-600"
+        activeIconClassName="text-emerald-600"
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">

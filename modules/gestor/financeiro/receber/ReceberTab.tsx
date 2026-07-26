@@ -6,6 +6,7 @@ import LivresReceberTab from './livres/LivresReceberTab';
 import EspecializacaoReceberTab from './especializacao/EspecializacaoReceberTab';
 import EadReceberTab from './ead/EadReceberTab';
 import TecnicoReceberTab from './tecnico/TecnicoReceberTab';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 type CourseType = 'livres' | 'especializacao' | 'ead' | 'tecnico';
 
@@ -40,31 +41,15 @@ const ReceberTab: React.FC<ReceberTabProps> = ({ poloId }) => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="border-b border-slate-200 mb-4">
-        <div className="flex gap-6 overflow-x-auto pb-px">
-          {subtabs.map((tab) => {
-            const isActive = activeCourseTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveCourseTab(tab.id)}
-                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
-                  isActive
-                    ? 'text-[#001a33] font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
-                }`}
-              >
-                <span className={isActive ? 'text-emerald-600' : 'text-slate-400'}>
-                  {tab.icon}
-                </span>
-                <span>{tab.label}</span>
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-600 rounded-full" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+      <div className="mb-4">
+        <FinancialUnderlineTabs
+          items={subtabs}
+          value={activeCourseTab}
+          onChange={setActiveCourseTab}
+          ariaLabel="Modalidades das contas a receber"
+          indicatorClassName="bg-emerald-600"
+          activeIconClassName="text-emerald-600"
+        />
       </div>
 
       <div className="mt-4">

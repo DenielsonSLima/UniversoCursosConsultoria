@@ -28,6 +28,7 @@ import FinancialReportExportButton, {
   FinancialReportStatusBadge,
   FinancialReportSummaryCard,
 } from '../../components/FinancialReportPreview';
+import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -293,21 +294,14 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
       </div>
 
       {/* Tabs de status */}
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border ${
-              statusScope === tab.id
-                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <FinancialUnderlineTabs
+        items={tabs}
+        value={statusScope}
+        onChange={setStatusScope}
+        ariaLabel="Período das despesas fixas"
+        indicatorClassName="bg-rose-600"
+        activeIconClassName="text-rose-600"
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">

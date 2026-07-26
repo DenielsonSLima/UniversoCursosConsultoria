@@ -21,6 +21,7 @@ import {
   printReciboDespesa,
   despesaToReciboData,
 } from '../../cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -208,21 +209,14 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
         ))}
       </div>
 
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setStatusScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border ${
-              statusScope === tab.id
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <FinancialUnderlineTabs
+        items={tabs}
+        value={statusScope}
+        onChange={setStatusScope}
+        ariaLabel="Período dos outros débitos"
+        indicatorClassName="bg-indigo-600"
+        activeIconClassName="text-indigo-600"
+      />
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[180px]">

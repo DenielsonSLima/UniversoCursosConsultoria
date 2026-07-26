@@ -30,6 +30,7 @@ export interface ContasReceber {
   descricao: string;
   valor: number;
   dataVencimento: string;
+  dataEmissao?: string;
   dataPagamento?: string;
   valorPago?: number;
   status: 'PENDENTE' | 'PAGO' | 'VENCIDO' | 'SUSPENSO' | 'ESTORNADO' | 'CANCELADO' | 'DEVOLVIDO';
@@ -43,6 +44,9 @@ export interface ContasReceber {
   formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
   origemPagamento?: string;
   gatewayProvider?: string;
+  gatewayPaymentMethod?: string;
+  gatewaySettlementChannel?: 'PIX' | 'BOLETO' | 'NAO_IDENTIFICADO' | 'MISTO';
+  gatewaySettlementSource?: 'API' | 'CNAB240' | 'MANUAL';
   contaBancariaId?: string;
   nossoNumeroAsaas?: string;
   asaasPaymentId?: string;
@@ -55,6 +59,9 @@ export interface ContasReceber {
   asaasLastError?: string;
   taxa?: number;
   valorLiquido?: number;
+  descontoAplicado?: number;
+  jurosAplicados?: number;
+  multaAplicada?: number;
   createdAt?: string;
   tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA';
   parcelaNumero?: number;
@@ -231,6 +238,7 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   descricao: row.descricao,
   valor: Number(row.valor || 0),
   dataVencimento: row.data_vencimento,
+  dataEmissao: row.data_emissao || undefined,
   dataPagamento: row.data_pagamento || undefined,
   valorPago: row.valor_pago === null || row.valor_pago === undefined ? undefined : Number(row.valor_pago),
   status: row.status,
@@ -247,6 +255,9 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   formaPagamento: row.forma_pagamento || undefined,
   origemPagamento: row.origem_pagamento || undefined,
   gatewayProvider: row.gateway_provider || undefined,
+  gatewayPaymentMethod: row.gateway_payment_method || undefined,
+  gatewaySettlementChannel: row.gateway_settlement_channel || undefined,
+  gatewaySettlementSource: row.gateway_settlement_source || undefined,
   contaBancariaId: row.conta_bancaria_id || undefined,
   nossoNumeroAsaas: row.nosso_numero_asaas || undefined,
   asaasPaymentId: row.asaas_payment_id || undefined,
@@ -259,6 +270,15 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
   asaasLastError: row.asaas_last_error || undefined,
   taxa: row.taxa === null || row.taxa === undefined ? undefined : Number(row.taxa),
   valorLiquido: row.valor_liquido === null || row.valor_liquido === undefined ? undefined : Number(row.valor_liquido),
+  descontoAplicado: row.desconto_aplicado === null || row.desconto_aplicado === undefined
+    ? undefined
+    : Number(row.desconto_aplicado),
+  jurosAplicados: row.juros_aplicados === null || row.juros_aplicados === undefined
+    ? undefined
+    : Number(row.juros_aplicados),
+  multaAplicada: row.multa_aplicada === null || row.multa_aplicada === undefined
+    ? undefined
+    : Number(row.multa_aplicada),
   createdAt: row.created_at || undefined,
   tipoLancamento: row.tipo_lancamento || undefined,
   parcelaNumero: row.parcela_numero === null || row.parcela_numero === undefined ? undefined : Number(row.parcela_numero),

@@ -174,6 +174,7 @@ export const ModalidadeReceberTab: React.FC<ModalidadeReceberTabProps> = ({
     dueEnd,
     statusScope,
     groupMode,
+    kpis,
     statusCounts,
     toast,
   });

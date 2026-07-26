@@ -29,6 +29,7 @@ import { useFinanceiroRealtime } from '../hooks/useFinanceiroRealtime';
 import { useFinanceiroSharedQueries } from '../hooks/useFinanceiroSharedQueries';
 import { useTransferenciasQueries } from './hooks/useTransferenciasQueries';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
+import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 
 type PeriodScope = 'current_month' | 'all';
 
@@ -338,24 +339,17 @@ const TransferenciasTab: React.FC<TransferenciasTabProps> = ({ poloId }) => {
       </div>
 
       {/* Tabs de período */}
-      <div className="flex gap-2 border-b border-slate-100 pb-2">
-        {[
+      <FinancialUnderlineTabs
+        items={[
           { id: 'current_month' as const, label: 'Mês Atual' },
           { id: 'all' as const, label: 'Todos' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setPeriodScope(tab.id)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border ${
-              periodScope === tab.id
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'text-slate-500 border-transparent hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        value={periodScope}
+        onChange={setPeriodScope}
+        ariaLabel="Período das transferências"
+        indicatorClassName="bg-indigo-600"
+        activeIconClassName="text-indigo-600"
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-center">

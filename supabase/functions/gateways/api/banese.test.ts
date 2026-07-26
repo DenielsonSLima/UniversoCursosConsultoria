@@ -538,18 +538,18 @@ Deno.test("classifica BolePix somente com prova canonica em todos os pagamentos"
       CodigoMotivoLiquidacao: "61",
       FormaLiquidacao: "BOLETO",
     }]),
-    "BOLETO",
+    "NAO_IDENTIFICADO",
   );
   assert.equal(
     classifyBaneseSettlementMethod([
       { CodigoMotivoLiquidacao: "61" },
-      { BancoRecebedor: "BANCO DO ESTADO DE SERGIPE" },
+      { FormaLiquidacao: "BOLETO" },
     ]),
-    "BOLETO",
+    "MISTO",
   );
 });
 
-Deno.test("formato atualmente documentado pela API falha fechado como BOLETO", () => {
+Deno.test("formato atualmente documentado pela API nao inventa o canal", () => {
   assert.equal(
     classifyBaneseSettlementMethod([{
       BancoRecebedor: "BANCO DO ESTADO DE SERGIPE",
@@ -558,9 +558,13 @@ Deno.test("formato atualmente documentado pela API falha fechado como BOLETO", (
       Descricao: "Liquidado via Pix",
       QrCode: "nao-e-prova-do-canal-usado",
     }]),
+    "NAO_IDENTIFICADO",
+  );
+  assert.equal(
+    classifyBaneseSettlementMethod([{ FormaLiquidacao: "BOLETO" }]),
     "BOLETO",
   );
-  assert.equal(classifyBaneseSettlementMethod([]), "BOLETO");
+  assert.equal(classifyBaneseSettlementMethod([]), "NAO_IDENTIFICADO");
 });
 
 Deno.test("rejeita qualquer DataPagamento invalida no detalhe bancario", async () => {

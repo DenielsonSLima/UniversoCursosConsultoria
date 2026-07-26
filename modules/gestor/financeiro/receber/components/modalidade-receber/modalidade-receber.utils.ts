@@ -100,8 +100,50 @@ export const formatOptionalCurrency = (
   missingLabel = '—',
 ) => value === null || value === undefined ? missingLabel : formatCurrency(value);
 
-export const formatReceivableDate = (value: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '—';
+export const formatReceivableDate = (value: string) => {
+  if (!value) return '—';
+
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('pt-BR', { timeZone: 'America/Maceio' });
+};
+
+const courseModalityLabels: Record<string, string> = {
+  EAD: 'EAD',
+  LIVRE: 'Livre',
+  ESPECIALIZACAO: 'Especialização',
+  TÉCNICO: 'Técnico',
+  TECNICO: 'Técnico',
+};
+
+export const receivableCourseTitle = (item: ContasReceber) => {
+  const courseName = String(item.cursoNome || '').trim();
+  const modalityCode = String(item.cursoModalidade || '').trim().toUpperCase();
+  const modalityLabel = courseModalityLabels[modalityCode] || String(item.cursoModalidade || '').trim();
+
+  if (courseName && modalityLabel) return `${courseName} — Curso ${modalityLabel}`;
+  if (courseName) return courseName;
+  return item.descricao || 'Curso não informado';
+};
+
+export const receivableClassLabel = (item: ContasReceber) => {
+  const courseName = String(item.cursoNome || '').trim();
+  const modality = String(item.cursoModalidade || '').trim();
+  let className = String(item.turmaNome || '').trim();
+
+  if (!className) return '';
+  if (courseName && className.toLocaleLowerCase('pt-BR').startsWith(courseName.toLocaleLowerCase('pt-BR'))) {
+    className = className.slice(courseName.length).replace(/^\s*[-–—:]\s*/, '');
+  }
+  if (modality && className.toLocaleLowerCase('pt-BR').startsWith(modality.toLocaleLowerCase('pt-BR'))) {
+    className = className.slice(modality.length).replace(/^\s*[-–—:]\s*/, '');
+  }
+
+  return className.replace(/\bUnica\b/gi, 'Única').trim();
+};
 
 export const formatNextPendingDueDate = (
   pendingCount: number,
@@ -120,6 +162,17 @@ export const paymentOriginLabel = (item: ContasReceber) => {
 };
 
 export const paymentMethodLabel = (item: ContasReceber) => {
+  const isBaneseBolePix =
+    paymentGatewayCode(item) === 'banese_card'
+    && String(item.gatewayPaymentMethod || item.formaPagamento || '').toUpperCase() === 'BOLETO';
+  if (isBaneseBolePix) {
+    if (item.gatewaySettlementChannel === 'PIX') return 'Pix (BolePix)';
+    if (item.gatewaySettlementChannel === 'BOLETO') return 'Boleto';
+    if (item.gatewaySettlementChannel === 'MISTO') return 'Boleto/Pix (liquidação mista)';
+    return item.status === 'PAGO'
+      ? 'Boleto/Pix — canal não identificado'
+      : 'Boleto/Pix';
+  }
   if (item.formaPagamento === 'CARTAO') return 'Cartão';
   if (item.formaPagamento === 'BOLETO') return 'Boleto';
   if (item.formaPagamento === 'PIX') return 'Pix';
