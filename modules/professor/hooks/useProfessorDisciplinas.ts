@@ -28,6 +28,7 @@ export interface ProfessorDisciplinaAssignment {
   primeiraAulaLabel: string;
   ultimaAulaLabel: string;
   isEstagio: boolean;
+  isFinalizada: boolean;
   canEdit: boolean;
   accessLabel: string;
   accessMessage: string;
@@ -38,7 +39,7 @@ export interface ProfessorDisciplinaAssignment {
 
 type ProfessorDisciplinaPortalRow = Omit<
   ProfessorDisciplinaAssignment,
-  'primeiraAulaLabel' | 'ultimaAulaLabel'
+  'primeiraAulaLabel' | 'ultimaAulaLabel' | 'isFinalizada'
 >;
 
 export const professorDisciplinasKeys = {
@@ -67,11 +68,20 @@ export const useProfessorDisciplinas = (professorId: string, poloId: string) => 
 
     if (!Array.isArray(data)) return [];
 
-    return (data as ProfessorDisciplinaPortalRow[]).map((row) => ({
-      ...row,
-      primeiraAulaLabel: formatDate(row.primeiraAula),
-      ultimaAulaLabel: formatDate(row.ultimaAula),
-    }));
+    return (data as ProfessorDisciplinaPortalRow[]).map((row) => {
+      const turmaStatus = String(row.status || '').trim().toUpperCase();
+      const periodoStatus = String(row.raw?.periodo_status || '').trim().toUpperCase();
+      const bloqueioDiario = String(row.raw?.bloqueio_diario || '').trim().toUpperCase();
+
+      return {
+        ...row,
+        primeiraAulaLabel: formatDate(row.primeiraAula),
+        ultimaAulaLabel: formatDate(row.ultimaAula),
+        isFinalizada: turmaStatus === 'FINALIZADA'
+          || periodoStatus === 'FECHADO'
+          || bloqueioDiario === 'TOTAL',
+      };
+    });
   },
 });
 

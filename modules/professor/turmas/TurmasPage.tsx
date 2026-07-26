@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BookOpen,
   CalendarRange,
+  CheckCircle2,
   ChevronRight,
   ClipboardEdit,
   Clock3,
@@ -25,11 +26,24 @@ interface TurmasPageProps {
   poloId: string;
 }
 
+type AssignmentStatusTab = 'EM_ANDAMENTO' | 'FINALIZADAS';
+
 const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [activeDetailTab, setActiveDetailTab] = useState<'diario' | 'estagio' | 'atividades'>('diario');
+  const [assignmentStatusTab, setAssignmentStatusTab] = useState<AssignmentStatusTab>('EM_ANDAMENTO');
   const assignmentsQuery = useProfessorDisciplinas(professorId, poloId);
   const { data: assignments = [], isLoading: loadingAssignments, isError } = assignmentsQuery;
+  const assignmentsByStatus = assignments.reduce(
+    (groups, assignment) => {
+      groups[assignment.isFinalizada ? 'FINALIZADAS' : 'EM_ANDAMENTO'].push(assignment);
+      return groups;
+    },
+    { EM_ANDAMENTO: [], FINALIZADAS: [] } as Record<AssignmentStatusTab, typeof assignments>,
+  );
+  const ongoingAssignments = assignmentsByStatus.EM_ANDAMENTO;
+  const finalizedAssignments = assignmentsByStatus.FINALIZADAS;
+  const visibleAssignments = assignmentsByStatus[assignmentStatusTab];
   const selectedAssignment = assignments.find(
     (assignment) => assignment.id === selectedAssignmentId,
   ) || null;
@@ -42,6 +56,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
   useEffect(() => {
     setSelectedAssignmentId(null);
     setActiveDetailTab('diario');
+    setAssignmentStatusTab('EM_ANDAMENTO');
   }, [poloId, professorId]);
 
   if (loadingAssignments) {
@@ -92,21 +107,104 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 shadow-sm">
+              <nav
+                aria-label="Situação das disciplinas"
+                className="flex w-fit max-w-full flex-nowrap items-center gap-7 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <button
+                  type="button"
+                  aria-current={assignmentStatusTab === 'EM_ANDAMENTO' ? 'page' : undefined}
+                  onClick={() => setAssignmentStatusTab('EM_ANDAMENTO')}
+                  className={`relative flex h-[52px] shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-purple-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ${
+                    assignmentStatusTab === 'EM_ANDAMENTO'
+                      ? 'text-[#001a33] after:scale-x-100'
+                      : 'text-slate-400 after:scale-x-0 hover:text-purple-700 hover:after:scale-x-50'
+                  }`}
+                >
+                  <Activity
+                    size={15}
+                    className={assignmentStatusTab === 'EM_ANDAMENTO' ? 'text-emerald-600' : undefined}
+                  />
+                  Em andamento
+                  <span className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-black ${
+                    assignmentStatusTab === 'EM_ANDAMENTO'
+                      ? 'bg-purple-50 text-purple-700'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {ongoingAssignments.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-current={assignmentStatusTab === 'FINALIZADAS' ? 'page' : undefined}
+                  onClick={() => setAssignmentStatusTab('FINALIZADAS')}
+                  className={`relative flex h-[52px] shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-purple-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ${
+                    assignmentStatusTab === 'FINALIZADAS'
+                      ? 'text-[#001a33] after:scale-x-100'
+                      : 'text-slate-400 after:scale-x-0 hover:text-purple-700 hover:after:scale-x-50'
+                  }`}
+                >
+                  <CheckCircle2
+                    size={15}
+                    className={assignmentStatusTab === 'FINALIZADAS' ? 'text-purple-600' : undefined}
+                  />
+                  Finalizadas
+                  <span className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-black ${
+                    assignmentStatusTab === 'FINALIZADAS'
+                      ? 'bg-purple-50 text-purple-700'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {finalizedAssignments.length}
+                  </span>
+                </button>
+              </nav>
+            </div>
+
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                {assignments.length} {assignments.length === 1 ? 'disciplina vinculada' : 'disciplinas vinculadas'}
+                {visibleAssignments.length}{' '}
+                {assignmentStatusTab === 'EM_ANDAMENTO'
+                  ? visibleAssignments.length === 1 ? 'disciplina em andamento' : 'disciplinas em andamento'
+                  : visibleAssignments.length === 1 ? 'disciplina finalizada' : 'disciplinas finalizadas'}
               </p>
               <p className="hidden text-[10px] font-bold text-slate-400 sm:block">
                 Selecione uma disciplina para acessar o diário
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {assignments.map((assignment) => (
-                <article
-                  key={assignment.id}
-                  className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[1.75rem] border border-purple-100 bg-white p-5 shadow-[0_12px_34px_-26px_rgba(76,29,149,0.5)] transition duration-300 hover:-translate-y-1 hover:border-purple-300 hover:shadow-[0_24px_52px_-30px_rgba(124,58,237,0.55)]"
-                >
+            {visibleAssignments.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+                <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
+                  assignmentStatusTab === 'EM_ANDAMENTO'
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : 'bg-purple-50 text-purple-600'
+                }`}>
+                  {assignmentStatusTab === 'EM_ANDAMENTO'
+                    ? <Activity size={24} />
+                    : <CheckCircle2 size={24} />}
+                </div>
+                <h3 className="mt-4 text-base font-black text-[#001a33]">
+                  {assignmentStatusTab === 'EM_ANDAMENTO'
+                    ? 'Nenhuma disciplina em andamento'
+                    : 'Nenhuma disciplina finalizada'}
+                </h3>
+                <p className="mx-auto mt-1 max-w-md text-xs font-medium leading-relaxed text-slate-500">
+                  {assignmentStatusTab === 'EM_ANDAMENTO'
+                    ? 'As disciplinas abertas ou em revisão aparecerão aqui quando forem liberadas pela coordenação.'
+                    : 'As disciplinas aparecerão aqui depois que o período ou o diário forem encerrados pela Gestão.'}
+                </p>
+              </div>
+            ) : (
+              <div
+                aria-label={assignmentStatusTab === 'EM_ANDAMENTO' ? 'Disciplinas em andamento' : 'Disciplinas finalizadas'}
+                className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+              >
+                {visibleAssignments.map((assignment) => (
+                  <article
+                    key={assignment.id}
+                    className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[1.75rem] border border-purple-100 bg-white p-5 shadow-[0_12px_34px_-26px_rgba(76,29,149,0.5)] transition duration-300 hover:-translate-y-1 hover:border-purple-300 hover:shadow-[0_24px_52px_-30px_rgba(124,58,237,0.55)]"
+                  >
                   <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-purple-500/10 blur-3xl transition-transform duration-700 group-hover:scale-150" />
 
                   <div className="relative z-10 flex flex-1 flex-col">
@@ -199,9 +297,10 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
                       <ChevronRight size={13} />
                     </button>
                   </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )
       ) : (
