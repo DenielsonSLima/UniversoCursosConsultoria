@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { AcademicMovementType, AcademicStudent } from '../academic-lifecycle.service';
@@ -6,6 +6,7 @@ import { isValidStudentCpf } from '../turma-alunos.service';
 import ConfirmarMatriculaModal, { EnrollmentFinance, EnrollmentStep } from './alunos/ConfirmarMatriculaModal';
 import MatricularAlunoModal from './alunos/MatricularAlunoModal';
 import MovimentacaoAlunoModal, { OperationMode, TransferType } from './alunos/MovimentacaoAlunoModal';
+import MovimentacaoHistoricoModal from './alunos/MovimentacaoHistoricoModal';
 import TurmaAlunosTable from './alunos/TurmaAlunosTable';
 import TurmaAlunosHeader from './alunos/TurmaAlunosHeader';
 import TurmaAlunosQueryState from './alunos/TurmaAlunosQueryState';
@@ -17,6 +18,7 @@ import {
   useEnrollmentPaymentOptions,
   useTurmaFinanceiroMatriculaConfig,
   useTurmaStudents,
+  useTurmaMovements,
   usePrevisaoFinanceiraTurma,
 } from '../hooks/useTurmaAlunosQueries';
 import {
@@ -65,15 +67,41 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const [transferType, setTransferType] = useState<TransferType>('INTERNA_TURMA');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
+  const [operationDate, setOperationDate] = useState(getMaceioIsoDate());
   const [returnDate, setReturnDate] = useState('');
   const [destinationClassId, setDestinationClassId] = useState('');
   const [destinationInstitution, setDestinationInstitution] = useState('');
+  const [historyStudent, setHistoryStudent] = useState<AcademicStudent | null>(null);
   const requireTechnicalProfile = String(turma.modalidade || '').toUpperCase() === 'TECNICO';
   const turmaStatus = String(turma.status || '').toUpperCase();
   const canEnroll = ENROLLMENT_PHASES.has(turmaStatus);
   const isReadOnly = turmaStatus === 'FINALIZADA';
   const studentsQuery = useTurmaStudents(turma.id);
   const students = studentsQuery.data || [];
+  const movementsQuery = useTurmaMovements(turma.id);
+  const movements = movementsQuery.data || [];
+  const latestMovements = useMemo(() => {
+    const byEnrollment = new Map<string, (typeof movements)[number]>();
+    const currentStatus = new Map(
+      students.map((student) => [student.matricula_id, student.status]),
+    );
+    movements.forEach((movement) => {
+      const current = byEnrollment.get(movement.matricula_id);
+      if (
+        movement.status_novo === currentStatus.get(movement.matricula_id)
+        && (!current || movement.created_at > current.created_at)
+      ) {
+        byEnrollment.set(movement.matricula_id, movement);
+      }
+    });
+    return byEnrollment;
+  }, [movements, students]);
+  const selectedHistory = useMemo(
+    () => historyStudent
+      ? movements.filter((movement) => movement.matricula_id === historyStudent.matricula_id)
+      : [],
+    [historyStudent, movements],
+  );
   const availableStudentsQuery = useAvailableStudents(
     turma.id,
     showMatricularModal,
@@ -319,6 +347,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     setSelectedStudent(null);
     setReason('');
     setNotes('');
+    setOperationDate(getMaceioIsoDate());
     setReturnDate('');
     setDestinationClassId('');
     setDestinationInstitution('');
@@ -337,6 +366,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const openMovement = (student: AcademicStudent) => {
     if (isReadOnly) return;
     setSelectedStudent(student);
+    setOperationDate(getMaceioIsoDate());
     setOperationMode('MOVIMENTACAO');
     setMovementType(
       ['TRANCADO', 'DESISTENTE', 'CANCELADO'].includes(student.status)
@@ -348,6 +378,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
   const openTransfer = (student: AcademicStudent) => {
     if (isReadOnly) return;
     setSelectedStudent(student);
+    setOperationDate(getMaceioIsoDate());
     setOperationMode('TRANSFERENCIA');
     setTransferType('INTERNA_TURMA');
   };
@@ -367,6 +398,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           onOpenMovement={openMovement}
           onOpenTransfer={openTransfer}
           onRemoveEnrollment={setStudentToRemove}
+          latestMovements={latestMovements}
+          onOpenHistory={setHistoryStudent}
         />
       </div>
 
@@ -425,6 +458,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           transferType={transferType}
           reason={reason}
           notes={notes}
+          operationDate={operationDate}
           returnDate={returnDate}
           destinationClassId={destinationClassId}
           destinationInstitution={destinationInstitution}
@@ -439,6 +473,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
           onTransferTypeChange={setTransferType}
           onReasonChange={setReason}
           onNotesChange={setNotes}
+          onOperationDateChange={setOperationDate}
           onReturnDateChange={setReturnDate}
           onDestinationClassChange={setDestinationClassId}
           onDestinationInstitutionChange={setDestinationInstitution}
@@ -450,6 +485,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
               tipo: movementType,
               motivo: reason,
               observacao: notes,
+              dataMovimentacao: operationDate,
               dataRetornoPrevista: movementType === 'TRANCAMENTO' ? returnDate || undefined : undefined,
             })
             : operationMode === 'RETORNO'
@@ -458,6 +494,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
                 turmaDestinoId: destinationClassId,
                 motivo: reason,
                 observacao: notes,
+                dataRetorno: operationDate,
               })
             : transferType !== 'EXTERNA_ENVIADA'
               && (destinationClassesQuery.isError || destinationClassesQuery.isLoading)
@@ -469,7 +506,16 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
               turmaDestinoId: transferType === 'EXTERNA_ENVIADA' ? undefined : destinationClassId,
               instituicaoDestino: transferType === 'EXTERNA_ENVIADA' ? destinationInstitution : undefined,
               observacao: notes,
+              dataTransferencia: operationDate,
             })}
+        />
+      )}
+
+      {historyStudent && (
+        <MovimentacaoHistoricoModal
+          student={historyStudent}
+          movements={selectedHistory}
+          onClose={() => setHistoryStudent(null)}
         />
       )}
 

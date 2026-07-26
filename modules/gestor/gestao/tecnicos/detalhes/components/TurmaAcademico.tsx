@@ -40,6 +40,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const [originInstitution, setOriginInstitution] = useState('');
   const [originCourse, setOriginCourse] = useState('');
   const [transferReason, setTransferReason] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [transferDate, setTransferDate] = useState(getMaceioIsoDate());
   const [externalCredits, setExternalCredits] = useState<Record<string, ExternalCreditDraft>>({});
 
   const periodsQuery = useQuery({
@@ -80,6 +82,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
     setOriginInstitution('');
     setOriginCourse('');
     setTransferReason('');
+    setTransferNotes('');
+    setTransferDate(getMaceioIsoDate());
     setExternalCredits({});
   };
 
@@ -167,6 +171,8 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
         instituicaoOrigem: originInstitution,
         cursoOrigem: originCourse,
         motivo: transferReason,
+        observacao: transferNotes,
+        dataTransferencia: transferDate,
         aproveitamentos: (Object.entries(externalCredits) as Array<[string, ExternalCreditDraft]>)
           .filter(([, credit]) => credit.selected)
           .map(([disciplinaId, credit]) => ({
@@ -374,11 +380,15 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
           originInstitution={originInstitution}
           originCourse={originCourse}
           reason={transferReason}
+          notes={transferNotes}
+          transferDate={transferDate}
           credits={externalCredits}
           onStudentChange={setSelectedStudentId}
           onInstitutionChange={setOriginInstitution}
           onCourseChange={setOriginCourse}
           onReasonChange={setTransferReason}
+          onNotesChange={setTransferNotes}
+          onTransferDateChange={setTransferDate}
           onCreditsChange={setExternalCredits}
           onRetry={() => { void Promise.all([allStudentsQuery.refetch(), disciplinesQuery.refetch()]); }}
           onClose={closeReceiveTransfer}

@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
+import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
 import DailabsSignature from '../../shared/components/DailabsSignature';
 import AccessCheckingScreen from '../../shared/components/AccessCheckingScreen';
 import {
@@ -16,21 +17,31 @@ import {
 import AlunoLoginAuthCard from './AlunoLoginAuthCard';
 import { AlunoLoginHero, AlunoLoginMobileHeader } from './AlunoLoginHero';
 import {
-  clearAuthReturnParams,
-  getAuthReturnCode,
-  getAuthReturnError,
-  hasAuthReturnInUrl,
   type AuthMessage,
   type AuthMode,
 } from './aluno-login.utils';
+import {
+  clearOAuthReturnParams,
+  clearPendingOAuthReturn,
+  getOAuthReturnError,
+  hasOAuthReturnInUrl,
+  readPendingOAuthReturn,
+} from '../../shared/auth/oauth-return-state';
+
+type SignupStep = 'dados' | 'endereco';
+type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
 
 const AlunoLoginPublicPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [pendingGoogleReturn] = useState(() => readPendingOAuthReturn('aluno'));
+  const [hasExternalAuthReturn] = useState(
+    () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
+  );
   const initialMode = searchParams.get('mode') === 'cadastro' ? 'cadastro' : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
-  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasAuthReturnInUrl);
+  const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
   const [message, setMessage] = useState<AuthMessage | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -47,6 +58,15 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [signupStep, setSignupStep] = useState<SignupStep>('dados');
+  const [cep, setCep] = useState('');
+  const [endereco, setEndereco] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [uf, setUf] = useState('');
+  const [cepStatus, setCepStatus] = useState<CepStatus>('idle');
 
   const passwordChecks = useMemo(() => {
     const hasMinLength = password.length >= 6;
@@ -60,29 +80,32 @@ const AlunoLoginPublicPage: React.FC = () => {
   }, [password]);
 
   const redirectPath = useMemo(() => {
-    const redirect = searchParams.get('redirect');
+    const redirect = searchParams.get('redirect') || pendingGoogleReturn?.redirectPath;
     return getSafePublicAlunoRedirectPath(redirect);
-  }, [searchParams]);
-  const hasExplicitRedirect = searchParams.has('redirect');
+  }, [pendingGoogleReturn, searchParams]);
+  const hasExplicitRedirect = searchParams.has('redirect') || Boolean(pendingGoogleReturn?.redirectPath);
 
-  const finishAuth = async (profile?: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean }) => {
-    if (!profile) return;
+  const finishAuth = async (
+    profile?: { tipo?: string; acceptedTermsAt?: string | null; requiresPasswordReset?: boolean },
+  ): Promise<boolean> => {
+    if (!profile) return false;
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
       const redirect = hasExplicitRedirect ? redirectPath : '/aluno';
       const firstAccessParams = new URLSearchParams();
       firstAccessParams.set('next', redirect);
       navigate(`/primeiro-acesso?${firstAccessParams.toString()}`, { replace: true });
-      return;
+      return true;
     }
 
     savePortalSession(profile as any);
 
     if (hasExplicitRedirect) {
-      navigate(redirectPath);
-      return;
+      navigate(redirectPath, { replace: true });
+      return true;
     }
-    navigate(profile?.tipo === 'Aluno' ? '/aluno' : redirectPath);
+    navigate(profile?.tipo === 'Aluno' ? '/aluno' : redirectPath, { replace: true });
+    return true;
   };
 
   useEffect(() => {
@@ -95,13 +118,52 @@ const AlunoLoginPublicPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (signupStep !== 'endereco') return undefined;
+
+    const digits = cep.replace(/\D/g, '');
+    if (digits.length !== 8) {
+      setCepStatus('idle');
+      return undefined;
+    }
+
+    const controller = new globalThis.AbortController();
+    const timer = window.setTimeout(async () => {
+      setCepStatus('loading');
+      try {
+        const address = await lookupBrazilianCep(cep, controller.signal);
+        if (!address) {
+          setCepStatus('not-found');
+          return;
+        }
+
+        setCep(address.cep);
+        setEndereco(address.endereco);
+        setBairro(address.bairro);
+        setCidade(address.cidade);
+        setUf(address.uf);
+        setCepStatus('resolved');
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        setCepStatus('error');
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [cep, signupStep]);
+
+  useEffect(() => {
     let mounted = true;
 
     const checkAuthRedirectReturn = async () => {
-      try {
-        if (!hasAuthReturnInUrl()) return;
+      let isLeavingLoginPage = false;
 
-        const authReturnError = getAuthReturnError();
+      try {
+        if (!hasExternalAuthReturn) return;
+
+        const authReturnError = getOAuthReturnError();
         if (authReturnError) {
           setMessage({
             tone: 'error',
@@ -110,24 +172,22 @@ const AlunoLoginPublicPage: React.FC = () => {
           return;
         }
 
-        const authCode = getAuthReturnCode();
-        let { data } = await supabase.auth.getSession();
-        const hasAuthReturn = hasAuthReturnInUrl();
-
-        if (authCode) {
-          const { data: exchangedData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
-          if (exchangeError) {
-            throw new Error(alunoPublicAuthService.getFriendlyAuthRedirectError(exchangeError.message));
-          }
-          data = exchangedData;
-          clearAuthReturnParams();
+        // getSession aguarda a inicialização do cliente. Com
+        // detectSessionInUrl ativo, o próprio supabase-js já troca o PKCE ou
+        // restaura os tokens do fragmento; repetir exchangeCodeForSession aqui
+        // consumiria o mesmo callback duas vezes.
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          throw new Error(
+            alunoPublicAuthService.getFriendlyAuthRedirectError(sessionError.message),
+          );
         }
 
         if (!data.session) {
-          if (hasAuthReturn && mounted) {
+          if (mounted) {
             setMessage({
               tone: 'error',
-              text: 'Não foi possível recuperar a sessão de confirmação. Tente entrar novamente para receber um novo link, se necessário.',
+              text: 'Não foi possível recuperar a sessão do Google. Tente entrar novamente.',
             });
           }
           return;
@@ -135,7 +195,7 @@ const AlunoLoginPublicPage: React.FC = () => {
 
         const profile = await alunoPublicAuthService.finishExternalLogin();
         if (!mounted) return;
-        await finishAuth(profile);
+        isLeavingLoginPage = await finishAuth(profile);
       } catch (error) {
         if (!mounted) return;
         setMessage({
@@ -143,7 +203,14 @@ const AlunoLoginPublicPage: React.FC = () => {
           text: error instanceof Error ? error.message : 'Não foi possível concluir a autenticação.',
         });
       } finally {
-        if (mounted) setCheckingExternalLogin(false);
+        if (mounted) {
+          clearPendingOAuthReturn('aluno');
+          clearOAuthReturnParams();
+          // Quando o OAuth terminou com redirecionamento, mantenha a validação
+          // visível até o React Router montar a próxima rota. Desligá-la aqui
+          // expõe a tela de login por um quadro entre /login e /aluno.
+          if (!isLeavingLoginPage) setCheckingExternalLogin(false);
+        }
       }
     };
 
@@ -151,11 +218,12 @@ const AlunoLoginPublicPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [hasExternalAuthReturn]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setMessage(null);
+    setSignupStep('dados');
     const next = new URLSearchParams(searchParams);
     next.set('mode', nextMode);
     setSearchParams(next, { replace: true });
@@ -178,35 +246,73 @@ const AlunoLoginPublicPage: React.FC = () => {
     }
   };
 
-  const handleSignup = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const validateSignupPersonalData = () => {
     setMessage(null);
 
+    if (nome.trim().length < 3) {
+      setMessage({ tone: 'error', text: 'Informe o nome completo para continuar.' });
+      return false;
+    }
     if (!isValidEmail(email)) {
       setMessage({ tone: 'error', text: 'Informe um e-mail válido. Ele será usado como login do aluno.' });
-      return;
+      return false;
     }
     if (!isValidCpf(cpf)) {
       setMessage({ tone: 'error', text: 'Informe um CPF válido para concluir o cadastro.' });
-      return;
+      return false;
     }
     if (!dataNascimento) {
       setMessage({ tone: 'error', text: 'Informe a data de nascimento para concluir o cadastro.' });
-      return;
+      return false;
+    }
+    if (telefone.replace(/\D/g, '').length < 10) {
+      setMessage({ tone: 'error', text: 'Informe um WhatsApp válido para continuar.' });
+      return false;
     }
     if (password.length < 6 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
       setMessage({
         tone: 'error',
         text: 'A senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.',
       });
-      return;
+      return false;
     }
     if (password !== confirmPassword) {
       setMessage({ tone: 'error', text: 'As senhas não conferem.' });
-      return;
+      return false;
     }
     if (!acceptedTerms) {
       setMessage({ tone: 'error', text: 'Você precisa aceitar os Termos de Uso para finalizar o cadastro.' });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSignupNext = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validateSignupPersonalData()) return;
+    setSignupStep('endereco');
+    setMessage(null);
+  };
+
+  const handleSignup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setMessage(null);
+
+    if (!validateSignupPersonalData()) {
+      setSignupStep('dados');
+      return;
+    }
+
+    if (cep.replace(/\D/g, '').length !== 8) {
+      setMessage({ tone: 'error', text: 'Informe um CEP válido com 8 números.' });
+      return;
+    }
+    if (!endereco.trim() || !numero.trim() || !bairro.trim() || !cidade.trim() || uf.trim().length !== 2) {
+      setMessage({
+        tone: 'error',
+        text: 'Complete endereço, número, bairro, cidade e UF para concluir o cadastro.',
+      });
       return;
     }
 
@@ -220,6 +326,13 @@ const AlunoLoginPublicPage: React.FC = () => {
         dataNascimento,
         password,
         acceptedTerms,
+        cep,
+        endereco,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        uf,
         redirectPath: hasExplicitRedirect ? redirectPath : undefined,
       });
 
@@ -310,6 +423,15 @@ const AlunoLoginPublicPage: React.FC = () => {
             confirmPassword={confirmPassword}
             showSignupConfirmPassword={showSignupConfirmPassword}
             acceptedTerms={acceptedTerms}
+            signupStep={signupStep}
+            cep={cep}
+            endereco={endereco}
+            numero={numero}
+            complemento={complemento}
+            bairro={bairro}
+            cidade={cidade}
+            uf={uf}
+            cepStatus={cepStatus}
             passwordChecks={passwordChecks}
             onModeChange={switchMode}
             onLoginIdentifierChange={setLoginIdentifier}
@@ -325,7 +447,22 @@ const AlunoLoginPublicPage: React.FC = () => {
             onConfirmPasswordChange={setConfirmPassword}
             onToggleSignupConfirmPassword={() => setShowSignupConfirmPassword((prev) => !prev)}
             onAcceptedTermsChange={setAcceptedTerms}
+            onCepChange={(value) => {
+              setCepStatus('idle');
+              setCep(formatCep(value));
+            }}
+            onEnderecoChange={(value) => setEndereco(value.toLocaleUpperCase('pt-BR'))}
+            onNumeroChange={(value) => setNumero(value.toLocaleUpperCase('pt-BR'))}
+            onComplementoChange={(value) => setComplemento(value.toLocaleUpperCase('pt-BR'))}
+            onBairroChange={(value) => setBairro(value.toLocaleUpperCase('pt-BR'))}
+            onCidadeChange={(value) => setCidade(value.toLocaleUpperCase('pt-BR'))}
+            onUfChange={(value) => setUf(value.toLocaleUpperCase('pt-BR').slice(0, 2))}
+            onSignupBack={() => {
+              setSignupStep('dados');
+              setMessage(null);
+            }}
             onLogin={handleLogin}
+            onSignupNext={handleSignupNext}
             onSignup={handleSignup}
             onGoogleLogin={handleGoogleLogin}
           />

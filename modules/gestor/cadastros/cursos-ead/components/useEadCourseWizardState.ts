@@ -11,9 +11,6 @@ export const useEadCourseWizardState = () => {
   const [area, setArea] = useState('Outros');
   const [cargaHoraria, setCargaHoraria] = useState('');
   const [valorText, setValorText] = useState('');
-  const [financeiroPix, setFinanceiroPix] = useState(true);
-  const [financeiroBoleto, setFinanceiroBoleto] = useState(true);
-  const [financeiroCartao, setFinanceiroCartao] = useState(true);
   const [descricao, setDescricao] = useState('');
   const [imagemUrl, setImagemUrl] = useState('');
   const [versao, setVersao] = useState('1.0');
@@ -102,12 +99,6 @@ export const useEadCourseWizardState = () => {
     setCargaHoraria,
     valorText,
     setValorText,
-    financeiroPix,
-    setFinanceiroPix,
-    financeiroBoleto,
-    setFinanceiroBoleto,
-    financeiroCartao,
-    setFinanceiroCartao,
     descricao,
     setDescricao,
     imagemUrl,

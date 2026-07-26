@@ -5,7 +5,6 @@ import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
-import { assinaturasService } from '../../../../../configuracoes/assinaturas/assinaturas.service';
 import DiarioClasseHeader from './DiarioClasseHeader';
 import DiarioClasseFooter from './DiarioClasseFooter';
 import DiarioConteudoTab from './DiarioConteudoTab';
@@ -98,10 +97,6 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     queryKey: ['polo-watermark', turma.poloId],
     queryFn: () => diariosService.getLandscapeWatermark(turma.poloId),
     enabled: Boolean(turma.poloId),
-  });
-  const { data: centralSignatures } = useQuery({
-    queryKey: ['central-signatures'],
-    queryFn: () => assinaturasService.getSignatures(),
   });
   const studentsQuery = useDiarioStudents(turma.id, disciplina.id, effectiveAccessMode);
   const aulasQuery = useDiarioAulas(turma.id, disciplina.id);
@@ -306,14 +301,11 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     observacoes: dbObservacoes,
     activeInstruments,
     watermark,
-    diretorSigUrl: diarioTemplate?.diretorAssinaturaRole ? centralSignatures?.[diarioTemplate.diretorAssinaturaRole] : null,
-    secretarioSigUrl: diarioTemplate?.secretarioAssinaturaRole ? centralSignatures?.[diarioTemplate.secretarioAssinaturaRole] : null,
     exportMode,
   }), [
     activeInstruments,
     attendanceMap,
     aulas,
-    centralSignatures,
     dbObservacoes,
     diarioTemplate,
     disciplina,

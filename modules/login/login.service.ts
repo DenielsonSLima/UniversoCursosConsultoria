@@ -4,6 +4,10 @@ import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
 import { formatCpf, isCpfLike, normalizeEmail, onlyDigits } from '../shared/utils/identityValidation';
 import { clearPortalSession } from './portal-session';
+import {
+  clearPendingOAuthReturn,
+  rememberPendingOAuthReturn,
+} from '../shared/auth/oauth-return-state';
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 const AUTH_EMAIL_NOT_CONFIRMED_ERROR = 'Falta confirmar seu e-mail. Enviamos um novo link; olhe sua caixa de entrada e também o spam/lixo eletrônico.';
@@ -180,18 +184,27 @@ export const loginService = {
     console.warn('Sessão encerrada localmente; não foi possível revogar as outras sessões.', error);
   },
 
-  async loginWithGoogle(redirectPath = '/sistema/login') {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildAuthRedirectUrl(redirectPath),
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+  async loginWithGoogle(
+    callbackPath = '/sistema/login',
+    postLoginRedirectPath: string | null = null,
+  ) {
+    rememberPendingOAuthReturn('institucional', postLoginRedirectPath);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: buildAuthRedirectUrl(callbackPath),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
-      },
-    });
-    if (error) throw new Error(getFriendlyOAuthError(error.message));
+      });
+      if (error) throw new Error(getFriendlyOAuthError(error.message));
+    } catch (error) {
+      clearPendingOAuthReturn('institucional');
+      throw error;
+    }
   },
   
   // Função auxiliar para recuperar sessão atual (útil para persistência)

@@ -11,6 +11,8 @@ import {
   Landmark,
   RefreshCcw,
   ScrollText,
+  FolderKanban,
+  FileSignature,
 } from 'lucide-react';
 import type { CertificadoModalidade } from '../certificados/certificados.types';
 
@@ -20,6 +22,8 @@ export const DOCUMENT_TABS = [
   { key: 'todos', label: 'Todos', icon: History },
   { key: 'carteirinha', label: 'Carteirinha', icon: CreditCard },
   { key: 'cracha_estagio', label: 'Crachá de Estágio', icon: FileCheck2 },
+  { key: 'pasta_identificacao', label: 'Pasta de Identificação', icon: FolderKanban },
+  { key: 'ficha_matricula', label: 'Ficha de Matrícula', icon: FileSignature },
   { key: 'declaracao_matricula', label: 'Declaração Matrícula', icon: FileBadge },
   { key: 'declaracao_frequencia', label: 'Declaração Frequência', icon: BadgeCheck },
   { key: 'declaracao_irpf', label: 'Declaração IRPF', icon: Landmark },

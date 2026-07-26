@@ -1,213 +1,329 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, FileSignature } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  FileSignature,
+  Loader2,
+  Move,
+  Plus,
+  Save,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
+import { polosService } from '../../../configuracoes/polos/polos.service';
+import DeclaracaoEditor from '../../modelos-documentos/declaracao/components/DeclaracaoEditor';
+import { fichaCadastralService } from '../../modelos-documentos/ficha-cadastral/ficha-cadastral.service';
+import {
+  FICHA_ALUNO_VARIABLES,
+  fichaMatriculaDefaultTemplate,
+} from '../document-layouts';
+import {
+  fichasMatriculaService,
+  type FichaMatriculaCourseOption,
+  type FichaMatriculaModel,
+} from '../fichas-matricula.service';
 
 interface FichaEditorProps {
-  ficha: any;
-  onSave: (ficha: any) => void;
+  ficha: FichaMatriculaModel | null;
+  onSave: (ficha: FichaMatriculaModel) => Promise<void>;
   onCancel: () => void;
 }
 
+const createDraft = (): FichaMatriculaModel => ({
+  id: `draft-${Date.now()}`,
+  nome: '',
+  tipoCurso: 'TODOS',
+  status: 'ATIVO',
+  requerAssinatura: true,
+  textoContrato:
+    'Solicito minha matrícula no curso acima identificado e declaro que os dados informados são verdadeiros. '
+    + 'Estou ciente das normas acadêmicas e administrativas da unidade.',
+  camposCustomizados: [],
+  camposCount: 0,
+  cursoEspecificoId: null,
+  templateConfig: JSON.parse(JSON.stringify(fichaMatriculaDefaultTemplate)),
+});
+
 const FichaEditor: React.FC<FichaEditorProps> = ({ ficha, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(ficha || {
-    id: `new-${Date.now()}`,
-    nome: '',
-    tipoCurso: 'Cursos Livres',
-    status: 'ativo',
-    requerAssinatura: true,
-    textoContrato: '',
-    camposCount: 0,
-    camposCustomizados: []
-  });
+  const [draft, setDraft] = useState<FichaMatriculaModel>(() => ficha || createDraft());
+  const [isLayoutOpen, setIsLayoutOpen] = useState(false);
+  const [editorPolo, setEditorPolo] = useState<any>(null);
+  const [courses, setCourses] = useState<FichaMatriculaCourseOption[]>([]);
 
-  const [novoCampo, setNovoCampo] = useState('');
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData({ ...formData, [name]: checked });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const addCampo = () => {
-    if (novoCampo.trim()) {
-      setFormData({
-        ...formData,
-        camposCustomizados: [...(formData.camposCustomizados || []), { id: Date.now(), label: novoCampo }],
-        camposCount: (formData.camposCount || 0) + 1
+  useEffect(() => {
+    let active = true;
+    polosService.getAll().then((polos) => {
+      if (!active) return;
+      setEditorPolo(polos.find((polo: any) => polo.is_matriz) || polos[0] || {
+        id: 'matriz',
+        nomeFantasia: 'Universo Cursos e Consultoria',
       });
-      setNovoCampo('');
-    }
-  };
-
-  const removeCampo = (id: number) => {
-    const updated = (formData.camposCustomizados || []).filter((c: any) => c.id !== id);
-    setFormData({
-      ...formData,
-      camposCustomizados: updated,
-      camposCount: updated.length
     });
-  };
+    fichasMatriculaService.getAvailableCourses()
+      .then((items) => {
+        if (active) setCourses(items);
+      })
+      .catch(() => {
+        if (active) setCourses([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const service = useMemo(() => ({
+    async getTemplate() {
+      return JSON.parse(JSON.stringify({
+        ...(draft.templateConfig || fichaMatriculaDefaultTemplate),
+        enrollmentFormTerm: draft.textoContrato,
+        enrollmentFormCustomFields: draft.camposCustomizados,
+        enrollmentFormRequiresSignature: draft.requerAssinatura,
+      }));
+    },
+    async saveTemplate(_poloId: string, templateConfig: any) {
+      await onSave({
+        ...draft,
+        templateConfig: {
+          ...templateConfig,
+          enrollmentFormTerm: draft.textoContrato,
+          enrollmentFormCustomFields: draft.camposCustomizados,
+          enrollmentFormRequiresSignature: draft.requerAssinatura,
+        },
+      });
+      return true;
+    },
+    getQrConfig: fichaCadastralService.getQrConfig,
+  }), [draft, onSave]);
+
+  if (isLayoutOpen) {
+    if (!editorPolo) {
+      return (
+        <div className="flex min-h-[420px] items-center justify-center gap-3 rounded-[2rem] border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-500">
+          <Loader2 className="animate-spin text-blue-600" size={24} /> Preparando editor visual...
+        </div>
+      );
+    }
+    return (
+      <DeclaracaoEditor
+        polo={editorPolo}
+        onBack={() => setIsLayoutOpen(false)}
+        service={service}
+        editorTitle={`Editor da Ficha de Matrícula — ${draft.nome}`}
+        documentTitle="Ficha de Matrícula"
+        variables={FICHA_ALUNO_VARIABLES}
+        validationPrefix="FICHA-MAT"
+        showValidity={false}
+        migrateDeclarationDefaults={false}
+        scopeLabel="Modelo geral • dados dinâmicos por polo"
+      />
+    );
+  }
 
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm animate-fadeIn">
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+    <div className="animate-fadeIn rounded-[2.5rem] border border-slate-200 bg-white p-7 shadow-sm">
+      <div className="mb-8 flex flex-col gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={onCancel}
-            className="p-3 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors shrink-0"
-          >
+          <button type="button" onClick={onCancel} className="rounded-xl bg-slate-50 p-3 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-              <FileSignature size={24} className="text-blue-600" />
-              {ficha ? 'Editar Modelo de Ficha' : 'Novo Modelo de Ficha'}
+            <h3 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33]">
+              <FileSignature className="text-blue-600" size={23} />
+              {ficha ? 'Configurar modelo' : 'Novo modelo'}
             </h3>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">Configure os campos e termos</p>
-          </div>
-        </div>
-        <button 
-          onClick={() => onSave(formData)}
-          className="flex items-center gap-2 px-6 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-blue-900 transition-colors shadow-lg shadow-blue-900/20"
-        >
-          <Save size={16} /> {ficha ? 'Salvar Alterações' : 'Criar Modelo'}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome do Modelo <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                placeholder="Ex: Ficha Ouro - Pós Graduação"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tipo de Curso</label>
-              <select 
-                name="tipoCurso"
-                value={formData.tipoCurso}
-                onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer appearance-none"
-              >
-                <option value="Ensino Superior">Ensino Superior (Graduação/Pós)</option>
-                <option value="Cursos Técnicos">Cursos Técnicos</option>
-                <option value="Cursos Livres">Cursos Livres / Extensão</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Status</label>
-              <select 
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer appearance-none"
-              >
-                <option value="ativo">Ativo - Visível para matrículas</option>
-                <option value="inativo">Inativo - Apenas rascunho</option>
-              </select>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Vincular a Curso Específico (Opcional)</label>
-              <select 
-                name="cursoEspecificoId"
-                value={formData.cursoEspecificoId || ''}
-                onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer appearance-none"
-              >
-                <option value="">Aplicar a todos os cursos do tipo selecionado</option>
-                <option value="c1">Direito - Bacharelado</option>
-                <option value="c2">Enfermagem - Técnico</option>
-                <option value="c3">Gestão de RH - Tecnólogo</option>
-              </select>
-              <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                Se vazio, a ficha vale como padrão para o tipo de curso escolhido.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Termo de Aceite / Contrato Simplificado</label>
-            <textarea 
-              name="textoContrato"
-              value={formData.textoContrato}
-              onChange={handleChange}
-              placeholder="Cole aqui o texto padrão do termo de matrícula..."
-              className="w-full min-h-[200px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-all custom-scrollbar resize-y"
-            ></textarea>
-            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">
-              Dica: Você pode usar variáveis como {'{{nome_aluno}}'}, {'{{curso}}'} e {'{{data_atual}}'}.
+            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              Defina o uso e continue para o editor de arrastar e posicionar
             </p>
           </div>
-          
-          <label className="flex items-center gap-3 cursor-pointer p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-            <input 
-              type="checkbox" 
-              name="requerAssinatura" 
-              checked={formData.requerAssinatura} 
-              onChange={handleChange}
-              className="w-5 h-5 text-blue-600 rounded" 
+        </div>
+        <span className="inline-flex items-center gap-2 self-start rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-blue-700">
+          <Move size={12} /> Editor visual completo
+        </span>
+      </div>
+
+      <div className="grid gap-7 lg:grid-cols-[1.4fr_.8fr]">
+        <div className="space-y-6">
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Nome do modelo
+            </label>
+            <input
+              value={draft.nome}
+              onChange={(event) => setDraft((current) => ({ ...current, nome: event.target.value }))}
+              placeholder="Ex.: Ficha de Matrícula Geral"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-800 outline-none transition-colors focus:border-blue-500 focus:bg-white"
+            />
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Aplicação</label>
+              <select
+                value={draft.tipoCurso}
+                onChange={(event) => setDraft((current) => {
+                  const tipoCurso = event.target.value;
+                  const selectedCourse = courses.find(item => item.id === current.cursoEspecificoId);
+                  return {
+                    ...current,
+                    tipoCurso,
+                    cursoEspecificoId:
+                      selectedCourse
+                      && tipoCurso !== 'TODOS'
+                      && selectedCourse.modalidade !== tipoCurso
+                        ? null
+                        : current.cursoEspecificoId,
+                  };
+                })}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
+              >
+                <option value="TODOS">Todos os cursos</option>
+                <option value="TECNICO">Cursos técnicos</option>
+                <option value="LIVRE">Cursos livres</option>
+                <option value="EAD">Cursos EAD</option>
+                <option value="ESPECIALIZACAO">Especialização</option>
+                <option value="SUPERIOR">Ensino superior</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Status</label>
+              <select
+                value={draft.status}
+                onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as 'ATIVO' | 'INATIVO' }))}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
+              >
+                <option value="ATIVO">Ativo para emissão</option>
+                <option value="INATIVO">Rascunho / inativo</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Curso específico (opcional)
+            </label>
+            <select
+              value={draft.cursoEspecificoId || ''}
+              onChange={(event) => setDraft((current) => ({
+                ...current,
+                cursoEspecificoId: event.target.value || null,
+              }))}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
+            >
+              <option value="">Todos os cursos compatíveis com a aplicação</option>
+              {courses
+                .filter(course => draft.tipoCurso === 'TODOS' || course.modalidade === draft.tipoCurso)
+                .map(course => (
+                  <option key={course.id} value={course.id}>
+                    {course.nome} — {course.modalidade}
+                  </option>
+                ))}
+            </select>
+            <p className="mt-2 text-[10px] font-medium text-slate-400">
+              Se escolhido, o modelo só poderá ser emitido para matrículas desse curso.
+            </p>
+          </div>
+          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4 transition-colors hover:bg-slate-50">
+            <input
+              type="checkbox"
+              checked={draft.requerAssinatura}
+              onChange={(event) => setDraft((current) => ({ ...current, requerAssinatura: event.target.checked }))}
+              className="h-5 w-5 rounded text-blue-600"
             />
             <div>
-              <span className="block text-sm font-bold text-[#001a33] uppercase">Exigir Assinatura Digital</span>
-              <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Obriga o aluno a assinar ao concluir via portal</span>
+              <span className="block text-xs font-black uppercase text-[#001a33]">Usar área de assinatura</span>
+              <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">Assinaturas podem ser movidas ou substituídas no editor.</span>
             </div>
           </label>
+
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Termo da matrícula
+            </label>
+            <textarea
+              value={draft.textoContrato}
+              onChange={(event) => setDraft((current) => ({
+                ...current,
+                textoContrato: event.target.value,
+              }))}
+              rows={5}
+              placeholder="Texto que o aluno ou responsável declara e assina."
+              className="w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium leading-relaxed text-slate-700 outline-none transition-colors focus:border-blue-500 focus:bg-white"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                  Campos extras
+                </p>
+                <p className="mt-1 text-[10px] font-medium text-slate-400">
+                  Cada campo será impresso com uma linha para preenchimento.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDraft((current) => {
+                  const fields = [
+                    ...current.camposCustomizados,
+                    { id: `campo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, label: '' },
+                  ];
+                  return { ...current, camposCustomizados: fields, camposCount: fields.length };
+                })}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100"
+              >
+                <Plus size={13} /> Adicionar
+              </button>
+            </div>
+            <div className="space-y-2">
+              {draft.camposCustomizados.map((field, index) => (
+                <div key={field.id} className="flex items-center gap-2">
+                  <input
+                    value={field.label}
+                    onChange={(event) => setDraft((current) => ({
+                      ...current,
+                      camposCustomizados: current.camposCustomizados.map((item, itemIndex) => (
+                        itemIndex === index ? { ...item, label: event.target.value } : item
+                      )),
+                    }))}
+                    placeholder={`Nome do campo ${index + 1}`}
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remover campo ${index + 1}`}
+                    onClick={() => setDraft((current) => {
+                      const fields = current.camposCustomizados.filter((_, itemIndex) => itemIndex !== index);
+                      return { ...current, camposCustomizados: fields, camposCount: fields.length };
+                    })}
+                    className="rounded-xl border border-rose-100 bg-rose-50 p-2.5 text-rose-500 hover:bg-rose-100"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {!draft.camposCustomizados.length && (
+                <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-[10px] font-bold text-slate-400">
+                  Nenhum campo extra configurado.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col">
-          <h4 className="text-sm font-black text-[#001a33] uppercase tracking-tight mb-1">Campos Extras</h4>
-          <p className="text-xs text-slate-500 font-medium mb-6">Além dos dados pessoais padrão (CPF, RG, Endereço), que dados mais esta ficha exige?</p>
-
-          <div className="flex gap-2 mb-6">
-            <input 
-              type="text" 
-              value={novoCampo}
-              onChange={(e) => setNovoCampo(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addCampo()}
-              placeholder="Ex: Tipo Sanguíneo"
-              className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500"
-            />
-            <button 
-              onClick={addCampo}
-              className="px-4 bg-[#001a33] text-white rounded-xl hover:bg-blue-900 transition-colors flex items-center justify-center shadow-md"
-            >
-              <Plus size={20} />
-            </button>
+        <div className="flex flex-col justify-between rounded-[2rem] border border-blue-100 bg-[#001a33] p-6 text-white shadow-xl shadow-blue-950/15">
+          <div>
+            <Settings2 className="mb-5 text-blue-300" size={28} />
+            <h4 className="text-lg font-black uppercase tracking-tight">Próxima etapa</h4>
+            <p className="mt-2 text-xs font-medium leading-relaxed text-blue-100">
+              No editor você poderá arrastar campos, mover elementos, alterar tamanho, fonte e cor, inserir QR Code, foto, imagens e assinaturas configuradas.
+            </p>
           </div>
-
-          <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-2 min-h-[200px]">
-             {(!formData.camposCustomizados || formData.camposCustomizados.length === 0) ? (
-                <div className="text-center p-8 bg-slate-100/50 rounded-xl border border-slate-200 border-dashed h-full flex flex-col items-center justify-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum campo extra<br/>adicionado</p>
-                </div>
-             ) : (
-                formData.camposCustomizados.map((c: any) => (
-                  <div key={c.id} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm group">
-                    <GripVertical size={16} className="text-slate-300 cursor-grab" />
-                    <span className="flex-1 text-sm font-bold text-slate-700">{c.label}</span>
-                    <button 
-                      onClick={() => removeCampo(c.id)}
-                      className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))
-             )}
-          </div>
+          <button
+            type="button"
+            disabled={!draft.nome.trim()}
+            onClick={() => setIsLayoutOpen(true)}
+            className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-[#001a33] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Save size={15} /> Abrir editor visual
+          </button>
         </div>
       </div>
     </div>

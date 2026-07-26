@@ -18,6 +18,8 @@ import {
   History,
   Award,
   Vote,
+  FolderKanban,
+  FileSignature,
 } from 'lucide-react';
 
 interface SecretariaDashboardProps {
@@ -34,6 +36,8 @@ const cards = [
   { id: 'atestado-conclusao', title: 'Atestado de Conclusão', desc: 'Comprovação provisória para cursos técnicos concluídos.', icon: BadgeCheck, color: 'emerald' },
   { id: 'declaracao-irpf', title: 'Declaração de IRPF', desc: 'Comprovante financeiro do ano-calendário.', icon: Landmark, color: 'amber' },
   { id: 'historico-escolar', title: 'Histórico Escolar', desc: 'Percurso curricular e resultados acadêmicos.', icon: ScrollText, color: 'slate' },
+  { id: 'pasta-identificacao', title: 'Pasta de Identificação', desc: 'Capa A4 da pasta do aluno, individual, em lote ou personalizada.', icon: FolderKanban, color: 'cyan' },
+  { id: 'ficha-matricula', title: 'Ficha de Matrícula', desc: 'Ficha completa com foto, dados acadêmicos, termo e assinaturas.', icon: FileSignature, color: 'blue' },
   { id: 'carteirinha', title: 'Carteirinha Estudantil', desc: 'Identificação estudantil com QR Code.', icon: CreditCard, color: 'purple' },
   { id: 'cracha-estagio', title: 'Crachá de Estágio', desc: 'Identificação para atividades supervisionadas.', icon: FileCheck2, color: 'rose' },
   { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Crachá do aluno liberado após a entrada no estágio.', icon: Vote, color: 'cyan' },

@@ -95,7 +95,7 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
           onClick={togglePlayback}
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 ${
             outgoing
-              ? 'text-white hover:bg-white/10 focus-visible:ring-white'
+              ? 'text-[#00a884] hover:bg-white/35 focus-visible:ring-[#00a884]'
               : 'text-[#00a884] hover:bg-slate-100 focus-visible:ring-[#00a884]'
           }`}
           aria-label={playing ? 'Pausar áudio' : 'Reproduzir áudio'}
@@ -128,30 +128,24 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
                 key={`${height}-${index}`}
                 className={`w-[3px] shrink-0 rounded-full transition-colors ${
                   index < playedBars
-                    ? outgoing ? 'bg-white' : 'bg-[#00a884]'
-                    : outgoing ? 'bg-white/45' : 'bg-slate-400/55'
+                    ? 'bg-[#00a884]'
+                    : outgoing ? 'bg-[#7c9488]/55' : 'bg-slate-400/55'
                 }`}
                 style={{ height }}
               />
             ))}
             <span
-              className={`pointer-events-none absolute h-3 w-3 -translate-x-1/2 rounded-full shadow-sm ${
-                outgoing ? 'bg-white' : 'bg-[#00a884]'
-              }`}
+              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 rounded-full bg-[#00a884] shadow-sm"
               style={{ left: `${progress * 100}%` }}
             />
           </div>
 
-          <div className={`mt-0.5 flex items-center justify-between text-[11px] font-semibold tabular-nums ${
-            outgoing ? 'text-white/75' : 'text-slate-500'
-          }`}>
+          <div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold tabular-nums text-[#667781]">
             <span>{timeLabel}</span>
             <button
               type="button"
               onClick={cycleSpeed}
-              className={`min-w-8 rounded-md px-1.5 py-0.5 font-bold transition-colors ${
-                outgoing ? 'hover:bg-white/10' : 'hover:bg-slate-200'
-              }`}
+              className={`min-w-8 rounded-md px-1.5 py-0.5 font-bold transition-colors ${outgoing ? 'hover:bg-white/35' : 'hover:bg-slate-200'}`}
               title="Velocidade de reprodução"
             >
               {speed}x
@@ -161,12 +155,12 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
 
         <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
           outgoing
-            ? 'bg-gradient-to-br from-emerald-500 to-emerald-800 text-white'
+            ? 'bg-gradient-to-br from-[#d2e2d0] to-[#8daf9f] text-white'
             : 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-600'
         }`}>
           <Mic2 size={18} />
           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 ${
-            outgoing ? 'border-emerald-600 bg-[#00e676]' : 'border-white bg-[#00a884]'
+            outgoing ? 'border-[#d9fdd3] bg-[#00a884]' : 'border-white bg-[#00a884]'
           }`} />
         </div>
       </div>

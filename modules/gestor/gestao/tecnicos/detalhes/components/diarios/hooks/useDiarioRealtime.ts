@@ -97,6 +97,34 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
         },
         scheduleRefresh(diarioClasseKeys.observacoes(turmaId, disciplinaId)),
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matricula_movimentacoes',
+          filter: `turma_origem_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
+          diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matricula_movimentacoes',
+          filter: `turma_destino_id=eq.${turmaId}`,
+        },
+        scheduleRefresh(
+          diarioClasseKeys.students(turmaId, disciplinaId, 'GESTOR'),
+          diarioClasseKeys.students(turmaId, disciplinaId, 'PROFESSOR'),
+          diarioClasseKeys.resultados(turmaId, disciplinaId),
+        ),
+      )
       .subscribe();
 
     return () => {

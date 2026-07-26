@@ -19,6 +19,7 @@ export interface DeclaracaoEditorProps {
   migrateDeclarationDefaults?: boolean;
   hideBackButton?: boolean;
   scopeLabel?: string;
+  enableEnrollmentSettings?: boolean;
 }
 
 export interface EditorVariable {

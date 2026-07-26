@@ -29,11 +29,11 @@ const DiarioClasseFooter: React.FC<DiarioClasseFooterProps> = ({ disciplina }) =
       <div className="mt-4 flex flex-wrap items-center gap-12 xl:mt-0">
         <div className="text-center">
           <div className="mb-2 h-4 w-56 border-b border-slate-400" />
-          <p>ASSINATURA DO PROFESSOR</p>
+          <p>Assinatura do Professor</p>
         </div>
         <div className="text-center">
           <div className="mb-2 h-4 w-56 border-b border-slate-400" />
-          <p>ASSINATURA DO COORDENADOR DO CURSO</p>
+          <p>Assinatura do Coordenador do Curso</p>
         </div>
       </div>
     </div>

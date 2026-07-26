@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AppWindow,
+  AlertCircle,
   Braces,
   CheckCircle2,
   Cloud,
@@ -10,15 +11,20 @@ import {
   Hash,
   KeyRound,
   Loader2,
+  LockKeyhole,
+  Pencil,
   Phone,
   QrCode,
+  RefreshCw,
   Save,
   Shield,
   Smartphone,
+  Trash2,
   Webhook,
   XCircle,
 } from 'lucide-react';
 import type { WhatsAppConexao } from '../../../comunicacao/components/whatsapp/whatsapp.types';
+import { whatsappService } from '../../../comunicacao/components/whatsapp/whatsapp.service';
 import { mensageriaService } from '../mensageria.service';
 import { loadFacebookSdk, facebookWindow } from './whatsapp-coexistence/facebookSdk';
 import {
@@ -32,6 +38,13 @@ type ConnectionSaveInput = Partial<WhatsAppConexao> & {
   tokenInput?: string;
   appSecretInput?: string;
   verifyTokenInput?: string;
+};
+
+type SecretKind = 'access_token' | 'app_secret' | 'verify_token';
+type CredentialKey = 'accessToken' | 'appSecret' | 'verifyToken';
+type CredentialCheck = {
+  state: 'valid' | 'verified' | 'stored' | 'missing' | 'invalid';
+  message: string;
 };
 
 interface WhatsAppLineConfigFormProps {
@@ -89,6 +102,123 @@ const StatusPill = ({
   </span>
 );
 
+const credentialStateStyles: Record<CredentialCheck['state'], string> = {
+  valid: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  verified: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  stored: 'border-blue-200 bg-blue-50 text-blue-700',
+  missing: 'border-slate-200 bg-slate-50 text-slate-500',
+  invalid: 'border-red-200 bg-red-50 text-red-700',
+};
+
+const credentialStateLabels: Record<CredentialCheck['state'], string> = {
+  valid: 'Válido',
+  verified: 'Confirmado',
+  stored: 'Salvo no cofre',
+  missing: 'Não configurado',
+  invalid: 'Inválido',
+};
+
+const CredentialField = ({
+  id,
+  icon: Icon,
+  label,
+  configured,
+  check,
+  value,
+  onChange,
+  onRemove,
+  isRemoving,
+  placeholder,
+  span = false,
+  managedByLogin = false,
+}: {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  configured: boolean;
+  check?: CredentialCheck;
+  value: string;
+  onChange: (value: string) => void;
+  onRemove: () => void;
+  isRemoving: boolean;
+  placeholder: string;
+  span?: boolean;
+  managedByLogin?: boolean;
+}) => {
+  const state = check?.state ?? (configured ? 'stored' : 'missing');
+  const description = check?.message ?? (managedByLogin
+    ? configured
+      ? 'Token obtido pelo login da Meta e protegido no cofre.'
+      : 'Será criado automaticamente ao concluir o login com Facebook.'
+    : configured
+    ? 'A credencial está protegida no cofre. O valor não é exibido por segurança.'
+    : 'Nenhuma credencial foi salva para esta linha.');
+
+  return (
+    <div className={`rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 ${span ? 'md:col-span-2' : ''}`}>
+      <div className="mb-2.5 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+            <Icon size={13} />
+            {label}
+          </span>
+          <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-slate-400">{description}</p>
+        </div>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold ${credentialStateStyles[state]}`}>
+          {state === 'invalid' ? <AlertCircle size={11} /> : state === 'missing' ? <LockKeyhole size={11} /> : <CheckCircle2 size={11} />}
+          {credentialStateLabels[state]}
+        </span>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {managedByLogin ? (
+          <div className="flex h-11 flex-1 items-center rounded-lg border border-dashed border-slate-200 bg-white px-3.5 text-xs text-slate-500">
+            {configured ? '••••••••  Gerenciado pelo login da Meta' : 'Conclua “Entrar com Facebook” para gerar'}
+          </div>
+        ) : (
+          <input
+            id={id}
+            type="password"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className={inputClass}
+            placeholder={configured ? 'Digite uma nova credencial para substituir' : placeholder}
+            autoComplete="new-password"
+            aria-label={configured ? `Nova credencial para ${label}` : label}
+          />
+        )}
+        {configured ? (
+          <div className="flex shrink-0 gap-2">
+            {!managedByLogin ? (
+              <button
+                type="button"
+                onClick={() => document.getElementById(id)?.focus()}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-blue-200 hover:text-blue-700"
+              >
+                <Pencil size={13} />
+                Alterar
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={isRemoving}
+              className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+            >
+              {isRemoving ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+              Remover
+            </button>
+          </div>
+        ) : null}
+      </div>
+      {value && !managedByLogin ? (
+        <p className="mt-2 text-[11px] font-medium text-amber-700">
+          Nova credencial pronta para salvar. O valor atual só será substituído ao clicar em Salvar.
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
 export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
   conexao,
   onSave,
@@ -100,6 +230,15 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
   const [tokenInput, setTokenInput] = useState('');
   const [appSecretInput, setAppSecretInput] = useState('');
   const [verifyTokenInput, setVerifyTokenInput] = useState('');
+  const [credentialChecks, setCredentialChecks] = useState<
+    Partial<Record<CredentialKey, CredentialCheck>>
+  >({});
+  const [isTestingCredentials, setIsTestingCredentials] = useState(false);
+  const [removingSecret, setRemovingSecret] = useState<SecretKind | null>(null);
+  const [credentialActionError, setCredentialActionError] = useState<string | null>(null);
+  const [credentialActionSuccess, setCredentialActionSuccess] = useState<string | null>(null);
+  const [credentialActionTone, setCredentialActionTone] = useState<'success' | 'warning'>('success');
+  const [lastCredentialCheckAt, setLastCredentialCheckAt] = useState<string | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
   const [coexResult, setCoexResult] = useState<{
     wabaId?: string | null;
@@ -128,6 +267,11 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
     setTokenInput('');
     setAppSecretInput('');
     setVerifyTokenInput('');
+    setCredentialChecks({});
+    setCredentialActionError(null);
+    setCredentialActionSuccess(null);
+    setCredentialActionTone('success');
+    setLastCredentialCheckAt(conexao.last_health_check_at || null);
     setCoexResult(null);
     setCoexError(null);
   }, [conexao.id, conexao.updated_at]);
@@ -143,6 +287,69 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
     setTokenInput('');
     setAppSecretInput('');
     setVerifyTokenInput('');
+    setCredentialChecks({});
+    setCredentialActionError(null);
+    setCredentialActionSuccess('Alterações salvas. As credenciais permanecem ocultas e protegidas no cofre.');
+    setCredentialActionTone('success');
+  };
+
+  const handleTestCredentials = async () => {
+    const connectionId = String(draft.id || '').trim();
+    if (!connectionId) {
+      setCredentialActionError('Salve a linha antes de testar as credenciais.');
+      return;
+    }
+    setIsTestingCredentials(true);
+    setCredentialActionError(null);
+    setCredentialActionSuccess(null);
+    try {
+      const result = await whatsappService.validateConexaoCredentials(connectionId);
+      setCredentialChecks(result.credentials);
+      setLastCredentialCheckAt(result.checkedAt);
+      setCredentialActionSuccess(
+        result.ok
+          ? 'Teste concluído. Veja o estado individual de cada credencial.'
+          : 'Teste concluído com credenciais que precisam de atenção.',
+      );
+      setCredentialActionTone(result.ok ? 'success' : 'warning');
+      await queryClient.invalidateQueries({ queryKey: ['whatsapp_conexoes'] });
+    } catch (error) {
+      setCredentialActionError(
+        error instanceof Error ? error.message : 'Não foi possível testar as credenciais.',
+      );
+    } finally {
+      setIsTestingCredentials(false);
+    }
+  };
+
+  const handleRemoveSecret = async (kind: SecretKind, label: string) => {
+    const connectionId = String(draft.id || '').trim();
+    if (!connectionId) return;
+    if (!window.confirm(`Remover ${label} desta linha? A conexão ficará inativa até uma nova credencial ser salva.`)) {
+      return;
+    }
+
+    setRemovingSecret(kind);
+    setCredentialActionError(null);
+    setCredentialActionSuccess(null);
+    try {
+      await whatsappService.removeConexaoSecret(connectionId, kind);
+      if (kind === 'access_token') setTokenInput('');
+      if (kind === 'app_secret') setAppSecretInput('');
+      if (kind === 'verify_token') setVerifyTokenInput('');
+      setCredentialChecks({});
+      setLastCredentialCheckAt(null);
+      setCredentialActionSuccess(`${label} removido do cofre com segurança.`);
+      setCredentialActionTone('success');
+      await queryClient.invalidateQueries({ queryKey: ['whatsapp_conexoes'] });
+    } catch (error) {
+      setCredentialActionError(
+        error instanceof Error ? error.message : `Não foi possível remover ${label}.`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ['whatsapp_conexoes'] });
+    } finally {
+      setRemovingSecret(null);
+    }
   };
 
   const handleFacebookLogin = async () => {
@@ -291,11 +498,19 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <StatusPill ready={Boolean(conexao.token_configured)}>Token</StatusPill>
-          <StatusPill ready={Boolean(conexao.app_secret_configured)}>App Secret</StatusPill>
-          <StatusPill ready={Boolean(conexao.verify_token_configured)}>Verify Token</StatusPill>
-          <StatusPill ready={Boolean(conexao.waba_subscribed_at)}>WABA</StatusPill>
-          <StatusPill ready={Boolean(conexao.webhook_verified_at)}>Webhook</StatusPill>
+          <StatusPill ready={Boolean(conexao.token_configured)}>Access Token salvo</StatusPill>
+          {isCoexistence ? (
+            <>
+              <StatusPill ready={Boolean(conexao.app_secret_configured)}>App Secret</StatusPill>
+              <StatusPill ready={Boolean(conexao.verify_token_configured)}>Verify Token</StatusPill>
+            </>
+          ) : null}
+          {isCoexistence || conexao.waba_id || conexao.waba_subscribed_at ? (
+            <StatusPill ready={Boolean(conexao.waba_subscribed_at)}>Webhook WABA</StatusPill>
+          ) : null}
+          {isCoexistence || conexao.webhook_verified_at ? (
+            <StatusPill ready={Boolean(conexao.webhook_verified_at)}>Webhook</StatusPill>
+          ) : null}
           <button
             type="submit"
             disabled={isSaving}
@@ -402,7 +617,7 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
                 placeholder="ID do número na Meta"
               />
             </Field>
-            <Field icon={Hash} label="WABA ID">
+            <Field icon={Hash} label="WABA ID (opcional para envio; necessário para webhook)">
               <input
                 value={draft.waba_id || ''}
                 onChange={(event) => setDraft((current) => ({ ...current, waba_id: event.target.value }))}
@@ -412,7 +627,10 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
             </Field>
           </>
         ) : null}
-        <Field icon={AppWindow} label="App ID">
+        <Field
+          icon={AppWindow}
+          label={isCoexistence ? 'App ID' : 'App ID (opcional, somente para webhook)'}
+        >
           <input
             value={draft.app_id || ''}
             onChange={(event) => setDraft((current) => ({ ...current, app_id: event.target.value }))}
@@ -441,38 +659,156 @@ export const WhatsAppLineConfigForm: React.FC<WhatsAppLineConfigFormProps> = ({
             />
           </Field>
         ) : null}
-        <Field icon={Shield} label="App Secret">
-          <input
-            type="password"
-            value={appSecretInput}
-            onChange={(event) => setAppSecretInput(event.target.value)}
-            className={inputClass}
-            placeholder={conexao.app_secret_configured ? 'Configurado — preencha somente para trocar' : 'App Secret da Meta'}
-            autoComplete="new-password"
-          />
-        </Field>
-        <Field icon={Webhook} label="Verify Token do webhook">
-          <input
-            type="password"
-            value={verifyTokenInput}
-            onChange={(event) => setVerifyTokenInput(event.target.value)}
-            className={inputClass}
-            placeholder={conexao.verify_token_configured ? 'Configurado — preencha somente para trocar' : 'Token criado por você'}
-            autoComplete="new-password"
-          />
-        </Field>
-        {!isCoexistence ? (
-          <Field icon={KeyRound} label="Access Token permanente" span>
-            <input
-              type="password"
+        <div className="flex flex-col gap-3 md:col-span-2">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 sm:flex-row sm:items-center">
+            <div>
+              <h5 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <LockKeyhole size={15} className="text-blue-600" />
+                Credenciais protegidas
+              </h5>
+              <p className="mt-1 text-xs text-slate-500">
+                {isCoexistence
+                  ? 'A coexistência usa o login da Meta e exige as credenciais do app e do webhook.'
+                  : 'Para testar envios pela Cloud API, informe apenas o Access Token. App Secret e Verify Token são usados depois, ao configurar o recebimento por webhook.'}
+              </p>
+              {lastCredentialCheckAt ? (
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Último teste: {new Intl.DateTimeFormat('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  }).format(new Date(lastCredentialCheckAt))}
+                </p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={handleTestCredentials}
+              disabled={isTestingCredentials || !draft.id}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isTestingCredentials ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {isTestingCredentials ? 'Testando...' : 'Testar credenciais'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <CredentialField
+              id={`access-token-${draft.id || 'new'}`}
+              icon={KeyRound}
+              label={isCoexistence ? 'Access Token da Meta' : 'Access Token (teste ou permanente)'}
+              configured={Boolean(conexao.token_configured)}
+              check={credentialChecks.accessToken}
               value={tokenInput}
-              onChange={(event) => setTokenInput(event.target.value)}
-              className={inputClass}
-              placeholder={conexao.token_configured ? 'Configurado — preencha somente para trocar' : 'Token do System User'}
-              autoComplete="new-password"
+              onChange={(value) => {
+                setTokenInput(value);
+                setCredentialChecks((current) => ({ ...current, accessToken: undefined }));
+              }}
+              onRemove={() => handleRemoveSecret('access_token', 'Access Token')}
+              isRemoving={removingSecret === 'access_token'}
+              placeholder={isCoexistence ? 'Token gerenciado pelo login' : 'Cole o token fornecido pela Meta'}
+              managedByLogin={isCoexistence}
+              span
             />
-          </Field>
-        ) : null}
+            {isCoexistence ? (
+              <>
+                <CredentialField
+                  id={`app-secret-${draft.id || 'new'}`}
+                  icon={Shield}
+                  label="App Secret"
+                  configured={Boolean(conexao.app_secret_configured)}
+                  check={credentialChecks.appSecret}
+                  value={appSecretInput}
+                  onChange={(value) => {
+                    setAppSecretInput(value);
+                    setCredentialChecks((current) => ({ ...current, appSecret: undefined }));
+                  }}
+                  onRemove={() => handleRemoveSecret('app_secret', 'App Secret')}
+                  isRemoving={removingSecret === 'app_secret'}
+                  placeholder="App Secret da Meta"
+                />
+                <CredentialField
+                  id={`verify-token-${draft.id || 'new'}`}
+                  icon={Webhook}
+                  label="Verify Token do webhook"
+                  configured={Boolean(conexao.verify_token_configured)}
+                  check={credentialChecks.verifyToken}
+                  value={verifyTokenInput}
+                  onChange={(value) => {
+                    setVerifyTokenInput(value);
+                    setCredentialChecks((current) => ({ ...current, verifyToken: undefined }));
+                  }}
+                  onRemove={() => handleRemoveSecret('verify_token', 'Verify Token')}
+                  isRemoving={removingSecret === 'verify_token'}
+                  placeholder="Token criado por você"
+                />
+              </>
+            ) : (
+              <details className="rounded-xl border border-slate-200 bg-white p-3.5 md:col-span-2">
+                <summary className="cursor-pointer text-xs font-bold text-slate-600">
+                  Configurar recebimento por webhook (opcional para o número de teste)
+                </summary>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                  Preencha estes campos somente quando for receber mensagens e status da Meta neste sistema.
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <CredentialField
+                    id={`app-secret-${draft.id || 'new'}`}
+                    icon={Shield}
+                    label="App Secret"
+                    configured={Boolean(conexao.app_secret_configured)}
+                    check={credentialChecks.appSecret}
+                    value={appSecretInput}
+                    onChange={(value) => {
+                      setAppSecretInput(value);
+                      setCredentialChecks((current) => ({ ...current, appSecret: undefined }));
+                    }}
+                    onRemove={() => handleRemoveSecret('app_secret', 'App Secret')}
+                    isRemoving={removingSecret === 'app_secret'}
+                    placeholder="App Secret da Meta"
+                  />
+                  <CredentialField
+                    id={`verify-token-${draft.id || 'new'}`}
+                    icon={Webhook}
+                    label="Verify Token do webhook"
+                    configured={Boolean(conexao.verify_token_configured)}
+                    check={credentialChecks.verifyToken}
+                    value={verifyTokenInput}
+                    onChange={(value) => {
+                      setVerifyTokenInput(value);
+                      setCredentialChecks((current) => ({ ...current, verifyToken: undefined }));
+                    }}
+                    onRemove={() => handleRemoveSecret('verify_token', 'Verify Token')}
+                    isRemoving={removingSecret === 'verify_token'}
+                    placeholder="Token criado por você"
+                  />
+                </div>
+              </details>
+            )}
+          </div>
+
+          {credentialActionError ? (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+              <XCircle size={15} className="mt-0.5 shrink-0 text-red-500" />
+              <p className="text-xs text-red-700">{credentialActionError}</p>
+            </div>
+          ) : null}
+          {credentialActionSuccess ? (
+            <div className={`flex items-start gap-2 rounded-lg border p-3 ${
+              credentialActionTone === 'warning'
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-emerald-200 bg-emerald-50'
+            }`}>
+              {credentialActionTone === 'warning' ? (
+                <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-600" />
+              ) : (
+                <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-600" />
+              )}
+              <p className={`text-xs ${
+                credentialActionTone === 'warning' ? 'text-amber-800' : 'text-emerald-800'
+              }`}>{credentialActionSuccess}</p>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       {isCoexistence ? (

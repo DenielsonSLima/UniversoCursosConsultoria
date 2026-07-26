@@ -138,7 +138,7 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
   };
 
   return (
-    <div className="border-t border-slate-100 bg-white p-4">
+    <div className="border-t border-[#d8dbdf] bg-[#f0f2f5] px-4 py-3">
       {file && selectedKind && (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">
           <span className="flex min-w-0 items-center gap-2">
@@ -176,21 +176,21 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
         </div>
       )}
 
-      <div className="flex items-end gap-3">
+      <div className="flex items-end gap-2">
         <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(event) => setFile(event.target.files?.[0] || null)} />
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled || recording} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-100 disabled:opacity-40" title="Anexar áudio, foto ou documento">
-          <Paperclip size={17} />
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled || recording} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-[#e5e9ec] disabled:opacity-40" title="Anexar áudio, foto ou documento">
+          <Paperclip size={21} />
         </button>
         <button
           type="button"
           onClick={recording ? stopRecording : startRecording}
           disabled={disabled || Boolean(file)}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-colors disabled:opacity-40 ${
-            recording ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 ${
+            recording ? 'bg-rose-600 text-white' : 'text-[#54656f] hover:bg-[#e5e9ec]'
           }`}
           title={recording ? 'Parar gravação' : 'Gravar áudio'}
         >
-          {recording ? <Square size={14} fill="currentColor" /> : <Mic size={17} />}
+          {recording ? <Square size={14} fill="currentColor" /> : <Mic size={21} />}
         </button>
         <textarea
           value={reply}
@@ -199,10 +199,10 @@ const MessageComposer: React.FC<MessageComposerProps> = ({
           rows={1}
           placeholder={closed ? 'Atendimento finalizado' : recording ? 'Gravando mensagem de voz...' : file ? 'Legenda opcional...' : 'Escreva sua resposta...'}
           disabled={disabled || recording}
-          className="max-h-28 min-h-[44px] flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500 disabled:opacity-50"
+          className="max-h-28 min-h-[44px] flex-1 resize-none rounded-[22px] border border-transparent bg-white px-4 py-3 text-[14px] font-normal text-[#111b21] shadow-[0_1px_1px_rgba(11,20,26,0.04)] outline-none placeholder:text-[#667781] focus:border-[#c9d0d4] disabled:opacity-50"
         />
-        <button onClick={send} disabled={sending || !canSend} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:opacity-40">
-          <Send size={17} />
+        <button onClick={send} disabled={sending || !canSend} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white shadow-sm transition-colors hover:bg-[#008f72] disabled:opacity-40">
+          <Send size={19} className="ml-0.5" />
         </button>
       </div>
     </div>

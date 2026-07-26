@@ -193,9 +193,10 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
           onSearchChange={setSearch}
           onBatchSend={() => setBatchOpen(true)}
           onDelete={handleDeleteSelected}
+          onClearSelection={() => setSelectedIds(new Set())}
         />
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-white custom-scrollbar">
           {loadingConversations ? (
             <div className="p-8 text-center text-xs font-bold text-slate-400">Carregando conversas...</div>
           ) : filtered.length === 0 ? (
@@ -212,6 +213,7 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
                 flowSession={flowByConversation.get(conversation.id)}
                 active={conversation.id === activeConversationId}
                 selected={selectedIds.has(conversation.id)}
+                selectionMode={validSelectedIds.length > 0}
                 onSelect={() => onSelectConversation(conversation.id)}
                 onToggleSelected={() => toggleConversationSelection(conversation.id)}
               />
@@ -220,17 +222,17 @@ const WhatsAppInbox: React.FC<WhatsAppInboxProps> = ({
         </div>
       </aside>
 
-      <main className="flex min-h-0 flex-col bg-[#f7f9fb]">
-        <div className="flex min-h-[72px] items-center justify-between border-b border-slate-100 bg-white px-5">
+      <main className="flex min-h-0 flex-col bg-[#efeae2]">
+        <div className="flex min-h-[72px] items-center justify-between border-b border-[#d8dbdf] bg-[#f0f2f5] px-5">
           {activeConversation ? (
             <div className="flex min-w-0 items-center gap-3">
               <ContactAvatar name={activeConversation.contato_nome} photo={activeConversation.contato_foto} />
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-bold text-[#001a33]">{activeConversation.contato_nome}</h3>
+                <h3 className="truncate text-sm font-semibold text-[#111b21]">{activeConversation.contato_nome}</h3>
                 {isContactTyping ? (
                   <TypingIndicator name={activeConversation.contato_nome} />
                 ) : (
-                  <p className="text-xs font-medium text-slate-400">{formatPhone(activeConversation.telefone)}</p>
+                  <p className="text-xs font-normal text-[#667781]">{formatPhone(activeConversation.telefone)}</p>
                 )}
               </div>
             </div>

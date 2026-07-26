@@ -13,7 +13,6 @@ import {
   Contact,
   ClipboardCheck,
   BadgeCheck,
-  FileSignature,
   Vote
 } from 'lucide-react';
 
@@ -31,7 +30,6 @@ import BoletimPage from './boletim/BoletimPage';
 import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenciaPage';
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 import ReciboDespesaPage from './recibo/ReciboDespesaPage';
-import FichaCadastralPage from './ficha-cadastral/FichaCadastralPage';
 import CrachaPeriodoEleitoralPage from './cracha-periodo-eleitoral/CrachaPeriodoEleitoralPage';
 
 const ModelosDocumentosPage: React.FC = () => {
@@ -39,7 +37,6 @@ const ModelosDocumentosPage: React.FC = () => {
 
   const models = [
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
-    { id: 'ficha-cadastral', title: 'Ficha Cadastral do Aluno', desc: 'Ficha impressa do cadastro com dados, marca d’água e assinaturas.', icon: <FileSignature size={24} />, color: 'bg-blue-700' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Modelos de crachá por hospital, liberados após a entrada no estágio.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
     { id: 'declaracao', title: 'Declaração Cursando', desc: 'Comprovante de matrícula ativa e regular.', icon: <FileText size={24} />, color: 'bg-emerald-600' },
@@ -58,7 +55,6 @@ const ModelosDocumentosPage: React.FC = () => {
   const renderContent = () => {
     switch (activeModule) {
       case 'carteirinha': return <CarteirinhaPage />;
-      case 'ficha-cadastral': return <FichaCadastralPage />;
       case 'cracha': return <CrachaPage />;
       case 'cracha-periodo-eleitoral': return <CrachaPeriodoEleitoralPage />;
       case 'declaracao': return <DeclaracaoPage />;

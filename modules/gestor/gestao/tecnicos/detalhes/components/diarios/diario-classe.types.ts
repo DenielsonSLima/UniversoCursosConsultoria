@@ -65,7 +65,5 @@ export interface DiarioPrintDocumentProps {
   observacoes: string;
   activeInstruments?: ActiveInstruments;
   watermark?: any;
-  diretorSigUrl?: string | null;
-  secretarioSigUrl?: string | null;
   exportMode?: DiarioExportMode;
 }

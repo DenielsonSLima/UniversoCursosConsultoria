@@ -8,6 +8,8 @@ import { irpfService } from '../../cadastros/modelos-documentos/irpf/irpf.servic
 import { boletimService } from '../../cadastros/modelos-documentos/boletim/boletim.service';
 import { historicoService } from '../../cadastros/modelos-documentos/historico/historico.service';
 import { transferenciaService } from '../../cadastros/modelos-documentos/transferencia/transferencia.service';
+import { pastaIdentificacaoService, fichaMatriculaDefaultTemplate } from '../../cadastros/ficha-matricula/document-layouts';
+import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
@@ -73,6 +75,15 @@ const loadTemplate = async (
   poloId: string,
   academicConfigs: any
 ) => {
+  const frozenRegistrationTemplate =
+    emission.dados_emissao?.documentTemplateSnapshot;
+  if (
+    frozenRegistrationTemplate
+    && ['pasta_identificacao', 'ficha_matricula'].includes(emission.documento)
+  ) {
+    return frozenRegistrationTemplate;
+  }
+
   if (emission.documento === 'carteirinha') {
     const savedTemplate = await carteirinhaService.getTemplate();
     return {
@@ -88,6 +99,14 @@ const loadTemplate = async (
   if (emission.documento === 'boletim') return boletimService.getTemplate('TECNICO');
   if (emission.documento === 'historico_escolar') return historicoService.getTemplate(poloId);
   if (emission.documento === 'transferencia') return transferenciaService.getTemplate(poloId);
+  if (emission.documento === 'pasta_identificacao') {
+    return pastaIdentificacaoService.getTemplate(poloId);
+  }
+  if (emission.documento === 'ficha_matricula') {
+    if (!emission.periodo_referencia) return fichaMatriculaDefaultTemplate;
+    const model = await fichasMatriculaService.getById(emission.periodo_referencia);
+    return model?.templateConfig || fichaMatriculaDefaultTemplate;
+  }
 
   if (isCertificateDocument(emission.documento)) {
     const { data, error } = await supabase

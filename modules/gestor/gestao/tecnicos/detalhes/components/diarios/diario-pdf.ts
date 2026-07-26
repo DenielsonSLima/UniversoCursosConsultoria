@@ -284,14 +284,10 @@ const drawBackCover = (
   pdf.line(left + 12, signatureY, left + 100, signatureY);
   pdf.line(left + width - 100, signatureY, left + width - 12, signatureY);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  setTextColor(pdf);
-  pdf.text(props.template.diretorNome || '—', left + 56, signatureY + 5, { align: 'center' });
-  pdf.text(props.template.secretarioNome || '—', left + width - 56, signatureY + 5, { align: 'center' });
   pdf.setFontSize(6.5);
   setTextColor(pdf, '#64748b');
-  pdf.text(props.template.diretorCargo || 'Diretor(a) Geral', left + 56, signatureY + 10, { align: 'center' });
-  pdf.text(props.template.secretarioCargo || 'Secretaria Acadêmica', left + width - 56, signatureY + 10, { align: 'center' });
+  pdf.text('ASSINATURA DO PROFESSOR', left + 56, signatureY + 6, { align: 'center' });
+  pdf.text('ASSINATURA DO COORDENADOR DO CURSO', left + width - 56, signatureY + 6, { align: 'center' });
 };
 
 const drawFrequencyPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: PdfImage | null) => {
@@ -404,15 +400,10 @@ const drawContentPages = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: Pdf
       pdf.line(CONTENT_LEFT + 18, signatureY, CONTENT_LEFT + 105, signatureY);
       pdf.line(PAGE_WIDTH - CONTENT_RIGHT - 105, signatureY, PAGE_WIDTH - CONTENT_RIGHT - 18, signatureY);
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7);
-      setTextColor(pdf);
-      pdf.text(props.disciplina.professor || 'Professor(a)', CONTENT_LEFT + 61.5, signatureY + 5, { align: 'center' });
-      pdf.text('Coordenação do curso', PAGE_WIDTH - CONTENT_RIGHT - 61.5, signatureY + 5, { align: 'center' });
-      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(6);
       setTextColor(pdf, '#64748b');
-      pdf.text('Assinatura do(a) professor(a)', CONTENT_LEFT + 61.5, signatureY + 9, { align: 'center' });
-      pdf.text('Assinatura do(a) coordenador(a)', PAGE_WIDTH - CONTENT_RIGHT - 61.5, signatureY + 9, { align: 'center' });
+      pdf.text('ASSINATURA DO PROFESSOR', CONTENT_LEFT + 61.5, signatureY + 6, { align: 'center' });
+      pdf.text('ASSINATURA DO COORDENADOR DO CURSO', PAGE_WIDTH - CONTENT_RIGHT - 61.5, signatureY + 6, { align: 'center' });
     }
   });
 };

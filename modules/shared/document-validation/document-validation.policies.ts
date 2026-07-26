@@ -57,6 +57,14 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'TER-EST',
     title: 'Termo de Estágio',
   },
+  pasta_identificacao: {
+    prefix: 'PASTA',
+    title: 'Pasta de Identificação do Aluno',
+  },
+  ficha_matricula: {
+    prefix: 'FICHA-MAT',
+    title: 'Ficha de Matrícula',
+  },
   certificado_tecnico: {
     prefix: 'CERT-TEC',
     title: 'Certificado Técnico',

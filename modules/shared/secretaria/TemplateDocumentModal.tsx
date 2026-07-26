@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FileText, Printer, X } from 'lucide-react';
 import DocumentHeader from '../../gestor/components/DocumentHeader';
 import { sanitizedHtml } from '../../../lib/htmlSanitizer';
@@ -40,12 +41,29 @@ const TemplateDocumentModal: React.FC<TemplateDocumentModalProps> = ({
   onPrint,
   showFooter = false,
 }) => {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   const accentClass = accent === 'emerald' ? 'text-emerald-600' : 'text-blue-600';
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-[858px] flex-col overflow-hidden rounded-[2.5rem] bg-white shadow-2xl animate-slideUp">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4 print:hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-white">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 print:hidden sm:px-6 sm:py-4">
           <div className="flex items-center gap-2">
             <FileText className={accentClass} size={20} />
             <h4 className="text-base font-black uppercase tracking-tight text-[#001a33]">{title}</h4>
@@ -55,7 +73,7 @@ const TemplateDocumentModal: React.FC<TemplateDocumentModalProps> = ({
             <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"><X size={16} /></button>
           </div>
         </div>
-        <div className="flex flex-1 flex-col items-center gap-4 overflow-auto bg-slate-100 p-8 custom-scrollbar">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-auto bg-slate-100 p-3 custom-scrollbar sm:p-8">
           {beforeDocument}
           <div id={printAreaId} className="relative shrink-0 bg-white text-justify text-black shadow-md" style={{ width: 794, height: 1123, minHeight: 1123, padding: '60px 80px' }}>
             {watermark?.watermarkUrl ? <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden"><img src={watermark.watermarkUrl} alt="Marca d'água" style={{ opacity: watermark.watermarkOpacity || 0.1, width: `${watermark.watermarkScale || 50}%`, transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none' }} /></div> : null}
@@ -73,7 +91,8 @@ const TemplateDocumentModal: React.FC<TemplateDocumentModalProps> = ({
         </div>
         {showFooter ? <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4 print:hidden"><button onClick={onClose} className="rounded-xl bg-slate-100 px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-200">Fechar</button><button onClick={onPrint} disabled={printDisabled} className="flex items-center gap-2 rounded-xl bg-[#001a33] px-6 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg hover:bg-blue-900 disabled:bg-slate-300"><Printer size={14} /> Imprimir</button></div> : null}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

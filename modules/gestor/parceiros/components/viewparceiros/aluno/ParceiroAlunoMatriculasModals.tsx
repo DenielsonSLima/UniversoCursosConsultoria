@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { AcademicMovementType } from '../../../../gestao/tecnicos/detalhes/academic-lifecycle.service';
+import { getMaceioIsoDate } from '../../../../gestao/tecnicos/technicalClassDates';
 import type { GatewayPaymentMethod } from '../../../../../asaas/asaas.service';
 
 export type OperationMode = 'MOVIMENTACAO' | 'TRANSFERENCIA';
@@ -204,6 +205,7 @@ interface OperationModalProps {
   destinationClasses: any[];
   reason: string;
   notes: string;
+  operationDate: string;
   returnDate: string;
   movementMutation: any;
   transferMutation: any;
@@ -215,14 +217,20 @@ interface OperationModalProps {
   onDestinationInstitutionChange: (value: string) => void;
   onReasonChange: (value: string) => void;
   onNotesChange: (value: string) => void;
+  onOperationDateChange: (value: string) => void;
   onReturnDateChange: (value: string) => void;
 }
 
 const OperationModal: React.FC<OperationModalProps> = (props) => {
   const { selected, mode, movementType, transferType, destinationClassId,
-    destinationInstitution, destinationClasses, reason, notes, returnDate,
+    destinationInstitution, destinationClasses, reason, notes, operationDate, returnDate,
     movementMutation, transferMutation } = props;
   if (!selected) return null;
+  const today = getMaceioIsoDate();
+  const enrollmentDate = selected.data_matricula?.slice(0, 10) || '';
+  const invalidOperationDate = !operationDate
+    || operationDate > today
+    || Boolean(enrollmentDate && operationDate < enrollmentDate);
   const pending = movementMutation.isPending || transferMutation.isPending;
   const invalidDestination = mode === 'TRANSFERENCIA' && (
     transferType === 'EXTERNA_ENVIADA' ? !destinationInstitution.trim() : !destinationClassId
@@ -267,9 +275,31 @@ const OperationModal: React.FC<OperationModalProps> = (props) => {
             </>
           )}
           <input value={reason} onChange={(event) => props.onReasonChange(event.target.value)} placeholder="Motivo obrigatório" className="w-full rounded-xl border border-slate-200 p-3.5" />
+          <div>
+            <label className="mb-2 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+              {mode === 'TRANSFERENCIA'
+                ? 'Data da transferência'
+                : movementType === 'DESISTENCIA'
+                  ? 'Data da desistência'
+                  : movementType === 'CANCELAMENTO'
+                    ? 'Data do cancelamento'
+                    : movementType === 'REATIVACAO'
+                      ? 'Data da reativação'
+                      : 'Data da movimentação'}
+            </label>
+            <input
+              type="date"
+              required
+              min={enrollmentDate || undefined}
+              max={today}
+              value={operationDate}
+              onChange={(event) => props.onOperationDateChange(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 p-3.5"
+            />
+          </div>
           <textarea value={notes} onChange={(event) => props.onNotesChange(event.target.value)} placeholder="Observações" className="min-h-24 w-full resize-none rounded-xl border border-slate-200 p-3.5" />
           {(movementMutation.isError || transferMutation.isError) && <p className="text-xs font-bold text-rose-600">{movementMutation.error?.message || transferMutation.error?.message}</p>}
-          <button onClick={() => mode === 'MOVIMENTACAO' ? movementMutation.mutate() : transferMutation.mutate()} disabled={!reason.trim() || pending || invalidDestination} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] py-3.5 text-xs font-black uppercase text-white disabled:opacity-40">
+          <button onClick={() => mode === 'MOVIMENTACAO' ? movementMutation.mutate() : transferMutation.mutate()} disabled={!reason.trim() || invalidOperationDate || pending || invalidDestination} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#001a33] py-3.5 text-xs font-black uppercase text-white disabled:opacity-40">
             {pending ? <Loader2 size={15} className="animate-spin" /> : mode === 'TRANSFERENCIA' ? <ArrowRightLeft size={15} /> : movementType === 'REATIVACAO' ? <RotateCcw size={15} /> : movementType === 'CONCLUSAO' ? <CheckCircle2 size={15} /> : movementType === 'CANCELAMENTO' || movementType === 'DESISTENCIA' ? <Ban size={15} /> : <PauseCircle size={15} />}
             Confirmar operação
           </button>

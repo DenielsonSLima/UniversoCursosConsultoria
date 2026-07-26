@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   Italic,
   Palette,
+  Plus,
   QrCode,
   Sliders,
   Trash2,
@@ -36,6 +37,16 @@ interface DeclaracaoEditorSidebarProps {
   onUpdateField: (updates: Partial<AbsoluteField>) => void;
   onUpdateFieldStyle: (updates: React.CSSProperties) => void;
   selectedField?: AbsoluteField;
+  enrollmentSettings?: {
+    customFields: Array<{ id?: string | number; label?: string }>;
+    requiresSignature: boolean;
+    term: string;
+  };
+  onEnrollmentSettingsChange?: (settings: {
+    customFields: Array<{ id?: string | number; label?: string }>;
+    requiresSignature: boolean;
+    term: string;
+  }) => void;
   setValidityDays: (days: number) => void;
   showValidity: boolean;
   validityDays: number;
@@ -67,6 +78,8 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
   onUpdateField,
   onUpdateFieldStyle,
   selectedField,
+  enrollmentSettings,
+  onEnrollmentSettingsChange,
   setValidityDays,
   showValidity,
   validityDays,
@@ -105,6 +118,94 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
           <p className="text-[9px] text-slate-400 font-medium leading-normal">
             Define o prazo padrão que será impresso no documento e usado na verificação do QR Code.
           </p>
+        </div>
+      )}
+
+      {enrollmentSettings && onEnrollmentSettingsChange && (
+        <div className="shrink-0 space-y-3 border-b border-slate-100 pb-4">
+          <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#001a33]">
+            <Sliders size={14} className="text-emerald-600" /> Conteúdo da Matrícula
+          </h4>
+
+          <div>
+            <label className="mb-1 block text-[9px] font-black uppercase tracking-wider text-slate-500">
+              Termo da matrícula
+            </label>
+            <textarea
+              value={enrollmentSettings.term}
+              onChange={(event) => onEnrollmentSettingsChange({
+                ...enrollmentSettings,
+                term: event.target.value,
+              })}
+              className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-medium leading-relaxed text-slate-700 outline-none focus:border-emerald-400 focus:bg-white"
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <span className="text-[10px] font-bold text-slate-700">Exigir assinaturas</span>
+            <input
+              type="checkbox"
+              checked={enrollmentSettings.requiresSignature}
+              onChange={(event) => onEnrollmentSettingsChange({
+                ...enrollmentSettings,
+                requiresSignature: event.target.checked,
+              })}
+              className="h-4 w-4 accent-emerald-600"
+            />
+          </label>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                Campos extras
+              </span>
+              <button
+                type="button"
+                onClick={() => onEnrollmentSettingsChange({
+                  ...enrollmentSettings,
+                  customFields: [
+                    ...enrollmentSettings.customFields,
+                    { id: `campo-${Date.now()}`, label: 'Novo campo' },
+                  ],
+                })}
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase text-emerald-700 hover:bg-emerald-100"
+              >
+                <Plus size={11} /> Adicionar
+              </button>
+            </div>
+
+            {enrollmentSettings.customFields.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-200 p-2 text-center text-[9px] font-medium text-slate-400">
+                Nenhum campo extra.
+              </p>
+            ) : (
+              enrollmentSettings.customFields.map((field, index) => (
+                <div key={String(field.id ?? index)} className="flex items-center gap-1.5">
+                  <input
+                    value={field.label || ''}
+                    onChange={(event) => onEnrollmentSettingsChange({
+                      ...enrollmentSettings,
+                      customFields: enrollmentSettings.customFields.map((item, itemIndex) => (
+                        itemIndex === index ? { ...item, label: event.target.value } : item
+                      )),
+                    })}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-700 outline-none focus:border-emerald-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onEnrollmentSettingsChange({
+                      ...enrollmentSettings,
+                      customFields: enrollmentSettings.customFields.filter((_, itemIndex) => itemIndex !== index),
+                    })}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                    title="Remover campo"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -196,7 +297,7 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
       </div>
 
       {selectedField && (
-        <div className="border-t border-slate-100 pt-4 flex flex-col gap-3 shrink-0 animate-fadeIn">
+        <div className="order-first flex shrink-0 flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50/40 p-3 animate-fadeIn">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-xs font-black text-[#001a33] uppercase tracking-wider flex items-center gap-2">
               <Sliders size={14} className="text-blue-600" /> Ajustar Elemento
@@ -210,6 +311,9 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
           </div>
 
           <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-3 flex flex-col gap-3">
+            <p className="rounded-lg bg-white px-2.5 py-2 text-[9px] font-bold leading-relaxed text-slate-500">
+              Arraste o elemento para mover. Use a alça azul no canto inferior direito para aumentar ou diminuir.
+            </p>
             {selectedField.type === 'image' && (
               <div className="space-y-3">
                 <div>
@@ -223,6 +327,20 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
                     max="500"
                     value={selectedField.width || 200}
                     onChange={event => onUpdateField({ width: parseInt(event.target.value) })}
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                    <span>Altura</span>
+                    <span>{selectedField.height || 'Auto'}{selectedField.height ? 'px' : ''}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="40"
+                    max="500"
+                    value={selectedField.height || 120}
+                    onChange={event => onUpdateField({ height: parseInt(event.target.value) })}
                     className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                 </div>
@@ -341,6 +459,26 @@ const DeclaracaoEditorSidebar: React.FC<DeclaracaoEditorSidebarProps> = ({
                     className="text-[9px] font-bold text-slate-400 mt-1 hover:text-blue-600 block text-left"
                   >
                     Limpar Largura (Auto)
+                  </button>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase mb-1">
+                    <span>Altura do Bloco</span>
+                    <span>{selectedField.height ? `${selectedField.height}px` : 'Automática'}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="24"
+                    max="500"
+                    value={selectedField.height || 80}
+                    onChange={event => onUpdateField({ height: parseInt(event.target.value) })}
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <button
+                    onClick={() => onUpdateField({ height: undefined })}
+                    className="text-[9px] font-bold text-slate-400 mt-1 hover:text-blue-600 block text-left"
+                  >
+                    Usar altura automática
                   </button>
                 </div>
                 <div className="flex gap-2">

@@ -21,7 +21,7 @@ import { installWhatsAppSoundUnlock, isWhatsAppSoundEnabled, playIncomingWhatsAp
 import { DEFAULT_AUTOMATION, DEFAULT_MODALITIES } from './whatsapp-panel/constants';
 import AutomationsTab from './whatsapp-panel/AutomationsTab';
 import OverdueTab from './whatsapp-panel/OverdueTab';
-import StartConversationModal from './whatsapp-panel/StartConversationModal';
+import StartConversationModal, { StartConversationBatchResult } from './whatsapp-panel/StartConversationModal';
 import WhatsAppPanelHeader from './whatsapp-panel/WhatsAppPanelHeader';
 import WhatsAppLineSwitcher from './whatsapp-panel/WhatsAppLineSwitcher';
 import { AutomationField, AutomationKey, WhatsAppOpsTab } from './whatsapp-panel/types';
@@ -203,6 +203,12 @@ const WhatsAppCommunicationPanel: React.FC = () => {
         contact.cpfCnpj,
         contact.cidade,
         contact.poloNome,
+        ...contact.matriculas.flatMap((enrollment) => [
+          enrollment.cursoNome,
+          enrollment.modalidade,
+          enrollment.turmaNome,
+          enrollment.turmaCodigo,
+        ]),
       ].filter(Boolean).join(' ').toLowerCase();
       return searchable.includes(term);
     });
@@ -373,6 +379,62 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     } finally {
       setIsSendingWhatsApp(false);
     }
+  };
+
+  const sendWhatsAppBatch = async (
+    recipients: WhatsAppContact[],
+    message: string,
+  ): Promise<StartConversationBatchResult> => {
+    const text = message.trim();
+    if (!apiReady || !activeConnectionId || !text) {
+      return {
+        sent: 0,
+        skipped: recipients.length,
+        failures: ['A API não está disponível ou a mensagem está vazia.'],
+      };
+    }
+
+    let sent = 0;
+    let skipped = 0;
+    const failures: string[] = [];
+
+    for (const contact of recipients) {
+      const phone = normalizePhone(contact.telefone);
+      if (!phone) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        await whatsappService.sendMessage({
+          connectionId: activeConnectionId,
+          alunoId: contact.id,
+          to: phone,
+          message: text,
+        });
+        sent += 1;
+      } catch (error: any) {
+        failures.push(`${contact.nome}: ${error?.message || 'falha no envio'}`);
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', activeConnectionId, 'conversas'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', activeConnectionId, 'mensagens'] });
+    queryClient.invalidateQueries({ queryKey: ['whatsapp', 'uso-mensal'] });
+
+    if (sent > 0) {
+      toast.success(
+        'Envio em massa concluído',
+        `${sent} aluno(s) receberam a mensagem.${failures.length ? ` ${failures.length} envio(s) falharam.` : ''}`,
+      );
+    } else {
+      toast.error(
+        'Nenhuma mensagem enviada',
+        failures[0] || 'Os alunos selecionados não possuem telefone válido.',
+      );
+    }
+
+    return { sent, skipped, failures };
   };
 
   const selectConversation = async (conversationId: string) => {
@@ -588,7 +650,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
       )}
 
       {isStartModalOpen && (
-        <StartConversationModal contacts={contacts} filteredContacts={filteredContacts} loadingContacts={loadingContacts} contactSearch={contactSearch} selectedContact={selectedContact} quickMessage={quickMessage} isSendingWhatsApp={isSendingWhatsApp} apiReady={apiReady} onSearchChange={setContactSearch} onSelectContact={selectStartContact} onQuickMessageChange={setQuickMessage} onSendWhatsAppMessage={sendWhatsAppMessage} onOpenWhatsApp={openWhatsApp} onClose={() => setIsStartModalOpen(false)} />
+        <StartConversationModal contacts={contacts} filteredContacts={filteredContacts} loadingContacts={loadingContacts} contactSearch={contactSearch} selectedContact={selectedContact} quickMessage={quickMessage} isSendingWhatsApp={isSendingWhatsApp} apiReady={apiReady} onSearchChange={setContactSearch} onSelectContact={selectStartContact} onQuickMessageChange={setQuickMessage} onSendWhatsAppMessage={sendWhatsAppMessage} onSendWhatsAppBatch={sendWhatsAppBatch} onOpenWhatsApp={openWhatsApp} onClose={() => setIsStartModalOpen(false)} />
       )}
     </div>
   );

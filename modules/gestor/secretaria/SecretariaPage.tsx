@@ -25,6 +25,8 @@ const moduleLoaders = {
   'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
   certificados: () => import('./certificados/SecretariaCertificadosPage'),
   'atestado-conclusao': () => import('./atestado-conclusao/SecretariaAtestadoConclusaoPage'),
+  'pasta-identificacao': () => import('./pasta-identificacao/SecretariaPastaIdentificacaoPage'),
+  'ficha-matricula': () => import('./ficha-matricula/SecretariaFichaMatriculaPage'),
   documento: () => import('./shared/SecretariaDocumentoEmissionPage'),
 } as const;
 
@@ -43,6 +45,8 @@ const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira
 const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
 const SecretariaCertificadosPage = lazy(moduleLoaders.certificados);
 const SecretariaAtestadoConclusaoPage = lazy(moduleLoaders['atestado-conclusao']);
+const SecretariaPastaIdentificacaoPage = lazy(moduleLoaders['pasta-identificacao']);
+const SecretariaFichaMatriculaPage = lazy(moduleLoaders['ficha-matricula']);
 const SecretariaDocumentoEmissionPage = lazy(moduleLoaders.documento);
 
 const secretariaModuleHeaders: Record<string, { title: string; description: string }> = {
@@ -114,6 +118,14 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
     title: 'Financeiro',
     description: 'Recebimentos agrupados por aluno e curso, nos modos individual, lote e personalizado.',
   },
+  'pasta-identificacao': {
+    title: 'Pasta de Identificação',
+    description: 'Capa A4 da pasta do aluno, individual, em lote ou personalizada.',
+  },
+  'ficha-matricula': {
+    title: 'Ficha de Matrícula',
+    description: 'Ficha completa com foto, dados acadêmicos, termo e assinaturas.',
+  },
 };
 
 interface SecretariaPageProps {
@@ -167,6 +179,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
       'historico-escolar': 'historico',
       'historico-emissoes': 'historico',
       'consulta-financeira': 'recebimentos',
+      'pasta-identificacao': 'fichas',
+      'ficha-matricula': 'fichas',
     };
 
     return Object.keys(secretariaModuleHeaders).filter(id => {
@@ -215,6 +229,10 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaTermoEstagioPage />;
       case 'consulta-financeira':
         return <SecretariaConsultaFinanceiraPage />;
+      case 'pasta-identificacao':
+        return <SecretariaPastaIdentificacaoPage />;
+      case 'ficha-matricula':
+        return <SecretariaFichaMatriculaPage />;
       case 'transferencia':
         return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.transferencia} />;
       case 'boletim':
