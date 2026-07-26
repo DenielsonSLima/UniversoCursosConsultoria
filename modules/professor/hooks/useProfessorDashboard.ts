@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 
 export interface ProfessorDashboardLesson {
@@ -63,19 +63,26 @@ const normalizeDashboard = (payload: any): ProfessorDashboardStats => ({
   turmas: Array.isArray(payload?.turmas) ? payload.turmas : [],
 });
 
+export const professorDashboardQueryOptions = (
+  professorId: string,
+  poloId: string,
+) => queryOptions({
+  queryKey: professorDashboardKeys.professor(professorId, poloId),
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc('get_professor_dashboard', {
+      p_polo_id: poloId,
+    });
+
+    if (error) throw error;
+    return normalizeDashboard(data);
+  },
+  staleTime: 30_000,
+});
+
 export const useProfessorDashboardStats = (professorId: string, poloId?: string | null) => {
   const dashboard = useQuery<ProfessorDashboardStats>({
-    queryKey: professorDashboardKeys.professor(professorId, poloId),
-    enabled: Boolean(professorId),
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_professor_dashboard', {
-        p_polo_id: poloId || null,
-      });
-
-      if (error) throw error;
-      return normalizeDashboard(data);
-    },
-    staleTime: 30_000,
+    ...professorDashboardQueryOptions(professorId, poloId || ''),
+    enabled: Boolean(professorId && poloId),
   });
 
   return {

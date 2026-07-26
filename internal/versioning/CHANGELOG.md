@@ -2,6 +2,29 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.1] - 2026-07-26
+
+### Adicionado
+
+- Transição em tela cheia na troca de polo, com estados de carregamento, sucesso, falha, nova tentativa e retorno seguro ao polo anterior.
+
+### Alterado
+
+- O carregamento inicial e a troca de contexto passam a buscar somente os polos e dados autorizados necessários ao módulo ativo.
+- O portal do professor passou a carregar seus módulos sob demanda, reduzindo o pacote e o processamento iniciais.
+- A transição de polo segue o mesmo padrão visual claro usado na validação inicial de acesso.
+
+### Corrigido
+
+- O seletor de polo permanece acima dos cards e indicadores da página, sem sobreposição indevida do conteúdo “Professores”.
+- Calendário, financeiro do professor e caixa respeitam explicitamente o polo selecionado.
+- O calendário da Gestão cancela respostas antigas e só conclui a transição após preparar os dados do novo polo.
+
+### Segurança
+
+- O cache de consultas é separado por polo e limpo no logout ou na troca de identidade autenticada.
+- Usuários restritos deixam de consultar a lista completa de polos no frontend.
+
 ## [0.7.0-beta.2] - 2026-07-26
 
 ### Adicionado

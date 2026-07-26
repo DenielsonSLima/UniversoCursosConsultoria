@@ -23,6 +23,7 @@ import { jsPDF } from 'jspdf';
 
 interface FinanceiroPageProps {
   professorId: string;
+  poloId: string;
 }
 
 type StatusTab = 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS';
@@ -40,6 +41,7 @@ interface ProfessorPayment {
   forma_pagamento?: string | null;
   observacao?: string | null;
   created_at?: string | null;
+  polo_id?: string | null;
   polos?: {
     nome?: string | null;
     cidade?: string | null;
@@ -51,7 +53,7 @@ interface ProfessorPayment {
 const hiddenStatuses = ['CANCELADO', 'ESTORNADO'];
 const pageSize = 8;
 
-const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId, poloId }) => {
   const [selectedReceipt, setSelectedReceipt] = useState<ProfessorPayment | null>(null);
   const [isGeneratingReceiptPdf, setIsGeneratingReceiptPdf] = useState(false);
   const [notice, setNotice] = useState('');
@@ -65,18 +67,36 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const { data: dbPayments = [], isLoading } = useQuery<ProfessorPayment[]>({
-    queryKey: ['professor-financeiro', professorId],
+    queryKey: ['professor-financeiro', professorId, poloId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contas_pagar')
-        .select('*, polos(nome, cidade, estado)')
+        .select(`
+          id,
+          descricao,
+          categoria,
+          valor,
+          valor_pago,
+          data_vencimento,
+          data_pagamento,
+          status,
+          forma_pagamento,
+          observacao,
+          created_at,
+          polo_id,
+          polos(nome, cidade, estado)
+        `)
         .eq('fornecedor_id', professorId)
+        .eq('polo_id', poloId)
         .order('data_vencimento', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map((payment: any) => ({
+        ...payment,
+        polos: Array.isArray(payment.polos) ? payment.polos[0] || null : payment.polos,
+      })) as ProfessorPayment[];
     },
-    enabled: Boolean(professorId)
+    enabled: Boolean(professorId && poloId)
   });
 
   const parseDate = (value?: string | null) => {
@@ -171,6 +191,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ professorId }) => {
   const totalPages = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
   const currentPageSafe = Math.min(currentPage, totalPages);
   const visiblePayments = filteredPayments.slice((currentPageSafe - 1) * pageSize, currentPageSafe * pageSize);
+
+  useEffect(() => {
+    setSelectedReceipt(null);
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setCategoryFilter('TODOS');
+    setStatusTab('ABERTO');
+    setCurrentPage(1);
+  }, [poloId]);
 
   useEffect(() => {
     setCurrentPage(1);
