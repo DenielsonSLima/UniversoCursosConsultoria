@@ -190,6 +190,19 @@ const finalizePublicSignupFromMetadata = async () => {
   });
 };
 
+const getExistingOrFinalizePublicAlunoProfile = async () => {
+  // O perfil sincronizado pelo Auth pode já existir e ter sido corrigido pela
+  // secretaria depois do cadastro. Nesse caso, os metadados originais não
+  // devem sobrescrever novamente CPF, telefone ou outros dados a cada login.
+  const existingProfile = await getPortalProfile({
+    preferredRole: 'Aluno',
+    allowedRoles: ['Aluno'],
+  });
+  if (existingProfile) return existingProfile;
+
+  return finalizePublicSignupFromMetadata();
+};
+
 export const alunoPublicAuthService = {
   async login(
     email: string,
@@ -201,10 +214,7 @@ export const alunoPublicAuthService = {
     });
     if (error) throw new Error(error);
 
-    let profile = await finalizePublicSignupFromMetadata();
-    if (!profile) {
-      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    }
+    const profile = await getExistingOrFinalizePublicAlunoProfile();
 
     if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
@@ -240,10 +250,7 @@ export const alunoPublicAuthService = {
   },
 
   async finishExternalLogin() {
-    let profile = await finalizePublicSignupFromMetadata();
-    if (!profile) {
-      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    }
+    const profile = await getExistingOrFinalizePublicAlunoProfile();
 
     if (!profile || profile.tipo !== 'Aluno') {
       await loginService.logout();
