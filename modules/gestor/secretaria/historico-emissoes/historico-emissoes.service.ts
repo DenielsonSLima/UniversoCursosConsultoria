@@ -144,6 +144,135 @@ const loadTemplate = async (
   return data?.conteudo || null;
 };
 
+const PREVIEW_RESOURCE_TTL_MS = 5 * 60_000;
+type CachedPromise<T> = { expiresAt: number; promise: Promise<T> };
+
+const sharedPreviewCache = new Map<string, CachedPromise<any>>();
+
+const getCachedPreviewResource = <T>(
+  key: string,
+  loader: () => Promise<T>,
+): Promise<T> => {
+  const cached = sharedPreviewCache.get(key) as CachedPromise<T> | undefined;
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+
+  const promise = loader().catch((error) => {
+    sharedPreviewCache.delete(key);
+    throw error;
+  });
+  sharedPreviewCache.set(key, {
+    expiresAt: Date.now() + PREVIEW_RESOURCE_TTL_MS,
+    promise,
+  });
+  return promise;
+};
+
+const getTemplateCacheKey = (emission: EmissionLog, poloId: string) => {
+  if (emission.dados_emissao?.documentTemplateSnapshot) return null;
+  return [
+    'template',
+    emission.documento,
+    poloId,
+    emission.periodo_referencia || 'padrao',
+  ].join(':');
+};
+
+const mapWithConcurrency = async <Item, Result>(
+  items: Item[],
+  limit: number,
+  mapper: (item: Item) => Promise<Result>,
+): Promise<Result[]> => {
+  const results = new Array<Result>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(Math.max(1, limit), items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await mapper(items[currentIndex]);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+};
+
+const loadPreviewBatch = async (
+  emissions: EmissionLog[],
+  fallbackPoloId: string,
+  onProgress?: (completedDocuments: number, totalDocuments: number) => void,
+): Promise<PreviewResources[]> => {
+  if (!emissions.length) return [];
+
+  const watermarksPromise = getCachedPreviewResource(
+    'watermarks',
+    () => marcaDaguaService.getCompaniesWithWatermark(),
+  );
+  const academicConfigsPromise = getCachedPreviewResource(
+    'academic-configs',
+    () => academicosService.getConfigs(),
+  );
+  const poloIds = [...new Set(emissions.map((emission) => emission.polo_id || fallbackPoloId))];
+  const polosPromise = Promise.all(poloIds.map(async (poloId) => [
+    poloId,
+    await getCachedPreviewResource(`polo:${poloId}`, () => polosService.getById(poloId)),
+  ] as const));
+
+  const [watermarks, academicConfigs, polos] = await Promise.all([
+    watermarksPromise,
+    academicConfigsPromise,
+    polosPromise,
+  ]);
+  const polosById = new Map(polos);
+
+  let completedDocuments = 0;
+  return mapWithConcurrency(emissions, 8, async (emission) => {
+    const poloId = emission.polo_id || fallbackPoloId;
+    const needsAcademic = [
+      'boletim',
+      'atestado_conclusao_tecnico',
+      'historico_escolar',
+      'transferencia',
+    ].includes(emission.documento);
+    const templateKey = getTemplateCacheKey(emission, poloId);
+    const [academicData, certificate, template] = await Promise.all([
+      needsAcademic
+        ? getCachedPreviewResource(
+            `academic:${emission.codigo}`,
+            () => loadAcademicPreview(emission),
+          )
+        : Promise.resolve(null),
+      isCertificateDocument(emission.documento)
+        ? getCachedPreviewResource(
+            `certificate:${emission.codigo}`,
+            () => fetchCertificateForEmission(emission),
+          )
+        : Promise.resolve(null),
+      templateKey
+        ? getCachedPreviewResource(
+            templateKey,
+            () => loadTemplate(emission, poloId, academicConfigs),
+          )
+        : loadTemplate(emission, poloId, academicConfigs),
+    ]);
+
+    if (isCertificateDocument(emission.documento) && !certificate) {
+      throw new Error('O certificado acadêmico finalizado não foi localizado para esta emissão.');
+    }
+    const preview = {
+      template,
+      watermark: watermarks.find((item) => item.id === poloId) || null,
+      polo: polosById.get(poloId) || null,
+      academicData,
+      certificate,
+    };
+    completedDocuments += 1;
+    onProgress?.(completedDocuments, emissions.length);
+    return preview;
+  });
+};
+
 export const historicoEmissoesService = {
   async loadFilters(poloId: string): Promise<{
     turmas: TurmaFilter[];
@@ -206,33 +335,15 @@ export const historicoEmissoesService = {
   },
 
   async loadPreview(emission: EmissionLog, fallbackPoloId: string): Promise<PreviewResources> {
-    const poloId = emission.polo_id || fallbackPoloId;
-    const needsAcademic = [
-      'boletim',
-      'atestado_conclusao_tecnico',
-      'historico_escolar',
-      'transferencia',
-    ].includes(emission.documento);
-    const academicPreviewPromise = needsAcademic
-      ? loadAcademicPreview(emission)
-      : Promise.resolve(null);
-    const [polo, watermarks, academicConfigs, academicData, certificate] = await Promise.all([
-      polosService.getById(poloId),
-      marcaDaguaService.getCompaniesWithWatermark(),
-      academicosService.getConfigs(),
-      academicPreviewPromise,
-      fetchCertificateForEmission(emission),
-    ]);
-    if (isCertificateDocument(emission.documento) && !certificate) {
-      throw new Error('O certificado acadêmico finalizado não foi localizado para esta emissão.');
-    }
-    const template = await loadTemplate(emission, poloId, academicConfigs);
-    return {
-      template,
-      watermark: watermarks.find((item) => item.id === poloId) || null,
-      polo,
-      academicData,
-      certificate,
-    };
+    const [preview] = await loadPreviewBatch([emission], fallbackPoloId);
+    return preview;
+  },
+
+  async loadPreviews(
+    emissions: EmissionLog[],
+    fallbackPoloId: string,
+    onProgress?: (completedDocuments: number, totalDocuments: number) => void,
+  ): Promise<PreviewResources[]> {
+    return loadPreviewBatch(emissions, fallbackPoloId, onProgress);
   },
 };

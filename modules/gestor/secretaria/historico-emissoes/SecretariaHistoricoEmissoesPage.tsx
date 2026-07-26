@@ -204,6 +204,7 @@ const SecretariaHistoricoEmissoesPage: React.FC = () => {
           isLoading={isLoadingPreview}
           isDownloading={isDownloading}
           isReissuing={isReissuing}
+          fullscreenViewer
           printContentRef={printContentRef}
           onClose={clearPreview}
           onDownload={handleDownload}

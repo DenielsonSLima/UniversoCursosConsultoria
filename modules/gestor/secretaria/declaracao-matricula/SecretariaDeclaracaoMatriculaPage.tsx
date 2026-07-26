@@ -3,14 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CreditCard, Users, Search, Printer, ArrowLeft, Loader2, Download, Trash2, X } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { supabase } from '../../../../lib/supabase';
 import { declaracaoService } from '../../cadastros/modelos-documentos/declaracao/declaracao.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
 import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
-import { parceirosService } from '../../parceiros/parceiros.service';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
 import { formatMatricula } from '../../../../lib/academicUtils';
@@ -125,65 +122,82 @@ const SecretariaDeclaracaoMatriculaPage = ({
   const loadAcademicoData = async (activePoloId: string) => {
     try {
       setLoading(true);
-      
-      // Load polo info
-      const poloData = await polosService.getById(activePoloId);
+
+      const [poloData, enrollmentsResult] = await Promise.all([
+        polosService.getById(activePoloId),
+        supabase
+          .from('matriculas')
+          .select(`
+            id, aluno_id, turma_id, status, data_matricula,
+            parceiros!inner(
+              id, nome, cpf_cnpj, rg, data_nascimento, foto_url, tipo_documento
+            ),
+            turmas!inner(
+              id, nome, codigo, status, polo_id,
+              cursos!inner(nome),
+              polos(nome, cnpj, cidade, estado)
+            )
+          `)
+          .eq('status', 'ATIVO')
+          .eq('turmas.status', 'EM_ANDAMENTO')
+          .or(`polo_id.eq.${activePoloId},polo_id.is.null`, { foreignTable: 'turmas' })
+          .order('data_matricula', { ascending: false }),
+      ]);
       setPoloInfo(poloData);
-      
-      // Load students of active polo or Geral (polo_id IS NULL)
-      const { data: dbAlunos, error: errorAlunos } = await supabase
-        .from('parceiros')
-        .select('*')
-        .eq('tipo', 'Aluno')
-        .or(`polo_id.eq.${activePoloId},polo_ids.cs.{${activePoloId}},polo_id.is.null`)
-        .order('nome', { ascending: true });
-        
-      if (errorAlunos) throw errorAlunos;
+      if (enrollmentsResult.error) throw enrollmentsResult.error;
 
-      const allTurmas = await parceirosService.getTurmasDisponiveis();
-      // Filter turmas by polo or load all
-      const filteredTurmas = allTurmas.filter((t: any) => t.poloId === activePoloId || !t.poloId);
-      setTurmas(filteredTurmas);
-      
-      const mapped = await Promise.all(
-        (dbAlunos || []).map(async (p): Promise<Aluno | null> => {
-          const matriculas = await parceirosService.getMatriculas(p.id);
-          const eligibleMatriculas = matriculas.filter((matricula) => (
-            matricula.status?.toUpperCase() === 'ATIVO'
-            && matricula.turmas?.status?.toUpperCase() === 'EM_ANDAMENTO'
-          ));
-          const activeMat = eligibleMatriculas[0];
-          if (!activeMat) return null;
-          const turmaIds = eligibleMatriculas.map((matricula) => matricula.turma_id);
-          
-          return {
-            id: p.id,
-            enrollmentId: activeMat?.id,
-            nome: p.nome.toUpperCase(),
-            cpf: p.cpf_cnpj || '',
-            rg: p.rg || '',
-            nascimento: p.data_nascimento || '',
-            matricula: activeMat ? formatMatricula(activeMat.id, activeMat.data_matricula, activeMat.turmas?.polo_id || activePoloId) : 'PENDENTE',
-            curso: activeMat?.turmas?.cursos?.nome || 'Curso Geral',
-            turmaNome: activeMat?.turmas?.nome || '',
-            turmaCodigo: activeMat?.turmas?.codigo || '',
-            instituicao: 'Universo Cursos e Consultoria',
-            fotoUrl: p.foto_url || null,
-            tipoDocumento: p.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
-            turmaIds,
-            poloNome: activeMat?.turmas?.polos?.nome || poloData?.nome || 'Universo Cursos e Consultoria',
-            poloCnpj: activeMat?.turmas?.polos?.cnpj || poloData?.cnpj || '',
-            cidadePolo: (() => {
-              const rawCidade = activeMat?.turmas?.polos?.cidade || poloData?.cidade || 'Aracaju';
-              const rawUf = activeMat?.turmas?.polos?.estado || poloData?.estado || 'SE';
-              if (rawCidade.includes('/')) return rawCidade;
-              return `${rawCidade}/${rawUf}`;
-            })(),
-          };
-        })
+      const rows = (enrollmentsResult.data || []) as any[];
+      const enrollmentsByStudent = new Map<string, any[]>();
+      const classesById = new Map<string, { id: string; nome: string; codigo: string }>();
+      rows.forEach((enrollment) => {
+        const current = enrollmentsByStudent.get(enrollment.aluno_id) || [];
+        current.push(enrollment);
+        enrollmentsByStudent.set(enrollment.aluno_id, current);
+        if (enrollment.turmas?.id && !classesById.has(enrollment.turmas.id)) {
+          classesById.set(enrollment.turmas.id, {
+            id: enrollment.turmas.id,
+            nome: enrollment.turmas.nome || 'Turma',
+            codigo: enrollment.turmas.codigo || '',
+          });
+        }
+      });
+
+      const mapped = [...enrollmentsByStudent.values()].map((studentEnrollments): Aluno => {
+        const activeMat = studentEnrollments[0];
+        const student = activeMat.parceiros || {};
+        const turma = activeMat.turmas || {};
+        const turmaPolo = turma.polos || {};
+        const rawCidade = turmaPolo.cidade || poloData?.cidade || 'Aracaju';
+        const rawUf = turmaPolo.estado || poloData?.estado || 'SE';
+        return {
+          id: student.id || activeMat.aluno_id,
+          enrollmentId: activeMat.id,
+          nome: String(student.nome || '').toUpperCase(),
+          cpf: student.cpf_cnpj || '',
+          rg: student.rg || '',
+          nascimento: student.data_nascimento || '',
+          matricula: formatMatricula(
+            activeMat.id,
+            activeMat.data_matricula,
+            turma.polo_id || activePoloId
+          ),
+          curso: turma.cursos?.nome || 'Curso Geral',
+          turmaNome: turma.nome || '',
+          turmaCodigo: turma.codigo || '',
+          instituicao: 'Universo Cursos e Consultoria',
+          fotoUrl: student.foto_url || null,
+          tipoDocumento: student.tipo_documento || 'CARTEIRA NACIONAL DE IDENTIFICAÇÃO',
+          turmaIds: studentEnrollments.map((enrollment) => enrollment.turma_id),
+          poloNome: turmaPolo.nome || poloData?.nome || 'Universo Cursos e Consultoria',
+          poloCnpj: turmaPolo.cnpj || poloData?.cnpj || '',
+          cidadePolo: rawCidade.includes('/') ? rawCidade : `${rawCidade}/${rawUf}`,
+        };
+      });
+
+      setTurmas(
+        [...classesById.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       );
-
-      setAlunos(mapped.filter((aluno): aluno is Aluno => aluno !== null));
+      setAlunos(mapped.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
     } catch (err) {
       console.error('Erro ao carregar dados acadêmicos:', err);
     } finally {
@@ -196,20 +210,16 @@ const SecretariaDeclaracaoMatriculaPage = ({
       try {
         const activePoloId = sessionStorage.getItem('current_polo_id') || '44444444-4444-4444-4444-444444444444';
 
-        // Load document template
-        const template = await documentService.getTemplate(activePoloId);
+        const [template, watermarks, academicData] = await Promise.all([
+          documentService.getTemplate(activePoloId),
+          marcaDaguaService.getCompaniesWithWatermark(),
+          academicosService.getConfigs(),
+          loadAcademicoData(activePoloId),
+        ]);
         setTemplateConfig(template);
-
-        // Load watermark
-        const watermarks = await marcaDaguaService.getCompaniesWithWatermark();
         const wm = watermarks.find(w => w.id === activePoloId);
         setWatermark(wm);
-
-        // Load global academic configs
-        const academicData = await academicosService.getConfigs();
         setAcademicConfigs(academicData);
-        
-        await loadAcademicoData(activePoloId);
       } catch (err) {
         console.error('Erro ao carregar configurações de declaração:', err);
       }
@@ -422,6 +432,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
     setIsDownloading(true);
     let restoreImages = () => {};
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       await waitForPrintAssets();
       restoreImages = await inlinePrintImages();
 
@@ -442,6 +456,9 @@ const SecretariaDeclaracaoMatriculaPage = ({
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         if (index > 0) pdf.addPage('a4', 'portrait');
         pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+        canvas.width = 0;
+        canvas.height = 0;
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       }
 
       pdf.save(`${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`);

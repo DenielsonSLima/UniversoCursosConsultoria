@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -54,6 +55,15 @@ interface CustomEmissionSelection {
   aluno: SecretariaAlunoResumo;
   matricula: SecretariaMatriculaResumo;
 }
+
+const useDebouncedValue = <T,>(value: T, delayMs: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [delayMs, value]);
+  return debouncedValue;
+};
 
 const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageProps> = ({ definition }) => {
   const queryClient = useQueryClient();
@@ -115,7 +125,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   });
   const selectedFichaTemplate = fichaTemplates.find((model) => model.id === selectedTemplateId);
 
-  const normalizedTerm = searchTerm.trim();
+  const normalizedTerm = useDebouncedValue(searchTerm.trim(), 300);
   const { data: alunos = [], isFetching: isSearching } = useQuery({
     queryKey: secretariaDocumentosKeys.search(context, definition.id, normalizedTerm),
     queryFn: () => secretariaDocumentosService.searchAlunos(context.poloId, normalizedTerm),
@@ -246,6 +256,15 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     const intervalId = window.setInterval(() => setAvailabilityNow(new Date()), 60_000);
     return () => window.clearInterval(intervalId);
   }, [isCrachaPeriodoEleitoral]);
+
+  useEffect(() => {
+    if (!isCrachaPrinting) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isCrachaPrinting]);
 
   useEffect(() => {
     if (matriculas.length && !selectedMatriculaId) setSelectedMatriculaId(matriculas[0].id);
@@ -515,8 +534,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   };
 
   if (isCrachaPrinting) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 z-[9999] overflow-y-auto custom-scrollbar flex flex-col" id="cracha-print-layout">
+    return createPortal(
+      <div className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-y-auto bg-slate-950 custom-scrollbar" id="cracha-print-layout">
         <div className="bg-slate-800 text-white p-4 shadow-md sticky top-0 flex justify-between items-center z-[10000] print:hidden">
           <div className="flex items-center gap-4">
             <button
@@ -539,16 +558,16 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg shadow-rose-900/30"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-950/30"
           >
             <Printer size={16} /> Imprimir / Salvar PDF
           </button>
         </div>
 
         <div className="flex-1 bg-slate-900 p-8 overflow-y-auto flex flex-col items-center">
-          <div className="bg-rose-950/70 border border-rose-800 p-4 rounded-2xl max-w-[297mm] w-full text-white mb-8 flex items-center gap-3 print:hidden">
-            <Printer size={20} className="text-rose-300" />
-            <p className="text-[10px] text-rose-100 leading-normal font-medium">
+          <div className="mb-8 flex w-full max-w-[297mm] items-center gap-3 rounded-2xl border border-blue-800 bg-blue-950/70 p-4 text-white print:hidden">
+            <Printer size={20} className="text-blue-300" />
+            <p className="text-[10px] font-medium leading-normal text-blue-100">
               {isCrachaPeriodoEleitoral
                 ? 'Use papel A4 em paisagem. O modelo eleitoral não possui QR Code e usa a data final configurada como validade padrão.'
                 : 'Use papel A4 em paisagem. Para o modo 10 por página, imprima frente e verso virando no lado curto.'}
@@ -631,7 +650,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           }
           @page { size: A4 landscape; margin: 0; }
         `}} />
-      </div>
+      </div>,
+      document.body
     );
   }
 

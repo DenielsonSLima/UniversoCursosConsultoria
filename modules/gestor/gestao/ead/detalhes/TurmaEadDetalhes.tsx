@@ -7,7 +7,6 @@ import {
   GraduationCap,
   Loader2,
   Plus,
-  Search,
   Settings,
   ShieldCheck,
   Users,
@@ -26,6 +25,7 @@ import {
   useMatricularAlunoEadMutation,
 } from './hooks/useTurmaEadMutations';
 import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
+import AdicionarAlunoEadModal from './components/AdicionarAlunoEadModal';
 
 interface TurmaEadDetalhesProps {
   turma: Turma;
@@ -110,6 +110,17 @@ const normalizeStatus = (status?: string | null) =>
 const isEadEnrollmentActive = (status?: string | null) => EAD_ACTIVE_STATUSES.has(normalizeStatus(status));
 const isEadEnrollmentPending = (status?: string | null) => EAD_PENDING_STATUSES.has(normalizeStatus(status));
 
+const useDebouncedValue = <T,>(value: T, delayMs: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [delayMs, value]);
+
+  return debouncedValue;
+};
+
 const StatCard = ({ label, value, icon, tone = 'slate' }: { label: string; value: string | number; icon: React.ReactNode; tone?: 'slate' | 'purple' | 'emerald' | 'amber' | 'blue' }) => {
   const tones = {
     slate: 'bg-white border-slate-200 text-slate-500',
@@ -135,6 +146,8 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
+  const normalizedSearchAluno = searchAluno.trim();
+  const debouncedSearchAluno = useDebouncedValue(normalizedSearchAluno, 300);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -144,7 +157,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
 
   const resumoQuery = useTurmaEadResumo(turma.id);
   const alunosQuery = useTurmaEadAlunos(turma.id);
-  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, searchAluno, showAddAluno);
+  const alunosDisponiveisQuery = useTurmaEadAlunosDisponiveis(turma.id, debouncedSearchAluno, showAddAluno);
   const liberarMutation = useLiberarMatriculaEadMutation(
     turma.id,
     (error: any) => toast.error('Não foi possível liberar', error?.message || 'Tente novamente em alguns instantes.'),
@@ -368,56 +381,23 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       )}
 
-      {showAddAluno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h4 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Adicionar aluno EAD</h4>
-                <p className="text-xs font-bold text-slate-500">Matricula manual liberada, sem gerar recebimento.</p>
-              </div>
-              <button type="button" onClick={() => setShowAddAluno(false)} className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-black uppercase text-slate-500">
-                Fechar
-              </button>
-            </div>
-
-            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <Search size={16} className="text-slate-400" />
-              <input
-                value={searchAluno}
-                onChange={(event) => setSearchAluno(event.target.value)}
-                placeholder="Buscar por nome, email ou CPF"
-                className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-slate-400"
-              />
-            </div>
-
-            <div className="max-h-[380px] overflow-y-auto rounded-2xl border border-slate-100">
-              {alunosDisponiveisQuery.isLoading ? (
-                <div className="py-10 text-center text-sm font-bold text-slate-400">Buscando alunos...</div>
-              ) : (alunosDisponiveisQuery.data || []).length === 0 ? (
-                <div className="py-10 text-center text-sm font-bold text-slate-400">Nenhum aluno disponivel.</div>
-              ) : (
-                (alunosDisponiveisQuery.data || []).map((aluno) => (
-                  <div key={aluno.id} className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-[#001a33]">{aluno.nome}</p>
-                      <p className="truncate text-xs font-bold text-slate-400">{aluno.email || aluno.cpfCnpj || 'Sem contato'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={matricularMutation.isPending}
-                      onClick={() => matricularMutation.mutate(aluno.id)}
-                      className="rounded-lg bg-purple-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-purple-700 disabled:opacity-60"
-                    >
-                      Matricular
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <AdicionarAlunoEadModal
+        open={showAddAluno}
+        search={searchAluno}
+        alunos={(alunosDisponiveisQuery.data || []) as AlunoDisponivel[]}
+        isLoading={alunosDisponiveisQuery.isLoading}
+        isFetching={alunosDisponiveisQuery.isFetching}
+        isSearchSettling={showAddAluno && normalizedSearchAluno !== debouncedSearchAluno}
+        isError={alunosDisponiveisQuery.isError}
+        pendingAlunoId={matricularMutation.isPending ? matricularMutation.variables : null}
+        onSearchChange={setSearchAluno}
+        onClose={() => {
+          setShowAddAluno(false);
+          setSearchAluno('');
+        }}
+        onRetry={() => void alunosDisponiveisQuery.refetch()}
+        onMatricular={(alunoId) => matricularMutation.mutate(alunoId)}
+      />
     </div>
   );
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { eadTurmaKeys } from '../ead-turma.keys';
 import { eadTurmaService } from '../ead-turma.service';
 
@@ -17,9 +17,12 @@ export const useTurmaEadAlunosDisponiveis = (
   search: string,
   enabled: boolean,
 ) => useQuery({
-  queryKey: eadTurmaKeys.alunosDisponiveis(turmaId, search),
-  queryFn: () => eadTurmaService.getAlunosDisponiveis(turmaId, search),
+  queryKey: eadTurmaKeys.alunosDisponiveis(turmaId, search.trim()),
+  queryFn: () => eadTurmaService.getAlunosDisponiveis(turmaId, search.trim()),
   enabled,
+  placeholderData: keepPreviousData,
+  staleTime: 30_000,
+  refetchOnWindowFocus: false,
 });
 
 export const useTurmaEadPagamentos = (turmaId: string) => useQuery({

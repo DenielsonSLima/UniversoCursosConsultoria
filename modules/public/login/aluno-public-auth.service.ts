@@ -190,6 +190,19 @@ const finalizePublicSignupFromMetadata = async () => {
   });
 };
 
+const getExistingOrFinalizePublicAlunoProfile = async () => {
+  // O perfil sincronizado pelo Auth pode já existir e ter sido corrigido pela
+  // secretaria depois do cadastro. Nesse caso, os metadados originais não
+  // devem sobrescrever novamente CPF, telefone ou outros dados a cada login.
+  const existingProfile = await getPortalProfile({
+    preferredRole: 'Aluno',
+    allowedRoles: ['Aluno'],
+  });
+  if (existingProfile) return existingProfile;
+
+  return finalizePublicSignupFromMetadata();
+};
+
 export const alunoPublicAuthService = {
   async login(
     email: string,
@@ -201,17 +214,18 @@ export const alunoPublicAuthService = {
     });
     if (error) throw new Error(error);
 
-    let profile = await finalizePublicSignupFromMetadata();
-    if (!profile) {
-      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    }
+    try {
+      const profile = await getExistingOrFinalizePublicAlunoProfile();
 
-    if (!profile || profile.tipo !== 'Aluno') {
+      if (!profile || profile.tipo !== 'Aluno') {
+        throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
+      }
+
+      return profile;
+    } catch (profileError) {
       await loginService.logout();
-      throw new Error('Este login é exclusivo para alunos. Use uma conta de aluno ou acesse o portal institucional.');
+      throw profileError;
     }
-
-    return profile;
   },
 
   async loginWithGoogle(redirectPath = '/aluno') {
@@ -240,17 +254,18 @@ export const alunoPublicAuthService = {
   },
 
   async finishExternalLogin() {
-    let profile = await finalizePublicSignupFromMetadata();
-    if (!profile) {
-      profile = await getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
-    }
+    try {
+      const profile = await getExistingOrFinalizePublicAlunoProfile();
 
-    if (!profile || profile.tipo !== 'Aluno') {
+      if (!profile || profile.tipo !== 'Aluno') {
+        throw new Error('Esta conta não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
+      }
+
+      return profile;
+    } catch (profileError) {
       await loginService.logout();
-      throw new Error('Esta conta não possui vínculo de aluno. Use um e-mail de aluno ou crie o cadastro de aluno antes de entrar.');
+      throw profileError;
     }
-
-    return profile;
   },
 
   getFriendlyAuthRedirectError,

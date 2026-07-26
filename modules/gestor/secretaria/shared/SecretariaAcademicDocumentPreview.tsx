@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Printer, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Printer } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
@@ -131,36 +131,38 @@ const SecretariaAcademicDocumentPreview: React.FC<Props> = ({
   return createPortal(
     <div
       id="academic-preview-modal"
-      className="fixed inset-0 z-[140] flex h-[100dvh] w-screen animate-fadeIn flex-col overflow-hidden bg-slate-950/75 backdrop-blur-sm"
+      className="fixed inset-0 z-[2147483000] flex h-[100dvh] w-screen animate-fadeIn flex-col overflow-hidden bg-slate-950"
       role="dialog"
       aria-modal="true"
       aria-label="Prévia do documento acadêmico"
     >
-      <header className="flex shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div>
-          <h4 className="text-sm font-black uppercase tracking-wide text-[#001a33]">
+      <header className="flex shrink-0 flex-col gap-3 border-b border-white/10 bg-slate-800 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Voltar"
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+          <h4 className="text-sm font-black uppercase tracking-wide text-white">
             Prévia do {type === 'boletim_tecnico' ? 'boletim escolar' : 'atestado de conclusão'}
           </h4>
-          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-300">
             {moduleName || 'Documento acadêmico oficial'}
           </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div>
           <button
             type="button"
             onClick={() => window.print()}
             disabled={isLoading || isError}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white shadow-md transition-colors hover:bg-blue-900 disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white shadow-md transition-colors hover:bg-blue-500 disabled:opacity-40"
           >
             <Printer size={13} /> Imprimir
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar prévia"
-            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"
-          >
-            <X size={16} />
           </button>
         </div>
       </header>

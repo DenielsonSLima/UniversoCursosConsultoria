@@ -246,20 +246,23 @@ export const secretariaDocumentosService = {
       alunosPorTurma.forEach((alunos, turmaId) => internshipCounts.set(turmaId, alunos.size));
       turmas = turmas.filter((turma: any) => turmaIds.has(turma.id));
     }
-    const counts = await Promise.all(
-      turmas.map(async (turma: any) => {
-        if (internshipOnly) return internshipCounts.get(turma.id) || 0;
-        const { count, error: countError } = await supabase
-          .from('matriculas')
-          .select('id', { count: 'exact', head: true })
-          .eq('turma_id', turma.id)
-          .eq('status', 'ATIVO');
-        if (countError) throw countError;
-        return count || 0;
-      })
-    );
+    const activeEnrollmentCounts = new Map<string, number>();
+    if (!internshipOnly && turmas.length) {
+      const { data: activeEnrollments, error: activeEnrollmentsError } = await supabase
+        .from('matriculas')
+        .select('turma_id')
+        .in('turma_id', turmas.map((turma: any) => turma.id))
+        .eq('status', 'ATIVO');
+      if (activeEnrollmentsError) throw activeEnrollmentsError;
+      (activeEnrollments || []).forEach((enrollment: any) => {
+        activeEnrollmentCounts.set(
+          enrollment.turma_id,
+          (activeEnrollmentCounts.get(enrollment.turma_id) || 0) + 1
+        );
+      });
+    }
 
-    return turmas.map((turma: any, index) => ({
+    return turmas.map((turma: any) => ({
       id: turma.id,
       nome: turma.nome,
       codigo: turma.codigo,
@@ -268,7 +271,9 @@ export const secretariaDocumentosService = {
       modalidade: turma.cursos?.modalidade || '',
       turno: turma.turno,
       status: turma.status,
-      totalAlunos: counts[index],
+      totalAlunos: internshipOnly
+        ? internshipCounts.get(turma.id) || 0
+        : activeEnrollmentCounts.get(turma.id) || 0,
     }));
   },
 
