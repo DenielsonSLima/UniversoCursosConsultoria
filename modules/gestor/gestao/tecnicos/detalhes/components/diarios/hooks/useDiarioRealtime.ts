@@ -39,6 +39,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
           diarioClasseKeys.aulas(turmaId, disciplinaId),
           diarioClasseKeys.resultados(turmaId, disciplinaId),
           diarioClasseKeys.praticas(turmaId, disciplinaId),
+          diarioClasseKeys.fechamento(turmaId, disciplinaId),
         ),
       )
       .on(
@@ -75,6 +76,7 @@ export const useDiarioRealtime = (turmaId: string, disciplinaId: string) => {
         scheduleRefresh(
           diarioClasseKeys.instruments(turmaId, disciplinaId),
           diarioClasseKeys.resultados(turmaId, disciplinaId),
+          diarioClasseKeys.fechamento(turmaId, disciplinaId),
         ),
       )
       .on(
