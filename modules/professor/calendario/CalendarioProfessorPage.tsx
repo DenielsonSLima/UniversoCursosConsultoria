@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
 import { CalendarEvent } from '../../gestor/calendario/calendario.types';
 import { DEFAULT_EVENT_TYPES } from '../../gestor/calendario/calendario.types';
 import CalendarioReadOnly from '../../shared/components/CalendarioReadOnly';
@@ -41,6 +42,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
             id,
             titulo,
             carga_horaria,
+            sessao,
             data_aula,
             turma_id,
             disciplina_id
@@ -66,7 +68,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
         const disciplinaNames = new Map((disciplinasData || []).map((disciplina: any) => [disciplina.id, disciplina.nome]));
         const professorNames = new Map((disciplinas || []).map((disciplina: any) => [`${disciplina.turma_id}:${disciplina.disciplina_id}`, disciplina.professor_nome || 'Professor']));
 
-        classEvents = (aulas || [])
+        classEvents = groupAcademicClassMeetings((aulas || []) as any[])
           .filter((aula: any) => assignmentPairs.has(`${aula.turma_id}:${aula.disciplina_id}`))
           .map((a: any) => {
             const turma = turmaById.get(a.turma_id) || {};
@@ -75,6 +77,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
             const professorName = professorNames.get(`${a.turma_id}:${a.disciplina_id}`) || 'Professor';
             const cargaHoraria = Number(a.carga_horaria || 0);
             const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
+            const sessoesLabel = formatAcademicSessions(a.sessoes);
 
             return {
               id: `class-${a.id}`,
@@ -84,6 +87,7 @@ const CalendarioProfessorPage: React.FC<CalendarioProfessorPageProps> = ({ profe
                 `Professor: ${professorName}`,
                 `Turma: ${turmaNome}${turma.codigo ? ` (${turma.codigo})` : ''}`,
                 `Carga horária: ${cargaLabel}`,
+                sessoesLabel ? `Sessões: ${sessoesLabel}` : null,
                 turma.turno ? `Turno: ${turma.turno}` : null,
               ].filter(Boolean).join(' • '),
               date: a.data_aula,
