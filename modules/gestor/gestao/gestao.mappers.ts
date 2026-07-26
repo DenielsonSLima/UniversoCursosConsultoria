@@ -9,6 +9,24 @@ const normalizeStatus = (status?: string | null) => String(status || '')
 
 const EAD_ACTIVE_STATUSES = new Set(['ATIVO', 'CONCLUIDO']);
 
+type GestaoAcademicProgressRow = {
+  turma_id: string;
+  total_disciplinas: number | string;
+  disciplinas_concluidas: number | string;
+  grade_concluida: boolean;
+  modulo_atual_id: string | null;
+  modulo_atual_nome: string | null;
+  modulo_atual_ordem: number | string | null;
+  disciplina_atual_id: string | null;
+  disciplina_atual_nome: string | null;
+  disciplina_atual_ordem: number | string | null;
+  professor_atual: string | null;
+  carga_horaria: number | string | null;
+  horas_realizadas: number | string | null;
+  proxima_aula_data: string | null;
+  proxima_aula_titulo: string | null;
+};
+
 export const mapTurma = (t: any): Turma => {
   const matriculas = t.matriculas || [];
   const isEad = t.cursos?.modalidade === 'EAD';
@@ -70,78 +88,51 @@ export const enrichTechnicalAcademicProgress = async (turmas: Turma[]): Promise<
   if (turmas.length === 0) return turmas;
 
   const turmaIds = turmas.map((turma) => turma.id);
-  const cursoIds = Array.from(new Set(turmas.map((turma) => turma.cursoId).filter(Boolean)));
-  const todayStr = new Date().toLocaleDateString('sv-SE');
 
-  const [configsResult, gradeResult, upcomingClassesResult] = await Promise.all([
-    supabase.from('turmas_disciplinas')
-      .select('turma_id, disciplina_id, concluida, professor_nome')
-      .in('turma_id', turmaIds),
-    supabase.from('modulos')
-      .select('id, curso_id, created_at, disciplinas(id, nome, created_at)')
-      .in('curso_id', cursoIds)
-      .order('created_at', { ascending: true }),
-    supabase.from('aulas_turma')
-      .select('turma_id, data_aula, titulo')
-      .in('turma_id', turmaIds)
-      .gte('data_aula', todayStr)
-      .order('data_aula', { ascending: true }),
-  ]);
+  const { data, error } = await supabase.rpc('get_gestao_turmas_academic_progress', {
+    p_turma_ids: turmaIds,
+  });
 
-  if (configsResult.error || gradeResult.error || upcomingClassesResult.error) {
-    console.error(
-      'Erro ao carregar progresso acadêmico das turmas:',
-      configsResult.error || gradeResult.error || upcomingClassesResult.error
-    );
-    return turmas;
+  if (error) {
+    console.error('Erro ao carregar progresso acadêmico canônico das turmas:', error);
+    throw error;
   }
 
-  const configured = new Map<string, { concluida: boolean; professor_nome?: string }>();
-  (configsResult.data || []).forEach((row: any) => {
-    configured.set(`${row.turma_id}:${row.disciplina_id}`, {
-      concluida: row.concluida === true,
-      professor_nome: row.professor_nome || undefined,
-    });
-  });
-
-  const gradeByCourse = new Map<string, any[]>();
-  (gradeResult.data || []).forEach((module: any) => {
-    gradeByCourse.set(module.curso_id, [
-      ...(gradeByCourse.get(module.curso_id) || []),
-      ...(module.disciplinas || []),
-    ]);
-  });
-
-  const upcomingByTurma = new Map<string, { data_aula: string; titulo: string }>();
-  (upcomingClassesResult.data || []).forEach((row: any) => {
-    if (!upcomingByTurma.has(row.turma_id)) {
-      upcomingByTurma.set(row.turma_id, {
-        data_aula: row.data_aula,
-        titulo: row.titulo || '',
-      });
-    }
-  });
+  const progressByTurma = new Map<string, GestaoAcademicProgressRow>(
+    ((data || []) as GestaoAcademicProgressRow[]).map((row) => [row.turma_id, row]),
+  );
 
   return turmas.map((turma) => {
-    const disciplinas = gradeByCourse.get(turma.cursoId) || [];
-    const currentIndex = disciplinas.findIndex((discipline) => (
-      configured.get(`${turma.id}:${discipline.id}`)?.concluida !== true
-    ));
+    const progress = progressByTurma.get(turma.id);
+    if (!progress) {
+      throw new Error(`Progresso acadêmico indisponível para a turma ${turma.id}.`);
+    }
 
-    const currentConfig = currentIndex >= 0
-      ? configured.get(`${turma.id}:${disciplinas[currentIndex]?.id}`)
-      : null;
-
-    const nextClass = upcomingByTurma.get(turma.id);
+    const hasCurrentDiscipline = Boolean(progress.disciplina_atual_id);
 
     return {
       ...turma,
-      totalDisciplinas: disciplinas.length,
-      disciplinaAtual: currentIndex >= 0 ? disciplinas[currentIndex]?.nome || 'Disciplina não informada' : undefined,
-      disciplinaAtualOrdem: currentIndex >= 0 ? currentIndex + 1 : undefined,
-      professorAtual: currentConfig?.professor_nome || 'Não definido',
-      proximaAulaData: nextClass?.data_aula || undefined,
-      proximaAulaTitulo: nextClass?.titulo || undefined,
+      progressoAcademicoDisponivel: true,
+      totalDisciplinas: Number(progress.total_disciplinas || 0),
+      disciplinasConcluidas: Number(progress.disciplinas_concluidas || 0),
+      gradeConcluida: progress.grade_concluida === true,
+      moduloAtualId: hasCurrentDiscipline ? progress.modulo_atual_id || undefined : undefined,
+      moduloAtual: hasCurrentDiscipline ? progress.modulo_atual_nome || 'Módulo não informado' : undefined,
+      moduloAtualOrdem: hasCurrentDiscipline && progress.modulo_atual_ordem != null
+        ? Number(progress.modulo_atual_ordem)
+        : undefined,
+      disciplinaAtualId: hasCurrentDiscipline ? progress.disciplina_atual_id : undefined,
+      disciplinaAtual: hasCurrentDiscipline
+        ? progress.disciplina_atual_nome || 'Disciplina não informada'
+        : undefined,
+      disciplinaAtualOrdem: hasCurrentDiscipline
+        ? Number(progress.disciplina_atual_ordem)
+        : undefined,
+      professorAtual: hasCurrentDiscipline ? progress.professor_atual || 'Não definido' : undefined,
+      cargaHorariaAtual: hasCurrentDiscipline ? Number(progress.carga_horaria || 0) : undefined,
+      horasRealizadasAtual: hasCurrentDiscipline ? Number(progress.horas_realizadas || 0) : undefined,
+      proximaAulaData: progress.proxima_aula_data || undefined,
+      proximaAulaTitulo: progress.proxima_aula_titulo || undefined,
     };
   });
 };
