@@ -195,7 +195,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
   onPoloChange,
   onPoloSelectorChange,
 }) => (
-  <div className="flex h-screen bg-slate-100 font-sans antialiased overflow-hidden">
+  <div className="professor-typography flex h-screen overflow-hidden bg-slate-100 font-sans">
     <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
       <div className="p-6 border-b border-white/10">
         <div className="bg-white p-3 rounded-2xl shadow-md flex items-center justify-center">

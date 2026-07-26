@@ -170,7 +170,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       <div className="bg-white rounded-[2.5rem] border border-slate-100 p-5 md:p-6 shadow-sm">
         <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">

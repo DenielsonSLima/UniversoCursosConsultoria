@@ -122,14 +122,18 @@ const selectRegistry = () => supabase
     parceiro:parceiros!assinaturas_pessoas_parceiro_id_fkey(id,nome,email,status)
   `);
 
-const uploadSignature = async (path: string, file: File) => {
+const uploadSignature = async (
+  path: string,
+  file: File,
+  options: { upsert?: boolean } = {},
+) => {
   ensureSignatureFile(file);
   const { data, error } = await supabase.storage
     .from(SIGNATURE_BUCKET)
     .upload(path, file, {
       cacheControl: '0',
       contentType: file.type,
-      upsert: true,
+      upsert: options.upsert ?? true,
     });
   if (error) throw error;
   if (!data?.path) throw new Error('O Storage não retornou o caminho da assinatura.');
@@ -199,7 +203,10 @@ export const assinaturasRegistryService = {
     const folder = item.category === 'PROFESSOR'
       ? `professores/${item.partnerId}`
       : `${item.category.toLowerCase()}/${item.id}`;
-    const path = await uploadSignature(`${folder}/assinatura`, file);
+    const path = await uploadSignature(
+      item.signaturePath || `${folder}/assinatura`,
+      file,
+    );
     const { data, error } = await supabase
       .from('assinaturas_pessoas')
       .update({ assinatura_path: path, assinatura_url: null })
@@ -211,11 +218,44 @@ export const assinaturasRegistryService = {
   },
 
   async uploadMyProfessorSignature(professorId: string, file: File): Promise<SignatureRegistryItem> {
-    const path = await uploadSignature(`professores/${professorId}/assinatura`, file);
+    ensureSignatureFile(file);
+
+    const existingSignature = await this.getProfessorSignature(professorId);
+    if (
+      existingSignature?.signaturePath
+      || existingSignature?.signatureUrl
+      || existingSignature?.previewUrl
+    ) {
+      throw new Error(
+        'Sua assinatura já está vinculada. Solicite à gestão qualquer alteração ou exclusão.',
+      );
+    }
+
+    const path = `professores/${professorId}/assinatura`;
+    let uploadError: unknown = null;
+
+    try {
+      await uploadSignature(path, file, { upsert: false });
+    } catch (error) {
+      // Pode existir um primeiro envio que concluiu no Storage, mas perdeu a
+      // resposta antes do vínculo. O RPC abaixo finaliza esse mesmo arquivo;
+      // ele nunca é sobrescrito pelo professor.
+      uploadError = error;
+    }
+
     const { error } = await supabase.rpc('salvar_minha_assinatura_professor', {
       p_assinatura_path: path,
     });
-    if (error) throw error;
+    if (error) {
+      try {
+        const linkedSignature = await this.getProfessorSignature(professorId);
+        if (linkedSignature?.signaturePath === path) return linkedSignature;
+      } catch {
+        // Mantém abaixo o erro original do vínculo.
+      }
+
+      throw uploadError || error;
+    }
     const signature = await this.getProfessorSignature(professorId);
     if (!signature) throw new Error('A assinatura foi enviada, mas o vínculo não foi localizado.');
     return signature;

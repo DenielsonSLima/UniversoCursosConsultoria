@@ -102,6 +102,14 @@
           -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Evita a rasterização fina/turva dos textos no portal do professor,
+           especialmente no Safari em telas com escala ou zoom. */
+        #root .professor-typography,
+        #root .professor-typography * {
+          -webkit-font-smoothing: auto;
+          -moz-osx-font-smoothing: auto;
+        }
+
         .animate-fadeIn {
             animation: fadeIn 0.25s ease-out forwards;
             backface-visibility: hidden;
