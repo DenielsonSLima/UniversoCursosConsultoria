@@ -13,7 +13,12 @@ import {
   AlertTriangle,
   Sparkles
 } from 'lucide-react';
-import { dashboardService, DashboardKpis, ChartDataPoint, RecentActivityItem } from './dashboard.service';
+import type { DashboardKpis, ChartDataPoint, RecentActivityItem } from './dashboard.service';
+import {
+  dashboardActivityQueryOptions,
+  dashboardChartQueryOptions,
+  dashboardKpisQueryOptions,
+} from './dashboard.queries';
 
 interface DashboardPageProps {
   poloId?: string | null;
@@ -50,22 +55,24 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
 };
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => {
+  const activePoloId = poloId || '';
+
   // 1. Fetch KPIs
   const { data: kpis, isLoading: loadingKpis } = useQuery<DashboardKpis>({
-    queryKey: ['dashboard_kpis', poloId],
-    queryFn: () => dashboardService.getKpis(poloId),
+    ...dashboardKpisQueryOptions(activePoloId),
+    enabled: Boolean(activePoloId),
   });
 
   // 2. Fetch Chart Data
   const { data: chartData = [], isLoading: loadingChart } = useQuery<ChartDataPoint[]>({
-    queryKey: ['dashboard_chart', poloId],
-    queryFn: () => dashboardService.getChartData(poloId, 6),
+    ...dashboardChartQueryOptions(activePoloId),
+    enabled: Boolean(activePoloId),
   });
 
   // 3. Fetch Recent Activity
   const { data: recentActivity = [], isLoading: loadingActivity } = useQuery<RecentActivityItem[]>({
-    queryKey: ['dashboard_activity', poloId],
-    queryFn: () => dashboardService.getRecentActivity(poloId, 5),
+    ...dashboardActivityQueryOptions(activePoloId),
+    enabled: Boolean(activePoloId),
   });
 
   const formatCurrency = (val: number) => {
