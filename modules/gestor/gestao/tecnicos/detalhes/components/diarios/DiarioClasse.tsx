@@ -11,6 +11,7 @@ import DiarioConteudoTab from './DiarioConteudoTab';
 import DiarioFrequenciaTab from './DiarioFrequenciaTab';
 import DiarioObservacoesTab from './DiarioObservacoesTab';
 import DiarioResultadoTab from './DiarioResultadoTab';
+import DiarioFechamentoTab from './DiarioFechamentoTab';
 import DiarioExportModal from './export/DiarioExportModal';
 import TechnicalDataError from '../TechnicalDataError';
 import {
@@ -21,6 +22,8 @@ import {
   useDiarioPraticas,
   useDiarioStudents,
   useDiarioTemplate,
+  useDiarioClosure,
+  useSetDiarioClosureMutation,
   useSaveDiarioGradesMutation,
   useSaveDiarioObservacoesMutation,
   useSaveDiarioPraticaMutation,
@@ -34,6 +37,7 @@ import {
   DiarioGradeResult,
   GradesMap,
   AttendanceMap,
+  AttendanceStatus,
 } from './diario-classe.types';
 import { DiarioExportMode } from './turma-diarios.types';
 import {
@@ -86,10 +90,33 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   const [exportMode, setExportMode] = useState<DiarioExportMode>(
     initialExportMode || 'PREENCHIDO',
   );
-  const isReadOnly = !isAcademicContextEditable(turma?.status, disciplina?.periodoStatus);
+  const closureQuery = useDiarioClosure(turma.id, disciplina.id);
+  const closureState = closureQuery.data;
+  const closureUnavailable = closureQuery.isError;
+  const closurePending = closureQuery.isPending;
+  const lockedByDiary = closurePending
+    || closureUnavailable
+    || closureState?.bloqueio === 'TOTAL'
+    || (closureState?.bloqueio === 'PROFESSOR' && effectiveAccessMode === 'PROFESSOR');
+  const isReadOnly = !isAcademicContextEditable(turma?.status, disciplina?.periodoStatus)
+    || lockedByDiary;
   const readOnlyContent = getAcademicReadOnlyContent(turma?.status, disciplina?.periodoStatus);
-  const readOnlyLabel = readOnlyContent.label;
-  const readOnlyMessage = readOnlyContent.message;
+  const readOnlyLabel = closurePending
+    ? 'Verificando fechamento'
+    : closureUnavailable
+      ? 'Fechamento indisponível'
+      : lockedByDiary
+        ? 'Diário bloqueado'
+        : readOnlyContent.label;
+  const readOnlyMessage = lockedByDiary
+    ? closurePending
+      ? 'Aguarde enquanto o sistema confirma o estado de fechamento deste diário.'
+      : closureUnavailable
+        ? 'Não foi possível confirmar a trava do diário. Os lançamentos foram protegidos até a consulta ser restabelecida.'
+        : closureState?.bloqueio === 'TOTAL'
+      ? 'A Gestão fechou este diário para todos. Reabra-o na aba Fechamento para editar.'
+      : 'O diário foi enviado para revisão e está bloqueado para o professor.'
+    : readOnlyContent.message;
 
   const templateQuery = useDiarioTemplate(turma.cursoId);
   const { data: diarioTemplate } = templateQuery;
@@ -155,7 +182,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     if (Object.keys(localAttendance).length === 0) return attendanceMap;
     const merged: AttendanceMap = { ...attendanceMap };
     Object.entries(localAttendance).forEach(([studentId, classMap]) => {
-      merged[studentId] = { ...(merged[studentId] || {}), ...(classMap as Record<string, 'P' | 'F' | null>) };
+      merged[studentId] = { ...(merged[studentId] || {}), ...(classMap as Record<string, AttendanceStatus>) };
     });
     return merged;
   }, [attendanceMap, localAttendance]);
@@ -177,14 +204,20 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     disciplina.id,
     (input) => {
       const aluno = students.find((s) => s.id === input.alunoId);
-      const aula = aulas.find((a) => a.id === input.aulaId);
+      const aula = aulas.find((a) => a.sessoes.some((sessao) => sessao.id === input.aulaId));
+      const sessao = aula?.sessoes.find((item) => item.id === input.aulaId);
       const alunoNome = aluno?.nome || 'Aluno';
-      const aulaLabel = aula?.dataLabel ? ` (${aula.dataLabel})` : '';
+      const turnoLabel = sessao && sessao.periodo !== 'U' ? ` ${sessao.periodo}` : '';
+      const aulaLabel = aula?.dataLabel ? ` (${aula.dataLabel}${turnoLabel})` : '';
 
       if (input.nextStatus === 'P') {
         toast.success('Presença registrada', `Presença de ${alunoNome}${aulaLabel} salva.`);
       } else if (input.nextStatus === 'F') {
         toast.info('Falta registrada', `Falta de ${alunoNome}${aulaLabel} lançada.`);
+      } else if (input.nextStatus === 'J') {
+        toast.info('Falta justificada', `Justificativa de ${alunoNome}${aulaLabel} registrada.`);
+      } else {
+        toast.info('Frequência removida', `O lançamento de ${alunoNome}${aulaLabel} foi removido.`);
       }
     },
     (error) => {
@@ -226,6 +259,21 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
       toast.error('Observações não salvas', error?.message || 'Não foi possível salvar as observações.');
     },
   );
+  const setClosureMutation = useSetDiarioClosureMutation(
+    turma.id,
+    disciplina.id,
+    (bloqueio) => {
+      toast.success(
+        bloqueio === 'TOTAL' ? 'Diário fechado' : bloqueio === 'PROFESSOR' ? 'Diário em revisão' : 'Diário reaberto',
+        bloqueio === 'TOTAL'
+          ? 'Professor e Gestão não podem mais alterar os lançamentos.'
+          : bloqueio === 'PROFESSOR'
+            ? 'O professor não pode mais editar; a Gestão continua com acesso.'
+            : 'Os lançamentos foram liberados novamente.',
+      );
+    },
+    (error) => toast.error('Fechamento não alterado', error?.message || 'Não foi possível alterar a trava do diário.'),
+  );
 
   const handleToggleAttendance = (studentId: string, classId: string) => {
     if (isReadOnly) return;
@@ -237,7 +285,13 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
       return;
     }
     const current = effectiveAttendanceMap[studentId]?.[classId] || null;
-    const nextStatus = current === null ? 'P' : current === 'P' ? 'F' : 'P';
+    const nextStatus: AttendanceStatus = current === null
+      ? 'P'
+      : current === 'P'
+        ? 'F'
+        : current === 'F'
+          ? 'J'
+          : null;
 
     // Atualização otimista instantânea na UI (< 1ms)
     setLocalAttendance((prev) => ({
@@ -326,7 +380,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     || saveStudentGradesMutation.isPending
     || savePraticaMutation.isPending
     || saveObservacoesMutation.isPending
-    || savingInstruments;
+    || savingInstruments
+    || setClosureMutation.isPending;
 
   const openExportModal = (mode: DiarioExportMode) => {
     if (hasPendingWrites) {
@@ -442,6 +497,31 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
               onChange={setLocalObservacoes}
               onSave={(text) => saveObservacoesMutation.mutate(text)}
             />
+          )}
+          {activeTab === 'fechamento' && closureState && (
+            <DiarioFechamentoTab
+              state={closureState}
+              accessMode={effectiveAccessMode}
+              saving={setClosureMutation.isPending}
+              onChange={(bloqueio, motivo, confirmarPendencias) =>
+                setClosureMutation.mutate({ bloqueio, motivo, confirmarPendencias })}
+            />
+          )}
+          {activeTab === 'fechamento' && closureQuery.isError && (
+            <div className="p-6">
+              <TechnicalDataError
+                title="Fechamento não carregado"
+                message="Os demais dados do diário continuam disponíveis em modo seguro. Tente carregar novamente o estado de fechamento."
+                retrying={closureQuery.isFetching}
+                onRetry={() => { void closureQuery.refetch(); }}
+              />
+            </div>
+          )}
+          {activeTab === 'fechamento' && closureQuery.isPending && (
+            <div className="flex items-center justify-center gap-3 py-20 text-sm font-bold text-slate-500">
+              <Loader2 className="animate-spin text-blue-600" size={22} />
+              Verificando o fechamento do diário...
+            </div>
           )}
         </div>
         <DiarioClasseFooter disciplina={disciplina} />
