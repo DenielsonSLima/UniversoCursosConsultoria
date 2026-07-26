@@ -3,6 +3,7 @@ import { AlertCircle, BookOpen, Calendar, Clock, Loader2, TrendingUp, Users } fr
 import { useQuery } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import { supabase } from '../../../../../../lib/supabase';
+import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../../../../lib/academicClassMeetings';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
 import { academicLifecycleService } from '../academic-lifecycle.service';
 import TechnicalDataError from './TechnicalDataError';
@@ -23,12 +24,12 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('aulas_turma')
-        .select('id, titulo, carga_horaria, data_aula, created_at, disciplinas(nome)')
+        .select('id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id, created_at, disciplinas(nome)')
         .eq('turma_id', turma.id)
         .order('data_aula', { ascending: false, nullsFirst: false })
-        .limit(3);
+        .limit(6);
       if (error) throw error;
-      return data || [];
+      return groupAcademicClassMeetings((data || []) as any[]).slice(0, 3);
     },
   });
   const recentClasses = recentClassesQuery.data || [];
@@ -124,6 +125,7 @@ const TurmaResumo: React.FC<TurmaResumoProps> = ({ turma }) => {
                     <h4 className="font-bold text-[#001a33] text-sm truncate">{lesson.titulo}</h4>
                     <p className="text-xs text-slate-500 mt-1 truncate">
                       {lesson.disciplinas?.nome || 'Disciplina'} · {lesson.carga_horaria}h
+                      {formatAcademicSessions(lesson.sessoes) ? ` · ${formatAcademicSessions(lesson.sessoes)}` : ''}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">
