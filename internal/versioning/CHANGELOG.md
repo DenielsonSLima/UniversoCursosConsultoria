@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [0.7.0-beta.2] - 2026-07-26
+
+### Adicionado
+
+- Seleção de módulo no boletim técnico do portal do aluno, com escolha automática do módulo em andamento ou do último módulo fechado.
+
+### Alterado
+
+- O carregamento de módulos e resultados acadêmicos do boletim passa a ocorrer somente ao abrir o documento, com cache, estado de carregamento e tentativa de recuperação.
+
+### Corrigido
+
+- Módulos ainda planejados e suas disciplinas deixam de aparecer como páginas ou resultados vazios no boletim do aluno.
+
+### Segurança
+
+- A consulta aceita exclusivamente períodos `ABERTO`, `EM_FECHAMENTO` ou `FECHADO`, preservando a regra existente de matrícula técnica ativa em turma em andamento.
+
 ## [0.7.0-beta.1] - 2026-07-26
 
 ### Adicionado
