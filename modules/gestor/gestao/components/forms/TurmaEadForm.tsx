@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, MonitorPlay, Calendar, Lock } from 'lucide-react';
 import { Turno } from '../../gestao.types';
+import { parseCivilDate } from '../../gestao-date.utils';
 
 interface TurmaEadFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | Promise<void>;
   cursosDisponiveis: any[];
 }
 
@@ -25,17 +26,19 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
     nomeAutomatico: '',
     codigoAutomatico: ''
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Lógica Automação EAD (Sem Polo)
   useEffect(() => {
     if (formData.cursoId && formData.dataInicio) {
         const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
-        const date = new Date(formData.dataInicio);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
+        const date = parseCivilDate(formData.dataInicio);
+        if (!date) return;
+        const { year, month } = date;
         const semester = month <= 6 ? 1 : 2;
 
-        if (curso && !isNaN(year)) {
+        if (curso) {
             const siglaCurso = curso.nome.substring(0, 4).toUpperCase().replace(/\s/g, '');
             
             // Código: 2024.1-GEST-EAD
@@ -49,14 +52,26 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
     }
   }, [formData.cursoId, formData.dataInicio, cursosDisponiveis]);
 
+  useEffect(() => {
+    if (isOpen) setSaveError(null);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleClose = () => {
+    if (!isSaving) onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     const curso = cursosDisponiveis.find(c => c.id === formData.cursoId);
     if (!curso) { alert('Selecione o curso'); return; }
 
-    onSave({
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onSave({
         ...formData,
         nome: formData.nomeAutomatico,
         codigo: formData.codigoAutomatico,
@@ -68,13 +83,18 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
         turno: 'EAD' as Turno,
         modalidade: 'EAD',
         status: 'EM_ANDAMENTO'
-    });
-    onClose();
+      });
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar a turma.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm transition-opacity" onClick={handleClose}></div>
       
       <div className="relative bg-white rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl  border border-slate-100 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
@@ -82,7 +102,7 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
              <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Nova Turma EAD</h3>
              <p className="text-xs text-slate-500 font-medium">Sem necessidade de polo físico.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
+          <button type="button" onClick={handleClose} disabled={isSaving} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors disabled:cursor-not-allowed disabled:opacity-40">
             <X size={20} />
           </button>
         </div>
@@ -178,7 +198,7 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
                 onChange={(e) => setFormData((current) => ({ ...current, sincronizarAsaasFuturo: e.target.checked }))}
                 className="h-4 w-4 rounded border-slate-300"
               />
-              Sincronizar futuras cobranças com Asaas
+              Sincronizar futuras cobranças com o gateway configurado
             </label>
           </div>
 
@@ -198,12 +218,17 @@ const TurmaEadForm: React.FC<TurmaEadFormProps> = ({
           </div>
 
           <div className="flex justify-end pt-4">
+            {saveError && (
+              <p className="mr-auto max-w-sm self-center text-xs font-bold text-rose-600" role="alert">
+                {saveError}
+              </p>
+            )}
             <button 
                 type="submit"
-                disabled={!formData.nomeAutomatico}
+                disabled={!formData.nomeAutomatico || isSaving}
                 className="px-8 py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-purple-700 transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <Save size={16} /> Criar Turma Online
+                <Save size={16} /> {isSaving ? 'Salvando...' : 'Criar Turma Online'}
             </button>
           </div>
 
