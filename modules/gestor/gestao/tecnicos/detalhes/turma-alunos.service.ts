@@ -101,7 +101,7 @@ export const turmaAlunosService = {
       aplicarDescontoRematricula: data.aplicar_desconto_rematricula !== false,
       aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula !== false,
       diaVencimento: Number(data.dia_vencimento_padrao || 10),
-      qtdParcelas: Number(data.qtd_parcelas || 11),
+      qtdParcelas: Number(data.qtd_parcelas),
       origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
       financeiroHerdado: data.financeiro_herdado ?? false,
       gerarCobrancasFuturas: data.gerar_cobrancas_futuras ?? false,

@@ -2,6 +2,29 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.3] - 2026-07-27
+
+### Adicionado
+
+- Submódulo Consulta API Banese com 12 perfis operacionais, prioridade EAD, exemplos de capacidade e visão clara do perfil anterior, efetivo e teto selecionado.
+- Histórico de execuções paginado por hora, agrupado em janelas de 10 minutos, com pesquisa, período e filtro exclusivo de erros.
+- Painel de saúde com resumo dos erros e das limitações HTTP 429 ocorridas na última hora.
+
+### Alterado
+
+- O modo automático evolui gradualmente até o teto conservador escolhido, reutiliza OAuth válido e recua ao detectar limitação ou taxa elevada de falhas.
+- Os ciclos de cobrança passam a obedecer à quantidade de parcelas configurada no curso ou na turma, sem assumir doze parcelas fixas.
+
+### Corrigido
+
+- A seleção visual de perfil agora diferencia o teto configurado do perfil realmente executado pelo automático.
+- Promoções automáticas exigem execução válida e amostra real; falhas reiniciam a estabilidade antes de qualquer avanço.
+
+### Segurança
+
+- Os quatro perfis avançados de 30, 60, 90 e 150 títulos por minuto permanecem bloqueados até autorização formal do Banese.
+- O módulo consulta apenas títulos já emitidos e não cria, reemite, cancela nem gera cobranças.
+
 ## [2.2.3-beta.2] - 2026-07-26
 
 ### Adicionado

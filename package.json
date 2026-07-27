@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
     "test:banese-ui": "node scripts/test-banese-payment-ui.mjs",
+    "test:banese-reconciliation": "node --test scripts/test-banese-reconciliation-control.mjs",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
     "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",

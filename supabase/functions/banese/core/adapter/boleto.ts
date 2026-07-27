@@ -430,6 +430,7 @@ export const queryBaneseBoleto = async (
   input: {
     convenio: unknown;
     nossoNumero: unknown;
+    accessToken?: BaneseAccessToken;
   },
 ) => {
   assertEnvironment(environment);
@@ -441,7 +442,8 @@ export const queryBaneseBoleto = async (
     );
   }
 
-  const token = await requestBaneseBoletoAccessToken(admin, environment);
+  const token = input.accessToken ??
+    await requestBaneseBoletoAccessToken(admin, environment);
   const baseEndpoint = `${
     BANESE_BOLETO_ENDPOINTS[environment].baseUrl
   }/convenios/${convenio}/boletos/${nossoNumero}`;

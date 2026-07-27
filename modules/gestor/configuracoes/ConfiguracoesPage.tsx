@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Building2, 
   Users, 
@@ -16,7 +17,8 @@ import {
   FileCode2,
   GraduationCap,
   Megaphone,
-  Lock
+  Lock,
+  Activity
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -37,9 +39,20 @@ import CategoriasFinanceirasConfig from './categorias-financeiras/CategoriasFina
 import SitePublicoConfig from './site-publico/SitePublicoConfig';
 import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
 import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
+import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConfig';
+import {
+  banesePollingQueryKey,
+  consultaApiBaneseService,
+} from './consulta-api-banese/consulta-api-banese.service';
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const banesePollingQuery = useQuery({
+    queryKey: banesePollingQueryKey,
+    queryFn: consultaApiBaneseService.getDashboard,
+    staleTime: 30_000,
+    retry: false,
+  });
 
   const menuItems = [
     { id: 'empresas', title: 'Dados da Empresa', desc: 'CNPJ, Endereço e Logo', icon: <Building2 size={24} />, color: 'bg-blue-500' },
@@ -58,6 +71,13 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
+    ...(banesePollingQuery.data?.available ? [{
+      id: 'consulta-api-banese',
+      title: 'Consulta API Banese',
+      desc: 'Confirmações, prioridade EAD e saúde operacional',
+      icon: <Activity size={24} />,
+      color: 'bg-emerald-700',
+    }] : []),
     { id: 'api', title: 'Status da API', desc: 'Monitoramento de serviços', icon: <Server size={24} />, color: 'bg-violet-500' },
   ];
 
@@ -79,6 +99,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;
+      case 'consulta-api-banese': return <ConsultaApiBaneseConfig />;
       case 'api': return <ApiStatusConfig />;
       default: return null;
     }

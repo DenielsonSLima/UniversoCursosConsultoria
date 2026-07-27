@@ -317,7 +317,9 @@ const ConfirmarMatriculaModal: React.FC<ConfirmarMatriculaModalProps> = ({
                   label="Valor da mensalidade"
                   value={finance.valorParcela}
                   onChange={(value) => onFinanceChange('valorParcela', String(value))}
-                  helper={`${turmaFinanceiroConfig?.qtdParcelas || 11} parcelas por ciclo`}
+                  helper={turmaFinanceiroConfig
+                    ? `${turmaFinanceiroConfig.qtdParcelas} parcelas por ciclo`
+                    : 'Quantidade definida na configuração da turma'}
                 />
                 <label className="space-y-2">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Dia das mensalidades</span>

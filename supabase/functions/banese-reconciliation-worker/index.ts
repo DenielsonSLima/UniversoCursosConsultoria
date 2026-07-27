@@ -1,10 +1,21 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { reconcileBaneseReceivable } from "../gateways/api/banese.ts";
-import { normalizeGatewayPaymentIdentity } from "../gateways/online-inscription.ts";
-import { syncRouteAwareFutureInstallments } from "../asaas/api/route-aware-future-sync.ts";
-import { requireGatewayEnvironment } from "../gateways/api/environment.ts";
+import {
+  queryBaneseBoleto,
+  requestBaneseBoletoAccessToken,
+} from "../banese/core/adapter.ts";
+import type {
+  BaneseAccessToken,
+  Environment,
+} from "../banese/core/adapter.ts";
 
-const MAX_BATCH_SIZE = 10;
+type CachedToken = {
+  token: BaneseAccessToken;
+  expiresAt: number;
+};
+
+const tokenCache = new Map<Environment, CachedToken>();
+const tokenRequests = new Map<Environment, Promise<BaneseAccessToken>>();
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -27,28 +38,108 @@ const safeEqual = (left: string, right: string) => {
   return difference === 0;
 };
 
-const readBatchSize = async (req: Request) => {
+const readRequestBody = async (req: Request) => {
   const text = await req.text();
-  if (!text) return MAX_BATCH_SIZE;
+  if (!text) return;
   if (text.length > 1_024) throw new Error("Corpo da requisição inválido.");
-  const body = JSON.parse(text) as Record<string, unknown>;
-  const parsed = Number(body.batchSize ?? MAX_BATCH_SIZE);
-  return Number.isInteger(parsed)
-    ? Math.max(1, Math.min(MAX_BATCH_SIZE, parsed))
-    : MAX_BATCH_SIZE;
+  JSON.parse(text);
 };
 
-const safeError = (error: unknown) => {
-  const record = error && typeof error === "object"
-    ? error as Record<string, unknown>
-    : null;
-  const message = error instanceof Error
-    ? error.message
-    : [record?.message, record?.details, record?.hint, record?.code]
-      .map((value) => String(value || "").trim())
-      .filter(Boolean)
-      .join(" | ") || String(error);
-  return message.replace(/[\r\n\t]+/g, " ").slice(0, 500);
+const wait = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const classifyError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const statusMatch = message.match(/\((\d{3})\)/);
+  const httpStatus = statusMatch ? Number(statusMatch[1]) : null;
+  if (httpStatus === 429) {
+    return {
+      result: "THROTTLED" as const,
+      errorClass: "RATE_LIMIT",
+      httpStatus,
+      publicMessage: "Consulta Banese temporariamente limitada (HTTP 429).",
+    };
+  }
+  if (httpStatus === 401 || httpStatus === 403) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "AUTH",
+      httpStatus,
+      publicMessage: "Falha de autenticação na consulta Banese.",
+    };
+  }
+  if (httpStatus && httpStatus >= 500) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "UPSTREAM_5XX",
+      httpStatus,
+      publicMessage: "Serviço Banese temporariamente indisponível.",
+    };
+  }
+  if (/timeout|timed out|aborted/i.test(message)) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "TIMEOUT",
+      httpStatus,
+      publicMessage: "Tempo esgotado na consulta Banese.",
+    };
+  }
+  if (/diverge|inválid|inval|bloquead|mudou durante/i.test(message)) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "REVIEW_REQUIRED",
+      httpStatus,
+      publicMessage: "Consulta Banese requer revisão financeira.",
+    };
+  }
+  return {
+    result: "ERROR" as const,
+    errorClass: "QUERY_ERROR",
+    httpStatus,
+    publicMessage: "Não foi possível confirmar o título no Banese.",
+  };
+};
+
+const invalidateToken = (environment: Environment) => {
+  tokenCache.delete(environment);
+  tokenRequests.delete(environment);
+};
+
+const getSharedToken = async (
+  admin: any,
+  environment: Environment,
+  refreshMarginSeconds: number,
+  metrics: { requests: number; reused: boolean },
+) => {
+  const cached = tokenCache.get(environment);
+  if (cached && cached.expiresAt > Date.now()) {
+    metrics.reused = true;
+    return cached.token;
+  }
+
+  const inFlight = tokenRequests.get(environment);
+  if (inFlight) {
+    metrics.reused = true;
+    return await inFlight;
+  }
+
+  const request = requestBaneseBoletoAccessToken(admin, environment);
+  tokenRequests.set(environment, request);
+  metrics.requests += 1;
+  try {
+    const token = await request;
+    const expiresIn = Math.max(
+      60,
+      Number(token.expiresIn || 3600) - refreshMarginSeconds,
+    );
+    tokenCache.set(environment, {
+      token,
+      expiresAt: Date.now() + expiresIn * 1000,
+    });
+    return token;
+  } finally {
+    tokenRequests.delete(environment);
+  }
 };
 
 Deno.serve(async (req: Request) => {
@@ -80,238 +171,194 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Não autorizado." }, 401);
   }
 
-  let batchSize: number;
   try {
-    batchSize = await readBatchSize(req);
+    await readRequestBody(req);
   } catch {
     return json({ error: "Requisição inválida." }, 400);
   }
 
+  const startedAt = Date.now();
+  const { data: runConfig, error: beginError } = await admin.rpc(
+    "begin_banese_reconciliation_run",
+  );
+  if (beginError) {
+    console.error("banese reconciliation begin failed", {
+      errorClass: "BEGIN_RUN_ERROR",
+    });
+    return json({ error: "Não foi possível iniciar a conciliação." }, 500);
+  }
+  if (!runConfig?.enabled) {
+    return json({
+      success: true,
+      skipped: true,
+      reason: String(runConfig?.reason || "DISABLED"),
+    });
+  }
+
+  const runId = String(runConfig.runId || "");
+  const environment = String(runConfig.environment || "") as Environment;
+  const targetTitles = Math.max(
+    1,
+    Math.min(10, Number(runConfig.targetTitles || 1)),
+  );
+  const refreshMarginSeconds = Math.max(
+    30,
+    Math.min(300, Number(runConfig.oauthRefreshMarginSeconds || 60)),
+  );
+
   const { data: claimed, error: claimError } = await admin.rpc(
-    "claim_banese_reconciliation_batch",
-    { p_limit: batchSize },
+    "claim_banese_reconciliation_batch_v2",
+    { p_run_id: runId },
   );
   if (claimError) {
     console.error("banese reconciliation claim failed", {
-      message: safeError(claimError),
+      errorClass: "CLAIM_ERROR",
+    });
+    await admin.rpc("finish_banese_reconciliation_run", {
+      p_run_id: runId,
+      p_oauth_requests: 0,
+      p_oauth_reused: false,
+      p_duration_ms: Date.now() - startedAt,
     });
     return json({ error: "Não foi possível iniciar a conciliação." }, 500);
   }
 
-  const ids = (Array.isArray(claimed) ? claimed : [])
-    .map((item) => String(item?.receivable_id ?? item?.id ?? ""))
-    .filter(Boolean);
+  const items = (Array.isArray(claimed) ? claimed : [])
+    .map((item) => ({
+      receivableId: String(item?.receivable_id ?? ""),
+      modality: String(item?.modality ?? "OUTROS_CREDITOS"),
+    }))
+    .filter((item) => Boolean(item.receivableId));
   let reconciled = 0;
   let paid = 0;
   let failed = 0;
+  let pending = 0;
+  let throttled = false;
+  const oauthMetrics = { requests: 0, reused: false };
+  const intervalMs = Math.min(1_000, Math.floor(60_000 / targetTitles / 2));
 
-  for (const receivableId of ids) {
+  for (let index = 0; index < items.length; index += 1) {
+    const { receivableId } = items[index];
+    const attemptStartedAt = Date.now();
     try {
+      let token = await getSharedToken(
+        admin,
+        environment,
+        refreshMarginSeconds,
+        oauthMetrics,
+      );
+      let renewedAfterUnauthorized = false;
+      const queryWithSharedToken = async (
+        queryAdmin: any,
+        queryEnvironment: Environment,
+        input: { convenio: unknown; nossoNumero: unknown },
+      ) => {
+        try {
+          return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
+            ...input,
+            accessToken: token,
+          });
+        } catch (error) {
+          const classification = classifyError(error);
+          if (
+            classification.errorClass !== "AUTH" ||
+            renewedAfterUnauthorized
+          ) {
+            throw error;
+          }
+          renewedAfterUnauthorized = true;
+          invalidateToken(queryEnvironment);
+          token = await getSharedToken(
+            queryAdmin,
+            queryEnvironment,
+            refreshMarginSeconds,
+            oauthMetrics,
+          );
+          return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
+            ...input,
+            accessToken: token,
+          });
+        }
+      };
+
       const result = await reconcileBaneseReceivable(admin, receivableId, {
-        syncFutureInstallments: (matriculaId, environment) =>
-          syncRouteAwareFutureInstallments(
-            admin,
-            matriculaId,
-            environment,
-          ),
+        queryBoleto: queryWithSharedToken,
       });
       reconciled += 1;
-      if (result.paid) paid += 1;
+      if (result.paid) {
+        paid += 1;
+      } else {
+        pending += 1;
+      }
+      await admin.rpc("record_banese_reconciliation_attempt", {
+        p_run_id: runId,
+        p_receivable_id: receivableId,
+        p_result: result.paid ? "PAID" : "PENDING",
+        p_remote_status: result.remoteStatus || null,
+        p_error_class: null,
+        p_http_status: null,
+        p_duration_ms: Date.now() - attemptStartedAt,
+      });
     } catch (error) {
       failed += 1;
-      const message = safeError(error);
+      const classification = classifyError(error);
+      throttled = classification.result === "THROTTLED";
       console.error("banese reconciliation item failed", {
         receivableId,
-        message,
+        errorClass: classification.errorClass,
+        httpStatus: classification.httpStatus,
       });
       await admin
         .from("contas_receber")
         .update({
-          gateway_last_error: message,
+          gateway_last_error: classification.publicMessage,
           gateway_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", receivableId)
         .eq("gateway_provider", "banese_card");
+      await admin.rpc("record_banese_reconciliation_attempt", {
+        p_run_id: runId,
+        p_receivable_id: receivableId,
+        p_result: classification.result,
+        p_remote_status: null,
+        p_error_class: classification.errorClass,
+        p_http_status: classification.httpStatus,
+        p_duration_ms: Date.now() - attemptStartedAt,
+      });
+      if (throttled) break;
     }
+    if (index < items.length - 1 && !throttled) await wait(intervalMs);
   }
 
-  const {
-    data: pendingPaidProjections,
-    error: pendingPaidProjectionsError,
-  } =
-    await admin
-      .from("inscricoes_online")
-      .select("receivable_id, gateway_payment_id")
-      .eq("gateway_provider", "banese_card")
-      .neq("status", "PAGO")
-      .not("receivable_id", "is", null)
-      .order("updated_at", { ascending: true })
-      .limit(MAX_BATCH_SIZE * 5);
-  if (pendingPaidProjectionsError) {
-    console.error("banese paid projection retry query failed", {
-      message: safeError(pendingPaidProjectionsError),
-    });
-  }
-
-  const projectionByReceivableId = new Map(
-    (pendingPaidProjections || []).map((item) => [
-      String(item.receivable_id),
-      item,
-    ]),
+  const { data: finishResult, error: finishError } = await admin.rpc(
+    "finish_banese_reconciliation_run",
+    {
+      p_run_id: runId,
+      p_oauth_requests: oauthMetrics.requests,
+      p_oauth_reused: oauthMetrics.reused,
+      p_duration_ms: Date.now() - startedAt,
+    },
   );
-  const pendingProjectionReceivableIds = [
-    ...projectionByReceivableId.keys(),
-  ];
-  const { data: paidProjectionQueue, error: paidProjectionQueueError } =
-    pendingProjectionReceivableIds.length
-      ? await admin
-        .from("contas_receber")
-        .select("id, gateway_payment_id, gateway_boleto_nosso_numero")
-        .in("id", pendingProjectionReceivableIds)
-        .eq("status", "PAGO")
-        .eq("gateway_provider", "banese_card")
-        .limit(MAX_BATCH_SIZE * 5)
-      : { data: [], error: null };
-  if (paidProjectionQueueError) {
-    console.error("banese paid receivable retry query failed", {
-      message: safeError(paidProjectionQueueError),
+  if (finishError) {
+    console.error("banese reconciliation finish failed", {
+      errorClass: "FINISH_RUN_ERROR",
     });
-  }
-
-  const repairablePaidProjectionIds = (paidProjectionQueue || [])
-    .filter((item) => {
-      const receivablePaymentId = normalizeGatewayPaymentIdentity(
-        "banese_card",
-        item.gateway_payment_id,
-      );
-      const ourNumber = normalizeGatewayPaymentIdentity(
-        "banese_card",
-        item.gateway_boleto_nosso_numero,
-      );
-      const inscriptionPaymentId = normalizeGatewayPaymentIdentity(
-        "banese_card",
-        projectionByReceivableId.get(String(item.id))?.gateway_payment_id,
-      );
-      return Boolean(
-        receivablePaymentId &&
-          ourNumber &&
-          inscriptionPaymentId &&
-          receivablePaymentId === ourNumber &&
-          inscriptionPaymentId === ourNumber,
-      );
-    })
-    .slice(0, MAX_BATCH_SIZE)
-    .map((item) => String(item.id));
-
-  let projectionRetried = 0;
-  let projectionRecovered = 0;
-  for (const receivableId of repairablePaidProjectionIds) {
-    projectionRetried += 1;
-    try {
-      await reconcileBaneseReceivable(admin, receivableId, {
-        syncFutureInstallments: (matriculaId, environment) =>
-          syncRouteAwareFutureInstallments(
-            admin,
-            matriculaId,
-            environment,
-          ),
-      });
-      projectionRecovered += 1;
-    } catch (error) {
-      const message = safeError(error);
-      console.error("banese paid projection retry failed", {
-        receivableId,
-        message,
-      });
-      await admin
-        .from("contas_receber")
-        .update({
-          gateway_last_error:
-            `Pagamento Banese conciliado; inscricao online pendente: ${message}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", receivableId)
-        .eq("status", "PAGO")
-        .eq("gateway_provider", "banese_card");
-    }
-  }
-
-  const { data: futureSyncQueue, error: futureSyncQueueError } = await admin
-    .from("contas_receber")
-    .select("id, matricula_id, gateway_environment")
-    .eq("status", "PAGO")
-    .eq("gateway_provider", "banese_card")
-    .eq("tipo_lancamento", "MATRICULA")
-    .like(
-      "gateway_last_error",
-      "Pagamento Banese conciliado; parcelas futuras pendentes:%",
-    )
-    .order("updated_at", { ascending: true })
-    .limit(MAX_BATCH_SIZE);
-  if (futureSyncQueueError) {
-    console.error("banese future installment retry query failed", {
-      message: safeError(futureSyncQueueError),
-    });
-  }
-
-  let futureRetried = 0;
-  let futureRecovered = 0;
-  for (const item of futureSyncQueue || []) {
-    if (!item.matricula_id) continue;
-    futureRetried += 1;
-    try {
-      await syncRouteAwareFutureInstallments(
-        admin,
-        item.matricula_id,
-        requireGatewayEnvironment(
-          item.gateway_environment,
-          "recebivel Banese da fila de parcelas futuras",
-        ),
-      );
-      const { error: clearError } = await admin
-        .from("contas_receber")
-        .update({
-          gateway_last_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.id)
-        .eq("status", "PAGO")
-        .eq("gateway_provider", "banese_card")
-        .like(
-          "gateway_last_error",
-          "Pagamento Banese conciliado; parcelas futuras pendentes:%",
-        );
-      if (clearError) throw clearError;
-      futureRecovered += 1;
-    } catch (error) {
-      const message = safeError(error);
-      console.error("banese future installment retry failed", {
-        receivableId: item.id,
-        message,
-      });
-      await admin
-        .from("contas_receber")
-        .update({
-          gateway_last_error:
-            `Pagamento Banese conciliado; parcelas futuras pendentes: ${message}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.id)
-        .eq("status", "PAGO")
-        .eq("gateway_provider", "banese_card");
-    }
+    return json({ error: "A consulta terminou, mas a auditoria falhou." }, 500);
   }
 
   return json({
     success: true,
-    claimed: ids.length,
+    runId,
+    profileId: runConfig.profileId,
+    claimed: items.length,
     reconciled,
+    pending,
     paid,
     failed,
-    projectionRetried,
-    projectionRecovered,
-    futureRetried,
-    futureRecovered,
+    throttled,
+    oauthRequests: oauthMetrics.requests,
+    oauthReused: oauthMetrics.reused,
+    decision: finishResult?.decision || null,
   });
 });

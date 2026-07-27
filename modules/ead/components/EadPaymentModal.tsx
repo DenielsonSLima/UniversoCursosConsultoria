@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpRight, CheckCircle2, Copy, FileText, X } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Clock3, Copy, FileText, MessageCircle, X } from 'lucide-react';
 import { fetchBaneseBoletoDocument } from '../../aluno/shared/baneseBoletoDocument';
 import {
   preparePaymentWindow,
@@ -90,6 +90,8 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
   const pixQrImageSource = normalizeEadPaymentQrImageSource(payment.pixQrCode?.encodedImage);
   const officialUrl = payment.invoiceUrl || panel.url || payment.bankSlipUrl || null;
   const expirationLabel = pixExpiration || dueDate || `Informado pelo ${providerName}`;
+  const isPendingBanese = provider.startsWith('banese')
+    && !['PAID', 'RECEIVED', 'CONFIRMED'].includes(String(payment.status || '').toUpperCase());
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -304,6 +306,38 @@ const EadPaymentModal: React.FC<EadPaymentModalProps> = ({ panel, onClose }) => 
               Abrir fatura oficial
             </a>
           )}
+
+          {isPendingBanese ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <div className="flex items-start gap-3">
+                <Clock3 size={20} className="mt-0.5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-sm font-black">Aguardando confirmação do Banese</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed">
+                    Assim que o banco confirmar o pagamento, o curso será liberado automaticamente.
+                    Se você já realizou o pagamento via Pix e o acesso não for liberado em até 20 minutos,
+                    fale conosco. Pagamentos por boleto podem levar até 48 horas úteis para compensação.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={`https://wa.me/557996028316?text=${encodeURIComponent('Olá! Realizei o pagamento de um curso EAD e ainda aguardo a confirmação do Banese.')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700"
+                    >
+                      <MessageCircle size={14} /> Falar no WhatsApp
+                    </a>
+                    <a
+                      href="/aluno?module=comunicacao"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 text-[10px] font-black uppercase tracking-widest text-amber-900 hover:bg-amber-100"
+                    >
+                      <MessageCircle size={14} /> Abrir chamado
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-[11px] font-bold leading-relaxed text-slate-600 sm:text-xs">
             A tela pode ser fechada sem cancelar a cobrança. Quando o {providerName} confirmar o pagamento, o curso aparece automaticamente em Meus Cursos.
