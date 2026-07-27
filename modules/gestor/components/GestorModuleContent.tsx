@@ -91,7 +91,7 @@ class ModuleErrorBoundary extends React.Component<ModuleErrorBoundaryProps, Modu
   }
 
   private retry = () => {
-    this.setState({ hasError: false });
+    window.location.reload();
   };
 
   private returnHome = () => {
@@ -120,7 +120,7 @@ class ModuleErrorBoundary extends React.Component<ModuleErrorBoundaryProps, Modu
             className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-blue-900"
           >
             <RefreshCw size={16} />
-            Tentar novamente
+            Recarregar página
           </button>
           <button
             type="button"
