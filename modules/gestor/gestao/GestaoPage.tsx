@@ -8,6 +8,7 @@ import GestaoLivres from './livres/GestaoLivres';
 import GestaoEspecializacao from './especializacao/GestaoEspecializacao';
 import GestaoEad from './ead/GestaoEad';
 import { useGestaoRealtime } from './hooks/useGestaoRealtime';
+import type { GestorPermissions } from '../access-control';
 
 interface GestaoPageProps {
   poloId?: string;
@@ -15,9 +16,10 @@ interface GestaoPageProps {
   poloNome?: string;
   isMatriz: boolean;
   onRequestScrollTop?: () => void;
+  permissions: GestorPermissions;
 }
 
-const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop }) => {
+const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz, onRequestScrollTop, permissions }) => {
   useGestaoRealtime(poloId);
   const [activeTab, setActiveTab] = useState<'resumo' | 'tecnicos' | 'livres' | 'especializacao' | 'ead'>('resumo');
   const [isDetailView, setIsDetailView] = useState(false);
@@ -76,10 +78,10 @@ const GestaoPage: React.FC<GestaoPageProps> = ({ poloId, activePoloId, isMatriz,
       {/* Conteúdo Dinâmico */}
       <div className="min-h-[500px]">
         {activeTab === 'resumo' && <GestaoResumo poloId={poloId} />}
-        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} />}
-        {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} />}
+        {activeTab === 'tecnicos' && <GestaoTecnicos onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+        {activeTab === 'livres' && <GestaoLivres onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+        {activeTab === 'especializacao' && <GestaoEspecializacao onToggleDetails={setIsDetailView} poloId={poloId} creationPoloId={activePoloId || poloId} permissions={permissions} />}
+        {isMatriz && activeTab === 'ead' && <GestaoEad onToggleDetails={setIsDetailView} permissions={permissions} />}
       </div>
     </div>
   );
