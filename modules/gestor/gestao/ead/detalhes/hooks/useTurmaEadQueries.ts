@@ -25,7 +25,8 @@ export const useTurmaEadAlunosDisponiveis = (
   refetchOnWindowFocus: false,
 });
 
-export const useTurmaEadPagamentos = (turmaId: string) => useQuery({
+export const useTurmaEadPagamentos = (turmaId: string, enabled = true) => useQuery({
   queryKey: eadTurmaKeys.pagamentos(turmaId),
   queryFn: () => eadTurmaService.getPagamentos(turmaId),
+  enabled,
 });
