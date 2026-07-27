@@ -46,21 +46,19 @@ const normalizeTemplate = (template: unknown): CarteirinhaTemplate | null => {
 
 export const carteirinhaService = {
   async getTemplate(): Promise<CarteirinhaTemplate> {
-    try {
-      const { data, error } = await supabase
-        .from('documentos_templates')
-        .select('conteudo')
-        .eq('id', 'carteirinha')
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('documentos_templates')
+      .select('conteudo')
+      .eq('id', 'carteirinha')
+      .maybeSingle();
 
-      if (!error && data && data.conteudo) {
-        return normalizeTemplate(data.conteudo) || DEFAULT_TEMPLATE;
-      }
-    } catch (e) {
-      console.error('[carteirinhaService] Erro ao buscar template do Supabase:', e);
+    if (error) {
+      console.error('[carteirinhaService] Erro ao buscar template do Supabase:', error);
+      throw error;
     }
 
-    return DEFAULT_TEMPLATE;
+    if (!data?.conteudo) return DEFAULT_TEMPLATE;
+    return normalizeTemplate(data.conteudo) || DEFAULT_TEMPLATE;
   },
 
   async saveTemplate(data: CarteirinhaTemplate) {

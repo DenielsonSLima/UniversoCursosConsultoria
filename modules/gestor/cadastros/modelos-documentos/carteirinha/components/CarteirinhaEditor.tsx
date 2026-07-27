@@ -4,6 +4,8 @@ import { supabase } from '../../../../../../lib/supabase';
 import ToastNotification, { useToast } from '../../../../components/ToastNotification';
 import { usePoloInstitutionalData } from '../../../../../shared/polo-institutional/use-polo-institutional-data';
 import CarteirinhaEditorPreviewPanel from './CarteirinhaEditorPreviewPanel';
+import { DocumentPreviewAssetGate } from '../../components/DocumentTemplateLoadingState';
+import { useDocumentBackgroundReadiness } from '../../hooks/useDocumentBackgroundReadiness';
 import CarteirinhaEditorSidebar from './CarteirinhaEditorSidebar';
 import type {
   CarteirinhaEditorFormData,
@@ -75,6 +77,10 @@ const createInitialFormData = (modelo: any): CarteirinhaEditorFormData => {
 const CarteirinhaEditor: React.FC<CarteirinhaEditorProps> = ({ modelo, onSave, onCancel }) => {
   const { toasts, removeToast, toast } = useToast();
   const [formData, setFormData] = useState(() => createInitialFormData(modelo));
+  const backgrounds = useDocumentBackgroundReadiness(
+    formData.bgFrenteUrl,
+    formData.hasVerso ? formData.bgVersoUrl : null,
+  );
   const [activeTab, setActiveTab] = useState<CarteirinhaEditorTab>('config');
   const [previewMode, setPreviewMode] = useState<CarteirinhaPreviewMode>('ambos');
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -159,7 +165,9 @@ const CarteirinhaEditor: React.FC<CarteirinhaEditorProps> = ({ modelo, onSave, o
         </div>
         <div className="flex flex-1 flex-col gap-8 xl:flex-row">
           <CarteirinhaEditorSidebar activeTab={activeTab} formData={formData} handleChange={handleChange} handleUploadFile={handleUploadFile} institutionalData={institutionalData} isUploading={isUploading} setActiveTab={setActiveTab} setFormData={setFormData} />
-          <CarteirinhaEditorPreviewPanel formData={formData} onZoomIn={() => setZoomLevel((current) => Math.min(200, current + 10))} onZoomOut={() => setZoomLevel((current) => Math.max(50, current - 10))} previewAluno={previewAluno} previewMode={previewMode} setFormData={setFormData} setPreviewMode={setPreviewMode} zoomLevel={zoomLevel} />
+          <DocumentPreviewAssetGate status={backgrounds.status} onRetry={backgrounds.retry} title="carteirinha">
+            <CarteirinhaEditorPreviewPanel formData={formData} onZoomIn={() => setZoomLevel((current) => Math.min(200, current + 10))} onZoomOut={() => setZoomLevel((current) => Math.max(50, current - 10))} previewAluno={previewAluno} previewMode={previewMode} setFormData={setFormData} setPreviewMode={setPreviewMode} zoomLevel={zoomLevel} />
+          </DocumentPreviewAssetGate>
         </div>
       </div>
     </>

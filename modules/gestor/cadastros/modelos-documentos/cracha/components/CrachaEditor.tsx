@@ -14,6 +14,8 @@ import CrachaFieldEditorPanel from './CrachaFieldEditorPanel';
 import CrachaEditorHeader from './CrachaEditorHeader';
 import CrachaEditorToast, { CrachaEditorToastState } from './CrachaEditorToast';
 import CrachaPreviewWorkspace from './CrachaPreviewWorkspace';
+import { DocumentPreviewAssetGate } from '../../components/DocumentTemplateLoadingState';
+import { useDocumentBackgroundReadiness } from '../../hooks/useDocumentBackgroundReadiness';
 import { getCrachaUploadExtension, initializeCrachaModel } from './cracha-editor.model';
 
 interface CrachaEditorProps {
@@ -24,6 +26,10 @@ interface CrachaEditorProps {
 
 const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel }) => {
   const [formData, setFormData] = useState<any>(() => initializeCrachaModel(modelo));
+  const backgrounds = useDocumentBackgroundReadiness(
+    formData.bgFrenteUrl,
+    formData.hasVerso ? formData.bgVersoUrl : null,
+  );
 
   const [activeTab, setActiveTab] = useState<'config' | 'frente' | 'verso'>('config');
   const [previewMode, setPreviewMode] = useState<'frente' | 'verso' | 'ambos'>('ambos');
@@ -473,17 +479,19 @@ const CrachaEditor: React.FC<CrachaEditorProps> = ({ modelo, onSave, onCancel })
 
         </div>
 
-        <CrachaPreviewWorkspace
-          formData={formData}
-          previewMode={previewMode}
-          selectedFieldId={selectedFieldId}
-          zoomLevel={zoomLevel}
-          onFieldsChange={(fields) => setFormData((previous: any) => ({ ...previous, fields }))}
-          onPreviewModeChange={setPreviewMode}
-          onSelectField={setSelectedFieldId}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-        />
+        <DocumentPreviewAssetGate status={backgrounds.status} onRetry={backgrounds.retry} title="crachá">
+          <CrachaPreviewWorkspace
+            formData={formData}
+            previewMode={previewMode}
+            selectedFieldId={selectedFieldId}
+            zoomLevel={zoomLevel}
+            onFieldsChange={(fields) => setFormData((previous: any) => ({ ...previous, fields }))}
+            onPreviewModeChange={setPreviewMode}
+            onSelectField={setSelectedFieldId}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+          />
+        </DocumentPreviewAssetGate>
 
       </div>
 

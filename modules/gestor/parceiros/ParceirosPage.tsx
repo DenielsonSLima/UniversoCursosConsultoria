@@ -251,6 +251,9 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
       <ParceirosExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
+        items={sortedAndFilteredPartners}
+        activeTab={activeTab}
+        poloId={poloId}
         filtrosAtuais={{ searchTerm, statusFilter, alunoModalidadeFilter, turmaFilter, turmaFilterLabel }}
       />
 
