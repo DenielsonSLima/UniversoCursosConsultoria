@@ -13,7 +13,9 @@ function mapAccountToFrontend(db: any) {
     tipo: db.tipo,
     saldoInicial: Number(db.saldo_inicial || 0),
     dataSaldo: db.data_saldo || '',
-    ativo: db.ativo
+    ativo: db.ativo,
+    natureza: db.natureza || 'BANCARIA',
+    systemManaged: db.system_managed === true,
   };
 }
 
@@ -48,6 +50,7 @@ export const saldoInicialService = {
       .from('contas_bancarias')
       .select('*')
       .eq('polo_id', poloId)
+      .eq('ativo', true)
       .order('banco', { ascending: true });
 
     if (error) {
@@ -55,20 +58,20 @@ export const saldoInicialService = {
       throw new Error(error.message);
     }
 
-    return (data || []).map(mapAccountToFrontend);
+    return (data || [])
+      .filter((account) => !account.system_managed || account.natureza === 'CAIXA_INTERNO')
+      .map(mapAccountToFrontend);
   },
 
   /**
    * Atualiza o saldo inicial e a data de saldo de uma conta bancária.
    */
   async updateInitialBalance(accountId: string, value: number, date: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('contas_bancarias')
-      .update({
-        saldo_inicial: value,
-        data_saldo: date || null
-      })
-      .eq('id', accountId);
+    const { error } = await supabase.rpc('atualizar_saldo_inicial_conta_secure', {
+      p_conta_id: accountId,
+      p_saldo_inicial: value,
+      p_data_saldo: date || null,
+    });
 
     if (error) {
       console.error('Erro ao atualizar saldo inicial:', error);
