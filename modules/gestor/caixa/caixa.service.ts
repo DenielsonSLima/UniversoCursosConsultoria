@@ -1,98 +1,349 @@
-// File: modules/gestor/caixa/caixa.service.ts
-
-import { supabase } from '../../../lib/supabase';
 import { queryOptions } from '@tanstack/react-query';
+import { supabase } from '../../../lib/supabase';
 
-export interface CaixaDashboardData {
-  saldoTotalContas: number;
-  saldosIndividuais: Array<{
+export type CaixaResultStatus = 'POSITIVO' | 'NEGATIVO' | 'NEUTRO';
+export type CaixaScopeType = 'GLOBAL' | 'POLO';
+export type CaixaAccountValueType = 'SALDO_CONTA' | 'POSICAO_POLO';
+
+export interface CaixaMonthlyStatement {
+  versao: number;
+  meta: {
+    competencia: string;
+    periodoInicio: string;
+    periodoFimExclusivo: string;
+    geradoEm: string;
+    escopoTipo: CaixaScopeType;
+    poloId: string | null;
+    escopoRotulo: string;
+    fonteSaldo: 'CONTABIL_SISTEMA';
+    extratoBancarioDisponivel: boolean;
+  };
+  saldosHoje: {
+    registradoTotal: number;
+    bancarioRegistrado: number;
+    caixaLocal: number;
+    compartilhadoTotal: number;
+    posicaoCompartilhadaEscopo: number;
+    naoAtribuido: number;
+  };
+  resumoCompetencia: {
+    entradasRecebidasBrutas: number;
+    tarifasBancariasConfirmadas: number;
+    saidasPagas: number;
+    resultado: number;
+    resultadoStatus: CaixaResultStatus;
+    quantidadeRecebimentos: number;
+    quantidadePagamentos: number;
+  };
+  compromissos: {
+    aReceber: number;
+    receberVencido: number;
+    aPagar: number;
+    pagarVencido: number;
+  };
+  receitasPorModalidade: Array<{
+    codigo: string;
+    rotulo: string;
+    valor: number;
+    quantidade: number;
+    percentual: number;
+  }>;
+  despesasPorCategoria: Array<{
+    codigo: string;
+    rotulo: string;
+    valor: number;
+    quantidade: number;
+    percentual: number;
+  }>;
+  serieMensal: Array<{
+    competencia: string;
+    rotulo: string;
+    entradas: number;
+    saidas: number;
+    resultado: number;
+    resultadoStatus: CaixaResultStatus;
+    entradasEscalaPercentual: number;
+    saidasEscalaPercentual: number;
+  }>;
+  contas: Array<{
     id: string;
     banco: string;
     agencia: string;
     conta: string;
-    saldoAtual: number;
-    poloNome: string;
-    poloId: string;
+    titular: string;
+    cidadeUf: string;
+    natureza: 'BANCARIA' | 'CAIXA_INTERNO';
+    compartilhada: boolean;
+    unidadesUso: number;
+    valorExibido: number;
+    tipoValorExibido: CaixaAccountValueType;
+    saldoTotalRegistrado: number;
+    posicaoGerencialEscopo: number;
+    ativo: boolean;
+    codigoInterno: string;
   }>;
-  totalReceber: number;
-  receberPorTipo: Array<{
-    categoria: string;
-    valor: number;
-  }>;
-  totalPagar: number;
-  pagarPorTipo: Array<{
-    categoria: string;
-    valor: number;
-  }>;
-  mensalidadesEmAtraso: {
-    quantidade: number;
-    valorTotal: number;
+  classificacao: {
+    quantidadeSemPolo: number;
+    valorSemPolo: number;
   };
-  fluxo3Meses: Array<{
-    mesNome: string;
-    creditos: number;
-    debitos: number;
-  }>;
+  conciliacao: {
+    recebimentosConciliados: number;
+    pagamentosConciliados: number;
+    pendentes: number;
+    ultimaAtualizacao: string | null;
+  };
+  qualidadeDados: {
+    movimentosSemPolo: number;
+    pagamentosSemConta: number;
+    pagamentosSemData: number;
+    receitasSemModalidade: number;
+    tarifasEstimadasIgnoradas: number;
+  };
 }
 
-export const PRINCIPAL_POLO_ID = '44444444-4444-4444-4444-444444444444';
+type RawItem = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is RawItem => (
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+);
+
+const asRecord = (value: unknown): RawItem => (
+  isRecord(value)
+    ? value as RawItem
+    : {}
+);
+
+const asArray = (value: unknown): RawItem[] => (
+  Array.isArray(value) ? value.map(asRecord) : []
+);
+
+const asNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const asString = (value: unknown) => (
+  typeof value === 'string' ? value : ''
+);
+
+const asResultStatus = (value: unknown): CaixaResultStatus => {
+  if (value === 'POSITIVO' || value === 'NEGATIVO') return value;
+  return 'NEUTRO';
+};
+
+const isNumericValue = (value: unknown) => (
+  value !== null
+  && value !== ''
+  && Number.isFinite(Number(value))
+);
+
+const assertStatementPayload = (payload: RawItem) => {
+  const meta = payload.meta;
+  const saldos = payload.saldos_hoje;
+  const resumo = payload.resumo_competencia;
+  const compromissos = payload.compromissos;
+
+  const hasRequiredArrays = [
+    payload.receitas_por_modalidade,
+    payload.despesas_por_categoria,
+    payload.serie_mensal,
+    payload.contas,
+  ].every(Array.isArray);
+
+  const requiredNumbers = [
+    isRecord(saldos) ? saldos.registrado_total : undefined,
+    isRecord(saldos) ? saldos.bancario_registrado : undefined,
+    isRecord(saldos) ? saldos.caixa_local : undefined,
+    isRecord(resumo) ? resumo.entradas_recebidas_brutas : undefined,
+    isRecord(resumo) ? resumo.saidas_pagas : undefined,
+    isRecord(resumo) ? resumo.resultado : undefined,
+    isRecord(compromissos) ? compromissos.a_receber : undefined,
+    isRecord(compromissos) ? compromissos.a_pagar : undefined,
+  ];
+
+  if (
+    asNumber(payload.versao) !== 2
+    || !isRecord(meta)
+    || typeof meta.competencia !== 'string'
+    || !isRecord(saldos)
+    || !isRecord(resumo)
+    || !isRecord(compromissos)
+    || !hasRequiredArrays
+    || !requiredNumbers.every(isNumericValue)
+  ) {
+    throw new Error('Contrato inválido da prestação mensal do Caixa.');
+  }
+};
+
+export const getCurrentCaixaCompetencia = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+export const shiftCaixaCompetencia = (competencia: string, months: number) => {
+  const [yearValue, monthValue] = competencia.split('-').map(Number);
+  const shifted = new Date(yearValue, monthValue - 1 + months, 1, 12);
+  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}-01`;
+};
+
+export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
+  const payload = asRecord(Array.isArray(value) ? value[0] : value);
+  assertStatementPayload(payload);
+  const meta = asRecord(payload.meta);
+  const saldos = asRecord(payload.saldos_hoje);
+  const resumo = asRecord(payload.resumo_competencia);
+  const compromissos = asRecord(payload.compromissos);
+  const classificacao = asRecord(payload.classificacao);
+  const conciliacao = asRecord(payload.conciliacao);
+  const qualidade = asRecord(payload.qualidade_dados);
+
+  return {
+    versao: asNumber(payload.versao),
+    meta: {
+      competencia: asString(meta.competencia),
+      periodoInicio: asString(meta.periodo_inicio),
+      periodoFimExclusivo: asString(meta.periodo_fim_exclusivo),
+      geradoEm: asString(meta.gerado_em),
+      escopoTipo: meta.escopo_tipo === 'POLO' ? 'POLO' : 'GLOBAL',
+      poloId: typeof meta.polo_id === 'string' ? meta.polo_id : null,
+      escopoRotulo: asString(meta.escopo_rotulo),
+      fonteSaldo: 'CONTABIL_SISTEMA',
+      extratoBancarioDisponivel: meta.extrato_bancario_disponivel === true,
+    },
+    saldosHoje: {
+      registradoTotal: asNumber(saldos.registrado_total),
+      bancarioRegistrado: asNumber(saldos.bancario_registrado),
+      caixaLocal: asNumber(saldos.caixa_local),
+      compartilhadoTotal: asNumber(saldos.compartilhado_total),
+      posicaoCompartilhadaEscopo: asNumber(saldos.posicao_compartilhada_escopo),
+      naoAtribuido: asNumber(saldos.nao_atribuido),
+    },
+    resumoCompetencia: {
+      entradasRecebidasBrutas: asNumber(resumo.entradas_recebidas_brutas),
+      tarifasBancariasConfirmadas: asNumber(resumo.tarifas_bancarias_confirmadas),
+      saidasPagas: asNumber(resumo.saidas_pagas),
+      resultado: asNumber(resumo.resultado),
+      resultadoStatus: asResultStatus(resumo.resultado_status),
+      quantidadeRecebimentos: asNumber(resumo.quantidade_recebimentos),
+      quantidadePagamentos: asNumber(resumo.quantidade_pagamentos),
+    },
+    compromissos: {
+      aReceber: asNumber(compromissos.a_receber),
+      receberVencido: asNumber(compromissos.receber_vencido),
+      aPagar: asNumber(compromissos.a_pagar),
+      pagarVencido: asNumber(compromissos.pagar_vencido),
+    },
+    receitasPorModalidade: asArray(payload.receitas_por_modalidade).map((item) => ({
+      codigo: asString(item.codigo),
+      rotulo: asString(item.rotulo),
+      valor: asNumber(item.valor),
+      quantidade: asNumber(item.quantidade),
+      percentual: asNumber(item.percentual),
+    })),
+    despesasPorCategoria: asArray(payload.despesas_por_categoria).map((item) => ({
+      codigo: asString(item.codigo),
+      rotulo: asString(item.rotulo),
+      valor: asNumber(item.valor),
+      quantidade: asNumber(item.quantidade),
+      percentual: asNumber(item.percentual),
+    })),
+    serieMensal: asArray(payload.serie_mensal).map((item) => ({
+      competencia: asString(item.competencia),
+      rotulo: asString(item.rotulo),
+      entradas: asNumber(item.entradas),
+      saidas: asNumber(item.saidas),
+      resultado: asNumber(item.resultado),
+      resultadoStatus: asResultStatus(item.resultado_status),
+      entradasEscalaPercentual: asNumber(item.entradas_escala_percentual),
+      saidasEscalaPercentual: asNumber(item.saidas_escala_percentual),
+    })),
+    contas: asArray(payload.contas).map((item) => ({
+      id: asString(item.id),
+      banco: asString(item.banco),
+      agencia: asString(item.agencia),
+      conta: asString(item.conta),
+      titular: asString(item.titular),
+      cidadeUf: asString(item.cidade_uf),
+      natureza: item.natureza === 'CAIXA_INTERNO' ? 'CAIXA_INTERNO' : 'BANCARIA',
+      compartilhada: item.compartilhada === true,
+      unidadesUso: asNumber(item.unidades_uso),
+      valorExibido: asNumber(item.valor_exibido),
+      tipoValorExibido: item.tipo_valor_exibido === 'POSICAO_POLO'
+        ? 'POSICAO_POLO'
+        : 'SALDO_CONTA',
+      saldoTotalRegistrado: asNumber(item.saldo_total_registrado),
+      posicaoGerencialEscopo: asNumber(item.posicao_gerencial_escopo),
+      ativo: item.ativo !== false,
+      codigoInterno: asString(item.codigo_interno),
+    })),
+    classificacao: {
+      quantidadeSemPolo: asNumber(classificacao.quantidade_sem_polo),
+      valorSemPolo: asNumber(classificacao.valor_sem_polo),
+    },
+    conciliacao: {
+      recebimentosConciliados: asNumber(conciliacao.recebimentos_conciliados),
+      pagamentosConciliados: asNumber(conciliacao.pagamentos_conciliados),
+      pendentes: asNumber(conciliacao.pendentes),
+      ultimaAtualizacao: typeof conciliacao.ultima_atualizacao === 'string'
+        ? conciliacao.ultima_atualizacao
+        : null,
+    },
+    qualidadeDados: {
+      movimentosSemPolo: asNumber(qualidade.movimentos_sem_polo),
+      pagamentosSemConta: asNumber(qualidade.pagamentos_sem_conta),
+      pagamentosSemData: asNumber(qualidade.pagamentos_sem_data),
+      receitasSemModalidade: asNumber(qualidade.receitas_sem_modalidade),
+      tarifasEstimadasIgnoradas: asNumber(qualidade.tarifas_estimadas_ignoradas),
+    },
+  };
+};
 
 export const caixaService = {
-  async getCaixaDashboardData(poloId?: string): Promise<CaixaDashboardData> {
-    const { data, error } = await supabase.rpc('get_caixa_dashboard_secure', {
+  async getMonthlyStatement(
+    poloId: string | null | undefined,
+    competencia: string,
+  ): Promise<CaixaMonthlyStatement> {
+    const { data, error } = await supabase.rpc('get_caixa_prestacao_mensal_secure', {
       p_polo_id: poloId && poloId !== 'todos' ? poloId : null,
+      p_competencia: competencia,
+      p_meses_historico: 6,
     });
 
     if (error) {
-      console.error('Erro ao buscar o painel agregado do Caixa:', error);
+      console.error('Erro ao buscar a prestação mensal do Caixa:', error);
       throw error;
     }
 
-    const payload: any = Array.isArray(data) ? data[0] : data || {};
-
-    return {
-      saldoTotalContas: Number(payload.saldo_total_contas || 0),
-      saldosIndividuais: (payload.saldos_individuais || []).map((account: any) => ({
-        id: account.id,
-        banco: account.banco || '',
-        agencia: account.agencia || '',
-        conta: account.conta || '',
-        saldoAtual: Number(account.saldo_atual || 0),
-        poloNome: account.polo_nome || 'Polo Geral',
-        poloId: account.polo_id || '',
-      })),
-      totalReceber: Number(payload.total_receber || 0),
-      receberPorTipo: (payload.receber_por_tipo || []).map((item: any) => ({
-        categoria: item.categoria,
-        valor: Number(item.valor || 0),
-      })),
-      totalPagar: Number(payload.total_pagar || 0),
-      pagarPorTipo: (payload.pagar_por_tipo || []).map((item: any) => ({
-        categoria: item.categoria,
-        valor: Number(item.valor || 0),
-      })),
-      mensalidadesEmAtraso: {
-        quantidade: Number(payload.mensalidades_em_atraso?.quantidade || 0),
-        valorTotal: Number(payload.mensalidades_em_atraso?.valor_total || 0),
-      },
-      fluxo3Meses: (payload.fluxo_3_meses || []).map((month: any) => ({
-        mesNome: `${month.mes_nome}/${month.ano}`,
-        creditos: Number(month.creditos || 0),
-        debitos: Number(month.debitos || 0),
-      })),
-    };
-  }
+    return mapCaixaStatement(data);
+  },
 };
 
 export const caixaQueryKeys = {
   root: ['caixa'] as const,
-  dashboards: ['caixa', 'dashboard'] as const,
-  dashboard: (poloId?: string | null) => ['caixa', 'dashboard', poloId || 'todos'] as const,
+  statements: ['caixa', 'statement'] as const,
+  statement: (poloId: string | null | undefined, competencia: string) => [
+    'caixa',
+    'statement',
+    poloId && poloId !== 'todos' ? poloId : 'todos',
+    competencia,
+  ] as const,
+  // Alias mantido para as invalidações dos formulários financeiros existentes.
+  dashboards: ['caixa', 'statement'] as const,
+  dashboard: (poloId: string | null | undefined, competencia = getCurrentCaixaCompetencia()) => [
+    'caixa',
+    'statement',
+    poloId && poloId !== 'todos' ? poloId : 'todos',
+    competencia,
+  ] as const,
 };
 
-export const caixaDashboardQueryOptions = (poloId?: string | null) => queryOptions({
-  queryKey: caixaQueryKeys.dashboard(poloId),
-  queryFn: () => caixaService.getCaixaDashboardData(poloId || undefined),
-  staleTime: 5 * 60_000,
+export const caixaDashboardQueryOptions = (
+  poloId?: string | null,
+  competencia = getCurrentCaixaCompetencia(),
+) => queryOptions({
+  queryKey: caixaQueryKeys.statement(poloId, competencia),
+  queryFn: () => caixaService.getMonthlyStatement(poloId, competencia),
+  staleTime: 30_000,
   gcTime: 30 * 60_000,
+  refetchOnWindowFocus: true,
 });

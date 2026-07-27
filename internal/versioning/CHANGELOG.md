@@ -2,6 +2,31 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.5] - 2026-07-27
+
+### Adicionado
+
+- Prestação mensal do Caixa com visão consolidada e individual por polo, saldo contábil registrado, superávit ou déficit, inadimplência e obrigações vencidas.
+- Pré-visualização e exportação em PDF com cabeçalho institucional, marca d’água, resumo executivo e tabelas completas de recebimentos e despesas.
+- Conta Caixa individual para cada unidade e posição gerencial por polo na conta Banese compartilhada.
+
+### Alterado
+
+- A conta Banese da matriz pode ser utilizada pelos três polos sem duplicar o saldo físico no Resultado geral.
+- A seleção de contas nas baixas exibe banco, agência, conta, titular, cidade/UF e saldo contábil canônico.
+- Indicadores, composições financeiras e totais do relatório são calculados integralmente pelo backend.
+
+### Corrigido
+
+- A cobrança EAD de teste permanece registrada pelo valor bruto confirmado de R$ 14,90, sem tarifa bancária presumida.
+- Contas excluídas ou inativas deixam de aparecer como disponíveis, preservando apenas o histórico necessário.
+- Despesas espelhadas entre lançamentos e contas a pagar não são contadas duas vezes.
+
+### Segurança
+
+- O relatório detalhado exige permissão explícita do módulo Caixa e respeita o escopo autorizado de cada polo.
+- CPF, contato, anexos e dados internos do gateway não são incluídos no PDF; o documento é identificado como confidencial e de uso interno.
+
 ## [2.2.3-beta.4] - 2026-07-27
 
 ### Adicionado

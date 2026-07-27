@@ -4,6 +4,8 @@ import { ArrowLeft, Save, Calendar, DollarSign, Building, AlertCircle, RefreshCw
 import { saldoInicialService } from '../saldo-inicial.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
+import { financeiroQueryKeys } from '../../../financeiro/financeiro.queryKeys';
+import { caixaQueryKeys } from '../../../caixa/caixa.service';
 
 interface AccountBalanceManagerProps {
   company: any;
@@ -17,6 +19,8 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
   const { data: accounts = [], isLoading, isError, error } = useQuery<any[]>({
     queryKey: ['saldo_inicial_accounts', company.id],
     queryFn: () => saldoInicialService.getAccountsByCompany(company.id),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // 2. Realtime para a tabela contas_bancarias (sincronizar se outro usuário alterar os saldos)
@@ -25,9 +29,11 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
       .channel(`saldo_inicial_realtime_${company.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'contas_bancarias', filter: `polo_id=eq.${company.id}` },
+        { event: '*', schema: 'public', table: 'contas_bancarias' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts', company.id] });
+          queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts'] });
+          queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+          queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards });
         }
       )
       .subscribe();
@@ -41,8 +47,12 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
   const updateBalanceMutation = useMutation({
     mutationFn: ({ id, value, date }: { id: string; value: number; date: string }) => 
       saldoInicialService.updateInitialBalance(id, value, date),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts', company.id] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts'] }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+      ]);
       alert('Saldo inicial atualizado com sucesso!');
     },
     onError: (err: any) => alert(`Erro ao atualizar saldo: ${err.message}`),

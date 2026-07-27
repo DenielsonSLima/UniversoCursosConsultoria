@@ -14,6 +14,8 @@ const ContasBancariasConfig: React.FC = () => {
   const { data: companies = [], isLoading, isError, error } = useQuery<any[]>({
     queryKey: ['companies_accounts'],
     queryFn: contasBancariasService.getCompanies,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // 2. Escutar em tempo real alterações na tabela 'polos' ou 'contas_bancarias' para atualizar os contadores
@@ -32,6 +34,14 @@ const ContasBancariasConfig: React.FC = () => {
         { event: '*', schema: 'public', table: 'contas_bancarias' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contas_bancarias_polos' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['companies_accounts'] });
+          queryClient.invalidateQueries({ queryKey: ['accounts'] });
         }
       )
       .subscribe();

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Save, X, Building, User, Hash, CreditCard } from 'lucide-react';
+import { Save, X, Building, User, Hash, CreditCard, MapPin, WalletCards } from 'lucide-react';
 
 interface AccountFormProps {
   initialData?: any;
@@ -11,6 +11,7 @@ interface AccountFormProps {
 }
 
 const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, companies, onSave, onCancel }) => {
+  const ownerCompany = companies.find((company) => company.id === companyId);
   const [formData, setFormData] = useState({
     banco: '',
     titular: '',
@@ -18,16 +19,36 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
     conta: '',
     tipo: 'Corrente',
     ...initialData,
-    poloId: initialData?.poloId || companyId,
+    poloId: companyId,
+    polosUso: initialData?.polosUso?.length ? initialData.polosUso : [companyId],
   });
+  const isCaixa = formData.tipo === 'Caixa' || formData.natureza === 'CAIXA_INTERNO';
+  const canShare = ownerCompany?.isMatriz && !isCaixa;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, poloId: formData.poloId || companyId, companyId: formData.poloId || companyId });
+    onSave({
+      ...formData,
+      poloId: companyId,
+      companyId,
+      polosUso: isCaixa
+        ? [companyId]
+        : Array.from(new Set([companyId, ...formData.polosUso])),
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const togglePolo = (poloId: string) => {
+    if (poloId === companyId) return;
+    setFormData((current) => ({
+      ...current,
+      polosUso: current.polosUso.includes(poloId)
+        ? current.polosUso.filter((id: string) => id !== poloId)
+        : [...current.polosUso, poloId],
+    }));
   };
 
   return (
@@ -56,7 +77,8 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
               onChange={handleChange}
               placeholder="Ex: Banco do Brasil, Nubank..."
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700"
-              required
+              required={!isCaixa}
+              disabled={isCaixa}
             />
           </div>
           <div className="space-y-2">
@@ -72,29 +94,73 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
               <option value="Corrente">Conta Corrente</option>
               <option value="Poupanca">Conta Poupança</option>
               <option value="Pagamento">Conta de Pagamento</option>
+              <option value="Caixa">Caixa da Unidade</option>
             </select>
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
           <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
-            <Building size={14} className="text-blue-500" /> Exibir / usar no polo
+            <MapPin size={14} className="text-blue-500" /> Unidade titular
           </label>
-          <select
-            name="poloId"
-            value={formData.poloId}
-            onChange={handleChange}
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700 cursor-pointer"
-            required
-          >
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.isMatriz ? 'Matriz' : 'Polo'} - {company.nomeFantasia}
-                {company.cidade ? ` (${company.cidade}/${company.estado || ''})` : ''}
-              </option>
-            ))}
-          </select>
+          <p className="mt-2 text-sm font-black text-[#001a33]">
+            {ownerCompany?.isMatriz ? 'Matriz' : 'Polo'} — {ownerCompany?.nomeFantasia}
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-500">
+            {ownerCompany?.cidade}{ownerCompany?.estado ? `/${ownerCompany.estado}` : ''}
+          </p>
         </div>
+
+        {canShare && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider flex items-center gap-2">
+                <Building size={14} className="text-blue-500" /> Polos autorizados a usar a conta
+              </label>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                A conta continua pertencendo à Matriz; marque os polos que poderão usá-la em recebimentos e pagamentos.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {companies.filter((company) => company.ativo).map((company) => {
+                const checked = company.id === companyId || formData.polosUso.includes(company.id);
+                return (
+                  <label
+                    key={company.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                      checked ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={company.id === companyId}
+                      onChange={() => togglePolo(company.id)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+                    />
+                    <span>
+                      <span className="block text-xs font-black text-[#001a33]">
+                        {company.isMatriz ? 'Matriz' : 'Polo'} — {company.nomeFantasia}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">
+                        {company.cidade}/{company.estado}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {isCaixa && (
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <WalletCards size={18} className="mt-0.5 shrink-0 text-emerald-700" />
+            <p className="text-xs font-semibold leading-relaxed text-emerald-800">
+              O Caixa é individual desta unidade. Banco, titular e identificadores são definidos automaticamente pelo sistema.
+            </p>
+          </div>
+        )}
 
         {/* Titular */}
         <div className="space-y-2">
@@ -108,7 +174,8 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
             onChange={handleChange}
             placeholder="Nome completo ou Razão Social"
             className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700"
-            required
+            required={!isCaixa}
+            disabled={isCaixa}
           />
         </div>
 
@@ -125,7 +192,8 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
               onChange={handleChange}
               placeholder="0000"
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700"
-              required
+              required={!isCaixa}
+              disabled={isCaixa}
             />
           </div>
           <div className="space-y-2">
@@ -139,7 +207,8 @@ const AccountForm: React.FC<AccountFormProps> = ({ initialData, companyId, compa
               onChange={handleChange}
               placeholder="00000-0"
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium text-slate-700"
-              required
+              required={!isCaixa}
+              disabled={isCaixa}
             />
           </div>
         </div>
