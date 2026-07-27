@@ -1,7 +1,7 @@
 // File: modules/gestor/gestao/livres/detalhes/TurmaLivreDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign } from 'lucide-react';
+import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, DollarSign, LockKeyhole } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
 import TurmaAlunos from './components/TurmaAlunos';
@@ -10,14 +10,22 @@ import TurmaDiarios from './components/diarios/TurmaDiarios';
 import TurmaFinanceiro from './components/TurmaFinanceiro';
 import TurmaConfiguracoes from './components/TurmaConfiguracoes';
 import { useTurmaLivreRealtime } from './hooks/useTurmaLivreRealtime';
+import {
+  canAccessGestaoTurmaTab,
+  type GestorPermissions,
+} from '../../../access-control';
 
 interface TurmaLivreDetalhesProps {
   turma: Turma;
   onBack: () => void;
+  permissions: GestorPermissions;
 }
 
-const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack }) => {
+const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack, permissions }) => {
   const [activeTab, setActiveTab] = useState('resumo');
+  const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
+  const canViewAulas = canAccessGestaoTurmaTab(permissions, 'grade')
+    || canAccessGestaoTurmaTab(permissions, 'diarios');
 
   useTurmaLivreRealtime(turma.id);
 
@@ -32,11 +40,18 @@ const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack }
     { id: 'diarios', label: 'Diários', icon: <Book size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-  ];
+  ].filter((tab) => canAccessGestaoTurmaTab(permissions, tab.id));
+
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || '');
+    }
+  }, [activeTab, permissions]);
 
   const renderContent = () => {
+    if (!tabs.some((tab) => tab.id === activeTab)) return null;
     switch (activeTab) {
-      case 'resumo': return <TurmaResumo turma={turma} />;
+      case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
       case 'alunos': return <TurmaAlunos turma={turma} />;
       case 'grade': return <TurmaGrade turma={turma} singleProfessor={true} colorTheme="amber" />;
       case 'diarios': return <TurmaDiarios turma={turma} />;
@@ -104,7 +119,13 @@ const TurmaLivreDetalhes: React.FC<TurmaLivreDetalhesProps> = ({ turma, onBack }
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-0">
-        {renderContent()}
+        {tabs.length === 0 ? (
+          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-8 text-center">
+            <LockKeyhole className="mx-auto text-amber-600" size={28} />
+            <h3 className="mt-3 text-sm font-black uppercase tracking-wider text-amber-900">Nenhuma área da turma liberada</h3>
+            <p className="mt-1 text-sm font-medium text-amber-700">Solicite ao administrador uma permissão de aba para o módulo Gestão.</p>
+          </div>
+        ) : renderContent()}
       </div>
     </div>
   );
