@@ -4,7 +4,7 @@
 import React from 'react';
 import { Facebook, Instagram, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import DailabsSignature from '../../shared/components/DailabsSignature';
+import ArkhenSignature from '../../shared/components/ArkhenSignature';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
@@ -132,7 +132,7 @@ const Footer: React.FC = () => {
             <p>@2026 Universos Cursos e Consultoria.</p>
             <p>Todos os Direitos Reservados.</p>
           </div>
-          <DailabsSignature tone="light" className="scale-90 opacity-75" />
+          <ArkhenSignature tone="light" className="scale-90 opacity-75" />
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-7 gap-y-3">
             <button onClick={() => navigate('/termos')} className="hover:text-white transition-colors">Termos de Uso</button>
             <button onClick={() => navigate('/privacidade')} className="hover:text-white transition-colors">Política de Privacidade (LGPD)</button>

@@ -15,7 +15,7 @@ import {
   Mail,
   ShieldCheck,
 } from 'lucide-react';
-import DailabsSignature from '../shared/components/DailabsSignature';
+import ArkhenSignature from '../shared/components/ArkhenSignature';
 
 type RecoveryMode = 'request' | 'reset';
 interface RecoveryAuthorization {
@@ -383,7 +383,7 @@ const PasswordRecoveryPage: React.FC = () => {
                   Seu link é pessoal e temporário
                 </p>
               </div>
-              <DailabsSignature tone="light" />
+              <ArkhenSignature tone="light" />
             </div>
           </div>
         </aside>
@@ -653,7 +653,7 @@ const PasswordRecoveryPage: React.FC = () => {
                   Fale com a secretaria
                 </Link>
               </p>
-              <DailabsSignature tone="dark" className="lg:hidden" />
+              <ArkhenSignature tone="dark" className="lg:hidden" />
             </div>
           </div>
         </section>

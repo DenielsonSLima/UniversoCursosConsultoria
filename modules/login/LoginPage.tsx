@@ -6,7 +6,7 @@ import { loginService } from './login.service';
 import { LoginCredentials } from './login.types';
 import { getInstitutionalProfiles, PortalAuthProfile, savePortalSession } from './portal-session';
 import { supabase } from '../../lib/supabase';
-import DailabsSignature from '../shared/components/DailabsSignature';
+import ArkhenSignature from '../shared/components/ArkhenSignature';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import {
   clearOAuthReturnParams,
@@ -267,7 +267,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 font-sans">
-      <DailabsSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
+      <ArkhenSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen xl:grid-cols-[1.04fr_0.96fr]">
         <section className="relative hidden min-h-[640px] overflow-hidden bg-[#001a33] text-white lg:flex xl:min-h-screen">
           <img src="/banner2.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />

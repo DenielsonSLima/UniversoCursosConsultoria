@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
 import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
-import DailabsSignature from '../../shared/components/DailabsSignature';
+import ArkhenSignature from '../../shared/components/ArkhenSignature';
 import AccessCheckingScreen from '../../shared/components/AccessCheckingScreen';
 import {
   STUDENT_LOGIN_MOTIVATIONAL_PHRASES,
@@ -401,7 +401,7 @@ const AlunoLoginPublicPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-50">
-      <DailabsSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
+      <ArkhenSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
         <AlunoLoginHero {...heroProps} />
         <section className="flex flex-col items-center justify-center bg-slate-50 px-4 py-8 text-slate-900 sm:px-8">
