@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/social-preview.js": {
+      "includeFiles": "dist/_social-share/**"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -25,12 +30,136 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' blob: data: https:; frame-ancestors 'self'; object-src 'self' blob: data:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; frame-src 'self' blob: data: https:; frame-ancestors 'self'; object-src 'self' blob: data:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
         }
       ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/",
+      "destination": "/_social-share/home.html"
+    },
+    {
+      "source": "/ead",
+      "destination": "/_social-share/ead.html"
+    },
+    {
+      "source": "/ead/:sharePath*",
+      "destination": "/api/social-preview?template=ead-detail&path=/ead/:sharePath*"
+    },
+    {
+      "source": "/cursos-livres",
+      "destination": "/_social-share/cursos-livres.html"
+    },
+    {
+      "source": "/cursos-livres/:sharePath*",
+      "destination": "/api/social-preview?template=cursos-livres-detail&path=/cursos-livres/:sharePath*"
+    },
+    {
+      "source": "/cursos-tecnicos",
+      "destination": "/_social-share/cursos-tecnicos.html"
+    },
+    {
+      "source": "/cursos-tecnicos/:sharePath*",
+      "destination": "/api/social-preview?template=cursos-tecnicos-detail&path=/cursos-tecnicos/:sharePath*"
+    },
+    {
+      "source": "/especializacao",
+      "destination": "/_social-share/especializacao.html"
+    },
+    {
+      "source": "/especializacao/:sharePath*",
+      "destination": "/api/social-preview?template=especializacao-detail&path=/especializacao/:sharePath*"
+    },
+    {
+      "source": "/ensino-superior",
+      "destination": "/_social-share/ensino-superior.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/_social-share/login.html"
+    },
+    {
+      "source": "/cadastro",
+      "destination": "/_social-share/cadastro.html"
+    },
+    {
+      "source": "/primeiro-acesso",
+      "destination": "/_social-share/primeiro-acesso.html"
+    },
+    {
+      "source": "/confirmacao-email",
+      "destination": "/_social-share/confirmacao-email.html"
+    },
+    {
+      "source": "/recuperar-senha",
+      "destination": "/_social-share/recuperar-senha.html"
+    },
+    {
+      "source": "/sistema/login",
+      "destination": "/_social-share/sistema-login.html"
+    },
+    {
+      "source": "/cad-aed",
+      "destination": "/_social-share/sistema-login.html"
+    },
+    {
+      "source": "/gestor",
+      "destination": "/_social-share/gestor.html"
+    },
+    {
+      "source": "/gestor/(.*)",
+      "destination": "/_social-share/gestor.html"
+    },
+    {
+      "source": "/professor",
+      "destination": "/_social-share/professor.html"
+    },
+    {
+      "source": "/professor/(.*)",
+      "destination": "/_social-share/professor.html"
+    },
+    {
+      "source": "/aluno",
+      "destination": "/_social-share/aluno.html"
+    },
+    {
+      "source": "/aluno/(.*)",
+      "destination": "/_social-share/aluno.html"
+    },
+    {
+      "source": "/localizacao",
+      "destination": "/_social-share/localizacao.html"
+    },
+    {
+      "source": "/contato",
+      "destination": "/_social-share/contato.html"
+    },
+    {
+      "source": "/polos",
+      "destination": "/_social-share/polos.html"
+    },
+    {
+      "source": "/links",
+      "destination": "/_social-share/links.html"
+    },
+    {
+      "source": "/bio",
+      "destination": "/_social-share/bio.html"
+    },
+    {
+      "source": "/linktree",
+      "destination": "/_social-share/linktree.html"
+    },
+    {
+      "source": "/validador",
+      "destination": "/_social-share/validador.html"
+    },
+    {
+      "source": "/validator",
+      "destination": "/_social-share/validador.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
