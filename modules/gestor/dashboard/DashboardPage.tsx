@@ -19,10 +19,19 @@ import {
   dashboardChartQueryOptions,
   dashboardKpisQueryOptions,
 } from './dashboard.queries';
+import {
+  buildDashboardAccessKey,
+  canAccessGestorModule,
+  getAllowedDashboardWidgets,
+  type DashboardWidgetId,
+  type GestorPermissions,
+} from '../access-control';
 
 interface DashboardPageProps {
   poloId?: string | null;
   onNavigate?: (moduleId: string) => void;
+  permissions: GestorPermissions;
+  cacheIdentity?: string;
 }
 
 const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ value, invertColors = false }) => {
@@ -54,25 +63,62 @@ const ChangeBadge: React.FC<{ value: number; invertColors?: boolean }> = ({ valu
   );
 };
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({
+  poloId,
+  onNavigate,
+  permissions,
+  cacheIdentity,
+}) => {
   const activePoloId = poloId || '';
+  const allowedWidgets = getAllowedDashboardWidgets(permissions);
+  const widgetSet = new Set<DashboardWidgetId>(allowedWidgets);
+  const hasWidget = (widgetId: DashboardWidgetId) => widgetSet.has(widgetId);
+  const dashboardAccessKey = buildDashboardAccessKey(permissions, cacheIdentity);
+  const hasKpiWidgets = [
+    'alunos-ativos',
+    'receita-mes',
+    'inadimplencia',
+    'matriculas-mes',
+  ].some((widgetId) => hasWidget(widgetId as DashboardWidgetId));
+  const showChart = hasWidget('fluxo-caixa');
+  const showQuickActions = hasWidget('acoes-rapidas');
+  const showRecentActivity = hasWidget('atividade-recente');
+  const showSideColumn = showQuickActions || showRecentActivity;
+  const canUseCommunication = canAccessGestorModule(permissions, 'comunicacao');
+  const canUseReports = canAccessGestorModule(permissions, 'relatorios');
+  const canCreatePartner = canAccessGestorModule(permissions, 'parceiros');
+  const canUseRegistrations = canAccessGestorModule(permissions, 'cadastros');
+  const canUseCashier = canAccessGestorModule(permissions, 'caixa');
+  const kpiCount = [
+    'alunos-ativos',
+    'receita-mes',
+    'inadimplencia',
+    'matriculas-mes',
+  ].filter((widgetId) => hasWidget(widgetId as DashboardWidgetId)).length;
+  const kpiGridColumns = kpiCount >= 4
+    ? 'lg:grid-cols-4'
+    : kpiCount === 3
+      ? 'lg:grid-cols-3'
+      : kpiCount === 2
+        ? 'lg:grid-cols-2'
+        : 'lg:grid-cols-4';
 
   // 1. Fetch KPIs
   const { data: kpis, isLoading: loadingKpis } = useQuery<DashboardKpis>({
-    ...dashboardKpisQueryOptions(activePoloId),
-    enabled: Boolean(activePoloId),
+    ...dashboardKpisQueryOptions(activePoloId, dashboardAccessKey),
+    enabled: Boolean(activePoloId) && hasKpiWidgets,
   });
 
   // 2. Fetch Chart Data
   const { data: chartData = [], isLoading: loadingChart } = useQuery<ChartDataPoint[]>({
-    ...dashboardChartQueryOptions(activePoloId),
-    enabled: Boolean(activePoloId),
+    ...dashboardChartQueryOptions(activePoloId, dashboardAccessKey),
+    enabled: Boolean(activePoloId) && showChart,
   });
 
   // 3. Fetch Recent Activity
   const { data: recentActivity = [], isLoading: loadingActivity } = useQuery<RecentActivityItem[]>({
-    ...dashboardActivityQueryOptions(activePoloId),
-    enabled: Boolean(activePoloId),
+    ...dashboardActivityQueryOptions(activePoloId, dashboardAccessKey),
+    enabled: Boolean(activePoloId) && showRecentActivity,
   });
 
   const formatCurrency = (val: number) => {
@@ -123,29 +169,37 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             {poloId ? 'Acompanhe os principais indicadores da unidade selecionada.' : 'Acompanhe os principais indicadores consolidados de todas as unidades.'}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => onNavigate?.('comunicacao')}
-            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <Bell size={16} />
-            <span className="hidden sm:inline">Central Atendimento</span>
-            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse">Ativo</span>
-          </button>
-          <button 
-            onClick={() => onNavigate?.('relatorios')}
-            className="flex items-center gap-2 bg-[#4169E1] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all hover:scale-[1.02] shadow-lg shadow-blue-900/20"
-          >
-            <FileText size={16} />
-            <span>Novo Relatório</span>
-          </button>
-        </div>
+        {(canUseCommunication || canUseReports) && (
+          <div className="flex gap-3">
+            {canUseCommunication && (
+              <button
+                onClick={() => onNavigate?.('comunicacao')}
+                className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                <Bell size={16} />
+                <span className="hidden sm:inline">Central Atendimento</span>
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse">Ativo</span>
+              </button>
+            )}
+            {canUseReports && (
+              <button
+                onClick={() => onNavigate?.('relatorios')}
+                className="flex items-center gap-2 bg-[#4169E1] text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-all hover:scale-[1.02] shadow-lg shadow-blue-900/20"
+              >
+                <FileText size={16} />
+                <span>Novo Relatório</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {hasKpiWidgets && (
+      <div className={`grid grid-cols-1 gap-6 md:grid-cols-2 ${kpiGridColumns}`}>
         
         {/* Card 1: Alunos Ativos */}
+        {hasWidget('alunos-ativos') && (
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between h-40">
           <div className="flex justify-between items-start mb-2">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-sm">
@@ -168,8 +222,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
         </div>
+        )}
 
         {/* Card 2: Receita Mensal */}
+        {hasWidget('receita-mes') && (
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between h-40">
           <div className="flex justify-between items-start mb-2">
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-sm">
@@ -192,8 +248,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
         </div>
+        )}
 
         {/* Card 3: Inadimplência */}
+        {hasWidget('inadimplencia') && (
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between h-40">
           <div className="flex justify-between items-start mb-2">
             <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl group-hover:bg-rose-600 group-hover:text-white transition-colors shadow-sm">
@@ -216,8 +274,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
         </div>
+        )}
 
         {/* Card 4: Novas Matrículas */}
+        {hasWidget('matriculas-mes') && (
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between h-40">
           <div className="flex justify-between items-start mb-2">
             <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition-colors shadow-sm">
@@ -240,12 +300,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             )}
           </div>
         </div>
+        )}
       </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {(showChart || showSideColumn) && (
+      <div className={showChart && showSideColumn ? 'grid grid-cols-1 gap-8 lg:grid-cols-3' : 'grid grid-cols-1 gap-8'}>
         
         {/* Main Chart Area (Left - 2 Cols) */}
-        <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[28rem]">
+        {showChart && (
+        <div className={`${showSideColumn ? 'lg:col-span-2' : ''} flex h-[28rem] flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8`}>
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-sm font-bold text-[#001a33] uppercase tracking-wide">Desempenho de Caixa</h3>
@@ -320,15 +384,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
             </div>
           )}
         </div>
+        )}
 
         {/* Right Column: Quick Actions & Recent Activity */}
-        <div className="space-y-6 flex flex-col lg:h-[28rem]">
+        {showSideColumn && (
+        <div className={`${showChart ? 'flex flex-col space-y-6 lg:h-[28rem]' : 'grid grid-cols-1 gap-6 md:grid-cols-2'}`}>
           
           {/* Quick Actions */}
+          {showQuickActions && (
           <div className="bg-[#001a33] p-5 rounded-3xl text-white shadow-xl relative overflow-hidden flex-none flex flex-col min-h-[14rem]">
             <div className="relative z-10">
               <h3 className="text-sm font-bold uppercase tracking-wider mb-4">Ações Rápidas</h3>
               <div className="space-y-2.5">
+                {canCreatePartner && (
                 <button 
                   onClick={() => onNavigate?.('parceiros')}
                   className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 p-3 rounded-xl transition-all hover:scale-[1.02] border border-white/5 group text-left"
@@ -341,6 +409,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                     <span className="text-[10px] text-white/50 block font-normal">Novo cadastro de aluno ou docente</span>
                   </div>
                 </button>
+                )}
+                {!canCreatePartner && canUseRegistrations && (
+                <button
+                  onClick={() => onNavigate?.('cadastros')}
+                  className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 p-3 rounded-xl transition-all hover:scale-[1.02] border border-white/5 group text-left"
+                >
+                  <div className="p-2 bg-blue-500 text-white rounded-lg group-hover:scale-110 transition-transform">
+                    <Users size={16} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold block">Abrir Cadastros</span>
+                    <span className="text-[10px] text-white/50 block font-normal">Consultar os cadastros permitidos</span>
+                  </div>
+                </button>
+                )}
+                {canUseCashier && (
                 <button 
                   onClick={() => onNavigate?.('caixa')}
                   className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 p-3 rounded-xl transition-all hover:scale-[1.02] border border-white/5 group text-left"
@@ -353,6 +437,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                     <span className="text-[10px] text-white/50 block font-normal">Registrar recebimento ou sangria</span>
                   </div>
                 </button>
+                )}
               </div>
             </div>
             {/* Background decoration */}
@@ -360,8 +445,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
                <TrendingUp size={150} />
             </div>
           </div>
+          )}
 
           {/* Recent Activity List */}
+          {showRecentActivity && (
           <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex-1 flex flex-col justify-between">
             <div>
               <h3 className="text-xs font-bold text-[#001a33] uppercase tracking-wide mb-3">Atividade Recente</h3>
@@ -409,16 +496,33 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ poloId, onNavigate }) => 
               )}
             </div>
             
-            <button 
-              onClick={() => onNavigate?.('parceiros')}
-              className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-800 pt-3 border-t border-slate-50"
-            >
-              Visualizar Alunos
-            </button>
+            {canCreatePartner && (
+              <button
+                onClick={() => onNavigate?.('parceiros')}
+                className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-800 pt-3 border-t border-slate-50"
+              >
+                Visualizar Alunos
+              </button>
+            )}
           </div>
+          )}
 
         </div>
+        )}
       </div>
+      )}
+
+      {allowedWidgets.length === 0 && (
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <Sparkles size={22} />
+          </div>
+          <h2 className="text-base font-bold text-[#001a33]">Tela inicial sem indicadores configurados</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            Este perfil não possui indicadores disponíveis na Visão Geral. Um administrador pode personalizar esta tela em Configurações → Perfis de acesso.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
