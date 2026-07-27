@@ -8,6 +8,7 @@ import { canAccessTab } from '../access-control';
 import SecretariaDashboard from './components/SecretariaDashboard';
 import { secretariaDocumentoDefinitions } from './shared/secretaria-documentos.definitions';
 import { secretariaCarteirinhasWorkspaceQueryOptions } from './carteirinhas/secretaria-carteirinhas.service';
+import { SECRETARIA_ACCESS_OPTIONS } from './secretaria-access';
 
 const moduleLoaders = {
   alunos: () => import('./alunos/SecretariaAlunosPage'),
@@ -169,25 +170,9 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
 
   const allowedTabsList = useMemo(() => {
     if (!gestorPermissions) return null;
-    const permissionMap: Record<string, string> = {
-      'solicitacoes': 'solicitacoes',
-      'carteirinha': 'carteirinhas',
-      'declaracao-matricula': 'declaracoes',
-      'declaracao-frequencia': 'declaracoes',
-      'declaracao-irpf': 'declaracoes',
-      'atestado-conclusao': 'declaracoes',
-      'historico-escolar': 'historico',
-      'historico-emissoes': 'historico',
-      'consulta-financeira': 'recebimentos',
-      'pasta-identificacao': 'fichas',
-      'ficha-matricula': 'fichas',
-    };
-
-    return Object.keys(secretariaModuleHeaders).filter(id => {
-      const permKey = permissionMap[id];
-      if (!permKey) return true;
-      return canAccessTab(gestorPermissions, 'secretaria', permKey);
-    });
+    return SECRETARIA_ACCESS_OPTIONS
+      .map(option => option.id)
+      .filter(id => canAccessTab(gestorPermissions, 'secretaria', id));
   }, [gestorPermissions]);
 
   useEffect(() => {
