@@ -1,30 +1,37 @@
-// File: modules/gestor/caixa/CaixaPage.tsx
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  DollarSign, TrendingUp, TrendingDown, Landmark, AlertTriangle, Info
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Banknote,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  CircleDollarSign,
+  Info,
+  Landmark,
+  ReceiptText,
+  Scale,
+  WalletCards,
 } from 'lucide-react';
-import { caixaDashboardQueryOptions, PRINCIPAL_POLO_ID } from './caixa.service';
+import {
+  caixaDashboardQueryOptions,
+  getCurrentCaixaCompetencia,
+  shiftCaixaCompetencia,
+} from './caixa.service';
 import { useCaixaRealtime } from './useCaixaRealtime';
 import { financeiroService } from '../financeiro/financeiro.service';
-
-const getPoloCleanName = (polo: any) => {
-  if (!polo) return '';
-  if (!polo.cidade) return polo.nome || '';
-  
-  const cityUpper = polo.cidade.toUpperCase().trim();
-  if (cityUpper === 'JAPOATA') return 'Japoatã/SE';
-  if (cityUpper === 'AQUIDABA') return 'Aquidabã/SE';
-  if (cityUpper === 'PORTO DA FOLHA') return 'Porto da Folha/SE';
-  
-  const cleanCity = polo.cidade
-    .toLowerCase()
-    .split(' ')
-    .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-  return `${cleanCity}/${(polo.estado || 'SE').toUpperCase()}`;
-};
+import {
+  formatCaixaCompetencia,
+  formatCaixaCurrency,
+} from './caixa.formatters';
+import {
+  CaixaBreakdownList,
+  CaixaMetricCard,
+} from './components/CaixaDashboardCards';
+import { CaixaReportLauncher } from './report/CaixaReportLauncher';
+import { CaixaReconciliationCard } from './components/CaixaReconciliationCard';
 
 interface CaixaPageProps {
   poloId?: string | null;
@@ -32,12 +39,31 @@ interface CaixaPageProps {
   isGlobal?: boolean;
 }
 
-const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, poloName, isGlobal = false }) => {
-  const [selectedPolo, setSelectedPolo] = useState<string>(
-    isGlobal ? (poloId || 'todos') : (poloId || '')
+interface CaixaPolo {
+  id: string;
+  nome: string;
+  cidade: string | null;
+  estado: string | null;
+  is_matriz: boolean;
+}
+
+const formatPoloName = (polo?: CaixaPolo) => {
+  if (!polo) return 'Polo atual';
+  if (!polo.cidade) return polo.nome;
+  return `${polo.cidade}/${(polo.estado || 'SE').toUpperCase()}`;
+};
+
+const CaixaPage: React.FC<CaixaPageProps> = ({
+  poloId,
+  poloName,
+  isGlobal = false,
+}) => {
+  const currentCompetencia = getCurrentCaixaCompetencia();
+  const [competencia, setCompetencia] = useState(currentCompetencia);
+  const [selectedPolo, setSelectedPolo] = useState(
+    isGlobal ? (poloId || 'todos') : (poloId || ''),
   );
 
-  // Fetch Polos list
   const { data: polos = [] } = useQuery({
     queryKey: ['caixa-polos-list', 'global'],
     queryFn: financeiroService.getPolos,
@@ -50,381 +76,400 @@ const CaixaPage: React.FC<CaixaPageProps> = ({ poloId, poloName, isGlobal = fals
     setSelectedPolo(isGlobal ? (poloId || 'todos') : (poloId || ''));
   }, [isGlobal, poloId]);
 
-  const visiblePolos = useMemo(() => {
-    if (isGlobal) return polos;
-    return poloId ? [{ id: poloId, nome: poloName || 'Polo atual' }] : [];
+  const visiblePolos = useMemo<CaixaPolo[]>(() => {
+    if (isGlobal) return polos as CaixaPolo[];
+    if (!poloId) return [];
+    return [{
+      id: poloId,
+      nome: poloName || 'Polo atual',
+      cidade: null,
+      estado: null,
+      is_matriz: false,
+    }];
   }, [isGlobal, poloId, poloName, polos]);
 
-  useCaixaRealtime(selectedPolo);
+  useCaixaRealtime();
 
-  // Fetch dashboard data reactively based on selectedPolo
-  const { data: dashboard, isLoading, error } = useQuery({
-    ...caixaDashboardQueryOptions(selectedPolo),
+  const { data: statement, isLoading, error } = useQuery({
+    ...caixaDashboardQueryOptions(selectedPolo, competencia),
     enabled: Boolean(selectedPolo),
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
-
-  const getReceitaCatLabel = (cat: string) => {
-    switch (cat) {
-      case 'MENSALIDADE': return 'Mensalidades Escolares';
-      case 'OUTROS_CREDITOS': return 'Outros Créditos';
-      case 'ADIANTAMENTO_TOMADO': return 'Adiantamentos Tomados';
-      default: return cat;
-    }
-  };
-
-  const getDespesaCatLabel = (cat: string) => {
-    switch (cat) {
-      case 'DESPESA_VARIAVEL': return 'Despesas Variáveis';
-      case 'DESPESA_ADMINISTRATIVA': return 'Despesas Administrativas';
-      case 'OUTRAS_DESPESAS': return 'Outras Despesas';
-      case 'ADIANTAMENTO_CEDIDO': return 'Adiantamentos Cedidos';
-      default: return cat;
-    }
-  };
+  const isCurrentCompetencia = competencia === currentCompetencia;
+  const isConsolidated = selectedPolo === 'todos';
+  const hasChartMovement = statement?.serieMensal.some(
+    (month) => month.entradas !== 0 || month.saidas !== 0,
+  ) === true;
 
   if (isLoading) {
     return (
-      <div className="py-24 text-center space-y-4 animate-fadeIn">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="text-slate-500 text-xs font-black uppercase tracking-widest">Carregando painel de caixa...</p>
+      <div className="py-24 text-center">
+        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <p className="mt-4 text-sm font-medium text-slate-500">Carregando prestação de contas...</p>
       </div>
     );
   }
 
-  if (error || !dashboard) {
+  if (error || !statement) {
     return (
-      <div className="p-8 text-center bg-rose-50 border border-rose-250 rounded-[2rem] text-rose-800 space-y-2 animate-fadeIn">
-        <AlertTriangle className="mx-auto text-rose-500" size={32} />
-        <h4 className="font-black uppercase text-sm">Erro ao carregar dados do caixa</h4>
-        <p className="text-xs">Não foi possível recuperar os saldos e filtros do polo selecionado. Tente atualizar a página.</p>
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-rose-800">
+        <AlertTriangle className="mx-auto text-rose-500" size={30} />
+        <h4 className="mt-3 text-base font-bold">Não foi possível carregar o Caixa</h4>
+        <p className="mt-1 text-sm">Atualize a página ou tente novamente em alguns instantes.</p>
       </div>
     );
   }
 
-  // Find max value in last 3 months to scale the chart bars
-  const maxMonthValue = Math.max(
-    ...dashboard.fluxo3Meses.map(f => Math.max(f.creditos, f.debitos)),
-    1000 // avoid division by zero
-  );
+  const resultTone = statement.resumoCompetencia.resultadoStatus === 'NEGATIVO'
+    ? 'rose'
+    : statement.resumoCompetencia.resultadoStatus === 'POSITIVO'
+      ? 'green'
+      : 'blue';
 
   return (
-    <div className="max-w-7xl mx-auto animate-fadeIn pb-12 space-y-6">
-      
-      {/* TABS DE SELEÇÃO DE POLO */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Filtro por Polo / Unidade</span>
-        
-        <div className="border-b border-slate-200 mb-2">
-          <div className="flex gap-6 overflow-x-auto pb-px">
-            {/* Aba Geral */}
-            {isGlobal && (
+    <div className="mx-auto max-w-7xl animate-fadeIn space-y-5 pb-12">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#001a33]">Caixa</h1>
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+              Prestação mensal
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Saúde financeira e posição contábil de {formatCaixaCompetencia(statement.meta.competencia)}.
+          </p>
+        </div>
+
+        <div className="inline-flex w-fit items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, -1))}
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Mês anterior"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <div className="flex min-w-[154px] items-center justify-center gap-2 px-3 text-sm font-semibold text-slate-800">
+            <CalendarDays size={15} className="text-blue-600" />
+            {formatCaixaCompetencia(competencia)}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, 1))}
+            disabled={isCurrentCompetencia}
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Próximo mês"
+          >
+            <ChevronRight size={17} />
+          </button>
+        </div>
+      </header>
+
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="flex min-w-max gap-1">
+          {isGlobal && (
+            <button
+              type="button"
+              onClick={() => setSelectedPolo('todos')}
+              className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
+                isConsolidated ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Scale size={15} />
+              Resultado geral
+              {isConsolidated && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-blue-600" />}
+            </button>
+          )}
+          {visiblePolos.map((polo) => {
+            const active = selectedPolo === polo.id;
+            return (
               <button
-                onClick={() => setSelectedPolo('todos')}
-                className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
-                  selectedPolo === 'todos'
-                    ? 'text-[#001a33] font-extrabold'
-                    : 'text-slate-400 hover:text-slate-700'
+                key={polo.id}
+                type="button"
+                onClick={() => setSelectedPolo(polo.id)}
+                disabled={!isGlobal}
+                className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
+                  active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <Landmark size={14} className={selectedPolo === 'todos' ? 'text-[#4169E1]' : 'text-slate-400'} />
-                <span>Resultado Geral</span>
-                {selectedPolo === 'todos' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
+                <Landmark size={15} />
+                {formatPoloName(polo)}
+                {polo.is_matriz && (
+                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                    Matriz
+                  </span>
                 )}
+                {active && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded bg-blue-600" />}
               </button>
-            )}
-            
-            {/* Abas de Polos Específicos */}
-            {visiblePolos.map((polo: any) => {
-              const isActive = selectedPolo === polo.id;
-              const cleanPoloName = getPoloCleanName(polo);
-              return (
-                <button
-                  key={polo.id}
-                  onClick={() => setSelectedPolo(polo.id)}
-                  disabled={!isGlobal}
-                  className={`flex items-center gap-2 pb-3 text-xs font-bold uppercase tracking-wider transition-all relative shrink-0 ${
-                    isActive
-                      ? 'text-[#001a33] font-extrabold'
-                      : 'text-slate-400 hover:text-slate-700'
-                  }`}
-                >
-                  <Landmark size={14} className={isActive ? 'text-[#4169E1]' : 'text-slate-400'} />
-                  <span>{cleanPoloName}</span>
-                  {polo.id === PRINCIPAL_POLO_ID && (
-                    <span className="ml-1.5 bg-blue-50 text-[#4169E1] text-[8px] px-1.5 py-0.5 rounded font-bold uppercase border border-blue-100">Matriz</span>
-                  )}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4169E1] rounded-full" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
-
-        {/* Informativo EAD agrupado no Principal */}
-        {(selectedPolo === 'todos' || selectedPolo === PRINCIPAL_POLO_ID) && (
-          <div className="bg-blue-50/50 border border-blue-200/50 text-blue-700 p-4 rounded-2xl text-xs flex items-start gap-3">
-            <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold uppercase tracking-wider text-[9px] mb-0.5">Informação de Lançamento EAD</p>
-              <p className="font-medium text-slate-650">Os recebimentos referentes a cursos EAD (que não possuem polo físico associado) estão consolidados junto ao **Polo Principal** ({getPoloCleanName(polos.find((p: any) => p.id === PRINCIPAL_POLO_ID) || { nome: 'Japoatã/SE', cidade: 'JAPOATA' })}).</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* KPI CARDS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        {/* 1. Saldo Consolidado */}
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl flex flex-col justify-between group relative overflow-hidden">
-           <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-blue-500/10 blur-xl group-hover:scale-150 transition-all duration-500"></div>
-           <div className="flex justify-between items-start relative z-10">
-             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <DollarSign size={12} className="text-blue-400" /> Saldo Consolidado
-             </span>
-             <span className="text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded text-[8px] font-black uppercase">Contas Ativas</span>
-           </div>
-           <div className="mt-6 relative z-10">
-             <h3 className="text-3xl font-black text-white tracking-tight">{formatCurrency(dashboard.saldoTotalContas)}</h3>
-             <p className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase">Soma dos saldos das contas selecionadas</p>
-           </div>
+      {statement.classificacao.quantidadeSemPolo > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+          <AlertTriangle size={17} className="shrink-0 text-amber-600" />
+          <p className="text-sm">
+            <strong>{formatCaixaCurrency(statement.classificacao.valorSemPolo)}</strong> em{' '}
+            {statement.classificacao.quantidadeSemPolo}{' '}
+            {statement.classificacao.quantidadeSemPolo === 1 ? 'movimento aguarda' : 'movimentos aguardam'} identificação do polo.
+          </p>
         </div>
+      )}
 
-        {/* 2. Total a Receber */}
-        <div className="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300 group">
-           <div className="flex justify-between items-start">
-             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <TrendingUp size={12} className="text-emerald-500" /> Total a Receber
-             </span>
-             <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[8px] font-black uppercase">Aberto</span>
-           </div>
-           <div className="mt-6">
-             <h3 className="text-3xl font-black text-emerald-600 tracking-tight">{formatCurrency(dashboard.totalReceber)}</h3>
-             <p className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase">Receitas pendentes e vencidas</p>
-           </div>
-        </div>
-
-        {/* 3. Total a Pagar */}
-        <div className="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300 group">
-           <div className="flex justify-between items-start">
-             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <TrendingDown size={12} className="text-rose-500" /> Total a Pagar
-             </span>
-             <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-[8px] font-black uppercase">Aberto</span>
-           </div>
-           <div className="mt-6">
-             <h3 className="text-3xl font-black text-rose-600 tracking-tight">{formatCurrency(dashboard.totalPagar)}</h3>
-             <p className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase">Despesas pendentes e vencidas</p>
-           </div>
-        </div>
-
-        {/* 4. Mensalidades em Atraso */}
-        <div className="bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm flex flex-col justify-between hover:shadow-lg transition-all duration-300 group">
-           <div className="flex justify-between items-start">
-             <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-               <AlertTriangle size={12} className="text-amber-500" /> Mensalidades em Atraso
-             </span>
-             <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded text-[8px] font-black uppercase">Inadimplência</span>
-           </div>
-           <div className="mt-6">
-             <h3 className="text-3xl font-black text-amber-500 tracking-tight">{formatCurrency(dashboard.mensalidadesEmAtraso.valorTotal)}</h3>
-             <p className="text-[9px] text-slate-400 font-bold mt-1.5 uppercase">
-               {dashboard.mensalidadesEmAtraso.quantidade} boleto(s) em atraso
-             </p>
-           </div>
-        </div>
-
-      </div>
-
-      {/* SEÇÃO PRINCIPAL DE GRÁFICOS E SALDOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* LADO ESQUERDO: GRÁFICO E CATEGORIAS (2 COLS) */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Grafico dos ultimos 3 meses */}
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col space-y-6">
-            <div>
-              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Comparativo dos Últimos 3 Meses</h3>
-              <p className="text-slate-500 text-xs font-bold uppercase mt-1">Créditos recebidos vs. Débitos pagos em cada período.</p>
-            </div>
-
-            {/* Simulação do Gráfico de Barras com CSS */}
-            <div className="h-64 flex items-end justify-around gap-8 border-b border-slate-100 pb-4 pt-8 px-4 relative">
-              {dashboard.fluxo3Meses.map((f, idx) => {
-                const credPct = (f.creditos / maxMonthValue) * 100;
-                const debPct = (f.debitos / maxMonthValue) * 100;
-                return (
-                  <div key={idx} className="flex flex-col items-center flex-1 space-y-2 max-w-[150px]">
-                    <div className="w-full flex items-end justify-center gap-3 h-48 relative">
-                      {/* Barra Receita (Verde) */}
-                      <div 
-                        style={{ height: `${credPct}%` }}
-                        className="w-8 bg-emerald-500 hover:bg-emerald-600 rounded-t-lg transition-all duration-300 relative group flex items-end justify-center cursor-pointer shadow-md shadow-emerald-500/20"
-                      >
-                        <div className="absolute -top-8 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl pointer-events-none z-50">
-                          Receitas: {formatCurrency(f.creditos)}
-                        </div>
-                      </div>
-                      
-                      {/* Barra Despesa (Vermelho) */}
-                      <div 
-                        style={{ height: `${debPct}%` }}
-                        className="w-8 bg-rose-500 hover:bg-rose-600 rounded-t-lg transition-all duration-300 relative group flex items-end justify-center cursor-pointer shadow-md shadow-rose-500/20"
-                      >
-                        <div className="absolute -top-8 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl pointer-events-none z-50">
-                          Despesas: {formatCurrency(f.debitos)}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-xs font-black text-[#001a33] uppercase mt-2 tracking-wider">{f.mesNome}</span>
-                  </div>
-                );
-              })}
-              {dashboard.fluxo3Meses.length === 0 && (
-                <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-bold uppercase">Nenhum fluxo consolidado registrado.</div>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <CaixaMetricCard
+          label={isConsolidated ? 'Saldo contábil consolidado' : 'Posição atribuída ao polo'}
+          value={statement.saldosHoje.registradoTotal}
+          tone="navy"
+          icon={<CircleDollarSign size={15} className="text-blue-400" />}
+          helper={(
+            <span>
+              {isConsolidated ? 'Banco registrado' : 'Posição nas contas'}{' '}
+              {formatCaixaCurrency(statement.saldosHoje.bancarioRegistrado)}
+              {' · '}
+              Caixa local {formatCaixaCurrency(statement.saldosHoje.caixaLocal)}
+            </span>
+          )}
+        />
+        <CaixaMetricCard
+          label="Entradas recebidas no mês"
+          value={statement.resumoCompetencia.entradasRecebidasBrutas}
+          tone="green"
+          icon={<ArrowUpRight size={15} className="text-emerald-500" />}
+          helper={`${statement.resumoCompetencia.quantidadeRecebimentos} recebimento(s) confirmado(s)`}
+        />
+        <CaixaMetricCard
+          label="Saídas pagas no mês"
+          value={statement.resumoCompetencia.saidasPagas}
+          tone="rose"
+          icon={<ArrowDownRight size={15} className="text-rose-500" />}
+          helper={(
+            <span>
+              {statement.resumoCompetencia.quantidadePagamentos} pagamento(s)
+              {statement.resumoCompetencia.tarifasBancariasConfirmadas > 0 && (
+                <> · Tarifas {formatCaixaCurrency(statement.resumoCompetencia.tarifasBancariasConfirmadas)}</>
               )}
+            </span>
+          )}
+        />
+        <CaixaMetricCard
+          label={
+            statement.resumoCompetencia.resultadoStatus === 'NEGATIVO'
+              ? 'Déficit do mês'
+              : statement.resumoCompetencia.resultadoStatus === 'POSITIVO'
+                ? 'Superávit do mês'
+                : 'Resultado do mês'
+          }
+          value={statement.resumoCompetencia.resultado}
+          tone={resultTone}
+          icon={<Banknote size={15} />}
+          helper="Entradas menos saídas confirmadas no período"
+        />
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 md:grid-cols-4 md:divide-y-0">
+          {[
+            { label: 'Receitas futuras', value: statement.compromissos.aReceber, color: 'text-emerald-700' },
+            { label: 'Inadimplência', value: statement.compromissos.receberVencido, color: 'text-amber-600' },
+            { label: 'Obrigações futuras', value: statement.compromissos.aPagar, color: 'text-rose-600' },
+            { label: 'Obrigações vencidas', value: statement.compromissos.pagarVencido, color: 'text-rose-700' },
+          ].map((item) => (
+            <div key={item.label} className="px-4 py-3.5">
+              <p className="text-[11px] font-medium text-slate-500">{item.label}</p>
+              <p className={`mt-1 text-lg font-bold ${item.color}`}>{formatCaixaCurrency(item.value)}</p>
+              <p className="mt-0.5 text-[10px] text-slate-400">
+                {item.label === 'Inadimplência' || item.label === 'Obrigações vencidas'
+                  ? 'Valor vencido ainda não liquidado'
+                  : 'Compromisso em aberto hoje'}
+              </p>
             </div>
-
-            {/* Legenda */}
-            <div className="flex gap-6 justify-center text-xs font-bold uppercase tracking-wider text-slate-500 pt-2">
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 bg-emerald-500 rounded-md"></span>
-                <span>Receitas (Créditos)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3.5 h-3.5 bg-rose-500 rounded-md"></span>
-                <span>Despesas (Débitos)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Receitas e Despesas Segmentadas por Categoria */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* Receitas por Categoria */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
-              <h4 className="text-xs font-black text-[#001a33] uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100">
-                <TrendingUp size={14} className="text-emerald-500" /> Receitas Separadas por Tipo
-              </h4>
-              
-              <div className="space-y-4">
-                {dashboard.receberPorTipo.map((item, idx) => {
-                  const pct = dashboard.totalReceber > 0 ? (item.valor / dashboard.totalReceber) * 100 : 0;
-                  return (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-bold text-slate-700">
-                        <span>{getReceitaCatLabel(item.categoria)}</span>
-                        <span className="font-black text-[#001a33]">{formatCurrency(item.valor)}</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${pct}%` }} 
-                          className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
-                        <span>Porcentagem do total</span>
-                        <span>{pct.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Despesas por Categoria */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
-              <h4 className="text-xs font-black text-[#001a33] uppercase tracking-widest flex items-center gap-1.5 pb-2 border-b border-slate-100">
-                <TrendingDown size={14} className="text-rose-500" /> Despesas Separadas por Tipo
-              </h4>
-
-              <div className="space-y-4">
-                {dashboard.pagarPorTipo.map((item, idx) => {
-                  const pct = dashboard.totalPagar > 0 ? (item.valor / dashboard.totalPagar) * 100 : 0;
-                  return (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-bold text-slate-700">
-                        <span>{getDespesaCatLabel(item.categoria)}</span>
-                        <span className="font-black text-[#001a33]">{formatCurrency(item.valor)}</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${pct}%` }} 
-                          className="bg-rose-500 h-full rounded-full transition-all duration-500"
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase">
-                        <span>Porcentagem do total</span>
-                        <span>{pct.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-
+          ))}
         </div>
+      </section>
 
-        {/* LADO DIREITO: SALDO INDIVIDUAL DAS CONTAS BANCÁRIAS (1 COL) */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-3">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight">Saldos Individuais</h3>
-              <p className="text-slate-500 text-xs font-bold uppercase mt-1">Saldo em tempo real de cada conta ativa.</p>
+              <h2 className="text-base font-bold text-slate-900">Movimentação do caixa</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Entradas e saídas confirmadas nos últimos seis meses
+              </p>
             </div>
+            <div className="flex gap-3 text-[10px] font-medium text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <i className="h-2.5 w-2.5 rounded-sm bg-emerald-500" /> Entradas
+              </span>
+              <span className="flex items-center gap-1.5">
+                <i className="h-2.5 w-2.5 rounded-sm bg-rose-500" /> Saídas
+              </span>
+            </div>
+          </div>
 
-            <div className="space-y-4">
-              {dashboard.saldosIndividuais.length > 0 ? (
-                dashboard.saldosIndividuais.map((account) => (
-                  <div 
-                    key={account.id} 
-                    className="p-5 bg-slate-50 border border-slate-150 rounded-[2rem] hover:bg-white hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                        <Landmark size={20} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-[#001a33] uppercase">{account.banco}</p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">
-                          Ag: {account.agencia} • C/C: {account.conta}
-                        </p>
-                      </div>
+          {hasChartMovement ? (
+            <div className="mt-5 flex h-44 items-end gap-3 border-b border-slate-100 px-1 pb-2 sm:gap-5">
+              {statement.serieMensal.map((month) => (
+                <div key={month.competencia} className="flex h-full min-w-0 flex-1 flex-col justify-end">
+                  <div className="flex flex-1 items-end justify-center gap-1.5">
+                    <div
+                      className="group relative min-h-0 w-3 rounded-t bg-emerald-500 transition hover:bg-emerald-600 sm:w-5"
+                      style={{ height: `${month.entradasEscalaPercentual}%` }}
+                    >
+                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
+                        {formatCaixaCurrency(month.entradas)}
+                      </span>
                     </div>
-                    
-                    <div className="flex items-end justify-between border-t border-slate-200/50 pt-3">
-                      <div>
-                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-wider block">Polo Vinculado</span>
-                        <span className="text-[10px] text-slate-600 font-bold uppercase">{account.poloNome}</span>
-                      </div>
-                      <span className={`text-base font-black ${account.saldoAtual < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {formatCurrency(account.saldoAtual)}
+                    <div
+                      className="group relative min-h-0 w-3 rounded-t bg-rose-500 transition hover:bg-rose-600 sm:w-5"
+                      style={{ height: `${month.saidasEscalaPercentual}%` }}
+                    >
+                      <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
+                        {formatCaixaCurrency(month.saidas)}
                       </span>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase border border-dashed border-slate-200 rounded-[2rem]">
-                  Nenhuma conta bancária configurada para esta unidade.
+                  <p className="mt-2 truncate text-center text-[10px] font-medium text-slate-500">
+                    {month.rotulo}
+                  </p>
                 </div>
-              )}
+              ))}
             </div>
-
-          </div>
+          ) : (
+            <div className="mt-5 flex h-28 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400">
+              Nenhuma movimentação confirmada neste período.
+            </div>
+          )}
         </div>
 
-      </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Onde está o saldo</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Contas bancárias e caixas da unidade
+              </p>
+            </div>
+            <Info size={16} className="mt-0.5 text-slate-400" />
+          </div>
 
+          <div className="mt-4 divide-y divide-slate-100">
+            {statement.contas.length > 0 ? statement.contas.map((account) => (
+              <div key={account.id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
+                    {account.natureza === 'CAIXA_INTERNO'
+                      ? <WalletCards size={17} />
+                      : <Landmark size={17} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-900">
+                          {account.banco} · Ag. {account.agencia} · Conta {account.conta}
+                        </p>
+                        {!account.ativo && (
+                          <p className="mt-0.5 text-[10px] font-semibold text-amber-600">
+                            Inativa — somente histórico
+                          </p>
+                        )}
+                        <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                          {account.titular} · {account.cidadeUf}
+                        </p>
+                      </div>
+                      <p className={`shrink-0 text-sm font-extrabold ${
+                        account.valorExibido < 0 ? 'text-rose-600' : 'text-emerald-700'
+                      }`}>
+                        {formatCaixaCurrency(account.valorExibido)}
+                      </p>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-[10px]">
+                      <span className="font-semibold text-blue-600">
+                        {account.tipoValorExibido === 'POSICAO_POLO'
+                          ? 'Posição deste polo'
+                          : account.compartilhada
+                            ? `Compartilhada com ${account.unidadesUso} unidades`
+                            : 'Saldo registrado'}
+                      </span>
+                      {account.tipoValorExibido === 'POSICAO_POLO' && (
+                        <span className="text-slate-400">
+                          Total da conta {formatCaixaCurrency(account.saldoTotalRegistrado)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <p className="py-8 text-center text-sm text-slate-400">Nenhuma conta disponível.</p>
+            )}
+          </div>
+
+          <div className="mt-4 flex gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] leading-4 text-slate-500">
+            <Info size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Saldo contábil atualizado por cobranças e baixas conciliadas.
+              A integração Banese não consulta o extrato bancário.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
+              <ArrowUpRight size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Receitas recebidas no mês</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Por modalidade de curso</p>
+            </div>
+          </div>
+          <CaixaBreakdownList
+            items={statement.receitasPorModalidade}
+            emptyLabel="Nenhuma receita recebida."
+            tone="green"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
+              <ArrowDownRight size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Despesas pagas no mês</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Tarifas bancárias aparecem somente quando confirmadas
+              </p>
+            </div>
+          </div>
+          <CaixaBreakdownList
+            items={statement.despesasPorCategoria}
+            emptyLabel="Nenhuma despesa paga."
+            tone="rose"
+          />
+        </div>
+      </section>
+
+      <CaixaReconciliationCard reconciliation={statement.conciliacao} />
+
+      <CaixaReportLauncher
+        poloId={selectedPolo}
+        competencia={competencia}
+        scopeLabel={statement.meta.escopoRotulo}
+      />
+
+      <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
+        <ReceiptText size={13} className="mt-0.5 shrink-0" />
+        <span>
+          Esta tela apresenta posição contábil do sistema. Valores bancários reais devem ser conferidos
+          com o extrato quando a integração de saldo estiver disponível.
+        </span>
+      </footer>
     </div>
   );
 };
