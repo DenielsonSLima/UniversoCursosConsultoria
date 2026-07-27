@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.4",
+  "version": "2.2.3-beta.5",
   "display": "BETA",
   "stage": "beta",
-  "revision": 4,
+  "revision": 5,
   "releasedAt": "2026-07-27",
-  "summary": "Autopiloto Banese até P10, rollback seguro, prioridade EAD e console com tipografia nítida"
+  "summary": "Caixa mensal por polo, conta Banese compartilhada e prestação detalhada em PDF"
 }
