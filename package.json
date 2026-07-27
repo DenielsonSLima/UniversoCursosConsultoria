@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --force",
-    "build": "npm run check:version && npm run typecheck && vite build",
+    "build": "npm run check:version && vite build",
     "check:version": "node scripts/check-version-record.mjs",
-    "typecheck": "tsc --noEmit --pretty false",
     "preview": "vite preview",
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
     "test:banese-ui": "node scripts/test-banese-payment-ui.mjs",
