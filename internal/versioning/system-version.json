@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.3",
+  "version": "2.2.3-beta.4",
   "display": "BETA",
   "stage": "beta",
-  "revision": 3,
+  "revision": 4,
   "releasedAt": "2026-07-27",
-  "summary": "Consulta Banese adaptativa, histórico operacional paginado e ciclos financeiros conforme a configuração do curso"
+  "summary": "Autopiloto Banese até P10, rollback seguro, prioridade EAD e console com tipografia nítida"
 }

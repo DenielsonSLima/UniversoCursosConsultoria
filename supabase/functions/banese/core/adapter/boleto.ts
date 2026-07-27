@@ -431,6 +431,7 @@ export const queryBaneseBoleto = async (
     convenio: unknown;
     nossoNumero: unknown;
     accessToken?: BaneseAccessToken;
+    signal?: AbortSignal;
   },
 ) => {
   assertEnvironment(environment);
@@ -449,6 +450,7 @@ export const queryBaneseBoleto = async (
   }/convenios/${convenio}/boletos/${nossoNumero}`;
   const response = await fetch(baseEndpoint, {
     headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+    signal: input.signal,
   });
   const raw = await readResponseBody(response);
   if (!response.ok) {
@@ -484,6 +486,7 @@ export const queryBaneseBoleto = async (
     `${baseEndpoint}/pagamentos/efetivados`,
     {
       headers: { Authorization: `${token.tokenType} ${token.accessToken}` },
+      signal: input.signal,
     },
   );
   const paymentRaw = await readResponseBody(paymentResponse);

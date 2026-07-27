@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Building2, 
@@ -47,6 +47,7 @@ import {
 
 const ConfiguracoesPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const sectionTopRef = useRef<HTMLDivElement>(null);
   const banesePollingQuery = useQuery({
     queryKey: banesePollingQueryKey,
     queryFn: consultaApiBaneseService.getDashboard,
@@ -105,9 +106,14 @@ const ConfiguracoesPage: React.FC = () => {
     }
   };
 
+  useLayoutEffect(() => {
+    if (!activeSection) return;
+    sectionTopRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [activeSection]);
+
   if (activeSection) {
     return (
-      <div className="animate-fadeIn">
+      <div ref={sectionTopRef}>
         <button 
           onClick={() => setActiveSection(null)} 
           className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors uppercase tracking-widest group"

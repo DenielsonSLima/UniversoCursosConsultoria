@@ -45,8 +45,18 @@ const readRequestBody = async (req: Request) => {
   JSON.parse(text);
 };
 
-const wait = (milliseconds: number) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
+const wait = (milliseconds: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (signal?.aborted || milliseconds <= 0) {
+      resolve();
+      return;
+    }
+    const timeout = setTimeout(resolve, milliseconds);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+  });
 
 const classifyError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error ?? "");
@@ -84,6 +94,14 @@ const classifyError = (error: unknown) => {
       publicMessage: "Tempo esgotado na consulta Banese.",
     };
   }
+  if (/SUPABASE_AUDIT_WRITE/i.test(message)) {
+    return {
+      result: "ERROR" as const,
+      errorClass: "AUDIT_WRITE",
+      httpStatus,
+      publicMessage: "A consulta ocorreu, mas a auditoria interna falhou.",
+    };
+  }
   if (/diverge|inválid|inval|bloquead|mudou durante/i.test(message)) {
     return {
       result: "ERROR" as const,
@@ -110,6 +128,7 @@ const getSharedToken = async (
   environment: Environment,
   refreshMarginSeconds: number,
   metrics: { requests: number; reused: boolean },
+  signal?: AbortSignal,
 ) => {
   const cached = tokenCache.get(environment);
   if (cached && cached.expiresAt > Date.now()) {
@@ -123,7 +142,9 @@ const getSharedToken = async (
     return await inFlight;
   }
 
-  const request = requestBaneseBoletoAccessToken(admin, environment);
+  const request = requestBaneseBoletoAccessToken(admin, environment, {
+    signal,
+  });
   tokenRequests.set(environment, request);
   metrics.requests += 1;
   try {
@@ -199,7 +220,11 @@ Deno.serve(async (req: Request) => {
   const environment = String(runConfig.environment || "") as Environment;
   const targetTitles = Math.max(
     1,
-    Math.min(10, Number(runConfig.targetTitles || 1)),
+    Math.min(375, Number(runConfig.targetTitles || 1)),
+  );
+  const maxConcurrency = Math.max(
+    1,
+    Math.min(8, Number(runConfig.maxConcurrency || 1)),
   );
   const refreshMarginSeconds = Math.max(
     30,
@@ -214,12 +239,20 @@ Deno.serve(async (req: Request) => {
     console.error("banese reconciliation claim failed", {
       errorClass: "CLAIM_ERROR",
     });
-    await admin.rpc("finish_banese_reconciliation_run", {
-      p_run_id: runId,
-      p_oauth_requests: 0,
-      p_oauth_reused: false,
-      p_duration_ms: Date.now() - startedAt,
-    });
+    const { error: failureAuditError } = await admin.rpc(
+      "fail_banese_reconciliation_run",
+      {
+        p_run_id: runId,
+        p_error_class: "CLAIM_ERROR",
+        p_decision: "Falha interna ao preparar a fila de consulta Banese.",
+        p_duration_ms: Date.now() - startedAt,
+      },
+    );
+    if (failureAuditError) {
+      console.error("banese reconciliation failure audit failed", {
+        errorClass: "FAILURE_AUDIT_ERROR",
+      });
+    }
     return json({ error: "Não foi possível iniciar a conciliação." }, 500);
   }
 
@@ -234,18 +267,59 @@ Deno.serve(async (req: Request) => {
   let failed = 0;
   let pending = 0;
   let throttled = false;
+  let halted = false;
+  let launched = 0;
+  let auditFailure = false;
   const oauthMetrics = { requests: 0, reused: false };
-  const intervalMs = Math.min(1_000, Math.floor(60_000 / targetTitles / 2));
+  const batchController = new globalThis.AbortController();
+  const processingStartedAt = Date.now();
+  const queryDeadline = startedAt + 40_000;
+  const hardDeadline = startedAt + 50_000;
+  const launchWindowMs = Math.max(
+    1_000,
+    Math.min(30_000, queryDeadline - processingStartedAt - 8_000),
+  );
+  const launchIntervalMs = targetTitles <= 1
+    ? 0
+    : Math.max(80, Math.floor(launchWindowMs / (targetTitles - 1)));
+  const launchDeadline = processingStartedAt + launchWindowMs;
+  let cursor = 0;
 
-  for (let index = 0; index < items.length; index += 1) {
-    const { receivableId } = items[index];
+  const processItem = async (
+    item: { receivableId: string; modality: string },
+    index: number,
+  ) => {
+    const scheduledAt = processingStartedAt + index * launchIntervalMs;
+    if (scheduledAt > Date.now()) {
+      await wait(scheduledAt - Date.now(), batchController.signal);
+    }
+    if (
+      halted || batchController.signal.aborted ||
+      Date.now() > launchDeadline
+    ) return;
+    const { receivableId } = item;
+    launched += 1;
     const attemptStartedAt = Date.now();
+    const queryController = new globalThis.AbortController();
+    const abortQuery = () => queryController.abort(batchController.signal.reason);
+    batchController.signal.addEventListener("abort", abortQuery, { once: true });
+    const remainingMs = Math.max(
+      250,
+      Math.min(8_000, queryDeadline - Date.now()),
+    );
+    const timeout = setTimeout(
+      () => queryController.abort(
+        new globalThis.DOMException("Banese query timeout", "TimeoutError"),
+      ),
+      remainingMs,
+    );
     try {
       let token = await getSharedToken(
         admin,
         environment,
         refreshMarginSeconds,
         oauthMetrics,
+        queryController.signal,
       );
       let renewedAfterUnauthorized = false;
       const queryWithSharedToken = async (
@@ -257,6 +331,7 @@ Deno.serve(async (req: Request) => {
           return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
             ...input,
             accessToken: token,
+            signal: queryController.signal,
           });
         } catch (error) {
           const classification = classifyError(error);
@@ -273,10 +348,12 @@ Deno.serve(async (req: Request) => {
             queryEnvironment,
             refreshMarginSeconds,
             oauthMetrics,
+            queryController.signal,
           );
           return await queryBaneseBoleto(queryAdmin, queryEnvironment, {
             ...input,
             accessToken: token,
+            signal: queryController.signal,
           });
         }
       };
@@ -284,13 +361,24 @@ Deno.serve(async (req: Request) => {
       const result = await reconcileBaneseReceivable(admin, receivableId, {
         queryBoleto: queryWithSharedToken,
       });
+      if (Date.now() > hardDeadline) {
+        // A reconciliação pode já ter aplicado a baixa e ativado o EAD.
+        // Depois desse ponto, atraso é telemetria — nunca convertemos sucesso
+        // financeiro em TIMEOUT nem reabrimos a fila como se a consulta falhasse.
+        console.warn("banese reconciliation completed after target deadline", {
+          receivableId,
+          errorClass: "LATE_COMPLETION",
+        });
+      }
       reconciled += 1;
       if (result.paid) {
         paid += 1;
       } else {
         pending += 1;
       }
-      await admin.rpc("record_banese_reconciliation_attempt", {
+      const { error: attemptError } = await admin.rpc(
+        "record_banese_reconciliation_attempt",
+        {
         p_run_id: runId,
         p_receivable_id: receivableId,
         p_result: result.paid ? "PAID" : "PENDING",
@@ -298,38 +386,76 @@ Deno.serve(async (req: Request) => {
         p_error_class: null,
         p_http_status: null,
         p_duration_ms: Date.now() - attemptStartedAt,
-      });
+        },
+      );
+      if (attemptError) {
+        throw new Error("SUPABASE_AUDIT_WRITE");
+      }
     } catch (error) {
+      const cancelledByPeer = halted &&
+        batchController.signal.aborted &&
+        queryController.signal.aborted;
+      if (cancelledByPeer) return;
       failed += 1;
       const classification = classifyError(error);
-      throttled = classification.result === "THROTTLED";
+      throttled ||= classification.result === "THROTTLED";
+      halted = true;
+      batchController.abort(classification.errorClass);
       console.error("banese reconciliation item failed", {
         receivableId,
         errorClass: classification.errorClass,
         httpStatus: classification.httpStatus,
       });
-      await admin
-        .from("contas_receber")
-        .update({
-          gateway_last_error: classification.publicMessage,
-          gateway_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", receivableId)
-        .eq("gateway_provider", "banese_card");
-      await admin.rpc("record_banese_reconciliation_attempt", {
-        p_run_id: runId,
-        p_receivable_id: receivableId,
-        p_result: classification.result,
-        p_remote_status: null,
-        p_error_class: classification.errorClass,
-        p_http_status: classification.httpStatus,
-        p_duration_ms: Date.now() - attemptStartedAt,
-      });
-      if (throttled) break;
+      if (classification.errorClass !== "AUDIT_WRITE") {
+        const { error: updateError } = await admin
+          .from("contas_receber")
+          .update({
+            gateway_last_error: classification.publicMessage,
+            gateway_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", receivableId)
+          .eq("gateway_provider", "banese_card");
+        if (updateError) auditFailure = true;
+
+        const { error: attemptError } = await admin.rpc(
+          "record_banese_reconciliation_attempt",
+          {
+            p_run_id: runId,
+            p_receivable_id: receivableId,
+            p_result: classification.result,
+            p_remote_status: null,
+            p_error_class: classification.errorClass,
+            p_http_status: classification.httpStatus,
+            p_duration_ms: Date.now() - attemptStartedAt,
+          },
+        );
+        if (attemptError) auditFailure = true;
+      } else {
+        auditFailure = true;
+      }
+      return;
+    } finally {
+      clearTimeout(timeout);
+      batchController.signal.removeEventListener("abort", abortQuery);
     }
-    if (index < items.length - 1 && !throttled) await wait(intervalMs);
-  }
+  };
+
+  const worker = async () => {
+    while (!halted && Date.now() < launchDeadline) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= items.length) return;
+      await processItem(items[index], index);
+    }
+  };
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(maxConcurrency, Math.max(1, items.length)) },
+      () => worker(),
+    ),
+  );
 
   const { data: finishResult, error: finishError } = await admin.rpc(
     "finish_banese_reconciliation_run",
@@ -352,11 +478,13 @@ Deno.serve(async (req: Request) => {
     runId,
     profileId: runConfig.profileId,
     claimed: items.length,
+    launched,
     reconciled,
     pending,
     paid,
     failed,
     throttled,
+    auditFailure,
     oauthRequests: oauthMetrics.requests,
     oauthReused: oauthMetrics.reused,
     decision: finishResult?.decision || null,

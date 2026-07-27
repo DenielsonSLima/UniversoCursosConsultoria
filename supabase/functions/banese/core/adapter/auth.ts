@@ -27,6 +27,7 @@ const requestAccessToken = async (
   credentials: BaneseClientCredentials,
   scope?: string,
   extraHeaders: Record<string, string> = {},
+  signal?: AbortSignal,
 ): Promise<BaneseAccessToken> => {
   const body = new URLSearchParams({ grant_type: "client_credentials" });
   if (scope) body.set("scope", scope);
@@ -41,6 +42,7 @@ const requestAccessToken = async (
       ...extraHeaders,
     },
     body,
+    signal,
   });
   const raw = await readResponseBody(response);
 
@@ -202,6 +204,7 @@ export const getBanesePixCredentials = async (
 export const requestBaneseBoletoAccessToken = async (
   admin: SupabaseAdminRpcClient,
   environment: Environment,
+  options: { signal?: AbortSignal } = {},
 ) => {
   assertEnvironment(environment);
   const credentials = await getBaneseBoletoCredentials(admin, environment);
@@ -209,6 +212,8 @@ export const requestBaneseBoletoAccessToken = async (
     BANESE_BOLETO_ENDPOINTS[environment].tokenUrl,
     credentials,
     "boletos",
+    {},
+    options.signal,
   );
 };
 
