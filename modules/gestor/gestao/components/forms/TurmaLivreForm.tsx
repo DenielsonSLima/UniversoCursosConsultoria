@@ -2,11 +2,12 @@ import React from 'react';
 import { Zap } from 'lucide-react';
 import { Turno } from '../../gestao.types';
 import TurmaPresencialForm, { TurmaPresencialFormData } from './TurmaPresencialForm';
+import { parseCivilDate } from '../../gestao-date.utils';
 
 interface TurmaLivreFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | Promise<void>;
   cursosDisponiveis: any[];
   selectedPoloId?: string;
 }
@@ -59,11 +60,10 @@ const livreConfig = {
   },
   defaults: livreDefaults,
   generateIdentity: ({ curso, polo, formData }: { curso: any; polo: any; formData: TurmaPresencialFormData }) => {
-    const date = new Date(formData.dataInicio);
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-
-    if (Number.isNaN(year)) return null;
+    const date = parseCivilDate(formData.dataInicio);
+    if (!date) return null;
+    const { year } = date;
+    const month = date.month.toString().padStart(2, '0');
 
     const siglaCurso = curso.nome.substring(0, 4).toUpperCase().replace(/\s/g, '');
     const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
