@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Lock, Settings } from 'lucide-react';
+import { Lock, RefreshCw, Settings, TriangleAlert } from 'lucide-react';
 import type { PortalAuthProfile } from '../../login/portal-session';
 import { canAccessTab, getEffectiveFinanceiroTabs } from '../access-control';
 import type { GestorPermissions } from '../access-control';
@@ -60,6 +60,81 @@ const ModuleLoading = () => (
   </div>
 );
 
+interface ModuleErrorBoundaryProps {
+  children: React.ReactNode;
+  moduleId: string;
+  onReturnHome: () => void;
+}
+
+interface ModuleErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ModuleErrorBoundary extends React.Component<ModuleErrorBoundaryProps, ModuleErrorBoundaryState> {
+  declare readonly props: Readonly<ModuleErrorBoundaryProps>;
+  declare setState: (state: Partial<ModuleErrorBoundaryState>) => void;
+
+  state: ModuleErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ModuleErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[GestorModuleContent] Falha ao renderizar módulo.', error, info);
+  }
+
+  componentDidUpdate(previousProps: ModuleErrorBoundaryProps) {
+    if (this.state.hasError && previousProps.moduleId !== this.props.moduleId) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  private retry = () => {
+    this.setState({ hasError: false });
+  };
+
+  private returnHome = () => {
+    this.setState({ hasError: false });
+    this.props.onReturnHome();
+  };
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+
+    return (
+      <div role="alert" className="rounded-[2rem] border border-amber-200 bg-white p-10 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+          <TriangleAlert size={28} />
+        </div>
+        <h2 className="mt-4 text-xl font-black uppercase tracking-tight text-[#001a33]">
+          Não foi possível abrir este módulo
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
+          O restante do portal continua disponível. Tente carregar novamente ou volte ao início.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={this.retry}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-blue-900"
+          >
+            <RefreshCw size={16} />
+            Tentar novamente
+          </button>
+          <button
+            type="button"
+            onClick={this.returnHome}
+            className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            Voltar ao início
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
 const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   activeModule,
   canOpenModule,
@@ -92,7 +167,15 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'cadastros-superior': return <EnsinoSuperiorPage readOnly={!isMatrizSelected} />;
     case 'cadastros-ficha': return <FichaMatriculaPage />;
     case 'cadastros-modelos': return <ModelosDocumentosPage />;
-    case 'gestao': return <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} permissions={permissions} />;
+    case 'gestao':
+      return (
+        <ModuleErrorBoundary
+          moduleId={`gestao:${currentPoloId || 'global'}`}
+          onReturnHome={() => setActiveModule('inicio')}
+        >
+          <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} permissions={permissions} />
+        </ModuleErrorBoundary>
+      );
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
