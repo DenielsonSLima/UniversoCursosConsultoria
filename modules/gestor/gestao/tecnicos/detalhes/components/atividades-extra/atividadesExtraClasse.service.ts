@@ -43,6 +43,17 @@ export const atividadesExtraClasseKeys = {
 };
 
 export const atividadesExtraClasseService = {
+  async hasAtividades(turmaId: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('atividades_extra_classe')
+      .select('id', { count: 'exact', head: true })
+      .eq('turma_id', turmaId)
+      .neq('status', 'ARQUIVADA');
+
+    if (error) throw error;
+    return (count || 0) > 0;
+  },
+
   async getTurmaCurso(turmaId: string) {
     const { data, error } = await supabase
       .from('turmas')
