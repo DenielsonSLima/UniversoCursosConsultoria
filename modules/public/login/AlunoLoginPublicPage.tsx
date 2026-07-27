@@ -38,7 +38,9 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [hasExternalAuthReturn] = useState(
     () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
   );
-  const initialMode = searchParams.get('mode') === 'cadastro' ? 'cadastro' : 'login';
+  const initialMode = window.location.pathname === '/cadastro' || searchParams.get('mode') === 'cadastro'
+    ? 'cadastro'
+    : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
