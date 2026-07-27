@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Evita a rasterização fina/turva dos textos no portal do professor,
+   especialmente no Safari em telas com escala ou zoom. */
+#root .professor-typography,
+#root .professor-typography * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+}
+
+/* O console Banese usa muitos números e rótulos operacionais. No Safari,
+   suavização forçada e texto abaixo de 12px davam aparência turva. */
+#root .banese-console,
+#root .banese-console * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+
+#root .banese-console .font-black {
+  font-weight: 700 !important;
+}
+
+#root .banese-console .tracking-widest {
+  letter-spacing: 0.075em !important;
+}
+
+#root .banese-console .text-\[8px\],
+#root .banese-console .text-\[9px\],
+#root .banese-console .text-\[10px\],
+#root .banese-console .text-\[11px\] {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+  backface-visibility: hidden;
+  will-change: opacity, transform;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
