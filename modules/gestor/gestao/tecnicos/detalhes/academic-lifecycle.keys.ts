@@ -8,6 +8,7 @@ export const academicLifecycleKeys = {
   movimentacoes: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'movimentacoes'] as const,
   transferencias: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'transferencias'] as const,
   grade: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'grade'] as const,
+  atividades: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'atividades'] as const,
   diarios: (turmaId: string) => [...academicLifecycleKeys.turma(turmaId), 'diarios'] as const,
   estagio: (
     turmaId: string,
