@@ -1,6 +1,9 @@
 import React from 'react';
 import { Building2, Check, Clock, Headphones, Info, Loader2, ShieldAlert } from 'lucide-react';
 import { PerfilSetorComunicacao } from './perfis-acesso.service';
+import { SECRETARIA_ACCESS_OPTIONS } from '../../secretaria/secretaria-access';
+import type { DashboardWidgetId } from '../../access-control';
+import DashboardWidgetsProfileSection from './DashboardWidgetsProfileSection';
 
 const DAYS_OF_WEEK = [
   { value: 1, label: 'Segunda-feira' },
@@ -48,13 +51,17 @@ const FINANCEIRO_TABS = [
   { id: 'outros-creditos', label: 'Outros Créditos' }
 ];
 
-const SECRETARIA_TABS = [
-  { id: 'solicitacoes', label: 'Solicitações' },
-  { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
-  { id: 'declaracoes', label: 'Declaração de Matrícula' },
-  { id: 'historico', label: 'Histórico de Emissões' },
-  { id: 'recebimentos', label: 'Financeiro / Recebimentos' },
-  { id: 'fichas', label: 'Pasta de Identificação e Ficha de Matrícula' },
+const GESTAO_TURMA_TABS = [
+  { id: 'resumo', label: 'Resumo' },
+  { id: 'alunos', label: 'Alunos' },
+  { id: 'grade', label: 'Grade e Professores / Aulas' },
+  { id: 'atividades', label: 'Atividades' },
+  { id: 'diarios', label: 'Diários' },
+  { id: 'financeiro', label: 'Financeiro da Turma' },
+  { id: 'vacinas', label: 'Vacinas' },
+  { id: 'estagio', label: 'Estágio' },
+  { id: 'academico', label: 'Ciclo Acadêmico' },
+  { id: 'configuracoes', label: 'Configurações da Turma' },
 ];
 
 const COMUNICACAO_TABS = [
@@ -68,6 +75,8 @@ interface PerfilAcessoFormProps {
   descricao: string;
   selectedModules: string[];
   selectedTabs: Record<string, string[]>;
+  dashboardWidgets: DashboardWidgetId[];
+  eligibleDashboardWidgets: DashboardWidgetId[];
   horarioAtivo: boolean;
   diasHorario: number[];
   horarioInicio: string;
@@ -95,6 +104,7 @@ interface PerfilAcessoFormProps {
   setHorarioFim: (value: string) => void;
   onToggleModule: (moduleId: string) => void;
   onToggleTab: (moduleId: string, tabId: string) => void;
+  onToggleDashboardWidget: (widgetId: DashboardWidgetId) => void;
   onTogglePolo: (poloId: string) => void;
   onToggleDay: (day: number) => void;
   onClose: () => void;
@@ -107,6 +117,8 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
   descricao,
   selectedModules,
   selectedTabs,
+  dashboardWidgets,
+  eligibleDashboardWidgets,
   horarioAtivo,
   diasHorario,
   horarioInicio,
@@ -129,6 +141,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
   setHorarioFim,
   onToggleModule: toggleModule,
   onToggleTab: toggleTab,
+  onToggleDashboardWidget: toggleDashboardWidget,
   onTogglePolo: togglePolo,
   onToggleDay: toggleDay,
   onClose: handleCloseForm,
@@ -198,6 +211,14 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
             </div>
           </div>
 
+          {selectedModules.includes('inicio') && (
+            <DashboardWidgetsProfileSection
+              selected={dashboardWidgets}
+              eligible={eligibleDashboardWidgets}
+              onToggle={toggleDashboardWidget}
+            />
+          )}
+
           {/* ESCOPO DE POLOS */}
           <div className="space-y-5">
             <div className="border-b border-slate-100 pb-3">
@@ -266,7 +287,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
           </div>
 
           {/* CONTROLE DE ABAS INTERNAS */}
-          {(selectedModules.includes('cadastros') || selectedModules.includes('financeiro') || selectedModules.includes('secretaria') || selectedModules.includes('comunicacao')) && (
+          {(selectedModules.includes('gestao') || selectedModules.includes('cadastros') || selectedModules.includes('financeiro') || selectedModules.includes('secretaria') || selectedModules.includes('comunicacao')) && (
             <div className="space-y-6">
               <h4 className="text-base font-bold text-[#001a33] border-b border-slate-100 pb-3 flex items-center gap-2">
                 <Info size={18} className="text-amber-500" />
@@ -274,6 +295,34 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Abas das turmas no módulo Gestão */}
+                {selectedModules.includes('gestao') && (
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
+                    <div>
+                      <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Turmas da Gestão</h5>
+                      <p className="mt-1 text-xs font-medium text-slate-500">
+                        Aplicado às turmas técnicas, livres, de especialização e EAD.
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {GESTAO_TURMA_TABS.map(tab => {
+                        const isTabChecked = (selectedTabs.gestao || []).includes(tab.id);
+                        return (
+                          <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">
+                            <input
+                              type="checkbox"
+                              checked={isTabChecked}
+                              onChange={() => toggleTab('gestao', tab.id)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                            />
+                            <span>{tab.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Abas do Financeiro */}
                 {selectedModules.includes('financeiro') && (
                   <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
@@ -302,7 +351,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
                   <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
                     <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Secretaria</h5>
                     <div className="space-y-3">
-                      {SECRETARIA_TABS.map(tab => {
+                      {SECRETARIA_ACCESS_OPTIONS.map(tab => {
                         const isTabChecked = (selectedTabs['secretaria'] || []).includes(tab.id);
                         return (
                           <label key={tab.id} className="flex items-center gap-3 cursor-pointer text-sm font-medium text-slate-700 select-none">

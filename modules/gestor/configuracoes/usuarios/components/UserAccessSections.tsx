@@ -8,6 +8,8 @@ import {
   USER_FORM_MODULE_TABS,
   USER_FORM_SCHEDULE_DAYS,
 } from './user-access-options';
+import { normalizeSecretariaAccessTabs } from '../../../secretaria/secretaria-access';
+import { DEFAULT_GESTAO_TURMA_TABS } from '../../../access-control';
 
 interface UserAccessSectionsProps {
   contextId: string;
@@ -57,6 +59,20 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
             && Boolean(nextProfile?.permissoes?.allPolos);
           const inheritedPoloIds = nextProfile?.permissoes?.poloIds || [];
           const communicationScope = nextProfile?.permissoes?.communicationScope;
+          const inheritedTabs: Record<string, string[]> = nextProfile?.permissoes?.tabs
+            ? {
+                ...nextProfile.permissoes.tabs,
+                secretaria: normalizeSecretariaAccessTabs(
+                  nextProfile.permissoes.tabs.secretaria,
+                ),
+              }
+            : {};
+          if (
+            nextProfile?.permissoes?.modules?.includes('gestao')
+            && !Object.prototype.hasOwnProperty.call(inheritedTabs, 'gestao')
+          ) {
+            inheritedTabs.gestao = DEFAULT_GESTAO_TURMA_TABS;
+          }
           setFormData(previous => ({
             ...previous,
             perfil_acesso_id: profileId || null,
@@ -66,7 +82,7 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
             financeiroAbas: nextProfile?.permissoes?.financeiroTabs?.length
               ? nextProfile?.permissoes.financeiroTabs
               : nextProfile?.permissoes?.tabs?.financeiro || [],
-            abasModulos: nextProfile?.permissoes?.tabs || {},
+            abasModulos: inheritedTabs,
             todosPolos: nextProfile ? profileAllowsAllPolos : previous.todosPolos,
             polosAcesso: nextProfile
               ? profileAllowsAllPolos
@@ -148,9 +164,15 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
           </div>
         )}
 
-        {(['cadastros', 'secretaria', 'comunicacao'] as const).map(moduleId => {
+        {(['gestao', 'cadastros', 'secretaria', 'comunicacao'] as const).map(moduleId => {
           if (!formData.permissoes.includes(moduleId)) return null;
-          const title = moduleId === 'cadastros' ? 'Abas de Cadastros' : moduleId === 'secretaria' ? 'Abas da Secretaria' : 'Canais de Comunicação';
+          const title = moduleId === 'gestao'
+            ? 'Abas das Turmas da Gestão'
+            : moduleId === 'cadastros'
+              ? 'Abas de Cadastros'
+              : moduleId === 'secretaria'
+                ? 'Abas da Secretaria'
+                : 'Canais de Comunicação';
           return (
             <div key={moduleId} className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
               <div className="mb-4 flex items-center gap-2 text-blue-700"><Layers size={18} /><h5 className="text-xs font-black uppercase tracking-widest">{title}</h5></div>

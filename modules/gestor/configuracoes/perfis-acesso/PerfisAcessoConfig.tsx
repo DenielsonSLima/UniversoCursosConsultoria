@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Building2, Headphones, Lock, Plus, Edit3, Trash2, Clock, Check, X,
+  Building2, Headphones, LayoutDashboard, Lock, Plus, Edit3, Trash2, Clock, Check, X,
   AlertCircle, Loader2
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
@@ -11,6 +11,15 @@ import {
   PerfilSetorComunicacao,
 } from './perfis-acesso.service';
 import PerfilAcessoForm from './PerfilAcessoForm';
+import { normalizeSecretariaAccessTabs } from '../../secretaria/secretaria-access';
+import {
+  DashboardWidgetId,
+  DEFAULT_GESTAO_TURMA_TABS,
+  getAllowedDashboardWidgets,
+  getEligibleDashboardWidgets,
+  normalizeDashboardWidgets,
+  normalizeGestorPermissions,
+} from '../../access-control';
 
 const PerfisAcessoConfig: React.FC = () => {
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
@@ -32,6 +41,7 @@ const PerfisAcessoConfig: React.FC = () => {
   const [descricao, setDescricao] = useState('');
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [selectedTabs, setSelectedTabs] = useState<Record<string, string[]>>({});
+  const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidgetId[]>([]);
   const [todosPolos, setTodosPolos] = useState(false);
   const [polosAcesso, setPolosAcesso] = useState<string[]>([]);
   const [setorComunicacao, setSetorComunicacao] = useState<PerfilSetorComunicacao>('todos');
@@ -43,6 +53,25 @@ const PerfisAcessoConfig: React.FC = () => {
   const [horarioFim, setHorarioFim] = useState('18:00');
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const draftPermissions = useMemo(
+    () => normalizeGestorPermissions({
+      modules: selectedModules,
+      financeiroTabs: selectedTabs.financeiro || [],
+      tabs: selectedTabs,
+      allPolos: todosPolos,
+    }, { fallbackFullAccess: false }),
+    [selectedModules, selectedTabs, todosPolos],
+  );
+  const eligibleDashboardWidgets = useMemo(
+    () => getEligibleDashboardWidgets(draftPermissions),
+    [draftPermissions],
+  );
+
+  useEffect(() => {
+    const eligibleSet = new Set(eligibleDashboardWidgets);
+    setDashboardWidgets((current) => current.filter((widgetId) => eligibleSet.has(widgetId)));
+  }, [eligibleDashboardWidgets]);
 
   useEffect(() => {
     fetchData();
@@ -94,12 +123,27 @@ const PerfisAcessoConfig: React.FC = () => {
       setNome(perfil.nome);
       setDescricao(perfil.descricao || '');
       setSelectedModules(perfil.permissoes?.modules || []);
+      const profileTabs = perfil.permissoes?.tabs || {};
       setSelectedTabs({
-        ...(perfil.permissoes?.tabs || {}),
+        ...profileTabs,
+        gestao: Object.prototype.hasOwnProperty.call(profileTabs, 'gestao')
+          ? profileTabs.gestao
+          : perfil.permissoes?.modules?.includes('gestao')
+            ? DEFAULT_GESTAO_TURMA_TABS
+            : [],
+        secretaria: normalizeSecretariaAccessTabs(perfil.permissoes?.tabs?.secretaria),
         financeiro: perfil.permissoes?.tabs?.financeiro
           ?? perfil.permissoes?.financeiroTabs
           ?? [],
       });
+      const profilePermissions = normalizeGestorPermissions(perfil.permissoes, {
+        fallbackFullAccess: false,
+      });
+      setDashboardWidgets(
+        perfil.permissoes?.dashboardWidgets !== undefined
+          ? normalizeDashboardWidgets(perfil.permissoes.dashboardWidgets)
+          : getEligibleDashboardWidgets(profilePermissions),
+      );
       setTodosPolos(Boolean(perfil.permissoes?.allPolos));
       setPolosAcesso(perfil.permissoes?.poloIds || []);
       setSetorComunicacao(perfil.permissoes?.communicationScope?.sector || 'todos');
@@ -120,6 +164,7 @@ const PerfisAcessoConfig: React.FC = () => {
         cadastros: ['cadastros-checklist'],
         comunicacao: ['comunicacao-mensagem']
       });
+      setDashboardWidgets([]);
       setTodosPolos(false);
       setPolosAcesso([]);
       setSetorComunicacao('todos');
@@ -139,11 +184,20 @@ const PerfisAcessoConfig: React.FC = () => {
   };
 
   const toggleModule = (moduleId: string) => {
-    setSelectedModules(prev => 
-      prev.includes(moduleId) 
-        ? prev.filter(m => m !== moduleId) 
+    const enablingModule = !selectedModules.includes(moduleId);
+    setSelectedModules(prev =>
+      prev.includes(moduleId)
+        ? prev.filter(m => m !== moduleId)
         : [...prev, moduleId]
     );
+    if (enablingModule && moduleId === 'gestao') {
+      setSelectedTabs(current => ({
+        ...current,
+        gestao: (current.gestao || []).length > 0
+          ? current.gestao
+          : DEFAULT_GESTAO_TURMA_TABS,
+      }));
+    }
   };
 
   const toggleTab = (moduleId: string, tabId: string) => {
@@ -154,6 +208,13 @@ const PerfisAcessoConfig: React.FC = () => {
         : [...current, tabId];
       return { ...prev, [moduleId]: updated };
     });
+  };
+
+  const toggleDashboardWidget = (widgetId: DashboardWidgetId) => {
+    if (!eligibleDashboardWidgets.includes(widgetId)) return;
+    setDashboardWidgets((current) => current.includes(widgetId)
+      ? current.filter((id) => id !== widgetId)
+      : [...current, widgetId]);
   };
 
   const togglePolo = (poloId: string) => {
@@ -183,6 +244,10 @@ const PerfisAcessoConfig: React.FC = () => {
     }
     if (selectedModules.includes('financeiro') && (selectedTabs.financeiro || []).length === 0) {
       setErrorMsg('Selecione ao menos uma aba do Financeiro.');
+      return;
+    }
+    if (selectedModules.includes('gestao') && (selectedTabs.gestao || []).length === 0) {
+      setErrorMsg('Selecione ao menos uma aba das turmas do módulo Gestão.');
       return;
     }
     if (selectedModules.includes('secretaria') && (selectedTabs.secretaria || []).length === 0) {
@@ -226,6 +291,7 @@ const PerfisAcessoConfig: React.FC = () => {
         modules: selectedModules,
         financeiroTabs: selectedTabs['financeiro'] || [],
         tabs: selectedTabs,
+        dashboardWidgets,
         allPolos: todosPolos,
         poloIds: todosPolos ? [] : polosAcesso,
         communicationScope: {
@@ -311,6 +377,8 @@ const PerfisAcessoConfig: React.FC = () => {
           descricao={descricao}
           selectedModules={selectedModules}
           selectedTabs={selectedTabs}
+          dashboardWidgets={dashboardWidgets}
+          eligibleDashboardWidgets={eligibleDashboardWidgets}
           horarioAtivo={horarioAtivo}
           diasHorario={diasHorario}
           horarioInicio={horarioInicio}
@@ -342,6 +410,7 @@ const PerfisAcessoConfig: React.FC = () => {
           setHorarioFim={setHorarioFim}
           onToggleModule={toggleModule}
           onToggleTab={toggleTab}
+          onToggleDashboardWidget={toggleDashboardWidget}
           onTogglePolo={togglePolo}
           onToggleDay={toggleDay}
           onClose={handleCloseForm}
@@ -356,6 +425,10 @@ const PerfisAcessoConfig: React.FC = () => {
             const daysCount = perfil.restricao_horario?.dias?.length || 0;
             const profilePoloIds = perfil.permissoes?.poloIds || [];
             const communicationScope = perfil.permissoes?.communicationScope;
+            const profilePermissions = normalizeGestorPermissions(perfil.permissoes, {
+              fallbackFullAccess: false,
+            });
+            const profileDashboardWidgets = getAllowedDashboardWidgets(profilePermissions);
             const poloScopeLabel = perfil.permissoes?.allPolos
               ? 'Todos os polos'
               : profilePoloIds.length === 1
@@ -393,6 +466,11 @@ const PerfisAcessoConfig: React.FC = () => {
                     <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
                       <Check className="text-emerald-500" size={14} />
                       <span>{perfil.permissoes?.modules?.length || 0} módulos permitidos</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">
+                      <LayoutDashboard className="text-indigo-500" size={14} />
+                      <span>{profileDashboardWidgets.length} indicadores na tela inicial</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-[10px] text-slate-600 font-semibold uppercase">

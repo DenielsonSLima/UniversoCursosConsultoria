@@ -4,6 +4,7 @@ import { Save, X } from 'lucide-react';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../shared/utils/identityValidation';
 import {
   DEFAULT_FINANCEIRO_TABS,
+  DEFAULT_GESTAO_TURMA_TABS,
   GESTOR_MODULE_IDS,
   GestorModuleId,
   normalizeGestorPermissions,
@@ -14,6 +15,7 @@ import { perfisAcessoService, PerfilAcesso } from '../../perfis-acesso/perfis-ac
 import UserAccessSections from './UserAccessSections';
 import UserIdentitySections from './UserIdentitySections';
 import { USER_FORM_MODULE_TABS } from './user-access-options';
+import { normalizeSecretariaAccessTabs } from '../../../secretaria/secretaria-access';
 
 interface UserFormAddProps {
   contextId: string;
@@ -48,10 +50,22 @@ const buildPermissionsFromUser = (user?: UsuarioSistema | null) => {
       : permissions.modules.includes('financeiro')
         ? DEFAULT_FINANCEIRO_TABS
         : [];
+  const abasModulos: Record<string, string[]> = permissions.tabs
+    ? {
+        ...permissions.tabs,
+        secretaria: normalizeSecretariaAccessTabs(permissions.tabs.secretaria),
+      }
+    : {};
+  if (
+    permissions.modules.includes('gestao')
+    && !Object.prototype.hasOwnProperty.call(abasModulos, 'gestao')
+  ) {
+    abasModulos.gestao = DEFAULT_GESTAO_TURMA_TABS;
+  }
   return {
     permissoes: permissions.modules.length > 0 ? permissions.modules : ['inicio'],
     financeiroAbas,
-    abasModulos: permissions.tabs || {},
+    abasModulos,
   };
 };
 
@@ -323,7 +337,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         alert('Selecione ao menos uma aba do módulo financeiro.');
         return;
       }
-      for (const moduleId of ['cadastros', 'secretaria', 'comunicacao']) {
+      for (const moduleId of ['gestao', 'cadastros', 'secretaria', 'comunicacao']) {
         if (formData.permissoes.includes(moduleId) && (formData.abasModulos[moduleId] || []).length === 0) {
           alert(`Selecione ao menos uma aba do módulo ${moduleId}.`);
           return;

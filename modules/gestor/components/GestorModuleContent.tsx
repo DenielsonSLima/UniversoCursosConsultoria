@@ -80,7 +80,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   }
 
   switch (activeModule) {
-    case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
+    case 'inicio': return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} permissions={permissions} cacheIdentity={profile.id} />;
     case 'calendario': return <CalendarioPage poloId={scopedPoloId} />;
     case 'parceiros': return <ParceirosPage poloId={scopedPoloId} includeGlobal={isGlobal} onRequestScrollTop={onRequestScrollTop} />;
     case 'cadastros': return <CadastrosPage onNavigate={setActiveModule} readOnly={!isMatrizSelected} allowedTabs={allowedCadastroTabs} />;
@@ -92,7 +92,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'cadastros-superior': return <EnsinoSuperiorPage readOnly={!isMatrizSelected} />;
     case 'cadastros-ficha': return <FichaMatriculaPage />;
     case 'cadastros-modelos': return <ModelosDocumentosPage />;
-    case 'gestao': return <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} />;
+    case 'gestao': return <GestaoPage poloId={currentPoloId || undefined} activePoloId={currentPoloId || undefined} isMatriz={isMatrizSelected} poloNome={currentPoloName} onRequestScrollTop={onRequestScrollTop} permissions={permissions} />;
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
@@ -111,7 +111,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
         const submodule = activeModule.split('-')[1];
         return <div className="animate-fadeIn"><div className="mb-6 flex items-center justify-between"><h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight">Gerenciamento de {submodule.charAt(0).toUpperCase() + submodule.slice(1)}</h2><button onClick={() => setActiveModule('cadastros')} className="text-xs font-bold text-blue-600 hover:underline uppercase tracking-widest">Ver todos os cadastros</button></div><div className="bg-white p-12 rounded-[2.5rem] border border-slate-100 shadow-sm text-center"><div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><Settings className="animate-spin-slow" /></div><p className="text-slate-500 font-medium">O módulo de {submodule} está sendo preparado para você.</p></div></div>;
       }
-      return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} />;
+      return <DashboardPage poloId={currentPoloId} onNavigate={setActiveModule} permissions={permissions} cacheIdentity={profile.id} />;
   }
 };
 

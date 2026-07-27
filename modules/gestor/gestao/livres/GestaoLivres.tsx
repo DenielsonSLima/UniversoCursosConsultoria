@@ -13,14 +13,16 @@ import ConfirmModal from '../../components/ConfirmModal';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
+import type { GestorPermissions } from '../../access-control';
 
 interface GestaoLivresProps {
   onToggleDetails?: React.Dispatch<boolean>;
   poloId?: string;
   creationPoloId?: string;
+  permissions: GestorPermissions;
 }
 
-const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, creationPoloId }) => {
+const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, creationPoloId, permissions }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Turma | null>(null);
@@ -72,6 +74,7 @@ const GestaoLivres: React.FC<GestaoLivresProps> = ({ onToggleDetails, poloId, cr
       <TurmaLivreDetalhes 
         turma={selectedTurma} 
         onBack={handleCloseDetails} 
+        permissions={permissions}
       />
     );
   }

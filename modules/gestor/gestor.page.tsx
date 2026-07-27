@@ -13,13 +13,20 @@ import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
 
 import { loginService } from '../login/login.service';
-import { canAccessGestorModule, normalizeGestorPermissions, canAccessTab } from './access-control';
+import {
+  buildDashboardAccessKey,
+  canAccessGestorModule,
+  normalizeGestorPermissions,
+  canAccessTab,
+  getAllowedDashboardWidgets,
+} from './access-control';
 import { useGestorOperationalRealtime } from './hooks/useGestorOperationalRealtime';
 import { caixaDashboardQueryOptions } from './caixa/caixa.service';
 import {
   dashboardActivityQueryOptions,
   dashboardChartQueryOptions,
   dashboardKpisQueryOptions,
+  dashboardQueryKeys,
 } from './dashboard/dashboard.queries';
 import { gestorCalendarQueryOptions } from './calendario/calendario.queries';
 import GestorPortalShell from './components/GestorPortalShell';
@@ -45,8 +52,14 @@ const MOCK_SEARCH_DATA = [
 interface PoloTransitionState {
   fromPoloId: string;
   fromPoloName: string;
+  fromPoloCity?: string | null;
+  fromPoloState?: string | null;
+  fromPoloIsMatriz?: boolean;
   toPoloId: string;
   toPoloName: string;
+  toPoloCity?: string | null;
+  toPoloState?: string | null;
+  toPoloIsMatriz?: boolean;
   previousModule: string;
   status: PoloTransitionStatus;
   errorMessage?: string;
@@ -90,6 +103,14 @@ const GestorPage: React.FC = () => {
   const gestorPermissions = useMemo(
     () => profile?.gestorPermissions || normalizeGestorPermissions(null, { fallbackFullAccess: false }),
     [profile],
+  );
+  const dashboardWidgets = useMemo(
+    () => getAllowedDashboardWidgets(gestorPermissions),
+    [gestorPermissions],
+  );
+  const dashboardAccessKey = useMemo(
+    () => buildDashboardAccessKey(gestorPermissions, profile?.id),
+    [gestorPermissions, profile?.id],
   );
   const gestorScope = useMemo(() => getGestorAccessScope(profile), [profile]);
   const allowedPoloIdsKey = useMemo(
@@ -213,6 +234,7 @@ const GestorPage: React.FC = () => {
           sessionStorage.setItem('active_polo_id', scope.activePoloId);
         }
 
+        queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
         setProfile(portalProfile);
       } catch {
         queryClient.clear();
@@ -245,6 +267,7 @@ const GestorPage: React.FC = () => {
           await executeLogout();
           return;
         }
+        queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
         setProfile(refreshed);
       } catch {
         if (!cancelled) await executeLogout();
@@ -274,7 +297,7 @@ const GestorPage: React.FC = () => {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [executeLogout, profile?.id, profile?.perfil_acesso_id]);
+  }, [executeLogout, profile?.id, profile?.perfil_acesso_id, queryClient]);
 
   const visiblePolos = useMemo(
     () => activePolos,
@@ -302,11 +325,31 @@ const GestorPage: React.FC = () => {
 
   const prepareCriticalPoloData = useCallback(async (poloId: string) => {
     if (activeModule === 'inicio') {
-      await Promise.all([
-        queryClient.ensureQueryData(dashboardKpisQueryOptions(poloId)),
-        queryClient.ensureQueryData(dashboardChartQueryOptions(poloId)),
-        queryClient.ensureQueryData(dashboardActivityQueryOptions(poloId)),
-      ]);
+      const hasKpis = dashboardWidgets.some((widgetId) => [
+        'alunos-ativos',
+        'receita-mes',
+        'inadimplencia',
+        'matriculas-mes',
+      ].includes(widgetId));
+      const dashboardPromises: Array<Promise<unknown>> = [];
+
+      if (hasKpis) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardKpisQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+      if (dashboardWidgets.includes('fluxo-caixa')) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardChartQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+      if (dashboardWidgets.includes('atividade-recente')) {
+        dashboardPromises.push(
+          queryClient.ensureQueryData(dashboardActivityQueryOptions(poloId, dashboardAccessKey)),
+        );
+      }
+
+      await Promise.all(dashboardPromises);
       return;
     }
 
@@ -318,7 +361,7 @@ const GestorPage: React.FC = () => {
     if (activeModule === 'calendario') {
       await queryClient.ensureQueryData(gestorCalendarQueryOptions(poloId));
     }
-  }, [activeModule, queryClient]);
+  }, [activeModule, dashboardAccessKey, dashboardWidgets, queryClient]);
 
   useGestorOperationalRealtime({
     enabled: canUsePortal && needsOperationalRealtime,
@@ -469,8 +512,14 @@ const GestorPage: React.FC = () => {
     setPoloTransition({
       fromPoloId: previousPoloId,
       fromPoloName: previousPoloName,
+      fromPoloCity: currentPolo.cidade,
+      fromPoloState: currentPolo.estado,
+      fromPoloIsMatriz: currentPolo.is_matriz,
       toPoloId: poloId,
       toPoloName: nextPoloName,
+      toPoloCity: nextPolo.cidade,
+      toPoloState: nextPolo.estado,
+      toPoloIsMatriz: nextPolo.is_matriz,
       previousModule,
       status: 'loading',
     });
@@ -642,7 +691,13 @@ const GestorPage: React.FC = () => {
           <PoloTransitionOverlay
             isOpen
             fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
             toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
             status="error"
             errorMessage={poloTransition.errorMessage}
             onRetry={() => { void executePoloChange(poloTransition.toPoloId); }}
@@ -652,7 +707,13 @@ const GestorPage: React.FC = () => {
           <PoloTransitionOverlay
             isOpen
             fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
             toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
             status={poloTransition.status}
           />
         )

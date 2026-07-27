@@ -2,8 +2,8 @@
 // File: modules/gestor/gestao/tecnicos/detalhes/TurmaTecnicoDetalhes.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, PieChart, Users, BookOpen, Book, Settings, Activity, GraduationCap, DollarSign, Syringe, ClipboardCheck, LockKeyhole, Loader2 } from 'lucide-react';
 import { Turma } from '../../gestao.types';
 import TurmaResumo from './components/TurmaResumo';
 import TurmaAlunos from './components/TurmaAlunos';
@@ -19,15 +19,38 @@ import { useTurmaTecnicoRealtime } from './hooks/useTurmaTecnicoRealtime';
 import { turmaFinanceiroDashboardQueryOptions } from './components/financeiro/hooks/useFinanceiroAlunos';
 import { financeiroConfigQueryOptions } from './components/financeiro/hooks/useFinanceiroConfig';
 import { turmaVacinasQueryOptions } from './components/vacinas/useTurmaVacinas';
+import {
+  atividadesExtraClasseService,
+} from './components/atividades-extra/atividadesExtraClasse.service';
+import { academicLifecycleKeys } from './academic-lifecycle.keys';
+import {
+  canAccessGestaoTurmaTab,
+  getEffectiveGestaoTurmaTabs,
+  type GestorPermissions,
+} from '../../../access-control';
 
 interface TurmaTecnicoDetalhesProps {
   turma: Turma;
   onBack: () => void;
+  permissions: GestorPermissions;
 }
 
-const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBack }) => {
+const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBack, permissions }) => {
   const [activeTab, setActiveTab] = useState('resumo');
   const queryClient = useQueryClient();
+  const canViewAtividades = canAccessGestaoTurmaTab(permissions, 'atividades');
+  const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
+  const canViewAulas = canAccessGestaoTurmaTab(permissions, 'grade')
+    || canAccessGestaoTurmaTab(permissions, 'diarios');
+  const activityAvailabilityQuery = useQuery({
+    queryKey: academicLifecycleKeys.atividades(turma.id),
+    queryFn: () => atividadesExtraClasseService.hasAtividades(turma.id),
+    staleTime: 15_000,
+    enabled: canViewAtividades,
+  });
+  const atividadesAusentes = activityAvailabilityQuery.isSuccess
+    && activityAvailabilityQuery.data === false;
+  const verificandoAtividades = activityAvailabilityQuery.isPending;
 
   useTurmaTecnicoRealtime(turma.id);
 
@@ -35,20 +58,47 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [turma.id]);
 
+  useEffect(() => {
+    if (activeTab === 'atividades' && atividadesAusentes) {
+      setActiveTab(
+        canAccessGestaoTurmaTab(permissions, 'grade')
+          ? 'grade'
+          : getEffectiveGestaoTurmaTabs(permissions)[0] || '',
+      );
+    }
+  }, [activeTab, atividadesAusentes, permissions]);
+
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <PieChart size={18} /> },
     { id: 'alunos', label: 'Alunos', icon: <Users size={18} /> },
     { id: 'grade', label: 'Grade & Profs', icon: <BookOpen size={18} /> },
-    { id: 'atividades', label: 'Atividades', icon: <ClipboardCheck size={18} /> },
+    {
+      id: 'atividades',
+      label: 'Atividades',
+      icon: verificandoAtividades
+        ? <Loader2 size={17} className="animate-spin" />
+        : atividadesAusentes
+          ? <LockKeyhole size={17} />
+          : <ClipboardCheck size={18} />,
+      locked: atividadesAusentes,
+      pending: verificandoAtividades,
+    },
     { id: 'diarios', label: 'Diários', icon: <Book size={18} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <DollarSign size={18} /> },
     { id: 'vacinas', label: 'Vacinas', icon: <Syringe size={18} /> },
     { id: 'estagio', label: 'Estágio', icon: <Activity size={18} /> },
     { id: 'academico', label: 'Ciclo Acadêmico', icon: <GraduationCap size={18} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-  ];
+  ].filter((tab) => canAccessGestaoTurmaTab(permissions, tab.id));
+
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || '');
+    }
+  }, [activeTab, permissions]);
 
   const prefetchTab = (tabId: string) => {
+    if (!canAccessGestaoTurmaTab(permissions, tabId)) return;
     if (tabId === 'financeiro') {
       void queryClient.prefetchQuery(turmaFinanceiroDashboardQueryOptions(turma.id));
       void queryClient.prefetchQuery(financeiroConfigQueryOptions(turma.id));
@@ -59,8 +109,9 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
   };
 
   const renderContent = () => {
+    if (!tabs.some((tab) => tab.id === activeTab)) return null;
     switch (activeTab) {
-      case 'resumo': return <TurmaResumo turma={turma} />;
+      case 'resumo': return <TurmaResumo turma={turma} canViewFinanceiro={canViewFinanceiro} canViewAulas={canViewAulas} />;
       case 'alunos': return <TurmaAlunos turma={turma} />;
       case 'grade': return <TurmaGrade turma={turma} />;
       case 'atividades': return <AtividadesExtraClasse turmaId={turma.id} cursoId={turma.cursoId} modo="GESTOR" />;
@@ -128,15 +179,32 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTab(tab.locked ? 'grade' : tab.id)}
+                disabled={tab.pending}
                 onMouseEnter={() => prefetchTab(tab.id)}
                 onFocus={() => prefetchTab(tab.id)}
                 onTouchStart={() => prefetchTab(tab.id)}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
+                aria-label={tab.pending
+                  ? 'Verificando atividades da turma.'
+                  : tab.locked
+                    ? 'Configurar atividades em Grade e Professores.'
+                  : tab.label}
+                title={tab.pending
+                  ? 'Verificando atividades da turma...'
+                  : tab.locked
+                    ? 'Marque uma aula como atividade em Grade & Profs para liberar esta área.'
+                    : activityAvailabilityQuery.isError && tab.id === 'atividades'
+                      ? 'A verificação rápida falhou. Abra para tentar carregar as atividades.'
+                      : undefined}
                 className={`relative flex h-11 shrink-0 items-center justify-center gap-2 px-0.5 text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-center after:rounded-full after:bg-blue-600 after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
                   activeTab === tab.id
                     ? 'text-[#001a33] after:scale-x-100'
-                    : 'text-slate-400 after:scale-x-0 hover:text-blue-700 hover:after:scale-x-50'
+                    : tab.locked
+                      ? 'cursor-help text-slate-300 after:scale-x-0'
+                      : tab.pending
+                        ? 'cursor-wait text-slate-300 after:scale-x-0'
+                      : 'text-slate-400 after:scale-x-0 hover:text-blue-700 hover:after:scale-x-50'
                 }`}
               >
                 <span className={activeTab === tab.id ? 'text-blue-600' : undefined}>
@@ -150,7 +218,13 @@ const TurmaTecnicoDetalhes: React.FC<TurmaTecnicoDetalhesProps> = ({ turma, onBa
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-0">
-        {renderContent()}
+        {tabs.length === 0 ? (
+          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-8 text-center">
+            <LockKeyhole className="mx-auto text-amber-600" size={28} />
+            <h3 className="mt-3 text-sm font-black uppercase tracking-wider text-amber-900">Nenhuma área da turma liberada</h3>
+            <p className="mt-1 text-sm font-medium text-amber-700">Solicite ao administrador uma permissão de aba para o módulo Gestão.</p>
+          </div>
+        ) : renderContent()}
       </div>
     </div>
   );

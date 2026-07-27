@@ -12,12 +12,14 @@ import TurmaEadDetalhes from './detalhes/TurmaEadDetalhes';
 import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
+import type { GestorPermissions } from '../../access-control';
 
 interface GestaoEadProps {
   onToggleDetails?: (isOpen: boolean) => void;
+  permissions: GestorPermissions;
 }
 
-const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
+const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTurma, setSelectedTurma] = useState<Turma | null>(null);
   const queryClient = useQueryClient();
@@ -43,7 +45,7 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails }) => {
   };
 
   if (selectedTurma) {
-    return <TurmaEadDetalhes turma={selectedTurma} onBack={closeTurma} />;
+    return <TurmaEadDetalhes turma={selectedTurma} onBack={closeTurma} permissions={permissions} />;
   }
 
   return (
