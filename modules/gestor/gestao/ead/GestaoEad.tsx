@@ -13,6 +13,7 @@ import { invalidateSiteTickerQueries } from '../../../public/siteTicker.keys';
 import { useGestaoCursos } from '../hooks/useGestaoCursos';
 import { gestaoQueryKeys } from '../gestao.query-keys';
 import type { GestorPermissions } from '../../access-control';
+import GestaoDataError from '../components/GestaoDataError';
 
 interface GestaoEadProps {
   onToggleDetails?: (isOpen: boolean) => void;
@@ -30,8 +31,10 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
 
   const handleCreate = async (data: any) => {
     await gestaoService.createTurma(data);
-    await invalidateSiteTickerQueries(queryClient);
-    await queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('EAD') });
+    await Promise.allSettled([
+      invalidateSiteTickerQueries(queryClient),
+      queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('EAD') }),
+    ]);
   };
 
   const openTurma = (turma: Turma) => {
@@ -62,8 +65,9 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
         </div>
         
         <button 
-          onClick={() => setIsModalOpen(true)}
-          disabled={cursosQuery.isPending || cursosQuery.isError}
+          onClick={() => { if (!list.error && !cursosQuery.isError) setIsModalOpen(true); }}
+          disabled={Boolean(list.error || cursosQuery.isPending || cursosQuery.isError)}
+          title={list.error || cursosQuery.isError ? 'Recarregue os dados antes de criar uma turma.' : 'Abrir nova turma'}
           className="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/20 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Plus size={16} /> Abrir Nova Turma
@@ -100,6 +104,15 @@ const GestaoEad: React.FC<GestaoEadProps> = ({ onToggleDetails, permissions }) =
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {list.loading ? (
           <div className="col-span-full py-12 text-center text-slate-400">Carregando turmas...</div>
+        ) : list.error ? (
+          <div className="col-span-full">
+            <GestaoDataError
+              title="Turmas EAD não carregadas"
+              message="Não foi possível consultar as turmas. A criação foi bloqueada até que os dados sejam recarregados."
+              onRetry={() => { void list.reload().catch(() => undefined); }}
+              retrying={list.refreshing}
+            />
+          </div>
         ) : list.turmas.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-400">
                 Nenhuma turma encontrada.
