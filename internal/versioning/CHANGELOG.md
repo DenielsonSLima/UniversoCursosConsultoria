@@ -2,6 +2,34 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.4] - 2026-07-27
+
+### Adicionado
+
+- Progresso explícito da promoção automática, mostrando tempo estável, títulos válidos exigidos e o próximo perfil.
+- Quatro perfis temporários gerais e quatro perfis temporários com prioridade para EAD e vencimentos entre D−2 e D+2.
+- Quatro capacidades de 300, 450, 600 e 750 requisições por minuto visíveis como “aguardando retorno”, sem possibilidade de ativação.
+
+### Alterado
+
+- O perfil fica bloqueado para edição no modo automático; o próprio autopiloto evolui até P10 após uma hora e a amostra real exigida para cada capacidade.
+- P11–P16 permanecem testes manuais de 30 minutos; erro, HTTP 429, timeout ou lote incompleto nos perfis altos retorna diretamente ao P8.
+- EAD passa à frente de toda a fila; títulos não-EAD distantes do vencimento deixam de ser consultados a cada cinco minutos.
+
+### Corrigido
+
+- Uma execução antiga não pode mais sobrescrever uma alteração recente do seletor; cada lote carrega a versão da configuração que iniciou.
+- A abertura do submódulo retorna ao título da página e a tipografia usa a fonte nativa do sistema, peso máximo 700 e tamanho mínimo legível.
+- O worker ganhou timeout, cancelamento compartilhado, validação das gravações de auditoria e contagem de lote incompleto como falha.
+- Falha de autenticação agora recua o perfil efetivo antes de suspender o circuito.
+- Uma baixa concluída após o prazo-alvo permanece registrada como paga ou pendente; o atraso vira alerta e nunca é convertido em erro financeiro.
+
+### Segurança
+
+- O worker continua restrito à consulta e baixa de títulos existentes; os testes realizados não emitiram, reemitiram ou cancelaram cobranças.
+- HTTP 429 interrompe o lote imediatamente, recua ao fallback seguro e aplica resfriamento de uma hora.
+- Um ensaio local cronometrado aceitou 60 chamadas em uma janela de um minuto e classificou a 61ª como HTTP 429, sem acessar o Banese.
+
 ## [2.2.3-beta.3] - 2026-07-27
 
 ### Adicionado

@@ -193,6 +193,7 @@ const ConsultaApiBaneseConfig = () => {
 
   const profiles = dashboard.profiles || [];
   const queue = dashboard.queue || { ready: 0, leased: 0, eadReady: 0, quarantined: 0 };
+  const autopilot = dashboard.autopilot;
   const effective = profiles.find((profile) => profile.id === config.effective_profile_id);
   const ceiling = profiles.find((profile) => profile.id === config.selected_profile_id);
   const previousTransition = dashboard.transitions?.find((transition) => (
@@ -208,7 +209,7 @@ const ConsultaApiBaneseConfig = () => {
   const hasChanges = draftMode !== config.mode || draftProfile !== config.selected_profile_id;
 
   return (
-    <div className="space-y-6">
+    <div className="banese-console space-y-6">
       <header className="overflow-hidden rounded-[2rem] bg-[#001a33] text-white shadow-xl shadow-blue-950/10">
         <div className="grid gap-6 p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
           <div>
@@ -340,13 +341,48 @@ const ConsultaApiBaneseConfig = () => {
             </article>
           </section>
 
+          {config.mode === 'AUTOMATIC' && autopilot ? (
+            <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5 text-violet-950">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="font-black uppercase tracking-wider text-violet-700">Progresso automático P{autopilot.currentProfileId} → P{autopilot.nextProfileId || autopilot.currentProfileId}</p>
+                  <h3 className="mt-2 text-xl font-black">
+                    {autopilot.nextProfileId
+                      ? `${autopilot.validTitles} de ${autopilot.requiredTitles} títulos válidos`
+                      : 'Teto automático alcançado'}
+                  </h3>
+                  <p className="mt-2 max-w-3xl text-sm font-semibold leading-relaxed">
+                    {autopilot.nextProfileId
+                      ? `O avanço do P${autopilot.currentProfileId} exige duas condições ao mesmo tempo: ${autopilot.requiredTitles} consultas reais de títulos sem erro e 1 hora de estabilidade. Execuções com fila vazia não contam.`
+                      : 'O perfil efetivo já está no teto da escada automática conservadora.'}
+                  </p>
+                </div>
+                <span className={`rounded-full px-3 py-2 font-black ${
+                  autopilot.eligibleToPromote ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-violet-800'
+                }`}>
+                  {Math.min(60, Math.floor(autopilot.stableSeconds / 60))}/60 min estáveis
+                </span>
+              </div>
+              {autopilot.nextProfileId ? (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="h-2 overflow-hidden rounded-full bg-white">
+                    <div className="h-full rounded-full bg-violet-600" style={{ width: `${Math.min(100, (autopilot.validTitles / autopilot.requiredTitles) * 100)}%` }} />
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white">
+                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (autopilot.stableSeconds / autopilot.requiredSeconds) * 100)}%` }} />
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           <section className="grid gap-5 lg:grid-cols-[1fr_0.85fr]">
             <div className="rounded-3xl border border-slate-200 bg-white p-5">
               <div className="flex items-center gap-3">
                 <Gauge className="text-blue-600" size={22} />
                 <div>
                   <h3 className="font-black text-[#001a33]">Controle operacional</h3>
-                  <p className="text-xs font-semibold text-slate-500">O teto é escolhido por você; o automático define o perfil efetivo.</p>
+                  <p className="text-xs font-semibold text-slate-500">No manual você escolhe o perfil; no automático o sistema controla sozinho o perfil efetivo.</p>
                 </div>
               </div>
               <fieldset className="mt-5">
@@ -360,7 +396,16 @@ const ConsultaApiBaneseConfig = () => {
                     <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-xs font-black ${
                       draftMode === value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'
                     }`}>
-                      <input type="radio" name="banese-mode" value={value} checked={draftMode === value} onChange={() => setDraftMode(value)} />
+                      <input
+                        type="radio"
+                        name="banese-mode"
+                        value={value}
+                        checked={draftMode === value}
+                        onChange={() => {
+                          setDraftMode(value);
+                          if (value === 'AUTOMATIC') setDraftProfile(10);
+                        }}
+                      />
                       {value === 'PAUSED' ? <PauseCircle size={15} /> : <Activity size={15} />}
                       {label}
                     </label>
@@ -368,23 +413,13 @@ const ConsultaApiBaneseConfig = () => {
                 </div>
               </fieldset>
               {draftMode === 'AUTOMATIC' ? (
-                <label className="mt-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Teto máximo do automático
-                  <select
-                    value={draftProfile}
-                    onChange={(event) => setDraftProfile(Number(event.target.value))}
-                    className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-black normal-case tracking-normal text-[#001a33] outline-none focus:border-blue-500"
-                  >
-                    {profiles.filter((profile) => profile.selectable).map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        P{profile.id} — {profile.name} • {profile.titles_per_minute}/min ({profile.titles_per_minute * 5} a cada 5 min)
-                      </option>
-                    ))}
-                  </select>
-                  <span className="mt-2 block text-[11px] font-semibold normal-case tracking-normal text-slate-500">
-                    O teto não é o perfil atual. O automático começa no efetivo e só avança após estabilidade.
-                  </span>
-                </label>
+                <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="font-black uppercase tracking-wider text-blue-700">Perfil controlado pelo automático</p>
+                  <p className="mt-2 text-lg font-black text-[#001a33]">P{config.effective_profile_id} — {effective?.name}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-600">
+                    O usuário não altera o perfil enquanto este modo estiver ativo. O sistema avança sozinho após a amostra estável e retorna ao fallback anterior ao detectar qualquer erro.
+                  </p>
+                </div>
               ) : null}
               <label className="mt-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">
                 Motivo da alteração
@@ -423,7 +458,7 @@ const ConsultaApiBaneseConfig = () => {
                 <div className="flex gap-3"><AlertTriangle className="shrink-0" size={22} /><div>
                   <h3 className="font-black">Autopiloto conservador</h3>
                   <p className="mt-1 text-xs font-semibold leading-relaxed">
-                    Promoção exige uma hora e amostra real sem erros. HTTP 429 recua um perfil e abre resfriamento. P9–P12 nunca entram no automático sem autorização formal do Banese.
+                    Promoção exige uma hora e amostra real sem erros. Qualquer erro recua para o fallback seguro; HTTP 429 também interrompe o lote e abre resfriamento de uma hora.
                   </p>
                 </div></div>
               </article>
@@ -445,7 +480,7 @@ const ConsultaApiBaneseConfig = () => {
       {activeTab === 'profiles' ? (
         <section className="space-y-4">
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-900">
-            No automático, o marcador acompanha o perfil efetivo atual; o teto configurado aparece em azul e pode ser alterado na Visão geral. P9–P12 são apenas cenários avançados bloqueados: não representam limite homologado pelo Banese.
+            No automático, o marcador acompanha o perfil efetivo e fica bloqueado para edição. O teto é P10; P9 e P10 só entram após amostra real estável. P11–P16 são testes manuais temporários e P17–P20 permanecem bloqueados aguardando retorno.
           </div>
           <fieldset>
             <legend className="sr-only">Perfis operacionais da consulta Banese</legend>
@@ -485,6 +520,15 @@ const ConsultaApiBaneseConfig = () => {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-black text-[#001a33]">P{profile.id} — {profile.name}</p>
                         <div className="flex flex-wrap gap-1">
+                        <span className="inline-flex rounded-full bg-white px-2 py-1 font-black uppercase tracking-wider text-slate-600">
+                          {profile.automatic_selectable
+                            ? 'Automático'
+                            : profile.group_name === 'REAL_TEST'
+                              ? 'Teste geral'
+                              : profile.group_name === 'PRIORITY_WINDOW'
+                                ? 'EAD + vencimento'
+                                : 'Aguardando Banese'}
+                        </span>
                         {!profile.selectable ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-600">
                             <LockKeyhole size={10} /> Bloqueado

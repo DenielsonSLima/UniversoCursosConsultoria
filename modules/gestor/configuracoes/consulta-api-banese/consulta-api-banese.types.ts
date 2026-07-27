@@ -6,9 +6,14 @@ export interface BanesePollingProfile {
   titles_per_minute: number;
   estimated_requests_per_minute: number;
   capacity_per_hour: number;
-  group_name: 'CONSERVATIVE' | 'EXPERIMENTAL';
+  group_name: 'CONSERVATIVE' | 'REAL_TEST' | 'PRIORITY_WINDOW' | 'AWAITING_BANESE';
   sicredi_reference_percent?: number | null;
   selectable: boolean;
+  automatic_selectable: boolean;
+  queue_strategy: 'GENERAL' | 'EAD_DUE_WINDOW';
+  fallback_profile_id: number;
+  max_concurrency: number;
+  test_duration_minutes?: number | null;
   source_note: string;
 }
 
@@ -21,6 +26,7 @@ export interface BanesePollingConfig {
   state: 'OBSERVING' | 'STABLE' | 'COOLDOWN' | 'SUSPENDED' | 'PAUSED';
   stable_since: string;
   cooldown_until?: string | null;
+  test_expires_at?: string | null;
   suspended_reason?: string | null;
   oauth_reuse_enabled: boolean;
   oauth_refresh_margin_seconds: number;
@@ -83,6 +89,15 @@ export interface BanesePollingDashboard {
     leased: number;
     eadReady: number;
     quarantined: number;
+  };
+  autopilot?: {
+    currentProfileId: number;
+    nextProfileId?: number | null;
+    validTitles: number;
+    requiredTitles: number;
+    stableSeconds: number;
+    requiredSeconds: number;
+    eligibleToPromote: boolean;
   };
   lastRuns?: BanesePollingRun[];
   lastAttempts?: BanesePollingAttempt[];

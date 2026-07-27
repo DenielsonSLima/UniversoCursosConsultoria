@@ -20,4 +20,4 @@ export const profileOperationalExample = (
 };
 
 export const profileScaleExample = (profile: BanesePollingProfile) =>
-  `Exemplo teórico: 20 títulos em ~${estimateProfileTime(20, profile.titles_per_minute)}; 400 alunos × 12 títulos (4.800) em ~${estimateProfileTime(4_800, profile.titles_per_minute)}.`;
+  `${profile.queue_strategy === 'EAD_DUE_WINDOW' ? 'Prioriza EAD e títulos entre 2 dias antes e 2 dias depois do vencimento. ' : ''}Exemplo teórico: 20 títulos em ~${estimateProfileTime(20, profile.titles_per_minute)}; 400 alunos × 12 títulos (4.800) em ~${estimateProfileTime(4_800, profile.titles_per_minute)}.`;

@@ -11,9 +11,18 @@ export const banesePollingQueryKey = ['configuracoes', 'consulta-api-banese'] as
 
 export const consultaApiBaneseService = {
   async getDashboard(): Promise<BanesePollingDashboard> {
-    const { data, error } = await supabase.rpc('get_banese_reconciliation_dashboard');
+    const [
+      { data, error },
+      { data: autopilot, error: autopilotError },
+    ] = await Promise.all([
+      supabase.rpc('get_banese_reconciliation_dashboard'),
+      supabase.rpc('get_banese_reconciliation_autopilot_progress'),
+    ]);
     if (error) throw new Error(error.message || 'Não foi possível carregar a consulta Banese.');
-    return (data || { available: false, environment: 'sandbox' }) as BanesePollingDashboard;
+    return {
+      ...(data || { available: false, environment: 'sandbox' }),
+      autopilot: autopilotError ? undefined : autopilot,
+    } as BanesePollingDashboard;
   },
 
   async updateConfig(input: {
