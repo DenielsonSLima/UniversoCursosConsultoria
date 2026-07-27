@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.2",
+  "version": "2.2.3-beta.3",
   "display": "BETA",
   "stage": "beta",
-  "revision": 2,
-  "releasedAt": "2026-07-26",
-  "summary": "Financeiro padronizado, com rastreabilidade de recebíveis e proteção reforçada do fluxo BolePix"
+  "revision": 3,
+  "releasedAt": "2026-07-27",
+  "summary": "Consulta Banese adaptativa, histórico operacional paginado e ciclos financeiros conforme a configuração do curso"
 }
