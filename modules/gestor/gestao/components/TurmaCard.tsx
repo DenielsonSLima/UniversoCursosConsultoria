@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Users, Calendar, Clock, MoreVertical, GraduationCap, CheckCircle2, TrendingUp, BookOpen, PlayCircle, Trash2 } from 'lucide-react';
 import { Turma } from '../gestao.types';
+import { formatCivilDate } from '../gestao-date.utils';
 
 interface TurmaCardProps {
   turma: Turma;
@@ -32,7 +33,9 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
   };
 
   const colors = getColors();
-  const percentualOcupacao = (turma.alunosMatriculados / turma.vagasTotais) * 100;
+  const percentualOcupacao = turma.vagasTotais > 0
+    ? Math.min(100, Math.max(0, (turma.alunosMatriculados / turma.vagasTotais) * 100))
+    : 0;
 
   return (
     <div
@@ -113,7 +116,7 @@ const TurmaCard: React.FC<TurmaCardProps> = ({
               <Calendar size={14} className="text-slate-400" />
               <span>Período Previsto</span>
            </div>
-           <span className="font-bold text-[#001a33]">{new Date(turma.dataInicio).toLocaleDateString('pt-BR')} - {new Date(turma.dataPrevisaoTermino).toLocaleDateString('pt-BR')}</span>
+           <span className="font-bold text-[#001a33]">{formatCivilDate(turma.dataInicio)} - {formatCivilDate(turma.dataPrevisaoTermino)}</span>
         </div>
 
         <div className="flex items-center justify-between text-xs font-medium text-slate-600 bg-slate-50 p-2 rounded-xl">
