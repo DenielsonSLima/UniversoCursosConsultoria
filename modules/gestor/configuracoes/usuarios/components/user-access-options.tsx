@@ -16,6 +16,7 @@ import {
   TrendingUp,
   UserPlus,
 } from 'lucide-react';
+import { SECRETARIA_ACCESS_OPTIONS } from '../../../secretaria/secretaria-access';
 
 export const USER_FORM_MODULES = [
   { id: 'inicio', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
@@ -53,23 +54,28 @@ const CADASTROS_TABS = [
   { id: 'cadastros-modelos', label: 'Modelos Documentos' },
 ];
 
-const SECRETARIA_TABS = [
-  { id: 'solicitacoes', label: 'Solicitações' },
-  { id: 'carteirinhas', label: 'Carteirinhas de Estudante' },
-  { id: 'declaracoes', label: 'Declaração de Matrícula' },
-  { id: 'historico', label: 'Histórico de Emissões' },
-  { id: 'recebimentos', label: 'Financeiro / Recebimentos' },
-  { id: 'fichas', label: 'Pasta de Identificação e Ficha de Matrícula' },
-];
-
 const COMUNICACAO_TABS = [
   { id: 'comunicacao-mensagem', label: 'Mensagens internas' },
   { id: 'comunicacao-whatsapp', label: 'WhatsApp' },
 ];
 
+const GESTAO_TURMA_TABS = [
+  { id: 'resumo', label: 'Resumo' },
+  { id: 'alunos', label: 'Alunos' },
+  { id: 'grade', label: 'Grade e Professores / Aulas' },
+  { id: 'atividades', label: 'Atividades' },
+  { id: 'diarios', label: 'Diários' },
+  { id: 'financeiro', label: 'Financeiro da Turma' },
+  { id: 'vacinas', label: 'Vacinas' },
+  { id: 'estagio', label: 'Estágio' },
+  { id: 'academico', label: 'Ciclo Acadêmico' },
+  { id: 'configuracoes', label: 'Configurações da Turma' },
+];
+
 export const USER_FORM_MODULE_TABS: Record<string, { id: string; label: string }[]> = {
+  gestao: GESTAO_TURMA_TABS,
   cadastros: CADASTROS_TABS,
-  secretaria: SECRETARIA_TABS,
+  secretaria: [...SECRETARIA_ACCESS_OPTIONS],
   comunicacao: COMUNICACAO_TABS,
 };
 
