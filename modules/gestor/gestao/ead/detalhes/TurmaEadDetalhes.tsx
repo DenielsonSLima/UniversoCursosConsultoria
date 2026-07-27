@@ -6,6 +6,7 @@ import {
   CreditCard,
   GraduationCap,
   Loader2,
+  LockKeyhole,
   Plus,
   Settings,
   ShieldCheck,
@@ -26,10 +27,15 @@ import {
 } from './hooks/useTurmaEadMutations';
 import { useTurmaEadRealtime } from './hooks/useTurmaEadRealtime';
 import AdicionarAlunoEadModal from './components/AdicionarAlunoEadModal';
+import {
+  canAccessGestaoTurmaTab,
+  type GestorPermissions,
+} from '../../../access-control';
 
 interface TurmaEadDetalhesProps {
   turma: Turma;
   onBack: () => void;
+  permissions: GestorPermissions;
 }
 
 const formatCurrency = (value?: number | null) =>
@@ -141,9 +147,10 @@ const StatCard = ({ label, value, icon, tone = 'slate' }: { label: string; value
   );
 };
 
-const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) => {
+const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack, permissions }) => {
   const { toasts, removeToast, toast } = useToast();
   const [activeTab, setActiveTab] = useState<'resumo' | 'alunos' | 'financeiro' | 'configuracoes'>('resumo');
+  const canViewFinanceiro = canAccessGestaoTurmaTab(permissions, 'financeiro');
   const [searchAluno, setSearchAluno] = useState('');
   const [showAddAluno, setShowAddAluno] = useState(false);
   const normalizedSearchAluno = searchAluno.trim();
@@ -187,20 +194,30 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   const alunosLiberados = alunosComAcesso.length;
   const alunosConcluidos = alunosComAcesso.filter((aluno) => normalizeStatus(aluno.status) === 'CONCLUIDO').length;
   const alunosPendentesCount = alunosPendentes.length;
-  const pagamentosQuery = useTurmaEadPagamentos(turma.id);
+  const pagamentosQuery = useTurmaEadPagamentos(turma.id, canViewFinanceiro);
 
   const tabs = [
     { id: 'resumo', label: 'Resumo', icon: <BarChart3 size={17} /> },
     { id: 'alunos', label: 'Alunos', icon: <Users size={17} /> },
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={17} /> },
     { id: 'configuracoes', label: 'Configuracoes', icon: <Settings size={17} /> },
-  ] as const;
+  ].filter((tab) => canAccessGestaoTurmaTab(permissions, tab.id)) as Array<{
+    id: 'resumo' | 'alunos' | 'financeiro' | 'configuracoes';
+    label: string;
+    icon: React.ReactNode;
+  }>;
+
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || 'resumo');
+    }
+  }, [activeTab, permissions]);
 
   const renderResumo = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <StatCard label="Alunos com acesso" value={alunosLiberados} icon={<Users size={18} />} tone="purple" />
-        <StatCard label="Pendentes" value={alunosPendentesCount} icon={<CreditCard size={18} />} tone="amber" />
+        {canViewFinanceiro && <StatCard label="Pendentes" value={alunosPendentesCount} icon={<CreditCard size={18} />} tone="amber" />}
         <StatCard label="Liberados" value={alunosLiberados} icon={<ShieldCheck size={18} />} tone="emerald" />
         <StatCard label="Concluidos" value={alunosConcluidos} icon={<GraduationCap size={18} />} tone="blue" />
       </div>
@@ -222,10 +239,12 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
               <p className="mt-1 text-sm font-black text-[#001a33]">{resumo?.cursoNome || turma.cursoNome}</p>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor publico</p>
-              <p className="mt-1 text-sm font-black text-emerald-700">{formatCurrency(resumo?.valor)}</p>
-            </div>
+            {canViewFinanceiro && (
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor publico</p>
+                <p className="mt-1 text-sm font-black text-emerald-700">{formatCurrency(resumo?.valor)}</p>
+              </div>
+            )}
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aulas e atividades</p>
               <p className="mt-1 text-sm font-black text-[#001a33]">
@@ -323,7 +342,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       )}
 
-      {alunosPendentes.length > 0 && (
+      {canViewFinanceiro && alunosPendentes.length > 0 && (
         <div className="mt-6 rounded-3xl border border-amber-100 bg-amber-50/40 p-6">
           <div className="mb-4">
             <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">Pendências de pagamento</h4>
@@ -496,6 +515,7 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
   );
 
   const renderContent = () => {
+    if (!tabs.some((tab) => tab.id === activeTab)) return null;
     if (resumoQuery.isLoading) {
       return <div className="rounded-3xl bg-white py-16 text-center text-sm font-bold text-slate-400">Carregando turma EAD...</div>;
     }
@@ -566,7 +586,15 @@ const TurmaEadDetalhes: React.FC<TurmaEadDetalhesProps> = ({ turma, onBack }) =>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 md:px-0">{renderContent()}</div>
+      <div className="mx-auto max-w-7xl px-4 md:px-0">
+        {tabs.length === 0 ? (
+          <div className="rounded-3xl border border-amber-100 bg-amber-50 p-8 text-center">
+            <LockKeyhole className="mx-auto text-amber-600" size={28} />
+            <h3 className="mt-3 text-sm font-black uppercase tracking-wider text-amber-900">Nenhuma área da turma liberada</h3>
+            <p className="mt-1 text-sm font-medium text-amber-700">Solicite ao administrador uma permissão de aba para o módulo Gestão.</p>
+          </div>
+        ) : renderContent()}
+      </div>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>
   );
