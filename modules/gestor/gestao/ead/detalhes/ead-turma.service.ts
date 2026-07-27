@@ -1,17 +1,18 @@
 import { supabase } from '../../../../../lib/supabase';
 import { AlunoDisponivel, EadAlunoTurma, EadPagamentoTurma, EadTurmaResumo } from './ead-turma.types';
+import { normalizeRpcList, normalizeRpcRecord } from './ead-rpc.utils';
 
 export const eadTurmaService = {
   async getResumo(turmaId: string): Promise<EadTurmaResumo> {
     const { data, error } = await supabase.rpc('ead_get_turma_dashboard', { p_turma_id: turmaId });
     if (error) throw error;
-    return data as EadTurmaResumo;
+    return normalizeRpcRecord<EadTurmaResumo>(data, 'ead_get_turma_dashboard');
   },
 
   async getAlunos(turmaId: string): Promise<EadAlunoTurma[]> {
     const { data, error } = await supabase.rpc('ead_get_turma_alunos', { p_turma_id: turmaId });
     if (error) throw error;
-    return data as EadAlunoTurma[];
+    return normalizeRpcList<EadAlunoTurma>(data, 'ead_get_turma_alunos');
   },
 
   async getAlunosDisponiveis(turmaId: string, search: string): Promise<AlunoDisponivel[]> {
@@ -20,7 +21,7 @@ export const eadTurmaService = {
       p_search: search,
     });
     if (error) throw error;
-    return data as AlunoDisponivel[];
+    return normalizeRpcList<AlunoDisponivel>(data, 'ead_buscar_alunos_disponiveis');
   },
 
   async getPagamentos(turmaId: string): Promise<EadPagamentoTurma[]> {
@@ -31,7 +32,7 @@ export const eadTurmaService = {
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
-    return data as EadPagamentoTurma[];
+    return normalizeRpcList<EadPagamentoTurma>(data, 'inscricoes_online');
   },
 
   async liberarMatricula(matriculaId: string) {
