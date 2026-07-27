@@ -2,11 +2,12 @@ import React from 'react';
 import { Award } from 'lucide-react';
 import { Turno } from '../../gestao.types';
 import TurmaPresencialForm, { TurmaPresencialFormData } from './TurmaPresencialForm';
+import { parseCivilDate } from '../../gestao-date.utils';
 
 interface TurmaEspecializacaoFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | Promise<void>;
   cursosDisponiveis: any[];
   selectedPoloId?: string;
 }
@@ -59,10 +60,9 @@ const especializacaoConfig = {
   },
   defaults: especializacaoDefaults,
   generateIdentity: ({ curso, polo, formData }: { curso: any; polo: any; formData: TurmaPresencialFormData }) => {
-    const date = new Date(formData.dataInicio);
-    const year = date.getFullYear();
-
-    if (Number.isNaN(year)) return null;
+    const date = parseCivilDate(formData.dataInicio);
+    if (!date) return null;
+    const { year } = date;
 
     const siglaCurso = curso.nome.includes('Instrumentação') ? 'INST' : curso.nome.substring(0, 4).toUpperCase();
     const poloSigla = polo.cidade.substring(0, 3).toUpperCase();
