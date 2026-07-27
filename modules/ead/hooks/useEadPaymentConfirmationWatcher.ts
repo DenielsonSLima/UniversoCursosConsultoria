@@ -127,7 +127,9 @@ export const useEadPaymentConfirmationWatcher = ({
     channel.subscribe();
     void checkPaymentStatus();
 
-    const paymentCheckTimer = window.setInterval(checkPaymentStatus, 1800);
+    // Realtime é o caminho principal. O intervalo é apenas contingência para
+    // reconexões e não dispara qualquer consulta ao Banese.
+    const paymentCheckTimer = window.setInterval(checkPaymentStatus, 30_000);
     const focusHandler = () => {
       invalidate();
       void checkPaymentStatus();
