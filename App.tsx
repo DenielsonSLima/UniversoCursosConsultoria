@@ -80,9 +80,14 @@ const App: React.FC = () => {
 
         {/* ── Login público do aluno ── */}
         <Route path="/login" element={<AlunoLoginPublicPage />} />
+        <Route path="/cadastro" element={<AlunoLoginPublicPage />} />
         <Route path="/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
+
+        {/* ── Atalhos compartilháveis para unidades e localização ── */}
+        <Route path="/localizacao" element={<ContactPage />} />
+        <Route path="/polos" element={<ContactPage />} />
 
         {/* ── Cursos EAD ── */}
         {/* Em produção: redireciona para a plataforma EAD externa */}

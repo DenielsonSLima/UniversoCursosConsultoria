@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --force",
-    "build": "npm run check:version && vite build",
+    "build": "npm run check:version && vite build && node scripts/generate-social-share-pages.mjs",
     "check:version": "node scripts/check-version-record.mjs",
     "preview": "vite preview",
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
