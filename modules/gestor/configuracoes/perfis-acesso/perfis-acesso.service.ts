@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import type { DashboardWidgetId } from '../../access-control';
 
 export type PerfilSetorComunicacao =
   | 'todos'
@@ -21,6 +22,7 @@ export interface PerfilAcesso {
   permissoes: {
     modules: string[];
     financeiroTabs?: string[];
+    dashboardWidgets?: DashboardWidgetId[];
     tabs?: Record<string, string[]>;
     allPolos: boolean;
     poloIds?: string[];
