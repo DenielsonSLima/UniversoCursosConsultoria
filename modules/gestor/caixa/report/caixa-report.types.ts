@@ -77,9 +77,8 @@ export interface CaixaReportExpense extends CaixaReportMovementBase {
   valorPago: number;
 }
 
-export interface CaixaReportClassSummaryItem {
-  turmaId: string | null;
-  turma: string;
+export interface CaixaReportCourseSummaryItem {
+  cursoId: string;
   curso: string;
   modalidade: string;
   previstoNoMes: number;
@@ -88,19 +87,58 @@ export interface CaixaReportClassSummaryItem {
   quantidadeParcelas: number;
   quantidadeRecebidas: number;
   quantidadeEmAtraso: number;
-  agregado: boolean;
   quantidadeTurmas: number;
+  quantidadeAlunos: number;
 }
 
-export interface CaixaReportClassSummary {
-  itens: CaixaReportClassSummaryItem[];
-  quantidadeTurmas: number;
+export interface CaixaReportCourseSummary {
+  itens: CaixaReportCourseSummaryItem[];
+  quantidadeCursos: number;
   quantidadeOmitidas: number;
   totais: {
     previstoNoMes: number;
     recebidoNoMes: number;
     emAtraso: number;
+    quantidadeTurmas: number;
+    quantidadeAlunos: number;
   };
+}
+
+export interface CaixaReportRecurringBreakdown {
+  previstoNoMes: number;
+  recebidoNoMes: number;
+  emAtraso: number;
+  valorBaseRecebido: number;
+  juros: number;
+  multa: number;
+  acrescimo: number;
+  desconto: number;
+  diferencaNaoDiscriminada: number;
+  quantidadeParcelas: number;
+  quantidadeRecebidas: number;
+  quantidadeEmAtraso: number;
+  quantidadeCursos: number;
+  quantidadeTurmas: number;
+  quantidadeAlunos: number;
+}
+
+export interface CaixaReportRecurringModality extends CaixaReportRecurringBreakdown {
+  modalidade: string;
+  rotulo: string;
+}
+
+export interface CaixaReportRecurringClass extends CaixaReportRecurringBreakdown {
+  turmaId: string;
+  turma: string;
+  cursoId: string;
+  curso: string;
+  modalidade: string;
+}
+
+export interface CaixaReportRecurringAnalysis {
+  modalidades: CaixaReportRecurringModality[];
+  turmas: CaixaReportRecurringClass[];
+  totais: CaixaReportRecurringBreakdown;
 }
 
 export interface CaixaDetailedReport {
@@ -114,7 +152,8 @@ export interface CaixaDetailedReport {
   resumo: CaixaMonthlyStatement;
   totaisRecebimentos: CaixaReportTotals;
   totaisDespesas: CaixaReportTotals;
-  resumoTurmas: CaixaReportClassSummary;
+  resumoCursos: CaixaReportCourseSummary;
+  analiseRecorrente: CaixaReportRecurringAnalysis;
   recebimentos: CaixaReportReceipt[];
   despesas: CaixaReportExpense[];
 }
