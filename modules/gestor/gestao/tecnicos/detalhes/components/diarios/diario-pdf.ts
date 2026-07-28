@@ -22,6 +22,10 @@ import {
   fitText,
   measureTableRowHeights,
 } from './diario-pdf-table';
+import {
+  loadPdfImage,
+  type PdfImage,
+} from './diario-pdf-image';
 
 const PAGE_WIDTH = 297;
 const PAGE_HEIGHT = 210;
@@ -29,8 +33,6 @@ const CONTENT_LEFT = 14;
 const CONTENT_RIGHT = 11;
 const CONTENT_WIDTH = PAGE_WIDTH - CONTENT_LEFT - CONTENT_RIGHT;
 const NAVY = '#071a33';
-
-type PdfImage = { bytes: Uint8Array; format: 'PNG' | 'JPEG' | 'WEBP' };
 
 const groupAulasBySessionLimit = (aulas: DiarioAula[], limit: number) => {
   const groups: DiarioAula[][] = [];
@@ -69,31 +71,9 @@ const setFillColor = (pdf: jsPDF, color: string) => {
   pdf.setFillColor(red, green, blue);
 };
 
-const imageFormat = (contentType: string, url: string): PdfImage['format'] => {
-  const type = contentType.toLowerCase();
-  const path = url.toLowerCase();
-  if (type.includes('png') || path.includes('.png')) return 'PNG';
-  if (type.includes('webp') || path.includes('.webp')) return 'WEBP';
-  return 'JPEG';
-};
-
-const loadImage = async (url?: string | null): Promise<PdfImage | null> => {
-  if (!url) return null;
-  try {
-    const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
-    if (!response.ok) return null;
-    return {
-      bytes: new Uint8Array(await response.arrayBuffer()),
-      format: imageFormat(response.headers.get('content-type') || '', url),
-    };
-  } catch {
-    return null;
-  }
-};
-
 const loadFirstImage = async (urls: Array<string | null | undefined>) => {
   for (const url of urls) {
-    const image = await loadImage(url);
+    const image = await loadPdfImage(url);
     if (image) return image;
   }
   return null;
@@ -601,12 +581,12 @@ export const buildDiarioPdf = async (props: DiarioPrintDocumentProps) => {
   }
   const [cover, backCover, logo, qrCode] = await Promise.all([
     loadFirstImage([props.template.capaUrl, capaDiarioPadrao]),
-    loadImage(props.template.contracapaUrl),
+    loadPdfImage(props.template.contracapaUrl),
     loadFirstImage([props.template.cabecalhoLogoUrl, '/LogoUniverso.png']),
     !isBlank && props.template.imprimirValidacaoContracapa && validationCode
       ? createDocumentValidationQrDataUrl(validationCode, { size: 240 })
         .then(async (dataUrl) => {
-          const image = await loadImage(dataUrl);
+          const image = await loadPdfImage(dataUrl);
           if (!image) {
             throw new Error('Não foi possível carregar o QR Code obrigatório do diário.');
           }

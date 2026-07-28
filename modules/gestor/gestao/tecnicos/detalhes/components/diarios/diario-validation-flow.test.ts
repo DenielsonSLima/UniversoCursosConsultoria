@@ -1,4 +1,10 @@
 import assert from 'node:assert/strict';
+import {
+  createDocumentValidationQrDataUrl,
+} from '../../../../../../shared/document-validation/document-validation.qr';
+import {
+  loadPdfImage,
+} from './diario-pdf-image';
 
 declare const Deno: {
   readTextFile: (path: string | URL) => Promise<string>;
@@ -59,6 +65,28 @@ Deno.test('PDF e contracapa usam somente o código retornado pelo backend', asyn
   assert.doesNotMatch(utilitySource, /DIA-\$\{/);
   assert.match(editorCanvasSource, /www\.universocc\.com\.br\/validador/);
   assert.doesNotMatch(editorCanvasSource, /universocock/);
+});
+
+Deno.test('QR local do Diário vira bytes PNG sem depender de fetch(data:)', async () => {
+  const dataUrl = await createDocumentValidationQrDataUrl(
+    'DIA-TECNICO-TESTE-SAFARI',
+    { size: 120 },
+  );
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (() => {
+    throw new Error('fetch não deve receber a imagem base64 local');
+  }) as typeof fetch;
+
+  try {
+    const image = await loadPdfImage(dataUrl);
+    assert.equal(image?.format, 'PNG');
+    assert.deepEqual(
+      [...(image?.bytes.subarray(0, 8) || [])],
+      [137, 80, 78, 71, 13, 10, 26, 10],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 Deno.test('impressão do Diário aguarda o helper seguro antes de liberar a operação', async () => {
