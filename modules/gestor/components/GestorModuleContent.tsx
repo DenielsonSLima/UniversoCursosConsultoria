@@ -177,7 +177,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
         </ModuleErrorBoundary>
       );
     case 'secretaria': return <SecretariaPage key={scopedPoloId || 'sem-polo'} poloId={scopedPoloId} gestorPermissions={permissions} />;
-    case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} />;
+    case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'biblioteca': return <BibliotecaPage />;
     case 'comunicacao': return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') ? <ComunicacaoPage gestorProfile={profile} channel="mensagem" /> : <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
