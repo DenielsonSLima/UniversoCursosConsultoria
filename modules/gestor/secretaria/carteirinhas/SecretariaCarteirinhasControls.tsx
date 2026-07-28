@@ -27,7 +27,6 @@ interface SecretariaCarteirinhasControlsProps {
   setSearchQueryCustom: React.Dispatch<React.SetStateAction<string>>;
   setSelectedAluno: React.Dispatch<React.SetStateAction<Aluno | null>>;
   setSelectedTurmaId: React.Dispatch<React.SetStateAction<string>>;
-  setValidadeGeral: React.Dispatch<React.SetStateAction<string>>;
   startNumber: number;
   turmas: CarteirinhaTechnicalClass[];
   validadeGeral: string;
@@ -163,13 +162,13 @@ const IndividualControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
 
 const BatchControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
   'alunosParaImprimir' | 'isPreparingValidation' | 'layoutType' | 'onPrintAction' | 'selectedTurmaId'
-  | 'setLayoutType' | 'setSelectedTurmaId' | 'setValidadeGeral' | 'turmas' | 'validadeGeral'
->> = ({ alunosParaImprimir, isPreparingValidation, layoutType, onPrintAction, selectedTurmaId, setLayoutType, setSelectedTurmaId, setValidadeGeral, turmas, validadeGeral }) => (
+  | 'setLayoutType' | 'setSelectedTurmaId' | 'turmas' | 'validadeGeral'
+>> = ({ alunosParaImprimir, isPreparingValidation, layoutType, onPrintAction, selectedTurmaId, setLayoutType, setSelectedTurmaId, turmas, validadeGeral }) => (
   <div className="animate-fadeIn">
     <h3 className="mb-6 text-xl font-black uppercase tracking-tight text-[#001a33]">Emissão em Lote</h3>
     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
       <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Selecione a Turma</label><select value={selectedTurmaId} onChange={(event) => setSelectedTurmaId(event.target.value)} className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"><option value="todos">Todos os alunos técnicos deste polo</option>{turmas.map((turma) => <option key={turma.id} value={turma.id}>{turma.nome} ({turma.codigo})</option>)}</select></div>
-      <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Validade Geral</label><input type="date" value={validadeGeral} onChange={(event) => setValidadeGeral(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500" /></div>
+      <div><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Validade acadêmica</label><input type="text" value={validadeGeral} disabled className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-4 font-bold text-blue-700" /></div>
     </div>
     <LayoutSelector layoutType={layoutType} setLayoutType={setLayoutType} />
     <div className="mb-8 flex items-start gap-4 rounded-2xl border border-purple-100 bg-purple-50 p-6">
@@ -186,8 +185,8 @@ const BatchControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
 const CustomControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
   'alunos' | 'customSelectedAlunos' | 'isPreparingValidation' | 'layoutType' | 'onPrintAction'
   | 'searchQueryCustom' | 'setCustomSelectedAlunos' | 'setLayoutType' | 'setSearchQueryCustom'
-  | 'setValidadeGeral' | 'startNumber' | 'validadeGeral'
->> = ({ alunos, customSelectedAlunos, isPreparingValidation, layoutType, onPrintAction, searchQueryCustom, setCustomSelectedAlunos, setLayoutType, setSearchQueryCustom, setValidadeGeral, startNumber, validadeGeral }) => {
+  | 'startNumber' | 'validadeGeral'
+>> = ({ alunos, customSelectedAlunos, isPreparingValidation, layoutType, onPrintAction, searchQueryCustom, setCustomSelectedAlunos, setLayoutType, setSearchQueryCustom, startNumber, validadeGeral }) => {
   const searchResults = searchQueryCustom.trim() ? alunos.filter((aluno) => matchesAlunoSearch(aluno, searchQueryCustom)) : [];
   return (
     <div className="animate-fadeIn">
@@ -202,7 +201,7 @@ const CustomControls: React.FC<Pick<SecretariaCarteirinhasControlsProps,
           </div>
         )}
       </div>
-      <div className="mb-8"><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Validade Geral</label><input type="date" value={validadeGeral} onChange={(event) => setValidadeGeral(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500" /></div>
+      <div className="mb-8"><label className="mb-2 block text-xs font-bold uppercase text-slate-500">Validade acadêmica</label><input type="text" value={validadeGeral} disabled className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-4 font-bold text-blue-700" /></div>
       <div className="mb-8 rounded-3xl border border-slate-200 bg-slate-50/20 p-6">
         <div className="mb-6 flex items-center justify-between"><h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Alunos Selecionados ({customSelectedAlunos.length})</h4>{customSelectedAlunos.length > 0 && <button onClick={() => setCustomSelectedAlunos([])} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-red-500 transition-colors hover:text-red-700"><Trash2 size={12} /> Esvaziar Lista</button>}</div>
         {customSelectedAlunos.length > 0 ? (

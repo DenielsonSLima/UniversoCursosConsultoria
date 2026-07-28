@@ -35,7 +35,6 @@ const createDefaultModel = () => ({
   tamanhoFonteDados: 6.8,
   fotoWidth: 45,
   fotoHeight: 28.5,
-  fields: [],
 });
 
 export const getCrachaUploadExtension = (file: File) => {
@@ -176,19 +175,23 @@ const createFrontFields = (model: any) => {
 
 export const resolveCrachaFields = (model: any) => {
   const backFields = createBackFields(model.textoVerso);
+  const allowValidationQrCode = model.validationPublic !== false;
+  const isValidationElement = (field: any) => (
+    field.type === 'qrcode'
+    || field.id === 'verso_url_validador'
+    || field.id === 'validade_label'
+    || field.id === 'validade_valor'
+  );
 
-  if (!Array.isArray(model.fields) || model.fields.length === 0) {
-    return [...createFrontFields(model), ...backFields];
+  if (!Array.isArray(model.fields)) {
+    return [...createFrontFields(model), ...backFields].filter(
+      (field) => allowValidationQrCode || !isValidationElement(field),
+    );
   }
 
-  const normalizedFields = model.fields.map(normalizeFrontInfoField);
-  const hasNewBack = normalizedFields.some((field: any) => field.id === 'verso_qrcode');
-  if (!hasNewBack) {
-    const frontFields = normalizedFields.filter((field: any) => (field.page || 'frente') !== 'verso');
-    return [...frontFields, ...backFields];
-  }
-
-  return normalizedFields;
+  return model.fields
+    .map(normalizeFrontInfoField)
+    .filter((field: any) => allowValidationQrCode || !isValidationElement(field));
 };
 
 export const initializeCrachaModel = (modelo: any) => {

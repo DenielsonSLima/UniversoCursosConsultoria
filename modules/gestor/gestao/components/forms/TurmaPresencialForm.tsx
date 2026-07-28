@@ -517,7 +517,7 @@ const TurmaPresencialForm: React.FC<TurmaPresencialFormProps> = ({
                   value={formData.diaVencimentoPadrao}
                   onChange={(e) => updateForm({ diaVencimentoPadrao: parseInt(e.target.value, 10) || 10 })}
                 >
-                  {[5, 10, 15, 20, 25, 28].map((d) => (
+                  {Array.from({ length: 31 }, (_, index) => index + 1).map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>

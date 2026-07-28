@@ -1,4 +1,6 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
+import { assertPdfBlobReady } from '../shared/pdf-blob-print';
 import type { EmissionLog } from './historico-emissoes.types';
 
 export const getPreviewStudent = (emission: EmissionLog, poloInfo: any) => {
@@ -18,7 +20,7 @@ export const getPreviewStudent = (emission: EmissionLog, poloInfo: any) => {
       || formatMatricula(emission.matricula_id, emission.emitido_em, emission.polo_id),
     curso: emission.dados_emissao?.courseName || '',
     instituicao: emission.dados_emissao?.institutionName || 'Universo Cursos e Consultoria',
-    validade: expiresAt ? expiresAt.toLocaleDateString('pt-BR') : '',
+    validade: expiresAt ? expiresAt.toLocaleDateString('pt-BR') : 'Sem vencimento',
     fotoUrl: emission.dados_emissao?.studentPhotoUrl || emission.aluno?.foto_url || null,
     validationCode: emission.codigo,
     poloRazaoSocial: poloInfo?.nome,
@@ -41,34 +43,7 @@ const getPdfPageNodes = (container: HTMLDivElement) => {
 };
 
 const waitForPdfAssets = async (container: HTMLDivElement, timeoutMs = 15_000) => {
-  const assetDeadline = Date.now() + timeoutMs;
-  while (
-    container.querySelector('[data-pdf-asset-ready="false"]')
-    && Date.now() < assetDeadline
-  ) {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  }
-  if (container.querySelector('[data-pdf-asset-ready="false"]')) {
-    throw new Error('Os QR Codes do lote não ficaram prontos a tempo para gerar o PDF.');
-  }
-
-  const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
-  await Promise.all(images.map(async (image) => {
-    if (image.complete) {
-      if (image.naturalWidth > 0) await image.decode().catch(() => undefined);
-      return;
-    }
-    await new Promise<void>((resolve) => {
-      const timeout = window.setTimeout(resolve, 15_000);
-      const finish = () => {
-        window.clearTimeout(timeout);
-        resolve();
-      };
-      image.addEventListener('load', finish, { once: true });
-      image.addEventListener('error', finish, { once: true });
-    });
-  }));
-  if (document.fonts?.ready) await document.fonts.ready;
+  await waitForDocumentAssets(container, timeoutMs);
 };
 
 export const createEmissionBatchPdf = async (
@@ -134,7 +109,9 @@ export const createEmissionBatchPdf = async (
   }
 
   if (!pdf) throw new Error('Não foi possível iniciar o arquivo PDF do lote.');
-  return pdf.output('blob');
+  const blob = pdf.output('blob');
+  assertPdfBlobReady(blob, 'O PDF do lote');
+  return blob;
 };
 
 export const downloadEmissionPdf = async (
@@ -197,5 +174,27 @@ export const downloadEmissionPdf = async (
     pdf.save(filename || `${filenamePrefix}-${emission.documento}-${emission.codigo}.pdf`);
     return null;
   }
-  return pdf.output('blob');
+  const blob = pdf.output('blob');
+  assertPdfBlobReady(blob, 'O PDF da emissão');
+  return blob;
+};
+
+export const saveEmissionPdfBlob = (
+  blob: Blob,
+  emission: EmissionLog,
+  filename = `2-via-${emission.documento}-${emission.codigo}.pdf`,
+) => {
+  assertPdfBlobReady(blob, 'O PDF da emissão');
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+  }
 };

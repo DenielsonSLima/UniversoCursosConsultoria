@@ -8,7 +8,6 @@ export type ValidatableDocumentType =
   | 'atestado_conclusao_tecnico'
   | 'historico_escolar'
   | 'transferencia'
-  | 'rematricula'
   | 'termo_estagio'
   | 'certificado_tecnico'
   | 'certificado_livre'
@@ -30,6 +29,7 @@ export interface IssueDocumentInput {
   expiresAt?: string | null;
   sourceReference?: string;
   referencePeriod?: string;
+  idempotencyKey?: string;
   registerReissue?: boolean;
 }
 
@@ -38,12 +38,27 @@ export interface IssueDocumentBatchInput
   enrollmentIds: string[];
 }
 
+export interface ReissueDocumentInput
+  extends Omit<IssueDocumentInput, 'idempotencyKey' | 'registerReissue'> {
+  idempotencyKey: string;
+}
+
+export interface ReissueDocumentBatchInput
+  extends Omit<IssueDocumentBatchInput, 'idempotencyKey' | 'registerReissue'> {
+  idempotencyKey: string;
+}
+
 export interface IssuedDocumentValidation {
   code: string;
   type: ValidatableDocumentType;
   issuedAt: string;
   expiresAt: string | null;
+  validationPublic: boolean;
   lastIssuedAt?: string;
   issueCount?: number;
   reused?: boolean;
+}
+
+export interface PreparedDocumentReissue extends IssuedDocumentValidation {
+  policyVersion: number;
 }

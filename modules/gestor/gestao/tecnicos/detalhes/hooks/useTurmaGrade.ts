@@ -11,6 +11,7 @@ import {
   TurmaProfessorOption,
 } from '../turma-grade.types';
 import { gestaoQueryKeys } from '../../../gestao.query-keys';
+import { atividadesExtraClasseKeys } from '../components/atividades-extra/atividadesExtraClasse.service';
 
 const useTurmaGradeInvalidation = (turmaId: string) => {
   const queryClient = useQueryClient();
@@ -18,6 +19,8 @@ const useTurmaGradeInvalidation = (turmaId: string) => {
   return useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.atividades(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: atividadesExtraClasseKeys.turma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulasByTurma(turmaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultadosByTurma(turmaId) }),

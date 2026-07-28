@@ -125,7 +125,7 @@ const DiarioFrequenciaTab: React.FC<DiarioFrequenciaTabProps> = ({
                     {String(idx + 1).padStart(2, '0')}
                   </td>
                   <td
-                    className={`sticky left-16 z-20 w-80 min-w-80 max-w-80 border-b border-r border-slate-100 p-3 text-sm font-bold text-[#001a33] shadow-[5px_0_8px_-7px_rgba(15,23,42,0.55)] transition-colors ${frozenCellBackground}`}
+                    className={`sticky left-16 z-20 w-80 min-w-80 max-w-80 border-b border-r border-slate-100 p-3 text-[13px] font-semibold text-[#001a33] antialiased shadow-[5px_0_8px_-7px_rgba(15,23,42,0.55)] transition-colors ${frozenCellBackground}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate">{aluno.nome}</span>

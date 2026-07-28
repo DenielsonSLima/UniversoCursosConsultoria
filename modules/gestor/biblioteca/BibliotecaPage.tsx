@@ -12,6 +12,8 @@ import UploadModal from './components/UploadModal';
 import QuickPreviewModal from './components/QuickPreviewModal';
 import DocumentPermissionsModal from './components/DocumentPermissionsModal';
 import TeacherStorageConfig from './components/TeacherStorageConfig';
+import ConfirmModal from '../components/ConfirmModal';
+import ToastNotification, { useToast } from '../components/ToastNotification';
 import { LibraryDocument } from './biblioteca.types';
 import { useBibliotecaPageQueries } from './hooks/useBibliotecaPageQueries';
 import { useBibliotecaPageMutations } from './hooks/useBibliotecaPageMutations';
@@ -31,7 +33,9 @@ const BibliotecaPage: React.FC = () => {
 
   // Rules and permissions states
   const [permissionsDoc, setPermissionsDoc] = useState<LibraryDocument | null>(null);
+  const [documentPendingDeletion, setDocumentPendingDeletion] = useState<LibraryDocument | null>(null);
   const [searchRegrasQuery, setSearchRegrasQuery] = useState('');
+  const { toasts, removeToast, toast } = useToast();
 
   const {
     cursosList,
@@ -56,8 +60,22 @@ const BibliotecaPage: React.FC = () => {
   const getTurmaName = (id: string) => turmasList.find((t: any) => t.id === id)?.nome || id;
   const getDisciplinaName = (id: string) => disciplinasList.find((d: any) => d.id === id)?.nome || id;
 
-  const handleDeleteDocument = async (id: string) => {
-    await deleteMutation.mutateAsync(id);
+  const handleDeleteDocument = async () => {
+    if (!documentPendingDeletion) return;
+
+    const documentTitle = documentPendingDeletion.title;
+    try {
+      await deleteMutation.mutateAsync(documentPendingDeletion.id);
+      toast.success(
+        'Arquivo apagado',
+        `“${documentTitle}” foi removido da biblioteca e do armazenamento.`
+      );
+    } catch (error) {
+      toast.error(
+        'Não foi possível apagar',
+        error instanceof Error ? error.message : 'Tente novamente em alguns instantes.'
+      );
+    }
   };
 
   const filteredAllDocs = allDocs.filter(doc => 
@@ -88,6 +106,7 @@ const BibliotecaPage: React.FC = () => {
         case 'PDF': return <div className="w-8 h-8 rounded-lg bg-red-50 text-red-655 flex items-center justify-center font-black text-[10px] border border-red-100 shrink-0">PDF</div>;
         case 'DOC': return <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-655 flex items-center justify-center font-black text-[10px] border border-blue-100 shrink-0">DOC</div>;
         case 'XLS': return <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-655 flex items-center justify-center font-black text-[10px] border border-emerald-100 shrink-0">XLS</div>;
+        case 'PPT': return <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-655 flex items-center justify-center font-black text-[10px] border border-orange-100 shrink-0">PPT</div>;
         case 'IMG': return <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-655 flex items-center justify-center font-black text-[10px] border border-purple-100 shrink-0">IMG</div>;
         case 'VIDEO': return <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-655 flex items-center justify-center font-black text-[10px] border border-amber-100 shrink-0">VIDEO</div>;
         default: return <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center font-black text-[10px] border border-slate-150 shrink-0">FILE</div>;
@@ -410,13 +429,9 @@ const BibliotecaPage: React.FC = () => {
                                 <Lock size={12} />
                               </button>
                               <button
-                                onClick={() => {
-                                  if (confirm('Deseja excluir permanentemente este documento?')) {
-                                    handleDeleteDocument(doc.id);
-                                  }
-                                }}
+                                onClick={() => setDocumentPendingDeletion(doc)}
                                 className="p-1.5 text-slate-400 hover:text-rose-650 hover:bg-slate-50 border border-slate-100 rounded-lg transition-colors"
-                                title="Excluir"
+                                title="Apagar"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -470,6 +485,21 @@ const BibliotecaPage: React.FC = () => {
           invalidateDocuments();
         }}
       />
+
+      <ConfirmModal
+        isOpen={!!documentPendingDeletion}
+        title="Confirmação"
+        message={`Deseja realmente apagar o arquivo “${documentPendingDeletion?.title || ''}”?`}
+        confirmText="Apagar"
+        cancelText="Cancelar"
+        variant="danger"
+        onClose={() => setDocumentPendingDeletion(null)}
+        onConfirm={() => {
+          void handleDeleteDocument();
+        }}
+      />
+
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
 
     </div>
   );

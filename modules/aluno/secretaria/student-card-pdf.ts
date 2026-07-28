@@ -1,5 +1,6 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { waitForQrCodeAssets } from '../../shared/qrcode/qr-code-assets';
 
 const CARD_WIDTH_MM = 85.6;
 const CARD_HEIGHT_MM = 54;
@@ -16,6 +17,7 @@ const safeFilePart = (value?: string | null) => String(value || 'aluno')
 const wait = (milliseconds: number) => new Promise(resolve => window.setTimeout(resolve, milliseconds));
 
 const waitForCardReadiness = async (cards: HTMLElement[]) => {
+  await Promise.all(cards.map((card) => waitForQrCodeAssets(card, ASSET_TIMEOUT_MS)));
   const deadline = Date.now() + ASSET_TIMEOUT_MS;
   while (cards.some(card => card.dataset.renderReady === 'false')) {
     if (Date.now() >= deadline) {

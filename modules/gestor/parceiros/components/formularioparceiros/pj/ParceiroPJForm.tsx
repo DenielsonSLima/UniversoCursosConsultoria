@@ -1,12 +1,23 @@
 // File: modules/gestor/parceiros/components/formularioparceiros/pj/ParceiroPJForm.tsx
 // Formulário completo de Pessoa Jurídica (Empresa / Convenio) — Layout de Página Única
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Building, MapPin, Save, X, FileText, User,
   AlertCircle, Upload, Loader2, Search, Plus
 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import CategoriaForm from '../../../../configuracoes/categorias/components/CategoriaForm';
+import {
+  categoriasQueryKeys,
+  categoriasService,
+} from '../../../../configuracoes/categorias/categorias.service';
+import TipoParceriaForm from '../../../../configuracoes/tipos-parceria/components/TipoParceriaForm';
+import {
+  tiposParceriaQueryKeys,
+  tiposParceriaService,
+} from '../../../../configuracoes/tipos-parceria/tipos-parceria.service';
 
 interface ParceiroPJFormProps {
   onCancel?: () => void;
@@ -15,26 +26,61 @@ interface ParceiroPJFormProps {
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
-const PRESET_CATEGORIES = [
-  'CONVÊNIO DE ESTÁGIO',
-  'CONTRATO DE PRESTAÇÃO DE SERVIÇOS',
-  'FACULDADE PARCEIRA / AFILIADO',
-  'PREFEITURA / ÓRGÃO PÚBLICO',
-  'ONG / ASSOCIAÇÃO',
-  'SINDICATO',
-  'FORNECEDOR',
-  'EMPRESA PRIVADA',
-];
+const LogoPreview: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  return src && !failed ? (
+    <img
+      src={src}
+      alt={alt}
+      className="h-full w-full bg-white object-contain p-1"
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <Building className="text-slate-350" size={24} />
+  );
+};
 
 const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => {
+  const queryClient = useQueryClient();
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [cnpjError, setCnpjError] = useState('');
-  
-  // Custom Category States
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [customCategory, setCustomCategory] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('CONVÊNIO DE ESTÁGIO');
+  const [categoriaId, setCategoriaId] = useState('');
+  const [tipoParceriaId, setTipoParceriaId] = useState('');
+  const [showCategoriaForm, setShowCategoriaForm] = useState(false);
+  const [showTipoParceriaForm, setShowTipoParceriaForm] = useState(false);
+
+  const categoriasQuery = useQuery({
+    queryKey: categoriasQueryKeys.activeByType('pj'),
+    queryFn: () => categoriasService.getActiveByType('pj'),
+  });
+  const tiposParceriaQuery = useQuery({
+    queryKey: tiposParceriaQueryKeys.active,
+    queryFn: tiposParceriaService.getActive,
+  });
+  const createCategoriaMutation = useMutation({
+    mutationFn: categoriasService.create,
+    onSuccess: async (categoria) => {
+      await queryClient.invalidateQueries({ queryKey: categoriasQueryKeys.all });
+      setCategoriaId(categoria.id || '');
+      setShowCategoriaForm(false);
+    },
+    onError: (error: Error) => alert(`Erro ao cadastrar categoria: ${error.message}`),
+  });
+  const createTipoParceriaMutation = useMutation({
+    mutationFn: tiposParceriaService.create,
+    onSuccess: async (tipo) => {
+      await queryClient.invalidateQueries({ queryKey: tiposParceriaQueryKeys.all });
+      setTipoParceriaId(tipo.id || '');
+      setShowTipoParceriaForm(false);
+    },
+    onError: (error: Error) => alert(`Erro ao cadastrar tipo de parceria: ${error.message}`),
+  });
 
   const [formData, setFormData] = useState({
     // Empresa
@@ -180,8 +226,11 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalCategory = showCustomCategory ? customCategory.trim().toUpperCase() : selectedCategory;
-    
+    const categoria = categoriasQuery.data?.find((item) => item.id === categoriaId);
+    const tipoParceria = tiposParceriaQuery.data?.find((item) => item.id === tipoParceriaId);
+
+    if (!tipoParceria) return;
+
     if (onSave) onSave({
       ...formData,
       nome: formData.razaoSocial,
@@ -191,8 +240,12 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
       endereco: formData.logradouro,
       contato1: formData.telefone,
       observacao: formData.observacoes,
-      tipoPj: finalCategory,      // unificado para compatibilidade
-      tipoConvenio: finalCategory, // unificado para compatibilidade
+      categoriaId: categoria?.id || null,
+      categoriaNome: categoria?.nome || null,
+      tipoParceriaId: tipoParceria.id,
+      tipoParceriaNome: tipoParceria.nome,
+      tipoPj: categoria?.nome || null,
+      tipoConvenio: tipoParceria.nome,
       responsavelCargo: formData.responsavelCargo,
       foto: formData.foto
     });
@@ -276,11 +329,7 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
               <label className={labelCls}>Logo da Empresa / Parceira</label>
               <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div className="h-16 w-28 bg-white border border-slate-200 rounded-xl p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                  {formData.foto ? (
-                    <img src={formData.foto} alt="Logo" className="h-full w-full object-contain" />
-                  ) : (
-                    <Building className="text-slate-350" size={24} />
-                  )}
+                  <LogoPreview src={formData.foto} alt={`Logo de ${formData.razaoSocial || 'parceiro'}`} />
                 </div>
                 <div className="flex-grow space-y-2">
                   <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold uppercase cursor-pointer transition-colors border border-slate-200 shadow-sm">
@@ -329,40 +378,72 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
             </div>
 
             <div>
-              <label className={labelCls}>Classificação / Tipo de Parceria</label>
-              <div className="flex gap-2">
-                {!showCustomCategory ? (
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className={`${inputCls} flex-grow`}
-                  >
-                    {PRESET_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value.toUpperCase())}
-                    placeholder="DIGITE O TIPO DE PARCERIA (EX: AFILIADO EAD)"
-                    className={`${inputCls} flex-grow`}
-                    required
-                  />
-                )}
+              <label className={labelCls}>Categoria da Empresa</label>
+              <div className="flex items-stretch gap-2">
+                <select
+                  value={categoriaId}
+                  onChange={(e) => setCategoriaId(e.target.value)}
+                  className={`${inputCls} min-w-0 flex-1`}
+                  disabled={categoriasQuery.isLoading}
+                >
+                  <option value="">
+                    {categoriasQuery.isLoading ? 'CARREGANDO CATEGORIAS...' : 'SEM CATEGORIA DEFINIDA'}
+                  </option>
+                  {(categoriasQuery.data || []).map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>{categoria.nome}</option>
+                  ))}
+                </select>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCustomCategory(!showCustomCategory);
-                    setCustomCategory('');
-                  }}
-                  className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center shadow-sm"
-                  title={showCustomCategory ? "Escolher da lista existente" : "Cadastrar novo tipo de parceria"}
+                  onClick={() => setShowCategoriaForm(true)}
+                  className="flex w-14 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-sm transition-colors hover:bg-blue-900"
+                  title="Cadastrar nova categoria"
+                  aria-label="Cadastrar nova categoria"
                 >
-                  {showCustomCategory ? <X size={16} /> : <Plus size={16} />}
+                  <Plus size={22} />
                 </button>
               </div>
+              <p className="mt-1.5 text-[10px] font-medium text-slate-400">
+                Segmento cadastral configurado em Configurações → Categorias de Cadastros.
+              </p>
+              {categoriasQuery.isError ? (
+                <p className="mt-1.5 text-[10px] font-bold text-red-500">Não foi possível carregar as categorias.</p>
+              ) : null}
+            </div>
+
+            <div>
+              <label className={labelCls}>Tipo de Parceria / Convênio <span className="text-red-500">*</span></label>
+              <div className="flex items-stretch gap-2">
+                <select
+                  value={tipoParceriaId}
+                  onChange={(e) => setTipoParceriaId(e.target.value)}
+                  className={`${inputCls} min-w-0 flex-1`}
+                  disabled={tiposParceriaQuery.isLoading}
+                  required
+                >
+                  <option value="">
+                    {tiposParceriaQuery.isLoading ? 'CARREGANDO TIPOS...' : 'SELECIONE O TIPO DE PARCERIA'}
+                  </option>
+                  {(tiposParceriaQuery.data || []).map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>{tipo.nome}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowTipoParceriaForm(true)}
+                  className="flex w-14 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-sm transition-colors hover:bg-blue-900"
+                  title="Cadastrar novo tipo de parceria"
+                  aria-label="Cadastrar novo tipo de parceria"
+                >
+                  <Plus size={22} />
+                </button>
+              </div>
+              <p className="mt-1.5 text-[10px] font-medium text-slate-400">
+                Opções administradas em Configurações → Tipos de Parceria.
+              </p>
+              {tiposParceriaQuery.isError ? (
+                <p className="mt-1.5 text-[10px] font-bold text-red-500">Não foi possível carregar os tipos de parceria.</p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -493,12 +574,30 @@ const ParceiroPJForm: React.FC<ParceiroPJFormProps> = ({ onCancel, onSave }) => 
 
           <button
             type="submit"
-            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-slate-900/20 transition-all"
+            disabled={!tipoParceriaId || tiposParceriaQuery.isLoading || tiposParceriaQuery.isError}
+            className="flex items-center gap-2 px-8 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-slate-900/20 transition-all disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save size={16} /> Salvar Parceiro PJ
           </button>
         </div>
       </form>
+      {showCategoriaForm ? (
+        <CategoriaForm
+          tipoFixo="pj"
+          statusFixo="ativo"
+          isSaving={createCategoriaMutation.isPending}
+          onClose={() => setShowCategoriaForm(false)}
+          onSave={(categoria) => createCategoriaMutation.mutate({ ...categoria, tipo: 'pj' })}
+        />
+      ) : null}
+      {showTipoParceriaForm ? (
+        <TipoParceriaForm
+          statusFixo="ativo"
+          isSaving={createTipoParceriaMutation.isPending}
+          onClose={() => setShowTipoParceriaForm(false)}
+          onSave={(tipo) => createTipoParceriaMutation.mutate(tipo)}
+        />
+      ) : null}
     </div>
   );
 };

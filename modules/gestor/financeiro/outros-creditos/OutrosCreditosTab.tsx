@@ -1,6 +1,7 @@
 // File: modules/gestor/financeiro/outros-creditos/OutrosCreditosTab.tsx
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Banknote,
@@ -16,10 +17,15 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Tag,
   WalletCards,
   X,
 } from 'lucide-react';
-import { financeiroService, ContasReceber } from '../financeiro.service';
+import {
+  financeiroService,
+  ContasReceber,
+  isContaDisponivelNoPolo,
+} from '../financeiro.service';
 import { asaasIntegrationService } from '../../../asaas/asaas.service';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
@@ -30,6 +36,11 @@ import ManualSettlementModal from '../receber/components/manual-settlement/Manua
 import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
+import DespesaCredorPicker, {
+  DespesaCredorTipo,
+} from '../despesas/components/DespesaCredorPicker';
+import CategoriaFinanceiraInlineModal from '../despesas/components/CategoriaFinanceiraInlineModal';
+import { useCategoriasFinanceirasQuery } from '../despesas/hooks/useCategoriasFinanceirasQuery';
 
 type StatusScope = 'received' | 'pending' | 'canceled' | 'all';
 type CreditMode = 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
@@ -93,6 +104,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [categoryFilterId, setCategoryFilterId] = useState('');
   const [page, setPage] = useState(1);
   const [groupMode, setGroupMode] = useState<OtherCreditGroupMode>('partner');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -104,10 +116,13 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   const [value, setValue] = useState('');
   const [dueDate, setDueDate] = useState(today());
   const [poloId, setPoloId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [partnerType, setPartnerType] = useState<DespesaCredorTipo | ''>('');
   const [partnerId, setPartnerId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO' | 'CARTAO' | 'DINHEIRO'>('PIX');
   const [receiveItem, setReceiveItem] = useState<ContasReceber | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [creationAttemptId, setCreationAttemptId] = useState(generateSafeUuid);
 
   useFinanceiroRealtime(scopedPoloId || poloId);
@@ -117,25 +132,36 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     search,
     dueStart: startDate,
     dueEnd: endDate,
-  }), [endDate, scopedPoloId, search, startDate]);
+    categoryId: categoryFilterId,
+  }), [categoryFilterId, endDate, scopedPoloId, search, startDate]);
 
   const { creditsQuery, summaryQuery } = useOutrosCreditosQueries(summaryFilters, scopedPoloId);
-  const { accountsQuery, polosQuery, partnersQuery } = useFinanceiroSharedQueries();
+  const { accountsQuery, polosQuery, partnersQuery } = useFinanceiroSharedQueries({
+    poloId: scopedPoloId || poloId,
+  });
+  const categoriesQuery = useCategoriasFinanceirasQuery('OUTRO_CREDITO');
 
   const credits = creditsQuery.data || [];
   const polos = polosQuery.data || [];
   const accounts = accountsQuery.data || [];
   const partners = partnersQuery.data || [];
+  const categories = categoriesQuery.data || [];
   const isLoading = creditsQuery.isLoading;
   const effectivePoloId = scopedPoloId || poloId || '';
   const activePolo = polos.find((polo: any) => polo.id === effectivePoloId);
   const activeAccounts = useMemo(
-    () => accounts.filter((account) => account.ativo !== false && (!effectivePoloId || account.poloId === effectivePoloId)),
+    () => accounts.filter(
+      (account) => account.ativo !== false
+        && isContaDisponivelNoPolo(account, effectivePoloId),
+    ),
     [accounts, effectivePoloId],
   );
   const receiveAccounts = useMemo(() => {
     const receivePoloId = receiveItem?.poloId || effectivePoloId;
-    return accounts.filter((account) => account.ativo !== false && (!receivePoloId || account.poloId === receivePoloId));
+    return accounts.filter(
+      (account) => account.ativo !== false
+        && isContaDisponivelNoPolo(account, receivePoloId),
+    );
   }, [accounts, effectivePoloId, receiveItem?.poloId]);
 
   const createMutation = useMutation({
@@ -146,6 +172,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       valor: parseCurrencyInput(value),
       dataVencimento: dueDate,
       clienteId: partnerId || undefined,
+      categoriaFinanceiraId: categoryId || undefined,
       formaPagamento: mode === 'LOCAL_PAGO' || mode === 'GATEWAY' ? paymentMethod : undefined,
       contaBancariaId: mode === 'LOCAL_PAGO' ? accountId : undefined,
       mode,
@@ -213,9 +240,12 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     setValue('');
     setDueDate(today());
     setPoloId(effectivePoloId);
+    setCategoryId('');
+    setPartnerType('');
     setPartnerId('');
     setAccountId('');
     setPaymentMethod('PIX');
+    setShowCategoryModal(false);
   };
 
   const openCreateModal = () => {
@@ -236,8 +266,11 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     return credits.filter((item) => {
       const matchesStart = !startDate || item.dataVencimento >= startDate;
       const matchesEnd = !endDate || item.dataVencimento <= endDate;
+      const matchesCategory = !categoryFilterId
+        || item.categoriaFinanceiraId === categoryFilterId;
       const matchesSearch = !term || [
         item.descricao,
+        item.categoriaFinanceiraNome,
         item.clienteNome,
         item.clienteCpfCnpj,
         item.poloNome,
@@ -248,9 +281,9 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
         item.asaasStatus,
       ].some((field) => field?.toLocaleLowerCase('pt-BR').includes(term));
 
-      return matchesStart && matchesEnd && matchesSearch;
+      return matchesStart && matchesEnd && matchesCategory && matchesSearch;
     });
-  }, [credits, search, startDate, endDate]);
+  }, [categoryFilterId, credits, search, startDate, endDate]);
 
   const filtered = useMemo(() => {
     if (statusScope === 'received') return baseFiltered.filter((item) => item.status === 'PAGO');
@@ -310,11 +343,11 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
 
   useEffect(() => {
     setPage(1);
-  }, [statusScope, search, startDate, endDate, groupMode]);
+  }, [statusScope, search, startDate, endDate, categoryFilterId, groupMode]);
 
   useEffect(() => {
     setExpandedGroups(new Set());
-  }, [statusScope, search, startDate, endDate, groupMode]);
+  }, [statusScope, search, startDate, endDate, categoryFilterId, groupMode]);
 
   useEffect(() => {
     const nextPoloId = scopedPoloId || '';
@@ -332,8 +365,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   }, [accountId, activeAccounts, mode]);
 
   useEffect(() => {
-    if (mode === 'GATEWAY' && paymentMethod === 'DINHEIRO') {
-      setPaymentMethod('PIX');
+    if (mode === 'GATEWAY' && paymentMethod !== 'BOLETO') {
+      setPaymentMethod('BOLETO');
     }
   }, [mode, paymentMethod]);
 
@@ -356,8 +389,15 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
       toast.warning('Conta obrigatória', 'Selecione a conta/caixa onde o valor entrou.');
       return;
     }
-    if (mode === 'GATEWAY' && paymentMethod === 'DINHEIRO') {
-      toast.warning('Forma inválida', 'Link bancário permite Pix, boleto ou cartão.');
+    if (mode === 'GATEWAY' && (!partnerType || !partnerId)) {
+      toast.warning(
+        'Parceiro obrigatório',
+        'Selecione o tipo e o parceiro para o Banese emitir a cobrança BolePix.',
+      );
+      return;
+    }
+    if (mode === 'GATEWAY' && paymentMethod !== 'BOLETO') {
+      toast.warning('Forma inválida', 'O link bancário de Outros Créditos usa somente BolePix do Banese.');
       return;
     }
     createMutation.mutate();
@@ -411,7 +451,9 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
     <tr key={item.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-emerald-50/45'} transition-colors hover:bg-emerald-50/75`}>
       <td className="px-5 py-4">
         <p className="text-sm font-black text-[#001a33]">{item.descricao}</p>
-        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Outros créditos</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-600">
+          {item.categoriaFinanceiraNome || 'Sem categoria específica'}
+        </p>
       </td>
       <td className="px-5 py-4">
         <p className="text-xs font-bold text-slate-700">{item.clienteNome || 'Entrada sem parceiro'}</p>
@@ -572,6 +614,19 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
           title="Vencimento Final"
         />
 
+        {/* Categoria */}
+        <select
+          value={categoryFilterId}
+          onChange={(event) => setCategoryFilterId(event.target.value)}
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+          aria-label="Filtrar por categoria"
+        >
+          <option value="">Todas as categorias</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>{category.nome}</option>
+          ))}
+        </select>
+
         {/* Agrupamento */}
         <select
           value={groupMode}
@@ -584,12 +639,13 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
         </select>
 
         {/* Limpar Filtros */}
-        {(search || startDate || endDate) && (
+        {(search || startDate || endDate || categoryFilterId) && (
           <button
             onClick={() => {
               setSearch('');
               setStartDate('');
               setEndDate('');
+              setCategoryFilterId('');
             }}
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl text-xs font-bold uppercase transition-colors"
           >
@@ -707,13 +763,18 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[120] flex min-h-screen items-center justify-center bg-[#001a33]/65 p-4 backdrop-blur-sm">
-          <div className="max-h-[calc(100vh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+      {isModalOpen && typeof document !== 'undefined' && createPortal((
+        <div
+          className="fixed inset-0 z-[120] flex h-[100dvh] w-screen items-center justify-center overflow-y-auto bg-[#001a33]/65 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="outros-creditos-modal-title"
+        >
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Novo crédito</p>
-                <h4 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Registrar entrada avulsa</h4>
+                <h4 id="outros-creditos-modal-title" className="text-xl font-black uppercase tracking-tight text-[#001a33]">Registrar entrada avulsa</h4>
               </div>
               <button
                 onClick={closeCreateModal}
@@ -737,7 +798,10 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => setMode(option.id)}
+                      onClick={() => {
+                        setMode(option.id);
+                        if (option.id === 'GATEWAY') setPaymentMethod('BOLETO');
+                      }}
                       className={`rounded-2xl border p-4 text-left transition-all ${
                         active ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-100 bg-slate-50 hover:bg-white'
                       }`}
@@ -751,7 +815,42 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1 md:col-span-2">
+                <div className="space-y-1">
+                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <Tag size={11} /> Categoria
+                  </span>
+                  <div className="relative flex gap-2">
+                    <select
+                      value={categoryId}
+                      onChange={(event) => setCategoryId(event.target.value)}
+                      className="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
+                    >
+                      <option value="">Selecionar categoria...</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>{category.nome}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryModal((current) => !current)}
+                      className="inline-flex h-12 items-center gap-1 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-black text-emerald-700 transition-colors hover:bg-emerald-100"
+                    >
+                      <Plus size={14} /> Nova
+                    </button>
+                    {showCategoryModal && (
+                      <CategoriaFinanceiraInlineModal
+                        tipo="OUTRO_CREDITO"
+                        accent="emerald"
+                        onCriada={(id) => {
+                          setCategoryId(id);
+                          setShowCategoryModal(false);
+                        }}
+                        onClose={() => setShowCategoryModal(false)}
+                      />
+                    )}
+                  </div>
+                </div>
+                <label className="space-y-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Descrição</span>
                   <input
                     value={description}
@@ -795,23 +894,18 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                     </p>
                   </div>
                 </div>
-                <label className="space-y-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Parceiro (opcional)
-                  </span>
-                  <select
-                    value={partnerId}
-                    onChange={(event) => setPartnerId(event.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
-                  >
-                    <option value="">Sem parceiro vinculado</option>
-                    {partners.map((partner: any) => (
-                      <option key={partner.id} value={partner.id}>
-                        {partner.nome} {partner.cpf_cnpj ? `- ${partner.cpf_cnpj}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <DespesaCredorPicker
+                  parceiros={partners}
+                  tipo={partnerType}
+                  value={partnerId}
+                  onTipoChange={setPartnerType}
+                  onChange={setPartnerId}
+                  tipoLabel="Tipo de parceiro"
+                  pessoaLabel="Parceiro"
+                  emptyLabel="Sem parceiro vinculado"
+                  accent="emerald"
+                  required={mode === 'GATEWAY'}
+                />
                 {(mode === 'LOCAL_PAGO' || mode === 'GATEWAY') && (
                   <>
                     {mode === 'LOCAL_PAGO' && (
@@ -843,10 +937,16 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
                         onChange={(event) => setPaymentMethod(event.target.value as any)}
                         className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-400"
                       >
-                        <option value="PIX">Pix</option>
-                        <option value="BOLETO">Boleto</option>
-                        <option value="CARTAO">Cartão</option>
-                        {mode === 'LOCAL_PAGO' && <option value="DINHEIRO">Dinheiro</option>}
+                        {mode === 'GATEWAY' ? (
+                          <option value="BOLETO">BolePix (Banese)</option>
+                        ) : (
+                          <>
+                            <option value="PIX">Pix</option>
+                            <option value="BOLETO">Boleto</option>
+                            <option value="CARTAO">Cartão</option>
+                            <option value="DINHEIRO">Dinheiro</option>
+                          </>
+                        )}
                       </select>
                     </label>
                   </>
@@ -854,8 +954,8 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
               </div>
 
               {mode === 'GATEWAY' && (
-                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-700">
-                  O sistema vai consultar a aba Outros Créditos da Integração Bancária para decidir se o link usa Asaas, Mercado Pago ou Banese neste ambiente e nesta forma de pagamento.
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800">
+                  A cobrança será emitida como BolePix pelo Banese. O tipo e o parceiro são obrigatórios para identificar o pagador.
                 </div>
               )}
 
@@ -880,7 +980,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {receiveItem && (
         <ManualSettlementModal

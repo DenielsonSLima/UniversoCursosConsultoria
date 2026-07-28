@@ -57,6 +57,8 @@ type FlowInput = {
   content: string;
 };
 
+const createIrpfRequestKey = () => crypto.randomUUID().replaceAll("-", "");
+
 const logEvent = async (admin: any, session: any, type: string, details: Record<string, unknown> = {}) => {
   await admin.from("whatsapp_flow_events").insert({
     session_id: session?.id || null,
@@ -306,7 +308,18 @@ const sendIrpf = async (
   input: FlowInput,
   option: IrpfYearOption,
 ) => {
-  const issued = await issueIrpfDocument(admin, option);
+  const requestKey = String(session?.data?.irpfRequestKey || "").trim();
+  if (!/^[a-f0-9]{32}$/.test(requestKey)) {
+    throw new Error("A solicitação de IRPF perdeu sua chave de operação.");
+  }
+
+  const idempotencyKey = [
+    "whatsapp-irpf",
+    requestKey,
+    option.matriculaId,
+    option.year,
+  ].join(":");
+  const issued = await issueIrpfDocument(admin, option, idempotencyKey);
   await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: settings.irpf_ready_message });
   await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: settings.irpf_link_intro_message });
   await sendFlowText(admin, { conversation: input.conversation, aluno: input.alunoByPhone, phone: input.phone, text: issued.url, previewUrl: true });
@@ -314,7 +327,13 @@ const sendIrpf = async (
     ...session,
     status: "menu",
     attempts: 0,
-    data: { ...(session?.data || {}), lastIrpfYear: option.year, lastIrpfCode: issued.code },
+    data: {
+      ...(session?.data || {}),
+      irpfRequestKey: null,
+      irpfPendingOption: null,
+      lastIrpfYear: option.year,
+      lastIrpfCode: issued.code,
+    },
   });
   await logEvent(admin, next, "irpf_sent", { year: option.year, code: issued.code });
 };
@@ -336,13 +355,31 @@ const offerIrpf = async (admin: any, settings: any, session: any, input: FlowInp
     await logEvent(admin, next, "irpf_no_years", { alunoId });
     return;
   }
-  if (result.options.length === 1) return sendIrpf(admin, settings, session, input, result.options[0]);
+
+  const irpfRequestKey = createIrpfRequestKey();
+  if (result.options.length === 1) {
+    const next = await saveSession(admin, {
+      ...session,
+      status: "choosing_irpf_year",
+      attempts: 0,
+      data: {
+        ...(session?.data || {}),
+        irpfRequestKey,
+        irpfPendingOption: result.options[0],
+      },
+    });
+    return sendIrpf(admin, settings, next, input, result.options[0]);
+  }
 
   const next = await saveSession(admin, {
     ...session,
     status: "choosing_irpf_year",
     attempts: 0,
-    data: { ...(session?.data || {}), irpfOptions: result.options },
+    data: {
+      ...(session?.data || {}),
+      irpfRequestKey,
+      irpfOptions: result.options,
+    },
   });
   await sendFlowText(admin, {
     conversation: input.conversation,
@@ -1814,6 +1851,10 @@ export const processWhatsAppFlow = async (admin: any, input: FlowInput) => {
   }
 
   if (session.status === "choosing_irpf_year") {
+    const pendingOption = session.data?.irpfPendingOption;
+    if (pendingOption) {
+      return sendIrpf(admin, settings, session, input, pendingOption);
+    }
     const choice = parseMenuNumber(input.content);
     const options = Array.isArray(session.data?.irpfOptions) ? session.data.irpfOptions : [];
     const option = choice ? options[choice - 1] : null;

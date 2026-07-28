@@ -1,23 +1,24 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.9",
+  "version": "2.2.3-beta.10",
   "type": "module",
   "scripts": {
     "dev": "vite --force",
-    "build": "npm run check:version && vite build",
+    "build": "npm run check:version && vite build && node scripts/generate-social-share-pages.mjs",
     "check:version": "node scripts/check-version-record.mjs",
     "preview": "vite preview",
     "lint": "eslint \"**/*.{ts,tsx}\" --plugin react-hooks --rule 'react-hooks/rules-of-hooks: error'",
     "test:banese-ui": "node scripts/test-banese-payment-ui.mjs",
     "test:banese-reconciliation": "node --test scripts/test-banese-reconciliation-control.mjs",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
+    "test:caixa-report": "node scripts/test-caixa-report.mjs",
+    "test:document-validation": "node scripts/test-document-validation.mjs",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
     "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",
     "ead:update-acs-vimeo": "node scripts/update-acs-vimeo-embed.mjs",
-    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs",
-    "test:caixa-report": "node scripts/test-caixa-report.mjs"
+    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
@@ -40,14 +41,14 @@
     "@types/node": "^22.14.0",
     "@typescript-eslint/parser": "^8.59.4",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.12",
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "sharp": "^0.35.2",
-    "typescript": "~5.8.2",
-    "vite": "^6.4.3",
-    "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
+    "sharp": "^0.35.2",
     "tailwindcss": "^3.4.17",
-    "esbuild": "^0.25.12"
+    "typescript": "~5.8.2",
+    "vite": "^6.4.3"
   }
 }

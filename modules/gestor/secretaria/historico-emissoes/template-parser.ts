@@ -39,11 +39,13 @@ export const parseEmissionTemplate = (
   ];
   const dateInFull = `${today.getDate()} de ${months[today.getMonth()]} de ${today.getFullYear()}`;
   const currentTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
-  const validityDays = context.templateConfig?.validityDays || 30;
-  const expiresAt = data.validade_ate
-    ? new Date(data.validade_ate)
-    : new Date(today.getTime() + validityDays * 24 * 60 * 60 * 1000);
-  const formattedValidity = `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`;
+  const expiresAt = data.validade_ate ? new Date(data.validade_ate) : null;
+  const validityDays = expiresAt
+    ? Math.max(1, Math.ceil((expiresAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
+    : null;
+  const formattedValidity = expiresAt
+    ? `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`
+    : 'Sem vencimento';
   const emissionData = data.dados_emissao || {};
   const academicData = [
     'boletim',
@@ -188,7 +190,7 @@ export const parseEmissionTemplate = (
     [/{{HORA_ATUAL}}/g, currentTime],
     [/{{SITUACAO_ACADEMICA}}/g, academicStatus],
     [/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${currentTime}`],
-    [/{{VALIDADE_DIAS}}/g, String(validityDays)],
+    [/{{VALIDADE_DIAS}}/g, validityDays === null ? 'Sem vencimento' : String(validityDays)],
     [/{{VALIDADE_DATA}}/g, formattedValidity],
     [/{{ANO_CALENDARIO}}/g, String(emissionData.calendarYear || data.periodo_referencia || '')],
     [/{{VALOR_TOTAL}}/g, formattedIrpfTotal],

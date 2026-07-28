@@ -4,13 +4,47 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
 import { despesasQueryKeys } from '../despesas.queryKeys';
+import { financeiroQueryKeys } from '../../financeiro.queryKeys';
+import { caixaQueryKeys } from '../../../caixa/caixa.service';
 
 export function useDespesasRealtime(poloId?: string | null) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
+    let refreshTimer: number | undefined;
+    let expensesChanged = false;
+    let balancesChanged = false;
+
+    const flush = () => {
+      refreshTimer = undefined;
+      if (expensesChanged) {
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
+      }
+      if (balancesChanged) {
+        void queryClient.invalidateQueries({
+          queryKey: financeiroQueryKeys.contasBancariasSaldos,
+        });
+        void queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards });
+      }
+      expensesChanged = false;
+      balancesChanged = false;
+    };
+
+    const schedule = () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(flush, 250);
+    };
+
+    const invalidateExpenseAndBalances = () => {
+      expensesChanged = true;
+      balancesChanged = true;
+      schedule();
+    };
+
+    const invalidateBalances = () => {
+      balancesChanged = true;
+      schedule();
     };
 
     const activePoloId = poloId && poloId !== 'todos' ? poloId : null;
@@ -24,11 +58,22 @@ export function useDespesasRealtime(poloId?: string | null) {
           table: 'despesas_lancamentos',
           ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
         },
-        invalidate,
+        invalidateExpenseAndBalances,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'finance_realtime_events',
+          ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
+        },
+        invalidateBalances,
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [poloId, queryClient]);

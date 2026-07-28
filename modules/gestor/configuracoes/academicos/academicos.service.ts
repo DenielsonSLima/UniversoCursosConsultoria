@@ -3,6 +3,7 @@
 // Cache em memória apenas para evitar múltiplos fetches na mesma sessão de página.
 
 import { supabase } from '../../../../lib/supabase';
+import { getDocumentValidationBaseUrl } from '../../../shared/document-validation/document-validation.url';
 
 export interface AcademicosConfigData {
   matriculaPrefix: string;
@@ -33,7 +34,7 @@ export const DEFAULT_CONFIGS: AcademicosConfigData = {
   templateEad: 'Certificamos que o aluno concluiu via plataforma digital EAD o curso livre de {CURSO}.',
   templateLivres: 'Certificamos a participação do aluno no curso livre de {CURSO} com carga horária de {CARGA}h.',
   templateEspecializacao: 'Certificamos que o especialista concluiu a Pós-Graduação Latu Sensu em {CURSO}.',
-  validacaoUrl: 'https://www.universocc.com.br/validador',
+  validacaoUrl: getDocumentValidationBaseUrl(),
 };
 
 // Cache em memória — válido apenas durante a vida da página (sem localStorage)
@@ -61,7 +62,11 @@ export const academicosService = {
         .maybeSingle();
 
       if (!error && data && data.conteudo) {
-        _memCache = { ...DEFAULT_CONFIGS, ...data.conteudo } as AcademicosConfigData;
+        _memCache = {
+          ...DEFAULT_CONFIGS,
+          ...data.conteudo,
+          validacaoUrl: getDocumentValidationBaseUrl(),
+        } as AcademicosConfigData;
         _memCacheTs = now;
         return _memCache;
       }
@@ -79,20 +84,24 @@ export const academicosService = {
   async saveConfigs(data: AcademicosConfigData): Promise<boolean> {
     // Invalida cache em memória
     _memCache = null;
+    const canonicalData = {
+      ...data,
+      validacaoUrl: getDocumentValidationBaseUrl(),
+    };
 
     try {
       const { error } = await supabase
         .from('documentos_templates')
         .upsert({
           id: 'academicos_config',
-          conteudo: data,
+          conteudo: canonicalData,
           updated_at: new Date().toISOString()
         });
 
       if (error) throw error;
 
       // Atualiza cache em memória após salvar com sucesso
-      _memCache = data;
+      _memCache = canonicalData;
       _memCacheTs = Date.now();
       return true;
     } catch (e) {

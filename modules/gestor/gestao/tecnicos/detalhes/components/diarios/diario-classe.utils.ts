@@ -99,9 +99,6 @@ export const getStudentStats = (
   };
 };
 
-export const getDiarioValidationCode = (turma: any, disciplina: any) =>
-  `DIA-${(turma.codigo || turma.nome || 'TURMA').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}-${disciplina.id.slice(0, 8).toUpperCase()}`;
-
 export const getDiarioFileName = (turma: any, disciplina: any) =>
   `diario-${turma.codigo || turma.nome || 'turma'}-${disciplina.nome}`
     .normalize('NFD')

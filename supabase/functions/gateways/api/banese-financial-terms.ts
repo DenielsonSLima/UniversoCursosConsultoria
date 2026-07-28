@@ -46,7 +46,13 @@ export const buildConfiguredBaneseFinancialTerms = (input: {
   const interestValue = positiveNumber(
     matricula?.juros_atraso_individual ?? turma?.juros_atraso,
   );
-  const penaltyValue = roundMoney(
+  const percentagePenaltySource =
+    matricula?.multa_atraso_percentual_individual ??
+      turma?.multa_atraso_percentual;
+  const hasPercentagePenalty = percentagePenaltySource !== null &&
+    percentagePenaltySource !== undefined;
+  const percentagePenaltyValue = positiveNumber(percentagePenaltySource);
+  const fixedPenaltyValue = roundMoney(
     matricula?.multa_atraso_individual ?? turma?.multa_atraso,
   );
 
@@ -60,8 +66,14 @@ export const buildConfiguredBaneseFinancialTerms = (input: {
     interest: policy.penalty && interestValue > 0
       ? { type: "monthly-percentage", value: interestValue }
       : null,
-    penalty: policy.penalty && penaltyValue > 0
-      ? { type: "fixed", value: penaltyValue }
+    penalty: policy.penalty
+      ? hasPercentagePenalty
+        ? percentagePenaltyValue > 0
+          ? { type: "percentage", value: percentagePenaltyValue }
+          : null
+        : fixedPenaltyValue > 0
+        ? { type: "fixed", value: fixedPenaltyValue }
+        : null
       : null,
   };
 };
@@ -74,7 +86,7 @@ export const resolveBaneseReceivableFinancialTerms = async (
     ? await admin
       .from("turmas")
       .select(
-        "desconto_pontualidade, juros_atraso, multa_atraso, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula",
+        "desconto_pontualidade, juros_atraso, multa_atraso, multa_atraso_percentual, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula",
       )
       .eq("id", receivable.turma_id)
       .maybeSingle()
@@ -85,7 +97,7 @@ export const resolveBaneseReceivableFinancialTerms = async (
     ? await admin
       .from("matriculas")
       .select(
-        "desconto_pontualidade_individual, juros_atraso_individual, multa_atraso_individual",
+        "desconto_pontualidade_individual, juros_atraso_individual, multa_atraso_individual, multa_atraso_percentual_individual",
       )
       .eq("id", receivable.matricula_id)
       .maybeSingle()

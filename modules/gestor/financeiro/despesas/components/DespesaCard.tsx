@@ -1,7 +1,7 @@
 // File: modules/gestor/financeiro/despesas/components/DespesaCard.tsx
 
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, XCircle, Printer, Trash2, Layers } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, XCircle, Printer, Trash2, Layers, Paperclip } from 'lucide-react';
 import { DespesaLancamento } from '../despesas.service';
 
 const formatCurrency = (value: number) =>
@@ -22,9 +22,16 @@ interface DespesaCardProps {
   onPagar?: (item: DespesaLancamento) => void;
   onExcluir?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
+  onAnexo?: (item: DespesaLancamento) => void;
 }
 
-const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onImprimir }) => {
+const DespesaCard: React.FC<DespesaCardProps> = ({
+  item,
+  onPagar,
+  onExcluir,
+  onImprimir,
+  onAnexo,
+}) => {
   const cfg = statusConfig[item.status] || statusConfig.PENDENTE;
   const isPago = item.status === 'PAGO';
   const isCancelado = item.status === 'CANCELADO';
@@ -58,6 +65,14 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
           <p className={`text-2xl font-black ${isPago ? 'text-emerald-600' : item.status === 'VENCIDO' ? 'text-rose-600' : 'text-[#001a33]'}`}>
             {formatCurrency(item.valor)}
           </p>
+          {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+              Base {formatCurrency(item.valorBase)}
+              {item.jurosValor > 0 ? ` · Juros +${formatCurrency(item.jurosValor)}` : ''}
+              {item.multaValor > 0 ? ` · Multa +${formatCurrency(item.multaValor)}` : ''}
+              {item.descontoValor > 0 ? ` · Desconto −${formatCurrency(item.descontoValor)}` : ''}
+            </p>
+          )}
           {item.valorPago !== undefined && item.valorPago !== item.valor && (
             <p className="text-xs text-emerald-600 font-semibold mt-0.5">
               Pago: {formatCurrency(item.valorPago)}
@@ -120,7 +135,16 @@ const DespesaCard: React.FC<DespesaCardProps> = ({ item, onPagar, onExcluir, onI
               <Printer size={15} />
             </button>
           )}
-          {onExcluir && (
+          {item.anexoPath && onAnexo && (
+            <button
+              onClick={() => onAnexo(item)}
+              className="p-2 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-colors"
+              title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
+            >
+              <Paperclip size={15} />
+            </button>
+          )}
+          {onExcluir && item.status !== 'PAGO' && item.status !== 'CANCELADO' && (
             <button
               onClick={() => onExcluir(item)}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"

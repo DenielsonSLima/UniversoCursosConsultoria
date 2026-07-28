@@ -20,7 +20,6 @@ const moduleLoaders = {
   'declaracao-irpf': () => import('./declaracao-irpf/SecretariaDeclaracaoIrpfPage'),
   'historico-escolar': () => import('./historico-escolar/SecretariaHistoricoEscolarPage'),
   'cracha-estagio': () => import('./cracha-estagio/SecretariaCrachaEstagioPage'),
-  rematricula: () => import('./rematricula/SecretariaRematriculaPage'),
   'termo-estagio': () => import('./termo-estagio/SecretariaTermoEstagioPage'),
   'consulta-financeira': () => import('./consulta-financeira/SecretariaConsultaFinanceiraPage'),
   'historico-emissoes': () => import('./historico-emissoes/SecretariaHistoricoEmissoesPage'),
@@ -40,7 +39,6 @@ const SecretariaDeclaracaoFrequenciaPage = lazy(moduleLoaders['declaracao-freque
 const SecretariaDeclaracaoIrpfPage = lazy(moduleLoaders['declaracao-irpf']);
 const SecretariaHistoricoEscolarPage = lazy(moduleLoaders['historico-escolar']);
 const SecretariaCrachaEstagioPage = lazy(moduleLoaders['cracha-estagio']);
-const SecretariaRematriculaPage = lazy(moduleLoaders.rematricula);
 const SecretariaTermoEstagioPage = lazy(moduleLoaders['termo-estagio']);
 const SecretariaConsultaFinanceiraPage = lazy(moduleLoaders['consulta-financeira']);
 const SecretariaHistoricoEmissoesPage = lazy(moduleLoaders['historico-emissoes']);
@@ -94,10 +92,6 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   'termo-estagio': {
     title: 'Termo de Estágio',
     description: 'Termo de compromisso e dados acadêmicos do estágio supervisionado.',
-  },
-  rematricula: {
-    title: 'Rematrícula',
-    description: 'Preparação individual ou coletiva do processo de rematrícula.',
   },
   transferencia: {
     title: 'Transferência',
@@ -208,8 +202,6 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaCrachaEstagioPage />;
       case 'cracha-periodo-eleitoral':
         return <SecretariaDocumentoEmissionPage definition={secretariaDocumentoDefinitions.crachaPeriodoEleitoral} />;
-      case 'rematricula':
-        return <SecretariaRematriculaPage />;
       case 'termo-estagio':
         return <SecretariaTermoEstagioPage />;
       case 'consulta-financeira':

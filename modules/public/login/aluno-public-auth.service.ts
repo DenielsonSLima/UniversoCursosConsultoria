@@ -8,6 +8,7 @@ import { loginService } from '../../login/login.service';
 import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
+import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
 
 export interface PublicAlunoSignupData {
   nome: string;
@@ -207,10 +208,12 @@ export const alunoPublicAuthService = {
   async login(
     email: string,
     password: string,
+    turnstileToken: string,
   ) {
     const { error } = await loginService.login({
       email,
       password,
+      turnstileToken,
     });
     if (error) throw new Error(error);
 
@@ -314,6 +317,10 @@ export const alunoPublicAuthService = {
 
     if (!dataNascimento) {
       throw new Error('Informe a data de nascimento para concluir o cadastro.');
+    }
+
+    if (!isPublicAlunoOlderThanTen(dataNascimento)) {
+      throw new Error('O cadastro é permitido somente para alunos com mais de 10 anos de idade.');
     }
 
     if (

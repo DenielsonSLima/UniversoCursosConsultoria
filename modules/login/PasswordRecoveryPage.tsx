@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import ArkhenSignature from '../shared/components/ArkhenSignature';
+import TurnstileWidget from '../shared/auth/TurnstileWidget';
 
 type RecoveryMode = 'request' | 'reset';
 interface RecoveryAuthorization {
@@ -27,12 +28,12 @@ const RECOVERY_STEPS = [
   {
     number: '01',
     title: 'Solicite o link',
-    description: 'Informe o mesmo e-mail usado no cadastro.',
+    description: 'Informe sua matrícula de acesso ou e-mail.',
   },
   {
     number: '02',
-    title: 'Abra seu e-mail',
-    description: 'Use o link seguro enviado pela Universo.',
+    title: 'Abra o link seguro',
+    description: 'Use o link recebido por e-mail ou pela secretaria.',
   },
   {
     number: '03',
@@ -79,12 +80,14 @@ const clearRecoveryAuthParams = () => {
 const PasswordRecoveryPage: React.FC = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<RecoveryMode>('request');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [recoveryAuthorization, setRecoveryAuthorization] =
     useState<RecoveryAuthorization | null>(null);
 
@@ -120,7 +123,7 @@ const PasswordRecoveryPage: React.FC = () => {
         accessToken: session.access_token,
       });
       setMode('reset');
-      if (session.user.email) setEmail(session.user.email);
+      if (session.user.email) setIdentifier(session.user.email);
       clearRecoveryAuthParams();
     };
 
@@ -202,25 +205,34 @@ const PasswordRecoveryPage: React.FC = () => {
   const requestReset = async (event: React.FormEvent) => {
     event.preventDefault();
     setMessage(null);
+
+    if (!turnstileToken) {
+      setMessage({
+        tone: 'error',
+        text: 'Conclua a verificação de segurança para continuar.',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const error = await loginService.requestPasswordRecovery(email);
-      if (error) {
-        setMessage({ tone: 'error', text: error });
-        return;
-      }
+      const genericMessage = await loginService.requestPasswordRecovery(
+        identifier,
+        turnstileToken,
+      );
       setMessage({
         tone: 'success',
-        text: 'Enviamos um link de redefinição para seu e-mail. Verifique a caixa de entrada.',
+        text: genericMessage,
       });
-    } catch (error) {
+    } catch {
       setMessage({
-        tone: 'error',
-        text: error instanceof Error ? error.message : 'Não foi possível enviar o e-mail de recuperação.',
+        tone: 'success',
+        text: 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.',
       });
     } finally {
       setIsLoading(false);
+      setTurnstileResetSignal((value) => value + 1);
     }
   };
 
@@ -448,7 +460,7 @@ const PasswordRecoveryPage: React.FC = () => {
                     <p className="mt-3 max-w-md text-sm font-semibold leading-relaxed text-slate-500">
                       {mode === 'reset'
                         ? 'Defina uma senha segura para voltar a acessar seus cursos e serviços acadêmicos.'
-                        : 'Informe o e-mail cadastrado na Universo para receber seu link seguro de recuperação.'}
+                        : 'Informe sua matrícula de acesso ou e-mail para solicitar a recuperação.'}
                     </p>
                   </div>
                   <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 sm:flex">
@@ -477,9 +489,9 @@ const PasswordRecoveryPage: React.FC = () => {
 
                 {mode === 'request' ? (
                   <form onSubmit={requestReset} className="mt-7">
-                    <label className="block" htmlFor="recovery-email">
+                    <label className="block" htmlFor="recovery-identifier">
                       <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        E-mail cadastrado
+                        Matrícula de acesso ou e-mail
                       </span>
                       <div className="group relative">
                         <Mail
@@ -487,32 +499,46 @@ const PasswordRecoveryPage: React.FC = () => {
                           size={19}
                         />
                         <input
-                          id="recovery-email"
-                          type="email"
-                          name="email"
-                          inputMode="email"
-                          autoComplete="email"
+                          id="recovery-identifier"
+                          type="text"
+                          name="identifier"
+                          autoComplete="username"
                           required
                           autoFocus
-                          value={email}
-                          onChange={(event) => setEmail(event.target.value)}
-                          placeholder="seuemail@exemplo.com"
-                          aria-describedby="recovery-email-help"
+                          value={identifier}
+                          onChange={(event) => setIdentifier(event.target.value)}
+                          placeholder="UNIV-A-00000001 ou seuemail@exemplo.com"
+                          aria-describedby="recovery-identifier-help"
                           className="h-16 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                           disabled={isLoading}
                         />
                       </div>
                       <span
-                        id="recovery-email-help"
+                        id="recovery-identifier-help"
                         className="mt-2.5 block text-xs font-semibold leading-relaxed text-slate-500"
                       >
-                        Use o mesmo e-mail informado na sua matrícula ou cadastro online.
+                        Alunos sem e-mail devem solicitar o link à secretaria, que fará a validação de identidade antes do envio.
                       </span>
                     </label>
 
+                    <div className="mt-5">
+                      <TurnstileWidget
+                        action="recover"
+                        resetSignal={turnstileResetSignal}
+                        onTokenChange={setTurnstileToken}
+                        onError={() => {
+                          setTurnstileToken('');
+                          setMessage({
+                            tone: 'error',
+                            text: 'Não foi possível carregar a verificação de segurança. Atualize a página e tente novamente.',
+                          });
+                        }}
+                      />
+                    </div>
+
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isLoading || !turnstileToken}
                       className="group mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-blue-700/30 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (

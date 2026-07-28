@@ -65,6 +65,16 @@ interface PoloTransitionState {
   errorMessage?: string;
 }
 
+interface GestorPoloOption {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  cidade: string | null;
+  estado: string | null;
+  is_matriz: boolean;
+  status: string;
+}
+
 const POLO_TRANSITION_MINIMUM_MS = 550;
 const POLO_TRANSITION_SUCCESS_MS = 450;
 
@@ -149,7 +159,7 @@ const GestorPage: React.FC = () => {
     }).toLowerCase();
   }, [currentDateTime]);
 
-  const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<any[]>({
+  const { data: activePolos = [], isLoading: isLoadingPolos } = useQuery<GestorPoloOption[]>({
     queryKey: ['active_polos', profile?.id || 'sem-usuario', allowedPoloIdsKey],
     queryFn: async () => {
       let query = supabase

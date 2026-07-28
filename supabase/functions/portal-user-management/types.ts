@@ -6,6 +6,17 @@ export type IncomingPayload = {
   password?: string | null;
   redirectTo?: string;
   user?: Record<string, unknown>;
+  userId?: string;
+  userIds?: string[];
+  status?: string;
+};
+
+export type GestorUserManagementState = {
+  userId: string;
+  canDelete: boolean;
+  canChangeStatus: boolean;
+  hasActivity: boolean;
+  reason: string | null;
 };
 
 export type FunctionResponse = {
@@ -21,6 +32,7 @@ export type FunctionResponse = {
   recoveryLink?: string | null;
   user?: Record<string, unknown> | null;
   statuses?: PartnerEmailStatus[];
+  managementStates?: GestorUserManagementState[];
   emailConfirmed?: boolean;
   error?: string;
 };
@@ -55,6 +67,8 @@ export type Partner = {
   tipo: string;
   nome: string;
   email?: string | null;
+  matricula_acesso?: string | null;
+  auth_login_email?: string | null;
   polo_id?: string | null;
   polo_ids?: string[] | null;
 };

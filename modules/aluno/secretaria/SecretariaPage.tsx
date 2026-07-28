@@ -25,6 +25,7 @@ import { useAlunoSecretariaData } from './useAlunoSecretariaData';
 import { AlunoSecretariaSolicitacaoTipo } from './secretaria-aluno.types';
 import { useIRPFFiscalData } from './useIRPFFiscalData';
 import { downloadStudentCardPdf } from './student-card-pdf';
+import { waitForQrCodeAssets } from '../../shared/qrcode/qr-code-assets';
 
 interface SecretariaPageProps { alunoId: string }
 type Toast = { message: string; type: 'success' | 'error' | 'warning' };
@@ -136,7 +137,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
   const irpfYearOptions = getIrpfCalendarYearOptions(irpfReleaseDate);
   const irpfReleaseLabel = formatIrpfReleaseDate(selectedIrpfYear, irpfReleaseDate);
   const irpfReleased = isIrpfYearReleased(selectedIrpfYear, irpfReleaseDate);
-  const irpfValidation = useDocumentValidationCode(irpfEnrollment ? { type: 'declaracao_irpf', enrollmentId: irpfEnrollment.id, referencePeriod: String(selectedIrpfYear), registerReissue: true } : null, irpfOpen && eligibility.canEmitIrpf && irpfReleased);
+  const irpfValidation = useDocumentValidationCode(irpfEnrollment ? { type: 'declaracao_irpf', enrollmentId: irpfEnrollment.id, referencePeriod: String(selectedIrpfYear) } : null, irpfOpen && eligibility.canEmitIrpf && irpfReleased);
   const { data: irpfPayments = [] } = useIRPFFiscalData(alunoId, selectedIrpfYear, irpfEnrollment?.turma_id, eligibility.canEmitIrpf && irpfReleased);
   const { data: polo } = useQuery({ queryKey: ['print-polo-details', documentPoloId], queryFn: async () => {
     if (!documentPoloId) return null;
@@ -200,7 +201,32 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     onError: (error: any) => showToast(error?.message || 'Erro ao registrar solicitação.', 'error'),
   });
 
-  const printRegistered = (code: string | undefined, label: string) => code ? window.print() : showToast(`Aguarde o registro do código da ${label}.`, 'warning');
+  const printRegistered = async (code: string | undefined, label: string) => {
+    if (!code) {
+      showToast(`Aguarde o registro do código da ${label}.`, 'warning');
+      return;
+    }
+    const printAreaId = label === 'carteirinha'
+      ? 'print-area'
+      : label === 'crachá'
+        ? 'print-area-cracha'
+        : label.includes('IRPF')
+          ? 'print-area-irpf'
+          : 'print-area-declaracao';
+    const printArea = document.getElementById(printAreaId);
+    if (!printArea) return;
+    try {
+      await waitForQrCodeAssets(printArea);
+      window.print();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar o QR Code para impressão.',
+        'error',
+      );
+    }
+  };
   const onDownloadCard = async () => {
     if (!cardValidation.data?.code) return showToast('Aguarde o registro do código da carteirinha.', 'warning');
     setDownloadingCard(true);

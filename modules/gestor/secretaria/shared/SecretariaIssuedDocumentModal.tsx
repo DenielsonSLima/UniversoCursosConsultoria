@@ -14,12 +14,24 @@ import type {
 } from '../historico-emissoes/historico-emissoes.types';
 import type { SecretariaDocumentoDefinition } from './secretaria-documentos.types';
 import { getSecretariaErrorMessage } from './secretaria-error';
+import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
+import {
+  assertPdfBlobReady,
+  printPdfBlob,
+  shouldPrintAggregatedPdf,
+} from './pdf-blob-print';
 
 interface SecretariaIssuedDocumentModalProps {
   emissions: EmissionLog[];
   poloId: string;
   definition: SecretariaDocumentoDefinition;
   onClose: () => void;
+}
+
+interface PreparedPdf {
+  blob: Blob;
+  url: string;
+  filename: string;
 }
 
 const EMPTY_PREVIEW: PreviewResources = {
@@ -68,8 +80,10 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
   const queryClient = useQueryClient();
   const printContentRef = useRef<HTMLDivElement>(null);
   const batchPrintContentRef = useRef<HTMLDivElement>(null);
+  const batchPdfPreparationRef = useRef<Promise<PreparedPdf> | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<{
     completed: number;
@@ -79,10 +93,7 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
     completed: number;
     total: number;
   } | null>(null);
-  const [preparedPdf, setPreparedPdf] = useState<{
-    url: string;
-    filename: string;
-  } | null>(null);
+  const [preparedPdf, setPreparedPdf] = useState<PreparedPdf | null>(null);
   const [batchPreviews, setBatchPreviews] = useState<PreviewResources[] | null>(null);
   const [batchRenderIndex, setBatchRenderIndex] = useState<number | null>(null);
 
@@ -125,15 +136,68 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
 
   if (!currentEmission) return null;
 
+  const downloadPreparedPdf = (pdf: PreparedPdf) => {
+    assertPdfBlobReady(pdf.blob, 'O PDF agregado');
+    const link = document.createElement('a');
+    link.href = pdf.url;
+    link.download = pdf.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const prepareAggregatedPdf = async (): Promise<PreparedPdf> => {
+    if (preparedPdf) return preparedPdf;
+    if (batchPdfPreparationRef.current) return batchPdfPreparationRef.current;
+
+    const preparation = (async () => {
+      setDownloadProgress(null);
+      setDataLoadProgress(null);
+      const previews = await historicoEmissoesService.loadPreviews(
+        emissions,
+        poloId,
+        (completed, total) => setDataLoadProgress({ completed, total }),
+      );
+      setBatchPreviews(previews);
+      const filename = `${definition.id}-lote-${totalEmissions}-documentos.pdf`;
+      const blob = await createEmissionBatchPdf(
+        totalEmissions,
+        async (documentIndex) => {
+          setBatchRenderIndex(documentIndex);
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          return waitForBatchRenderer(
+            () => batchPrintContentRef.current,
+            emissions[documentIndex].codigo,
+          );
+        },
+        (completed, total) => setDownloadProgress({ completed, total }),
+      );
+      assertPdfBlobReady(blob, 'O PDF agregado');
+      const nextPdf = {
+        blob,
+        url: URL.createObjectURL(blob),
+        filename,
+      };
+      setPreparedPdf(nextPdf);
+      return nextPdf;
+    })();
+
+    batchPdfPreparationRef.current = preparation;
+    try {
+      return await preparation;
+    } finally {
+      batchPdfPreparationRef.current = null;
+      setDownloadProgress(null);
+      setDataLoadProgress(null);
+      setBatchPreviews(null);
+      setBatchRenderIndex(null);
+    }
+  };
+
   const handleDownload = async () => {
-    if (previewError) return;
+    if (previewError || isDownloading || isPrinting) return;
     if (preparedPdf) {
-      const link = document.createElement('a');
-      link.href = preparedPdf.url;
-      link.download = preparedPdf.filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      downloadPreparedPdf(preparedPdf);
       return;
     }
     setIsDownloading(true);
@@ -147,31 +211,7 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
         return;
       }
 
-      const previews = await historicoEmissoesService.loadPreviews(
-        emissions,
-        poloId,
-        (completed, total) => setDataLoadProgress({ completed, total }),
-      );
-      setBatchPreviews(previews);
-      const filename = `${definition.id}-lote-${totalEmissions}-documentos.pdf`;
-      const pdfBlob = await createEmissionBatchPdf(
-        totalEmissions,
-        async (documentIndex) => {
-          setBatchRenderIndex(documentIndex);
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          return waitForBatchRenderer(
-            () => batchPrintContentRef.current,
-            emissions[documentIndex].codigo,
-          );
-        },
-        (completed, total) => setDownloadProgress({ completed, total }),
-      );
-      setPreparedPdf({
-        url: URL.createObjectURL(pdfBlob),
-        filename,
-      });
-      setBatchPreviews(null);
-      setBatchRenderIndex(null);
+      downloadPreparedPdf(await prepareAggregatedPdf());
     } catch (downloadFailure) {
       console.error('[SecretariaIssuedDocumentModal] Erro ao gerar PDF:', downloadFailure);
       setDownloadError(
@@ -181,16 +221,39 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
       );
     } finally {
       setIsDownloading(false);
-      setDownloadProgress(null);
-      setDataLoadProgress(null);
-      setBatchPreviews(null);
-      setBatchRenderIndex(null);
     }
   };
 
-  const handlePrint = () => {
-    if (error || currentPreviewQuery.isLoading) return;
-    window.print();
+  const handlePrint = async () => {
+    if (
+      error
+      || currentPreviewQuery.isLoading
+      || !printContentRef.current
+      || isPrinting
+      || isDownloading
+    ) return;
+    setIsPrinting(true);
+    setDownloadError(null);
+    try {
+      if (shouldPrintAggregatedPdf(totalEmissions)) {
+        const pdf = await prepareAggregatedPdf();
+        await printPdfBlob(pdf.blob, {
+          title: `${definition.singularLabel} — ${totalEmissions} documentos`,
+        });
+      } else {
+        await waitForDocumentAssets(printContentRef.current);
+        window.print();
+      }
+    } catch (printFailure) {
+      console.error('[SecretariaIssuedDocumentModal] Documento indisponível:', printFailure);
+      setDownloadError(
+        printFailure instanceof Error
+          ? printFailure.message
+          : 'Não foi possível preparar os elementos do documento para impressão.',
+      );
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const batchRenderer = batchPreviews
@@ -231,7 +294,7 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
         error={error}
         isLoading={currentPreviewQuery.isLoading}
         isDownloading={isDownloading}
-        isReissuing={false}
+        isReissuing={isPrinting}
         printContentRef={printContentRef}
         onClose={onClose}
         onDownload={() => {
@@ -247,6 +310,12 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
               : dataLoadProgress
                 ? `Carregando dados do lote: ${dataLoadProgress.completed} de ${dataLoadProgress.total} documentos`
                 : `Preparando ${totalEmissions} documentos para o PDF único...`
+            : isPrinting && totalEmissions > 1
+              ? downloadProgress
+                ? `Preparando impressão do lote: ${downloadProgress.completed} de ${downloadProgress.total} documentos`
+                : dataLoadProgress
+                  ? `Carregando dados para impressão: ${dataLoadProgress.completed} de ${dataLoadProgress.total} documentos`
+                  : `Preparando PDF agregado com ${totalEmissions} documentos...`
             : preparedPdf
               ? 'PDF único pronto. Clique em “Baixar PDF pronto” para salvar.'
             : `Emissão: ${definition.singularLabel} (${totalEmissions} ${totalEmissions === 1 ? 'pág.' : 'documentos'})`)

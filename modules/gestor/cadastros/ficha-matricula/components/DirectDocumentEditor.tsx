@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { polosService } from '../../../configuracoes/polos/polos.service';
 import DeclaracaoEditor from '../../modelos-documentos/declaracao/components/DeclaracaoEditor';
+import {
+  studentTemplatePreviewService,
+  type StudentTemplatePreview,
+} from '../student-template-preview.service';
 
 interface DirectDocumentEditorProps {
   onBack: () => void;
@@ -29,6 +33,10 @@ const DirectDocumentEditor: React.FC<DirectDocumentEditorProps> = ({
 }) => {
   const [referencePolo, setReferencePolo] = useState<any | null>(null);
   const [error, setError] = useState('');
+  const [studentPreviewPool, setStudentPreviewPool] = useState<StudentTemplatePreview[]>([]);
+  const [studentPreview, setStudentPreview] = useState<StudentTemplatePreview | null>(null);
+  const [studentPreviewLoading, setStudentPreviewLoading] = useState(false);
+  const [studentPreviewError, setStudentPreviewError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -36,7 +44,11 @@ const DirectDocumentEditor: React.FC<DirectDocumentEditorProps> = ({
     polosService.getAll()
       .then((polos) => {
         if (!isMounted) return;
-        const polo = polos.find((item) => item.is_matriz) || polos[0];
+        const activePoloId = window.sessionStorage.getItem('current_polo_id')
+          || window.sessionStorage.getItem('active_polo_id');
+        const polo = polos.find(item => item.id === activePoloId)
+          || polos.find(item => item.is_matriz)
+          || polos[0];
         if (!polo) {
           setError('Cadastre uma unidade antes de configurar este modelo.');
           return;
@@ -51,6 +63,38 @@ const DirectDocumentEditor: React.FC<DirectDocumentEditorProps> = ({
       isMounted = false;
     };
   }, []);
+
+  const choosePreviewStudent = (pool: StudentTemplatePreview[]) => {
+    if (!pool.length) return null;
+    if (pool.length === 1) return pool[0];
+    const alternatives = pool.filter(item => item.enrollmentId !== studentPreview?.enrollmentId);
+    const candidates = alternatives.length ? alternatives : pool;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  };
+
+  const handleLoadStudentPreview = async () => {
+    if (!referencePolo || studentPreviewLoading) return;
+    setStudentPreviewLoading(true);
+    setStudentPreviewError('');
+    try {
+      const pool = studentPreviewPool.length
+        ? studentPreviewPool
+        : await studentTemplatePreviewService.getPool(referencePolo);
+      setStudentPreviewPool(pool);
+      const selected = choosePreviewStudent(pool);
+      if (!selected) {
+        setStudentPreview(null);
+        setStudentPreviewError('Nenhum aluno com matrícula foi encontrado nesta unidade.');
+        return;
+      }
+      setStudentPreview(selected);
+    } catch (previewError) {
+      console.error('[DirectDocumentEditor] Erro ao carregar aluno para prévia:', previewError);
+      setStudentPreviewError('Não foi possível carregar os dados de pré-visualização.');
+    } finally {
+      setStudentPreviewLoading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -90,6 +134,14 @@ const DirectDocumentEditor: React.FC<DirectDocumentEditorProps> = ({
       migrateDeclarationDefaults={false}
       scopeLabel="Todos os polos"
       enableEnrollmentSettings={enableEnrollmentSettings}
+      studentPreview={studentPreview}
+      studentPreviewLoading={studentPreviewLoading}
+      studentPreviewError={studentPreviewError}
+      onLoadStudentPreview={() => void handleLoadStudentPreview()}
+      onClearStudentPreview={() => {
+        setStudentPreview(null);
+        setStudentPreviewError('');
+      }}
     />
   );
 };

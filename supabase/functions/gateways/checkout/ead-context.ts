@@ -385,18 +385,20 @@ export const buildEadCheckoutContext = async (
     throw new Error("Curso EAD indisponivel para matricula online.");
   }
 
-  const charge = resolveEadCharge(course, {
+  const paymentInput = {
     method: body.eadPaymentMethod ?? body.paymentMethod ?? body.method ??
       body.billingType,
     installments: body.eadInstallments ?? body.installments,
-  });
+  };
+  const preliminaryCharge = resolveEadCharge(course, paymentInput);
   const gatewayEnvironment = await resolveGatewayEnvironment(runtime.admin);
   const { route } = await resolvePaymentGatewayRoute(
     runtime.admin,
     "EAD",
-    charge.method,
+    preliminaryCharge.method,
     gatewayEnvironment,
   );
+  const charge = resolveEadCharge(course, paymentInput, route.providerCode);
 
   const token = String(runtime.req.headers.get("Authorization") || "").replace(
     /^Bearer\s+/i,

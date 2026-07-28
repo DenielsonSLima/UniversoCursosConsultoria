@@ -82,4 +82,8 @@ export interface DiarioPrintDocumentProps {
   activeInstruments?: ActiveInstruments;
   watermark?: any;
   exportMode?: DiarioExportMode;
+  /** Código canônico retornado por emitir_diario_validacao_portal. */
+  validationCode?: string | null;
+  /** Identifica a renderização visual que não registra uma emissão no backend. */
+  validationPreview?: boolean;
 }

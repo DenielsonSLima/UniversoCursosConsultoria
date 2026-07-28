@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Tag } from 'lucide-react';
-import { DespesaLancamento } from '../despesas.service';
+import { DespesaGroupSummary, DespesaLancamento } from '../despesas.service';
 import DespesaTable from './DespesaTable';
 import DespesaCard from './DespesaCard';
 
@@ -12,23 +12,33 @@ const formatCurrency = (value: number) =>
 
 interface DespesaGroupedViewProps {
   items: DespesaLancamento[];
+  summaries: DespesaGroupSummary[];
   viewMode: 'tabela' | 'cards';
   onPagar?: (item: DespesaLancamento) => void;
   onExcluir?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
+  onAnexo?: (item: DespesaLancamento) => void;
 }
 
 const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
   items,
+  summaries,
   viewMode,
   onPagar,
   onExcluir,
   onImprimir,
+  onAnexo,
 }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; items: DespesaLancamento[] }>();
+    const summaryMap = new Map<string, DespesaGroupSummary>(
+      summaries.map((summary) => [
+        summary.categoriaId || '__sem_categoria__',
+        summary,
+      ]),
+    );
     items.forEach((item) => {
       const key = item.categoriaFinanceiraId || '__sem_categoria__';
       const label = item.categoriaNome || 'Sem Categoria';
@@ -37,15 +47,18 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
       }
       map.get(key)!.items.push(item);
     });
-    return Array.from(map.entries()).map(([key, { label, items: groupItems }]) => ({
-      key,
-      label,
-      items: groupItems,
-      total: groupItems.reduce((sum, i) => sum + i.valor, 0),
-      pago: groupItems.filter((i) => i.status === 'PAGO').reduce((sum, i) => sum + (i.valorPago ?? i.valor), 0),
-      count: groupItems.length,
-    }));
-  }, [items]);
+    return Array.from(map.entries()).map(([key, { label, items: groupItems }]) => {
+      const summary = summaryMap.get(key);
+      return {
+        key,
+        label: summary?.categoriaNome || label,
+        items: groupItems,
+        total: summary?.totalValue,
+        pago: summary?.paidValue,
+        count: summary?.itemCount,
+      };
+    });
+  }, [items, summaries]);
 
   const toggleGroup = (key: string) => {
     setExpanded((prev) => {
@@ -85,16 +98,20 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                     {group.label}
                   </p>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
-                    {group.count} lançamento{group.count !== 1 ? 's' : ''}
+                    {group.count === undefined
+                      ? 'Quantidade indisponível'
+                      : `${group.count} lançamento${group.count !== 1 ? 's' : ''}`}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="text-right">
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total previsto</p>
-                  <p className="font-black text-base text-[#001a33]">{formatCurrency(group.total)}</p>
+                  <p className="font-black text-base text-[#001a33]">
+                    {group.total === undefined ? '—' : formatCurrency(group.total)}
+                  </p>
                 </div>
-                {group.pago > 0 && (
+                {group.pago !== undefined && group.pago > 0 && (
                   <div className="text-right">
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pago</p>
                     <p className="font-black text-base text-emerald-600">{formatCurrency(group.pago)}</p>
@@ -115,6 +132,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                     onPagar={onPagar}
                     onExcluir={onExcluir}
                     onImprimir={onImprimir}
+                    onAnexo={onAnexo}
                   />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -125,6 +143,7 @@ const DespesaGroupedView: React.FC<DespesaGroupedViewProps> = ({
                         onPagar={onPagar}
                         onExcluir={onExcluir}
                         onImprimir={onImprimir}
+                        onAnexo={onAnexo}
                       />
                     ))}
                   </div>

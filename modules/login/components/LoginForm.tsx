@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { IdCard, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { UserRound, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { LoginCredentials } from '../login.types';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
+import TurnstileWidget from '../../shared/auth/TurnstileWidget';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginCredentials) => void;
@@ -21,28 +22,43 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const wasLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      setTurnstileResetSignal((value) => value + 1);
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ email: identifier, password });
+    if (!turnstileToken) {
+      setTurnstileError(true);
+      return;
+    }
+    onSubmit({ email: identifier, password, turnstileToken });
   };
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       
-      {/* Campo CPF ou E-mail */}
+      {/* Campo matrícula de acesso ou e-mail */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-[#001a33] uppercase tracking-wider ml-1">
-          CPF ou E-mail
+          Matrícula de acesso ou e-mail
         </label>
         <div className="relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#4169E1] transition-colors">
-            <IdCard size={20} />
+            <UserRound size={20} />
           </div>
           <input 
             type="text" 
-            inputMode="email"
-            placeholder="CPF ou seu@email.com"
+            autoComplete="username"
+            placeholder="UNIV-A-00000001 ou seu@email.com"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-[#4169E1] focus:bg-white focus:ring-4 focus:ring-[#4169E1]/10 transition-all font-semibold text-sm shadow-sm"
@@ -83,6 +99,23 @@ const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       </div>
 
+      <div className="space-y-2">
+        <TurnstileWidget
+          action="login"
+          resetSignal={turnstileResetSignal}
+          onTokenChange={(token) => {
+            setTurnstileToken(token);
+            if (token) setTurnstileError(false);
+          }}
+          onError={() => setTurnstileError(true)}
+        />
+        {turnstileError ? (
+          <p role="alert" className="text-xs font-bold text-red-600">
+            Conclua a verificação de segurança para continuar.
+          </p>
+        ) : null}
+      </div>
+
       {/* Checkbox Lembrar-me */}
       <div className="flex items-center ml-1">
         <label className="flex items-center cursor-pointer group select-none">
@@ -108,7 +141,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
       {/* Botão de Ação */}
       <button 
-        disabled={isLoading}
+        disabled={isLoading || !turnstileToken}
         className="w-full bg-[#001a33] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
       >
         <span>{isLoading ? 'Autenticando...' : 'Acessar Plataforma'}</span>

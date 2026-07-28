@@ -90,6 +90,7 @@ export const asaasIntegrationService = {
     valor: number;
     dataVencimento: string;
     clienteId?: string;
+    categoriaFinanceiraId?: string;
     formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     contaBancariaId?: string;
     mode: 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';

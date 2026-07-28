@@ -3,21 +3,54 @@ import { Award } from 'lucide-react';
 import { getBlocks, getTemplateBackgroundUrl } from '../../../cadastros/modelos-documentos/diploma/components/DiplomaPreview';
 import { CertificadoAcademico } from '../certificados.types';
 import { assinaturasService, AssinaturasData } from '../../../configuracoes/assinaturas/assinaturas.service';
-import { getDocumentValidationQrUrl, getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
+import { getDocumentValidationUrl } from '../../../../shared/document-validation/document-validation.url';
 import { sanitizedHtml } from '../../../../../lib/htmlSanitizer';
 import { parseProgrammaticRows, replaceVars, replaceVarsPlain } from './certificado-preview.utils';
+import {
+  getMissingRequiredSignatureSources,
+  hasActiveCertificateQrBlock,
+  removePublicValidationReferences,
+  shouldRenderCertificateQrBlock,
+} from './certificate-validation-rendering';
 
 interface CertificadoPreviewProps {
   certificado: CertificadoAcademico;
   modelo?: any;
   gradeCurricular?: string;
   pdfMode?: boolean;
+  showValidationQrCode?: boolean;
+  validationCode?: string;
 }
 
-const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, modelo, gradeCurricular, pdfMode = false }) => {
+const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({
+  certificado,
+  modelo,
+  gradeCurricular,
+  pdfMode = false,
+  showValidationQrCode = true,
+  validationCode,
+}) => {
   const isTecnico = certificado.modalidade === 'TECNICO';
-  const validationUrl = getDocumentValidationUrl(certificado.codigo_validacao || '');
+  const modelHasValidationQrCode = hasActiveCertificateQrBlock(modelo);
+  const canRenderValidationQrCode =
+    showValidationQrCode && modelHasValidationQrCode;
+  const shouldRenderVisualTemplate = Boolean(
+    modelo?.blocks?.length || modelo?.usePhotoshopLayout || modelo?.ocultarDesignPadrao
+  );
+  const canonicalValidationCode =
+    String(validationCode || certificado.codigo_validacao || '').trim();
+  const publicText = (content: string) => (
+    showValidationQrCode
+      ? content
+      : removePublicValidationReferences(content)
+  );
+  const validationUrl = getDocumentValidationUrl(canonicalValidationCode);
   const [assinaturas, setAssinaturas] = useState<AssinaturasData>(() => assinaturasService.getSignaturesSync());
+  const [signatureReadiness, setSignatureReadiness] = useState<
+    'loading' | 'ready' | 'error'
+  >('loading');
+  const [signatureError, setSignatureError] = useState('');
   const templateVars = {
     grade_curricular: gradeCurricular || 'Grade curricular conforme histórico acadêmico do aluno.',
     diretoria_geral_nome: assinaturas.diretoriaGeralNome || '________________',
@@ -27,12 +60,36 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
   };
 
   useEffect(() => {
-    void assinaturasService.getSignatures().then((data) => {
+    let active = true;
+    setSignatureReadiness('loading');
+    setSignatureError('');
+    if (!shouldRenderVisualTemplate) {
+      setSignatureReadiness('ready');
+      return () => {
+        active = false;
+      };
+    }
+
+    const settleSignatures = (data: AssinaturasData) => {
+      if (!active) return;
       setAssinaturas(data);
-    }).catch(() => {
-      setAssinaturas(assinaturasService.getSignaturesSync());
+      const missing = getMissingRequiredSignatureSources(getBlocks(modelo || {}), data);
+      if (missing.length) {
+        setSignatureReadiness('error');
+        setSignatureError(`Não foi possível carregar ${missing.join(', ')}.`);
+        return;
+      }
+      setSignatureReadiness('ready');
+    };
+
+    void assinaturasService.getSignatures().then(settleSignatures).catch(() => {
+      settleSignatures(assinaturasService.getSignaturesSync());
     });
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [modelo, shouldRenderVisualTemplate]);
 
   const getSignatureUrl = (block: any) => {
     if (!block.signatureSource || block.signatureSource === 'none') {
@@ -69,7 +126,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               textTransform: ['titulo', 'subtitulo', 'cidadeData'].includes(block.id) ? 'uppercase' : 'none',
               letterSpacing: block.id === 'subtitulo' ? '0.3em' : 0,
             }}
-            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(block.content || '', certificado, templateVars))}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, templateVars))}
           />
         );
       case 'signature': {
@@ -142,23 +199,17 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
           />
         );
       case 'qrcode': {
+        if (!shouldRenderCertificateQrBlock(block, showValidationQrCode, modelo)) return null;
         const size = block.width || 170;
-        if (block.id === 'qrcode') {
-          return (
-            <div style={{ width: size }} className="rounded border border-slate-200 bg-white/90 p-2 text-center shadow-sm">
-              <p className="text-[7px] font-black uppercase tracking-widest text-slate-500">Código de Autenticidade</p>
-              <p className="mt-1 break-all font-mono text-[9px] font-black text-[#001a33]">{certificado.codigo_validacao || 'Gerado após a emissão'}</p>
-            </div>
-          );
-        }
         return (
           <div style={{ width: size }} className="flex flex-col items-center rounded border border-slate-200 bg-white p-1">
-            <img
-              src={getDocumentValidationQrUrl(certificado.codigo_validacao || '', size * 2)}
+            <DocumentValidationQrCodeImage
+              code={canonicalValidationCode}
+              size={size * 2}
               alt="QR de validação"
-              className="w-full h-auto object-contain pointer-events-none"
+              className="pointer-events-none h-auto w-full"
             />
-            <span className="mt-1 text-[6px] font-black uppercase tracking-widest text-slate-400">Código: {certificado.codigo_validacao || 'Aguardando emissão'}</span>
+            <span className="mt-1 text-[6px] font-black uppercase tracking-widest text-slate-400">Código: {canonicalValidationCode || 'Aguardando emissão'}</span>
           </div>
         );
       }
@@ -213,7 +264,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               <div
                 className="whitespace-pre-wrap leading-relaxed"
                 style={tableTextStyle}
-                dangerouslySetInnerHTML={sanitizedHtml(replaceVars(block.content || '', certificado, templateVars))}
+                dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(block.content || ''), certificado, templateVars))}
               />
             )}
           </div>
@@ -240,6 +291,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
       case 'image':
         return block.imageUrl ? <img src={block.imageUrl} alt="" style={{ width: block.width || 180, opacity: block.opacity ?? 1 }} className="object-contain" /> : null;
       case 'validationLink':
+        if (!showValidationQrCode) return null;
         return (
           <div style={{ width: `${block.width || 560}px` }} className="p-1">
             <div
@@ -315,13 +367,15 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
     );
   };
 
-  const shouldRenderVisualTemplate = Boolean(
-    modelo?.blocks?.length || modelo?.usePhotoshopLayout || modelo?.ocultarDesignPadrao
-  );
+  const renderReadinessProps = {
+    'data-render-ready': signatureReadiness === 'loading' ? 'false' : 'true',
+    'data-render-error': signatureReadiness === 'error' ? signatureError : undefined,
+    'data-requires-qr-code': canRenderValidationQrCode ? 'true' : undefined,
+  };
 
   if (shouldRenderVisualTemplate) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" {...renderReadinessProps}>
         {renderVisualPage('frente')}
         {(modelo?.hasVerso !== false || isTecnico) && renderVisualPage('verso')}
       </div>
@@ -329,7 +383,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" {...renderReadinessProps}>
           <section
             data-certificate-pdf-page={pdfMode ? 'true' : undefined}
             className={`relative overflow-hidden border-[10px] border-double border-blue-700 bg-white p-10 ${
@@ -345,7 +399,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
           <h2 className="my-5 font-serif text-4xl font-black uppercase text-[#001a33]">Certificado</h2>
           <div
             className="max-w-3xl font-serif text-lg leading-loose text-slate-800"
-            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(frontText, certificado))}
+            dangerouslySetInnerHTML={sanitizedHtml(replaceVars(publicText(frontText), certificado))}
           />
             <p className="mt-8 text-sm font-bold text-slate-600">
             {certificado.polo?.cidade || 'Não informado'}/{certificado.polo?.estado || 'Não informado'}, {new Date(`${certificado.data_conclusao}T12:00:00`).toLocaleDateString('pt-BR')}
@@ -367,7 +421,7 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
               <h3 className="mb-3 font-black uppercase">Histórico / Conteúdo Programático</h3>
               <p className="whitespace-pre-wrap leading-relaxed">
                 {modelo?.textoVerso
-                  ? modelo.textoVerso.replace('{{grade_curricular}}', gradeCurricular || 'Grade curricular conforme histórico acadêmico.')
+                  ? publicText(modelo.textoVerso).replace('{{grade_curricular}}', gradeCurricular || 'Grade curricular conforme histórico acadêmico.')
                   : gradeCurricular || 'Grade curricular conforme histórico acadêmico.'}
               </p>
             </div>
@@ -387,19 +441,22 @@ const CertificadoPreview: React.FC<CertificadoPreviewProps> = ({ certificado, mo
                   </div>
                 </>
               )}
+              {canRenderValidationQrCode && (
               <div className="flex items-center gap-3 rounded-lg border border-slate-300 p-4">
                 <div>
-                <img
-                  src={getDocumentValidationQrUrl(certificado.codigo_validacao || '', 280)}
+                <DocumentValidationQrCodeImage
+                  code={canonicalValidationCode}
+                  size={280}
                   alt="QR de validação"
-                  className="w-24 h-24 object-contain bg-white p-1 border border-slate-200 rounded shadow-sm"
+                  className="h-24 w-24 rounded border border-slate-200 bg-white p-1 shadow-sm"
                 />
                   <p className="font-black uppercase">Código de autenticidade</p>
-                  <p className="font-mono text-blue-700">{certificado.codigo_validacao || 'Gerado após a emissão'}</p>
+                  <p className="font-mono text-blue-700">{canonicalValidationCode || 'Gerado após a emissão'}</p>
                   <p className="mt-2 break-words text-[11px] font-black text-red-600">www.universocc.com.br/validador</p>
                   <p className="mt-2 text-[10px] text-slate-500">Aviso de autenticidade: consulte este certificado pelo QR Code ou pelo código de autenticidade.</p>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </section>

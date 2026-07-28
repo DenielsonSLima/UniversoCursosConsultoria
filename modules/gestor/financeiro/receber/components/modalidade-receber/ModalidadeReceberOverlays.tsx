@@ -1,7 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, RefreshCw, X } from 'lucide-react';
-import type { ContaBancaria } from '../../../financeiro.service';
+import {
+  isContaDisponivelNoPolo,
+  type ContaBancaria,
+} from '../../../financeiro.service';
 import ManualSettlementModal from '../manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../manual-settlement/useManualSettlementForm';
 import InstitutionalReceiptModal from './InstitutionalReceiptModal';
@@ -40,8 +43,9 @@ export const ModalidadeReceberOverlays: React.FC<ModalidadeReceberOverlaysProps>
           receivable={selected}
           accounts={settlementAccounts}
           initialAccountId={(
-            settlementAccounts.find((account) => account.poloId === selected.poloId)
-            || settlementAccounts.find((account) => !account.poloId)
+            settlementAccounts.find((account) =>
+              isContaDisponivelNoPolo(account, selected.poloId)
+            )
           )?.id || ''}
           pending={paymentMutation.isPending}
           error={paymentMutation.error instanceof Error ? paymentMutation.error.message : null}

@@ -114,6 +114,18 @@ test('expande os seis grupos legados para as operações reais da Secretaria', (
   assert.equal(legacy.includes('certificados'), true);
 });
 
+test('descarta a permissão removida de rematrícula sem afetar o grupo legado', () => {
+  const ids = SECRETARIA_ACCESS_OPTIONS.map(option => String(option.id));
+  assert.equal(ids.includes('rematricula'), false);
+  assert.deepEqual(normalizeSecretariaAccessTabs(['rematricula']), []);
+
+  const legacy = normalizeSecretariaAccessTabs(['solicitacoes']);
+  assert.equal(legacy.includes('rematricula'), false);
+  assert.equal(legacy.includes('solicitacoes'), true);
+  assert.equal(legacy.includes('termo-estagio'), true);
+  assert.equal(legacy.includes('transferencia'), true);
+});
+
 test('permissão granular da Secretaria não libera outra operação', () => {
   const granular = permissions({
     modules: ['inicio', 'secretaria'],

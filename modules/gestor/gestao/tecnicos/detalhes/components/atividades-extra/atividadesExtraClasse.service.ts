@@ -36,6 +36,8 @@ const normalizeAtividadeRecord = (row: SupabaseAtividadeRecord): AtividadeExtraC
 export const atividadesExtraClasseKeys = {
   root: ['atividades-extra-classe'] as const,
   turma: (turmaId: string) => [...atividadesExtraClasseKeys.root, turmaId] as const,
+  availability: (turmaId: string) =>
+    [...atividadesExtraClasseKeys.turma(turmaId), 'availability'] as const,
   disciplinas: (turmaId: string, cursoId?: string | null, disciplinaId?: string | null) =>
     [...atividadesExtraClasseKeys.turma(turmaId), 'disciplinas', cursoId || 'sem-curso', disciplinaId || 'todas'] as const,
   list: (turmaId: string, disciplinaId?: string | null) =>
@@ -80,7 +82,7 @@ export const atividadesExtraClasseService = {
       if (error) throw error;
       const { data: vinculoData, error: vinculoError } = await supabase
         .from('turmas_disciplinas')
-        .select('periodo:periodos_letivos(status)')
+        .select('professor_id, professor_nome, periodo:periodos_letivos(status)')
         .eq('turma_id', input.turmaId)
         .eq('disciplina_id', input.disciplinaIdRestrita)
         .maybeSingle();
@@ -92,6 +94,8 @@ export const atividadesExtraClasseService = {
         nome: data.nome || 'Disciplina não identificada',
         cargaHoraria: Number(data.carga_horaria || 0),
         periodoStatus: periodo?.status || null,
+        professorId: vinculoData?.professor_id || null,
+        professorNome: vinculoData?.professor_nome || null,
       }];
     }
 
@@ -106,21 +110,34 @@ export const atividadesExtraClasseService = {
     if (error) throw error;
     const { data: vinculosData, error: vinculosError } = await supabase
       .from('turmas_disciplinas')
-      .select('disciplina_id, periodo:periodos_letivos(status)')
+      .select('disciplina_id, professor_id, professor_nome, periodo:periodos_letivos(status)')
       .eq('turma_id', input.turmaId);
 
     if (vinculosError) throw vinculosError;
-    const periodoStatusByDisciplina = new Map<string, string | null>();
+    const vinculoByDisciplina = new Map<string, {
+      periodoStatus: string | null;
+      professorId: string | null;
+      professorNome: string | null;
+    }>();
     (vinculosData || []).forEach((vinculo) => {
       const periodo = Array.isArray(vinculo.periodo) ? vinculo.periodo[0] : vinculo.periodo;
-      periodoStatusByDisciplina.set(vinculo.disciplina_id, periodo?.status || null);
+      vinculoByDisciplina.set(vinculo.disciplina_id, {
+        periodoStatus: periodo?.status || null,
+        professorId: vinculo.professor_id || null,
+        professorNome: vinculo.professor_nome || null,
+      });
     });
-    return (data || []).map((disciplina) => ({
-      id: disciplina.id,
-      nome: disciplina.nome || 'Disciplina não identificada',
-      cargaHoraria: Number(disciplina.carga_horaria || 0),
-      periodoStatus: periodoStatusByDisciplina.get(disciplina.id) || null,
-    }));
+    return (data || []).map((disciplina) => {
+      const vinculo = vinculoByDisciplina.get(disciplina.id);
+      return {
+        id: disciplina.id,
+        nome: disciplina.nome || 'Disciplina não identificada',
+        cargaHoraria: Number(disciplina.carga_horaria || 0),
+        periodoStatus: vinculo?.periodoStatus || null,
+        professorId: vinculo?.professorId || null,
+        professorNome: vinculo?.professorNome || null,
+      };
+    });
   },
 
   async getAtividades(
@@ -143,9 +160,36 @@ export const atividadesExtraClasseService = {
 
     if (disciplinaIdRestrita) query = query.eq('disciplina_id', disciplinaIdRestrita);
 
-    const { data, error } = await query;
+    let professoresQuery = supabase
+      .from('turmas_disciplinas')
+      .select('disciplina_id, professor_id, professor_nome')
+      .eq('turma_id', turmaId);
+
+    if (disciplinaIdRestrita) {
+      professoresQuery = professoresQuery.eq('disciplina_id', disciplinaIdRestrita);
+    }
+
+    const [
+      { data, error },
+      { data: professoresData, error: professoresError },
+    ] = await Promise.all([query, professoresQuery]);
+
     if (error) throw error;
-    return ((data || []) as unknown as SupabaseAtividadeRecord[]).map(normalizeAtividadeRecord);
+    if (professoresError) throw professoresError;
+
+    const professorByDisciplina = new Map(
+      (professoresData || []).map((item) => [
+        item.disciplina_id,
+        { id: item.professor_id || null, nome: item.professor_nome || null },
+      ]),
+    );
+
+    return ((data || []) as unknown as SupabaseAtividadeRecord[])
+      .map(normalizeAtividadeRecord)
+      .map((atividade) => ({
+        ...atividade,
+        professor: professorByDisciplina.get(atividade.disciplina_id) || null,
+      }));
   },
 
   async createAtividade(input: {

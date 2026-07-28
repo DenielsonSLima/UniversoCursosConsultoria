@@ -43,7 +43,6 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ professorId }) => {
 
   const handleOpenPreview = (doc: LibraryDocument) => {
     setPreviewDoc(doc);
-    bibliotecaService.incrementAcessos(doc.id);
   };
 
   return (

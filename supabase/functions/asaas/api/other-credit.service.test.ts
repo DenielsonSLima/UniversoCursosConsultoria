@@ -10,6 +10,8 @@ import {
 
 const ID = "11111111-1111-4111-8111-111111111111";
 const POLO_ID = "22222222-2222-4222-8222-222222222222";
+const CATEGORY_ID = "44444444-4444-4444-8444-444444444444";
+const CLIENT_ID = "55555555-5555-4555-8555-555555555555";
 
 const gatewayRequest = () =>
   normalizeOtherCreditRequest({
@@ -18,20 +20,24 @@ const gatewayRequest = () =>
     descricao: "Credito avulso",
     valor: 120.5,
     dataVencimento: "2026-07-30",
+    clienteId: CLIENT_ID,
+    categoriaFinanceiraId: CATEGORY_ID,
     mode: "GATEWAY",
-    formaPagamento: "PIX",
+    formaPagamento: "BOLETO",
   });
 
-const asaasRoute: OtherCreditRoute = {
-  providerCode: "asaas",
+const baneseRoute: OtherCreditRoute = {
+  providerCode: "banese_card",
   environment: "sandbox",
-  paymentMethod: "PIX",
+  paymentMethod: "BOLETO",
 };
 
 Deno.test("Outros Creditos normaliza o contrato e rejeita combinacoes inseguras", () => {
   const request = gatewayRequest();
   assert.equal(request.value, 120.5);
-  assert.equal(request.paymentMethod, "PIX");
+  assert.equal(request.paymentMethod, "BOLETO");
+  assert.equal(request.clientId, CLIENT_ID);
+  assert.equal(request.categoryId, CATEGORY_ID);
 
   assert.throws(
     () =>
@@ -42,9 +48,23 @@ Deno.test("Outros Creditos normaliza o contrato e rejeita combinacoes inseguras"
         valor: 10,
         dataVencimento: "2026-02-31",
         mode: "GATEWAY",
-        formaPagamento: "DINHEIRO",
+        clienteId: CLIENT_ID,
+        formaPagamento: "PIX",
       }),
-    /Data de vencimento invalida|exige Pix, boleto ou cartao/i,
+    /Data de vencimento invalida|somente BolePix/i,
+  );
+  assert.throws(
+    () =>
+      normalizeOtherCreditRequest({
+        idempotencyKey: ID,
+        poloId: POLO_ID,
+        descricao: "Sem parceiro",
+        valor: 10,
+        dataVencimento: "2026-07-30",
+        mode: "GATEWAY",
+        formaPagamento: "BOLETO",
+      }),
+    /Parceiro obrigatorio/i,
   );
   assert.throws(
     () =>
@@ -59,6 +79,19 @@ Deno.test("Outros Creditos normaliza o contrato e rejeita combinacoes inseguras"
       }),
     /nao deve antecipar uma forma/i,
   );
+  assert.throws(
+    () =>
+      normalizeOtherCreditRequest({
+        idempotencyKey: ID,
+        poloId: POLO_ID,
+        descricao: "Invalido",
+        valor: 10,
+        dataVencimento: "2026-07-30",
+        mode: "LOCAL_RECEBER",
+        categoriaFinanceiraId: "categoria-invalida",
+      }),
+    /Categoria financeira invalido/i,
+  );
 });
 
 Deno.test("payload grava provedor, ambiente e origem da rota real", () => {
@@ -68,6 +101,7 @@ Deno.test("payload grava provedor, ambiente e origem da rota real", () => {
     descricao: "Credito avulso",
     valor: 120.5,
     dataVencimento: "2026-07-30",
+    clienteId: CLIENT_ID,
     mode: "GATEWAY",
     formaPagamento: "BOLETO",
   });
@@ -78,11 +112,21 @@ Deno.test("payload grava provedor, ambiente e origem da rota real", () => {
   });
 
   assert.equal(payload.id, ID);
+  assert.equal(payload.categoria_financeira_id, null);
   assert.equal(payload.gateway_provider, "banese_card");
   assert.equal(payload.gateway_environment, "sandbox");
   assert.equal(payload.origem_pagamento, "BANESE");
   assert.equal(paymentOriginForProvider("mercado_pago"), "MERCADO_PAGO");
   assert.equal(paymentOriginForProvider("banco_inter"), "BANCO_INTER");
+  assert.throws(
+    () =>
+      buildOtherCreditPayload(request, {
+        providerCode: "asaas",
+        environment: "sandbox",
+        paymentMethod: "BOLETO",
+      }),
+    /somente o Banese/i,
+  );
 });
 
 Deno.test("retry reutiliza o mesmo contas_receber depois de falha do gateway", async () => {
@@ -100,7 +144,7 @@ Deno.test("retry reutiliza o mesmo contas_receber depois de falha do gateway", a
       return row;
     },
     validateReferences: async () => {},
-    resolveRoute: async () => asaasRoute,
+    resolveRoute: async () => baneseRoute,
     syncGateway: async (receivable: any) => {
       syncCalls += 1;
       if (!receivable.gateway_submission_status) {
@@ -131,7 +175,7 @@ Deno.test("retry reutiliza o mesmo contas_receber depois de falha do gateway", a
 
 Deno.test("conflito concorrente da chave recupera e valida o registro canonico", async () => {
   const request = gatewayRequest();
-  const canonical = buildOtherCreditPayload(request, asaasRoute);
+  const canonical = buildOtherCreditPayload(request, baneseRoute);
   let findCalls = 0;
 
   const result = await createOtherCreditAttempt(request, {
@@ -143,7 +187,7 @@ Deno.test("conflito concorrente da chave recupera e valida o registro canonico",
       throw { code: "23505" };
     },
     validateReferences: async () => {},
-    resolveRoute: async () => asaasRoute,
+    resolveRoute: async () => baneseRoute,
     syncGateway: async (receivable) => receivable,
   });
 
@@ -153,23 +197,38 @@ Deno.test("conflito concorrente da chave recupera e valida o registro canonico",
 
 Deno.test("mesma chave nunca aceita dados ou rota divergentes", () => {
   const request = gatewayRequest();
-  const existing = buildOtherCreditPayload(request, asaasRoute);
+  const existing = buildOtherCreditPayload(request, baneseRoute);
 
   assert.throws(
     () =>
       assertOtherCreditReplayMatches(
         { ...existing, valor: 999 },
         request,
-        asaasRoute,
+        baneseRoute,
       ),
     /ja pertence a outro credito/i,
   );
   assert.throws(
     () =>
       assertOtherCreditReplayMatches(existing, request, {
-        ...asaasRoute,
+        ...baneseRoute,
         environment: "production",
       }),
+    /ja pertence a outro credito/i,
+  );
+});
+
+Deno.test("mesma chave rejeita categoria financeira divergente", () => {
+  const request = gatewayRequest();
+  const existing = buildOtherCreditPayload(request, baneseRoute);
+
+  assert.throws(
+    () =>
+      assertOtherCreditReplayMatches(
+        { ...existing, categoria_financeira_id: null },
+        request,
+        baneseRoute,
+      ),
     /ja pertence a outro credito/i,
   );
 });
@@ -184,7 +243,7 @@ Deno.test("mesma chave rejeita troca bidirecional entre gateway e conta local", 
     dataVencimento: "2026-07-30",
     mode: "LOCAL_RECEBER",
   });
-  const gatewayRow = buildOtherCreditPayload(gateway, asaasRoute);
+  const gatewayRow = buildOtherCreditPayload(gateway, baneseRoute);
   const localRow = buildOtherCreditPayload(local, null);
 
   assert.throws(
@@ -192,7 +251,7 @@ Deno.test("mesma chave rejeita troca bidirecional entre gateway e conta local", 
     /ja pertence a outro credito/i,
   );
   assert.throws(
-    () => assertOtherCreditReplayMatches(localRow, gateway, asaasRoute),
+    () => assertOtherCreditReplayMatches(localRow, gateway, baneseRoute),
     /ja pertence a outro credito/i,
   );
 });
@@ -231,7 +290,7 @@ Deno.test("mesma chave rejeita troca bidirecional entre local pago e pendente", 
 
 Deno.test("replay gateway aceita evolucao remota sem aceitar baixa local", () => {
   const request = gatewayRequest();
-  const gatewayRow = buildOtherCreditPayload(request, asaasRoute);
+  const gatewayRow = buildOtherCreditPayload(request, baneseRoute);
 
   assert.doesNotThrow(() =>
     assertOtherCreditReplayMatches(
@@ -244,7 +303,7 @@ Deno.test("replay gateway aceita evolucao remota sem aceitar baixa local", () =>
         gateway_status: "RECEIVED",
       },
       request,
-      asaasRoute,
+      baneseRoute,
     )
   );
   assert.throws(
@@ -257,7 +316,7 @@ Deno.test("replay gateway aceita evolucao remota sem aceitar baixa local", () =>
           origem_pagamento: "PRESENCIAL",
         },
         request,
-        asaasRoute,
+        baneseRoute,
       ),
     /ja pertence a outro credito/i,
   );

@@ -1,7 +1,7 @@
 // File: modules/gestor/financeiro/despesas/components/DespesaTable.tsx
 
 import React from 'react';
-import { Edit2, Trash2, CheckCircle2, Clock, AlertCircle, XCircle, Banknote } from 'lucide-react';
+import { Edit2, Trash2, CheckCircle2, Clock, AlertCircle, XCircle, Banknote, Paperclip } from 'lucide-react';
 import { DespesaLancamento } from '../despesas.service';
 
 const formatCurrency = (value: number) =>
@@ -31,9 +31,16 @@ interface DespesaTableProps {
   onPagar?: (item: DespesaLancamento) => void;
   onExcluir?: (item: DespesaLancamento) => void;
   onImprimir?: (item: DespesaLancamento) => void;
+  onAnexo?: (item: DespesaLancamento) => void;
 }
 
-const DespesaTable: React.FC<DespesaTableProps> = ({ items, onPagar, onExcluir, onImprimir }) => {
+const DespesaTable: React.FC<DespesaTableProps> = ({
+  items,
+  onPagar,
+  onExcluir,
+  onImprimir,
+  onAnexo,
+}) => {
   if (items.length === 0) {
     return (
       <div className="text-center py-16 text-slate-400">
@@ -93,6 +100,11 @@ const DespesaTable: React.FC<DespesaTableProps> = ({ items, onPagar, onExcluir, 
               </td>
               <td className="px-4 py-3 text-right whitespace-nowrap">
                 <span className="font-black text-slate-800">{formatCurrency(item.valor)}</span>
+                {(item.jurosValor > 0 || item.multaValor > 0 || item.descontoValor > 0) && (
+                  <div className="mt-0.5 text-right text-[9px] font-semibold text-slate-400">
+                    Base {formatCurrency(item.valorBase)}
+                  </div>
+                )}
                 {item.valorPago !== undefined && item.valorPago !== item.valor && (
                   <div className="text-[10px] text-emerald-600 font-medium mt-0.5 text-right">
                     Pago: {formatCurrency(item.valorPago)}
@@ -131,7 +143,16 @@ const DespesaTable: React.FC<DespesaTableProps> = ({ items, onPagar, onExcluir, 
                       <Edit2 size={15} />
                     </button>
                   )}
-                  {onExcluir && (
+                  {item.anexoPath && onAnexo && (
+                    <button
+                      onClick={() => onAnexo(item)}
+                      className="p-1.5 text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors"
+                      title={`Abrir anexo${item.anexoNome ? `: ${item.anexoNome}` : ''}`}
+                    >
+                      <Paperclip size={15} />
+                    </button>
+                  )}
+                  {onExcluir && item.status !== 'PAGO' && item.status !== 'CANCELADO' && (
                     <button
                       onClick={() => onExcluir(item)}
                       className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"

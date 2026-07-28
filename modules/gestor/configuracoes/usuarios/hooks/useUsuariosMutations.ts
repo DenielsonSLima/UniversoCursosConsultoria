@@ -33,3 +33,37 @@ export const useUpdateUsuarioMutation = (contextId: string, onSuccess?: () => vo
     },
   });
 };
+
+export const useToggleUsuarioStatusMutation = (
+  contextId: string,
+  onSuccess?: () => void,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'Ativo' | 'Inativo' }) =>
+      usuariosService.toggleUserStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.management(contextId) });
+      onSuccess?.();
+    },
+  });
+};
+
+export const useDeleteUsuarioMutation = (
+  contextId: string,
+  onSuccess?: () => void,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => usuariosService.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.management(contextId) });
+      onSuccess?.();
+    },
+  });
+};

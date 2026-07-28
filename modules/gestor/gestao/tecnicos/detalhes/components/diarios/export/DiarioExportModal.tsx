@@ -12,6 +12,8 @@ import { DiarioPrintDocumentProps } from '../diario-classe.types';
 import { buildDiarioPdf } from '../diario-pdf';
 import { DiarioExportMode } from '../turma-diarios.types';
 
+const DIARIO_PREVIEW_VALIDATION_CODE = 'DIA-TECNICO-PREVIA';
+
 interface DiarioExportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,7 +61,18 @@ const DiarioExportModal: React.FC<DiarioExportModalProps> = ({
     setPdfUrl('');
     setPreviewError('');
 
-    void buildDiarioPdf(printProps)
+    void buildDiarioPdf({
+      ...printProps,
+      // A prévia não emite no backend. A chave ilustrativa impede que a
+      // contracapa configurada pareça uma página em branco.
+      validationCode: isBlank ? null : DIARIO_PREVIEW_VALIDATION_CODE,
+      validationPreview: !isBlank,
+      template: {
+        ...printProps.template,
+        imprimirValidacaoContracapa:
+          !isBlank && printProps.template.imprimirValidacaoContracapa,
+      },
+    })
       .then((pdf) => {
         if (disposed) return;
         objectUrl = URL.createObjectURL(pdf.output('blob'));

@@ -120,7 +120,9 @@ export const buildFinalDiplomaData = (formData: any) => {
     exibirCidadeData: cidadeData ? cidadeData.visible : true,
     exibirAssinatura1: assinatura1 ? signatureSync(assinatura1) : true,
     exibirAssinatura2: signatureSync(assinatura2),
-    hasValidationQrCode: (qrcode?.visible || versoQrcode?.visible) ?? true,
+    hasValidationQrCode: Array.isArray(formData.blocks)
+      ? Boolean(qrcode?.visible || versoQrcode?.visible)
+      : formData.hasValidationQrCode !== false,
     exibirVersoRegistro: registro ? registro.visible : true,
     exibirVersoCarimbo: carimbo ? carimbo.visible : true,
     tamanhoFonteTitulo: titulo?.fontSize || formData.tamanhoFonteTitulo || 45,

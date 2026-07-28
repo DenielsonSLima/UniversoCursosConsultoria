@@ -9,7 +9,6 @@ export type SecretariaDocumentoId =
   | 'historico_escolar'
   | 'cracha_estagio'
   | 'cracha_periodo_eleitoral'
-  | 'rematricula'
   | 'transferencia'
   | 'termo_estagio'
   | 'pasta_identificacao'

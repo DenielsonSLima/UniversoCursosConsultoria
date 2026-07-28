@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ChevronLeft,
   CheckCircle2,
   Eye,
   EyeOff,
-  IdCard,
+  UserRound,
   Loader2,
   Lock,
   MapPin,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { formatCpf, formatPhone, type AuthMessage, type AuthMode, type PasswordChecks } from './aluno-login.utils';
+import { getPublicAlunoBirthDateMax } from './aluno-birth-date';
+import TurnstileWidget from '../../shared/auth/TurnstileWidget';
 
 type Props = {
   mode: AuthMode;
@@ -64,7 +66,7 @@ type Props = {
   onCidadeChange: (value: string) => void;
   onUfChange: (value: string) => void;
   onSignupBack: () => void;
-  onLogin: React.FormEventHandler;
+  onLogin: (event: React.FormEvent, turnstileToken: string) => void;
   onSignupNext: React.FormEventHandler;
   onSignup: React.FormEventHandler;
   onGoogleLogin: () => void;
@@ -125,7 +127,22 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   onSignupNext,
   onSignup,
   onGoogleLogin,
-}) => (
+}) => {
+  const [birthDateInputActive, setBirthDateInputActive] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const [turnstileError, setTurnstileError] = useState(false);
+  const wasLoadingRef = useRef(false);
+  const maximumBirthDate = getPublicAlunoBirthDateMax();
+
+  useEffect(() => {
+    if (wasLoadingRef.current && !loading) {
+      setTurnstileResetSignal((value) => value + 1);
+    }
+    wasLoadingRef.current = loading;
+  }, [loading]);
+
+  return (
   <div className="w-full max-w-[560px] rounded-[2rem] border border-slate-200 bg-white px-5 pb-7 pt-6 shadow-2xl shadow-slate-200/80 sm:px-8 lg:mx-auto lg:p-9">
     <div className="mb-6 flex items-center justify-between gap-4">
       <div>
@@ -175,20 +192,29 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
     )}
 
     {mode === 'login' ? (
-      <form onSubmit={onLogin} className="space-y-4">
+      <form
+        onSubmit={(event) => {
+          if (!turnstileToken) {
+            event.preventDefault();
+            setTurnstileError(true);
+            return;
+          }
+          onLogin(event, turnstileToken);
+        }}
+        className="space-y-4"
+      >
         <label className="block">
-          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">CPF ou E-mail</span>
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Matrícula de acesso ou e-mail</span>
           <div className="relative">
-            <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               name="username"
-              inputMode="email"
               autoComplete="username"
               required
               value={loginIdentifier}
               onChange={(event) => onLoginIdentifierChange(event.target.value)}
-              placeholder="CPF ou seu@email.com"
+              placeholder="UNIV-A-00000001 ou seu@email.com"
               className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
           </div>
@@ -219,7 +245,24 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </div>
         </label>
 
-        <button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60">
+        <div className="space-y-2">
+          <TurnstileWidget
+            action="login"
+            resetSignal={turnstileResetSignal}
+            onTokenChange={(token) => {
+              setTurnstileToken(token);
+              if (token) setTurnstileError(false);
+            }}
+            onError={() => setTurnstileError(true)}
+          />
+          {turnstileError ? (
+            <p role="alert" className="text-xs font-bold text-red-600">
+              Conclua a verificação de segurança para continuar.
+            </p>
+          ) : null}
+        </div>
+
+        <button type="submit" disabled={loading || !turnstileToken} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60">
           {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
           Entrar e continuar
         </button>
@@ -256,7 +299,25 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         </label>
         <label className="block">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Data de nascimento</span>
-          <input type="date" name="bday" autoComplete="bday" required value={dataNascimento} onChange={(event) => onDataNascimentoChange(event.target.value)} className={inputClassName} />
+          <input
+            type={birthDateInputActive || dataNascimento ? 'date' : 'text'}
+            name="bday"
+            autoComplete="bday"
+            required
+            value={dataNascimento}
+            max={maximumBirthDate}
+            onPointerDown={() => setBirthDateInputActive(true)}
+            onFocus={() => setBirthDateInputActive(true)}
+            onBlur={() => {
+              if (!dataNascimento) setBirthDateInputActive(false);
+            }}
+            onChange={(event) => onDataNascimentoChange(event.target.value)}
+            aria-describedby="public-aluno-birth-date-help"
+            className={inputClassName}
+          />
+          <span id="public-aluno-birth-date-help" className="mt-1.5 block text-[10px] font-semibold text-slate-400">
+            Cadastro permitido somente para maiores de 10 anos.
+          </span>
         </label>
         <label className="block">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">WhatsApp</span>
@@ -406,6 +467,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
       </form>
     )}
   </div>
-);
+  );
+};
 
 export default AlunoLoginAuthCard;

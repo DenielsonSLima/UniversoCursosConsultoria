@@ -33,6 +33,14 @@ export const handleUpsertGestorUser = async (
 
   const email = normalizeEmail(incomingUser.email as string | null);
   const password = String(passwordInput || "").trim();
+  const phoneDigits = String(incomingUser.telefone || "")
+    .replace(/\D/g, "")
+    .slice(0, 11);
+  const formattedPhone = phoneDigits.length === 11
+    ? `(${phoneDigits.slice(0, 2)}) ${phoneDigits.slice(2, 7)}-${
+      phoneDigits.slice(7)
+    }`
+    : "";
   const permissions = normalizePermissionsPayload(incomingUser.permissoes);
   const perfilAcessoId = typeof incomingUser.perfil_acesso_id === "string" &&
       incomingUser.perfil_acesso_id.trim().length > 0
@@ -45,10 +53,12 @@ export const handleUpsertGestorUser = async (
   const poloIds = allPolos ? [] : normalizeStringArray(incomingUser.polo_ids);
   const canViewAllCommunication = incomingUser.pode_visualizar_todos_setores ===
     true;
+  const canViewAllCommunicationPolos = canViewAllCommunication ||
+    incomingUser.pode_visualizar_todos_polos === true;
   const communicationSector = String(
     incomingUser.setor_comunicacao || "todos",
   ).trim();
-  const communicationPoloId = canViewAllCommunication
+  const communicationPoloId = canViewAllCommunicationPolos
     ? null
     : String(incomingUser.polo_comunicacao_id || "").trim() || null;
   let profilePermissions:
@@ -79,6 +89,12 @@ export const handleUpsertGestorUser = async (
       { success: false, error: "E-mail do usuário é obrigatório." },
       400,
     );
+  }
+  if (!formattedPhone) {
+    return json({
+      success: false,
+      error: "Informe o telefone com DDD no formato (00) 00000-0000.",
+    }, 400);
   }
 
   if (password.length < 6) {
@@ -111,6 +127,7 @@ export const handleUpsertGestorUser = async (
     effectivePermissions.modules.includes("comunicacao") &&
     effectivePermissions.tabs?.comunicacao?.includes("comunicacao-whatsapp") &&
     !canViewAllCommunication &&
+    !canViewAllCommunicationPolos &&
     !communicationPoloId
   ) {
     return json({
@@ -170,7 +187,7 @@ export const handleUpsertGestorUser = async (
     nome: String(incomingUser.nome || "").trim(),
     email,
     cpf: incomingUser.cpf ? String(incomingUser.cpf) : null,
-    telefone: incomingUser.telefone ? String(incomingUser.telefone) : null,
+    telefone: formattedPhone,
     perfil: isGestor ? "Gestor" : isFinanceiro ? "Financeiro" : "Operacional",
     status: String(incomingUser.status || "Ativo").trim(),
     context: String(incomingUser.context || "global").trim(),
@@ -181,6 +198,7 @@ export const handleUpsertGestorUser = async (
     restricao_horario: incomingUser.restricao_horario || null,
     setor_comunicacao: communicationSector,
     polo_comunicacao_id: communicationPoloId,
+    pode_visualizar_todos_polos: canViewAllCommunicationPolos,
     pode_visualizar_todos_setores: canViewAllCommunication,
   };
 
@@ -195,7 +213,7 @@ export const handleUpsertGestorUser = async (
     .from("usuarios_sistema")
     .insert(userPayload)
     .select(
-      "id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_setores, created_at",
+      "id, nome, email, cpf, telefone, perfil, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, created_at",
     )
     .single();
 

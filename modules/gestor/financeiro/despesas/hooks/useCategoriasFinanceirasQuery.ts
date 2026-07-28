@@ -2,9 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { despesasService, CreateCategoriaFinanceiraInput } from '../despesas.service';
-import { despesasQueryKeys, DespesaTipo } from '../despesas.queryKeys';
+import {
+  CategoriaFinanceiraTipo,
+  despesasQueryKeys,
+} from '../despesas.queryKeys';
 
-export function useCategoriasFinanceirasQuery(tipo?: DespesaTipo) {
+export function useCategoriasFinanceirasQuery(tipo?: CategoriaFinanceiraTipo) {
   return useQuery({
     queryKey: despesasQueryKeys.categoriasList(tipo),
     queryFn: () => despesasService.getCategoriasFinanceiras(tipo),

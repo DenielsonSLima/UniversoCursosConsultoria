@@ -5,7 +5,10 @@ import CarteirinhaPreview from '../../cadastros/modelos-documentos/carteirinha/c
 import type { Aluno } from './secretaria-carteirinhas.types';
 
 export type CarteirinhaLayoutType = 'dobra' | 'espelhado';
-export type CarteirinhaPrintAluno = Aluno & { validationCode?: string };
+export type CarteirinhaPrintAluno = Aluno & {
+  validationCode?: string;
+  validationPublic?: boolean;
+};
 
 interface SecretariaCarteirinhasPrintLayoutProps {
   alunos: CarteirinhaPrintAluno[];
@@ -55,7 +58,7 @@ const EspelhadoPages = ({
               {gridAlunos.map((aluno, index) => (
                 <div key={`frente-${index}`} className="relative flex h-[54mm] w-[85.6mm] items-center justify-center overflow-hidden rounded-[2.5mm] border border-slate-200 bg-slate-50 shadow-sm">
                   {aluno
-                    ? <CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={aluno} />
+                    ? <CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
                     : <EmptyCard label="Espaço Vazio" />}
                 </div>
               ))}
@@ -71,7 +74,7 @@ const EspelhadoPages = ({
               {linhasVersos.flatMap((par) => par).map((aluno, index) => (
                 <div key={`verso-${index}`} className="relative flex h-[54mm] w-[85.6mm] items-center justify-center overflow-hidden rounded-[2.5mm] border border-slate-200 bg-slate-50 shadow-sm">
                   {aluno
-                    ? <CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={aluno} />
+                    ? <CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
                     : <EmptyCard label="Espaço Vazio" />}
                 </div>
               ))}
@@ -100,11 +103,11 @@ const DobraPages = ({
             <div key={`dobra-${index}`} className="relative flex w-full items-center justify-center">
               <div className="relative flex overflow-hidden rounded-[2.5mm] border border-slate-300 shadow-sm">
                 <div className="relative h-[54mm] w-[85.6mm] border-r border-dashed border-slate-455">
-                  <CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={aluno} />
+                  <CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
                   <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-px border-r border-dashed border-slate-400" />
                 </div>
                 <div className="relative h-[54mm] w-[85.6mm]">
-                  <CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={aluno} />
+                  <CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={aluno} showValidationQrCode={aluno.validationPublic === true} />
                 </div>
               </div>
               <div className="pointer-events-none absolute left-4 flex items-center gap-1 text-[7px] font-bold uppercase tracking-widest text-slate-400 print:hidden">

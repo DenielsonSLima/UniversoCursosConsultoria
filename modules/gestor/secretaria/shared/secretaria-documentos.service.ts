@@ -318,6 +318,7 @@ export const secretariaDocumentosService = {
     referencePeriod?: string;
     moduleId?: string;
     moduleName?: string;
+    idempotencyKey: string;
   }) {
     let query = supabase
       .from('matriculas')
@@ -375,6 +376,13 @@ export const secretariaDocumentosService = {
           (selectedOrder.get(a.id) ?? Number.MAX_SAFE_INTEGER)
           - (selectedOrder.get(b.id) ?? Number.MAX_SAFE_INTEGER)
       );
+    } else {
+      // A chave idempotente de cada item usa sua posição no lote. A consulta
+      // não possui ordem SQL garantida, então normalizamos por identidade para
+      // que retries nunca reassociem uma chave já confirmada a outra matrícula.
+      matriculas = [...matriculas].sort((a: any, b: any) =>
+        String(a.id).localeCompare(String(b.id))
+      );
     }
     if (!matriculas.length) {
       throw new Error('Nenhuma matrícula compatível foi localizada para esta emissão.');
@@ -400,13 +408,6 @@ export const secretariaDocumentosService = {
       throw new Error(
         'O termo de estágio exige concedente, vigência, jornada, plano de atividades e supervisor. '
         + 'A emissão foi bloqueada porque esses dados ainda não possuem cadastro acadêmico completo.'
-      );
-    }
-
-    if (input.documento === 'rematricula') {
-      throw new Error(
-        'Rematrícula é um processo acadêmico, não uma emissão documental. '
-        + 'A geração isolada de código foi bloqueada até existir um fluxo que efetive e audite a rematrícula.'
       );
     }
 
@@ -502,17 +503,17 @@ export const secretariaDocumentosService = {
     );
     const records = shouldIssueValidation
       ? isRegistrationDocument
-        ? await documentValidationService.issueRegistrationBatch({
+        ? await documentValidationService.reissueRegistrationBatch({
             type: input.documento as ValidatableDocumentType,
             enrollmentIds: matriculas.map((matricula: any) => matricula.id),
             issuedBy: input.context.userId,
             referencePeriod: input.referencePeriod,
-            registerReissue: true,
+            idempotencyKey: input.idempotencyKey,
           })
         : await Promise.all(
           matriculas.map((matricula: any) => {
             const validationType = input.documento as ValidatableDocumentType;
-            return documentValidationService.issue({
+            return documentValidationService.reissue({
               type: validationType,
               enrollmentId: matricula.id,
               issuedBy: input.context.userId,
@@ -523,7 +524,7 @@ export const secretariaDocumentosService = {
                   : input.documento === 'termo_estagio'
                   ? `${matricula.id}_contrato_principal`
                   : undefined,
-              registerReissue: true,
+              idempotencyKey: `${input.idempotencyKey}:${matricula.id}`,
             });
           })
         )
@@ -569,11 +570,13 @@ export const secretariaDocumentosService = {
             emitido_em: record?.issuedAt || issuedAt,
             ultima_emissao_em: record?.lastIssuedAt || record?.issuedAt || issuedAt,
             validade_ate: record?.expiresAt || null,
+            validacao_publica: record?.validationPublic ?? false,
             revogado_em: null,
             emitido_por: input.context.userId,
             quantidade_emissoes: record?.issueCount || 1,
             dados_emissao: {
               ...buildStudentRegistrationSnapshot(matricula),
+              validationPublic: record?.validationPublic ?? false,
               ...(input.documento === 'pasta_identificacao'
                 || input.documento === 'ficha_matricula'
                 ? {
@@ -656,6 +659,10 @@ export const secretariaDocumentosService = {
         polo: matricula.turmas?.polos?.nome || '',
         fotoUrl: matricula.parceiros?.foto_url || null,
         validationCode: records[index]?.code,
+        validationPublic: records[index]?.validationPublic === true,
+        validade: records[index]?.expiresAt
+          ? new Date(records[index].expiresAt!).toLocaleDateString('pt-BR')
+          : 'Sem vencimento',
       })),
     };
   },

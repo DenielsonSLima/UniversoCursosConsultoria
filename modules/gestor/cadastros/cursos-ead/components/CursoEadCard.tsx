@@ -1,8 +1,9 @@
 // File: modules/gestor/cadastros/cursos-ead/components/CursoEadCard.tsx
 
 import React from 'react';
-import { Clock, GraduationCap, Copy, Power, PowerOff, Trash2, Edit3, CheckCircle2, CreditCard } from 'lucide-react';
-import { Curso, EadConfig } from '../../cadastros.types';
+import { CalendarClock, Clock, GraduationCap, Copy, Power, PowerOff, Trash2, Edit3, CheckCircle2, CreditCard } from 'lucide-react';
+import { Curso } from '../../cadastros.types';
+import { formatCursoEadUpdatedAt, getCursoEadMetrics } from '../cursos-ead.utils';
 
 interface CursoEadCardProps {
   curso: Curso;
@@ -17,15 +18,7 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
   const area = curso.area || 'Saúde';
   const descricao = curso.descricao || `Curso livre na modalidade de Educação a Distância em ${curso.nome}.`;
 
-  const config: EadConfig = curso.ead_config || {
-    cronograma: [],
-    conteudos: [],
-    provas: [],
-    certificacao: { emitirAutomatico: true, minimoAproveitamento: 70 }
-  };
-
-  const videoCount = config.videoUrl || config.conteudos?.some(c => c.videoUrl) ? 1 : 0;
-  const questionsCount = config.provas?.reduce((acc, p) => acc + (p.questoes?.length || 0), 0) || 0;
+  const { videoCount, questionsCount } = getCursoEadMetrics(curso);
 
   return (
     <div 
@@ -90,9 +83,14 @@ const CursoEadCard: React.FC<CursoEadCardProps> = ({ curso, onClick, onDuplicate
           <span>{questionsCount} Questões</span>
         </div>
 
+        <div className="flex items-center gap-1.5 border-t border-slate-100 pt-3 text-[10px] font-bold text-slate-400">
+          <CalendarClock size={13} className="shrink-0 text-purple-500" />
+          <span>Atualizado em {formatCursoEadUpdatedAt(curso)}</span>
+        </div>
+
         {/* Ações */}
         {!readOnly && (
-        <div className="flex flex-col gap-2 relative z-20 pt-2 border-t border-slate-100">
+        <div className="flex flex-col gap-2 relative z-20 pt-2">
           <button 
             onClick={onClick}
             className="w-full flex items-center justify-between p-3 rounded-xl bg-purple-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-md shadow-purple-600/15"

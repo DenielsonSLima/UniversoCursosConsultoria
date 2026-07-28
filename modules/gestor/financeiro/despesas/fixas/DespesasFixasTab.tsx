@@ -3,10 +3,10 @@
 import React, { useMemo, useState } from 'react';
 import {
   Plus, Search, LayoutGrid, LayoutList, Tag, RefreshCw,
-  Building, CheckCircle2, Layers,
+  Building, Layers,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { despesasService, DespesaLancamento } from '../despesas.service';
+import { despesasService, DespesaBaixaParams, DespesaLancamento } from '../despesas.service';
 import { despesasQueryKeys, DespesaStatusScope, DespesaTipo } from '../despesas.queryKeys';
 import { useDespesasQueries } from '../hooks/useDespesasQueries';
 import { useDespesasRealtime } from '../hooks/useDespesasRealtime';
@@ -15,6 +15,7 @@ import DespesaForm from '../components/DespesaForm';
 import DespesaTable from '../components/DespesaTable';
 import DespesaCard from '../components/DespesaCard';
 import DespesaGroupedView from '../components/DespesaGroupedView';
+import DespesaBaixaModal from '../components/DespesaBaixaModal';
 import ToastNotification, { useToast } from '../../../components/ToastNotification';
 import { useFinanceiroSharedQueries } from '../../hooks/useFinanceiroSharedQueries';
 import {
@@ -29,6 +30,8 @@ import FinancialReportExportButton, {
   FinancialReportSummaryCard,
 } from '../../components/FinancialReportPreview';
 import FinancialUnderlineTabs from '../../components/FinancialUnderlineTabs';
+import { financeiroQueryKeys } from '../../financeiro.queryKeys';
+import { caixaQueryKeys } from '../../../caixa/caixa.service';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -40,64 +43,6 @@ const statusScopeLabels: Record<DespesaStatusScope, string> = {
   mes_atual: 'Mês atual',
   em_aberto: 'Em aberto',
   todos: 'Todos',
-};
-
-// Modal de Baixa
-const BaixaModal: React.FC<{
-  item: DespesaLancamento;
-  contas: any[];
-  onConfirm: (params: { contaBancariaId: string; valorPago: number; dataPagamento: string; formaPagamento: string }) => void;
-  onClose: () => void;
-  isPending: boolean;
-}> = ({ item, contas, onConfirm, onClose, isPending }) => {
-  const [contaBancariaId, setContaBancariaId] = useState('');
-  const [valorPago, setValorPago] = useState(
-    item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  );
-  const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
-  const [formaPagamento, setFormaPagamento] = useState('PIX');
-  const parseVal = (s: string) => Number(s.replace(/\./g, '').replace(',', '.') || 0);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
-        <h3 className="text-lg font-black text-[#001a33] uppercase tracking-tight mb-1">Dar Baixa</h3>
-        <p className="text-xs text-slate-400 font-medium mb-6 truncate">{item.descricao}</p>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Conta Bancária *</label>
-            <select value={contaBancariaId} onChange={(e) => setContaBancariaId(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500">
-              <option value="">Selecionar...</option>
-              {contas.map((c: any) => <option key={c.id} value={c.id}>{c.banco} — {c.conta}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Valor Pago</label>
-            <input type="text" value={valorPago} onChange={(e) => setValorPago(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Data do Pagamento</label>
-            <input type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500" />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Forma de Pagamento</label>
-            <div className="flex gap-2">
-              {['PIX', 'TED', 'BOLETO', 'DINHEIRO'].map((fp) => (
-                <button key={fp} type="button" onClick={() => setFormaPagamento(fp)} className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${formaPagamento === fp ? 'bg-emerald-600 text-white border-emerald-600' : 'text-slate-500 border-slate-200 hover:border-emerald-400'}`}>{fp}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 text-sm font-bold uppercase transition-colors">Cancelar</button>
-          <button onClick={() => onConfirm({ contaBancariaId, valorPago: parseVal(valorPago), dataPagamento, formaPagamento })} disabled={!contaBancariaId || isPending} className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wide disabled:opacity-50 transition-colors">
-            {isPending ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            Confirmar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scopedPoloId }) => {
@@ -136,7 +81,9 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
     turmaId,
   }), [statusScope, dataInicio, dataFim, categoriaId, search, poloId, turmaId]);
 
-  const { lancamentosQuery, summaryQuery } = useDespesasQueries(filters);
+  const { lancamentosQuery, summaryQuery, groupSummaryQuery } = useDespesasQueries(filters, {
+    groupSummary: agrupar,
+  });
   const categoriasQuery = useCategoriasFinanceirasQuery('DESPESA_FIXA');
 
   const lancamentos = lancamentosQuery.data || [];
@@ -221,10 +168,15 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   ], [totals]);
 
   const baixaMutation = useMutation({
-    mutationFn: (params: { contaBancariaId: string; valorPago: number; dataPagamento: string; formaPagamento: string }) =>
+    mutationFn: (params: DespesaBaixaParams) =>
       despesasService.markDespesaPaga(baixaItem!.id, params),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+      ]);
       toast.success('Baixa confirmada!', 'O pagamento foi registrado com sucesso.');
       setBaixaItem(null);
     },
@@ -234,8 +186,13 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   const excluirMutation = useMutation({
     mutationFn: (id: string) => despesasService.deleteDespesa(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
-      toast.success('Lançamento excluído', 'O registro foi removido com sucesso.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos }),
+        queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis }),
+        queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards }),
+      ]);
+      toast.success('Lançamento cancelado', 'O histórico foi preservado com segurança.');
     },
     onError: (err: any) => toast.error('Erro ao excluir', err.message),
   });
@@ -246,6 +203,18 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
 
   const handleImprimir = (item: DespesaLancamento) => {
     printReciboDespesa(despesaToReciboData(item));
+  };
+  const handleAnexo = async (item: DespesaLancamento) => {
+    const preview = window.open('about:blank', '_blank');
+    if (preview) preview.opener = null;
+    try {
+      const url = await despesasService.getDespesaAnexoUrl(item);
+      if (preview) preview.location.replace(url);
+      else window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      preview?.close();
+      toast.error('Erro ao abrir anexo', error?.message || 'Não foi possível abrir o arquivo.');
+    }
   };
 
   const tabs: { id: DespesaStatusScope; label: string }[] = [
@@ -281,10 +250,10 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Previsto', value: formatCurrency(totals.total), color: 'text-[#001a33]' },
-          { label: 'Pago', value: formatCurrency(totals.pago), color: 'text-emerald-600' },
-          { label: 'A Pagar', value: formatCurrency(totals.pendente), color: 'text-amber-600' },
-          { label: 'Vencidos', value: `${totals.vencidos}`, color: 'text-rose-600' },
+          { label: 'Total Previsto', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.total), color: 'text-[#001a33]' },
+          { label: 'Pago', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pago), color: 'text-emerald-600' },
+          { label: 'A Pagar', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : formatCurrency(totals.pendente), color: 'text-amber-600' },
+          { label: 'Vencidos', value: !poloId ? 'Selecione um polo' : summaryQuery.isPending ? 'Carregando...' : summaryQuery.isError ? 'Indisponível' : `${totals.vencidos}`, color: 'text-rose-600' },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">{kpi.label}</p>
@@ -292,6 +261,11 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           </div>
         ))}
       </div>
+      {summaryQuery.isError && (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">
+          Não foi possível carregar o resumo canônico das despesas.
+        </div>
+      )}
 
       {/* Tabs de status */}
       <FinancialUnderlineTabs
@@ -373,7 +347,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
             summaryCards={reportSummaryCards}
             poloId={poloId}
             tone="rose"
-            disabled={lancamentosQuery.isLoading}
+            disabled={lancamentosQuery.isLoading || !summaryQuery.isSuccess}
           />
 
           {/* Toggles */}
@@ -407,17 +381,31 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
       </div>
 
       {/* Lista */}
-      {lancamentosQuery.isLoading ? (
+      {lancamentosQuery.isLoading || (agrupar && groupSummaryQuery.isLoading) ? (
         <div className="flex items-center justify-center py-16">
           <RefreshCw size={28} className="animate-spin text-rose-500" />
+        </div>
+      ) : !poloId ? (
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-6 text-center text-sm font-bold text-amber-700">
+          Selecione um polo para carregar as despesas.
+        </div>
+      ) : lancamentosQuery.isError ? (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-6 text-center text-sm font-bold text-rose-700">
+          Não foi possível carregar os lançamentos de despesas.
+        </div>
+      ) : agrupar && groupSummaryQuery.isError ? (
+        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-6 text-center text-sm font-bold text-rose-700">
+          Não foi possível carregar os totais canônicos por categoria.
         </div>
       ) : agrupar ? (
         <DespesaGroupedView
           items={filtered}
+          summaries={groupSummaryQuery.data || []}
           viewMode={viewMode}
           onPagar={(item) => setBaixaItem(item)}
           onExcluir={handleExcluir}
           onImprimir={handleImprimir}
+          onAnexo={handleAnexo}
         />
       ) : viewMode === 'tabela' ? (
         <DespesaTable
@@ -425,6 +413,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
           onPagar={(item) => setBaixaItem(item)}
           onExcluir={handleExcluir}
           onImprimir={handleImprimir}
+          onAnexo={handleAnexo}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -435,6 +424,7 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
               onPagar={(i) => setBaixaItem(i)}
               onExcluir={handleExcluir}
               onImprimir={handleImprimir}
+              onAnexo={handleAnexo}
             />
           ))}
         </div>
@@ -466,9 +456,10 @@ const DespesasFixasTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
 
       {/* Baixa Modal */}
       {baixaItem && (
-        <BaixaModal
+        <DespesaBaixaModal
           item={baixaItem}
-          contas={contas.filter((c: any) => c.ativo !== false)}
+          contas={contas}
+          poloId={poloId}
           onConfirm={(params) => baixaMutation.mutate(params)}
           onClose={() => setBaixaItem(null)}
           isPending={baixaMutation.isPending}

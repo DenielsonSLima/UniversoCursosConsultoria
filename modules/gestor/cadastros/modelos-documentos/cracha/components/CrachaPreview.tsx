@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, ShieldCheck } from 'lucide-react';
-import { getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { resolveCrachaFields } from './cracha-editor.model';
 
 interface CrachaPreviewProps {
@@ -70,7 +70,6 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
   };
 
   const codeValidador = collaboratorData.validationCode || collaboratorData.matricula;
-  const qrCodeUrl = getDocumentValidationQrUrl(codeValidador);
 
   const useCustomBg = page === 'frente' ? !!formData.bgFrenteUrl : !!formData.bgVersoUrl;
   const ocultarDesign = useCustomBg && !!formData.ocultarDesignPadrao;
@@ -315,7 +314,11 @@ const CrachaPreview: React.FC<CrachaPreviewProps> = ({
               onClick={(e) => { e.stopPropagation(); if (isEditable && onSelectField) onSelectField(field.id); }}
               className={`${hoverOutlineStyle} transition-all`}
             >
-              <img src={qrCodeUrl} alt="QR" className="w-full object-contain pointer-events-none" style={{ aspectRatio: '1/1' }} />
+              <DocumentValidationQrCodeImage
+                code={codeValidador}
+                alt="QR"
+                className="pointer-events-none w-full"
+              />
               <div className="w-full flex flex-col items-center pointer-events-none" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '2px', marginTop: '2px' }}>
                 <p style={{ fontSize: '2.8px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1, marginBottom: '1px' }}>
                   CÓD. VALIDAÇÃO

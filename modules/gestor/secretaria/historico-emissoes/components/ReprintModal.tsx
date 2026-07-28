@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Award, ChevronLeft, ChevronRight, Download, Loader2, Printer, X } from 'lucide-react';
 import { isCertificateDocument } from '../historico-emissoes.constants';
@@ -8,6 +8,7 @@ import type {
 } from '../historico-emissoes.types';
 import type { CertificadoAcademico } from '../../certificados/certificados.types';
 import EmissionDocumentPages from './EmissionDocumentPages';
+import { getEmissionRenderKey } from '../reissue-flow';
 
 interface Props {
   emission: EmissionLog;
@@ -66,8 +67,23 @@ const ReprintModal: React.FC<Props> = ({
   unavailableNote = 'A impressão e o PDF foram bloqueados para evitar um documento acadêmico incompleto.',
   fullscreenViewer = false,
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const isCertificate = isCertificateDocument(emission.documento);
   const isBlocked = Boolean(error) || (!isLoading && isCertificate && !certificatePreview);
+  const isOperationBusy = isDownloading || isReissuing;
+  const closeIfIdle = () => {
+    if (!isOperationBusy) onClose();
+  };
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    dialogRef.current?.focus({ preventScroll: true });
+    return () => {
+      previouslyFocused?.focus({ preventScroll: true });
+    };
+  }, []);
 
   useEffect(() => {
     if (!fullscreenViewer) return undefined;
@@ -75,7 +91,7 @@ const ReprintModal: React.FC<Props> = ({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isDownloading && !isReissuing) onClose();
+      if (event.key === 'Escape' && !isOperationBusy) onClose();
     };
     window.addEventListener('keydown', closeOnEscape);
 
@@ -83,10 +99,11 @@ const ReprintModal: React.FC<Props> = ({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', closeOnEscape);
     };
-  }, [fullscreenViewer, isDownloading, isReissuing, onClose]);
+  }, [fullscreenViewer, isOperationBusy, onClose]);
 
   const modal = (
     <div
+      ref={dialogRef}
       className={fullscreenViewer
         ? 'fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen animate-fadeIn bg-slate-950'
         : 'fixed inset-0 z-[130] flex animate-fadeIn bg-slate-900/60 backdrop-blur-sm'}
@@ -94,6 +111,8 @@ const ReprintModal: React.FC<Props> = ({
       role="dialog"
       aria-modal="true"
       aria-label={heading}
+      aria-busy={isLoading || isOperationBusy}
+      tabIndex={-1}
     >
       <div className={`flex h-full min-h-0 w-full flex-col overflow-hidden shadow-2xl animate-slideUp ${fullscreenViewer ? 'bg-slate-950' : 'bg-white'}`}>
         <div className={`flex shrink-0 flex-col gap-3 px-4 py-3 print:hidden sm:flex-row sm:items-center sm:justify-between sm:px-6 ${fullscreenViewer ? 'border-b border-white/10 bg-slate-800 text-white shadow-md' : 'border-b border-slate-200 bg-slate-50 sm:py-4'}`}>
@@ -102,8 +121,9 @@ const ReprintModal: React.FC<Props> = ({
               {fullscreenViewer && (
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+                  onClick={closeIfIdle}
+                  disabled={isOperationBusy}
+                  className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-700/50 p-2 text-xs font-bold uppercase tracking-wider text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="Fechar visualizador"
                 >
                   <ArrowLeft size={16} /> Voltar
@@ -111,7 +131,10 @@ const ReprintModal: React.FC<Props> = ({
               )}
               <div className="min-w-0">
                 <h4 className={`truncate text-sm font-black uppercase tracking-wide ${fullscreenViewer ? 'text-white' : 'text-[#001a33]'}`}>{heading}</h4>
-                <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                <p
+                  className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-widest text-slate-400"
+                  aria-live="polite"
+                >
                   {subtitle || `Visualização do Código: ${emission.codigo}`}
                 </p>
               </div>
@@ -123,7 +146,7 @@ const ReprintModal: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={onPrevious}
-                  disabled={!onPrevious || previousDisabled || isLoading}
+                  disabled={!onPrevious || previousDisabled || isLoading || isOperationBusy}
                   aria-label="Documento anterior"
                   className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${fullscreenViewer ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
@@ -137,7 +160,7 @@ const ReprintModal: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={onNext}
-                  disabled={!onNext || nextDisabled || isLoading}
+                  disabled={!onNext || nextDisabled || isLoading || isOperationBusy}
                   aria-label="Próximo documento"
                   className={`rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${fullscreenViewer ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                 >
@@ -145,21 +168,35 @@ const ReprintModal: React.FC<Props> = ({
                 </button>
               </div>
             )}
-            <button onClick={onDownload} disabled={isDownloading || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50 ${fullscreenViewer ? 'border border-white/15 bg-white/10 text-white hover:bg-white/20 sm:px-5 sm:py-3 sm:text-xs' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+            <button type="button" onClick={onDownload} disabled={isDownloading || isReissuing || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50 ${fullscreenViewer ? 'border border-white/15 bg-white/10 text-white hover:bg-white/20 sm:px-5 sm:py-3 sm:text-xs' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
               {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
               {downloadLabel || (fullscreenViewer ? 'Download PDF' : 'PDF')}
             </button>
-            <button onClick={onPrint} disabled={isReissuing || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors disabled:opacity-50 ${fullscreenViewer ? 'bg-blue-600 hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs' : 'bg-[#001a33] hover:bg-blue-900'}`}>
+            <button type="button" onClick={onPrint} disabled={isReissuing || isDownloading || isLoading || isBlocked} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white shadow-md transition-colors disabled:opacity-50 ${fullscreenViewer ? 'bg-blue-600 hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs' : 'bg-[#001a33] hover:bg-blue-900'}`}>
               {isReissuing ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} {printLabel}
             </button>
             {!fullscreenViewer && (
-              <button onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500"><X size={16} /></button>
+              <button
+                type="button"
+                onClick={closeIfIdle}
+                disabled={isOperationBusy}
+                aria-label="Fechar visualizador"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <X size={16} />
+              </button>
             )}
           </div>
         </div>
 
         <div className={`flex min-h-0 flex-1 justify-center overflow-auto p-3 custom-scrollbar sm:p-6 lg:p-8 ${fullscreenViewer ? 'bg-slate-900' : 'bg-slate-100'}`}>
-          <div ref={printContentRef} className="print-content-container">
+          <div
+            ref={printContentRef}
+            className="print-content-container"
+            data-emission-render-key={
+              !isLoading && !error ? getEmissionRenderKey(emission) : undefined
+            }
+          >
             {isLoading && (
               <div className="flex h-[297mm] w-[210mm] max-w-full flex-col items-center justify-center bg-white text-slate-400">
                 <Loader2 className="mb-4 animate-spin text-blue-600" size={36} />
@@ -167,7 +204,10 @@ const ReprintModal: React.FC<Props> = ({
               </div>
             )}
             {!isLoading && error && (
-              <div className="flex min-h-[120mm] w-[210mm] max-w-full flex-col items-center justify-center rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-xl">
+              <div
+                className="flex min-h-[120mm] w-[210mm] max-w-full flex-col items-center justify-center rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-xl"
+                role="alert"
+              >
                 <Award className="mb-4 text-rose-500" size={38} />
                 <h5 className="text-sm font-black uppercase tracking-widest text-[#001a33]">{unavailableHeading}</h5>
                 <p className="mt-3 max-w-md text-xs font-bold leading-relaxed text-slate-500">{error}</p>

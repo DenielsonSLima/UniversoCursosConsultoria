@@ -43,6 +43,9 @@ export const ATESTADO_CONCLUSAO_TECNICO_VARIABLES = [
   { code: '{{CARGA_HORARIA_TOTAL}}', label: 'Carga Horária Total' },
   { code: '{{MEDIA_GERAL}}', label: 'Média Geral' },
   { code: '{{FREQUENCIA_GERAL}}', label: 'Frequência Geral' },
+  { code: '{{VALIDADE_DATA}}', label: 'Data Limite de Validade' },
+  { code: '{{VALIDADE_DIAS}}', label: 'Prazo de Validade em Dias' },
+  { code: '{{DATA_GERACAO}}', label: 'Data e Hora da Geração' },
 ];
 
 export const ESTAGIO_VARIABLES = [

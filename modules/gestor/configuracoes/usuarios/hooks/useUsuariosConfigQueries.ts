@@ -38,3 +38,16 @@ export const useUsuariosByContextQuery = (contextId: string) =>
       : usuariosService.getUsersByContext(contextId),
     staleTime: 30_000,
   });
+
+export const useUsuariosManagementStatesQuery = (
+  contextId: string,
+  users: UsuarioSistema[],
+) =>
+  useQuery({
+    queryKey: usuariosKeys.management(contextId),
+    queryFn: () => usuariosService.getManagementStates(
+      users.flatMap(user => user.id ? [user.id] : []),
+    ),
+    enabled: users.length > 0,
+    staleTime: 30_000,
+  });

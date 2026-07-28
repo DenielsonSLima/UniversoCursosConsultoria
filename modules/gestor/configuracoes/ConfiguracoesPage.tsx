@@ -18,7 +18,9 @@ import {
   GraduationCap,
   Megaphone,
   Lock,
-  Activity
+  Activity,
+  HardDrive,
+  Handshake
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -30,6 +32,7 @@ import SaldoInicialConfig from './saldo-inicial/SaldoInicialConfig';
 import IntegracaoBancariaConfig from './integracao-bancaria/IntegracaoBancariaConfig';
 import ApiStatusConfig from './api-status/ApiStatusConfig';
 import CategoriasConfig from './categorias/CategoriasConfig';
+import TiposParceriaConfig from './tipos-parceria/TiposParceriaConfig';
 import MensageriaConfig from './mensageria/MensageriaConfig';
 import TemplatesMensagensConfig from './templates-mensagens/TemplatesMensagensConfig';
 import PolosConfig from './polos/PolosConfig';
@@ -40,6 +43,7 @@ import SitePublicoConfig from './site-publico/SitePublicoConfig';
 import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
 import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
 import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConfig';
+import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -60,7 +64,8 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'polos', title: 'Polos e Filiais', desc: 'Gestão das unidades', icon: <Building2 size={24} />, color: 'bg-sky-500' },
     { id: 'academicos', title: 'Matrícula e Validação', desc: 'Configurações de registros, carteirinhas e certificados', icon: <GraduationCap size={24} />, color: 'bg-purple-500' },
     { id: 'site-publico', title: 'Site Público', desc: 'Faixa de avisos e turmas abertas', icon: <Megaphone size={24} />, color: 'bg-blue-700' },
-    { id: 'categorias', title: 'Categorias (Parceiros)', desc: 'Classificação de cadastros', icon: <Tags size={24} />, color: 'bg-orange-500' },
+    { id: 'categorias', title: 'Categorias de Cadastros', desc: 'Segmentos de alunos, professores, PF e PJ', icon: <Tags size={24} />, color: 'bg-orange-500' },
+    { id: 'tipos-parceria', title: 'Tipos de Parceria', desc: 'Convênios e vínculos de pessoas jurídicas', icon: <Handshake size={24} />, color: 'bg-blue-700' },
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
     { id: 'perfis-acesso', title: 'Perfis de Acesso', desc: 'Gerenciar permissões por perfil', icon: <Lock size={24} />, color: 'bg-rose-500' },
@@ -69,6 +74,7 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'contas', title: 'Contas Bancárias', desc: 'Contas para recebimento', icon: <Landmark size={24} />, color: 'bg-emerald-500' },
     { id: 'saldo', title: 'Saldo Inicial', desc: 'Ajuste de caixa inicial', icon: <Wallet size={24} />, color: 'bg-teal-500' },
     { id: 'logs', title: 'Logs e Eventos', desc: 'Auditoria do sistema', icon: <FileText size={24} />, color: 'bg-slate-500' },
+    { id: 'armazenamento', title: 'Armazenamento', desc: 'Cota, arquivos e dados do sistema', icon: <HardDrive size={24} />, color: 'bg-blue-600' },
     { id: 'mensageria', title: 'WhatsApp API', desc: 'Meta Cloud API e webhooks', icon: <MessageCircle size={24} />, color: 'bg-green-500' },
     { id: 'templates-mensagens', title: 'Templates', desc: 'Textos de notificação', icon: <FileCode2 size={24} />, color: 'bg-blue-400' },
     { id: 'integracao-bancaria', title: 'Integração Bancária', desc: 'Rotas de pagamento', icon: <CreditCard size={24} />, color: 'bg-rose-500' },
@@ -89,6 +95,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'academicos': return <AcademicosConfig />;
       case 'site-publico': return <SitePublicoConfig />;
       case 'categorias': return <CategoriasConfig />;
+      case 'tipos-parceria': return <TiposParceriaConfig />;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
       case 'perfis-acesso': return <PerfisAcessoConfig />;
@@ -97,6 +104,7 @@ const ConfiguracoesPage: React.FC = () => {
       case 'contas': return <ContasBancariasConfig />;
       case 'saldo': return <SaldoInicialConfig />;
       case 'logs': return <LogsEventosConfig />;
+      case 'armazenamento': return <ArmazenamentoConfig />;
       case 'mensageria': return <MensageriaConfig />;
       case 'templates-mensagens': return <TemplatesMensagensConfig />;
       case 'integracao-bancaria': return <IntegracaoBancariaConfig />;

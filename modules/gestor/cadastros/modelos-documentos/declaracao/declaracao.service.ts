@@ -2,6 +2,7 @@
 // REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
 import { supabase } from '../../../../../lib/supabase';
+import { getDocumentValidationBaseUrl } from '../../../../shared/document-validation/document-validation.url';
 
 const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{CURSO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
@@ -58,7 +59,7 @@ export const defaultTemplate = {
     {
       id: 'footer_url',
       type: 'text',
-      value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
+      value: `Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">${getDocumentValidationBaseUrl()}</span>`,
       x: 50,
       y: 995,
       width: 694,

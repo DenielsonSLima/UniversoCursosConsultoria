@@ -16,6 +16,7 @@ import UserAccessSections from './UserAccessSections';
 import UserIdentitySections from './UserIdentitySections';
 import { USER_FORM_MODULE_TABS } from './user-access-options';
 import { normalizeSecretariaAccessTabs } from '../../../secretaria/secretaria-access';
+import ToastNotification, { useToast } from '../../../components/ToastNotification';
 
 interface UserFormAddProps {
   contextId: string;
@@ -76,6 +77,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
   initialUser,
 }) => {
   const { data: companies = [] } = useUsuariosPolosQuery();
+  const { toasts, removeToast, toast } = useToast();
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([]);
   
   const [formData, setFormData] = useState<NovoUsuarioFormData>({
@@ -101,6 +103,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     horarioFim: '18:00',
     setorComunicacao: 'todos',
     poloComunicacaoId: contextId === 'global' ? null : contextId,
+    podeVisualizarTodosPolos: false,
     podeVisualizarTodosSetores: false,
   });
 
@@ -135,7 +138,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       sobrenome,
       cpf: initialUser.cpf || '',
       dataNascimento: '',
-      telefone: initialUser.telefone || '',
+      telefone: formatPhone(initialUser.telefone || ''),
       email: initialUser.email || '',
       senha: '',
       confirmarSenha: '',
@@ -157,6 +160,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       horarioFim: initialUser.restricao_horario?.horario_fim || '18:00',
       setorComunicacao: initialUser.setor_comunicacao || 'todos',
       poloComunicacaoId: initialUser.polo_comunicacao_id || (contextId === 'global' ? null : contextId),
+      podeVisualizarTodosPolos: Boolean(initialUser.pode_visualizar_todos_polos),
       podeVisualizarTodosSetores: Boolean(initialUser.pode_visualizar_todos_setores),
     }));
   }, [contextId, initialUser]);
@@ -178,11 +182,17 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     return value ? formatCpf(value) : '';
   };
 
-  const formatPhone = (value: string) => value
-    .replace(/\D/g, '')
-    .replace(/(\d{2})(\d)/, '($1) $2')
-    .replace(/(\d{5})(\d)/, '$1-$2')
-    .replace(/(-\d{4})\d+?$/, '$1');
+  function formatPhone(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (!digits) return '';
+    if (digits.length === 1) return `(${digits}`;
+    if (digits.length === 2) return `(${digits})`;
+
+    const ddd = digits.slice(0, 2);
+    const number = digits.slice(2);
+    if (number.length <= 5) return `(${ddd}) ${number}`;
+    return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
+  }
 
   const checkPasswordStrength = (pass: string) => {
     let score = 0;
@@ -294,68 +304,77 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = (message: string) => {
+      toast.error('Revise os dados', message);
+    };
+
     if (!isValidCpf(formData.cpf)) {
-      alert('Informe um CPF válido para o usuário.');
+      validationError('Informe um CPF válido para o usuário.');
       return;
     }
     if (!isEditing && !formData.dataNascimento) {
-      alert('Informe a data de nascimento do usuário.');
+      validationError('Informe a data de nascimento do usuário.');
       return;
     }
-    if (formData.telefone.length < 14) {
-      alert('Informe o telefone do usuário.');
+    if (formData.telefone.replace(/\D/g, '').length !== 11) {
+      validationError('Informe o telefone com DDD no formato (00) 00000-0000.');
       return;
     }
     if (!isValidEmail(formData.email)) {
-      alert('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
+      validationError('Informe um e-mail válido. Ele será usado como login do gestor/usuário.');
       return;
     }
     if (formData.senha || formData.confirmarSenha) {
       if (!formData.senha || formData.senha.length < 6) {
-        alert('A senha precisa ter ao menos 6 caracteres.');
+        validationError('A senha precisa ter ao menos 6 caracteres.');
         return;
       }
       if (formData.senha !== formData.confirmarSenha) {
-        alert('As senhas não coincidem!');
+        validationError('As senhas não coincidem.');
         return;
       }
     }
     if (!isEditing && !formData.senha) {
-      alert('Informe a senha inicial do usuário.');
+      validationError('Informe a senha inicial do usuário.');
       return;
     }
     if (!formData.todosPolos && formData.polosAcesso.length === 0) {
-      alert('Selecione ao menos um polo para este usuário.');
+      validationError('Selecione ao menos um polo para este usuário.');
       return;
     }
     if (!formData.perfil_acesso_id || formData.personalizarPermissoes) {
       if (formData.permissoes.length === 0 || !formData.permissoes.some(moduleId => GESTOR_MODULE_IDS.includes(moduleId as GestorModuleId))) {
-        alert('Selecione ao menos um módulo para este usuário.');
+        validationError('Selecione ao menos um módulo para este usuário.');
         return;
       }
       if (formData.permissoes.includes('financeiro') && formData.financeiroAbas.length === 0) {
-        alert('Selecione ao menos uma aba do módulo financeiro.');
+        validationError('Selecione ao menos uma aba do módulo financeiro.');
         return;
       }
       for (const moduleId of ['gestao', 'cadastros', 'secretaria', 'comunicacao']) {
         if (formData.permissoes.includes(moduleId) && (formData.abasModulos[moduleId] || []).length === 0) {
-          alert(`Selecione ao menos uma aba do módulo ${moduleId}.`);
+          validationError(`Selecione ao menos uma aba do módulo ${moduleId}.`);
           return;
         }
       }
     }
     if (formData.personalizarHorario && formData.horarioAtivo && formData.diasHorario.length === 0) {
-      alert('Selecione ao menos um dia permitido para o horário individual.');
+      validationError('Selecione ao menos um dia permitido para o horário individual.');
       return;
     }
     if (formData.personalizarHorario && formData.horarioAtivo && formData.horarioInicio === formData.horarioFim) {
-      alert('O início e o fim do horário individual não podem ser iguais.');
+      validationError('O início e o fim do horário individual não podem ser iguais.');
       return;
     }
     const hasWhatsAppAccess = formData.permissoes.includes('comunicacao')
       && (formData.abasModulos.comunicacao || []).includes('comunicacao-whatsapp');
-    if (hasWhatsAppAccess && !formData.podeVisualizarTodosSetores && !formData.poloComunicacaoId) {
-      alert('Selecione o polo de atendimento do WhatsApp para este usuário.');
+    if (
+      hasWhatsAppAccess
+      && !formData.podeVisualizarTodosSetores
+      && !formData.podeVisualizarTodosPolos
+      && !formData.poloComunicacaoId
+    ) {
+      validationError('Selecione o polo de atendimento do WhatsApp para este usuário.');
       return;
     }
     onSave({ ...formData, email: normalizeEmail(formData.email) });
@@ -363,6 +382,7 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   return (
     <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-full animate-fadeIn">
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
       
       {/* Header */}
       <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">

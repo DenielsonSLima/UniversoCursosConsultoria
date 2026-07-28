@@ -1,7 +1,7 @@
 import { supabase } from '../../../lib/supabase';
 import { formatMatricula } from '../../../lib/academicUtils';
 
-export type RelatorioModalidade = 'todos' | 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO';
+export type RelatorioModalidade = 'todos' | 'TECNICO' | 'EAD' | 'LIVRE' | 'ESPECIALIZACAO' | 'SUPERIOR';
 export type RelatorioFinanceiroStatus = 'todos' | 'PAGO' | 'PENDENTE' | 'VENCIDO' | 'CANCELADO';
 export type RelatorioTipoLancamento = 'todos' | 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'AVULSO';
 

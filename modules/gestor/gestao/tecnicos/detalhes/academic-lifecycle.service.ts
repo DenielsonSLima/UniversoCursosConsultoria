@@ -40,6 +40,13 @@ export interface AcademicMovement {
   turma_destino?: { nome: string; codigo: string | null } | null;
 }
 
+export interface AcademicMovementsPage {
+  items: AcademicMovement[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface AcademicPeriod {
   id: string;
   turma_id: string;
@@ -51,6 +58,15 @@ export interface AcademicPeriod {
   status: 'PLANEJADO' | 'ABERTO' | 'EM_FECHAMENTO' | 'FECHADO';
   fechado_em: string | null;
   reaberto_em: string | null;
+}
+
+export interface AcademicClassSummary {
+  totalMatriculas: number;
+  totalAlunos: number;
+  alunosAtivos: number;
+  progressoCurso: number | null;
+  saudeFinanceiraPercentual: number | null;
+  saudeFinanceiraStatus: 'SEM_DADOS' | 'SAUDAVEL' | 'ATENCAO' | 'CRITICA';
 }
 
 export interface AcademicClosingPendencies {
@@ -86,11 +102,11 @@ export const academicLifecycleService = {
     return (data || []) as AcademicStudent[];
   },
 
-  async getResumo(turmaId: string) {
+  async getResumo(turmaId: string): Promise<AcademicClassSummary> {
     const { data, error } = await supabase.rpc('get_turma_resumo_academico', {
       p_turma_id: turmaId,
     });
-    return requireData(data, error);
+    return requireData(data as AcademicClassSummary | null, error);
   },
 
   async getPeriodos(turmaId: string): Promise<AcademicPeriod[]> {
@@ -117,6 +133,48 @@ export const academicLifecycleService = {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as AcademicMovement[];
+  },
+
+  async getMovimentacoesPage(
+    turmaId: string,
+    page = 1,
+    pageSize = 10,
+  ): Promise<AcademicMovementsPage> {
+    const normalizedPage = Math.max(1, Math.floor(page));
+    const normalizedPageSize = Math.min(50, Math.max(1, Math.floor(pageSize)));
+    const from = (normalizedPage - 1) * normalizedPageSize;
+    const to = from + normalizedPageSize - 1;
+    const { data, error, count } = await supabase
+      .from('matricula_movimentacoes')
+      .select(`
+        id,
+        matricula_id,
+        aluno_id,
+        tipo,
+        status_anterior,
+        status_novo,
+        turma_origem_id,
+        turma_destino_id,
+        motivo,
+        observacao,
+        data_movimentacao,
+        data_retorno_prevista,
+        created_at,
+        aluno:parceiros(nome),
+        turma_origem:turmas!matricula_movimentacoes_turma_origem_id_fkey(nome, codigo),
+        turma_destino:turmas!matricula_movimentacoes_turma_destino_id_fkey(nome, codigo)
+      `, { count: 'exact' })
+      .or(`turma_origem_id.eq.${turmaId},turma_destino_id.eq.${turmaId}`)
+      .order('data_movimentacao', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return {
+      items: (data || []) as unknown as AcademicMovement[],
+      total: count || 0,
+      page: normalizedPage,
+      pageSize: normalizedPageSize,
+    };
   },
 
   async getTransferencias(turmaId: string) {

@@ -2,6 +2,39 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.10] - 2026-07-28
+
+### Adicionado
+
+- Central de governança da validação documental com prefixo individual, campos públicos, validade, kill switch, prévia e histórico versionado por tipo de documento.
+- Emissão e reemissão idempotentes para documentos individuais, lotes, IRPF pelo WhatsApp e Diário de Classe, com QR Code gerado localmente e URL pública canônica.
+- Fluxos acadêmicos, financeiros, bibliotecários, calendários, documentos do aluno, assinaturas, mensageria e permissões granulares consolidados para produção.
+
+### Alterado
+
+- TanStack Query e Realtime passaram a preservar rascunhos, impedir regressão de versão, cancelar consultas obsoletas e ressincronizar o estado após reconexão.
+- Integrações Banese, Caixa, conciliação, recebíveis, despesas e rotas financeiras foram alinhadas aos contratos canônicos e às regras operacionais vigentes.
+- O validador público ganhou renderização específica por documento, proteção contra respostas assíncronas antigas e exposição limitada aos campos autorizados.
+
+### Corrigido
+
+- A abertura do Diário de Classe deixa de falhar enquanto o modelo visual ainda está carregando; exportação e impressão permanecem indisponíveis até o template ficar pronto.
+- A segunda página da prévia do Diário volta a exibir o cartão completo da contracapa com uma chave ilustrativa identificada como prévia, sem registrar emissão; quando a validação pública estiver inativa, nenhuma página vazia é criada.
+- A impressão do Diário aguarda carregamento, valida Blob e MIME, trata timeout e sempre remove iframe e URL temporária sem duplicar a operação canônica.
+- O endereço textual do validador na prévia do Diário foi corrigido para `www.universocc.com.br/validador`.
+- Os cards sociais de início, EAD e especialização exibem o domínio institucional completo `universocc.com.br`.
+
+### Segurança
+
+- Histórico bruto, ledgers idempotentes e registros canônicos permanecem sem acesso direto do cliente; operações sensíveis passam somente pelas RPCs autorizadas.
+- Planilhas operacionais com dados de turmas e bundles locais de diagnóstico permanecem fora do repositório público.
+- QR Codes e URLs recusam origens privadas, credenciais embutidas e serviços externos de geração.
+
+### Qualidade
+
+- Contratos de migrations, políticas, QR, PDFs, validador, Realtime, concorrência e Diário foram incorporados ao runner e aos gates do GitHub Actions.
+- TypeScript, lint, controle de versão, testes documentais e build de produção são exigidos antes da publicação.
+
 ## [2.2.3-beta.9] - 2026-07-27
 
 ### Corrigido

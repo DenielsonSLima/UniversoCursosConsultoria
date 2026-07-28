@@ -10,15 +10,42 @@ export interface ContaBancaria {
   agencia: string;
   conta: string;
   tipo: string;
+  natureza?: 'BANCARIA' | 'CAIXA_INTERNO';
   poloId: string;
   poloNome?: string;
+  poloCnpj?: string;
+  poloCidade?: string;
+  poloUf?: string;
+  polosUso: string[];
   saldoInicial: number;
   dataSaldo?: string;
   ativo?: boolean;
   saldoAtual?: number;
+  saldoContabilConta?: number;
+  saldoGerencialPolo?: number;
+  compartilhada?: boolean;
   recebido?: number;
   pago?: number;
 }
+
+export interface FinanceiroPolo {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  cidade: string | null;
+  estado: string | null;
+  uf?: string | null;
+  is_matriz: boolean;
+}
+
+export const isContaDisponivelNoPolo = (
+  account: ContaBancaria,
+  poloId?: string | null,
+) => (
+  !poloId
+  || poloId === 'todos'
+  || account.polosUso.includes(poloId)
+);
 
 export interface ContasReceber {
   id?: string;
@@ -35,6 +62,8 @@ export interface ContasReceber {
   valorPago?: number;
   status: 'PENDENTE' | 'PAGO' | 'VENCIDO' | 'SUSPENSO' | 'ESTORNADO' | 'CANCELADO' | 'DEVOLVIDO';
   categoria: 'MENSALIDADE' | 'OUTROS_CREDITOS' | 'ADIANTAMENTO_TOMADO';
+  categoriaFinanceiraId?: string;
+  categoriaFinanceiraNome?: string;
   clienteId?: string;
   clienteNome?: string;
   clienteCpfCnpj?: string;
@@ -130,7 +159,13 @@ export interface TransferenciasFilters {
   mesAtual?: boolean;
 }
 
+export interface TransferenciasSummary {
+  totalValue: number;
+  totalCount: number;
+}
+
 export interface TransferenciaInput {
+  requestId: string;
   poloOrigemId: string;
   contaOrigemId: string;
   poloDestinoId: string;
@@ -176,6 +211,7 @@ export interface ReceivablesSummaryFilters {
   search?: string;
   dueStart?: string;
   dueEnd?: string;
+  categoryId?: string;
 }
 
 export type ReceivablesStatusScope = 'pending' | 'received' | 'canceled' | 'all';
@@ -287,8 +323,12 @@ const mapReceivableRpcRow = (row: any): ContasReceber => ({
 
 export const financeiroService = {
   // 1. Bancos & Saldos (Sem criação de conta aqui - agora é em configurações)
-  async getContasBancariasSaldos(): Promise<ContaBancaria[]> {
-    const { data, error } = await supabase.rpc('get_contas_bancarias_saldos');
+  async getContasBancariasSaldos(poloId?: string | null): Promise<ContaBancaria[]> {
+    const { data, error } = poloId && poloId !== 'todos'
+      ? await supabase.rpc('get_contas_bancarias_para_polo_secure', {
+          p_polo_id: poloId,
+        })
+      : await supabase.rpc('get_contas_bancarias_saldos');
     if (error) {
       console.error('Erro ao buscar contas bancárias e saldos:', error);
       throw error;
@@ -300,10 +340,21 @@ export const financeiroService = {
       agencia: cb.agencia,
       conta: cb.conta,
       tipo: cb.tipo,
+      natureza: cb.natureza || 'BANCARIA',
       poloId: cb.polo_id,
       poloNome: cb.polo_name || cb.polo_nome || '',
+      poloCnpj: cb.polo_cnpj || '',
+      poloCidade: cb.polo_cidade || '',
+      poloUf: cb.polo_uf || '',
+      polosUso: Array.isArray(cb.polos_uso) ? cb.polos_uso : [cb.polo_id].filter(Boolean),
       saldoInicial: Number(cb.saldo_inicial),
       saldoAtual: Number(cb.saldo_atual),
+      saldoContabilConta: Number(cb.saldo_contabil_conta ?? cb.saldo_atual ?? 0),
+      saldoGerencialPolo: cb.saldo_gerencial_polo === undefined
+        ? undefined
+        : Number(cb.saldo_gerencial_polo || 0),
+      compartilhada: cb.compartilhada === true
+        || (Array.isArray(cb.polos_uso) && cb.polos_uso.length > 1),
       recebido: Number(cb.recebido),
       pago: Number(cb.pago),
       ativo: cb.ativo
@@ -361,6 +412,7 @@ export const financeiroService = {
       .select(`
         *,
         parceiros(nome, cpf_cnpj, telefone),
+        categorias_financeiras(nome),
         polos!contas_receber_polo_id_fkey(nome, cnpj, cidade, estado),
         turmas(
           nome,
@@ -399,6 +451,8 @@ export const financeiroService = {
       valorPago: cr.valor_pago ? Number(cr.valor_pago) : undefined,
       status: cr.status,
       categoria: cr.categoria,
+      categoriaFinanceiraId: cr.categoria_financeira_id || undefined,
+      categoriaFinanceiraNome: cr.categorias_financeiras?.nome || undefined,
       clienteId: cr.cliente_id,
       clienteNome: cr.parceiros?.nome || 'Cliente Geral',
       clienteCpfCnpj: cr.parceiros?.cpf_cnpj || '',
@@ -612,7 +666,7 @@ export const financeiroService = {
       p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
       p_search: filters.search?.trim() || null,
       p_due_start: filters.dueStart || null,
-      p_due_end: filters.dueEnd || null
+      p_due_end: filters.dueEnd || null,
     });
 
     if (error) {
@@ -654,7 +708,8 @@ export const financeiroService = {
       p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
       p_search: filters.search?.trim() || null,
       p_due_start: filters.dueStart || null,
-      p_due_end: filters.dueEnd || null
+      p_due_end: filters.dueEnd || null,
+      p_categoria_id: filters.categoryId || null,
     });
 
     if (error) {
@@ -672,6 +727,7 @@ export const financeiroService = {
     valor: number;
     dataVencimento: string;
     clienteId?: string;
+    categoriaFinanceiraId?: string;
     formaPagamento?: 'BOLETO' | 'PIX' | 'CARTAO' | 'DINHEIRO';
     contaBancariaId?: string;
     mode: 'LOCAL_PAGO' | 'LOCAL_RECEBER' | 'GATEWAY';
@@ -691,6 +747,8 @@ export const financeiroService = {
       valorPago: data.valor_pago === null ? undefined : Number(data.valor_pago),
       status: data.status,
       categoria: data.categoria,
+      categoriaFinanceiraId: data.categoria_financeira_id || undefined,
+      categoriaFinanceiraNome: data.categorias_financeiras?.nome || undefined,
       clienteId: data.cliente_id,
       clienteNome: 'Cliente Geral',
       clienteCpfCnpj: '',
@@ -812,11 +870,13 @@ export const financeiroService = {
       descricao: cp.descricao,
       valor: cp.valor,
       data_vencimento: cp.dataVencimento,
-      status: cp.status || 'PENDENTE',
+      // Uma obrigação nasce em aberto. A baixa exige a RPC transacional abaixo,
+      // que valida conta, data, valor e idempotência no backend.
+      status: 'PENDENTE',
       categoria: cp.categoria,
       fornecedor_id: cp.fornecedorId || null,
       forma_pagamento: cp.formaPagamento || null,
-      conta_bancaria_id: cp.contaBancariaId || null
+      conta_bancaria_id: null
     });
     if (error) {
       console.error('Erro ao criar conta a pagar:', error);
@@ -833,16 +893,15 @@ export const financeiroService = {
       formaPagamento: 'BOLETO' | 'PIX' | 'TED' | 'DINHEIRO';
     }
   ): Promise<void> {
-    const { error } = await supabase
-      .from('contas_pagar')
-      .update({
-        status: 'PAGO',
-        conta_bancaria_id: params.contaBancariaId,
-        valor_pago: params.valorPago,
-        data_pagamento: params.dataPagamento,
-        forma_pagamento: params.formaPagamento
-      })
-      .eq('id', id);
+    const requestId = globalThis.crypto?.randomUUID?.()
+      || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const { error } = await supabase.rpc('baixar_conta_pagar_secure', {
+      p_conta_pagar_id: id,
+      p_request_id: requestId,
+      p_conta_bancaria_id: params.contaBancariaId,
+      p_data_pagamento: params.dataPagamento,
+      p_forma_pagamento: params.formaPagamento,
+    });
     if (error) {
       console.error('Erro ao liquidar conta a pagar:', error);
       throw error;
@@ -905,6 +964,30 @@ export const financeiroService = {
     }));
   },
 
+  async getTransferenciasSummary(
+    filters: TransferenciasFilters = {},
+  ): Promise<TransferenciasSummary> {
+    const { data, error } = await supabase.rpc('get_transferencias_summary_secure', {
+      p_polo_id: filters.poloId && filters.poloId !== 'todos' ? filters.poloId : null,
+      p_search: filters.search?.trim() || null,
+      p_conta_origem_id: filters.contaOrigemId || null,
+      p_conta_destino_id: filters.contaDestinoId || null,
+      p_data_inicio: filters.dataInicio || null,
+      p_data_fim: filters.dataFim || null,
+      p_mes_atual: filters.mesAtual === true,
+    });
+    if (error) {
+      console.error('Erro ao buscar resumo de transferências:', error);
+      throw error;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      totalValue: Number(row?.total_value || 0),
+      totalCount: Number(row?.total_count || 0),
+    };
+  },
+
   async createTransferencia(t: TransferenciaInput): Promise<string> {
     const { data, error } = await supabase.rpc('registrar_transferencia_conta', {
       p_polo_origem_id: t.poloOrigemId,
@@ -913,7 +996,8 @@ export const financeiroService = {
       p_conta_destino_id: t.contaDestinoId,
       p_valor: t.valor,
       p_data_transferencia: t.dataTransferencia,
-      p_observacao: t.observacao || null
+      p_observacao: t.observacao || null,
+      p_request_id: t.requestId,
     });
     if (error) {
       console.error('Erro ao registrar transferência:', error);
@@ -950,7 +1034,7 @@ export const financeiroService = {
   },
 
   // 6. Auxiliares
-  async getPolos(): Promise<any[]> {
+  async getPolos(): Promise<FinanceiroPolo[]> {
     const { data, error } = await supabase
       .from('polos')
       .select('id, nome, cnpj, cidade, estado, is_matriz')
@@ -963,10 +1047,22 @@ export const financeiroService = {
     return data || [];
   },
 
-  async getParceiros(): Promise<any[]> {
+  async getParceiros(poloId?: string): Promise<any[]> {
+    if (poloId && poloId !== 'todos') {
+      const { data, error } = await supabase.rpc(
+        'get_financeiro_credores_por_polo_secure',
+        { p_polo_id: poloId },
+      );
+      if (error) {
+        console.error('Erro ao buscar credores do polo no financeiro:', error);
+        throw error;
+      }
+      return Array.isArray(data) ? data : [];
+    }
+
     const { data, error } = await supabase
       .from('parceiros')
-      .select('id, nome, tipo, cpf_cnpj, email, telefone')
+      .select('id, nome, tipo, cpf_cnpj, email, telefone, foto_url, polo_id, polo_ids')
       .eq('status', 'ATIVO')
       .order('nome', { ascending: true });
     if (error) {

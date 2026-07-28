@@ -41,6 +41,11 @@ supabase/.temp
 !/banese homologacao/retornos/2026-07-16-bolepix-webhook-e-conciliacao.md
 /tmp/
 
+# Bundles locais de diagnóstico e planilhas operacionais com dados de turmas
+/scratch/
+/Documentos/turma*.xls
+/Documentos/radiologia*.xls
+
 # Boletos de homologação com dados pessoais (entrega local, nunca versionar)
 /output/pdf/banese-homologacao-*.pdf
 /output/pdf/banese/boletos/*.pdf

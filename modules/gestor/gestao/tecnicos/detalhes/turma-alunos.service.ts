@@ -28,7 +28,7 @@ export interface TurmaFinanceiroMatriculaConfig {
   valorParcela: number;
   descontoPontualidade: number;
   jurosAtraso: number;
-  multaAtraso: number;
+  multaAtrasoPercentual: number;
   aplicarDescontoMatricula: boolean;
   aplicarMultaJurosMatricula: boolean;
   aplicarDescontoMensalidade: boolean;
@@ -81,7 +81,7 @@ export const turmaAlunosService = {
   async getFinanceiroMatriculaConfig(turmaId: string): Promise<TurmaFinanceiroMatriculaConfig> {
     const { data, error } = await supabase
       .from('turmas')
-      .select('valor_matricula, valor_rematricula, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
+      .select('valor_matricula, valor_rematricula, valor_parcela, desconto_pontualidade, juros_atraso, multa_atraso_percentual, aplicar_desconto_matricula, aplicar_multa_juros_matricula, aplicar_desconto_mensalidade, aplicar_multa_juros_mensalidade, aplicar_desconto_rematricula, aplicar_multa_juros_rematricula, dia_vencimento_padrao, qtd_parcelas, origem_financeira, financeiro_herdado, gerar_cobrancas_futuras, sincronizar_asaas_futuro')
       .eq('id', turmaId)
       .single();
 
@@ -93,19 +93,19 @@ export const turmaAlunosService = {
       valorParcela: Number(data.valor_parcela || 0),
       descontoPontualidade: Number(data.desconto_pontualidade || 0),
       jurosAtraso: Number(data.juros_atraso || 0),
-      multaAtraso: Number(data.multa_atraso || 0),
-      aplicarDescontoMatricula: data.aplicar_desconto_matricula === true,
-      aplicarMultaJurosMatricula: data.aplicar_multa_juros_matricula !== false,
-      aplicarDescontoMensalidade: data.aplicar_desconto_mensalidade !== false,
-      aplicarMultaJurosMensalidade: data.aplicar_multa_juros_mensalidade !== false,
-      aplicarDescontoRematricula: data.aplicar_desconto_rematricula !== false,
-      aplicarMultaJurosRematricula: data.aplicar_multa_juros_rematricula !== false,
+      multaAtrasoPercentual: Number(data.multa_atraso_percentual || 0),
+      aplicarDescontoMatricula: false,
+      aplicarMultaJurosMatricula: false,
+      aplicarDescontoMensalidade: true,
+      aplicarMultaJurosMensalidade: true,
+      aplicarDescontoRematricula: false,
+      aplicarMultaJurosRematricula: false,
       diaVencimento: Number(data.dia_vencimento_padrao || 10),
       qtdParcelas: Number(data.qtd_parcelas),
       origemFinanceira: (data.origem_financeira === 'LEGADO' ? 'LEGADO' : 'NORMAL'),
       financeiroHerdado: data.financeiro_herdado ?? false,
       gerarCobrancasFuturas: data.gerar_cobrancas_futuras ?? false,
-      sincronizarAsaasFuturo: data.sincronizar_asaas_futuro !== false,
+      sincronizarAsaasFuturo: false,
     };
   },
 

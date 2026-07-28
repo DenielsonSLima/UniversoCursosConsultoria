@@ -40,44 +40,44 @@ export const fichaCadastralDefaultTemplate = {
       <div style="flex:1;">
         <h3 style="font-size:21px;margin:0 0 4px 0;color:#0f172a;text-transform:uppercase;">{{ALUNO_NOME}}</h3>
         <p style="margin:0 0 12px 0;font-size:12px;color:#475569;font-weight:800;text-transform:uppercase;">Curso: {{CURSO_NOME}}</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px;">
-          <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Matrícula</strong>{{ALUNO_MATRICULA}}</div>
-          <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Turma</strong>{{TURMA_NOME}}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px;color:#334155;font-weight:400;">
+          <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Matrícula</strong>{{ALUNO_MATRICULA}}</div>
+          <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Turma</strong>{{TURMA_NOME}}</div>
         </div>
       </div>
     </section>
 
     <h4 style="font-size:14px;text-transform:uppercase;border-bottom:2px solid #cbd5e1;padding-bottom:6px;margin:0 0 10px;color:#0f172a;">Dados pessoais</h4>
-    <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px 16px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:14px;font-size:12px;">
-      <div style="grid-column:span 2;"><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nome social</strong>{{ALUNO_NOME_SOCIAL}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">CPF</strong>{{ALUNO_CPF}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">RG / Documento</strong>{{ALUNO_RG}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nascimento</strong>{{ALUNO_NASCIMENTO}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Sexo</strong>{{ALUNO_SEXO}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Estado civil</strong>{{ALUNO_ESTADO_CIVIL}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nacionalidade</strong>{{ALUNO_NACIONALIDADE}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Naturalidade</strong>{{ALUNO_NATURALIDADE}}</div>
+    <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px 16px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:14px;font-size:12px;color:#334155;font-weight:400;">
+      <div style="grid-column:span 2;"><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Nome social</strong>{{ALUNO_NOME_SOCIAL}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">CPF</strong>{{ALUNO_CPF}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">RG / Documento</strong>{{ALUNO_RG}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Nascimento</strong>{{ALUNO_NASCIMENTO}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Sexo</strong>{{ALUNO_SEXO}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Estado civil</strong>{{ALUNO_ESTADO_CIVIL}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Nacionalidade</strong>{{ALUNO_NACIONALIDADE}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Naturalidade</strong>{{ALUNO_NATURALIDADE}}</div>
       <div style="grid-column:span 3;border-top:1px solid #e2e8f0;padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:18px;">
-        <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nome da mãe</strong>{{ALUNO_MAE}}</div>
-        <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Nome do pai</strong>{{ALUNO_PAI}}</div>
+        <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Nome da mãe</strong>{{ALUNO_MAE}}</div>
+        <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Nome do pai</strong>{{ALUNO_PAI}}</div>
       </div>
     </section>
 
     <h4 style="font-size:14px;text-transform:uppercase;border-bottom:2px solid #cbd5e1;padding-bottom:6px;margin:0 0 10px;color:#0f172a;">Contato e endereço</h4>
-    <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:14px;font-size:12px;">
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">E-mail</strong>{{ALUNO_EMAIL}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Celular / WhatsApp</strong>{{ALUNO_TELEFONE}}</div>
-      <div style="grid-column:span 2;"><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Endereço completo</strong>{{ALUNO_ENDERECO}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">CEP</strong>{{ALUNO_CEP}}</div>
+    <section style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:14px;font-size:12px;color:#334155;font-weight:400;">
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">E-mail</strong>{{ALUNO_EMAIL}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Celular / WhatsApp</strong>{{ALUNO_TELEFONE}}</div>
+      <div style="grid-column:span 2;"><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Endereço completo</strong>{{ALUNO_ENDERECO}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">CEP</strong>{{ALUNO_CEP}}</div>
     </section>
 
     <div data-page-break="true" style="height:330px;border-top:2px dashed #cbd5e1;margin:18px 0 26px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;">Página 2</div>
 
     <h4 style="font-size:14px;text-transform:uppercase;border-bottom:2px solid #cbd5e1;padding-bottom:6px;margin:0 0 10px;color:#0f172a;">Responsável legal e financeiro</h4>
-    <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:28px;font-size:12px;">
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Responsável</strong>{{ALUNO_RESPONSAVEL}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">CPF</strong>{{ALUNO_RESPONSAVEL_CPF}}</div>
-      <div><strong style="display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Telefone</strong>{{ALUNO_RESPONSAVEL_TELEFONE}}</div>
+    <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:rgba(255,255,255,.70);margin-bottom:28px;font-size:12px;color:#334155;font-weight:400;">
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Responsável</strong>{{ALUNO_RESPONSAVEL}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">CPF</strong>{{ALUNO_RESPONSAVEL_CPF}}</div>
+      <div><strong style="display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;">Telefone</strong>{{ALUNO_RESPONSAVEL_TELEFONE}}</div>
     </section>
 
     <section style="border-top:2px dashed #0f172a;padding-top:20px;margin-top:36px;font-size:10px;color:#475569;text-align:justify;line-height:1.7;">
@@ -115,8 +115,21 @@ export const fichaCadastralDefaultTemplate = {
   ],
   validityDays: 0,
   pageCount: 2,
-  v: 2,
+  v: 3,
 };
+
+const LEGACY_FIELD_LABEL_STYLE = 'display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;';
+const FIELD_LABEL_STYLE = 'display:block;margin-bottom:3px;font-size:10px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.07em;';
+
+const normalizeFichaCadastralTypography = (template: any) => ({
+  ...template,
+  textContent: String(template?.textContent || '')
+    .replaceAll(LEGACY_FIELD_LABEL_STYLE, FIELD_LABEL_STYLE)
+    .replaceAll('gap:14px;font-size:12px;">', 'gap:14px;font-size:12px;color:#334155;font-weight:400;">')
+    .replaceAll('margin-bottom:14px;font-size:12px;">', 'margin-bottom:14px;font-size:12px;color:#334155;font-weight:400;">')
+    .replaceAll('margin-bottom:28px;font-size:12px;">', 'margin-bottom:28px;font-size:12px;color:#334155;font-weight:400;">'),
+  v: fichaCadastralDefaultTemplate.v,
+});
 
 const fichaCadastralTemplateService = createDocumentTemplateService(
   'ficha_cadastral_aluno',
@@ -132,9 +145,17 @@ export const fichaCadastralService = {
     if (!template?.v || Number(template.v) < 2 || !hasTwoPageStructure || Number((template as any).pageCount || 1) < 2) {
       return JSON.parse(JSON.stringify(fichaCadastralDefaultTemplate));
     }
+    const normalizedTemplate = Number(template.v || 0) < fichaCadastralDefaultTemplate.v
+      ? normalizeFichaCadastralTypography(template)
+      : template;
+
+    if (normalizedTemplate !== template) {
+      await fichaCadastralTemplateService.saveTemplate(poloId, normalizedTemplate).catch(() => false);
+    }
+
     return {
-      ...template,
-      pageCount: Math.max(2, Number((template as any).pageCount || 2)),
+      ...normalizedTemplate,
+      pageCount: Math.max(2, Number((normalizedTemplate as any).pageCount || 2)),
     };
   },
 };

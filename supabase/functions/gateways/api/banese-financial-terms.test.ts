@@ -9,8 +9,9 @@ const receivable = {
 
 const turma = {
   desconto_pontualidade: 19.9,
-  juros_atraso: 5,
-  multa_atraso: 5,
+  juros_atraso: 1,
+  multa_atraso: 5.6,
+  multa_atraso_percentual: 2,
   aplicar_desconto_mensalidade: true,
   aplicar_multa_juros_mensalidade: true,
 };
@@ -21,8 +22,8 @@ Deno.test("resolve os termos mensais configurados para o Banese", () => {
     nominalAmount: 279.9,
     dueDate: "2026-08-10",
     discount: { type: "fixed", value: 19.9 },
-    interest: { type: "monthly-percentage", value: 5 },
-    penalty: { type: "fixed", value: 5 },
+    interest: { type: "monthly-percentage", value: 1 },
+    penalty: { type: "percentage", value: 2 },
   });
 });
 
@@ -34,11 +35,23 @@ Deno.test("override individual zero desativa cada termo", () => {
       desconto_pontualidade_individual: 0,
       juros_atraso_individual: 0,
       multa_atraso_individual: 0,
+      multa_atraso_percentual_individual: 0,
     },
   });
   assert.equal(result.discount, null);
   assert.equal(result.interest, null);
   assert.equal(result.penalty, null);
+});
+
+Deno.test("mantem compatibilidade com multa fixa quando nao existe percentual", () => {
+  const result = buildConfiguredBaneseFinancialTerms({
+    receivable,
+    turma: {
+      ...turma,
+      multa_atraso_percentual: null,
+    },
+  });
+  assert.deepEqual(result.penalty, { type: "fixed", value: 5.6 });
 });
 
 Deno.test("respeita flags por tipo de lancamento", () => {

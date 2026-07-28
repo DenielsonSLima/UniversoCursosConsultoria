@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 import ToastNotification, { useToast } from '../../../../../parceiros/components/shared/ToastNotification';
 import { diariosService } from '../../../../../cadastros/modelos-documentos/diarios/diarios.service';
 import DiarioClasseHeader from './DiarioClasseHeader';
-import DiarioClasseFooter from './DiarioClasseFooter';
 import DiarioConteudoTab from './DiarioConteudoTab';
 import DiarioFrequenciaTab from './DiarioFrequenciaTab';
 import DiarioObservacoesTab from './DiarioObservacoesTab';
@@ -342,21 +341,24 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     });
   };
 
-  const printProps = useMemo(() => ({
-    template: diarioTemplate!,
-    turma,
-    disciplina,
-    moduloNome,
-    students,
-    aulas,
-    attendanceMap,
-    gradesMap,
-    praticasMap,
-    observacoes: dbObservacoes,
-    activeInstruments,
-    watermark,
-    exportMode,
-  }), [
+  const printProps = useMemo(() => {
+    if (!diarioTemplate) return null;
+    return {
+      template: diarioTemplate,
+      turma,
+      disciplina,
+      moduloNome,
+      students,
+      aulas,
+      attendanceMap,
+      gradesMap,
+      praticasMap,
+      observacoes: dbObservacoes,
+      activeInstruments,
+      watermark,
+      exportMode,
+    };
+  }, [
     activeInstruments,
     attendanceMap,
     aulas,
@@ -372,10 +374,12 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     watermark,
   ]);
 
-  const { downloadingPdf, printingPdf, downloadPdf, printPdf } = useDiarioPdfDownload({
-    printProps,
-    toast,
-  });
+  const {
+    downloadingPdf,
+    printingPdf,
+    downloadPdf,
+    printPdf,
+  } = useDiarioPdfDownload({ printProps, toast });
   const hasPendingWrites = toggleAttendanceMutation.isPending
     || saveStudentGradesMutation.isPending
     || savePraticaMutation.isPending
@@ -524,10 +528,9 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
             </div>
           )}
         </div>
-        <DiarioClasseFooter disciplina={disciplina} />
       </div>
 
-      {diarioTemplate && (
+      {diarioTemplate && printProps && (
         <>
           <DiarioExportModal
             isOpen={isExportModalOpen}

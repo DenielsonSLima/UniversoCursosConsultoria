@@ -28,8 +28,14 @@ const CalendarioProfessorPage = lazy(() => import('./calendario/CalendarioProfes
 interface ProfessorPoloTransitionState {
   fromPoloId: string;
   fromPoloName: string;
+  fromPoloCity?: string | null;
+  fromPoloState?: string | null;
+  fromPoloIsMatriz?: boolean;
   toPoloId: string;
   toPoloName: string;
+  toPoloCity?: string | null;
+  toPoloState?: string | null;
+  toPoloIsMatriz?: boolean;
   status: PoloTransitionStatus;
   errorMessage?: string;
 }
@@ -170,8 +176,14 @@ const ProfessorPage: React.FC = () => {
     setPoloTransition({
       fromPoloId: previousPoloId,
       fromPoloName: currentPolo.nome,
+      fromPoloCity: currentPolo.cidade,
+      fromPoloState: currentPolo.estado,
+      fromPoloIsMatriz: currentPolo.is_matriz,
       toPoloId: poloId,
       toPoloName: nextPolo.nome,
+      toPoloCity: nextPolo.cidade,
+      toPoloState: nextPolo.estado,
+      toPoloIsMatriz: nextPolo.is_matriz,
       status: 'loading',
     });
 
@@ -308,7 +320,13 @@ const ProfessorPage: React.FC = () => {
           <PoloTransitionOverlay
             isOpen
             fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
             toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
             status="error"
             errorMessage={poloTransition.errorMessage}
             onRetry={() => { void executePoloChange(poloTransition.toPoloId); }}
@@ -318,7 +336,13 @@ const ProfessorPage: React.FC = () => {
           <PoloTransitionOverlay
             isOpen
             fromPoloName={poloTransition.fromPoloName}
+            fromPoloCity={poloTransition.fromPoloCity}
+            fromPoloState={poloTransition.fromPoloState}
+            fromPoloIsMatriz={poloTransition.fromPoloIsMatriz}
             toPoloName={poloTransition.toPoloName}
+            toPoloCity={poloTransition.toPoloCity}
+            toPoloState={poloTransition.toPoloState}
+            toPoloIsMatriz={poloTransition.toPoloIsMatriz}
             status={poloTransition.status}
           />
         )

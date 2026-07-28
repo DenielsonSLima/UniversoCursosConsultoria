@@ -48,7 +48,9 @@ export const presentBaneseFinancialTerms = (
       }`,
       value: terms.penalty.type === "fixed"
         ? money(terms.penalty.value)
-        : percentage(terms.penalty.value),
+        : `${percentage(terms.penalty.value)} = ${
+          money(terms.nominalAmount * terms.penalty.value / 100)
+        }`,
     }
     : { label: "Multa após o vencimento", value: "Sem multa" };
   const interestAmountPerDay = terms.interest
@@ -67,4 +69,3 @@ export const presentBaneseFinancialTerms = (
 
   return { terms, discount, penalty, interest, amountUntilDue };
 };
-

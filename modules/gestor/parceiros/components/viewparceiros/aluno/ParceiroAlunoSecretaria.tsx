@@ -9,12 +9,16 @@ import { declaracaoService } from '../../../../cadastros/modelos-documentos/decl
 import { irpfService } from '../../../../cadastros/modelos-documentos/irpf/irpf.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { academicosService } from '../../../../configuracoes/academicos/academicos.service';
-import { useDocumentValidationCode } from '../../../../../shared/document-validation/use-document-validation-code';
+import {
+  useDocumentValidationCode,
+  useDocumentValidationReissue,
+} from '../../../../../shared/document-validation/use-document-validation-code';
 import { formatIrpfReleaseDate, getDefaultIrpfCalendarYear, getIrpfCalendarYearOptions, isIrpfYearReleased } from '../../../../../../lib/irpfYearUtils';
 import AcademicResultsModal from '../../../../../shared/secretaria/AcademicResultsModal';
 import TemplateDocumentModal from '../../../../../shared/secretaria/TemplateDocumentModal';
 import { secretariaAcademicResultsService } from '../../../../../shared/secretaria/academic-results.service';
 import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValidationUrl } from '../../../../../shared/secretaria/document-template.helpers';
+import { waitForQrCodeAssets } from '../../../../../shared/qrcode/qr-code-assets';
 import ParceiroSolicitacoesPanel from './ParceiroSolicitacoesPanel';
 
 interface ParceiroAlunoSecretariaProps { alunoId: string }
@@ -76,7 +80,16 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
   const irpfYearOptions = getIrpfCalendarYearOptions(irpfReleaseDate);
   const irpfReleaseLabel = formatIrpfReleaseDate(selectedIrpfYear, irpfReleaseDate);
   const irpfReleased = isIrpfYearReleased(selectedIrpfYear, irpfReleaseDate);
-  const irpfValidation = useDocumentValidationCode(irpfEnrollment ? { type: 'declaracao_irpf', enrollmentId: irpfEnrollment.id, referencePeriod: String(selectedIrpfYear), registerReissue: true } : null, irpfOpen && irpfReleased);
+  const irpfValidationInput = irpfEnrollment ? {
+    type: 'declaracao_irpf' as const,
+    enrollmentId: irpfEnrollment.id,
+    referencePeriod: String(selectedIrpfYear),
+  } : null;
+  const irpfValidation = useDocumentValidationCode(
+    irpfValidationInput,
+    irpfOpen && irpfReleased,
+  );
+  const irpfReissue = useDocumentValidationReissue(irpfValidationInput);
   const { data: irpfPayments = [] } = useQuery<any[]>({
     queryKey: ['secretaria-aluno-irpf-payments', alunoId, selectedIrpfYear, irpfEnrollment?.turma_id || null],
     queryFn: () => alunoSecretariaService.getPagamentosIrpf(alunoId, String(selectedIrpfYear), irpfEnrollment?.turma_id),
@@ -117,6 +130,31 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
     window.alert(`Solicitação ${action === 'deferir' ? 'deferida' : 'indeferida'} com sucesso!`);
   };
   const printRegistered = (code: string | undefined, label: string) => code ? window.print() : window.alert(`Aguarde o registro do código da ${label}.`);
+  const printRegisteredIrpf = async () => {
+    if (!irpfValidationInput) {
+      window.alert('Nenhuma matrícula técnica elegível para a declaração de IRPF.');
+      return;
+    }
+    try {
+      await irpfReissue.reissue();
+      // Aguarda o cache atualizar o QR renderizado com o resultado canônico.
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => resolve());
+        });
+      });
+      const printArea = document.getElementById('print-area-irpf');
+      if (!printArea) return;
+      await waitForQrCodeAssets(printArea);
+      window.print();
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível registrar a reemissão da declaração de IRPF.',
+      );
+    }
+  };
 
   const alunoCpf = aluno?.cpf_cnpj || aluno?.cpf || '';
   const variableEnrollment = irpfOpen ? irpfEnrollment : activeEnrollment;
@@ -135,7 +173,7 @@ const ParceiroAlunoSecretaria: React.FC<ParceiroAlunoSecretariaProps> = ({ aluno
       <ParceiroSolicitacoesPanel solicitacoes={requests} selected={selectedRequest} action={action} response={documentResponse} justification={justification} onSelect={setSelectedRequest} onActionChange={setAction} onResponseChange={setDocumentResponse} onJustificationChange={setJustification} onSubmit={(event) => void onRequestSubmit(event)} />
       <AcademicResultsModal open={bulletinOpen} onClose={() => setBulletinOpen(false)} results={academicResults} courseName={activeEnrollment?.turmas?.cursos?.nome} classCode={activeEnrollment?.turmas?.codigo} poloName={activeEnrollment?.turmas?.polos?.nome} onPrint={() => window.print()} />
       <TemplateDocumentModal open={declarationOpen} onClose={() => setDeclarationOpen(false)} title="Declaração de Cursando Digital" documentTitle="Declaração de Matrícula" printAreaId="print-area" code={declarationValidation.data?.code || declarationCode} validationUrl={declarationUrl} template={declarationTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} onPrint={() => printRegistered(declarationValidation.data?.code, 'declaração')} showFooter />
-      <TemplateDocumentModal open={irpfOpen} onClose={() => setIrpfOpen(false)} title="Declaração de Rendimentos (IRPF)" documentTitle="Declaração de Anuidade / Rendimentos Escolares" printAreaId="print-area-irpf" code={irpfValidation.data?.code || irpfCode} validationUrl={irpfUrl} template={irpfTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} accent="emerald" printDisabled={!irpfReleased || !irpfPayments.length} onPrint={() => printRegistered(irpfValidation.data?.code, 'declaração de IRPF')} showFooter beforeDocument={<div className="w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg print:hidden"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ano-calendário</p><select value={selectedIrpfYear} onChange={(event) => setSelectedIrpfYear(Number(event.target.value))} className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-[#001a33]">{irpfYearOptions.map((option) => <option key={option.year} value={option.year}>{option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}</option>)}</select><p className="mt-2 text-[10px] font-semibold text-slate-500">{irpfReleased ? `Pode emitir a declaração referente aos pagamentos de ${selectedIrpfYear}.` : `Disponível a partir de ${irpfReleaseLabel}.`}</p></div>} />
+      <TemplateDocumentModal open={irpfOpen} onClose={() => setIrpfOpen(false)} title="Declaração de Rendimentos (IRPF)" documentTitle="Declaração de Anuidade / Rendimentos Escolares" printAreaId="print-area-irpf" code={irpfValidation.data?.code || irpfCode} validationUrl={irpfUrl} template={irpfTemplate} polo={polo} watermark={watermark} replaceVariables={replaceVariables} accent="emerald" printDisabled={!irpfReleased || !irpfPayments.length || irpfReissue.isPending} onPrint={() => void printRegisteredIrpf()} showFooter beforeDocument={<div className="w-[794px] max-w-full rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg print:hidden"><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ano-calendário</p><select value={selectedIrpfYear} onChange={(event) => setSelectedIrpfYear(Number(event.target.value))} className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-[#001a33]">{irpfYearOptions.map((option) => <option key={option.year} value={option.year}>{option.year}{option.released ? '' : ` - libera em ${option.releaseLabel}`}</option>)}</select><p className="mt-2 text-[10px] font-semibold text-slate-500">{irpfReleased ? `Pode emitir a declaração referente aos pagamentos de ${selectedIrpfYear}.` : `Disponível a partir de ${irpfReleaseLabel}.`}</p></div>} />
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
     </div>
   );

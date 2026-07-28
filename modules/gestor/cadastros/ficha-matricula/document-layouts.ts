@@ -33,16 +33,39 @@ export const FICHA_ALUNO_VARIABLES = [
 ];
 
 const cell = (title: string, token: string, span = '') => `
-  <div style="${span}min-width:0;">
-    <strong style="display:block;margin-bottom:2px;font-size:7px;line-height:1.1;color:#475569;text-transform:uppercase;letter-spacing:.06em;">${title}</strong>
-    <span style="display:block;font-size:inherit;line-height:1.2;color:#0f172a;font-weight:700;">${token}</span>
+  <div style="${span}min-width:0;min-height:0;overflow:hidden;">
+    <strong style="display:block;margin-bottom:3px;font-size:8px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">${title}</strong>
+    <span style="display:-webkit-box;font-size:inherit;line-height:1.25;color:#334155;font-weight:400;overflow:hidden;overflow-wrap:anywhere;word-break:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2;">${token}</span>
   </div>
 `;
 
-const sectionBlock = (title: string, content: string, columns: string) => `
-  <section style="border:1px solid #cbd5e1;border-radius:7px;background-color:rgba(255,255,255,.9);overflow:hidden;">
+const LEGACY_FIELD_LABEL_STYLE = 'display:block;margin-bottom:2px;font-size:7px;line-height:1.1;color:#475569;text-transform:uppercase;letter-spacing:.06em;';
+const FIELD_LABEL_STYLE = 'display:block;margin-bottom:3px;font-size:8px;line-height:1.15;color:#0f172a;font-weight:800;text-transform:uppercase;letter-spacing:.06em;';
+const LEGACY_FIELD_VALUE_STYLE = 'display:block;font-size:inherit;line-height:1.2;color:#0f172a;font-weight:700;';
+const FIELD_VALUE_STYLE = 'display:block;font-size:inherit;line-height:1.3;color:#334155;font-weight:400;overflow-wrap:anywhere;word-break:normal;';
+
+const normalizeRegistrationHtmlTypography = (html: unknown) => String(html || '')
+  .replaceAll(LEGACY_FIELD_LABEL_STYLE, FIELD_LABEL_STYLE)
+  .replaceAll(LEGACY_FIELD_VALUE_STYLE, FIELD_VALUE_STYLE);
+
+export const normalizeRegistrationTemplateTypography = (template: any, version = 6) => ({
+  ...template,
+  textContent: normalizeRegistrationHtmlTypography(template?.textContent),
+  absoluteFields: Array.isArray(template?.absoluteFields)
+    ? template.absoluteFields.map((field: any) => ({
+        ...field,
+        value: field?.type === 'text'
+          ? normalizeRegistrationHtmlTypography(field.value)
+          : field.value,
+      }))
+    : template?.absoluteFields,
+  v: version,
+});
+
+const sectionBlock = (title: string, content: string, columns: string, rows = 1) => `
+  <section style="height:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:7px;background-color:rgba(255,255,255,.9);overflow:hidden;">
     <h4 style="margin:0;padding:4px 7px;border-bottom:1px solid #dbeafe;background-color:#eff6ff;color:#001a33;font-size:8px;line-height:1.1;text-transform:uppercase;letter-spacing:.08em;">${title}</h4>
-    <div style="display:grid;grid-template-columns:${columns};gap:7px 12px;padding:7px 8px;">
+    <div style="height:calc(100% - 18px);box-sizing:border-box;display:grid;grid-template-columns:${columns};grid-template-rows:repeat(${rows},minmax(0,1fr));gap:5px 12px;padding:6px 8px;">
       ${content}
     </div>
   </section>
@@ -63,6 +86,7 @@ const movableTextBlock = (
   x: number,
   y: number,
   width = 642,
+  height?: number,
 ) => ({
   id,
   type: 'text',
@@ -70,34 +94,85 @@ const movableTextBlock = (
   x,
   y,
   width,
+  ...(height ? { height } : {}),
   style: {
     color: '#0f172a',
     fontFamily: '"Times New Roman", Times, serif',
     fontSize: '10px',
     textAlign: 'left',
+    boxSizing: 'border-box',
+    padding: 0,
     zIndex: 30,
   },
 });
 
-const movableStudentPhoto = (x: number, y: number) => ({
+const movableStudentPhoto = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) => ({
   id: 'student_photo',
   type: 'image',
   value: '{{ALUNO_FOTO_URL}}',
   x,
   y,
-  width: 72,
-  height: 96,
+  width,
+  height,
   style: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
     border: '1px solid #94a3b8',
     borderRadius: '6px',
     overflow: 'hidden',
+    objectFit: 'contain',
+    objectPosition: 'center',
     zIndex: 35,
   },
 });
 
+const REGISTRATION_START_Y = 350;
+const REGISTRATION_SECTION_GAP = 10;
+const nextSectionY = (y: number, height: number) => (
+  y + height + REGISTRATION_SECTION_GAP
+);
+
+const IDENTITY_HEIGHT = 134;
+const NEEDS_HEIGHT = 58;
+const ADDRESS_HEIGHT = 118;
+const DOCUMENTS_HEIGHT = 92;
+const SCHOOL_HEIGHT = 78;
+const TERM_HEIGHT = 52;
+const CUSTOM_FIELDS_HEIGHT = 62;
+const SIGNATURES_HEIGHT = 42;
+const OBSERVATIONS_HEIGHT = 46;
+const LOCAL_DATE_HEIGHT = 16;
+const REGISTRATION_CONTENT_X = 76;
+const REGISTRATION_CONTENT_RIGHT = 718;
+const IDENTITY_MEDIA_GAP = 10;
+const STUDENT_PHOTO_WIDTH = IDENTITY_HEIGHT * (3 / 4);
+const IDENTITY_CARD_X = REGISTRATION_CONTENT_X
+  + STUDENT_PHOTO_WIDTH
+  + IDENTITY_MEDIA_GAP;
+const IDENTITY_CARD_WIDTH = REGISTRATION_CONTENT_RIGHT - IDENTITY_CARD_X;
+
+const pastaIdentityY = REGISTRATION_START_Y;
+const pastaNeedsY = nextSectionY(pastaIdentityY, IDENTITY_HEIGHT);
+const pastaAddressY = nextSectionY(pastaNeedsY, NEEDS_HEIGHT);
+const pastaDocumentsY = nextSectionY(pastaAddressY, ADDRESS_HEIGHT);
+const pastaSchoolY = nextSectionY(pastaDocumentsY, DOCUMENTS_HEIGHT);
+
+const fichaIdentityY = REGISTRATION_START_Y;
+const fichaAddressY = nextSectionY(fichaIdentityY, IDENTITY_HEIGHT);
+const fichaDocumentsY = nextSectionY(fichaAddressY, ADDRESS_HEIGHT);
+const fichaSchoolY = nextSectionY(fichaDocumentsY, DOCUMENTS_HEIGHT);
+const fichaTermY = nextSectionY(fichaSchoolY, SCHOOL_HEIGHT);
+const fichaCustomFieldsY = nextSectionY(fichaTermY, TERM_HEIGHT);
+const fichaSignaturesY = nextSectionY(fichaCustomFieldsY, CUSTOM_FIELDS_HEIGHT);
+const fichaObservationsY = nextSectionY(fichaSignaturesY, SIGNATURES_HEIGHT);
+const fichaLocalDateY = nextSectionY(fichaObservationsY, OBSERVATIONS_HEIGHT);
+
 const pastaIdentityBlock = `
-  <section style="display:grid;grid-template-columns:2fr .65fr .8fr;gap:7px 12px;border:1px solid #94a3b8;border-radius:8px;padding:8px;background-color:rgba(255,255,255,.9);">
+  <section style="height:100%;box-sizing:border-box;display:grid;grid-template-columns:2fr .65fr .8fr;grid-template-rows:repeat(4,minmax(0,1fr));gap:5px 12px;border:1px solid #94a3b8;border-radius:8px;padding:7px 8px;background-color:rgba(255,255,255,.9);overflow:hidden;">
     ${cell('Nome completo do aluno', '{{ALUNO_NOME}}', 'grid-column:span 2;')}
     ${cell('Matrícula', '{{ALUNO_MATRICULA}}')}
     ${cell('Filiação — Mãe', '{{ALUNO_MAE}}', 'grid-column:span 2;')}
@@ -123,6 +198,7 @@ const addressBlock = sectionBlock(
     ${cell('E-mail', '{{ALUNO_EMAIL}}', 'grid-column:span 4;')}
   `,
   '2fr .45fr 1.15fr .8fr',
+  3,
 );
 
 const documentsBlock = sectionBlock(
@@ -136,6 +212,7 @@ const documentsBlock = sectionBlock(
     ${cell('Reservista', '{{ALUNO_RESERVISTA}}', 'grid-column:span 2;')}
   `,
   '1fr 1fr .8fr 1fr',
+  2,
 );
 
 const pastaSchoolBlock = sectionBlock(
@@ -145,11 +222,12 @@ const pastaSchoolBlock = sectionBlock(
     ${cell('Turma', '{{TURMA_NOME}}')}
     ${cell('Turno', '{{CURSO_TURNO}}')}
   `,
-  '1.8fr .8fr .8fr',
+  '1.65fr 1.1fr .45fr',
+  1,
 );
 
 const fichaIdentityBlock = `
-  <section style="display:grid;grid-template-columns:2fr .65fr .9fr;gap:7px 12px;border:1px solid #94a3b8;border-radius:8px;padding:8px;background-color:rgba(255,255,255,.9);">
+  <section style="height:100%;box-sizing:border-box;display:grid;grid-template-columns:2fr .65fr .9fr;grid-template-rows:repeat(4,minmax(0,1fr));gap:5px 12px;border:1px solid #94a3b8;border-radius:8px;padding:7px 8px;background-color:rgba(255,255,255,.9);overflow:hidden;">
     ${cell('Nome completo do aluno', '{{ALUNO_NOME}}', 'grid-column:span 2;')}
     ${cell('Sexo', '{{ALUNO_SEXO}}')}
     ${cell('Filiação — Mãe', '{{ALUNO_MAE}}', 'grid-column:span 2;')}
@@ -168,14 +246,27 @@ const fichaSchoolBlock = sectionBlock(
     ${cell('Turma', '{{TURMA_NOME}}')}
     ${cell('Turno', '{{CURSO_TURNO}}')}
   `,
-  '1.7fr .75fr .75fr .7fr',
+  '1.6fr .65fr 1.1fr .45fr',
+  1,
 );
 
 export const pastaIdentificacaoDefaultTemplate = {
   textContent: '<div style="min-height:1px;"></div>',
   absoluteFields: [
-    movableTextBlock('pasta_identificacao', pastaIdentityBlock, 76, 350, 552),
-    movableStudentPhoto(646, 350),
+    movableStudentPhoto(
+      REGISTRATION_CONTENT_X,
+      pastaIdentityY,
+      STUDENT_PHOTO_WIDTH,
+      IDENTITY_HEIGHT,
+    ),
+    movableTextBlock(
+      'pasta_identificacao',
+      pastaIdentityBlock,
+      IDENTITY_CARD_X,
+      pastaIdentityY,
+      IDENTITY_CARD_WIDTH,
+      IDENTITY_HEIGHT,
+    ),
     movableTextBlock(
       'pasta_necessidades',
       sectionBlock(
@@ -184,26 +275,54 @@ export const pastaIdentificacaoDefaultTemplate = {
         '.5fr 2.5fr',
       ),
       76,
-      458,
+      pastaNeedsY,
+      642,
+      NEEDS_HEIGHT,
     ),
-    movableTextBlock('pasta_endereco', addressBlock, 76, 510),
-    movableTextBlock('pasta_documentos', documentsBlock, 76, 620),
-    movableTextBlock('pasta_escolar', pastaSchoolBlock, 76, 700),
-    movableTextBlock('pasta_rodape', institutionalFooter, 76, 758),
+    movableTextBlock('pasta_endereco', addressBlock, 76, pastaAddressY, 642, ADDRESS_HEIGHT),
+    movableTextBlock(
+      'pasta_documentos',
+      documentsBlock,
+      76,
+      pastaDocumentsY,
+      642,
+      DOCUMENTS_HEIGHT,
+    ),
+    movableTextBlock('pasta_escolar', pastaSchoolBlock, 76, pastaSchoolY, 642, SCHOOL_HEIGHT),
+    movableTextBlock('pasta_rodape', institutionalFooter, 76, 1000),
   ],
   validityDays: 0,
   pageCount: 1,
-  v: 5,
+  v: 9,
 };
 
 export const fichaMatriculaDefaultTemplate = {
   textContent: '<div style="min-height:1px;"></div>',
   absoluteFields: [
-    movableStudentPhoto(76, 350),
-    movableTextBlock('ficha_identificacao', fichaIdentityBlock, 158, 350, 560),
-    movableTextBlock('ficha_endereco', addressBlock, 76, 458),
-    movableTextBlock('ficha_documentos', documentsBlock, 76, 568),
-    movableTextBlock('ficha_escolar', fichaSchoolBlock, 76, 648),
+    movableStudentPhoto(
+      REGISTRATION_CONTENT_X,
+      fichaIdentityY,
+      STUDENT_PHOTO_WIDTH,
+      IDENTITY_HEIGHT,
+    ),
+    movableTextBlock(
+      'ficha_identificacao',
+      fichaIdentityBlock,
+      IDENTITY_CARD_X,
+      fichaIdentityY,
+      IDENTITY_CARD_WIDTH,
+      IDENTITY_HEIGHT,
+    ),
+    movableTextBlock('ficha_endereco', addressBlock, 76, fichaAddressY, 642, ADDRESS_HEIGHT),
+    movableTextBlock(
+      'ficha_documentos',
+      documentsBlock,
+      76,
+      fichaDocumentsY,
+      642,
+      DOCUMENTS_HEIGHT,
+    ),
+    movableTextBlock('ficha_escolar', fichaSchoolBlock, 76, fichaSchoolY, 642, SCHOOL_HEIGHT),
     movableTextBlock(
       'ficha_termo',
       `
@@ -213,10 +332,26 @@ export const fichaMatriculaDefaultTemplate = {
         </section>
       `,
       76,
-      706,
+      fichaTermY,
+      642,
+      TERM_HEIGHT,
     ),
-    movableTextBlock('ficha_campos_extras', '{{FICHA_CAMPOS_EXTRAS}}', 76, 770),
-    movableTextBlock('ficha_assinaturas', '{{FICHA_ASSINATURAS}}', 76, 820),
+    movableTextBlock(
+      'ficha_campos_extras',
+      '{{FICHA_CAMPOS_EXTRAS}}',
+      76,
+      fichaCustomFieldsY,
+      642,
+      CUSTOM_FIELDS_HEIGHT,
+    ),
+    movableTextBlock(
+      'ficha_assinaturas',
+      '{{FICHA_ASSINATURAS}}',
+      76,
+      fichaSignaturesY,
+      642,
+      SIGNATURES_HEIGHT,
+    ),
     movableTextBlock(
       'ficha_observacoes',
       `
@@ -225,13 +360,17 @@ export const fichaMatriculaDefaultTemplate = {
         </section>
       `,
       76,
-      875,
+      fichaObservationsY,
+      500,
+      OBSERVATIONS_HEIGHT,
     ),
     movableTextBlock(
       'ficha_local_data',
       '<p style="margin:0;text-align:right;color:#475569;font-size:8px;line-height:1.2;font-weight:700;">{{LOCAL_DOCUMENTO}}, {{DATA_ATUAL}}</p>',
       76,
-      930,
+      fichaLocalDateY,
+      500,
+      LOCAL_DATE_HEIGHT,
     ),
   ],
   validityDays: 0,
@@ -239,7 +378,7 @@ export const fichaMatriculaDefaultTemplate = {
   enrollmentFormTerm: 'Solicito minha matrícula no curso acima identificado e declaro que os dados informados são verdadeiros. Estou ciente das normas acadêmicas e administrativas da unidade escolar.',
   enrollmentFormCustomFields: [],
   enrollmentFormRequiresSignature: true,
-  v: 5,
+  v: 9,
 };
 
 const pastaIdentificacaoBaseService = createDocumentTemplateService(

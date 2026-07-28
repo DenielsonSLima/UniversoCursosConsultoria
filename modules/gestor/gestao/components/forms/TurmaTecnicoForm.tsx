@@ -59,7 +59,7 @@ const TurmaTecnicoForm: React.FC<TurmaTecnicoFormProps> = ({
     origemFinanceira: 'NORMAL' as const,
     financeiroHerdado: false,
     gerarCobrancasFuturas: true,
-    sincronizarAsaasFuturo: true,
+    sincronizarAsaasFuturo: false,
     // Campos calculados
     nomeAutomatico: '',
     codigoAutomatico: ''

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Award, BookOpen, CheckCircle2, Eye, Filter, GraduationCap,
   Loader2, MonitorPlay, Printer, Search, Settings2, X, Zap,
@@ -12,6 +13,8 @@ import {
   useFinalizarCertificadoMutation,
 } from './certificados.queries';
 import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
+import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
 
 const MODALIDADES = [
   { id: 'TECNICO', label: 'Cursos Técnicos', icon: GraduationCap },
@@ -32,6 +35,7 @@ const formatDate = (date?: string | null) =>
 
 const SecretariaCertificadosPage: React.FC = () => {
   const context = getSecretariaContext();
+  const certificatePrintRef = useRef<HTMLDivElement>(null);
   const [modalidade, setModalidade] = useState<CertificadoModalidade>('TECNICO');
   const [status, setStatus] = useState<CertificadoStatus>('PENDENTE');
   const [search, setSearch] = useState('');
@@ -48,6 +52,12 @@ const SecretariaCertificadosPage: React.FC = () => {
   const certificadosQuery = useCertificadosQuery({ modalidade, status, turmaId, poloId });
   const turmasQuery = useCertificadoTurmasQuery(modalidade, poloId);
   const templatesQuery = useCertificadoTemplatesQuery();
+  const validationSnapshotQuery = useQuery({
+    queryKey: ['certificate-validation-snapshot', preview?.codigo_validacao || 'nenhum'],
+    queryFn: () => documentValidationService.getSnapshot(preview!.codigo_validacao!),
+    enabled: Boolean(preview?.codigo_validacao),
+    staleTime: 60_000,
+  });
   const finalizarMutation = useFinalizarCertificadoMutation();
   const items = certificadosQuery.data || [];
   const turmas = turmasQuery.data || [];
@@ -61,6 +71,21 @@ const SecretariaCertificadosPage: React.FC = () => {
       turmasQuery.refetch(),
       templatesQuery.refetch(),
     ]);
+  };
+
+  const handlePrintCertificate = async () => {
+    if (!certificatePrintRef.current) return;
+    try {
+      await waitForQrCodeAssets(certificatePrintRef.current);
+      window.print();
+    } catch (error) {
+      console.error('[SecretariaCertificadosPage] QR Code indisponível:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar o QR Code para impressão.',
+      );
+    }
   };
 
   useEffect(() => {
@@ -124,6 +149,14 @@ const SecretariaCertificadosPage: React.FC = () => {
 
   const previewModalidade = preview?.modalidade || modalidade;
   const modelo = templates.find(item => item.tipoCurso === templateType[previewModalidade]);
+  const previewHasValidationCode = Boolean(preview?.codigo_validacao?.trim());
+  const validationSnapshotPending = previewHasValidationCode
+    && validationSnapshotQuery.isPending;
+  const validationSnapshotUnavailable = Boolean(preview) && (
+    !previewHasValidationCode
+    || validationSnapshotQuery.isError
+    || (!validationSnapshotQuery.isPending && !validationSnapshotQuery.data)
+  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -251,8 +284,49 @@ const SecretariaCertificadosPage: React.FC = () => {
       {preview?.status === 'FINALIZADO' && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 p-6 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-4 flex justify-end gap-2"><button onClick={() => window.print()} className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white"><Printer size={15}/> Imprimir</button><button onClick={() => setPreview(null)} className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button></div>
-            <CertificadoPreview certificado={preview} modelo={modelo} />
+            <div className="mb-4 flex justify-end gap-2">
+              <button
+                onClick={() => void handlePrintCertificate()}
+                disabled={validationSnapshotPending || validationSnapshotUnavailable}
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {validationSnapshotPending
+                  ? <Loader2 className="animate-spin" size={15} />
+                  : <Printer size={15} />}
+                Imprimir
+              </button>
+              <button onClick={() => setPreview(null)} className="rounded-xl bg-white p-3 text-slate-600"><X size={18}/></button>
+            </div>
+            {validationSnapshotPending ? (
+              <div className="flex min-h-80 items-center justify-center gap-3 rounded-3xl bg-white text-xs font-black uppercase tracking-widest text-slate-500">
+                <Loader2 className="animate-spin text-blue-600" size={26} />
+                Conferindo a emissão original...
+              </div>
+            ) : validationSnapshotUnavailable ? (
+              <div className="flex min-h-80 flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+                <h4 className="font-black uppercase text-red-800">Emissão não confirmada</h4>
+                <p className="mt-2 max-w-lg text-sm font-semibold text-red-700">
+                  Não foi possível confirmar o QR e a validade registrados neste certificado. A impressão foi bloqueada para evitar uma segunda via divergente.
+                </p>
+                {previewHasValidationCode && (
+                  <button
+                    type="button"
+                    onClick={() => void validationSnapshotQuery.refetch()}
+                    className="mt-5 rounded-xl bg-red-700 px-5 py-3 text-[10px] font-black uppercase tracking-wider text-white"
+                  >
+                    Tentar novamente
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div ref={certificatePrintRef}>
+                <CertificadoPreview
+                  certificado={preview}
+                  modelo={modelo}
+                  showValidationQrCode={validationSnapshotQuery.data?.validationPublic === true}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

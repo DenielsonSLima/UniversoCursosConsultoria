@@ -49,10 +49,6 @@ export const DOCUMENT_VALIDATION_POLICIES: Record<
     prefix: 'TRA',
     title: 'Transferência Escolar',
   },
-  rematricula: {
-    prefix: 'REM',
-    title: 'Comprovante de Rematrícula',
-  },
   termo_estagio: {
     prefix: 'TER-EST',
     title: 'Termo de Estágio',

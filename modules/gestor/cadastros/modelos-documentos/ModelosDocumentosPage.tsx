@@ -13,7 +13,8 @@ import {
   Contact,
   ClipboardCheck,
   BadgeCheck,
-  Vote
+  Vote,
+  ShieldCheck,
 } from 'lucide-react';
 
 // Importação dos Componentes Internos
@@ -31,11 +32,19 @@ import DeclaracaoFrequenciaPage from './declaracao-frequencia/DeclaracaoFrequenc
 import AtestadoConclusaoPage from './atestado-conclusao/AtestadoConclusaoPage';
 import ReciboDespesaPage from './recibo/ReciboDespesaPage';
 import CrachaPeriodoEleitoralPage from './cracha-periodo-eleitoral/CrachaPeriodoEleitoralPage';
+import DocumentValidationPoliciesPage from './validacao-documental/DocumentValidationPoliciesPage';
 
-const ModelosDocumentosPage: React.FC = () => {
+interface ModelosDocumentosPageProps {
+  canEditValidationPolicies?: boolean;
+}
+
+const ModelosDocumentosPage: React.FC<ModelosDocumentosPageProps> = ({
+  canEditValidationPolicies = false,
+}) => {
   const [activeModule, setActiveModule] = useState<string | null>(null);
 
   const models = [
+    { id: 'validacao-documental', title: 'QR Code e Validade', desc: 'Regras individuais de validador e vencimento para todos os documentos.', icon: <ShieldCheck size={24} />, color: 'bg-[#001a33]' },
     { id: 'carteirinha', title: 'Carteirinha de Estudante', desc: 'Identificação oficial com foto e QR Code.', icon: <CreditCard size={24} />, color: 'bg-blue-600' },
     { id: 'cracha', title: 'Crachá de Identificação', desc: 'Crachá vertical para colaboradores, técnicos e professores.', icon: <Contact size={24} />, color: 'bg-rose-600' },
     { id: 'cracha-periodo-eleitoral', title: 'SES', desc: 'Modelos de crachá por hospital, liberados após a entrada no estágio.', icon: <Vote size={24} />, color: 'bg-cyan-700' },
@@ -50,10 +59,14 @@ const ModelosDocumentosPage: React.FC = () => {
     { id: 'diploma', title: 'Modelo Diploma', desc: 'Certificado de conclusão de curso.', icon: <Award size={24} />, color: 'bg-purple-600' },
     { id: 'irpf', title: 'Declaração de IRPF', desc: 'Modelo de declaração financeira para fins de Imposto de Renda.', icon: <FileText size={24} />, color: 'bg-emerald-700' },
     { id: 'recibo', title: 'Modelo Recibo', desc: 'Recibo de pagamento de despesas fixas, variáveis e outros débitos.', icon: <FileText size={24} />, color: 'bg-rose-600' },
-  ];
+  ].sort((first, second) => (
+    first.title.localeCompare(second.title, 'pt-BR', { sensitivity: 'base' })
+  ));
 
   const renderContent = () => {
     switch (activeModule) {
+      case 'validacao-documental':
+        return <DocumentValidationPoliciesPage readOnly={!canEditValidationPolicies} />;
       case 'carteirinha': return <CarteirinhaPage />;
       case 'cracha': return <CrachaPage />;
       case 'cracha-periodo-eleitoral': return <CrachaPeriodoEleitoralPage />;

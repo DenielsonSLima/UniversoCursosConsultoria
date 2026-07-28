@@ -27,7 +27,7 @@ const getPreviewFingerprint = (data: FinanceiroConfigData) => JSON.stringify([
   data.valorParcela,
   data.descontoPontualidade,
   data.jurosAtraso,
-  data.multaAtraso,
+  data.multaAtrasoPercentual,
   data.aplicarDescontoMensalidade,
   data.aplicarMultaJurosMensalidade,
 ]);

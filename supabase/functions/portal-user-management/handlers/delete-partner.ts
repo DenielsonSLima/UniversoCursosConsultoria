@@ -6,7 +6,7 @@ export const handleDeletePartner = async (
   partner: Partner,
 ) => {
   const { admin, gestorEmail, json } = context;
-  const email = normalizeEmail(partner.email);
+  const email = normalizeEmail(partner.auth_login_email || partner.email);
   const shouldDeleteAuthUser = ["Aluno", "Professor"].includes(partner.tipo) &&
     Boolean(email);
   let authUserDeleted = false;

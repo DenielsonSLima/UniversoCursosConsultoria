@@ -20,6 +20,7 @@ export interface ProfessorPolo {
   cidade?: string | null;
   estado?: string | null;
   cnpj?: string | null;
+  is_matriz?: boolean;
 }
 
 interface MenuItem {

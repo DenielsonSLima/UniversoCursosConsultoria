@@ -25,10 +25,11 @@ type FinancialTab = FinanceiroTabId;
 
 interface FinanceiroPageProps {
   poloId?: string | null;
+  isMatriz: boolean;
   allowedTabs?: FinancialTab[];
 }
 
-const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) => {
+const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, isMatriz, allowedTabs }) => {
   const [activeTab, setActiveTab] = useState<FinancialTab>('resumo');
 
   const tabs = useMemo(() => [
@@ -56,7 +57,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ poloId, allowedTabs }) 
       case 'resumo':
         return <ResumoTab poloId={poloId} />;
       case 'receber':
-        return <ReceberTab poloId={poloId} />;
+        return <ReceberTab poloId={poloId} isMatriz={isMatriz} />;
       case 'despesas':
         return <DespesasTab poloId={poloId} />;
       case 'transferencias':

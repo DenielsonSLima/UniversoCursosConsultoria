@@ -1,14 +1,22 @@
 // File: modules/gestor/parceiros/components/viewparceiros/pj/ParceiroPJDetalhes.tsx
 // Página de detalhes de Parceiro Pessoa Jurídica com dados reais, edição e abas adequadas ao tipo
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft, Building, Handshake, Edit3, Save, X, MapPin, Phone,
-  AlertCircle, Loader2, Trash2, Upload, Image
+  AlertCircle, Loader2, Trash2, Upload
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import {
+  categoriasQueryKeys,
+  categoriasService,
+} from '../../../../configuracoes/categorias/categorias.service';
+import {
+  tiposParceriaQueryKeys,
+  tiposParceriaService,
+} from '../../../../configuracoes/tipos-parceria/tipos-parceria.service';
 import { useToast } from '../../shared/ToastNotification';
 import ToastNotification from '../../shared/ToastNotification';
 import { formatCnpj, formatCpf } from '../../../../../../lib/documentFormatters';
@@ -31,6 +39,36 @@ const Field: React.FC<{ label: string; value?: string | null; mono?: boolean }> 
   </div>
 );
 
+const PartnerLogo: React.FC<{
+  src?: string | null;
+  alt: string;
+  className: string;
+  iconSize?: number;
+}> = ({ src, alt, className, iconSize = 24 }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`${className} flex items-center justify-center text-slate-400`}>
+      <Building size={iconSize} />
+    </div>
+  );
+};
+
 const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-blue-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-sm';
 const labelCls = 'block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
 
@@ -47,6 +85,14 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
     queryKey: ['parceiro', pjInicial.id],
     queryFn: () => parceirosService.getById(pjInicial.id),
     initialData: pjInicial,
+  });
+  const categoriasQuery = useQuery({
+    queryKey: categoriasQueryKeys.all,
+    queryFn: categoriasService.getAll,
+  });
+  const tiposParceriaQuery = useQuery({
+    queryKey: tiposParceriaQueryKeys.all,
+    queryFn: tiposParceriaService.getAll,
   });
 
   const updateMutation = useMutation({
@@ -87,7 +133,36 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setEditData((prev: any) => ({ ...prev, [name]: value }));
+    setEditData((prev: any) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'nomeCompleto') next.nome = value;
+      if (name === 'cnpj') {
+        next.cpf = value;
+        next.cpf_cnpj = value;
+      }
+      if (name === 'telefone') next.contato1 = value;
+      return next;
+    });
+  };
+
+  const handleCategoriaChange = (categoriaId: string) => {
+    const categoria = (categoriasQuery.data || []).find((item) => item.id === categoriaId);
+    setEditData((prev: any) => ({
+      ...prev,
+      categoriaId: categoria?.id || null,
+      categoriaNome: categoria?.nome || null,
+      tipoPj: categoria?.nome || null,
+    }));
+  };
+
+  const handleTipoParceriaChange = (tipoParceriaId: string) => {
+    const tipoParceria = (tiposParceriaQuery.data || []).find((item) => item.id === tipoParceriaId);
+    setEditData((prev: any) => ({
+      ...prev,
+      tipoParceriaId: tipoParceria?.id || null,
+      tipoParceriaNome: tipoParceria?.nome || null,
+      tipoConvenio: tipoParceria?.nome || null,
+    }));
   };
 
   const handleSave = () => {
@@ -148,13 +223,12 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
               </button>
               <div className="flex items-center gap-4">
                 {/* Logo / Avatar */}
-                {pjData.foto ? (
-                  <img src={pjData.foto} alt={pjData.nome} className="w-14 h-14 rounded-2xl object-contain border border-slate-100 bg-white shadow-sm" />
-                ) : (
-                  <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-sm">
-                    <Building size={26} />
-                  </div>
-                )}
+                <PartnerLogo
+                  src={pjData.foto}
+                  alt={`Logo de ${pjData.nome}`}
+                  className="h-14 w-14 rounded-2xl border border-slate-200 bg-white object-contain p-2 shadow-sm"
+                  iconSize={26}
+                />
                 <div>
                   <h2 className="text-xl font-black text-[#001a33] uppercase tracking-tight leading-none">
                     {pjData.nome}
@@ -163,9 +237,9 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                     <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                       PJ • CNPJ: <span className="font-mono text-slate-600">{formatCnpj(pjData.cnpj) || 'Não informado'}</span>
                     </span>
-                    {pjData.tipoPj && (
+                    {pjData.categoriaNome && (
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full border border-blue-100">
-                        {pjData.tipoPj}
+                        {pjData.categoriaNome}
                       </span>
                     )}
                     <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase rounded-full ${statusColor[pjData.status?.toUpperCase()] || 'bg-slate-100 text-slate-500'}`}>
@@ -256,15 +330,19 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2"><Field label="Razão Social" value={pjData.nome} /></div>
                   <Field label="CNPJ" value={formatCnpj(pjData.cnpj)} mono />
-                  <Field label="Tipo / Classificação" value={pjData.tipoPj} />
-                  <Field label="Tipo de Convênio" value={pjData.tipoConvenio} />
+                  <Field label="Categoria da Empresa" value={pjData.categoriaNome} />
+                  <Field label="Tipo de Parceria / Convênio" value={pjData.tipoParceriaNome || pjData.tipoConvenio} />
                   <Field label="Status" value={pjData.status} />
                   <div className="md:col-span-3"><Field label="Polo Vinculado" value={pjData.poloNome} /></div>
                   {/* Logo em modo leitura */}
                   {pjData.foto && (
                     <div className="md:col-span-3">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Logo / Imagem</p>
-                      <img src={pjData.foto} alt={pjData.nome} className="h-16 object-contain rounded-xl border border-slate-100 bg-slate-50 p-2" />
+                      <PartnerLogo
+                        src={pjData.foto}
+                        alt={`Logo de ${pjData.nome}`}
+                        className="h-16 w-28 rounded-xl border border-slate-200 bg-white object-contain p-2"
+                      />
                     </div>
                   )}
                 </div>
@@ -287,23 +365,47 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                     </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Classificação / Tipo</label>
-                    <input name="tipoPj" value={d.tipoPj || ''} onChange={handleEditChange} className={inputCls} placeholder="Ex: Faculdade Parceira, Franquia..." />
+                    <label className={labelCls}>Categoria da Empresa</label>
+                    <select
+                      value={d.categoriaId || ''}
+                      onChange={(event) => handleCategoriaChange(event.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">SEM CATEGORIA DEFINIDA</option>
+                      {(categoriasQuery.data || [])
+                        .filter((categoria) => categoria.tipo === 'pj')
+                        .map((categoria) => (
+                          <option key={categoria.id} value={categoria.id}>
+                            {categoria.nome}{categoria.status === 'inativo' ? ' (INATIVA)' : ''}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Tipo de Convênio</label>
-                    <input name="tipoConvenio" value={d.tipoConvenio || ''} onChange={handleEditChange} className={inputCls} placeholder="Ex: Afiliado, Parceiro EAD..." />
+                    <label className={labelCls}>Tipo de Parceria / Convênio</label>
+                    <select
+                      value={d.tipoParceriaId || ''}
+                      onChange={(event) => handleTipoParceriaChange(event.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">SEM TIPO DEFINIDO</option>
+                      {(tiposParceriaQuery.data || []).map((tipoParceria) => (
+                        <option key={tipoParceria.id} value={tipoParceria.id}>
+                          {tipoParceria.nome}{tipoParceria.status === 'inativo' ? ' (INATIVO)' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {/* LOGO UPLOAD */}
                   <div className="md:col-span-3">
                     <label className={labelCls}>Logo / Imagem da Empresa</label>
                     <div className="flex items-center gap-4">
                       <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                        {d.foto ? (
-                          <img src={d.foto} alt="Logo" className="w-full h-full object-contain" />
-                        ) : (
-                          <Image size={24} className="text-slate-300" />
-                        )}
+                        <PartnerLogo
+                          src={d.foto}
+                          alt={`Logo de ${d.nome || pjData.nome}`}
+                          className="h-full w-full bg-white object-contain p-2"
+                        />
                       </div>
                       <div className="flex-1 space-y-2">
                         <label className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold uppercase cursor-pointer transition-colors border border-slate-200 w-full">
@@ -461,8 +563,8 @@ const ParceiroPJDetalhes: React.FC<ParceiroPJDetalhesProps> = ({ pjInicial, onBa
                 <h4 className="text-xs font-black uppercase tracking-wider">Informações da Parceria</h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Field label="Tipo de Convênio" value={pjData.tipoConvenio} />
-                <Field label="Classificação" value={pjData.tipoPj} />
+                <Field label="Tipo de Parceria / Convênio" value={pjData.tipoParceriaNome || pjData.tipoConvenio} />
+                <Field label="Categoria da Empresa" value={pjData.categoriaNome} />
                 <Field label="Polo de Atuação" value={pjData.poloNome} />
               </div>
             </div>

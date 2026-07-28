@@ -53,7 +53,7 @@ export function useFinanceiroRealtime(poloId?: string | null) {
           refetchType: 'active',
         });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.alunoReceivables });
 
         turmaIds.forEach((turmaId) => {
@@ -65,15 +65,17 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       }
 
       if (accountsChanged) {
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
       }
       if (transfersChanged) {
         void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.transferenciasRoot });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
       if (expensesChanged) {
-        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.lancamentosRoot });
-        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos, exact: true });
+        void queryClient.invalidateQueries({ queryKey: despesasQueryKeys.all });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+        void queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.resumoKpis });
       }
 
       receivablesChanged = false;
@@ -99,8 +101,6 @@ export function useFinanceiroRealtime(poloId?: string | null) {
     };
 
     const onAccountChange = (payload: any) => {
-      const record = recordFromPayload(payload);
-      if (activePoloId && record.polo_id && record.polo_id !== activePoloId) return;
       accountsChanged = true;
       schedule();
     };
@@ -127,8 +127,12 @@ export function useFinanceiroRealtime(poloId?: string | null) {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
+        table: 'contas_bancarias_polos',
+      }, onAccountChange)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'transferencias_contas',
-        ...(activePoloId ? { filter: `polo_id=eq.${activePoloId}` } : {}),
       }, () => {
         transfersChanged = true;
         schedule();

@@ -26,6 +26,7 @@ export interface UsuarioSistema {
   restricao_horario?: PortalScheduleRestriction | null;
   setor_comunicacao?: SetorComunicacao | null;
   polo_comunicacao_id?: string | null;
+  pode_visualizar_todos_polos?: boolean;
   pode_visualizar_todos_setores?: boolean;
   created_at?: string;
 }
@@ -46,7 +47,16 @@ export interface UsuarioSistemaInput {
   restricao_horario?: PortalScheduleRestriction | null;
   setor_comunicacao?: SetorComunicacao | null;
   polo_comunicacao_id?: string | null;
+  pode_visualizar_todos_polos?: boolean;
   pode_visualizar_todos_setores?: boolean;
+}
+
+export interface UsuarioManagementState {
+  userId: string;
+  canDelete: boolean;
+  canChangeStatus: boolean;
+  hasActivity: boolean;
+  reason: string | null;
 }
 
 export interface NovoUsuarioFormData {
@@ -72,5 +82,6 @@ export interface NovoUsuarioFormData {
   horarioFim: string;
   setorComunicacao: SetorComunicacao;
   poloComunicacaoId: string | null;
+  podeVisualizarTodosPolos: boolean;
   podeVisualizarTodosSetores: boolean;
 }

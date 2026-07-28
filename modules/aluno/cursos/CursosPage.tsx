@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { waitForQrCodeAssets } from '../../shared/qrcode/qr-code-assets';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import CertificadoPreview from '../../gestor/secretaria/certificados/components/CertificadoPreview';
 import { defaultEadCheckoutMethod, resolveEadCheckoutOptions } from './eadCheckoutOptions';
@@ -171,6 +172,7 @@ const CursosPage: React.FC<CursosPageProps> = ({
   const buildCertificatePdf = async () => {
     if (!certificatePdfSourceRef.current || !alunoCertificado) return null;
 
+    await waitForQrCodeAssets(certificatePdfSourceRef.current);
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pages = Array.from(certificatePdfSourceRef.current.querySelectorAll(CERTIFICATE_PDF_PAGE_SELECTOR)) as any[];
     const captureTargets = pages.length ? pages : [certificatePdfSourceRef.current];

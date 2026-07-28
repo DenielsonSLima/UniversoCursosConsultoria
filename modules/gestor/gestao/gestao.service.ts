@@ -146,6 +146,8 @@ export const gestaoService = {
       throw new Error('Informe o polo da turma antes de abrir inscrições.');
     }
 
+    const isTechnical = turma.modalidade === 'TECNICO';
+
     if (
       turma.modalidade === 'TECNICO'
       && turma.aceitaConcomitante === false
@@ -182,9 +184,9 @@ export const gestaoService = {
       turno: turma.turno,
       status: turma.status || 'EM_ANDAMENTO',
       valor_matricula: Number(turma.valorMatricula ?? 150),
-      valor_rematricula: Number(turma.valorRematricula ?? 100),
-      qtd_parcelas: Number(turma.qtdParcelas ?? 1),
-      valor_parcela: Number(turma.valorParcela ?? 0),
+      valor_rematricula: Number(turma.valorRematricula ?? (isTechnical ? 150 : 100)),
+      qtd_parcelas: Number(turma.qtdParcelas ?? (isTechnical ? 12 : 1)),
+      valor_parcela: Number(turma.valorParcela ?? (isTechnical ? 279.90 : 0)),
       desconto_pontualidade: Number(turma.descontoPontualidade ?? 0),
       juros_atraso: Number(turma.jurosAtraso ?? 0),
       multa_atraso: Number(turma.multaAtraso ?? 0),
@@ -194,8 +196,8 @@ export const gestaoService = {
       ,
       origem_financeira: turma.origemFinanceira || 'NORMAL',
       financeiro_herdado: turma.financeiroHerdado || false,
-      gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? false,
-      sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? true,
+      gerar_cobrancas_futuras: turma.gerarCobrancasFuturas ?? isTechnical,
+      sincronizar_asaas_futuro: turma.sincronizarAsaasFuturo ?? (isTechnical ? false : true),
       obs_financeira_origem: turma.obsFinanceiraOrigem || null,
     };
 
@@ -368,7 +370,7 @@ export const gestaoService = {
       valorParcela: number;
       descontoPontualidade: number;
       jurosAtraso: number;
-      multaAtraso: number;
+      multaAtrasoPercentual: number;
       aplicarDescontoMatricula?: boolean;
       aplicarMultaJurosMatricula?: boolean;
       aplicarDescontoMensalidade?: boolean;
@@ -389,13 +391,13 @@ export const gestaoService = {
         valor_parcela: config.valorParcela,
         desconto_pontualidade: config.descontoPontualidade,
         juros_atraso: config.jurosAtraso,
-        multa_atraso: config.multaAtraso,
+        multa_atraso_percentual: config.multaAtrasoPercentual,
         aplicar_desconto_matricula: config.aplicarDescontoMatricula === true,
-        aplicar_multa_juros_matricula: config.aplicarMultaJurosMatricula !== false,
+        aplicar_multa_juros_matricula: false,
         aplicar_desconto_mensalidade: config.aplicarDescontoMensalidade !== false,
         aplicar_multa_juros_mensalidade: config.aplicarMultaJurosMensalidade !== false,
-        aplicar_desconto_rematricula: config.aplicarDescontoRematricula !== false,
-        aplicar_multa_juros_rematricula: config.aplicarMultaJurosRematricula !== false,
+        aplicar_desconto_rematricula: false,
+        aplicar_multa_juros_rematricula: false,
         dia_vencimento_padrao: config.diaVencimentoPadrao,
         instrucao_boleto_carne: config.instrucaoBoletoCarne.trim(),
         cronograma_financeiro: config.cronogramaFinanceiro

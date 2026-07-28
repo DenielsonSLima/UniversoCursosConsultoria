@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, BookOpenCheck, MonitorPlay, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle, Search, Users } from 'lucide-react';
+import { BarChart3, BookOpenCheck, MonitorPlay, Plus, Loader2, X, Copy, CheckCircle2, AlertTriangle, Search, Users, LayoutGrid, TableProperties } from 'lucide-react';
 import CursoEadCard from './components/CursoEadCard';
+import CursoEadTable from './components/CursoEadTable';
 import EadCourseWizard from './components/EadCourseWizard';
 import { Curso } from '../cadastros.types';
 import { EadGroupMode, EadSortMode, EadStatusFilter } from './cursos-ead.service';
@@ -51,6 +52,7 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
   const [areaFilter, setAreaFilter] = useState('Todas');
   const [groupMode, setGroupMode] = useState<EadGroupMode>('area');
   const [sortMode, setSortMode] = useState<EadSortMode>('nome_asc');
+  const [displayMode, setDisplayMode] = useState<'cards' | 'table'>('cards');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
@@ -370,7 +372,40 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
             <p className="text-xs font-bold text-slate-500">
               Exibindo {total === 0 ? 0 : ((currentPage - 1) * pageSize + 1)} a {Math.min(currentPage * pageSize, total)} de {total} curso(s)
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                className="mr-1 flex items-center rounded-xl border border-slate-200 bg-slate-100 p-1"
+                aria-label="Modo de visualização"
+              >
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode('cards')}
+                  aria-pressed={displayMode === 'cards'}
+                  title="Visualizar em cards"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${
+                    displayMode === 'cards'
+                      ? 'bg-white text-purple-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <LayoutGrid size={13} />
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode('table')}
+                  aria-pressed={displayMode === 'table'}
+                  title="Visualizar em tabela"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${
+                    displayMode === 'table'
+                      ? 'bg-white text-purple-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <TableProperties size={13} />
+                  Tabela
+                </button>
+              </div>
               <button
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
@@ -398,19 +433,30 @@ const CursosEadPage: React.FC<CursosEadPageProps> = ({ readOnly = false }) => {
                   <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full border border-purple-100 font-bold">{group.total}</span>
                 </h3>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {(group.cursos || []).map((curso: Curso) => (
-                  <CursoEadCard 
-                    key={curso.id} 
-                    curso={curso} 
-                    readOnly={readOnly}
-                    onClick={() => handleEditCurso(curso)} 
-                    onDuplicate={(e) => handleOpenDuplicate(curso, e)}
-                    onToggleStatus={(e) => handleToggleStatus(curso, e)}
-                    onDelete={(e) => handleDeleteCurso(curso, e)}
-                  />
-                ))}
-              </div>
+              {displayMode === 'cards' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {(group.cursos || []).map((curso: Curso) => (
+                    <CursoEadCard
+                      key={curso.id}
+                      curso={curso}
+                      readOnly={readOnly}
+                      onClick={() => handleEditCurso(curso)}
+                      onDuplicate={(e) => handleOpenDuplicate(curso, e)}
+                      onToggleStatus={(e) => handleToggleStatus(curso, e)}
+                      onDelete={(e) => handleDeleteCurso(curso, e)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <CursoEadTable
+                  cursos={group.cursos || []}
+                  readOnly={readOnly}
+                  onEdit={handleEditCurso}
+                  onDuplicate={handleOpenDuplicate}
+                  onToggleStatus={handleToggleStatus}
+                  onDelete={handleDeleteCurso}
+                />
+              )}
             </div>
           ))}
         </div>

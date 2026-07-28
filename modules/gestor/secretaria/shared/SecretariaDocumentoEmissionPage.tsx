@@ -38,6 +38,7 @@ import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPrevi
 import SecretariaIssuedDocumentModal from './SecretariaIssuedDocumentModal';
 import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
+import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
 import { crachaService } from '../../cadastros/modelos-documentos/cracha/cracha.service';
 import { irpfService } from '../../cadastros/modelos-documentos/irpf/irpf.service';
 import CrachaPeriodoEleitoralPreview from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/components/CrachaPeriodoEleitoralPreview';
@@ -47,6 +48,7 @@ import {
 } from '../../cadastros/modelos-documentos/cracha-periodo-eleitoral/cracha-periodo-eleitoral.service';
 import { fichasMatriculaService } from '../../cadastros/ficha-matricula/fichas-matricula.service';
 import { getSecretariaErrorMessage } from './secretaria-error';
+import { createDocumentReissueKey } from '../../../shared/document-validation/document-validation.service';
 
 interface SecretariaDocumentoEmissionPageProps {
   definition: SecretariaDocumentoDefinition;
@@ -95,6 +97,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [isIssuedDocumentOpen, setIsIssuedDocumentOpen] = useState(false);
   const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const printContentRef = useRef<HTMLDivElement>(null);
+  const emissionRequestRef = useRef<{
+    fingerprint: string;
+    idempotencyKey: string;
+  } | null>(null);
 
   const isIrpfAnnual = definition.referenceMode === 'irpf_annual';
   const isBoletim = definition.id === 'boletim';
@@ -104,7 +110,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const selectsFichaTemplate = definition.templateSelection === 'ficha_matricula';
   const usesDirectDocumentViewer =
     definition.id === 'ficha_matricula' || definition.id === 'pasta_identificacao';
-  const supportsIssuedDocumentPreview = !isCrachaDocument && definition.id !== 'rematricula';
+  const supportsIssuedDocumentPreview = !isCrachaDocument;
   const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
   const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
   const enrollmentStatuses = definition.enrollmentStatuses || [];
@@ -350,6 +356,24 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
   const emissionMutation = useMutation({
     mutationFn: async () => {
+      const requestFingerprint = JSON.stringify([
+        definition.id,
+        mode,
+        selectedMatriculaId || null,
+        selectedTurmaId || null,
+        customSelections.map((selection) => selection.matricula.id),
+        selectedTemplateId || null,
+        selectedModuleId || null,
+        selectedReferenceYear,
+        context.userId,
+      ]);
+      if (emissionRequestRef.current?.fingerprint !== requestFingerprint) {
+        emissionRequestRef.current = {
+          fingerprint: requestFingerprint,
+          idempotencyKey: createDocumentReissueKey(),
+        };
+      }
+
       return secretariaDocumentosService.registrarEmissao({
         context,
         documento: definition.id,
@@ -375,9 +399,11 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             : undefined,
         moduleId: isBoletim ? selectedModuleId : undefined,
         moduleName: isBoletim ? selectedModule?.nome : undefined,
+        idempotencyKey: emissionRequestRef.current.idempotencyKey,
       });
     },
     onSuccess: (data) => {
+      emissionRequestRef.current = null;
       queryClient.invalidateQueries({
         queryKey: secretariaDocumentosKeys.emissions(context, definition.id),
       });
@@ -423,6 +449,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   };
 
   const crachaPrintItems = ((emissionMutation.data as any)?.items || []) as any[];
+  const getCrachaRenderTemplate = (item: any) => ({
+    ...(crachaTemplate || {}),
+    validationPublic: item?.validationPublic === true,
+  });
   const chunkArray = <T,>(items: T[], size: number) => {
     const chunks: T[][] = [];
     for (let index = 0; index < items.length; index += size) {
@@ -458,10 +488,10 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                 {aluno ? (
                   <>
                     <div className="w-[54mm] h-[85.6mm] relative border-b border-dashed border-slate-300">
-                      <CrachaPreview formData={crachaTemplate || {}} page="frente" zoomLevel={100} aluno={aluno} />
+                      <CrachaPreview formData={getCrachaRenderTemplate(aluno)} page="frente" zoomLevel={100} aluno={aluno} />
                     </div>
                     <div className="w-[54mm] h-[85.6mm] relative">
-                      <CrachaPreview formData={crachaTemplate || {}} page="verso" zoomLevel={100} aluno={aluno} />
+                      <CrachaPreview formData={getCrachaRenderTemplate(aluno)} page="verso" zoomLevel={100} aluno={aluno} />
                     </div>
                   </>
                 ) : renderCrachaEmptySlot()}
@@ -493,7 +523,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             <div className="cracha-card-grid grid grid-cols-5 grid-rows-2 gap-x-[1.5mm] gap-y-[3mm] justify-items-center items-center">
               {slots.map((aluno, index) => (
                 <div key={`cracha-frente-${index}`} className="w-[54mm] h-[85.6mm] relative rounded-[2.5mm] overflow-hidden border border-slate-200 bg-white">
-                  {aluno ? <CrachaPreview formData={crachaTemplate || {}} page="frente" zoomLevel={100} aluno={aluno} /> : renderCrachaEmptySlot()}
+                  {aluno ? <CrachaPreview formData={getCrachaRenderTemplate(aluno)} page="frente" zoomLevel={100} aluno={aluno} /> : renderCrachaEmptySlot()}
                 </div>
               ))}
             </div>
@@ -507,7 +537,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             <div className="cracha-card-grid grid grid-cols-5 grid-rows-2 gap-x-[1.5mm] gap-y-[3mm] justify-items-center items-center">
               {versoSlots.map((aluno, index) => (
                 <div key={`cracha-verso-${index}`} className="w-[54mm] h-[85.6mm] relative rounded-[2.5mm] overflow-hidden border border-slate-200 bg-white">
-                  {aluno ? <CrachaPreview formData={crachaTemplate || {}} page="verso" zoomLevel={100} aluno={aluno} /> : renderCrachaEmptySlot()}
+                  {aluno ? <CrachaPreview formData={getCrachaRenderTemplate(aluno)} page="verso" zoomLevel={100} aluno={aluno} /> : renderCrachaEmptySlot()}
                 </div>
               ))}
             </div>
@@ -565,6 +595,21 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     });
   };
 
+  const handleCrachaPrint = async () => {
+    if (!printContentRef.current) return;
+    try {
+      await waitForQrCodeAssets(printContentRef.current);
+      window.print();
+    } catch (error) {
+      console.error('[SecretariaDocumentoEmissionPage] QR Code indisponível:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar os QR Codes para impressão.',
+      );
+    }
+  };
+
   if (isCrachaPrinting) {
     return createPortal(
       <div className="fixed inset-0 z-[2147483000] flex h-screen h-[100dvh] w-screen flex-col overflow-y-auto bg-slate-950 custom-scrollbar" id="cracha-print-layout">
@@ -589,7 +634,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           </div>
 
           <button
-            onClick={() => window.print()}
+            onClick={() => void handleCrachaPrint()}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-950/30"
           >
             <Printer size={16} /> Imprimir / Salvar PDF

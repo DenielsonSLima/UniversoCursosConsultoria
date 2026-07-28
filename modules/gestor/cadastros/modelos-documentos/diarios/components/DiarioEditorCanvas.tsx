@@ -1,7 +1,7 @@
 import React from 'react';
 import { Move } from 'lucide-react';
 import capaDiarioPadrao from '../../../../../../Documentos/Capa-Diario.jpg';
-import { getDocumentValidationQrUrl } from '../../../../../shared/document-validation/document-validation.url';
+import { DocumentValidationQrCodeImage } from '../../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import { CapaCampo, DiarioTemplate, diariosService } from '../diarios.service';
 import { DiarioEditorTab } from '../diarios-editor.types';
 
@@ -269,12 +269,13 @@ const BackCoverValidationCard: React.FC<{ form: DiarioTemplate }> = ({ form }) =
         </div>
         <div className="bg-slate-50/30 border border-slate-100/30 p-1.5 rounded font-mono text-[7px] text-slate-500">
           <div><strong>Chave de Autenticação:</strong> DIA-TECNICO-XXXXXXXX</div>
-          <div className="mt-0.5"><strong>Endereço de Validação:</strong> www.universocock.com.br/validador</div>
+          <div className="mt-0.5"><strong>Endereço de Validação:</strong> www.universocc.com.br/validador</div>
         </div>
       </div>
       <div className="flex flex-col items-center justify-center border-l border-slate-200/20 pl-2">
-        <img
-          src={getDocumentValidationQrUrl('DIA-TECNICO-XXXXXXXX', 150)}
+        <DocumentValidationQrCodeImage
+          code="DIA-TECNICO-XXXXXXXX"
+          size={150}
           alt="QR Code"
           className="bg-white p-1 border border-slate-200 rounded"
           style={{
@@ -282,7 +283,6 @@ const BackCoverValidationCard: React.FC<{ form: DiarioTemplate }> = ({ form }) =
             height: `${form.qrCodeSize || 28}mm`,
             maxWidth: '75px',
             maxHeight: '75px',
-            objectFit: 'contain',
           }}
         />
         <div className="text-center mt-1">

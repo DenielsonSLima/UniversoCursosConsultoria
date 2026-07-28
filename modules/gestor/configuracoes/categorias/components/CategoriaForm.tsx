@@ -7,13 +7,22 @@ interface CategoriaFormProps {
   onSave: (data: Omit<Categoria, 'id'>) => void;
   categoria?: Categoria | null;
   isSaving: boolean;
+  tipoFixo?: Categoria['tipo'];
+  statusFixo?: Categoria['status'];
 }
 
-const CategoriaForm: React.FC<CategoriaFormProps> = ({ onClose, onSave, categoria, isSaving }) => {
+const CategoriaForm: React.FC<CategoriaFormProps> = ({
+  onClose,
+  onSave,
+  categoria,
+  isSaving,
+  tipoFixo,
+  statusFixo,
+}) => {
   const [nome, setNome] = useState(categoria?.nome || '');
-  const [tipo, setTipo] = useState<Categoria['tipo']>(categoria?.tipo || 'pj');
+  const [tipo, setTipo] = useState<Categoria['tipo']>(tipoFixo || categoria?.tipo || 'pj');
   const [descricao, setDescricao] = useState(categoria?.descricao || '');
-  const [status, setStatus] = useState<Categoria['status']>(categoria?.status || 'ativo');
+  const [status, setStatus] = useState<Categoria['status']>(statusFixo || categoria?.status || 'ativo');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +31,10 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({ onClose, onSave, categori
       return;
     }
     onSave({
-      nome,
+      nome: nome.trim().toLocaleUpperCase('pt-BR'),
       tipo,
       descricao,
-      status,
+      status: statusFixo || status,
     });
   };
 
@@ -59,9 +68,9 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({ onClose, onSave, categori
               <input 
                 type="text" 
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Fornecedores de Tecnologia"
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                onChange={(e) => setNome(e.target.value.toLocaleUpperCase('pt-BR'))}
+                placeholder="EX: FORNECEDORES DE TECNOLOGIA"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                 required
               />
             </div>
@@ -71,8 +80,9 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({ onClose, onSave, categori
                 Grupo de Cadastro
               </label>
               <select 
-                value={tipo}
+                value={tipoFixo || tipo}
                 onChange={(e) => setTipo(e.target.value as Categoria['tipo'])}
+                disabled={Boolean(tipoFixo)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all text-slate-900"
               >
                 <option value="aluno">Aluno</option>
@@ -100,8 +110,9 @@ const CategoriaForm: React.FC<CategoriaFormProps> = ({ onClose, onSave, categori
                 Status
               </label>
               <select 
-                value={status}
+                value={statusFixo || status}
                 onChange={(e) => setStatus(e.target.value as Categoria['status'])}
+                disabled={Boolean(statusFixo)}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all"
               >
                 <option value="ativo">Ativo</option>

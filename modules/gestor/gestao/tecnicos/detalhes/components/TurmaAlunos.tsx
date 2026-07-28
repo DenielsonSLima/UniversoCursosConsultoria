@@ -47,8 +47,8 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     valorParcela: turma.valorParcela || 0,
     valorRematricula: turma.valorRematricula || 0,
     descontoPontualidade: turma.descontoPontualidade || 0,
-    jurosAtraso: turma.jurosAtraso || 0,
-    multaAtraso: turma.multaAtraso || 0,
+    jurosAtraso: turma.jurosAtraso || 1,
+    multaAtraso: 2,
     dataVencimentoMatricula: getMaceioIsoDate(),
     diaVencimento: 10,
   });
@@ -56,7 +56,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     financeiro_herdado: turma.financeiroHerdado || false,
     gerar_cobranca_inicial: !(turma.origemFinanceira === 'LEGADO' || turma.financeiroHerdado),
     gerar_cobranca_futura: turma.gerarCobrancasFuturas ?? null,
-    sincronizar_asaas: turma.sincronizarAsaasFuturo ?? true,
+    sincronizar_asaas: false,
   });
   const [enrollmentPaymentMethod, setEnrollmentPaymentMethod] = useState<GatewayPaymentMethod | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,7 +117,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
     valorParcela: enrollmentFinance.valorParcela,
     descontoPontualidade: enrollmentFinance.descontoPontualidade,
     jurosAtraso: enrollmentFinance.jurosAtraso,
-    multaAtraso: enrollmentFinance.multaAtraso,
+    multaAtrasoPercentual: enrollmentFinance.multaAtraso,
     aplicarDescontoMensalidade: turmaFinanceiroConfig?.aplicarDescontoMensalidade !== false,
     aplicarMultaJurosMensalidade: turmaFinanceiroConfig?.aplicarMultaJurosMensalidade !== false,
   }, true, Boolean(pendingEnrollment && turmaFinanceiroConfig));
@@ -203,7 +203,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
         valorRematricula: defaults.valorRematricula,
         descontoPontualidade: defaults.descontoPontualidade,
         jurosAtraso: defaults.jurosAtraso,
-        multaAtraso: defaults.multaAtraso,
+        multaAtraso: defaults.multaAtrasoPercentual,
         dataVencimentoMatricula: getMaceioIsoDate(),
         diaVencimento: defaults.diaVencimento,
       });
@@ -254,7 +254,11 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       toast.error('Valor obrigatório', 'Informe o valor da matrícula para gerar a cobrança inicial.');
       return;
     }
-    if (enrollmentFlags.gerar_cobranca_inicial && !enrollmentPaymentMethod) {
+    if (
+      enrollmentFlags.gerar_cobranca_inicial
+      && enrollmentFlags.sincronizar_asaas !== false
+      && !enrollmentPaymentMethod
+    ) {
       toast.error('Método obrigatório', 'Escolha Pix, boleto ou cartão de crédito para a cobrança inicial.');
       setEnrollmentStep('MATRICULA');
       return;
@@ -285,6 +289,10 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       toast.error('Juros inválidos', 'Informe juros mensais entre 0% e 100%.');
       return;
     }
+    if (enrollmentFinance.multaAtraso < 0 || enrollmentFinance.multaAtraso > 100) {
+      toast.error('Multa inválida', 'Informe uma multa única entre 0% e 100%.');
+      return;
+    }
     const descontoInvalido = (
       (turmaFinanceiroConfig.aplicarDescontoMatricula
         && enrollmentFinance.valorMatricula > 0
@@ -305,6 +313,7 @@ const TurmaAlunos: React.FC<TurmaAlunosProps> = ({ turma }) => {
       paymentMethod: enrollmentPaymentMethod,
       ...enrollmentFlags,
       ...enrollmentFinance,
+      multaAtraso: enrollmentPreviewQuery.data.multa_aplicada,
     });
   };
   const movementMutation = useMovementMutation(

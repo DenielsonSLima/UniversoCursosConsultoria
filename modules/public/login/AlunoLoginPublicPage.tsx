@@ -20,6 +20,7 @@ import {
   type AuthMessage,
   type AuthMode,
 } from './aluno-login.utils';
+import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
 import {
   clearOAuthReturnParams,
   clearPendingOAuthReturn,
@@ -38,7 +39,9 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [hasExternalAuthReturn] = useState(
     () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
   );
-  const initialMode = searchParams.get('mode') === 'cadastro' ? 'cadastro' : 'login';
+  const initialMode = window.location.pathname === '/cadastro' || searchParams.get('mode') === 'cadastro'
+    ? 'cadastro'
+    : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
@@ -229,12 +232,19 @@ const AlunoLoginPublicPage: React.FC = () => {
     setSearchParams(next, { replace: true });
   };
 
-  const handleLogin = async (event: React.FormEvent) => {
+  const handleLogin = async (
+    event: React.FormEvent,
+    turnstileToken: string,
+  ) => {
     event.preventDefault();
     setLoading(true);
     setMessage(null);
     try {
-      const profile = await alunoPublicAuthService.login(loginIdentifier, loginPassword);
+      const profile = await alunoPublicAuthService.login(
+        loginIdentifier,
+        loginPassword,
+        turnstileToken,
+      );
       await finishAuth(profile);
     } catch (error) {
       setMessage({
@@ -263,6 +273,10 @@ const AlunoLoginPublicPage: React.FC = () => {
     }
     if (!dataNascimento) {
       setMessage({ tone: 'error', text: 'Informe a data de nascimento para concluir o cadastro.' });
+      return false;
+    }
+    if (!isPublicAlunoOlderThanTen(dataNascimento)) {
+      setMessage({ tone: 'error', text: 'O cadastro é permitido somente para alunos com mais de 10 anos de idade.' });
       return false;
     }
     if (telefone.replace(/\D/g, '').length < 10) {

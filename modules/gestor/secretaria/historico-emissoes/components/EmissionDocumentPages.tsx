@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import React from 'react';
 import { sanitizedHtml } from '../../../../../lib/htmlSanitizer';
+import { DocumentValidationQrCodeImage } from '../../../../shared/document-validation/DocumentValidationQrCodeImage';
 import DocumentHeader from '../../../components/DocumentHeader';
 import CertificadoPreview from '../../certificados/components/CertificadoPreview';
 import CarteirinhaPreview from '../../../cadastros/modelos-documentos/carteirinha/components/CarteirinhaPreview';
 import CrachaPreview from '../../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
+import {
+  PAGE_HEIGHT,
+  PAGE_WIDTH,
+} from '../../../cadastros/modelos-documentos/declaracao/components/declaracao-editor.utils';
 import { DOCUMENT_TABS, isCertificateDocument } from '../historico-emissoes.constants';
 import { getPreviewStudent } from '../preview-utils';
 import { parseEmissionTemplate } from '../template-parser';
@@ -13,6 +17,10 @@ import type {
   EmissionLog,
 } from '../historico-emissoes.types';
 import type { CertificadoAcademico } from '../../certificados/certificados.types';
+import {
+  hasExplicitQrCodeField,
+  isPublicDocumentValidationEnabled,
+} from '../document-validation-rendering';
 
 interface EmissionDocumentPagesProps {
   emission: EmissionLog;
@@ -23,41 +31,26 @@ interface EmissionDocumentPagesProps {
   academicPreviewData: AcademicPreviewData | null;
 }
 
-const splitTemplatePages = (html: string) => {
+const splitTemplatePages = (html: string, minimumPageCount = 1) => {
   const pages = html
     .split(/<div[^>]*data-page-break=["']true["'][\s\S]*?<\/div>/gi)
-    .map((page) => page.trim())
-    .filter(Boolean);
+    .map((page) => page.trim());
+  while (pages.length < minimumPageCount) pages.push('');
   return pages.length ? pages : [html];
 };
 
 const QrCodeField: React.FC<{ code: string; width?: number }> = ({ code, width }) => {
-  const [src, setSrc] = useState('');
-  const validationUrl = `https://www.universocc.com.br/validador?q=${code}`;
-
-  useEffect(() => {
-    let active = true;
-    QRCode.toDataURL(validationUrl, { width: 320, margin: 1, errorCorrectionLevel: 'M' })
-      .then((url) => {
-        if (active) setSrc(url);
-      })
-      .catch(() => {
-        if (active) setSrc('');
-      });
-    return () => {
-      active = false;
-    };
-  }, [validationUrl]);
-
   return (
     <div
       className="flex w-full flex-col items-center justify-center rounded border border-slate-100 bg-white p-1 text-center"
-      data-pdf-asset-ready={src ? 'true' : 'false'}
     >
       <div className="mb-0.5 flex aspect-square w-full items-center justify-center bg-white" style={{ width: width ? `${width}px` : '80px' }}>
-        {src
-          ? <img src={src} alt="QR Code" className="h-full w-full object-contain" />
-          : <span className="text-[6px] font-black uppercase text-slate-300">Gerando QR</span>}
+        <DocumentValidationQrCodeImage
+          code={code}
+          size={320}
+          alt="QR Code"
+          className="h-full w-full"
+        />
       </div>
       <p className="text-[6px] font-bold uppercase leading-none tracking-wide text-slate-400">CÓD. VALIDAÇÃO</p>
       <p className="mt-0.5 text-[8px] font-black leading-none tracking-wider text-blue-600">{code}</p>
@@ -80,30 +73,44 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
   });
   const cardStudent = getPreviewStudent(emission, poloInfo);
   const isCertificate = isCertificateDocument(emission.documento);
+  const validationPublic = isPublicDocumentValidationEnabled(emission);
+  const templateHasExplicitQrCode = hasExplicitQrCodeField(templateConfig);
   const parsedTemplateBody = templateConfig
     ? parseTemplate(templateConfig.textContent || templateConfig.textoFrente || '')
     : null;
-  const standardPages = parsedTemplateBody
-    ? splitTemplatePages(parsedTemplateBody)
-    : [null];
-  const hasConfiguredQrCode = Boolean(
-    templateConfig?.absoluteFields?.some((field: any) => field.type === 'qrcode')
+  const highestAbsoluteFieldPage = (templateConfig?.absoluteFields || []).reduce(
+    (highestPage: number, field: any) => Math.max(
+      highestPage,
+      Math.floor(Math.max(0, Number(field?.y || 0)) / PAGE_HEIGHT),
+    ),
+    0,
   );
+  const configuredPageCount = Math.max(
+    1,
+    Number(templateConfig?.pageCount || 1),
+    highestAbsoluteFieldPage + 1,
+  );
+  const standardPages = parsedTemplateBody !== null
+    ? splitTemplatePages(parsedTemplateBody, configuredPageCount)
+    : Array.from({ length: configuredPageCount }, () => null);
   const absoluteFieldsForPage = (pageIndex: number) => (
     (templateConfig?.absoluteFields || []).filter((field: any) => {
-      const fieldPage = Math.max(0, Math.floor(Number(field.y || 0) / 1123));
+      const fieldPage = Math.max(0, Math.floor(Number(field.y || 0) / PAGE_HEIGHT));
       return Math.min(standardPages.length - 1, fieldPage) === pageIndex;
     })
   );
 
   if (emission.documento === 'carteirinha' && templateConfig) {
     return (
-      <div className="print-page reprint-card-page mx-auto h-[297mm] w-[210mm] overflow-hidden border border-slate-200 bg-white p-[5mm] text-black shadow-xl box-border">
+      <div
+        className="print-page reprint-card-page mx-auto h-[297mm] w-[210mm] overflow-hidden border border-slate-200 bg-white p-[5mm] text-black shadow-xl box-border"
+        data-requires-qr-code={validationPublic ? 'true' : undefined}
+      >
         <div className="print-fold-grid grid grid-rows-5 gap-y-[1.5mm]">
           <div className="relative flex w-full items-center justify-center">
             <div className="relative flex overflow-hidden rounded-[2.5mm] border border-slate-300 shadow-sm">
-              <div className="relative h-[54mm] w-[85.6mm] border-r border-dashed border-slate-400"><CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={cardStudent} /></div>
-              <div className="relative h-[54mm] w-[85.6mm]"><CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={cardStudent} /></div>
+              <div className="relative h-[54mm] w-[85.6mm] border-r border-dashed border-slate-400"><CarteirinhaPreview formData={templateConfig} page="frente" zoomLevel={100} aluno={cardStudent} showValidationQrCode={validationPublic} /></div>
+              <div className="relative h-[54mm] w-[85.6mm]"><CarteirinhaPreview formData={templateConfig} page="verso" zoomLevel={100} aluno={cardStudent} showValidationQrCode={validationPublic} /></div>
             </div>
           </div>
           {Array.from({ length: 4 }).map((_, index) => (
@@ -115,13 +122,23 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
   }
 
   if (emission.documento === 'cracha_estagio' && templateConfig) {
+    const hasQrCodeField = !Array.isArray(templateConfig.fields)
+      || templateConfig.fields.some((field: any) => field?.type === 'qrcode');
     return (
-      <div className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm print:shadow-none">
+      <div
+        className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm print:shadow-none"
+        data-requires-qr-code={
+          validationPublic && hasQrCodeField ? 'true' : undefined
+        }
+      >
         {(['frente', 'verso'] as const).map((page) => (
           <div key={page} className="print-page mt-4 rounded-2xl border border-slate-150 bg-white p-2 first:mt-0">
             <h5 className="mb-2 text-center text-[10px] font-bold uppercase text-slate-400 print:hidden">{page}</h5>
             <CrachaPreview
-              formData={templateConfig}
+              formData={{
+                ...templateConfig,
+                validationPublic,
+              }}
               page={page}
               zoomLevel={100}
               aluno={{
@@ -132,6 +149,9 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
                 cargo: 'ESTUDANTE',
                 polo: emission.dados_emissao?.unitName || '',
                 curso: emission.dados_emissao?.courseName || '',
+                validade: emission.validade_ate
+                  ? new Date(emission.validade_ate).toLocaleDateString('pt-BR')
+                  : 'Sem vencimento',
                 fotoUrl: emission.dados_emissao?.studentPhotoUrl || emission.aluno?.foto_url || null,
                 validationCode: emission.codigo,
               }}
@@ -145,7 +165,13 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
   if (isCertificate && certificatePreview) {
     return (
       <div className="space-y-6">
-        <CertificadoPreview certificado={certificatePreview} modelo={templateConfig} pdfMode />
+        <CertificadoPreview
+          certificado={certificatePreview}
+          modelo={templateConfig}
+          pdfMode
+          showValidationQrCode={validationPublic}
+          validationCode={emission.codigo}
+        />
       </div>
     );
   }
@@ -153,9 +179,22 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
   if (isCertificate) return null;
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      data-requires-qr-code={
+        validationPublic && templateHasExplicitQrCode ? 'true' : undefined
+      }
+    >
       {standardPages.map((pageBody, pageIndex) => (
-        <div key={pageIndex} className="print-page relative mx-auto min-h-[297mm] w-[210mm] overflow-hidden border border-slate-200 bg-white p-[20mm] text-left text-black shadow-xl box-border" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+        <div
+          key={pageIndex}
+          className="print-page relative mx-auto h-[297mm] w-[210mm] overflow-hidden border border-slate-200 bg-white p-[20mm] text-left text-black shadow-xl box-border"
+          style={{
+            fontFamily: '"Times New Roman", Times, serif',
+            width: `${PAGE_WIDTH}px`,
+            height: `${PAGE_HEIGHT}px`,
+          }}
+        >
           {watermark?.watermarkUrl && (
             <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
               <img src={watermark.watermarkUrl} alt="Watermark" style={{ opacity: watermark.watermarkOpacity || 0.1, width: `${watermark.watermarkScale || 50}%`, transform: watermark.watermarkRotate !== false ? 'rotate(-45deg)' : 'none' }} />
@@ -180,23 +219,32 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
               className="absolute z-30"
               style={{
                 left: field.x,
-                top: Number(field.y || 0) - (pageIndex * 1123),
+                top: Number(field.y || 0) - (pageIndex * PAGE_HEIGHT),
                 color: '#000',
                 width: field.width ? `${field.width}px` : 'auto',
                 height: field.height ? `${field.height}px` : 'auto',
+                overflow: field.height ? 'hidden' : 'visible',
                 ...field.style,
               }}
             >
-              {field.type === 'qrcode' && <QrCodeField code={emission.codigo} width={field.width} />}
-              {field.type === 'image' && <img src={parseTemplate(field.value)} alt="Elemento visual" className="h-full w-full object-contain" />}
+              {field.type === 'qrcode' && validationPublic && templateHasExplicitQrCode && (
+                <QrCodeField code={emission.codigo} width={field.width} />
+              )}
+              {field.type === 'image' && (
+                <img
+                  src={parseTemplate(field.value)}
+                  alt="Elemento visual"
+                  className="w-full"
+                  style={{
+                    height: field.height ? '100%' : 'auto',
+                    objectFit: field.style?.objectFit || 'contain',
+                    objectPosition: field.style?.objectPosition || 'center',
+                  }}
+                />
+              )}
               {field.type === 'text' && <span dangerouslySetInnerHTML={sanitizedHtml(parseTemplate(field.value))} className="w-full break-words" />}
             </div>
           ))}
-          {pageIndex === standardPages.length - 1 && !hasConfiguredQrCode && (
-            <div className="absolute bottom-[16mm] right-[18mm] z-30 w-[24mm]">
-              <QrCodeField code={emission.codigo} width={76} />
-            </div>
-          )}
         </div>
       ))}
     </div>

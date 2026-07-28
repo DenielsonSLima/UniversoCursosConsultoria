@@ -97,6 +97,8 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
             poloComunicacaoId: communicationScope
               ? communicationScope.canViewAll ? null : communicationScope.poloId
               : previous.poloComunicacaoId,
+            podeVisualizarTodosPolos: communicationScope?.canViewAll
+              ?? previous.podeVisualizarTodosPolos,
             podeVisualizarTodosSetores: communicationScope?.canViewAll
               ?? previous.podeVisualizarTodosSetores,
           }));
@@ -210,6 +212,9 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
               onChange={event => setFormData(previous => ({
                 ...previous,
                 podeVisualizarTodosSetores: event.target.checked,
+                podeVisualizarTodosPolos: event.target.checked
+                  ? true
+                  : false,
                 setorComunicacao: event.target.checked ? 'todos' : previous.setorComunicacao,
                 poloComunicacaoId: event.target.checked ? null : previous.poloComunicacaoId,
               }))}
@@ -245,14 +250,18 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
                   <Building2 size={14} /> Polo permitido
                 </span>
                 <select
-                  value={formData.poloComunicacaoId || ''}
+                  value={formData.podeVisualizarTodosPolos ? '__all__' : formData.poloComunicacaoId || ''}
                   onChange={event => setFormData(previous => ({
                     ...previous,
-                    poloComunicacaoId: event.target.value || null,
+                    podeVisualizarTodosPolos: event.target.value === '__all__',
+                    poloComunicacaoId: event.target.value === '__all__'
+                      ? null
+                      : event.target.value || null,
                   }))}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-[#001a33] outline-none focus:border-emerald-500"
                 >
                   <option value="">Selecione o polo</option>
+                  <option value="__all__">Todos os polos</option>
                   {companies.map(company => (
                     <option key={company.id} value={company.id}>
                       {company.nomeFantasia} — {company.cidade}/{company.uf}

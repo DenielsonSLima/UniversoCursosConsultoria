@@ -1,5 +1,8 @@
 import { createDocumentTemplateService } from '../modelos-documentos/shared/document-template.service';
-import { fichaMatriculaDefaultTemplate } from './document-layouts';
+import {
+  fichaMatriculaDefaultTemplate,
+  normalizeRegistrationTemplateTypography,
+} from './document-layouts';
 import { fichasMatriculaService } from './fichas-matricula.service';
 
 const qrConfigService = createDocumentTemplateService(
@@ -17,13 +20,46 @@ export const fichaMatriculaTemplateService = {
       throw new Error('Nenhum modelo geral ativo de ficha de matrícula foi encontrado.');
     }
 
-    return {
+    const template = {
       ...cloneDefaultTemplate(),
       ...(model.templateConfig || {}),
       enrollmentFormTerm: model.textoContrato,
       enrollmentFormCustomFields: model.camposCustomizados,
       enrollmentFormRequiresSignature: model.requerAssinatura,
     };
+
+    if (Number(template.v || 0) >= fichaMatriculaDefaultTemplate.v) {
+      return template;
+    }
+
+    const defaultTemplate = cloneDefaultTemplate();
+    const canonicalFieldIds = new Set(
+      defaultTemplate.absoluteFields.map((field: any) => field.id),
+    );
+    const upgradedTemplate = normalizeRegistrationTemplateTypography(
+      {
+        ...template,
+        absoluteFields: [
+          ...defaultTemplate.absoluteFields,
+          ...(Array.isArray(template.absoluteFields)
+            ? template.absoluteFields.filter(
+                (field: any) => !canonicalFieldIds.has(field.id),
+              )
+            : []),
+        ],
+      },
+      fichaMatriculaDefaultTemplate.v,
+    );
+
+    await fichasMatriculaService.update({
+      ...model,
+      templateConfig: {
+        ...(model.templateConfig || {}),
+        ...upgradedTemplate,
+      },
+    }).catch(() => undefined);
+
+    return upgradedTemplate;
   },
 
   async saveTemplate(_poloId: string, template: any): Promise<boolean> {

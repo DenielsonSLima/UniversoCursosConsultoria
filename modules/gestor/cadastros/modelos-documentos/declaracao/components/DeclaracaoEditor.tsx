@@ -2,8 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { declaracaoService } from '../declaracao.service';
 import { marcaDaguaService } from '../../../../configuracoes/marca-dagua/marca-dagua.service';
 import { assinaturasService } from '../../../../configuracoes/assinaturas/assinaturas.service';
-import { academicosService } from '../../../../configuracoes/academicos/academicos.service';
-import { sanitizeHtml, sanitizeTemplateFields } from '../../../../../../lib/htmlSanitizer';
+import { getDocumentValidationUrl } from '../../../../../shared/document-validation/document-validation.url';
+import {
+  escapeHtmlText,
+  sanitizeHtml,
+  sanitizeTemplateFields,
+} from '../../../../../../lib/htmlSanitizer';
 import DeclaracaoEditorCanvas from './DeclaracaoEditorCanvas';
 import DeclaracaoEditorSidebar from './DeclaracaoEditorSidebar';
 import DeclaracaoEditorToast from './DeclaracaoEditorToast';
@@ -39,13 +43,17 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   hideBackButton = false,
   scopeLabel,
   enableEnrollmentSettings = false,
+  studentPreview,
+  studentPreviewLoading = false,
+  studentPreviewError,
+  onLoadStudentPreview,
+  onClearStudentPreview,
 }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [watermark, setWatermark] = useState<any>(null);
   const [qrConfig, setQrConfig] = useState<any>(null);
-  const [academicConfigs, setAcademicConfigs] = useState<any>(null);
   const [textContent, setTextContent] = useState('');
   const [absoluteFields, setAbsoluteFields] = useState<AbsoluteField[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
@@ -65,6 +73,7 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedField = absoluteFields.find(field => field.id === selectedFieldId);
+  const previewActive = Boolean(studentPreview);
 
   const showToast = (message: string, type: EditorToast['type'] = 'success') => {
     setToast({ message, type });
@@ -116,9 +125,6 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     const qrData = await service.getQrConfig();
     setQrConfig(qrData);
 
-    const academicData = await academicosService.getConfigs();
-    setAcademicConfigs(academicData);
-
   };
 
   const loadData = async () => {
@@ -137,6 +143,10 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
   useEffect(() => {
     void loadData();
   }, [polo.id]);
+
+  useEffect(() => {
+    if (previewActive) setSelectedFieldId(null);
+  }, [previewActive]);
 
   const updateSelectedField = (updates: Partial<AbsoluteField>) => {
     if (!selectedFieldId) return;
@@ -390,13 +400,27 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
     return `${validationPrefix}-${codeStr}`;
   };
 
-  const getValidationUrl = () => (
-    academicConfigs?.validacaoUrl || 'https://www.universocc.com.br/validador'
-  );
-
   const validationCode = getValidationCode();
-  const qrCodeExampleUrl = `${getValidationUrl()}?q=${validationCode}`;
+  const qrCodeExampleUrl = getDocumentValidationUrl(validationCode);
   const textPages = splitDocumentPages(textContent, pageCount);
+  const replacePreviewTokens = (source: string, escapeValues: boolean) => {
+    if (!studentPreview) return source;
+    return Object.entries(studentPreview.replacements).reduce(
+      (result, [token, value]) => result.split(token).join(
+        escapeValues ? escapeHtmlText(String(value ?? '')) : String(value ?? ''),
+      ),
+      source,
+    );
+  };
+  const previewTextPages = previewActive
+    ? textPages.map(page => replacePreviewTokens(page, true))
+    : textPages;
+  const previewAbsoluteFields = previewActive
+    ? absoluteFields.map(field => ({
+        ...field,
+        value: replacePreviewTokens(field.value, field.type !== 'image'),
+      }))
+    : absoluteFields;
 
   if (loading) {
     return <div className="p-12 text-center text-slate-500">Carregando editor...</div>;
@@ -437,30 +461,48 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
         poloName={polo.nomeFantasia}
         saving={saving}
         scopeLabel={scopeLabel}
+        previewActive={previewActive}
+        previewLabel={studentPreview?.label}
+        previewLoading={studentPreviewLoading}
+        previewError={studentPreviewError}
+        onLoadPreview={onLoadStudentPreview}
+        onClearPreview={onClearStudentPreview}
       />
 
       <div className="flex flex-1 gap-8 overflow-hidden h-full">
-        <DeclaracaoEditorSidebar
-          fileInputRef={fileInputRef}
-          onAddCentralSignature={handleAddCentralSignature}
-          onDragStart={handleDragStart}
-          onImageUpload={handleImageUpload}
-          onInsertVariable={handleInsertVariable}
-          onRemoveField={handleRemoveField}
-          onSelectField={setSelectedFieldId}
-          onUpdateField={updateSelectedField}
-          onUpdateFieldStyle={updateSelectedFieldStyle}
-          selectedField={selectedField}
-          enrollmentSettings={enableEnrollmentSettings ? enrollmentFormPreview : undefined}
-          onEnrollmentSettingsChange={enableEnrollmentSettings ? setEnrollmentFormPreview : undefined}
-          setValidityDays={setValidityDays}
-          showValidity={showValidity}
-          validityDays={validityDays}
-          variables={variables}
-        />
+        <div className={`relative flex shrink-0 ${previewActive ? 'pointer-events-none select-none opacity-45' : ''}`}>
+          <DeclaracaoEditorSidebar
+            fileInputRef={fileInputRef}
+            onAddCentralSignature={handleAddCentralSignature}
+            onDragStart={handleDragStart}
+            onImageUpload={handleImageUpload}
+            onInsertVariable={handleInsertVariable}
+            onRemoveField={handleRemoveField}
+            onSelectField={setSelectedFieldId}
+            onUpdateField={updateSelectedField}
+            onUpdateFieldStyle={updateSelectedFieldStyle}
+            selectedField={selectedField}
+            enrollmentSettings={enableEnrollmentSettings ? enrollmentFormPreview : undefined}
+            onEnrollmentSettingsChange={enableEnrollmentSettings ? setEnrollmentFormPreview : undefined}
+            setValidityDays={setValidityDays}
+            showValidity={showValidity}
+            validityDays={validityDays}
+            variables={variables}
+          />
+          {previewActive && (
+            <div className="absolute inset-x-3 top-3 z-50 rounded-xl border border-emerald-200 bg-white/95 p-3 text-center shadow-sm">
+              <p className="text-[9px] font-black uppercase tracking-widest text-emerald-700">
+                Modo de visualização
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-600">
+                Volte aos marcadores para editar.
+              </p>
+            </div>
+          )}
+        </div>
 
         <DeclaracaoEditorCanvas
-          absoluteFields={absoluteFields}
+          absoluteFields={previewAbsoluteFields}
           canvasRef={canvasRef}
           documentTitle={documentTitle}
           editorRef={editorRef}
@@ -475,9 +517,10 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
           polo={polo}
           qrCodeExampleUrl={qrCodeExampleUrl}
           selectedField={selectedField}
-          textPages={textPages}
+          textPages={previewTextPages}
           validationCode={validationCode}
           watermark={watermark}
+          readOnly={previewActive}
         />
 
         <DeclaracaoEditorToast toast={toast} />

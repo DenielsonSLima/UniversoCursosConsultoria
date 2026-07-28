@@ -3,14 +3,19 @@ import {
   buildGestorPermissionsPayload,
   normalizeGestorPermissions,
 } from '../../access-control';
-import { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
+import {
+  UsuarioManagementState,
+  UsuarioSistema,
+  UsuarioSistemaInput,
+} from './usuarios.types';
 
 export type { UsuarioSistema, UsuarioSistemaInput } from './usuarios.types';
 
 const USER_SELECT =
   'id, nome, email, cpf, telefone, perfil, status, context, polo_ids, ' +
   'permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, ' +
-  'setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_setores, ' +
+  'setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, ' +
+  'pode_visualizar_todos_setores, ' +
   'perfis_acesso(nome, permissoes, restricao_horario), created_at';
 
 const resolvePerfilNome = (value: unknown) => {
@@ -44,6 +49,7 @@ const normalizeUser = (row: any): UsuarioSistema => {
     restricao_horario: row.restricao_horario || null,
     setor_comunicacao: row.setor_comunicacao || 'todos',
     polo_comunicacao_id: row.polo_comunicacao_id || null,
+    pode_visualizar_todos_polos: Boolean(row.pode_visualizar_todos_polos),
     pode_visualizar_todos_setores: Boolean(row.pode_visualizar_todos_setores),
   };
 };
@@ -157,15 +163,19 @@ export const usuariosService = {
    * Alterna o status (Ativo/Inativo) de um usuário.
    */
   async toggleUserStatus(id: string, status: 'Ativo' | 'Inativo'): Promise<boolean> {
-    const { error } = await supabase
-      .from('usuarios_sistema')
-      .update({ status })
-      .eq('id', id);
+    const { data, error } = await supabase.functions.invoke('portal-user-management', {
+      body: {
+        action: 'set-gestor-user-status',
+        userId: id,
+        status,
+      },
+    });
 
     if (error) {
       console.error('Erro ao alternar status do usuário:', error);
-      throw new Error(error.message);
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível alterar o status do usuário.'));
     }
+    if (data?.error) throw new Error(data.error);
 
     return true;
   },
@@ -174,16 +184,44 @@ export const usuariosService = {
    * Remove um usuário.
    */
   async deleteUser(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('usuarios_sistema')
-      .delete()
-      .eq('id', id);
+    const { data, error } = await supabase.functions.invoke('portal-user-management', {
+      body: {
+        action: 'delete-gestor-user',
+        userId: id,
+      },
+    });
 
     if (error) {
       console.error('Erro ao excluir usuário:', error);
-      throw new Error(error.message);
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível excluir o usuário.'));
     }
+    if (data?.error) throw new Error(data.error);
 
     return true;
-  }
+  },
+
+  async getManagementStates(userIds: string[]): Promise<Record<string, UsuarioManagementState>> {
+    if (userIds.length === 0) return {};
+
+    const { data, error } = await supabase.functions.invoke('portal-user-management', {
+      body: {
+        action: 'list-gestor-user-management-states',
+        userIds,
+      },
+    });
+
+    if (error) {
+      console.error('Erro ao verificar o histórico dos usuários:', error);
+      throw new Error(await getFunctionErrorMessage(error, 'Não foi possível verificar o histórico dos usuários.'));
+    }
+    if (data?.error) throw new Error(data.error);
+
+    return (data?.managementStates || []).reduce(
+      (states: Record<string, UsuarioManagementState>, state: UsuarioManagementState) => {
+        states[state.userId] = state;
+        return states;
+      },
+      {},
+    );
+  },
 };

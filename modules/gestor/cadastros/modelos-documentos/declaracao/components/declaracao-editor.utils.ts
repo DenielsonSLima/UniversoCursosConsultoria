@@ -1,4 +1,5 @@
 import type { AbsoluteField, EditorVariable } from './declaracao-editor.types';
+import { getDocumentValidationBaseUrl } from '../../../../../shared/document-validation/document-validation.url';
 
 export const DECLARACAO_VARIABLES: EditorVariable[] = [
   { code: '{{ALUNO_NOME}}', label: 'Nome do Aluno' },
@@ -71,7 +72,7 @@ const DECLARACAO_DEFAULT_FIELDS: AbsoluteField[] = [
   {
     id: 'footer_url',
     type: 'text',
-    value: 'Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">www.universocc.com.br/validador</span>',
+    value: `Para verificar a autenticidade deste documento acesse: <span style="color: #ef4444">${getDocumentValidationBaseUrl()}</span>`,
     x: 50,
     y: 995,
     width: 694,

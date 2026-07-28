@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 
 import { empresasService } from '../../../../configuracoes/empresas/empresas.service';
+import ProfilePhotoAdjustModal from '../../../../../shared/components/ProfilePhotoAdjustModal';
 import { formatCpf, isValidCpf, isValidEmail, normalizeEmail } from '../../../../../shared/utils/identityValidation';
 import {
   getTechnicalEnrollmentMissingFields,
@@ -38,6 +39,7 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
   const [currentStep, setCurrentStep] = useState(1);
   const [showMatriculaModal, setShowMatriculaModal] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [polos, setPolos] = useState<PoloOption[]>([]);
   const [formData, setFormData] = useState<AlunoFormData>(() => createInitialFormData(defaultPoloId));
 
@@ -63,13 +65,18 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
     };
   }, [defaultPoloId]);
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    event.target.value = '';
+    if (file) setPendingPhotoFile(file);
+  };
+
+  const confirmPhotoUpload = async (file: File) => {
     setIsUploadingPhoto(true);
     try {
       const url = await empresasService.uploadLogo(file);
       setFormData((previous) => ({ ...previous, foto: url }));
+      setPendingPhotoFile(null);
     } catch (error: any) {
       alert('Erro ao enviar foto: ' + (error.message || error));
     } finally {
@@ -242,6 +249,17 @@ const ParceiroAlunoForm: React.FC<ParceiroAlunoFormProps> = ({ onCancel, onSave,
 
   return (
     <div className="">
+      {pendingPhotoFile && (
+        <ProfilePhotoAdjustModal
+          file={pendingPhotoFile}
+          isProcessing={isUploadingPhoto}
+          onCancel={() => {
+            if (!isUploadingPhoto) setPendingPhotoFile(null);
+          }}
+          onConfirm={confirmPhotoUpload}
+        />
+      )}
+
       <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
         <div>
           <h3 className="text-xl font-black text-[#001a33] uppercase tracking-tight">Novo Aluno</h3>

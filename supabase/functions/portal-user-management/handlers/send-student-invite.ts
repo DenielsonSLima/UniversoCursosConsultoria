@@ -1,4 +1,8 @@
-import { normalizeEmail, sendRecoveryEmail } from "../auth-users.ts";
+import {
+  findAuthUserByEmail,
+  normalizeEmail,
+  sendRecoveryEmail,
+} from "../auth-users.ts";
 import { resolveRedirectTarget } from "../redirects.ts";
 import type {
   HandlerContext,
@@ -41,13 +45,24 @@ export const handleSendStudentInvite = async (
     }, 400);
   }
 
-  const email = normalizeEmail(options.email || partner.email);
-  if (!email) {
+  const contactEmail = normalizeEmail(options.email || partner.email);
+  const authEmail = normalizeEmail(
+    partner.auth_login_email || options.email || partner.email,
+  );
+  if (!authEmail) {
     return json(
-      { success: false, error: "E-mail do aluno não informado." },
-      400,
+      {
+        success: false,
+        error: "Identidade de acesso do aluno não configurada.",
+      },
+      500,
     );
   }
+  const canDeliverByEmail = Boolean(
+    contactEmail &&
+      contactEmail === authEmail &&
+      !authEmail.endsWith("@acesso.universocc.invalid"),
+  );
 
   const redirectResolution = resolveRedirectTarget(options.redirectTo);
   if (!redirectResolution.redirectTo) {
@@ -58,26 +73,78 @@ export const handleSendStudentInvite = async (
   }
   const finalRedirect = redirectResolution.redirectTo;
 
-  const inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
-    data: {
-      nome: partner.nome,
-      origem: "cadastro_gestor",
-      partner_id: partner.id,
-    },
-    redirectTo: finalRedirect,
-  });
+  let authUser = await findAuthUserByEmail(admin, authEmail);
 
-  if (inviteResult.error) {
-    const updateError = await markStudentNeedsAccess(admin, partner.id);
-    if (updateError) {
-      return json({ success: false, error: updateError }, 500);
+  if (!authUser && canDeliverByEmail) {
+    const inviteResult = await admin.auth.admin.inviteUserByEmail(authEmail, {
+      data: {
+        nome: partner.nome,
+        origem: "cadastro_gestor",
+        partner_id: partner.id,
+        matricula_acesso: partner.matricula_acesso || null,
+      },
+      redirectTo: finalRedirect,
+    });
+
+    if (!inviteResult.error) {
+      const updateError = await markStudentNeedsAccess(admin, partner.id);
+      if (updateError) {
+        return json({ success: false, error: updateError }, 500);
+      }
+
+      return json({
+        success: true,
+        action: "invite",
+        userId: inviteResult.data?.user?.id || null,
+        inviteSent: true,
+        recoveryLink: null,
+        message: "Convite de acesso enviado com sucesso.",
+      });
     }
 
+    authUser = await findAuthUserByEmail(admin, authEmail);
+    if (!authUser) {
+      return json({
+        success: false,
+        error: inviteResult.error.message ||
+          "Não foi possível criar o acesso do aluno.",
+      }, 500);
+    }
+  }
+
+  if (!authUser) {
+    const createdUser = await admin.auth.admin.createUser({
+      email: authEmail,
+      email_confirm: true,
+      user_metadata: {
+        nome: partner.nome,
+        origem: "cadastro_gestor_matricula",
+        tipo: "Aluno",
+        partner_id: partner.id,
+        matricula_acesso: partner.matricula_acesso || null,
+      },
+    });
+    if (createdUser.error || !createdUser.data?.user) {
+      return json({
+        success: false,
+        error: createdUser.error?.message ||
+          "Não foi possível criar o acesso por matrícula.",
+      }, 500);
+    }
+    authUser = createdUser.data.user;
+  }
+
+  const updateError = await markStudentNeedsAccess(admin, partner.id);
+  if (updateError) {
+    return json({ success: false, error: updateError }, 500);
+  }
+
+  if (canDeliverByEmail) {
     const emailDelivery = options.publicApiKey.apiKey
       ? await sendRecoveryEmail(
         options.supabaseUrl,
         options.publicApiKey.apiKey,
-        email,
+        authEmail,
         finalRedirect,
       )
       : { sent: false, message: options.publicApiKey.message };
@@ -86,7 +153,7 @@ export const handleSendStudentInvite = async (
       return json({
         success: true,
         action: "recovery",
-        userId: null,
+        userId: authUser.id || null,
         inviteSent: false,
         recoveryEmailSent: true,
         recoveryLink: null,
@@ -94,46 +161,30 @@ export const handleSendStudentInvite = async (
           "Usuário já possui acesso. Enviamos o link de recuperação por e-mail.",
       });
     }
-
-    const recovery = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo: finalRedirect },
-    });
-
-    if (recovery.error) {
-      return json({
-        success: false,
-        error: recovery.error.message || emailDelivery.message ||
-          inviteResult.error.message ||
-          "Não foi possível enviar o convite de acesso.",
-      }, 500);
-    }
-
-    return json({
-      success: true,
-      action: "recovery",
-      userId: recovery.data?.user?.id || null,
-      inviteSent: false,
-      recoveryEmailSent: false,
-      recoveryLink: recovery.data?.properties?.action_link || null,
-      message: emailDelivery.message
-        ? `Falha ao enviar e-mail automático: ${emailDelivery.message} Geramos um link de recuperação para enviar manualmente, se necessário.`
-        : "Usuário já possui acesso. Geramos um link de recuperação para primeiro acesso.",
-    });
   }
 
-  const updateError = await markStudentNeedsAccess(admin, partner.id);
-  if (updateError) {
-    return json({ success: false, error: updateError }, 500);
+  const recovery = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email: authEmail,
+    options: { redirectTo: finalRedirect },
+  });
+  if (recovery.error) {
+    return json({
+      success: false,
+      error: recovery.error.message ||
+        "Não foi possível gerar o link de primeiro acesso.",
+    }, 500);
   }
 
   return json({
     success: true,
-    action: "invite",
-    userId: inviteResult.data?.user?.id || null,
-    inviteSent: true,
-    recoveryLink: null,
-    message: "Convite de acesso enviado com sucesso.",
+    action: "recovery",
+    userId: authUser.id || recovery.data?.user?.id || null,
+    inviteSent: false,
+    recoveryEmailSent: false,
+    recoveryLink: recovery.data?.properties?.action_link || null,
+    message: canDeliverByEmail
+      ? "Geramos um link seguro de recuperação para envio manual."
+      : "Aluno sem e-mail: envie o link seguro por um canal previamente verificado, como o WhatsApp cadastrado.",
   });
 };

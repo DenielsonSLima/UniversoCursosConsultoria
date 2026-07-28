@@ -6,15 +6,21 @@ import { CreditCard, Users, Search, Printer, ArrowLeft, Loader2, Download, Trash
 import { supabase } from '../../../../lib/supabase';
 import { declaracaoService } from '../../cadastros/modelos-documentos/declaracao/declaracao.service';
 import { marcaDaguaService } from '../../configuracoes/marca-dagua/marca-dagua.service';
-import { academicosService } from '../../configuracoes/academicos/academicos.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
-import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
+import {
+  createDocumentReissueKey,
+  documentValidationService,
+} from '../../../shared/document-validation/document-validation.service';
 import { ValidatableDocumentType } from '../../../shared/document-validation/document-validation.types';
+import { getDocumentValidationUrl } from '../../../shared/document-validation/document-validation.url';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { onlyDigits } from '../../../../lib/documentFormatters';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
+import { documentValidationPoliciesService } from '../../cadastros/modelos-documentos/validacao-documental/document-validation-policies.service';
+import { LocalQrCodeImage } from '../../../shared/qrcode/LocalQrCodeImage';
+import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
 
 interface Aluno {
   id: string;
@@ -80,15 +86,23 @@ const SecretariaDeclaracaoMatriculaPage = ({
   // Model Configs
   const [templateConfig, setTemplateConfig] = useState<any>(defaultTemplate);
   const [watermark, setWatermark] = useState<any>(null);
-  const [academicConfigs, setAcademicConfigs] = useState<any>(null);
 
   // States for printing visualizer
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPreparingValidation, setIsPreparingValidation] = useState(false);
   const [validationCodes, setValidationCodes] = useState<Record<string, string>>({});
+  const [validationExpirations, setValidationExpirations] = useState<Record<string, string | null>>({});
+  const [validationPublicByStudent, setValidationPublicByStudent] = useState<Record<string, boolean>>({});
+  const [validationPublic, setValidationPublic] = useState(true);
+  const [validationValidityDays, setValidationValidityDays] = useState<number | null>(null);
   const [frequenciesByStudent, setFrequenciesByStudent] = useState<Record<string, number>>({});
   const printContentRef = useRef<HTMLDivElement>(null);
+  const validationRequestRef = useRef<{
+    fingerprint: string;
+    idempotencyKey: string;
+  } | null>(null);
+  const validationRequestInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!isPrinting) return;
@@ -210,16 +224,17 @@ const SecretariaDeclaracaoMatriculaPage = ({
       try {
         const activePoloId = sessionStorage.getItem('current_polo_id') || '44444444-4444-4444-4444-444444444444';
 
-        const [template, watermarks, academicData] = await Promise.all([
+        const [template, watermarks, , validationPolicy] = await Promise.all([
           documentService.getTemplate(activePoloId),
           marcaDaguaService.getCompaniesWithWatermark(),
-          academicosService.getConfigs(),
           loadAcademicoData(activePoloId),
+          documentValidationPoliciesService.getByDocument(documentType),
         ]);
         setTemplateConfig(template);
         const wm = watermarks.find(w => w.id === activePoloId);
         setWatermark(wm);
-        setAcademicConfigs(academicData);
+        setValidationPublic(validationPolicy?.validacao_publica !== false);
+        setValidationValidityDays(validationPolicy?.validade_dias ?? null);
       } catch (err) {
         console.error('Erro ao carregar configurações de declaração:', err);
       }
@@ -240,6 +255,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
   };
 
   const handlePrintAction = async () => {
+    if (validationRequestInFlightRef.current) return;
     const targets = mode === 'individual'
       ? (selectedAluno ? [selectedAluno] : [])
       : mode === 'lote'
@@ -254,6 +270,18 @@ const SecretariaDeclaracaoMatriculaPage = ({
       return;
     }
 
+    const requestFingerprint = JSON.stringify([
+      documentType,
+      eligibleTargets.map((aluno) => aluno.enrollmentId),
+    ]);
+    if (validationRequestRef.current?.fingerprint !== requestFingerprint) {
+      validationRequestRef.current = {
+        fingerprint: requestFingerprint,
+        idempotencyKey: createDocumentReissueKey(),
+      };
+    }
+
+    validationRequestInFlightRef.current = true;
     setIsPreparingValidation(true);
     try {
       if (documentType === 'declaracao_frequencia') {
@@ -275,19 +303,14 @@ const SecretariaDeclaracaoMatriculaPage = ({
         }));
       }
 
-      const validityDays = templateConfig.validityDays || 30;
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + validityDays);
-      const expiresAtISO = expiresAt.toISOString();
-
       const issues = await Promise.all(
         eligibleTargets.map(async (aluno) => ({
           alunoId: aluno.id,
-          issue: await documentValidationService.issue({
+          issue: await documentValidationService.reissue({
             type: documentType,
             enrollmentId: aluno.enrollmentId!,
-            expiresAt: expiresAtISO,
-            registerReissue: true,
+            idempotencyKey:
+              `${validationRequestRef.current!.idempotencyKey}:${aluno.enrollmentId}`,
           }),
         }))
       );
@@ -296,7 +319,19 @@ const SecretariaDeclaracaoMatriculaPage = ({
         ...current,
         ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, issue.code])),
       }));
+      setValidationExpirations((current) => ({
+        ...current,
+        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [alunoId, issue.expiresAt])),
+      }));
+      setValidationPublicByStudent((current) => ({
+        ...current,
+        ...Object.fromEntries(issues.map(({ alunoId, issue }) => [
+          alunoId,
+          issue.validationPublic,
+        ])),
+      }));
       setIsPrinting(true);
+      validationRequestRef.current = null;
     } catch (error) {
       console.error('Erro ao registrar emissão de declaração:', error);
       alert(
@@ -305,6 +340,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
           : 'Não foi possível preparar as declarações.'
       );
     } finally {
+      validationRequestInFlightRef.current = false;
       setIsPreparingValidation(false);
     }
   };
@@ -409,6 +445,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
     const container = printContentRef.current;
     if (!container) return;
 
+    await waitForQrCodeAssets(container);
     const images = Array.from(
       container.querySelectorAll<HTMLImageElement>('img')
     ) as HTMLImageElement[];
@@ -471,8 +508,18 @@ const SecretariaDeclaracaoMatriculaPage = ({
     }
   };
 
-  const triggerBrowserPrint = () => {
-    window.print();
+  const triggerBrowserPrint = async () => {
+    try {
+      await waitForPrintAssets();
+      window.print();
+    } catch (error) {
+      console.error('Erro ao preparar declaração para impressão:', error);
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível preparar o QR Code para impressão.',
+      );
+    }
   };
 
   const rawAlunosParaImprimir = mode === 'individual'
@@ -483,7 +530,12 @@ const SecretariaDeclaracaoMatriculaPage = ({
           : alunos.filter(a => a.turmaIds && a.turmaIds.includes(selectedTurmaId)))
       : customSelectedAlunos;
 
-  const parseTemplate = (htmlText: string, aluno: Aluno, validationCode: string) => {
+  const parseTemplate = (
+    htmlText: string,
+    aluno: Aluno,
+    validationCode: string,
+    validationExpiresAt?: string | null,
+  ) => {
     if (!htmlText) return '';
     let parsed = htmlText;
 
@@ -495,10 +547,13 @@ const SecretariaDeclaracaoMatriculaPage = ({
     const dataExtenso = `${today.getDate()} de ${meses[today.getMonth()]} de ${today.getFullYear()}`;
     const horaAtual = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
 
-    const validityDays = templateConfig.validityDays || 30;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + validityDays);
-    const validadeFormatada = `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`;
+    const expiresAt = validationExpiresAt ? new Date(validationExpiresAt) : null;
+    const validityDays = expiresAt
+      ? Math.max(1, Math.ceil((expiresAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
+      : null;
+    const validadeFormatada = expiresAt
+      ? `${String(expiresAt.getDate()).padStart(2, '0')}/${String(expiresAt.getMonth() + 1).padStart(2, '0')}/${expiresAt.getFullYear()}`
+      : 'Sem vencimento';
 
     const formatarData = (dataStr?: string) => {
       if (!dataStr) return 'Não informada';
@@ -533,7 +588,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
     parsed = parsed.replace(/{{DATA_ATUAL}}/g, dataExtenso);
     parsed = parsed.replace(/{{HORA_ATUAL}}/g, horaAtual);
     parsed = parsed.replace(/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${horaAtual}`);
-    parsed = parsed.replace(/{{VALIDADE_DIAS}}/g, String(validityDays));
+    parsed = parsed.replace(
+      /{{VALIDADE_DIAS}}/g,
+      validityDays === null ? 'Sem vencimento' : String(validityDays),
+    );
     parsed = parsed.replace(/{{VALIDADE_DATA}}/g, validadeFormatada);
     parsed = parsed.replace(
       /{{FREQUENCIA_GERAL}}/g,
@@ -548,7 +606,9 @@ const SecretariaDeclaracaoMatriculaPage = ({
   const renderA4Pages = () => {
     return rawAlunosParaImprimir.map((aluno, index) => {
       const code = validationCodes[aluno.id] || 'VALIDACAO-PENDENTE';
-      const parsedText = parseTemplate(templateConfig.textContent, aluno, code);
+      const expiresAt = validationExpirations[aluno.id];
+      const issuedValidationPublic = validationPublicByStudent[aluno.id] === true;
+      const parsedText = parseTemplate(templateConfig.textContent, aluno, code, expiresAt);
 
       return (
         <div
@@ -586,7 +646,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
 
           {/* 4. Campos Absolutos */}
           {templateConfig.absoluteFields?.map((field: any) => {
-            const parsedVal = parseTemplate(field.value, aluno, code);
+            const parsedVal = parseTemplate(field.value, aluno, code, expiresAt);
             return (
               <div
                 key={field.id}
@@ -600,13 +660,14 @@ const SecretariaDeclaracaoMatriculaPage = ({
                   ...field.style
                 }}
               >
-                {field.type === 'qrcode' && (
+                {field.type === 'qrcode' && issuedValidationPublic && (
                   <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
                     <div className="w-full aspect-square bg-white flex items-center justify-center mb-1" style={{ width: field.width ? `${field.width}px` : '100px' }}>
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${academicConfigs?.validacaoUrl || 'https://www.universocc.com.br/validador'}?q=${code}`)}`}
+                      <LocalQrCodeImage
+                        value={getDocumentValidationUrl(code)}
+                        size={150}
                         alt="QR Code"
-                        className="w-full h-full object-contain pointer-events-none"
+                        className="pointer-events-none h-full w-full"
                       />
                     </div>
                     <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
@@ -622,8 +683,13 @@ const SecretariaDeclaracaoMatriculaPage = ({
                   <img
                     src={field.value}
                     alt="Assinatura"
-                    className="w-full h-auto object-contain pointer-events-none"
-                    style={{ width: field.width ? `${field.width}px` : '200px' }}
+                    className="w-full pointer-events-none"
+                    style={{
+                      width: field.width ? `${field.width}px` : '200px',
+                      height: field.height ? `${field.height}px` : 'auto',
+                      objectFit: field.style?.objectFit || 'contain',
+                      objectPosition: field.style?.objectPosition || 'center',
+                    }}
                   />
                 )}
 
@@ -684,7 +750,7 @@ const SecretariaDeclaracaoMatriculaPage = ({
               <span>{isDownloading ? 'Gerando...' : 'Download PDF'}</span>
             </button>
             <button
-              onClick={triggerBrowserPrint}
+              onClick={() => void triggerBrowserPrint()}
               className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:bg-blue-700 sm:px-6 sm:py-3 sm:text-xs"
             >
               <Printer size={16} /> <span>Imprimir</span>
@@ -906,10 +972,16 @@ const SecretariaDeclaracaoMatriculaPage = ({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Validade do Lote</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Política do Validador</label>
                 <input
                   type="text"
-                  value={`${templateConfig.validityDays || 30} dias`}
+                  value={
+                    !validationPublic
+                      ? 'Sem validador público'
+                      : validationValidityDays === null
+                        ? 'Sem vencimento'
+                        : `${validationValidityDays} dias`
+                  }
                   disabled
                   className="w-full p-4 bg-slate-100 border border-slate-200 rounded-2xl font-bold text-slate-500 text-sm outline-none"
                 />

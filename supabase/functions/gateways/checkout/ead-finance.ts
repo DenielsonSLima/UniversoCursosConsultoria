@@ -6,7 +6,7 @@ import {
   calculateEadCheckoutFeeBreakdown,
   shouldPassEadInstallmentCost,
 } from "../../asaas/ead/fees.ts";
-import type { EadCharge } from "./types.ts";
+import type { EadCharge, GatewayProviderCode } from "./types.ts";
 import { dueDateInDays, roundMoney } from "./utils.ts";
 
 export const buildCoursePaymentDescription = (courseName: string) =>
@@ -15,6 +15,7 @@ export const buildCoursePaymentDescription = (courseName: string) =>
 export const resolveEadCharge = (
   course: any,
   input: { method?: unknown; installments?: unknown },
+  providerCode?: GatewayProviderCode,
 ): EadCharge => {
   const financeiroConfig = normalizeCourseFinanceiroConfig(
     course?.financeiro_config || {},
@@ -30,6 +31,23 @@ export const resolveEadCharge = (
   const baseValue = roundMoney(course?.valor);
   if (!baseValue || baseValue <= 0) {
     throw new Error("Valor do curso EAD ainda nao configurado para cobranca.");
+  }
+
+  // O Banese confirma o valor pago do título, mas não fornece uma tarifa por
+  // cobrança nesta integração. A taxa fixa abaixo pertence ao legado Asaas e
+  // não pode ser usada para reduzir ou majorar boleto/Pix Banese.
+  if (providerCode === "banese_card") {
+    return {
+      method,
+      installmentCount,
+      value: baseValue,
+      feeValue: 0,
+      netValue: baseValue,
+      description: buildCoursePaymentDescription(
+        String(course?.nome || "Curso EAD"),
+      ),
+      dueDate: dueDateInDays(7),
+    };
   }
 
   const includeFeeInCheckout = financeiroConfig.considerarTaxaNoCheckout ===

@@ -14,6 +14,7 @@ export interface EmissionLog {
   emitido_em: string;
   ultima_emissao_em: string;
   validade_ate: string | null;
+  validacao_publica?: boolean;
   revogado_em: string | null;
   emitido_por: string | null;
   quantidade_emissoes: number;

@@ -283,8 +283,10 @@ export const formatBaneseFinancialTermsForPdf = (
     ? "Juros a partir de " + formatDate(terms.interest.startsOn) + ": " +
       (terms.interest.type === "daily-fixed"
         ? formatMoney(terms.interest.value) + " por dia (dias corridos)"
-        : formatPercentage(terms.interest.value) +
-          " ao mês (dias corridos)")
+        : formatMoney(
+          terms.nominalAmount * terms.interest.value / 100 / 30,
+        ) + " por dia (" + formatPercentage(terms.interest.value) +
+          " ao mês proporcional aos dias)")
     : null;
   const lines = [discount, penalty, interest].filter(
     (line): line is string => Boolean(line),

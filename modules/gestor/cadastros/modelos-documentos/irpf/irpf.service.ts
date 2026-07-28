@@ -2,14 +2,20 @@
 // REGRA ABSOLUTA: ZERO localStorage. Supabase é a única fonte de dados.
 
 import { supabase } from '../../../../../lib/supabase';
+import { getDocumentValidationBaseUrl } from '../../../../shared/document-validation/document-validation.url';
 
 const DEFAULT_QR_CONFIG = {
   pattern: ['{POLO_ID}', '{ALUNO_MATRICULA}', '{ANO_ATUAL}'],
   separator: '-'
 };
 
-const VALIDATOR_URL = 'www.universocc.com.br/validador';
-const LEGACY_VALIDATOR_URL = 'www.universocc.com.br/#/validador';
+const VALIDATOR_URL = getDocumentValidationBaseUrl();
+const LEGACY_VALIDATOR_URLS = [
+  'www.universocc.com.br/#/validador',
+  'www.universocc.com.br/validador',
+  'https://www.universocc.com.br/#/validador',
+  'https://www.universocc.com.br/validador',
+];
 const RED_VALIDATOR_URL = `<span style="color: #ef4444">${VALIDATOR_URL}</span>`;
 
 const IRPF_FOOTER_GENERATION_FIELD = {
@@ -23,7 +29,10 @@ const IRPF_FOOTER_GENERATION_FIELD = {
 };
 
 const colorValidatorUrl = (value: string) => {
-  const normalized = String(value || '').replaceAll(LEGACY_VALIDATOR_URL, VALIDATOR_URL);
+  const normalized = LEGACY_VALIDATOR_URLS.reduce(
+    (currentValue, legacyUrl) => currentValue.replaceAll(legacyUrl, VALIDATOR_URL),
+    String(value || ''),
+  );
   if (normalized.includes(RED_VALIDATOR_URL)) return normalized;
   return normalized.replaceAll(VALIDATOR_URL, RED_VALIDATOR_URL);
 };

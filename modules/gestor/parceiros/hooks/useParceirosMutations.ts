@@ -53,12 +53,12 @@ export const useParceirosMutations = ({
       let lastMessage: string | null = null;
       let manualRecoveryLink: string | null = null;
 
-      if (created?.email && !isExistingAluno) {
+      if (created?.id && !isExistingAluno) {
         const redirectTo = buildAuthRedirectUrl('/login');
         try {
           const result = await portalActivationService.ensureStudentAccess({
             partnerId: created.id,
-            email: created.email,
+            email: created.email || undefined,
             redirectTo,
           });
           inviteDispatched = result.action === 'invite' ? true : false;
@@ -97,11 +97,11 @@ export const useParceirosMutations = ({
           );
         } else if (created?.email && recoverySent) {
           toast.success('Aluno cadastrado!', `${created.nome} foi registrado com sucesso e enviamos o e-mail para definir a senha.`);
-        } else if (created?.email && manualRecoveryLink) {
+        } else if (manualRecoveryLink) {
           toast.success(
             'Aluno cadastrado!',
             `${created.nome}: ${lastMessage || 'Geramos um link de recuperação para primeiro acesso.'}`
-            + ' O link foi retornado para fallback administrativo.',
+            + ' Abra a aba Acesso para copiar e enviar o link com segurança.',
           );
         } else if (created?.email) {
           toast.success(

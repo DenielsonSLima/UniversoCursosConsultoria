@@ -5,6 +5,7 @@ import {
   FINANCEIRO_POLICIES,
   FinanceiroRulesCalculation,
   formatCurrencyBRL,
+  formatPercentageBR,
 } from './financeiro-config.utils';
 
 interface FinanceiroConfigSummaryProps {
@@ -21,8 +22,9 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
   cronograma,
   onEdit,
   turmaLabel,
-}) => (
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+}) => {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
     <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
       <div>
         <div className="flex justify-between items-start mb-8">
@@ -77,9 +79,25 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
-              <AlertCircle size={10} /> Juros/Mês
+              <AlertCircle size={10} /> Juros proporcional
             </p>
-            <p className="text-lg font-black text-red-500">{config.jurosAtraso}%</p>
+            <p className="text-lg font-black text-red-500">{config.jurosAtraso}% ao mês</p>
+            <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+              {calculo
+                ? `${formatPercentageBR(calculo.juros_percentual_dia)}% ao dia ≈ ${formatCurrencyBRL(calculo.juros_valor_dia)}/dia no boleto/carnê`
+                : 'Calculando equivalente diário...'}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] text-red-500 font-bold uppercase flex items-center gap-1">
+              <AlertCircle size={10} /> Multa única
+            </p>
+            <p className="text-lg font-black text-red-500">{config.multaAtrasoPercentual}%</p>
+            <p className="text-[10px] font-semibold leading-relaxed text-slate-500">
+              {calculo
+                ? `${formatCurrencyBRL(calculo.multa_aplicada)} uma única vez`
+                : 'Calculando multa em reais...'}
+            </p>
           </div>
         </div>
 
@@ -128,13 +146,13 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
 
         <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 flex flex-col justify-between">
           <div>
-            <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 1 mês de atraso - RPC)</span>
+            <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider block mb-1">Se pago após o vencimento (Exemplo com 30 dias de atraso - RPC)</span>
             <p className="text-slate-500 text-xs font-medium">
-              Parcela + juros de {config.jurosAtraso}% ({calculo
-                ? formatCurrencyBRL(calculo.juros_calculados)
-                : 'calculando...'}) + multa aplicada de {calculo
+              Parcela + juros diário de {calculo
+                ? formatCurrencyBRL(calculo.juros_valor_dia)
+                : 'calculando...'} ({config.jurosAtraso}% ao mês proporcional aos dias) + multa única de {config.multaAtrasoPercentual}% ({calculo
                   ? formatCurrencyBRL(calculo.multa_aplicada)
-                  : 'calculando...'}
+                  : 'calculando...'})
             </p>
           </div>
           <div className="mt-4 flex justify-between items-baseline">
@@ -190,7 +208,8 @@ const FinanceiroConfigSummary: React.FC<FinanceiroConfigSummaryProps> = ({
         })}
       </div>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 export default FinanceiroConfigSummary;

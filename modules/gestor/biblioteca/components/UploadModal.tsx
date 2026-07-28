@@ -14,7 +14,6 @@ import {
   Calendar,
   Layers,
   FileText,
-  Image as ImageIcon,
   ArrowLeft,
   ArrowRight,
   Eye,
@@ -26,6 +25,12 @@ import {
 import { TargetAudience, Scope } from '../biblioteca.types';
 import { polosService } from '../../configuracoes/polos/polos.service';
 import { bibliotecaService } from '../biblioteca.service';
+import LibraryFileIcon from './file-preview/LibraryFileIcon';
+import {
+  detectLibraryFileType,
+  getFileExtension,
+  getFileTypeLabel
+} from './file-preview/filePreview.utils';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -148,13 +153,8 @@ const UploadModal: React.FC<UploadModalProps> = ({
   const formatSizeMB = (bytes: number) => (bytes / (1024 * 1024)).toFixed(2);
 
   const detectFileType = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toUpperCase() || 'OTHER';
-    let fileType: 'PDF' | 'DOC' | 'XLS' | 'IMG' | 'OTHER' = 'OTHER';
-    if (['PDF'].includes(ext)) fileType = 'PDF';
-    if (['DOC', 'DOCX'].includes(ext)) fileType = 'DOC';
-    if (['XLS', 'XLSX'].includes(ext)) fileType = 'XLS';
-    if (['JPG', 'PNG', 'JPEG', 'GIF', 'WEBP'].includes(ext)) fileType = 'IMG';
-    return { ext, fileType };
+    const ext = getFileExtension(fileName).toUpperCase() || 'OTHER';
+    return { ext, fileType: detectLibraryFileType(fileName) };
   };
 
   const filteredCursos = cursos.filter(c =>
@@ -481,12 +481,18 @@ const UploadModal: React.FC<UploadModalProps> = ({
       );
     }
 
+    const hasInternalPreviewAfterUpload = ['DOC', 'XLS', 'PPT'].includes(fileType);
+
     return (
       <div className="h-full min-h-[280px] rounded-2xl border border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center p-6">
-        {fileType === 'IMG' ? <ImageIcon size={30} className="text-emerald-500 mb-3" /> : <FileText size={30} className="text-blue-500 mb-3" />}
-        <p className="text-sm font-black text-[#001a33] uppercase">{ext}</p>
+        <LibraryFileIcon kind={fileType} size="lg" />
+        <p className="mt-4 text-sm font-black text-[#001a33] uppercase">{getFileTypeLabel(fileType)} • {ext}</p>
         <p className="text-xs font-bold text-slate-600 mt-1 max-w-xs truncate">{formData.file.name}</p>
-        <p className="text-[11px] text-slate-400 mt-2">Este formato sera salvo normalmente, mas nao possui preview direto.</p>
+        <p className="text-[11px] text-slate-400 mt-2 max-w-sm">
+          {hasInternalPreviewAfterUpload
+            ? 'A visualização completa será liberada dentro do sistema assim que o arquivo for publicado.'
+            : 'Este formato será salvo normalmente e poderá ser baixado pelo acervo.'}
+        </p>
       </div>
     );
   };
@@ -587,7 +593,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
                       id="file-upload"
                       className="hidden"
                       onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp"
                     />
                     <label
                       htmlFor="file-upload"
@@ -613,7 +619,7 @@ const UploadModal: React.FC<UploadModalProps> = ({
                             <Upload size={22} />
                           </div>
                           <p className="text-sm font-black text-slate-650 group-hover:text-blue-700">Selecionar arquivo</p>
-                          <p className="text-[11px] text-slate-400 mt-1">PDF, DOCX, XLS, JPG, PNG ate 10MB</p>
+                          <p className="text-[11px] text-slate-400 mt-1">PDF, Word, Excel, PowerPoint e imagens até 10MB</p>
                         </>
                       )}
                     </label>

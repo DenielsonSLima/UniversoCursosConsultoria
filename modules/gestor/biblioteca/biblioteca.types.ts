@@ -2,6 +2,7 @@
 
 export type TargetAudience = 'ALUNOS' | 'PROFESSORES' | 'INTERNO' | 'TODOS';
 export type Scope = 'GLOBAL' | 'POLO_ESPECIFICO';
+export type LibraryFileType = 'PDF' | 'DOC' | 'XLS' | 'PPT' | 'IMG' | 'VIDEO' | 'OTHER';
 
 export interface LibraryFolder {
   id: string;
@@ -16,8 +17,9 @@ export interface LibraryDocument {
   pastaId?: string | null;
   title: string;
   description?: string;
-  fileType: 'PDF' | 'DOC' | 'XLS' | 'IMG' | 'VIDEO' | 'OTHER';
+  fileType: LibraryFileType;
   size: string;
+  sizeBytes?: number | null;
   url: string;
   targetAudience: TargetAudience;
   scope: Scope;

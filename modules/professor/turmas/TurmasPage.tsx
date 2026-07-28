@@ -11,6 +11,7 @@ import {
   Clock3,
   GraduationCap,
   Loader2,
+  LockKeyhole,
   RefreshCw,
 } from 'lucide-react';
 import DiarioClasse from '../../gestor/gestao/tecnicos/detalhes/components/diarios/DiarioClasse';
@@ -58,6 +59,16 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
     setActiveDetailTab('diario');
     setAssignmentStatusTab('EM_ANDAMENTO');
   }, [poloId, professorId]);
+
+  useEffect(() => {
+    if (
+      activeDetailTab === 'atividades'
+      && selectedAssignment
+      && Number(selectedAssignment.totalAtividades || 0) === 0
+    ) {
+      setActiveDetailTab('diario');
+    }
+  }, [activeDetailTab, selectedAssignment]);
 
   if (loadingAssignments) {
     return (
@@ -358,7 +369,7 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
               <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-800">
                 <AlertTriangle size={16} className="mb-2" />
                 <p className="font-black uppercase tracking-wider">Extra-classe</p>
-                <p className="mt-1 text-[11px] font-medium">Publique atividades para complementar a carga horária da disciplina.</p>
+                <p className="mt-1 text-[11px] font-medium">As atividades marcadas pela Gestão na grade aparecem aqui para acompanhamento e correção.</p>
               </div>
             </div>
           </div>
@@ -378,13 +389,22 @@ const TurmasPage: React.FC<TurmasPageProps> = ({ professorId, poloId }) => {
             <button
               type="button"
               onClick={() => setActiveDetailTab('atividades')}
+              disabled={Number(selectedAssignment.totalAtividades || 0) === 0}
+              title={Number(selectedAssignment.totalAtividades || 0) === 0
+                ? 'A Gestão ainda não marcou uma atividade para esta disciplina.'
+                : undefined}
               className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
                 activeDetailTab === 'atividades'
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
+                  : Number(selectedAssignment.totalAtividades || 0) === 0
+                    ? 'cursor-not-allowed bg-slate-50 text-slate-300'
+                    : 'bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700'
               }`}
             >
-              Atividades extra-classe
+              <span className="inline-flex items-center gap-1.5">
+                {Number(selectedAssignment.totalAtividades || 0) === 0 && <LockKeyhole size={12} />}
+                Atividades extra-classe
+              </span>
             </button>
             {selectedAssignment.isEstagio && (
               <button

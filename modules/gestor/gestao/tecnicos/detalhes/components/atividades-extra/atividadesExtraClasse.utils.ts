@@ -1,9 +1,71 @@
-import {
+import type {
+  AtividadeAlunoComResposta,
+  AtividadeAlunoFiltro,
+  AtividadeAlunoRoster,
   AtividadeExtraClasseFormState,
   AtividadeExtraClassePergunta,
   AtividadeExtraClasseResposta,
   AtividadeExtraClasseRespostaItem,
 } from './atividadesExtraClasse.types';
+
+export const buildAtividadeStudents = (
+  roster: readonly AtividadeAlunoRoster[],
+  respostas: readonly AtividadeExtraClasseResposta[],
+): AtividadeAlunoComResposta[] => {
+  const responseByStudent = new Map(respostas.map((resposta) => [resposta.aluno_id, resposta]));
+  const students: AtividadeAlunoComResposta[] = roster.map((aluno) => ({
+    id: aluno.id,
+    nome: aluno.nome,
+    matricula: aluno.matricula || null,
+    matriculaStatus: aluno.status || null,
+    resposta: responseByStudent.get(aluno.id) || null,
+  }));
+  const rosterIds = new Set(students.map((student) => student.id));
+
+  respostas.forEach((resposta) => {
+    if (rosterIds.has(resposta.aluno_id)) return;
+    students.push({
+      id: resposta.aluno_id,
+      nome: resposta.aluno?.nome || 'Aluno não identificado',
+      matricula: null,
+      matriculaStatus: 'VÍNCULO HISTÓRICO',
+      resposta,
+    });
+  });
+
+  return students.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+};
+
+export const getAtividadeStudentCounts = (
+  students: readonly AtividadeAlunoComResposta[],
+) => ({
+  total: students.length,
+  aguardando: students.filter((student) => (
+    !student.resposta || student.resposta.status === 'PENDENTE'
+  )).length,
+  revisar: students.filter((student) => student.resposta?.status === 'ENTREGUE').length,
+  corrigidos: students.filter((student) => student.resposta?.status === 'CORRIGIDA').length,
+});
+
+export const filterAtividadeStudents = (
+  students: readonly AtividadeAlunoComResposta[],
+  filter: AtividadeAlunoFiltro,
+  search: string,
+) => {
+  const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR');
+  return students.filter((student) => {
+    const matchesSearch = !normalizedSearch
+      || student.nome.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+      || String(student.matricula || '').toLocaleLowerCase('pt-BR').includes(normalizedSearch);
+    if (!matchesSearch) return false;
+    if (filter === 'AGUARDANDO') {
+      return !student.resposta || student.resposta.status === 'PENDENTE';
+    }
+    if (filter === 'REVISAR') return student.resposta?.status === 'ENTREGUE';
+    if (filter === 'CORRIGIDOS') return student.resposta?.status === 'CORRIGIDA';
+    return true;
+  });
+};
 
 export const createAtividadeFormInitialState = (
   disciplinaId = '',
@@ -86,10 +148,11 @@ export const isAtividadeRespostaAtrasada = (
   resposta: AtividadeExtraClasseResposta,
   prazoEntrega?: string | null,
 ) => {
-  if (!resposta.created_at || !prazoEntrega || !/^\d{4}-\d{2}-\d{2}$/.test(prazoEntrega)) return false;
-  const createdAt = new Date(resposta.created_at);
-  if (Number.isNaN(createdAt.getTime())) return false;
-  return getLocalIsoDate(createdAt) > prazoEntrega;
+  const submissionDate = resposta.entregue_em || resposta.created_at;
+  if (!submissionDate || !prazoEntrega || !/^\d{4}-\d{2}-\d{2}$/.test(prazoEntrega)) return false;
+  const submittedAt = new Date(submissionDate);
+  if (Number.isNaN(submittedAt.getTime())) return false;
+  return getLocalIsoDate(submittedAt) > prazoEntrega;
 };
 
 export const normalizeAtividadeHttpUrl = (

@@ -25,6 +25,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Preparar Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.1
+
       - name: Instalar dependências
         run: npm ci
 
@@ -36,6 +41,9 @@ jobs:
 
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
+
+      - name: Testar validação documental
+        run: npm run test:document-validation
 
       - name: Gerar build de produção
         run: npm run build

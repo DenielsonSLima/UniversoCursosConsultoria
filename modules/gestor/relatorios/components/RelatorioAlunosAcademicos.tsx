@@ -14,6 +14,7 @@ import {
   STATUS_LABELS,
   SummaryCard,
 } from './RelatorioShared';
+import { paginateReportItems } from './report-pagination';
 
 export type RelatorioAlunosAcademicosModo = 'cursando' | 'finalizados' | 'matricula-inicial' | 'situacao-aluno';
 
@@ -58,6 +59,11 @@ const academicStatuses = ['todos', 'ATIVO', 'CONCLUIDO', 'TRANCADO', 'CANCELADO'
 
 const isCursando = (status: string) => ['ATIVO', 'CONFIRMADO', 'AGUARDANDO_PAGAMENTO', 'AGUARDANDO_CONFIRMACAO'].includes(String(status).toUpperCase());
 const isFinalizado = (status: string) => String(status).toUpperCase() === 'CONCLUIDO';
+const maskCpf = (value?: string | null) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length !== 11) return value || '-';
+  return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+};
 
 const relatoriosAcademicosKeys = {
   turmas: (modalidade: RelatorioModalidade, poloId?: string) =>
@@ -75,6 +81,7 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
   const [modalidade, setModalidade] = useState<RelatorioModalidade>('todos');
   const [turmaId, setTurmaId] = useState('todos');
   const [status, setStatus] = useState(config.defaultStatus);
+  const [showFullCpf, setShowFullCpf] = useState(false);
 
   const poloId = polo?.id;
   const reportFilters = {
@@ -127,8 +134,12 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
     const certificados = filteredItems.filter(item => item.certificadoStatus === 'FINALIZADO').length;
     return { byStatus, byModalidade, certificados };
   }, [filteredItems]);
+  const itemPages = useMemo(
+    () => paginateReportItems(filteredItems, 8, 14),
+    [filteredItems],
+  );
 
-  const renderTable = () => {
+  const renderTable = (pageItems: RelatorioMatriculaAcademicaItem[]) => {
     if (hasQueryError) {
       return (
         <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-8 text-center">
@@ -144,29 +155,30 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
       );
     }
 
-    if (filteredItems.length === 0) return <EmptyReportState />;
+    if (pageItems.length === 0) return <EmptyReportState />;
 
     if (modo === 'matricula-inicial') {
       return (
-        <table className="w-full text-left border-collapse">
+        <table className="w-full table-fixed border-collapse text-left">
+          <caption className="sr-only">Matrículas iniciais por aluno, curso, turma, modalidade e polo</caption>
           <thead>
             <tr className="border-b-2 border-slate-300 text-[8px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
-              <th className="py-2 px-2">Aluno</th>
-              <th className="py-2 px-2">Nascimento</th>
-              <th className="py-2 px-2">Curso/Turma</th>
-              <th className="py-2 px-2">Modalidade</th>
-              <th className="py-2 px-2">Polo</th>
-              <th className="py-2 px-2">PCD</th>
+              <th scope="col" className="py-2 px-2">Aluno</th>
+              <th scope="col" className="py-2 px-2">Nascimento</th>
+              <th scope="col" className="py-2 px-2">Curso/Turma</th>
+              <th scope="col" className="py-2 px-2">Modalidade</th>
+              <th scope="col" className="py-2 px-2">Polo</th>
+              <th scope="col" className="py-2 px-2">PCD</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredItems.map((item) => (
-              <tr key={item.id} className="text-[9px] text-slate-700">
-                <td className="py-2 px-2"><p className="font-black text-[#001a33]">{item.alunoNome}</p><p className="text-[8px] text-slate-400">CPF {item.alunoCpf}</p></td>
+            {pageItems.map((item) => (
+              <tr key={item.id} className="h-12 text-[9px] text-slate-700">
+                <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-black text-[#001a33]" title={item.alunoNome}>{item.alunoNome}</p><p className="text-[8px] text-slate-400">CPF {showFullCpf ? item.alunoCpf : maskCpf(item.alunoCpf)}</p></td>
                 <td className="py-2 px-2">{formatDate(item.dataNascimento)}</td>
-                <td className="py-2 px-2"><p className="font-bold">{item.cursoNome}</p><p className="text-[8px] text-slate-400">{item.turmaNome}</p></td>
+                <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-bold" title={item.cursoNome}>{item.cursoNome}</p><p className="truncate text-[8px] text-slate-400" title={item.turmaNome}>{item.turmaNome}</p></td>
                 <td className="py-2 px-2">{MODALIDADE_LABELS[item.modalidade] || item.modalidade}</td>
-                <td className="py-2 px-2">{item.poloNome}</td>
+                <td className="truncate px-2 py-2" title={item.poloNome}>{item.poloNome}</td>
                 <td className="py-2 px-2">{item.pcd ? (item.pcdTipo || 'Sim') : 'Não'}</td>
               </tr>
             ))}
@@ -177,26 +189,27 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
 
     if (modo === 'situacao-aluno') {
       return (
-        <table className="w-full text-left border-collapse">
+        <table className="w-full table-fixed border-collapse text-left">
+          <caption className="sr-only">Situação acadêmica dos alunos</caption>
           <thead>
             <tr className="border-b-2 border-slate-300 text-[8px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
-              <th className="py-2 px-2">Aluno</th>
-              <th className="py-2 px-2">Curso/Turma</th>
-              <th className="py-2 px-2">Entrada</th>
-              <th className="py-2 px-2">Situação</th>
-              <th className="py-2 px-2">Modalidade</th>
-              <th className="py-2 px-2">Polo</th>
+              <th scope="col" className="py-2 px-2">Aluno</th>
+              <th scope="col" className="py-2 px-2">Curso/Turma</th>
+              <th scope="col" className="py-2 px-2">Entrada</th>
+              <th scope="col" className="py-2 px-2">Situação</th>
+              <th scope="col" className="py-2 px-2">Modalidade</th>
+              <th scope="col" className="py-2 px-2">Polo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredItems.map((item) => (
-              <tr key={item.id} className="text-[9px] text-slate-700">
-                <td className="py-2 px-2"><p className="font-black text-[#001a33]">{item.alunoNome}</p><p className="text-[8px] text-slate-400">{item.alunoCpf}</p></td>
-                <td className="py-2 px-2"><p className="font-bold">{item.cursoNome}</p><p className="text-[8px] text-slate-400">{item.turmaNome}</p></td>
+            {pageItems.map((item) => (
+              <tr key={item.id} className="h-12 text-[9px] text-slate-700">
+                <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-black text-[#001a33]" title={item.alunoNome}>{item.alunoNome}</p><p className="text-[8px] text-slate-400">{showFullCpf ? item.alunoCpf : maskCpf(item.alunoCpf)}</p></td>
+                <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-bold" title={item.cursoNome}>{item.cursoNome}</p><p className="truncate text-[8px] text-slate-400" title={item.turmaNome}>{item.turmaNome}</p></td>
                 <td className="py-2 px-2">{formatDate(item.dataMatricula)}</td>
                 <td className="py-2 px-2"><span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[8px] font-black uppercase">{STATUS_LABELS[item.status] || item.status}</span></td>
                 <td className="py-2 px-2">{MODALIDADE_LABELS[item.modalidade] || item.modalidade}</td>
-                <td className="py-2 px-2">{item.poloNome}</td>
+                <td className="truncate px-2 py-2" title={item.poloNome}>{item.poloNome}</td>
               </tr>
             ))}
           </tbody>
@@ -205,22 +218,23 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
     }
 
     return (
-      <table className="w-full text-left border-collapse">
+      <table className="w-full table-fixed border-collapse text-left">
+        <caption className="sr-only">Alunos, cursos, períodos, carga horária e certificados</caption>
         <thead>
           <tr className="border-b-2 border-slate-300 text-[8px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
-            <th className="py-2 px-2">Aluno</th>
-            <th className="py-2 px-2">Curso/Turma</th>
-            <th className="py-2 px-2">Modalidade</th>
-            <th className="py-2 px-2">Período</th>
-            <th className="py-2 px-2">Carga</th>
-            <th className="py-2 px-2">Certificado</th>
+            <th scope="col" className="py-2 px-2">Aluno</th>
+            <th scope="col" className="py-2 px-2">Curso/Turma</th>
+            <th scope="col" className="py-2 px-2">Modalidade</th>
+            <th scope="col" className="py-2 px-2">Período</th>
+            <th scope="col" className="py-2 px-2">Carga</th>
+            <th scope="col" className="py-2 px-2">Certificado</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {filteredItems.map((item) => (
-            <tr key={item.id} className="text-[9px] text-slate-700">
-              <td className="py-2 px-2"><p className="font-black text-[#001a33]">{item.alunoNome}</p><p className="text-[8px] text-slate-400">{item.alunoCpf}</p></td>
-              <td className="py-2 px-2"><p className="font-bold">{item.cursoNome}</p><p className="text-[8px] text-slate-400">{item.turmaNome}</p></td>
+          {pageItems.map((item) => (
+            <tr key={item.id} className="h-12 text-[9px] text-slate-700">
+              <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-black text-[#001a33]" title={item.alunoNome}>{item.alunoNome}</p><p className="text-[8px] text-slate-400">{showFullCpf ? item.alunoCpf : maskCpf(item.alunoCpf)}</p></td>
+              <td className="overflow-hidden px-2 py-1.5"><p className="truncate font-bold" title={item.cursoNome}>{item.cursoNome}</p><p className="truncate text-[8px] text-slate-400" title={item.turmaNome}>{item.turmaNome}</p></td>
               <td className="py-2 px-2">{MODALIDADE_LABELS[item.modalidade] || item.modalidade}</td>
               <td className="py-2 px-2">{formatDate(item.dataInicio)} a {formatDate(item.dataFim)}</td>
               <td className="py-2 px-2">{item.cargaHoraria}h</td>
@@ -237,8 +251,9 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-full w-full">
+    <div className="flex h-full w-full flex-col gap-6 overflow-auto lg:flex-row lg:overflow-hidden">
       <ReportFilterPanel
+        printDisabled={matriculasQuery.isFetching || turmasQuery.isFetching || hasQueryError}
         summary={
           <>
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resumo Acadêmico</h4>
@@ -269,6 +284,10 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
             </FilterSelect>
           </FilterField>
         )}
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-bold uppercase text-slate-600">
+          <input type="checkbox" checked={showFullCpf} onChange={(event) => setShowFullCpf(event.target.checked)} />
+          Exibir CPF completo
+        </label>
       </ReportFilterPanel>
 
       <A4ReportShell
@@ -283,7 +302,7 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
           <>
             <ReportMetaCard label="Modalidade" value={MODALIDADE_LABELS[modalidade]} />
             <ReportMetaCard label="Situação" value={modo === 'cursando' ? 'Cursando' : modo === 'finalizados' ? 'Concluído' : STATUS_LABELS[status] || status} />
-            <ReportMetaCard label="Unidade / Polo" value={polo?.nome || 'Matriz'} />
+            <ReportMetaCard label="Unidade / Polo" value={polo?.nome || 'Todos os polos autorizados'} />
           </>
         }
         kpis={
@@ -293,9 +312,8 @@ const RelatorioAlunosAcademicos: React.FC<RelatorioAlunosAcademicosProps> = ({ c
             <ReportKpiCard label="Concluídos" value={totals.byStatus.CONCLUIDO || 0} tone="amber" />
           </>
         }
-      >
-        {renderTable()}
-      </A4ReportShell>
+        pages={itemPages.map((pageItems) => renderTable(pageItems))}
+      />
     </div>
   );
 };

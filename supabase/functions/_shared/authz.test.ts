@@ -53,6 +53,7 @@ const actor = (
   tabs: {},
   communicationSector: "",
   communicationPoloId: null,
+  canViewAllCommunicationPolos: false,
   canViewAllCommunication: false,
   ...overrides,
 });
@@ -159,6 +160,35 @@ Deno.test("WhatsApp mantém acesso amplo quando a permissão global existe", () 
       "financeiro",
       null,
     )
+  );
+});
+
+Deno.test("WhatsApp permite setor restrito em todos os polos", () => {
+  const scoped = actor({
+    communicationPoloId: null,
+    communicationSector: "financeiro",
+    canViewAllCommunicationPolos: true,
+    canViewAllCommunication: false,
+  });
+
+  assert.doesNotThrow(() =>
+    requireGestorForWhatsAppRoute(scoped, "financeiro", "polo-a")
+  );
+  assert.doesNotThrow(() =>
+    requireGestorForWhatsAppRoute(scoped, "financeiro", "polo-b")
+  );
+  assert.throws(
+    () =>
+      requireGestorForWhatsAppRoute(
+        scoped,
+        "atendimento_geral",
+        "polo-a",
+      ),
+    /outro setor/,
+  );
+  assert.throws(
+    () => requireGestorForWhatsAppRoute(scoped, "financeiro", null),
+    /sem polo/,
   );
 });
 

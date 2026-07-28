@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import React from 'react';
 import { AlignJustify, GripVertical, MoveDiagonal2, Trash2 } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { escapeHtmlText, sanitizedHtml } from '../../../../../../lib/htmlSanitizer';
+import { LocalQrCodeImage } from '../../../../../shared/qrcode/LocalQrCodeImage';
 import type { AbsoluteField } from './declaracao-editor.types';
 import { PAGE_HEIGHT, PAGE_WIDTH } from './declaracao-editor.utils';
 
@@ -62,29 +62,8 @@ interface DeclaracaoAbsoluteFieldProps {
   qrCodeExampleUrl: string;
   selected: boolean;
   validationCode: string;
+  readOnly?: boolean;
 }
-
-const LocalQrImage: React.FC<{ value: string }> = ({ value }) => {
-  const [src, setSrc] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    QRCode.toDataURL(value, { width: 300, margin: 1, errorCorrectionLevel: 'M' })
-      .then((url) => {
-        if (active) setSrc(url);
-      })
-      .catch(() => {
-        if (active) setSrc('');
-      });
-    return () => {
-      active = false;
-    };
-  }, [value]);
-
-  return src
-    ? <img src={src} alt="QR Code" className="h-full w-full object-contain pointer-events-none" />
-    : <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">Gerando QR...</span>;
-};
 
 const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
   enrollmentFormPreview,
@@ -96,19 +75,24 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
   qrCodeExampleUrl,
   selected,
   validationCode,
+  readOnly = false,
 }) => {
   const pageTop = Number(field.y || 0) - (pageIndex * PAGE_HEIGHT);
 
   return (
     <div
-      onMouseDown={event => onFieldMouseDown(event, field.id)}
+      onMouseDown={event => {
+        if (!readOnly) onFieldMouseDown(event, field.id);
+      }}
       onClick={event => event.stopPropagation()}
-      className={`absolute z-30 cursor-move group flex items-center justify-center transition-all ${
-        selected
-          ? 'border-2 border-blue-500 shadow-md ring-2 ring-blue-500/20'
-          : field.type === 'text'
-            ? 'bg-yellow-50/20 border border-yellow-200/50 hover:bg-yellow-100 hover:border-yellow-400 px-2 py-1 rounded'
-            : 'border-2 border-transparent hover:border-blue-400 hover:bg-slate-50/5'
+      className={`absolute z-30 group flex items-center justify-center transition-all ${
+        readOnly
+          ? 'cursor-default'
+          : selected
+            ? 'cursor-move shadow-md ring-2 ring-blue-500 ring-offset-1'
+            : field.type === 'text'
+              ? 'cursor-move rounded bg-yellow-50/20 ring-1 ring-inset ring-yellow-200/50 hover:bg-yellow-100 hover:ring-yellow-400'
+              : 'cursor-move ring-2 ring-inset ring-transparent hover:bg-slate-50/5 hover:ring-blue-400'
       }`}
       style={{
         left: field.x,
@@ -123,7 +107,12 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
       {field.type === 'qrcode' && (
         <div className="w-full bg-white p-1.5 shadow-sm rounded-xl border border-slate-100 flex flex-col items-center justify-center text-center">
           <div className="w-full aspect-square bg-white flex items-center justify-center mb-1">
-            <LocalQrImage value={qrCodeExampleUrl} />
+            <LocalQrCodeImage
+              value={qrCodeExampleUrl}
+              size={300}
+              alt="QR Code"
+              className="pointer-events-none h-full w-full"
+            />
           </div>
           <div className="w-full flex flex-col gap-0.5 border-t border-slate-100 pt-1 mt-0.5 select-all">
             <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none">
@@ -140,24 +129,37 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
         <img
           src={field.value === '{{ALUNO_FOTO_URL}}' ? '/sem-foto-aluno.svg' : field.value}
           alt={field.value === '{{ALUNO_FOTO_URL}}' ? 'Foto do aluno' : 'Elemento visual'}
-          className={`w-full object-contain pointer-events-none ${field.height ? 'h-full' : 'h-auto'}`}
+          className={`w-full pointer-events-none ${field.height ? 'h-full' : 'h-auto'}`}
+          style={{
+            objectFit: field.style?.objectFit || 'contain',
+            objectPosition: field.style?.objectPosition || 'center',
+          }}
         />
       )}
 
       {field.type === 'text' && (
-        <div className="flex items-center w-full">
-          <GripVertical size={12} className="text-yellow-600 opacity-50 hidden group-hover:block mr-1 shrink-0" />
+        <div
+          className={`relative flex w-full ${
+            field.height ? 'h-full items-stretch' : 'items-center'
+          }`}
+        >
+          {!readOnly && (
+            <GripVertical
+              size={12}
+              className="pointer-events-none absolute left-0 top-1/2 hidden -translate-y-1/2 text-yellow-600 opacity-50 group-hover:block"
+            />
+          )}
           <div
             dangerouslySetInnerHTML={sanitizedHtml(withEditorAssetPlaceholders(
               field.value,
               enrollmentFormPreview,
             ))}
-            className="w-full break-words"
+            className={`${field.height ? 'h-full' : ''} w-full break-words`}
           />
         </div>
       )}
 
-      <button
+      {!readOnly && <button
         onMouseDown={event => event.stopPropagation()}
         onClick={event => {
           event.stopPropagation();
@@ -167,9 +169,9 @@ const DeclaracaoAbsoluteField: React.FC<DeclaracaoAbsoluteFieldProps> = ({
         title="Remover"
       >
         <Trash2 size={12} />
-      </button>
+      </button>}
 
-      {selected && (
+      {selected && !readOnly && (
         <button
           type="button"
           onMouseDown={event => onFieldResizeMouseDown(event, field.id)}
@@ -204,6 +206,7 @@ interface DeclaracaoEditorCanvasProps {
   textPages: string[];
   validationCode: string;
   watermark: any;
+  readOnly?: boolean;
 }
 
 const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
@@ -225,6 +228,7 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
   textPages,
   validationCode,
   watermark,
+  readOnly = false,
 }) => {
   const pageIndexForField = (field: AbsoluteField) => Math.max(
     0,
@@ -265,8 +269,12 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                 `,
                 backgroundSize: '20px 20px',
               }}
-              onDrop={event => onDrop(event, pageIndex)}
-              onDragOver={event => event.preventDefault()}
+              onDrop={event => {
+                if (!readOnly) onDrop(event, pageIndex);
+              }}
+              onDragOver={event => {
+                if (!readOnly) event.preventDefault();
+              }}
               onClick={event => {
                 if (event.currentTarget === event.target) onSelectField(null);
               }}
@@ -326,14 +334,19 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                 )}
                 <div
                   ref={pageIndex === 0 ? editorRef : undefined}
-                  contentEditable
-                  onInput={event => onTextInput(event, pageIndex)}
+                  contentEditable={!readOnly}
+                  suppressContentEditableWarning
+                  onInput={event => {
+                    if (!readOnly) onTextInput(event, pageIndex);
+                  }}
                   dangerouslySetInnerHTML={sanitizedHtml(withEditorAssetPlaceholders(
                     textPages[pageIndex] || '',
                     enrollmentFormPreview,
                   ))}
                   className={pageHasEditableText(pageIndex)
-                    ? 'min-h-[160px] cursor-text rounded-lg text-justify text-lg leading-loose text-black outline-none ring-1 ring-transparent transition-shadow hover:ring-blue-100'
+                    ? `min-h-[160px] rounded-lg text-justify text-lg leading-loose text-black outline-none ring-1 ring-transparent transition-shadow ${
+                      readOnly ? 'cursor-default' : 'cursor-text hover:ring-blue-100'
+                    }`
                     : 'h-px min-h-0 overflow-hidden opacity-0'}
                   style={{ fontFamily: '"Times New Roman", Times, serif', color: '#000000' }}
                 />
@@ -353,6 +366,7 @@ const DeclaracaoEditorCanvas: React.FC<DeclaracaoEditorCanvasProps> = ({
                     qrCodeExampleUrl={qrCodeExampleUrl}
                     selected={selectedField?.id === field.id}
                     validationCode={validationCode}
+                    readOnly={readOnly}
                   />
                 ))}
             </div>

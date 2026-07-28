@@ -466,3 +466,6 @@ verify_jwt = true
 
 [functions.whatsapp-profile]
 verify_jwt = true
+
+[functions.portal-auth]
+verify_jwt = false

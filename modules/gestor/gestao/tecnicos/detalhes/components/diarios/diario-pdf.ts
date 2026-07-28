@@ -1,12 +1,14 @@
 import { jsPDF } from 'jspdf';
 import capaDiarioPadrao from '../../../../../../../Documentos/Capa-Diario.jpg';
 import {
-  getDocumentValidationQrUrl,
+  createDocumentValidationQrDataUrl,
+} from '../../../../../../shared/document-validation/DocumentValidationQrCodeImage';
+import {
   getDocumentValidationUrl,
 } from '../../../../../../shared/document-validation/document-validation.url';
 import type { DiarioGradeResult, DiarioPrintDocumentProps } from './diario-classe.types';
 import type { DiarioAula } from './diario-classe.service';
-import { getDiarioValidationCode, getStudentStats } from './diario-classe.utils';
+import { getStudentStats } from './diario-classe.utils';
 import { DEFAULT_ACTIVE_INSTRUMENTS } from './diario-instruments';
 import {
   chunks,
@@ -268,7 +270,13 @@ const drawBackCover = (
 ) => {
   addPage(pdf);
   addFullPageImage(pdf, background);
-  const validationCode = getDiarioValidationCode(props.turma, props.disciplina);
+  if (!props.template.imprimirValidacaoContracapa) return;
+  const validationCode = props.validationCode?.trim();
+  if (!validationCode) {
+    throw new Error(
+      'O código canônico do Diário não foi confirmado. Nenhum PDF foi gerado.',
+    );
+  }
   const left = 20;
   const top = 14;
   const width = PAGE_WIDTH - 35;
@@ -279,6 +287,23 @@ const drawBackCover = (
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(14);
   pdf.text(['REGISTRO DE VALIDAÇÃO', 'E ASSINATURA ELETRÔNICA'], left + 8, top + 13);
+  if (props.validationPreview) {
+    const badgeWidth = 92;
+    const badgeX = left + width - badgeWidth - 8;
+    setFillColor(pdf, '#eff6ff');
+    pdf.setDrawColor(...hexToRgb('#60a5fa'));
+    pdf.roundedRect(badgeX, top + 7, badgeWidth, 9, 1.5, 1.5, 'FD');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    setTextColor(pdf, '#1d4ed8');
+    pdf.text(
+      'PRÉVIA — CÓDIGO OFICIAL AO BAIXAR OU IMPRIMIR',
+      badgeX + badgeWidth / 2,
+      top + 12.5,
+      { align: 'center' },
+    );
+    setTextColor(pdf);
+  }
   pdf.line(left + 8, top + 26, left + width - 8, top + 26);
 
   drawLabelValue(pdf, 'CURSO: ', props.turma.cursoNome || '—', left + 8, top + 55, 95, 8);
@@ -568,13 +593,25 @@ const drawInstructions = (pdf: jsPDF, props: DiarioPrintDocumentProps, logo: Pdf
 
 export const buildDiarioPdf = async (props: DiarioPrintDocumentProps) => {
   const isBlank = props.exportMode === 'EM_BRANCO';
-  const validationCode = getDiarioValidationCode(props.turma, props.disciplina);
+  const validationCode = props.validationCode?.trim() || '';
+  if (!isBlank && props.template.imprimirValidacaoContracapa && !validationCode) {
+    throw new Error(
+      'O código canônico do Diário não foi confirmado. Nenhum PDF foi gerado.',
+    );
+  }
   const [cover, backCover, logo, qrCode] = await Promise.all([
     loadFirstImage([props.template.capaUrl, capaDiarioPadrao]),
     loadImage(props.template.contracapaUrl),
     loadFirstImage([props.template.cabecalhoLogoUrl, '/LogoUniverso.png']),
-    !isBlank && props.template.imprimirValidacaoContracapa
-      ? loadImage(getDocumentValidationQrUrl(validationCode, 240))
+    !isBlank && props.template.imprimirValidacaoContracapa && validationCode
+      ? createDocumentValidationQrDataUrl(validationCode, { size: 240 })
+        .then(async (dataUrl) => {
+          const image = await loadImage(dataUrl);
+          if (!image) {
+            throw new Error('Não foi possível carregar o QR Code obrigatório do diário.');
+          }
+          return image;
+        })
       : Promise.resolve(null),
   ]);
 

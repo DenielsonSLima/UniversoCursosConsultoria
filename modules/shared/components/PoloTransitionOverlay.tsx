@@ -16,7 +16,13 @@ export type PoloTransitionStatus = 'loading' | 'success' | 'error';
 type PoloTransitionBaseProps = {
   isOpen: boolean;
   fromPoloName: string;
+  fromPoloCity?: string | null;
+  fromPoloState?: string | null;
+  fromPoloIsMatriz?: boolean;
   toPoloName: string;
+  toPoloCity?: string | null;
+  toPoloState?: string | null;
+  toPoloIsMatriz?: boolean;
   message?: string;
 };
 
@@ -44,8 +50,25 @@ const DEFAULT_MESSAGES: Record<PoloTransitionStatus, string> = {
   error: 'Não foi possível preparar o novo ambiente.',
 };
 
+const formatPoloLocation = (city?: string | null, state?: string | null) =>
+  [city, state].filter(Boolean).join(' / ');
+
+const getPoloKind = (isMatriz?: boolean) => (isMatriz ? 'Matriz' : 'Polo');
+
 const PoloTransitionOverlay: React.FC<PoloTransitionOverlayProps> = (props) => {
-  const { isOpen, fromPoloName, toPoloName, status, message } = props;
+  const {
+    isOpen,
+    fromPoloName,
+    fromPoloCity,
+    fromPoloState,
+    fromPoloIsMatriz,
+    toPoloName,
+    toPoloCity,
+    toPoloState,
+    toPoloIsMatriz,
+    status,
+    message,
+  } = props;
   const overlayRef = useRef<HTMLDivElement>(null);
   const retryButtonRef = useRef<React.ElementRef<'button'>>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -55,6 +78,15 @@ const PoloTransitionOverlay: React.FC<PoloTransitionOverlayProps> = (props) => {
   const isError = status === 'error';
   const statusMessage =
     message || (isError && props.errorMessage) || DEFAULT_MESSAGES[status];
+  const fromPoloKind = getPoloKind(fromPoloIsMatriz);
+  const toPoloKind = getPoloKind(toPoloIsMatriz);
+  const fromPoloLocation = formatPoloLocation(fromPoloCity, fromPoloState);
+  const toPoloLocation = formatPoloLocation(toPoloCity, toPoloState);
+  const fromPoloPrimary = fromPoloLocation || fromPoloName;
+  const toPoloPrimary = toPoloLocation || toPoloName;
+  const toPoloHeadline = toPoloCity
+    ? `${toPoloKind} de ${toPoloCity}`
+    : toPoloName;
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -210,7 +242,7 @@ const PoloTransitionOverlay: React.FC<PoloTransitionOverlayProps> = (props) => {
               {isLoading
                 ? 'Preparando seu novo ambiente'
                 : isSuccess
-                  ? `${toPoloName} está ativo`
+                  ? `${toPoloHeadline} ${toPoloIsMatriz ? 'está ativa' : 'está ativo'}`
                   : 'A troca não foi concluída'}
             </h2>
             <p
@@ -292,14 +324,24 @@ const PoloTransitionOverlay: React.FC<PoloTransitionOverlayProps> = (props) => {
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
                 <div className="min-w-0">
                   <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
-                    Polo anterior
+                    Ambiente anterior
                   </span>
-                  <span
-                    title={fromPoloName}
-                    className="mt-1 block truncate text-xs font-bold text-slate-600"
-                  >
-                    {fromPoloName}
-                  </span>
+                  <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+                    <span className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">
+                      {fromPoloKind}
+                    </span>
+                    <span
+                      title={[fromPoloKind, fromPoloLocation, fromPoloName].filter(Boolean).join(' — ')}
+                      className="truncate text-xs font-black text-slate-700"
+                    >
+                      {fromPoloPrimary}
+                    </span>
+                  </div>
+                  {fromPoloLocation ? (
+                    <span className="mt-1 block truncate text-[9px] font-semibold text-slate-400">
+                      {fromPoloName}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div
@@ -317,19 +359,29 @@ const PoloTransitionOverlay: React.FC<PoloTransitionOverlayProps> = (props) => {
 
                 <div className="min-w-0 text-right">
                   <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-blue-600">
-                    Novo polo
+                    Novo ambiente
                   </span>
-                  <span
-                    title={toPoloName}
-                    className="mt-1 flex items-center justify-end gap-1.5 text-xs font-black text-[#001a33]"
-                  >
+                  <div className="mt-1.5 flex min-w-0 items-center justify-end gap-1.5">
                     <Building2
                       size={13}
                       aria-hidden="true"
                       className="shrink-0 text-blue-600"
                     />
-                    <span className="truncate">{toPoloName}</span>
-                  </span>
+                    <span
+                      title={[toPoloKind, toPoloLocation, toPoloName].filter(Boolean).join(' — ')}
+                      className="truncate text-xs font-black text-[#001a33]"
+                    >
+                      {toPoloPrimary}
+                    </span>
+                    <span className="shrink-0 rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-blue-700">
+                      {toPoloKind}
+                    </span>
+                  </div>
+                  {toPoloLocation ? (
+                    <span className="mt-1 block truncate text-[9px] font-semibold text-slate-400">
+                      {toPoloName}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>

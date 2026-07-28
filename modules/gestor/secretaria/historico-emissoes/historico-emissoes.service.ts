@@ -24,6 +24,11 @@ import type {
   PreviewResources,
   TurmaFilter,
 } from './historico-emissoes.types';
+import {
+  shouldUseSharedPreviewCache,
+  type PreviewCacheMode,
+} from './reissue-flow';
+import { assertCertificateAlignedWithEmission } from './certificate-emission-contract';
 
 const certificateSelect = `
   *,
@@ -42,6 +47,7 @@ const fetchCertificateForEmission = async (
     .from('certificados_academicos')
     .select(certificateSelect)
     .eq('codigo_validacao', emission.codigo)
+    .eq('status', 'FINALIZADO')
     .maybeSingle();
   if (byCode.error) throw byCode.error;
   if (byCode.data) return byCode.data as unknown as CertificadoAcademico;
@@ -52,9 +58,14 @@ const fetchCertificateForEmission = async (
       .from('certificados_academicos')
       .select(certificateSelect)
       .eq('id', certificateId)
+      .eq('status', 'FINALIZADO')
       .maybeSingle();
     if (byId.error) throw byId.error;
-    if (byId.data) return byId.data as unknown as CertificadoAcademico;
+    if (byId.data) {
+      const certificate = byId.data as unknown as CertificadoAcademico;
+      assertCertificateAlignedWithEmission(certificate, emission);
+      return certificate;
+    }
   }
 
   const byEnrollment = await supabase
@@ -67,7 +78,10 @@ const fetchCertificateForEmission = async (
     .limit(1)
     .maybeSingle();
   if (byEnrollment.error) throw byEnrollment.error;
-  return (byEnrollment.data || null) as unknown as CertificadoAcademico | null;
+  if (!byEnrollment.data) return null;
+  const certificate = byEnrollment.data as unknown as CertificadoAcademico;
+  assertCertificateAlignedWithEmission(certificate, emission);
+  return certificate;
 };
 
 const loadTemplate = async (
@@ -167,6 +181,16 @@ const getCachedPreviewResource = <T>(
   return promise;
 };
 
+const loadPreviewResource = <T>(
+  mode: PreviewCacheMode,
+  key: string,
+  loader: () => Promise<T>,
+): Promise<T> => (
+  shouldUseSharedPreviewCache(mode)
+    ? getCachedPreviewResource(key, loader)
+    : loader()
+);
+
 const getTemplateCacheKey = (emission: EmissionLog, poloId: string) => {
   if (emission.dados_emissao?.documentTemplateSnapshot) return null;
   return [
@@ -202,21 +226,24 @@ const loadPreviewBatch = async (
   emissions: EmissionLog[],
   fallbackPoloId: string,
   onProgress?: (completedDocuments: number, totalDocuments: number) => void,
+  cacheMode: PreviewCacheMode = 'shared',
 ): Promise<PreviewResources[]> => {
   if (!emissions.length) return [];
 
-  const watermarksPromise = getCachedPreviewResource(
+  const watermarksPromise = loadPreviewResource(
+    cacheMode,
     'watermarks',
     () => marcaDaguaService.getCompaniesWithWatermark(),
   );
-  const academicConfigsPromise = getCachedPreviewResource(
+  const academicConfigsPromise = loadPreviewResource(
+    cacheMode,
     'academic-configs',
     () => academicosService.getConfigs(),
   );
   const poloIds = [...new Set(emissions.map((emission) => emission.polo_id || fallbackPoloId))];
   const polosPromise = Promise.all(poloIds.map(async (poloId) => [
     poloId,
-    await getCachedPreviewResource(`polo:${poloId}`, () => polosService.getById(poloId)),
+    await loadPreviewResource(cacheMode, `polo:${poloId}`, () => polosService.getById(poloId)),
   ] as const));
 
   const [watermarks, academicConfigs, polos] = await Promise.all([
@@ -238,19 +265,22 @@ const loadPreviewBatch = async (
     const templateKey = getTemplateCacheKey(emission, poloId);
     const [academicData, certificate, template] = await Promise.all([
       needsAcademic
-        ? getCachedPreviewResource(
+        ? loadPreviewResource(
+            cacheMode,
             `academic:${emission.codigo}`,
             () => loadAcademicPreview(emission),
           )
         : Promise.resolve(null),
       isCertificateDocument(emission.documento)
-        ? getCachedPreviewResource(
+        ? loadPreviewResource(
+            cacheMode,
             `certificate:${emission.codigo}`,
             () => fetchCertificateForEmission(emission),
           )
         : Promise.resolve(null),
       templateKey
-        ? getCachedPreviewResource(
+        ? loadPreviewResource(
+            cacheMode,
             templateKey,
             () => loadTemplate(emission, poloId, academicConfigs),
           )
@@ -334,8 +364,32 @@ export const historicoEmissoesService = {
     return { emissions: (data || []) as EmissionLog[], total: count || 0 };
   },
 
+  async loadEmissionByCode(code: string): Promise<EmissionLog> {
+    const normalizedCode = code.trim().toUpperCase();
+    const { data, error } = await supabase
+      .from('documentos_validacao')
+      .select(`
+        *,
+        aluno:parceiros(id, nome, cpf_cnpj, rg, data_nascimento, foto_url),
+        matricula:matriculas(id, status, turma:turmas(id, nome, codigo))
+      `)
+      .eq('codigo', normalizedCode)
+      .eq('status', 'ATIVO')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      throw new Error(`A emissão canônica atualizada não foi localizada para o código ${normalizedCode}.`);
+    }
+    return data as EmissionLog;
+  },
+
   async loadPreview(emission: EmissionLog, fallbackPoloId: string): Promise<PreviewResources> {
     const [preview] = await loadPreviewBatch([emission], fallbackPoloId);
+    return preview;
+  },
+
+  async loadPreviewFresh(emission: EmissionLog, fallbackPoloId: string): Promise<PreviewResources> {
+    const [preview] = await loadPreviewBatch([emission], fallbackPoloId, undefined, 'fresh');
     return preview;
   },
 

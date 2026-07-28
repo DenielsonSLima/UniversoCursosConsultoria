@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -10,7 +10,7 @@ import {
   PlayCircle,
   X,
 } from 'lucide-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Turma } from '../../../gestao.types';
 import ToastNotification, { useToast } from '../../../../parceiros/components/shared/ToastNotification';
 import { academicLifecycleKeys } from '../academic-lifecycle.keys';
@@ -30,6 +30,8 @@ interface TurmaAcademicoProps {
   onTurmaFinalizada?: () => void;
 }
 
+const MOVEMENTS_PAGE_SIZE = 10;
+
 const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizada }) => {
   const { toasts, removeToast, toast } = useToast();
   const queryClient = useQueryClient();
@@ -43,6 +45,7 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const [transferNotes, setTransferNotes] = useState('');
   const [transferDate, setTransferDate] = useState(getMaceioIsoDate());
   const [externalCredits, setExternalCredits] = useState<Record<string, ExternalCreditDraft>>({});
+  const [movementsPage, setMovementsPage] = useState(1);
 
   const periodsQuery = useQuery({
     queryKey: academicLifecycleKeys.periodos(turma.id),
@@ -51,10 +54,31 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
   const periods = periodsQuery.data || [];
 
   const movementsQuery = useQuery({
-    queryKey: academicLifecycleKeys.movimentacoes(turma.id),
-    queryFn: () => academicLifecycleService.getMovimentacoes(turma.id),
+    queryKey: academicLifecycleKeys.movimentacoesPagina(
+      turma.id,
+      movementsPage,
+      MOVEMENTS_PAGE_SIZE,
+    ),
+    queryFn: () => academicLifecycleService.getMovimentacoesPage(
+      turma.id,
+      movementsPage,
+      MOVEMENTS_PAGE_SIZE,
+    ),
+    placeholderData: keepPreviousData,
   });
-  const movements = movementsQuery.data || [];
+  const movements = movementsQuery.data?.items || [];
+  const movementsTotal = movementsQuery.data?.total || 0;
+  const movementsTotalPages = Math.max(1, Math.ceil(movementsTotal / MOVEMENTS_PAGE_SIZE));
+
+  useEffect(() => {
+    setMovementsPage(1);
+  }, [turma.id]);
+
+  useEffect(() => {
+    if (movementsPage > movementsTotalPages) {
+      setMovementsPage(movementsTotalPages);
+    }
+  }, [movementsPage, movementsTotalPages]);
 
   const allStudentsQuery = useQuery({
     queryKey: [...academicLifecycleKeys.turma(turma.id), 'alunos-recebimento'],
@@ -335,9 +359,13 @@ const TurmaAcademico: React.FC<TurmaAcademicoProps> = ({ turma, onTurmaFinalizad
 
       <AcademicMovementsSection
         movements={movements}
+        page={movementsPage}
+        pageSize={MOVEMENTS_PAGE_SIZE}
+        total={movementsTotal}
         isLoading={movementsQuery.isLoading}
         isError={movementsQuery.isError}
         isFetching={movementsQuery.isFetching}
+        onPageChange={setMovementsPage}
         onRetry={() => { void movementsQuery.refetch(); }}
       />
 

@@ -9,14 +9,35 @@ export type IrpfYearOption = {
 
 const TECHNICAL_STATUSES = ["ATIVO", "CONCLUIDO", "CANCELADO", "TRANCADO", "DESISTENTE", "TRANSFERIDO"];
 
+const DEFAULT_PUBLIC_SITE_URL = "https://universocc.com.br";
+
+const isPrivateOrLocalHostname = (hostname: string) => {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local") ||
+    /^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalized) ||
+    normalized.includes(":");
+};
+
 const validatorBaseUrl = () => {
-  const raw = [
-    Deno.env.get("PUBLIC_SITE_URL"),
-    Deno.env.get("SITE_URL"),
-    Deno.env.get("APP_URL"),
-    Deno.env.get("VITE_PUBLIC_SITE_URL"),
-  ].find((item) => String(item || "").trim()) || "https://www.universocc.com.br";
-  return String(raw).replace(/\/+$/, "");
+  const configuredUrl = String(Deno.env.get("PUBLIC_SITE_URL") || "").trim();
+  if (!configuredUrl) return DEFAULT_PUBLIC_SITE_URL;
+
+  try {
+    const url = new URL(configuredUrl);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      isPrivateOrLocalHostname(url.hostname)
+    ) {
+      return DEFAULT_PUBLIC_SITE_URL;
+    }
+    return url.origin;
+  } catch {
+    return DEFAULT_PUBLIC_SITE_URL;
+  }
 };
 
 export const buildIrpfValidationUrl = (code: string) =>
@@ -76,15 +97,18 @@ export const getIrpfYearOptions = async (admin: any, alunoId: string) => {
   return { eligible: true, options };
 };
 
-export const issueIrpfDocument = async (admin: any, option: IrpfYearOption) => {
-  const { data, error } = await admin.rpc("emitir_documento_validacao", {
+export const issueIrpfDocument = async (
+  admin: any,
+  option: IrpfYearOption,
+  idempotencyKey: string,
+) => {
+  const { data, error } = await admin.rpc("reemitir_documento_validacao_portal", {
     p_documento: "declaracao_irpf",
     p_matricula_id: option.matriculaId,
+    p_idempotency_key: idempotencyKey,
     p_periodo_referencia: String(option.year),
     p_referencia_externa: null,
-    p_validade_ate: null,
     p_emitido_por: null,
-    p_registrar_reemissao: true,
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
