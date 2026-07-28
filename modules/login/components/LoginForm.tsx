@@ -24,7 +24,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [rememberMe, setRememberMe] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
-  const [turnstileError, setTurnstileError] = useState(false);
+  const [turnstileErrorMessage, setTurnstileErrorMessage] = useState<string | null>(null);
   const wasLoadingRef = useRef(false);
 
   useEffect(() => {
@@ -37,7 +37,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!turnstileToken) {
-      setTurnstileError(true);
+      setTurnstileErrorMessage(
+        'Não foi possível validar o acesso. Atualize a página e tente novamente.',
+      );
       return;
     }
     onSubmit({ email: identifier, password, turnstileToken });
@@ -105,13 +107,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
           resetSignal={turnstileResetSignal}
           onTokenChange={(token) => {
             setTurnstileToken(token);
-            if (token) setTurnstileError(false);
+            if (token) setTurnstileErrorMessage(null);
           }}
-          onError={() => setTurnstileError(true)}
+          onError={() => setTurnstileToken('')}
         />
-        {turnstileError ? (
+        {turnstileErrorMessage ? (
           <p role="alert" className="text-xs font-bold text-red-600">
-            Conclua a verificação de segurança para continuar.
+            {turnstileErrorMessage}
           </p>
         ) : null}
       </div>

@@ -131,7 +131,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   const [birthDateInputActive, setBirthDateInputActive] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
-  const [turnstileError, setTurnstileError] = useState(false);
+  const [turnstileErrorMessage, setTurnstileErrorMessage] = useState<string | null>(null);
   const wasLoadingRef = useRef(false);
   const maximumBirthDate = getPublicAlunoBirthDateMax();
 
@@ -144,7 +144,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
 
   useEffect(() => {
     setTurnstileToken('');
-    setTurnstileError(false);
+    setTurnstileErrorMessage(null);
   }, [mode]);
 
   return (
@@ -201,7 +201,9 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         onSubmit={(event) => {
           if (!turnstileToken) {
             event.preventDefault();
-            setTurnstileError(true);
+            setTurnstileErrorMessage(
+              'Não foi possível validar o acesso. Atualize a página e tente novamente.',
+            );
             return;
           }
           onLogin(event, turnstileToken);
@@ -256,13 +258,13 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
             resetSignal={turnstileResetSignal}
             onTokenChange={(token) => {
               setTurnstileToken(token);
-              if (token) setTurnstileError(false);
+              if (token) setTurnstileErrorMessage(null);
             }}
-            onError={() => setTurnstileError(true)}
+            onError={() => setTurnstileToken('')}
           />
-          {turnstileError ? (
+          {turnstileErrorMessage ? (
             <p role="alert" className="text-xs font-bold text-red-600">
-              Conclua a verificação de segurança para continuar.
+              {turnstileErrorMessage}
             </p>
           ) : null}
         </div>

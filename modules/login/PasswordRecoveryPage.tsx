@@ -216,7 +216,7 @@ const PasswordRecoveryPage: React.FC = () => {
     if (!turnstileToken) {
       setMessage({
         tone: 'error',
-        text: 'Conclua a verificação de segurança para continuar.',
+        text: 'Não foi possível validar o acesso. Atualize a página e tente novamente.',
       });
       return;
     }
@@ -536,10 +536,6 @@ const PasswordRecoveryPage: React.FC = () => {
                         onTokenChange={setTurnstileToken}
                         onError={() => {
                           setTurnstileToken('');
-                          setMessage({
-                            tone: 'error',
-                            text: 'Não foi possível carregar a verificação de segurança. Atualize a página e tente novamente.',
-                          });
                         }}
                       />
                     </div>

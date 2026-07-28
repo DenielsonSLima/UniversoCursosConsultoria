@@ -10,9 +10,14 @@ type TurnstileApi = {
       action: TurnstileAction;
       theme: 'light';
       size: 'flexible';
+      appearance: 'interaction-only';
+      retry: 'auto';
+      'feedback-enabled': false;
+      'offlabel-show-help': false;
       callback: (token: string) => void;
       'expired-callback': () => void;
-      'error-callback': () => void;
+      'before-interactive-callback': () => void;
+      'error-callback': (errorCode: string) => boolean;
     },
   ) => string;
   remove: (widgetId: string) => void;
@@ -62,7 +67,7 @@ type Props = {
   action: TurnstileAction;
   resetSignal: number;
   onTokenChange: (token: string) => void;
-  onError?: () => void;
+  onError?: (errorCode?: string) => void;
 };
 
 const TurnstileWidget: React.FC<Props> = ({
@@ -100,11 +105,28 @@ const TurnstileWidget: React.FC<Props> = ({
           action,
           theme: 'light',
           size: 'flexible',
-          callback: (token) => onTokenChangeRef.current(token),
+          appearance: 'interaction-only',
+          retry: 'auto',
+          'feedback-enabled': false,
+          'offlabel-show-help': false,
+          callback: (token) => {
+            containerRef.current?.style.removeProperty('display');
+            onTokenChangeRef.current(token);
+          },
           'expired-callback': () => onTokenChangeRef.current(''),
-          'error-callback': () => {
+          'before-interactive-callback': () => {
+            containerRef.current?.style.removeProperty('display');
+          },
+          'error-callback': (errorCode) => {
+            // Cloudflare renders a clickable "Troubleshoot" link inside its
+            // cross-origin iframe after configuration/network failures. Hide
+            // only the failed widget and keep error feedback in our own UI.
+            if (containerRef.current) {
+              containerRef.current.style.display = 'none';
+            }
             onTokenChangeRef.current('');
-            onErrorRef.current?.();
+            onErrorRef.current?.(errorCode);
+            return true;
           },
         });
       } catch {
@@ -127,12 +149,13 @@ const TurnstileWidget: React.FC<Props> = ({
   useEffect(() => {
     const turnstile = getTurnstile();
     if (!widgetIdRef.current || !turnstile) return;
+    containerRef.current?.style.removeProperty('display');
     turnstile.reset(widgetIdRef.current);
     onTokenChangeRef.current('');
   }, [resetSignal]);
 
   return (
-    <div className="min-h-[65px] w-full" aria-label="Verificação de segurança">
+    <div className="w-full" aria-label="Verificação de segurança">
       <div ref={containerRef} className="w-full" />
     </div>
   );
