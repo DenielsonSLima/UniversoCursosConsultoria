@@ -2,9 +2,12 @@ import { mapCaixaStatement } from '../caixa.service';
 import type {
   CaixaCompositionStatus,
   CaixaDetailedReport,
+  CaixaReportCourseSummary,
   CaixaReportExpense,
   CaixaReportInstitution,
   CaixaReportReceipt,
+  CaixaReportRecurringAnalysis,
+  CaixaReportRecurringBreakdown,
   CaixaReportTotals,
 } from './caixa-report.types';
 
@@ -210,6 +213,154 @@ const assertStrictStatementSummary = (value: unknown) => {
   ['a_receber', 'receber_vencido', 'a_pagar', 'pagar_vencido'].forEach(
     (field) => requiredNumber(commitments[field], `resumo.compromissos.${field}`),
   );
+
+  const modalities = array(
+    statement.receitas_por_modalidade,
+    'resumo.receitas_por_modalidade',
+  );
+  ['EAD', 'ESPECIALIZACAO', 'TECNICO', 'LIVRE'].forEach((code) => {
+    const modality = modalities.find((item) => item.codigo === code);
+    if (!modality) {
+      throw new Error(`Contrato inválido do relatório do Caixa: modalidade ${code}.`);
+    }
+    requiredNumber(modality.valor, `resumo.receitas_por_modalidade.${code}.valor`);
+    integer(modality.quantidade, `resumo.receitas_por_modalidade.${code}.quantidade`);
+  });
+};
+
+const courseSummary = (value: unknown): CaixaReportCourseSummary => {
+  const summary = record(value, 'resumo_cursos');
+  const summaryTotals = record(summary.totais, 'resumo_cursos.totais');
+  return {
+    itens: array(summary.itens, 'resumo_cursos.itens').map((item, index) => ({
+      cursoId: string(item.curso_id, `resumo_cursos.itens[${index}].curso_id`),
+      curso: string(item.curso, `resumo_cursos.itens[${index}].curso`),
+      modalidade: string(item.modalidade, `resumo_cursos.itens[${index}].modalidade`),
+      previstoNoMes: requiredNumber(
+        item.previsto_no_mes,
+        `resumo_cursos.itens[${index}].previsto_no_mes`,
+      ),
+      recebidoNoMes: requiredNumber(
+        item.recebido_no_mes,
+        `resumo_cursos.itens[${index}].recebido_no_mes`,
+      ),
+      emAtraso: requiredNumber(
+        item.em_atraso,
+        `resumo_cursos.itens[${index}].em_atraso`,
+      ),
+      quantidadeParcelas: integer(
+        item.quantidade_parcelas,
+        `resumo_cursos.itens[${index}].quantidade_parcelas`,
+      ),
+      quantidadeRecebidas: integer(
+        item.quantidade_recebidas,
+        `resumo_cursos.itens[${index}].quantidade_recebidas`,
+      ),
+      quantidadeEmAtraso: integer(
+        item.quantidade_em_atraso,
+        `resumo_cursos.itens[${index}].quantidade_em_atraso`,
+      ),
+      quantidadeTurmas: integer(
+        item.quantidade_turmas,
+        `resumo_cursos.itens[${index}].quantidade_turmas`,
+      ),
+      quantidadeAlunos: integer(
+        item.quantidade_alunos,
+        `resumo_cursos.itens[${index}].quantidade_alunos`,
+      ),
+    })),
+    quantidadeCursos: integer(
+      summary.quantidade_cursos,
+      'resumo_cursos.quantidade_cursos',
+    ),
+    quantidadeOmitidas: integer(
+      summary.quantidade_omitidas,
+      'resumo_cursos.quantidade_omitidas',
+    ),
+    totais: {
+      previstoNoMes: requiredNumber(
+        summaryTotals.previsto_no_mes,
+        'resumo_cursos.totais.previsto_no_mes',
+      ),
+      recebidoNoMes: requiredNumber(
+        summaryTotals.recebido_no_mes,
+        'resumo_cursos.totais.recebido_no_mes',
+      ),
+      emAtraso: requiredNumber(
+        summaryTotals.em_atraso,
+        'resumo_cursos.totais.em_atraso',
+      ),
+      quantidadeTurmas: integer(
+        summaryTotals.quantidade_turmas,
+        'resumo_cursos.totais.quantidade_turmas',
+      ),
+      quantidadeAlunos: integer(
+        summaryTotals.quantidade_alunos,
+        'resumo_cursos.totais.quantidade_alunos',
+      ),
+    },
+  };
+};
+
+const recurringBreakdown = (
+  item: JsonRecord,
+  field: string,
+): CaixaReportRecurringBreakdown => ({
+  previstoNoMes: requiredNumber(item.previsto_no_mes, `${field}.previsto_no_mes`),
+  recebidoNoMes: requiredNumber(item.recebido_no_mes, `${field}.recebido_no_mes`),
+  emAtraso: requiredNumber(item.em_atraso, `${field}.em_atraso`),
+  valorBaseRecebido: requiredNumber(
+    item.valor_base_recebido,
+    `${field}.valor_base_recebido`,
+  ),
+  juros: requiredNumber(item.juros, `${field}.juros`),
+  multa: requiredNumber(item.multa, `${field}.multa`),
+  acrescimo: requiredNumber(item.acrescimo, `${field}.acrescimo`),
+  desconto: requiredNumber(item.desconto, `${field}.desconto`),
+  diferencaNaoDiscriminada: requiredNumber(
+    item.diferenca_nao_discriminada,
+    `${field}.diferenca_nao_discriminada`,
+  ),
+  quantidadeParcelas: integer(item.quantidade_parcelas, `${field}.quantidade_parcelas`),
+  quantidadeRecebidas: integer(item.quantidade_recebidas, `${field}.quantidade_recebidas`),
+  quantidadeEmAtraso: integer(
+    item.quantidade_em_atraso,
+    `${field}.quantidade_em_atraso`,
+  ),
+  quantidadeCursos: integer(item.quantidade_cursos, `${field}.quantidade_cursos`),
+  quantidadeTurmas: integer(item.quantidade_turmas, `${field}.quantidade_turmas`),
+  quantidadeAlunos: integer(item.quantidade_alunos, `${field}.quantidade_alunos`),
+});
+
+const recurringAnalysis = (value: unknown): CaixaReportRecurringAnalysis => {
+  const analysis = record(value, 'analise_recorrente');
+  return {
+    modalidades: array(analysis.modalidades, 'analise_recorrente.modalidades').map(
+      (item, index) => ({
+        ...recurringBreakdown(item, `analise_recorrente.modalidades[${index}]`),
+        modalidade: string(
+          item.modalidade,
+          `analise_recorrente.modalidades[${index}].modalidade`,
+        ),
+        rotulo: string(item.rotulo, `analise_recorrente.modalidades[${index}].rotulo`),
+      }),
+    ),
+    turmas: array(analysis.turmas, 'analise_recorrente.turmas').map((item, index) => ({
+      ...recurringBreakdown(item, `analise_recorrente.turmas[${index}]`),
+      turmaId: string(item.turma_id, `analise_recorrente.turmas[${index}].turma_id`),
+      turma: string(item.turma, `analise_recorrente.turmas[${index}].turma`),
+      cursoId: string(item.curso_id, `analise_recorrente.turmas[${index}].curso_id`),
+      curso: string(item.curso, `analise_recorrente.turmas[${index}].curso`),
+      modalidade: string(
+        item.modalidade,
+        `analise_recorrente.turmas[${index}].modalidade`,
+      ),
+    })),
+    totais: recurringBreakdown(
+      record(analysis.totais, 'analise_recorrente.totais'),
+      'analise_recorrente.totais',
+    ),
+  };
 };
 
 const assertUnique = (keys: string[], field: string) => {
@@ -220,7 +371,7 @@ const assertUnique = (keys: string[], field: string) => {
 
 export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const payload = record(Array.isArray(value) ? value[0] : value, 'payload');
-  if (requiredNumber(payload.versao, 'versao') !== 1 || payload.completo !== true) {
+  if (requiredNumber(payload.versao, 'versao') !== 3 || payload.completo !== true) {
     throw new Error('O relatório detalhado do Caixa está incompleto ou possui versão incompatível.');
   }
 
@@ -229,6 +380,8 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const limiteTotal = integer(payload.limite_total, 'limite_total');
   const totaisRecebimentos = totals(payload.totais_recebimentos, 'totais_recebimentos');
   const totaisDespesas = totals(payload.totais_despesas, 'totais_despesas');
+  const resumoCursos = courseSummary(payload.resumo_cursos);
+  const analiseRecorrente = recurringAnalysis(payload.analise_recorrente);
   const recebimentos = array(payload.recebimentos, 'recebimentos').map(receipt);
   const despesas = array(payload.despesas, 'despesas').map(expense);
 
@@ -245,7 +398,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   assertUnique(despesas.map((item) => `${item.origem}:${item.id}`), 'despesas');
 
   return {
-    versao: 1,
+    versao: 3,
     geradoEm: string(payload.gerado_em, 'gerado_em'),
     completo: true,
     confidencial: boolean(payload.confidencial, 'confidencial'),
@@ -255,6 +408,8 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
     resumo: mapCaixaStatement(payload.resumo),
     totaisRecebimentos,
     totaisDespesas,
+    resumoCursos,
+    analiseRecorrente,
     recebimentos,
     despesas,
   };

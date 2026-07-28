@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.7",
+  "version": "2.2.3-beta.8",
   "display": "BETA",
   "stage": "beta",
-  "revision": 7,
+  "revision": 8,
   "releasedAt": "2026-07-27",
-  "summary": "Conteúdo do PDF do Caixa alinhado à identidade visual"
+  "summary": "PDF do Caixa com carteira recorrente por curso, modalidade e turma"
 }

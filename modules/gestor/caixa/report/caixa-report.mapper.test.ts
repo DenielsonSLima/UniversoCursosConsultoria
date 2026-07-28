@@ -50,7 +50,12 @@ const summary = {
     a_pagar: 0,
     pagar_vencido: 0,
   },
-  receitas_por_modalidade: [],
+  receitas_por_modalidade: [
+    { codigo: 'EAD', rotulo: 'Cursos EAD', valor: 14.9, quantidade: 1, percentual: 100 },
+    { codigo: 'LIVRE', rotulo: 'Cursos livres', valor: 0, quantidade: 0, percentual: 0 },
+    { codigo: 'TECNICO', rotulo: 'Cursos técnicos', valor: 0, quantidade: 0, percentual: 0 },
+    { codigo: 'ESPECIALIZACAO', rotulo: 'Especialização', valor: 0, quantidade: 0, percentual: 0 },
+  ],
   despesas_por_categoria: [],
   serie_mensal: [],
   contas: [],
@@ -85,7 +90,7 @@ const receipt = {
 };
 
 const makePayload = () => ({
-  versao: 1,
+  versao: 3,
   gerado_em: '2026-07-27T23:00:00Z',
   completo: true,
   confidencial: true,
@@ -117,6 +122,90 @@ const makePayload = () => ({
   resumo: JSON.parse(JSON.stringify(summary)) as typeof summary,
   totais_recebimentos: totals(1),
   totais_despesas: totals(0),
+  resumo_cursos: {
+    itens: [{
+      curso_id: '33333333-3333-3333-3333-333333333333',
+      curso: 'Técnico em Enfermagem',
+      modalidade: 'TECNICO',
+      previsto_no_mes: 900,
+      recebido_no_mes: 750,
+      em_atraso: 150,
+      quantidade_parcelas: 6,
+      quantidade_recebidas: 5,
+      quantidade_em_atraso: 1,
+      quantidade_turmas: 2,
+      quantidade_alunos: 6,
+    }],
+    quantidade_cursos: 1,
+    quantidade_omitidas: 0,
+    totais: {
+      previsto_no_mes: 900,
+      recebido_no_mes: 750,
+      em_atraso: 150,
+      quantidade_turmas: 2,
+      quantidade_alunos: 6,
+    },
+  },
+  analise_recorrente: {
+    modalidades: [{
+      modalidade: 'TECNICO',
+      rotulo: 'Cursos técnicos',
+      previsto_no_mes: 900,
+      recebido_no_mes: 750,
+      em_atraso: 150,
+      valor_base_recebido: 720,
+      juros: 10,
+      multa: 20,
+      acrescimo: 0,
+      desconto: 0,
+      diferenca_nao_discriminada: 0,
+      quantidade_parcelas: 6,
+      quantidade_recebidas: 5,
+      quantidade_em_atraso: 1,
+      quantidade_cursos: 1,
+      quantidade_turmas: 2,
+      quantidade_alunos: 6,
+    }],
+    turmas: [{
+      turma_id: '44444444-4444-4444-4444-444444444444',
+      turma: 'TEC-ENF-2026.1 · Enfermagem Noturno',
+      curso_id: '33333333-3333-3333-3333-333333333333',
+      curso: 'Técnico em Enfermagem',
+      modalidade: 'TECNICO',
+      previsto_no_mes: 900,
+      recebido_no_mes: 750,
+      em_atraso: 150,
+      valor_base_recebido: 720,
+      juros: 10,
+      multa: 20,
+      acrescimo: 0,
+      desconto: 0,
+      diferenca_nao_discriminada: 0,
+      quantidade_parcelas: 6,
+      quantidade_recebidas: 5,
+      quantidade_em_atraso: 1,
+      quantidade_cursos: 1,
+      quantidade_turmas: 1,
+      quantidade_alunos: 6,
+    }],
+    totais: {
+      previsto_no_mes: 900,
+      recebido_no_mes: 750,
+      em_atraso: 150,
+      valor_base_recebido: 720,
+      juros: 10,
+      multa: 20,
+      acrescimo: 0,
+      desconto: 0,
+      diferenca_nao_discriminada: 0,
+      quantidade_parcelas: 6,
+      quantidade_recebidas: 5,
+      quantidade_em_atraso: 1,
+      quantidade_cursos: 1,
+      quantidade_turmas: 2,
+      quantidade_alunos: 6,
+    },
+  },
   recebimentos: [{ ...receipt }],
   despesas: [],
 });
@@ -125,6 +214,8 @@ test('aceita o contrato canônico completo sem recalcular valores', () => {
   const report = mapCaixaDetailedReport(makePayload());
   assert.equal(report.recebimentos[0].valorRecebido, 14.9);
   assert.equal(report.recebimentos[0].tipoLancamento, 'MATRICULA');
+  assert.equal(report.resumoCursos.itens[0].recebidoNoMes, 750);
+  assert.equal(report.analiseRecorrente.turmas[0].juros, 10);
 });
 
 test('recusa coerção de número enviado como texto', () => {

@@ -10,10 +10,13 @@ import {
   CaixaExpensesTable,
   CaixaReceiptsTable,
 } from './CaixaReportTables';
+import { CaixaReportRecurringAnalysis } from './CaixaReportRecurringAnalysis';
+import { CaixaReportSummaryBreakdowns } from './CaixaReportSummaryBreakdowns';
 import type {
   CaixaDetailedReport,
   CaixaReportExpense,
   CaixaReportReceipt,
+  CaixaReportRecurringClass,
 } from './caixa-report.types';
 
 const ExecutiveMetric: React.FC<{
@@ -29,10 +32,10 @@ const ExecutiveMetric: React.FC<{
     amber: 'border-amber-200 bg-amber-50 text-amber-800',
   };
   return (
-    <div className={`rounded-xl border p-3 ${tones[tone]}`}>
+    <div className={`rounded-xl border p-2 ${tones[tone]}`}>
       <p className="text-[7px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-      <p className="mt-1 text-[15px] font-black leading-none">{formatCaixaCurrency(value)}</p>
-      <p className="mt-1.5 text-[7px] leading-3 text-slate-500">{helper}</p>
+      <p className="mt-0.5 text-[14px] font-black leading-none">{formatCaixaCurrency(value)}</p>
+      <p className="mt-0.5 text-[6.5px] leading-2.5 text-slate-500">{helper}</p>
     </div>
   );
 };
@@ -46,7 +49,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
       : 'Resultado do mês';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div>
         <h2 className="text-lg font-black uppercase tracking-tight text-[#001a33]">
           Prestação de contas mensal
@@ -58,11 +61,11 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-4 gap-2">
         <ExecutiveMetric
           label="Saldo contábil registrado"
           value={statement.saldosHoje.registradoTotal}
-          helper="Posição do sistema; não representa consulta ao extrato bancário"
+          helper="Posição contábil do sistema; não é consulta ao extrato"
         />
         <ExecutiveMetric
           label="Entradas recebidas"
@@ -106,22 +109,22 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-emerald-200 bg-white p-3">
-          <div className="flex items-end justify-between border-b border-emerald-100 pb-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-emerald-200 bg-white p-2.5">
+          <div className="flex items-end justify-between border-b border-emerald-100 pb-1.5">
             <div>
               <p className="text-[8px] font-black uppercase tracking-widest text-emerald-700">
                 Composição dos recebimentos
               </p>
-              <p className="mt-1 text-[7px] text-slate-500">
+              <p className="mt-0.5 text-[6.5px] text-slate-500">
                 Ajustes identificados e auditados pelo backend
               </p>
             </div>
-            <strong className="text-base text-emerald-700">
+            <strong className="text-sm text-emerald-700">
               {formatCaixaCurrency(report.totaisRecebimentos.valorFinal)}
             </strong>
           </div>
-          <div className="mt-2 grid grid-cols-6 gap-1.5 text-[8px]">
+          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[7px]">
             <p>Base<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.valorBase)}</strong></p>
             <p>Juros<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.jurosIdentificados)}</strong></p>
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.multaIdentificada)}</strong></p>
@@ -131,21 +134,21 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
           </div>
         </div>
 
-        <div className="rounded-xl border border-rose-200 bg-white p-3">
-          <div className="flex items-end justify-between border-b border-rose-100 pb-2">
+        <div className="rounded-xl border border-rose-200 bg-white p-2.5">
+          <div className="flex items-end justify-between border-b border-rose-100 pb-1.5">
             <div>
               <p className="text-[8px] font-black uppercase tracking-widest text-rose-700">
                 Composição das despesas
               </p>
-              <p className="mt-1 text-[7px] text-slate-500">
+              <p className="mt-0.5 text-[6.5px] text-slate-500">
                 Pagamentos confirmados, sem duplicar lançamentos vinculados
               </p>
             </div>
-            <strong className="text-base text-rose-700">
+            <strong className="text-sm text-rose-700">
               {formatCaixaCurrency(report.totaisDespesas.valorFinal)}
             </strong>
           </div>
-          <div className="mt-2 grid grid-cols-6 gap-1.5 text-[8px]">
+          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[7px]">
             <p>Base<br /><strong>{formatCaixaCurrency(report.totaisDespesas.valorBase)}</strong></p>
             <p>Juros<br /><strong>{formatCaixaCurrency(report.totaisDespesas.jurosIdentificados)}</strong></p>
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisDespesas.multaIdentificada)}</strong></p>
@@ -156,11 +159,13 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[7px] leading-3 text-blue-900">
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-[6.5px] leading-2.5 text-blue-900">
         <strong>Leitura correta:</strong> o resultado mensal representa o fluxo de caixa confirmado,
         não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração
         atual não consulta o extrato bancário.
       </div>
+
+      <CaixaReportSummaryBreakdowns report={report} />
     </div>
   );
 };
@@ -188,8 +193,12 @@ export const CaixaReportDocument: React.FC<{
   report: CaixaDetailedReport;
 }> = ({ report }) => {
   const pages = useMemo(
-    () => buildCaixaReportPages(report.recebimentos, report.despesas),
-    [report.despesas, report.recebimentos],
+    () => buildCaixaReportPages(
+      report.recebimentos,
+      report.despesas,
+      report.analiseRecorrente.turmas,
+    ),
+    [report.analiseRecorrente.turmas, report.despesas, report.recebimentos],
   );
   const polo = {
     ...report.institucional,
@@ -223,28 +232,30 @@ export const CaixaReportDocument: React.FC<{
         return (
           <section
             key={page.key}
-            className="caixa-report-page relative box-border flex min-h-[210mm] w-[297mm] min-w-[297mm] shrink-0 flex-col bg-white p-[8mm] text-slate-800 shadow-xl"
+            className="caixa-report-page relative box-border flex h-[210mm] min-h-[210mm] w-[297mm] min-w-[297mm] shrink-0 flex-col overflow-hidden bg-white p-[8mm] text-slate-800 shadow-xl"
             aria-label={`Página ${pageIndex + 1} de ${pages.length}`}
           >
             <ReportWatermark polo={polo} orientation="landscape" />
-            <DocumentHeader
-              company={company}
-              polo={polo}
-              orientation="landscape"
-              rightContent={(
-                <div className="text-right">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-                    Caixa · uso interno
-                  </p>
-                  <p className="mt-1 text-xs font-black uppercase text-[#001a33]">
-                    {report.resumo.meta.escopoRotulo}
-                  </p>
-                  <p className="mt-1 text-[8px] font-bold text-slate-500">
-                    {formatCaixaCompetencia(report.resumo.meta.competencia)}
-                  </p>
-                </div>
-              )}
-            />
+            <div className="relative z-10 pl-[7mm] [&>div]:mb-5">
+              <DocumentHeader
+                company={company}
+                polo={polo}
+                orientation="landscape"
+                rightContent={(
+                  <div className="text-right">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                      Caixa · uso interno
+                    </p>
+                    <p className="mt-1 text-xs font-black uppercase text-[#001a33]">
+                      {report.resumo.meta.escopoRotulo}
+                    </p>
+                    <p className="mt-1 text-[8px] font-bold text-slate-500">
+                      {formatCaixaCompetencia(report.resumo.meta.competencia)}
+                    </p>
+                  </div>
+                )}
+              />
+            </div>
 
             <div className="relative z-10 min-h-0 flex-1 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
@@ -277,6 +288,15 @@ export const CaixaReportDocument: React.FC<{
                     showTotals={isLastSectionPage}
                   />
                 </>
+              )}
+              {page.section === 'CARTEIRA_RECORRENTE' && (
+                <CaixaReportRecurringAnalysis
+                  report={report}
+                  rows={page.rows as CaixaReportRecurringClass[]}
+                  page={page.sectionPage}
+                  showModalities={page.sectionPage === 1}
+                  showTotals={isLastSectionPage}
+                />
               )}
             </div>
 

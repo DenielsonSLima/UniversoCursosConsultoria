@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.8] - 2026-07-27
+
+### Adicionado
+
+- A primeira página do PDF do Caixa apresenta as receitas recebidas de EAD, especialização, cursos técnicos e cursos livres.
+- O acompanhamento recorrente da primeira página reúne os cursos parcelados, com quantidade de turmas e alunos, previsão, recebimento e atraso.
+- A última seção detalha a carteira parcelada por modalidade e por turma, incluindo juros, multa, acréscimo, desconto e diferenças não discriminadas.
+
+### Alterado
+
+- O cabeçalho institucional do relatório foi alinhado ao mesmo eixo de títulos, tabelas e rodapé.
+- A primeira página foi compactada para preservar integralmente o fundo institucional e a marca-d’água.
+- Cursos EAD continuam nas receitas realizadas e deixam de aparecer na previsão recorrente, pois não possuem ciclo mensal de parcelas.
+
+### Segurança
+
+- Todos os valores dos novos resumos são agregados pela RPC segura e respeitam o polo autorizado; o frontend apenas exibe o contrato canônico.
+
 ## [2.2.3-beta.7] - 2026-07-27
 
 ### Corrigido
