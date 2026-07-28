@@ -22,6 +22,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 - A suíte do relatório valida contrato canônico, paginação sem perda ou duplicação e proteção contra overflow.
 - Pull requests e atualizações da `main` passam a executar TypeScript, lint, testes do Caixa e build de produção no GitHub Actions.
+- A publicação da beta.9 foi reacionada diretamente pela `main` após a validação integral do commit de release.
 
 ## [2.2.3-beta.8] - 2026-07-27
 
