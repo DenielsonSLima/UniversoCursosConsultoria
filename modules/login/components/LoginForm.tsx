@@ -141,7 +141,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
       {/* Botão de Ação */}
       <button 
-        disabled={isLoading || !turnstileToken}
+        type="submit"
+        disabled={isLoading}
         className="w-full bg-[#001a33] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
       >
         <span>{isLoading ? 'Autenticando...' : 'Acessar Plataforma'}</span>

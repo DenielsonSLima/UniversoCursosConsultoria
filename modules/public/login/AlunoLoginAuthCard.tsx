@@ -142,6 +142,11 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
     wasLoadingRef.current = loading;
   }, [loading]);
 
+  useEffect(() => {
+    setTurnstileToken('');
+    setTurnstileError(false);
+  }, [mode]);
+
   return (
   <div className="w-full max-w-[560px] rounded-[2rem] border border-slate-200 bg-white px-5 pb-7 pt-6 shadow-2xl shadow-slate-200/80 sm:px-8 lg:mx-auto lg:p-9">
     <div className="mb-6 flex items-center justify-between gap-4">
@@ -262,7 +267,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           ) : null}
         </div>
 
-        <button type="submit" disabled={loading || !turnstileToken} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60">
+        <button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60">
           {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
           Entrar e continuar
         </button>

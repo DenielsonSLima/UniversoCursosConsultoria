@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginService } from './login.service';
 import { consumePasswordRecoveryMarker, supabase } from '../../lib/supabase';
@@ -92,6 +92,7 @@ const PasswordRecoveryPage: React.FC = () => {
     useState<RecoveryAuthorization | null>(null);
 
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const loginRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const passwordChecks = useMemo(() => {
     const hasMinLength = password.length >= 6;
@@ -151,6 +152,7 @@ const PasswordRecoveryPage: React.FC = () => {
 
     const detectRecoverySession = async () => {
       if (returnError) {
+        clearRecoveryAuthParams();
         if (mounted) {
           setMessage({
             tone: 'error',
@@ -187,6 +189,7 @@ const PasswordRecoveryPage: React.FC = () => {
       }
 
       if (code || recoveryType || recoveryAccessToken) {
+        clearRecoveryAuthParams();
         setMessage({
           tone: 'error',
           text: 'O link de recuperação não criou uma sessão válida. Solicite um novo link abaixo.',
@@ -199,6 +202,10 @@ const PasswordRecoveryPage: React.FC = () => {
     return () => {
       mounted = false;
       authListener.subscription.unsubscribe();
+      if (loginRedirectTimerRef.current) {
+        clearTimeout(loginRedirectTimerRef.current);
+        loginRedirectTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -295,7 +302,8 @@ const PasswordRecoveryPage: React.FC = () => {
         text: 'Senha alterada com sucesso. Você já pode entrar com a nova senha.',
       });
 
-      setTimeout(() => {
+      loginRedirectTimerRef.current = setTimeout(() => {
+        loginRedirectTimerRef.current = null;
         navigate('/login');
       }, 1000);
     } catch (error) {
@@ -538,7 +546,7 @@ const PasswordRecoveryPage: React.FC = () => {
 
                     <button
                       type="submit"
-                      disabled={isLoading || !turnstileToken}
+                      disabled={isLoading}
                       className="group mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-blue-700/30 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
