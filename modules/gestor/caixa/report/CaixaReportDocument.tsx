@@ -10,6 +10,7 @@ import {
   CaixaExpensesTable,
   CaixaReceiptsTable,
 } from './CaixaReportTables';
+import { CaixaReportSummaryBreakdowns } from './CaixaReportSummaryBreakdowns';
 import type {
   CaixaDetailedReport,
   CaixaReportExpense,
@@ -161,6 +162,8 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração
         atual não consulta o extrato bancário.
       </div>
+
+      <CaixaReportSummaryBreakdowns report={report} />
     </div>
   );
 };
@@ -227,24 +230,26 @@ export const CaixaReportDocument: React.FC<{
             aria-label={`Página ${pageIndex + 1} de ${pages.length}`}
           >
             <ReportWatermark polo={polo} orientation="landscape" />
-            <DocumentHeader
-              company={company}
-              polo={polo}
-              orientation="landscape"
-              rightContent={(
-                <div className="text-right">
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
-                    Caixa · uso interno
-                  </p>
-                  <p className="mt-1 text-xs font-black uppercase text-[#001a33]">
-                    {report.resumo.meta.escopoRotulo}
-                  </p>
-                  <p className="mt-1 text-[8px] font-bold text-slate-500">
-                    {formatCaixaCompetencia(report.resumo.meta.competencia)}
-                  </p>
-                </div>
-              )}
-            />
+            <div className="relative z-10 pl-[7mm]">
+              <DocumentHeader
+                company={company}
+                polo={polo}
+                orientation="landscape"
+                rightContent={(
+                  <div className="text-right">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                      Caixa · uso interno
+                    </p>
+                    <p className="mt-1 text-xs font-black uppercase text-[#001a33]">
+                      {report.resumo.meta.escopoRotulo}
+                    </p>
+                    <p className="mt-1 text-[8px] font-bold text-slate-500">
+                      {formatCaixaCompetencia(report.resumo.meta.competencia)}
+                    </p>
+                  </div>
+                )}
+              />
+            </div>
 
             <div className="relative z-10 min-h-0 flex-1 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
