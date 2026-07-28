@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
   Download,
@@ -31,6 +31,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   competencia,
 }) => {
   const documentRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<React.ElementRef<'button'>>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -40,17 +41,34 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   const [generationError, setGenerationError] = useState('');
   const [reportSnapshot, setReportSnapshot] = useState<CaixaDetailedReport | null>(null);
 
-  const reportQuery = useQuery(caixaReportQueryOptions(poloId, competencia, open));
+  const reportQuery = useQuery(caixaReportQueryOptions(
+    poloId,
+    competencia,
+    open && !reportSnapshot,
+  ));
 
   useEffect(() => {
     if (!open) {
       setReportSnapshot(null);
+      queryClient.removeQueries({
+        queryKey: ['caixa-report', 'monthly'],
+      });
       return;
     }
-    if (reportQuery.data) {
+    if (reportQuery.data && !reportQuery.isFetching && !reportQuery.error) {
       setReportSnapshot((current) => current ?? reportQuery.data);
     }
-  }, [open, reportQuery.data]);
+  }, [
+    open,
+    queryClient,
+    reportQuery.data,
+    reportQuery.error,
+    reportQuery.isFetching,
+  ]);
+
+  useEffect(() => {
+    setReportSnapshot(null);
+  }, [competencia, poloId]);
 
   useEffect(() => {
     generatingRef.current = generating;
@@ -103,7 +121,7 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
   if (!open) return null;
 
   const report = reportSnapshot;
-  const loading = !reportSnapshot && reportQuery.isLoading;
+  const loading = !reportSnapshot && (reportQuery.isLoading || reportQuery.isFetching);
   const error = reportSnapshot ? null : reportQuery.error;
 
   const handleDownload = async () => {
