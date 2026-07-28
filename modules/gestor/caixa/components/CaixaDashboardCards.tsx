@@ -22,7 +22,7 @@ export const CaixaMetricCard: React.FC<{
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-3 text-[26px] font-extrabold leading-none tracking-tight">
+      <p className="mt-3 text-[22px] font-extrabold leading-none tracking-tight">
         {formatCaixaCurrency(value)}
       </p>
       <div className={`mt-3 text-[11px] leading-4 ${mutedClasses}`}>{helper}</div>
@@ -76,4 +76,3 @@ export const CaixaBreakdownList: React.FC<{
     </div>
   );
 };
-
