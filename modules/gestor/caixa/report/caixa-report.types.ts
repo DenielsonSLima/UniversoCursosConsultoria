@@ -77,6 +77,32 @@ export interface CaixaReportExpense extends CaixaReportMovementBase {
   valorPago: number;
 }
 
+export interface CaixaReportClassSummaryItem {
+  turmaId: string | null;
+  turma: string;
+  curso: string;
+  modalidade: string;
+  previstoNoMes: number;
+  recebidoNoMes: number;
+  emAtraso: number;
+  quantidadeParcelas: number;
+  quantidadeRecebidas: number;
+  quantidadeEmAtraso: number;
+  agregado: boolean;
+  quantidadeTurmas: number;
+}
+
+export interface CaixaReportClassSummary {
+  itens: CaixaReportClassSummaryItem[];
+  quantidadeTurmas: number;
+  quantidadeOmitidas: number;
+  totais: {
+    previstoNoMes: number;
+    recebidoNoMes: number;
+    emAtraso: number;
+  };
+}
+
 export interface CaixaDetailedReport {
   versao: number;
   geradoEm: string;
@@ -88,6 +114,7 @@ export interface CaixaDetailedReport {
   resumo: CaixaMonthlyStatement;
   totaisRecebimentos: CaixaReportTotals;
   totaisDespesas: CaixaReportTotals;
+  resumoTurmas: CaixaReportClassSummary;
   recebimentos: CaixaReportReceipt[];
   despesas: CaixaReportExpense[];
 }
