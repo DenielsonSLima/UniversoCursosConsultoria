@@ -4,5 +4,5 @@
   "stage": "beta",
   "revision": 8,
   "releasedAt": "2026-07-27",
-  "summary": "PDF do Caixa com receitas por modalidade e resumo por turma"
+  "summary": "PDF do Caixa com carteira recorrente por curso, modalidade e turma"
 }
