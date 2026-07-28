@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.8",
+  "version": "2.2.3-beta.9",
   "display": "BETA",
   "stage": "beta",
-  "revision": 8,
+  "revision": 9,
   "releasedAt": "2026-07-27",
-  "summary": "PDF do Caixa com carteira recorrente por curso, modalidade e turma"
+  "summary": "Auditoria de release do Caixa com PDF seguro, cache isolado e gates de qualidade"
 }
