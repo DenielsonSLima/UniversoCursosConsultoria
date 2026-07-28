@@ -14,6 +14,10 @@ const formatDate = (value?: string) => {
   const parts = value.split('T')[0].split('-');
   return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
 };
+const formatOptionalDate = (value?: string | null) => {
+  if (!value) return '—';
+  return formatDate(value);
+};
 const formatEnrollmentStatus = (status?: string | null) => {
   const normalized = String(status || '').trim().toUpperCase();
   if (!normalized) return 'NÃO INFORMADA';
@@ -59,6 +63,18 @@ export const parseEmissionTemplate = (
     academicData?.situacaoAcademica
     || formatEnrollmentStatus(emissionData.enrollmentStatus || data.matricula?.status)
   ).toUpperCase();
+  const enrollmentStatus = String(
+    emissionData.enrollmentStatus || data.matricula?.status || ''
+  ).toUpperCase();
+  const isCompletedEnrollment = enrollmentStatus.includes('CONCLU');
+  const completionDate = emissionData.completionDate
+    || (isCompletedEnrollment ? academicData?.fimCurso : null);
+  const technologicalAxis = emissionData.courseTechnologicalAxis
+    || academicData?.courseTechnologicalAxis
+    || '—';
+  const professionalProfile = emissionData.courseProfessionalProfile
+    || academicData?.courseProfessionalProfile
+    || '—';
   const completedHours = academicData?.cargaHorariaCumprida ?? Number(emissionData.courseHours || 0);
   const totalHours = academicData?.cargaHorariaTotal ?? Number(emissionData.courseHours || 0);
   const irpfTotal = Number(emissionData.irpfTotal || 0);
@@ -135,13 +151,13 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_DOCUMENTO_TIPO}}/g, 'RG'],
     [/{{ALUNO_RG}}/g, emissionData.studentRg || data.aluno?.rg || 'Não informado'],
     [/{{ALUNO_NASCIMENTO}}/g, formatDate(emissionData.studentBirthDate || data.aluno?.data_nascimento)],
-    [/{{ALUNO_SEXO}}/g, emissionData.studentSex || 'Não informado'],
+    [/{{ALUNO_SEXO}}/g, emissionData.studentSex || data.aluno?.sexo || '—'],
     [/{{ALUNO_ESTADO_CIVIL}}/g, emissionData.studentMaritalStatus || 'Não informado'],
     [/{{ALUNO_RACA_COR}}/g, emissionData.studentRaceColor || 'NÃO DECLARADA'],
-    [/{{ALUNO_NACIONALIDADE}}/g, emissionData.studentNationality || 'Não informada'],
-    [/{{ALUNO_NATURALIDADE}}/g, emissionData.studentBirthplace || 'Não informada'],
-    [/{{ALUNO_MAE}}/g, emissionData.studentMotherName || 'Não informada'],
-    [/{{ALUNO_PAI}}/g, emissionData.studentFatherName || 'Não informado'],
+    [/{{ALUNO_NACIONALIDADE}}/g, emissionData.studentNationality || data.aluno?.nacionalidade || '—'],
+    [/{{ALUNO_NATURALIDADE}}/g, emissionData.studentBirthplace || data.aluno?.naturalidade || '—'],
+    [/{{ALUNO_MAE}}/g, emissionData.studentMotherName || data.aluno?.nome_mae || '—'],
+    [/{{ALUNO_PAI}}/g, emissionData.studentFatherName || data.aluno?.nome_pai || '—'],
     [/{{ALUNO_PCD}}/g, emissionData.studentPcd || 'NÃO'],
     [/{{ALUNO_PCD_TIPO}}/g, emissionData.studentPcdType || 'Não se aplica'],
     [/{{ALUNO_EMAIL}}/g, emissionData.studentEmail || 'Não informado'],
@@ -155,11 +171,13 @@ export const parseEmissionTemplate = (
     [/{{ALUNO_UF}}/g, emissionData.studentState || '—'],
     [/{{ALUNO_CEP}}/g, emissionData.studentZipCode || 'Não informado'],
     [/{{ALUNO_TIPO_DOCUMENTO}}/g, emissionData.studentDocumentType || 'RG'],
-    [/{{ALUNO_RG_ORGAO}}/g, emissionData.studentRgIssuer || 'Não informado'],
+    [/{{ALUNO_RG_ORGAO}}/g, emissionData.studentRgIssuer || data.aluno?.orgao_emissor || '—'],
     [/{{ALUNO_RG_UF}}/g, emissionData.studentRgState || '—'],
     [/{{ALUNO_RG_EMISSAO}}/g, formatDate(emissionData.studentRgIssueDate)],
-    [/{{ALUNO_TITULO_ELEITOR}}/g, emissionData.studentVoterId || 'Não informado'],
-    [/{{ALUNO_RESERVISTA}}/g, emissionData.studentReservist || 'Não informado'],
+    [/{{ALUNO_TITULO_ELEITOR}}/g, emissionData.studentVoterId || data.aluno?.titulo_eleitor || '—'],
+    [/{{ALUNO_TITULO_ZONA}}/g, emissionData.studentVoterZone || '—'],
+    [/{{ALUNO_TITULO_SECAO}}/g, emissionData.studentVoterSection || '—'],
+    [/{{ALUNO_RESERVISTA}}/g, emissionData.studentReservist || data.aluno?.reservista || '—'],
     [/{{ALUNO_RESPONSAVEL}}/g, emissionData.studentResponsibleName || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_CPF}}/g, emissionData.studentResponsibleCpf || 'Não informado'],
     [/{{ALUNO_RESPONSAVEL_PARENTESCO}}/g, emissionData.studentResponsibleRelation || 'Não informado'],
@@ -185,8 +203,13 @@ export const parseEmissionTemplate = (
     [/{{POLO_TELEFONE}}/g, context.poloInfo?.telefone || 'Não informado'],
     [/{{POLO_EMAIL}}/g, context.poloInfo?.email || 'Não informado'],
     [/{{CIDADE_POLO}}/g, context.poloInfo?.cidade || 'Aracaju'],
+    [/{{POLO_UF}}/g, context.poloInfo?.estado || context.poloInfo?.uf || 'SE'],
     [/{{LOCAL_DOCUMENTO}}/g, [context.poloInfo?.cidade, context.poloInfo?.estado || context.poloInfo?.uf].filter(Boolean).join('/')],
     [/{{DATA_ATUAL}}/g, dateInFull],
+    [/{{DATA_EMISSAO}}/g, formatOptionalDate(data.emitido_em)],
+    [/{{DATA_INICIO_CURSO}}/g, formatOptionalDate(academicData?.inicioCurso || emissionData.courseStartDate)],
+    [/{{DATA_CONCLUSAO_CURSO}}/g, formatOptionalDate(completionDate)],
+    [/{{DATA_EXPEDICAO_DIPLOMA}}/g, formatOptionalDate(emissionData.diplomaIssuedAt)],
     [/{{HORA_ATUAL}}/g, currentTime],
     [/{{SITUACAO_ACADEMICA}}/g, academicStatus],
     [/{{DATA_GERACAO}}/g, `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} às ${currentTime}`],
@@ -206,9 +229,13 @@ export const parseEmissionTemplate = (
     [/{{pagina_livro}}/g, emissionData.registryPage || '—'],
     [/{{livro}}/g, emissionData.registryBook || '—'],
     [/{{validacao_sistec}}/g, emissionData.sistecValidation || '—'],
-    [/{{ensino_medio_estabelecimento}}/g, emissionData.highSchoolInstitution || 'Não informado'],
+    [/{{ensino_medio_estabelecimento}}/g, emissionData.highSchoolInstitution || data.aluno?.escola_ensino_medio || 'Não informado'],
     [/{{ensino_medio_localidade_uf}}/g, emissionData.highSchoolLocation || 'Não informado'],
-    [/{{ensino_medio_ano_conclusao}}/g, emissionData.highSchoolCompletionYear || 'Não informado'],
+    [/{{ensino_medio_ano_conclusao}}/g, String(emissionData.highSchoolCompletionYear || data.aluno?.ano_conclusao_ensino_medio || 'Não informado')],
+    [/{{ENSINO_MEDIO_ESCOLA}}/g, emissionData.highSchoolInstitution || data.aluno?.escola_ensino_medio || '—'],
+    [/{{ENSINO_MEDIO_ANO_CONCLUSAO}}/g, String(emissionData.highSchoolCompletionYear || data.aluno?.ano_conclusao_ensino_medio || '—')],
+    [/{{EIXO_TECNOLOGICO}}/g, technologicalAxis],
+    [/{{PERFIL_PROFISSIONAL_CONCLUSAO}}/g, professionalProfile],
     [/{{TABELA_COMPONENTES_CURRICULARES}}/g, academicData?.componentesTable || ''],
     [/{{TABELA_BOLETIM_TECNICO}}/g, academicData?.componentesTable || ''],
     [/{{TABELA_HISTORICO_ESCOLAR}}/g, academicData?.historicoTable || ''],
@@ -218,7 +245,7 @@ export const parseEmissionTemplate = (
     [/{{OBSERVACOES_HISTORICO}}/g, academicData?.observacoesHistorico || '—'],
     [/{{INSTITUICAO_DESTINO}}/g, emissionData.destinationInstitution || 'A instituição de destino'],
     [/{{CARGA_HORARIA_TOTAL}}/g, String(totalHours)],
-    [/{{DATA_CONCLUSAO}}/g, formatDate(emissionData.completionDate || academicData?.fimCurso || '')],
+    [/{{DATA_CONCLUSAO}}/g, formatOptionalDate(completionDate)],
     [/{{MEDIA_GERAL}}/g, academicData?.mediaGeral === null || academicData?.mediaGeral === undefined
       ? '—'
       : academicData.mediaGeral.toFixed(1)],

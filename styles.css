@@ -52,6 +52,39 @@ body,
   line-height: 1rem !important;
 }
 
+/* Mantém os textos do acesso do aluno nítidos no Safari. O antialiasing
+   global deixava rótulos pequenos e placeholders claros com aspecto turvo. */
+#root .aluno-auth-typography,
+#root .aluno-auth-typography * {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+
+#root .aluno-auth-typography .font-black {
+  font-weight: 800 !important;
+}
+
+#root .aluno-auth-typography .tracking-widest {
+  letter-spacing: 0.075em !important;
+}
+
+#root .aluno-auth-typography .text-\[10px\] {
+  font-size: 0.6875rem !important;
+  line-height: 1rem !important;
+}
+
+#root .aluno-auth-typography .text-slate-400 {
+  color: rgb(100 116 139) !important;
+}
+
+#root .aluno-auth-typography input::placeholder {
+  color: rgb(100 116 139);
+  font-weight: 500;
+  opacity: 1;
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.25s ease-out forwards;
   backface-visibility: hidden;

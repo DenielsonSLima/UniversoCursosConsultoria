@@ -146,7 +146,7 @@ const verifyTurnstile = async (
   form.set("remoteip", getClientIp(request));
   form.set("idempotency_key", crypto.randomUUID());
 
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
@@ -259,7 +259,7 @@ Deno.serve(async (request: Request) => {
     }, 403);
   }
 
-  let resolvedEmail: string | null = null;
+  let resolvedEmail: string | null;
   try {
     resolvedEmail = await resolveLoginIdentity(admin, identifier);
   } catch (error) {

@@ -190,6 +190,10 @@ const DeclaracaoEditor: React.FC<DeclaracaoEditorProps> = ({
       .replace(
         /<section[^>]*data-template-token=(["'])FICHA_ASSINATURAS\1[^>]*>[\s\S]*?<\/section>/gi,
         '{{FICHA_ASSINATURAS}}',
+      )
+      .replace(
+        /<section[^>]*data-template-token=(["'])TABELA_HISTORICO_ESCOLAR\1[^>]*>[\s\S]*?<\/section>/gi,
+        '{{TABELA_HISTORICO_ESCOLAR}}',
       );
     if (pageCount <= 1) {
       setTextContent(nextHtml);
