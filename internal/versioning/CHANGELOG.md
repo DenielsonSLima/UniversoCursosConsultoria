@@ -2,6 +2,22 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.8] - 2026-07-27
+
+### Adicionado
+
+- A primeira página do PDF do Caixa apresenta as receitas recebidas de EAD, especialização, cursos técnicos e cursos livres.
+- O resumo financeiro por turma informa o valor previsto na competência, o valor recebido no mês e o saldo vencido ainda não liquidado.
+- Quando há mais de cinco turmas com movimento, as demais aparecem consolidadas em uma linha calculada pelo backend.
+
+### Alterado
+
+- O cabeçalho institucional do relatório foi alinhado ao mesmo eixo de títulos, tabelas e rodapé.
+
+### Segurança
+
+- Todos os valores do novo resumo são agregados pela RPC segura e respeitam o polo autorizado; o frontend apenas exibe o contrato canônico.
+
 ## [2.2.3-beta.7] - 2026-07-27
 
 ### Corrigido
