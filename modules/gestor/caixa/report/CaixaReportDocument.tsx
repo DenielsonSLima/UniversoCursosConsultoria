@@ -246,7 +246,7 @@ export const CaixaReportDocument: React.FC<{
               )}
             />
 
-            <div className="relative z-10 min-h-0 flex-1">
+            <div className="relative z-10 min-h-0 flex-1 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
               {page.section === 'RECEBIMENTOS' && (
                 <>
@@ -280,7 +280,7 @@ export const CaixaReportDocument: React.FC<{
               )}
             </div>
 
-            <footer className="relative z-10 mt-2 grid shrink-0 grid-cols-3 border-t border-slate-100 pt-2 text-[7px] font-bold uppercase tracking-widest text-slate-400">
+            <footer className="relative z-10 ml-[7mm] mt-2 grid shrink-0 grid-cols-3 border-t border-slate-100 pt-2 text-[7px] font-bold uppercase tracking-widest text-slate-400">
               <span>Confidencial · uso interno</span>
               <span className="text-center">
                 Gerado pelo backend em {new Date(report.geradoEm).toLocaleString('pt-BR')}
