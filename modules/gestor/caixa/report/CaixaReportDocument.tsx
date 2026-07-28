@@ -33,9 +33,9 @@ const ExecutiveMetric: React.FC<{
   };
   return (
     <div className={`rounded-xl border p-2 ${tones[tone]}`}>
-      <p className="text-[7px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+      <p className="text-[8px] font-black uppercase tracking-wide text-slate-600">{label}</p>
       <p className="mt-0.5 text-[14px] font-black leading-none">{formatCaixaCurrency(value)}</p>
-      <p className="mt-0.5 text-[6.5px] leading-2.5 text-slate-500">{helper}</p>
+      <p className="mt-0.5 text-[7.5px] leading-3 text-slate-600">{helper}</p>
     </div>
   );
 };
@@ -116,7 +116,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
               <p className="text-[8px] font-black uppercase tracking-widest text-emerald-700">
                 Composição dos recebimentos
               </p>
-              <p className="mt-0.5 text-[6.5px] text-slate-500">
+              <p className="mt-0.5 text-[7.5px] text-slate-600">
                 Ajustes identificados e auditados pelo backend
               </p>
             </div>
@@ -124,7 +124,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
               {formatCaixaCurrency(report.totaisRecebimentos.valorFinal)}
             </strong>
           </div>
-          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[7px]">
+          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[8px]">
             <p>Base<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.valorBase)}</strong></p>
             <p>Juros<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.jurosIdentificados)}</strong></p>
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisRecebimentos.multaIdentificada)}</strong></p>
@@ -140,7 +140,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
               <p className="text-[8px] font-black uppercase tracking-widest text-rose-700">
                 Composição das despesas
               </p>
-              <p className="mt-0.5 text-[6.5px] text-slate-500">
+              <p className="mt-0.5 text-[7.5px] text-slate-600">
                 Pagamentos confirmados, sem duplicar lançamentos vinculados
               </p>
             </div>
@@ -148,7 +148,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
               {formatCaixaCurrency(report.totaisDespesas.valorFinal)}
             </strong>
           </div>
-          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[7px]">
+          <div className="mt-1.5 grid grid-cols-6 gap-1.5 text-[8px]">
             <p>Base<br /><strong>{formatCaixaCurrency(report.totaisDespesas.valorBase)}</strong></p>
             <p>Juros<br /><strong>{formatCaixaCurrency(report.totaisDespesas.jurosIdentificados)}</strong></p>
             <p>Multa<br /><strong>{formatCaixaCurrency(report.totaisDespesas.multaIdentificada)}</strong></p>
@@ -159,7 +159,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-[6.5px] leading-2.5 text-blue-900">
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-[7.5px] leading-3 text-blue-900">
         <strong>Leitura correta:</strong> o resultado mensal representa o fluxo de caixa confirmado,
         não lucro contábil por competência. O saldo Banese é a posição contábil do sistema; a integração
         atual não consulta o extrato bancário.
@@ -183,7 +183,7 @@ const SectionHeading: React.FC<{
       }`}>{title}</h2>
       <p className="mt-0.5 text-[8px] text-slate-500">{description}</p>
     </div>
-    <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+    <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
       Página da seção {page}
     </span>
   </div>
@@ -300,7 +300,7 @@ export const CaixaReportDocument: React.FC<{
               )}
             </div>
 
-            <footer className="relative z-10 ml-[7mm] mt-2 grid shrink-0 grid-cols-3 border-t border-slate-100 pt-2 text-[7px] font-bold uppercase tracking-widest text-slate-400">
+            <footer className="relative z-10 ml-[7mm] mt-2 grid shrink-0 grid-cols-3 border-t border-slate-100 pt-2 text-[7.5px] font-bold uppercase tracking-widest text-slate-500">
               <span>Confidencial · uso interno</span>
               <span className="text-center">
                 Gerado pelo backend em {new Date(report.geradoEm).toLocaleString('pt-BR')}
