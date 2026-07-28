@@ -50,7 +50,12 @@ const summary = {
     a_pagar: 0,
     pagar_vencido: 0,
   },
-  receitas_por_modalidade: [],
+  receitas_por_modalidade: [
+    { codigo: 'EAD', rotulo: 'Cursos EAD', valor: 14.9, quantidade: 1, percentual: 100 },
+    { codigo: 'LIVRE', rotulo: 'Cursos livres', valor: 0, quantidade: 0, percentual: 0 },
+    { codigo: 'TECNICO', rotulo: 'Cursos técnicos', valor: 0, quantidade: 0, percentual: 0 },
+    { codigo: 'ESPECIALIZACAO', rotulo: 'Especialização', valor: 0, quantidade: 0, percentual: 0 },
+  ],
   despesas_por_categoria: [],
   serie_mensal: [],
   contas: [],
@@ -85,7 +90,7 @@ const receipt = {
 };
 
 const makePayload = () => ({
-  versao: 1,
+  versao: 2,
   gerado_em: '2026-07-27T23:00:00Z',
   completo: true,
   confidencial: true,
@@ -117,6 +122,29 @@ const makePayload = () => ({
   resumo: JSON.parse(JSON.stringify(summary)) as typeof summary,
   totais_recebimentos: totals(1),
   totais_despesas: totals(0),
+  resumo_turmas: {
+    itens: [{
+      turma_id: '33333333-3333-3333-3333-333333333333',
+      turma: 'EAD · Turma única',
+      curso: 'Auxiliar Administrativo',
+      modalidade: 'EAD',
+      previsto_no_mes: 0,
+      recebido_no_mes: 14.9,
+      em_atraso: 0,
+      quantidade_parcelas: 0,
+      quantidade_recebidas: 1,
+      quantidade_em_atraso: 0,
+      agregado: false,
+      quantidade_turmas: 1,
+    }],
+    quantidade_turmas: 1,
+    quantidade_omitidas: 0,
+    totais: {
+      previsto_no_mes: 0,
+      recebido_no_mes: 14.9,
+      em_atraso: 0,
+    },
+  },
   recebimentos: [{ ...receipt }],
   despesas: [],
 });
@@ -125,6 +153,7 @@ test('aceita o contrato canônico completo sem recalcular valores', () => {
   const report = mapCaixaDetailedReport(makePayload());
   assert.equal(report.recebimentos[0].valorRecebido, 14.9);
   assert.equal(report.recebimentos[0].tipoLancamento, 'MATRICULA');
+  assert.equal(report.resumoTurmas.itens[0].recebidoNoMes, 14.9);
 });
 
 test('recusa coerção de número enviado como texto', () => {
