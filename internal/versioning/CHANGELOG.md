@@ -2,6 +2,27 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.9] - 2026-07-27
+
+### Corrigido
+
+- O consolidado da carteira recorrente e o detalhamento por turma são separados em páginas próprias, limitadas a cinco turmas, para preservar a área útil do A4.
+- A exportação bloqueia a geração quando uma página excede a altura ou largura segura, impedindo corte silencioso de informações financeiras.
+- A consulta pesada do PDF usa cache isolado e deixa de ser reexecutada pelas invalidações em tempo real do painel após a captura do relatório.
+- Cada nova abertura do PDF descarta fotografias anteriores e só congela o relatório depois da conclusão de uma consulta atualizada.
+- O contrato recusa IDs duplicados de cursos, modalidades e turmas antes da renderização do documento.
+
+### Alterado
+
+- Textos auxiliares, cabeçalhos e valores do PDF receberam tipografia mais legível sem modificar o fundo institucional nem a marca-d’água.
+- O gráfico mensal expõe entradas e saídas por teclado e tecnologia assistiva.
+- React Router foi atualizado dentro da versão principal 7 e a versão do pacote foi alinhada ao registro canônico do produto.
+
+### Qualidade
+
+- A suíte do relatório valida contrato canônico, paginação sem perda ou duplicação e proteção contra overflow.
+- Pull requests e atualizações da `main` passam a executar TypeScript, lint, testes do Caixa e build de produção no GitHub Actions.
+
 ## [2.2.3-beta.8] - 2026-07-27
 
 ### Adicionado
