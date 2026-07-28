@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, FileDown, ShieldCheck } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import { formatCaixaCompetencia } from '../caixa.formatters';
 import { CaixaReportPreviewModal } from './CaixaReportPreviewModal';
 
@@ -18,34 +18,31 @@ export const CaixaReportLauncher: React.FC<CaixaReportLauncherProps> = ({
 
   return (
     <>
-      <section className="overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-r from-white via-blue-50/60 to-indigo-50 shadow-sm">
-        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200">
-              <FileDown size={20} />
-            </span>
-            <div>
-              <h2 className="text-base font-bold text-[#001a33]">Prestação detalhada em PDF</h2>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-                Prévia com cabeçalho, marca d’água, resumo executivo, todos os recebimentos
-                e todas as despesas de {formatCaixaCompetencia(competencia)}.
-              </p>
-              <p className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-blue-700">
-                <ShieldCheck size={12} />
-                {scopeLabel} · dados conferidos no backend · uso interno
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-5 py-3 text-xs font-black uppercase tracking-wider text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-950"
-          >
-            Pré-visualizar PDF
-            <ArrowRight size={15} />
-          </button>
+      <div className="group relative">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-describedby="caixa-pdf-tooltip"
+          className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#001a33] px-4 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <FileDown size={17} />
+          PDF
+        </button>
+        <div
+          id="caixa-pdf-tooltip"
+          role="tooltip"
+          className="pointer-events-none absolute right-0 top-full z-30 mt-2 hidden w-72 rounded-xl bg-slate-950 px-3.5 py-3 text-left shadow-xl group-hover:block group-focus-within:block"
+        >
+          <p className="text-xs font-bold text-white">Pré-visualizar prestação detalhada</p>
+          <p className="mt-1 text-[10px] leading-4 text-slate-300">
+            Cabeçalho, marca d’água, resumo e movimentos de{' '}
+            {formatCaixaCompetencia(competencia)}.
+          </p>
+          <p className="mt-1 text-[9px] font-semibold text-blue-300">
+            {scopeLabel} · conferido no backend
+          </p>
         </div>
-      </section>
+      </div>
 
       <CaixaReportPreviewModal
         open={open}
@@ -56,4 +53,3 @@ export const CaixaReportLauncher: React.FC<CaixaReportLauncherProps> = ({
     </>
   );
 };
-

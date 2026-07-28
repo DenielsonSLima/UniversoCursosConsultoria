@@ -37,6 +37,7 @@ interface CaixaPageProps {
   poloId?: string | null;
   poloName?: string;
   isGlobal?: boolean;
+  isMatriz?: boolean;
 }
 
 interface CaixaPolo {
@@ -57,27 +58,29 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
   poloId,
   poloName,
   isGlobal = false,
+  isMatriz = false,
 }) => {
   const currentCompetencia = getCurrentCaixaCompetencia();
+  const canViewConsolidated = isGlobal && isMatriz;
   const [competencia, setCompetencia] = useState(currentCompetencia);
   const [selectedPolo, setSelectedPolo] = useState(
-    isGlobal ? (poloId || 'todos') : (poloId || ''),
+    poloId || (canViewConsolidated ? 'todos' : ''),
   );
 
   const { data: polos = [] } = useQuery({
     queryKey: ['caixa-polos-list', 'global'],
     queryFn: financeiroService.getPolos,
-    enabled: isGlobal,
+    enabled: canViewConsolidated,
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
   });
 
   useEffect(() => {
-    setSelectedPolo(isGlobal ? (poloId || 'todos') : (poloId || ''));
-  }, [isGlobal, poloId]);
+    setSelectedPolo(poloId || (canViewConsolidated ? 'todos' : ''));
+  }, [canViewConsolidated, poloId]);
 
   const visiblePolos = useMemo<CaixaPolo[]>(() => {
-    if (isGlobal) return polos as CaixaPolo[];
+    if (canViewConsolidated) return polos as CaixaPolo[];
     if (!poloId) return [];
     return [{
       id: poloId,
@@ -86,7 +89,7 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
       estado: null,
       is_matriz: false,
     }];
-  }, [isGlobal, poloId, poloName, polos]);
+  }, [canViewConsolidated, poloId, poloName, polos]);
 
   useCaixaRealtime();
 
@@ -141,34 +144,41 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
           </p>
         </div>
 
-        <div className="inline-flex w-fit items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, -1))}
-            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            aria-label="Mês anterior"
-          >
-            <ChevronLeft size={17} />
-          </button>
-          <div className="flex min-w-[154px] items-center justify-center gap-2 px-3 text-sm font-semibold text-slate-800">
-            <CalendarDays size={15} className="text-blue-600" />
-            {formatCaixaCompetencia(competencia)}
+        <div className="flex w-fit items-center gap-2">
+          <div className="inline-flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, -1))}
+              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <div className="flex min-w-[154px] items-center justify-center gap-2 px-3 text-sm font-semibold text-slate-800">
+              <CalendarDays size={15} className="text-blue-600" />
+              {formatCaixaCompetencia(competencia)}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, 1))}
+              disabled={isCurrentCompetencia}
+              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight size={17} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setCompetencia((value) => shiftCaixaCompetencia(value, 1))}
-            disabled={isCurrentCompetencia}
-            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
-            aria-label="Próximo mês"
-          >
-            <ChevronRight size={17} />
-          </button>
+          <CaixaReportLauncher
+            poloId={selectedPolo}
+            competencia={competencia}
+            scopeLabel={statement.meta.escopoRotulo}
+          />
         </div>
       </header>
 
       <div className="overflow-x-auto border-b border-slate-200">
         <div className="flex min-w-max gap-1">
-          {isGlobal && (
+          {canViewConsolidated && (
             <button
               type="button"
               onClick={() => setSelectedPolo('todos')}
@@ -188,7 +198,7 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
                 key={polo.id}
                 type="button"
                 onClick={() => setSelectedPolo(polo.id)}
-                disabled={!isGlobal}
+                disabled={!canViewConsolidated}
                 className={`relative flex items-center gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition ${
                   active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
                 }`}
@@ -456,12 +466,6 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
       </section>
 
       <CaixaReconciliationCard reconciliation={statement.conciliacao} />
-
-      <CaixaReportLauncher
-        poloId={selectedPolo}
-        competencia={competencia}
-        scopeLabel={statement.meta.escopoRotulo}
-      />
 
       <footer className="flex items-start gap-2 px-1 text-[10px] leading-4 text-slate-400">
         <ReceiptText size={13} className="mt-0.5 shrink-0" />

@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.5",
+  "version": "2.2.3-beta.6",
   "display": "BETA",
   "stage": "beta",
-  "revision": 5,
+  "revision": 6,
   "releasedAt": "2026-07-27",
-  "summary": "Caixa mensal por polo, conta Banese compartilhada e prestação detalhada em PDF"
+  "summary": "Caixa restrito ao polo selecionado e exportação PDF no cabeçalho"
 }
