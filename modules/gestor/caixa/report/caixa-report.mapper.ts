@@ -396,6 +396,15 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   }
   assertUnique(recebimentos.map((item) => item.id), 'recebimentos');
   assertUnique(despesas.map((item) => `${item.origem}:${item.id}`), 'despesas');
+  assertUnique(resumoCursos.itens.map((item) => item.cursoId), 'resumo_cursos');
+  assertUnique(
+    analiseRecorrente.modalidades.map((item) => item.modalidade),
+    'analise_recorrente.modalidades',
+  );
+  assertUnique(
+    analiseRecorrente.turmas.map((item) => item.turmaId),
+    'analise_recorrente.turmas',
+  );
 
   return {
     versao: 3,

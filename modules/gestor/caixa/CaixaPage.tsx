@@ -322,11 +322,22 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
           {hasChartMovement ? (
             <div className="mt-5 flex h-44 items-end gap-3 border-b border-slate-100 px-1 pb-2 sm:gap-5">
               {statement.serieMensal.map((month) => (
-                <div key={month.competencia} className="flex h-full min-w-0 flex-1 flex-col justify-end">
+                <div
+                  key={month.competencia}
+                  className="group/month relative flex h-full min-w-0 flex-1 flex-col justify-end rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  role="img"
+                  tabIndex={0}
+                  aria-label={`${month.rotulo}: entradas ${formatCaixaCurrency(month.entradas)}; saídas ${formatCaixaCurrency(month.saidas)}`}
+                >
+                  <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-focus/month:block">
+                    Entradas {formatCaixaCurrency(month.entradas)} · Saídas{' '}
+                    {formatCaixaCurrency(month.saidas)}
+                  </span>
                   <div className="flex flex-1 items-end justify-center gap-1.5">
                     <div
                       className="group relative min-h-0 w-3 rounded-t bg-emerald-500 transition hover:bg-emerald-600 sm:w-5"
                       style={{ height: `${month.entradasEscalaPercentual}%` }}
+                      aria-hidden="true"
                     >
                       <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
                         {formatCaixaCurrency(month.entradas)}
@@ -335,6 +346,7 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
                     <div
                       className="group relative min-h-0 w-3 rounded-t bg-rose-500 transition hover:bg-rose-600 sm:w-5"
                       style={{ height: `${month.saidasEscalaPercentual}%` }}
+                      aria-hidden="true"
                     >
                       <span className="pointer-events-none absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[9px] text-white group-hover:block">
                         {formatCaixaCurrency(month.saidas)}

@@ -56,11 +56,20 @@ export const buildCaixaReportPages = (
     });
   });
 
-  chunk(recurringClasses, 8).forEach((rows, index) => {
+  pages.push({
+    key: 'recurring-modalities',
+    section: 'CARTEIRA_RECORRENTE',
+    sectionPage: 1,
+    rows: [],
+  });
+
+  if (recurringClasses.length === 0) return pages;
+
+  chunk(recurringClasses, 5).forEach((rows, index) => {
     pages.push({
-      key: `recurring-analysis-${index + 1}`,
+      key: `recurring-classes-${index + 1}`,
       section: 'CARTEIRA_RECORRENTE',
-      sectionPage: index + 1,
+      sectionPage: index + 2,
       rows,
     });
   });

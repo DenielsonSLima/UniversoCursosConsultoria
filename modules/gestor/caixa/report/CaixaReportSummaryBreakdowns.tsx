@@ -16,7 +16,7 @@ const SummaryPanel: React.FC<{
 }> = ({ eyebrow, title, children }) => (
   <section className="rounded-xl border border-slate-200 bg-white p-2.5">
     <header className="border-b border-slate-100 pb-1.5">
-      <p className="text-[7px] font-black uppercase tracking-[0.18em] text-blue-600">
+      <p className="text-[8px] font-black uppercase tracking-[0.16em] text-blue-600">
         {eyebrow}
       </p>
       <h3 className="mt-0.5 text-[10px] font-black uppercase tracking-tight text-[#001a33]">
@@ -42,7 +42,7 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
             <div key={item.codigo} className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5">
               <div className="min-w-0">
                 <p className="truncate text-[9px] font-black text-slate-800">{item.rotulo}</p>
-                <p className="mt-0.5 text-[7px] text-slate-400">
+                <p className="mt-0.5 text-[8px] text-slate-500">
                   {item.quantidade} recebimento(s) confirmado(s)
                 </p>
               </div>
@@ -56,12 +56,12 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
 
       <SummaryPanel eyebrow="Acompanhamento mensal" title="Resumo financeiro por curso">
         {report.resumoCursos.itens.length === 0 ? (
-          <div className="flex min-h-[72px] items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-[7px] font-semibold text-slate-400">
+          <div className="flex min-h-[72px] items-center justify-center rounded-lg bg-slate-50 px-4 text-center text-[8px] font-semibold text-slate-500">
             Nenhum curso parcelado possui previsão, recebimento ou atraso nesta competência.
           </div>
         ) : (
           <div>
-            <div className="grid grid-cols-[1fr_repeat(3,72px)] gap-1 border-b border-slate-100 py-1.5 text-right text-[6px] font-black uppercase tracking-wider text-slate-400">
+            <div className="grid grid-cols-[1fr_repeat(3,72px)] gap-1 border-b border-slate-100 py-1.5 text-right text-[7.5px] font-black uppercase tracking-wide text-slate-500">
               <span className="text-left">Curso</span>
               <span>Previsto</span>
               <span>Recebido</span>
@@ -75,7 +75,7 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
                 >
                   <div className="min-w-0 text-left">
                     <p className="truncate text-[8px] font-black text-slate-800">{item.curso}</p>
-                    <p className="mt-0.5 truncate text-[6px] text-slate-400">
+                    <p className="mt-0.5 truncate text-[8px] text-slate-500">
                       {item.modalidade} · {item.quantidadeTurmas} turma(s) ·{' '}
                       {item.quantidadeAlunos} aluno(s)
                     </p>
@@ -95,7 +95,7 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
               ))}
             </div>
             {report.resumoCursos.quantidadeOmitidas > 0 && (
-              <p className="border-t border-slate-100 pt-1.5 text-right text-[6px] font-bold text-slate-400">
+              <p className="border-t border-slate-100 pt-1.5 text-right text-[8px] font-bold text-slate-500">
                 + {report.resumoCursos.quantidadeOmitidas} curso(s) na análise recorrente
               </p>
             )}

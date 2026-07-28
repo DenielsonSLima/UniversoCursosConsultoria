@@ -1,3 +1,5 @@
+import { assertCaixaReportPagesFit } from './caixa-report.layout';
+
 const settleWithin = async (promise: Promise<unknown>, timeoutMs = 5_000) => {
   await Promise.race([
     promise.catch(() => undefined),
@@ -20,6 +22,11 @@ const waitForImages = async (element: HTMLElement) => {
       await settleWithin(image.decode());
     }
   }));
+};
+
+const waitForDocumentFonts = async () => {
+  if (typeof document === 'undefined' || !document.fonts?.ready) return;
+  await settleWithin(document.fonts.ready);
 };
 
 export const buildCaixaReportFileName = (
@@ -49,6 +56,8 @@ export const buildCaixaReportPdf = async (
   if (pages.length === 0) throw new Error('Nenhuma página do relatório foi encontrada.');
 
   await waitForImages(element);
+  await waitForDocumentFonts();
+  assertCaixaReportPagesFit(pages);
 
   const pdf = new jsPDF({
     orientation: 'landscape',
