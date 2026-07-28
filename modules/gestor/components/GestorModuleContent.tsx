@@ -4,6 +4,7 @@ import type { PortalAuthProfile } from '../../login/portal-session';
 import { canAccessTab, getEffectiveFinanceiroTabs } from '../access-control';
 import type { GestorPermissions } from '../access-control';
 import { POLO_CADASTROS_ALLOWED } from '../gestor-navigation';
+import type { ParceiroFormType } from '../parceiros/ParceirosPage';
 
 export const loadSecretariaPage = () => import('../secretaria/SecretariaPage');
 export const loadCaixaPage = () => import('../caixa/CaixaPage');
@@ -152,6 +153,20 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   if (!canOpenModule(activeModule)) return <AccessDenied />;
   if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
     return <CadastrosPage onNavigate={setActiveModule} readOnly allowedTabs={allowedCadastroTabs} />;
+  }
+  if (activeModule.startsWith('parceiros-novo-')) {
+    const requestedForm = activeModule.replace('parceiros-novo-', '') as ParceiroFormType;
+    const initialForm: ParceiroFormType = ['aluno', 'professor', 'pf', 'pj'].includes(requestedForm)
+      ? requestedForm
+      : 'selection';
+    return (
+      <ParceirosPage
+        initialForm={initialForm}
+        poloId={scopedPoloId}
+        includeGlobal={isGlobal}
+        onRequestScrollTop={onRequestScrollTop}
+      />
+    );
   }
 
   switch (activeModule) {
