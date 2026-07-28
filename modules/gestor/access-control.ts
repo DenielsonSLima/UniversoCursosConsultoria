@@ -248,7 +248,7 @@ export const getEligibleDashboardWidgets = (
     );
   const hasCashFlow = canAccessGestorModule(permissions, 'financeiro')
     && canAccessFinanceiroTab(permissions, 'resumo');
-  const hasQuickActions = ['parceiros', 'cadastros', 'caixa']
+  const hasQuickActions = ['parceiros', 'cadastros', 'caixa', 'financeiro']
     .some((moduleId) => canAccessGestorModule(permissions, moduleId));
   const hasRecentActivity = hasAcademicActivity
     || hasFinanceOverview
