@@ -2,6 +2,7 @@ import { mapCaixaStatement } from '../caixa.service';
 import type {
   CaixaCompositionStatus,
   CaixaDetailedReport,
+  CaixaReportClassSummary,
   CaixaReportExpense,
   CaixaReportInstitution,
   CaixaReportReceipt,
@@ -210,6 +211,85 @@ const assertStrictStatementSummary = (value: unknown) => {
   ['a_receber', 'receber_vencido', 'a_pagar', 'pagar_vencido'].forEach(
     (field) => requiredNumber(commitments[field], `resumo.compromissos.${field}`),
   );
+
+  const modalities = array(
+    statement.receitas_por_modalidade,
+    'resumo.receitas_por_modalidade',
+  );
+  ['EAD', 'ESPECIALIZACAO', 'TECNICO', 'LIVRE'].forEach((code) => {
+    const modality = modalities.find((item) => item.codigo === code);
+    if (!modality) {
+      throw new Error(`Contrato inválido do relatório do Caixa: modalidade ${code}.`);
+    }
+    requiredNumber(modality.valor, `resumo.receitas_por_modalidade.${code}.valor`);
+    integer(modality.quantidade, `resumo.receitas_por_modalidade.${code}.quantidade`);
+  });
+};
+
+const classSummary = (value: unknown): CaixaReportClassSummary => {
+  const summary = record(value, 'resumo_turmas');
+  const summaryTotals = record(summary.totais, 'resumo_turmas.totais');
+  return {
+    itens: array(summary.itens, 'resumo_turmas.itens').map((item, index) => ({
+      turmaId: item.turma_id === null
+        ? null
+        : string(item.turma_id, `resumo_turmas.itens[${index}].turma_id`),
+      turma: string(item.turma, `resumo_turmas.itens[${index}].turma`),
+      curso: string(item.curso, `resumo_turmas.itens[${index}].curso`),
+      modalidade: string(item.modalidade, `resumo_turmas.itens[${index}].modalidade`),
+      previstoNoMes: requiredNumber(
+        item.previsto_no_mes,
+        `resumo_turmas.itens[${index}].previsto_no_mes`,
+      ),
+      recebidoNoMes: requiredNumber(
+        item.recebido_no_mes,
+        `resumo_turmas.itens[${index}].recebido_no_mes`,
+      ),
+      emAtraso: requiredNumber(
+        item.em_atraso,
+        `resumo_turmas.itens[${index}].em_atraso`,
+      ),
+      quantidadeParcelas: integer(
+        item.quantidade_parcelas,
+        `resumo_turmas.itens[${index}].quantidade_parcelas`,
+      ),
+      quantidadeRecebidas: integer(
+        item.quantidade_recebidas,
+        `resumo_turmas.itens[${index}].quantidade_recebidas`,
+      ),
+      quantidadeEmAtraso: integer(
+        item.quantidade_em_atraso,
+        `resumo_turmas.itens[${index}].quantidade_em_atraso`,
+      ),
+      agregado: boolean(item.agregado, `resumo_turmas.itens[${index}].agregado`),
+      quantidadeTurmas: integer(
+        item.quantidade_turmas,
+        `resumo_turmas.itens[${index}].quantidade_turmas`,
+      ),
+    })),
+    quantidadeTurmas: integer(
+      summary.quantidade_turmas,
+      'resumo_turmas.quantidade_turmas',
+    ),
+    quantidadeOmitidas: integer(
+      summary.quantidade_omitidas,
+      'resumo_turmas.quantidade_omitidas',
+    ),
+    totais: {
+      previstoNoMes: requiredNumber(
+        summaryTotals.previsto_no_mes,
+        'resumo_turmas.totais.previsto_no_mes',
+      ),
+      recebidoNoMes: requiredNumber(
+        summaryTotals.recebido_no_mes,
+        'resumo_turmas.totais.recebido_no_mes',
+      ),
+      emAtraso: requiredNumber(
+        summaryTotals.em_atraso,
+        'resumo_turmas.totais.em_atraso',
+      ),
+    },
+  };
 };
 
 const assertUnique = (keys: string[], field: string) => {
@@ -220,7 +300,7 @@ const assertUnique = (keys: string[], field: string) => {
 
 export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const payload = record(Array.isArray(value) ? value[0] : value, 'payload');
-  if (requiredNumber(payload.versao, 'versao') !== 1 || payload.completo !== true) {
+  if (requiredNumber(payload.versao, 'versao') !== 2 || payload.completo !== true) {
     throw new Error('O relatório detalhado do Caixa está incompleto ou possui versão incompatível.');
   }
 
@@ -229,6 +309,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   const limiteTotal = integer(payload.limite_total, 'limite_total');
   const totaisRecebimentos = totals(payload.totais_recebimentos, 'totais_recebimentos');
   const totaisDespesas = totals(payload.totais_despesas, 'totais_despesas');
+  const resumoTurmas = classSummary(payload.resumo_turmas);
   const recebimentos = array(payload.recebimentos, 'recebimentos').map(receipt);
   const despesas = array(payload.despesas, 'despesas').map(expense);
 
@@ -245,7 +326,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
   assertUnique(despesas.map((item) => `${item.origem}:${item.id}`), 'despesas');
 
   return {
-    versao: 1,
+    versao: 2,
     geradoEm: string(payload.gerado_em, 'gerado_em'),
     completo: true,
     confidencial: boolean(payload.confidencial, 'confidencial'),
@@ -255,6 +336,7 @@ export const mapCaixaDetailedReport = (value: unknown): CaixaDetailedReport => {
     resumo: mapCaixaStatement(payload.resumo),
     totaisRecebimentos,
     totaisDespesas,
+    resumoTurmas,
     recebimentos,
     despesas,
   };
