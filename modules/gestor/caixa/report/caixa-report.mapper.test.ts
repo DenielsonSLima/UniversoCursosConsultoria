@@ -233,4 +233,22 @@ test('recusa contagem incompatível e IDs duplicados', () => {
   duplicate.recebimentos.push({ ...receipt });
   duplicate.totais_recebimentos.quantidade = 2;
   assert.throws(() => mapCaixaDetailedReport(duplicate), /IDs duplicados/);
+
+  const duplicateClass = makePayload();
+  duplicateClass.analise_recorrente.turmas.push({
+    ...duplicateClass.analise_recorrente.turmas[0],
+  });
+  assert.throws(() => mapCaixaDetailedReport(duplicateClass), /IDs duplicados/);
+
+  const duplicateModality = makePayload();
+  duplicateModality.analise_recorrente.modalidades.push({
+    ...duplicateModality.analise_recorrente.modalidades[0],
+  });
+  assert.throws(() => mapCaixaDetailedReport(duplicateModality), /IDs duplicados/);
+
+  const duplicateCourse = makePayload();
+  duplicateCourse.resumo_cursos.itens.push({
+    ...duplicateCourse.resumo_cursos.itens[0],
+  });
+  assert.throws(() => mapCaixaDetailedReport(duplicateCourse), /IDs duplicados/);
 });
