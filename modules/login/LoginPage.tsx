@@ -267,7 +267,6 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 font-sans">
-      <ArkhenSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen xl:grid-cols-[1.04fr_0.96fr]">
         <section className="relative hidden min-h-[640px] overflow-hidden bg-[#001a33] text-white lg:flex xl:min-h-screen">
           <img src="/banner2.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
@@ -331,14 +330,16 @@ const LoginPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="relative flex min-h-screen flex-col items-center justify-center p-6 py-14 sm:p-8 lg:min-h-0 lg:py-16 xl:min-h-screen">
+        <section className="relative flex min-h-screen flex-col items-center px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 sm:pb-10 sm:pt-8 lg:min-h-0 lg:py-16 xl:min-h-screen xl:justify-center">
           <button
+            type="button"
             onClick={() => navigate('/')}
-            className="absolute top-6 left-6 flex items-center gap-2 text-slate-500 hover:text-[#4169E1] transition-colors text-sm font-bold uppercase tracking-widest group"
+            aria-label="Voltar ao site"
+            className="group mb-4 flex w-full max-w-md items-center gap-2 text-sm font-bold uppercase tracking-widest text-slate-500 transition-colors hover:text-[#4169E1] xl:absolute xl:left-6 xl:top-6 xl:mb-0 xl:w-auto xl:max-w-none"
           >
-            <div className="p-2 rounded-full bg-white border border-slate-200 shadow-sm group-hover:border-[#4169E1] transition-colors">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all group-hover:border-[#4169E1] group-hover:shadow-md">
               <ArrowLeft size={16} />
-            </div>
+            </span>
             <span className="hidden sm:inline">Voltar ao site</span>
           </button>
 
@@ -474,6 +475,10 @@ const LoginPage: React.FC = () => {
             </div>
           </div>
         )}
+
+          <div className="mt-5 flex w-full max-w-md justify-center pb-1 sm:justify-end sm:pr-2 xl:absolute xl:bottom-6 xl:right-6 xl:mt-0 xl:w-auto xl:max-w-none xl:pb-0 xl:pr-0">
+            <ArkhenSignature tone="dark" />
+          </div>
         </section>
       </main>
     </div>
