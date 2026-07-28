@@ -342,7 +342,11 @@ export const historicoEmissoesService = {
       .from('documentos_validacao')
       .select(`
         *,
-        aluno:parceiros(id, nome, cpf_cnpj, rg, data_nascimento, foto_url),
+        aluno:parceiros(
+          id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
+          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
+          nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
+        ),
         ${enrollmentRelation}
       `, { count: 'exact' })
       .eq('status', 'ATIVO');
@@ -370,7 +374,11 @@ export const historicoEmissoesService = {
       .from('documentos_validacao')
       .select(`
         *,
-        aluno:parceiros(id, nome, cpf_cnpj, rg, data_nascimento, foto_url),
+        aluno:parceiros(
+          id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
+          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
+          nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
+        ),
         matricula:matriculas(id, status, turma:turmas(id, nome, codigo))
       `)
       .eq('codigo', normalizedCode)

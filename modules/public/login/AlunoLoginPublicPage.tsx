@@ -418,7 +418,7 @@ const AlunoLoginPublicPage: React.FC = () => {
       <ArkhenSignature tone="dark" className="absolute bottom-6 right-6 z-30" />
       <main className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
         <AlunoLoginHero {...heroProps} />
-        <section className="flex flex-col items-center justify-center bg-slate-50 px-4 py-8 text-slate-900 sm:px-8">
+        <section className="aluno-auth-typography flex flex-col items-center justify-center bg-slate-50 px-4 py-8 text-slate-900 sm:px-8">
           <AlunoLoginMobileHeader {...heroProps} />
           <AlunoLoginAuthCard
             mode={mode}

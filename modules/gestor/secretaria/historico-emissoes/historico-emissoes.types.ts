@@ -26,6 +26,16 @@ export interface EmissionLog {
     rg?: string;
     data_nascimento?: string;
     foto_url?: string;
+    sexo?: string;
+    nacionalidade?: string;
+    naturalidade?: string;
+    orgao_emissor?: string;
+    titulo_eleitor?: string;
+    reservista?: string;
+    nome_mae?: string;
+    nome_pai?: string;
+    escola_ensino_medio?: string;
+    ano_conclusao_ensino_medio?: number | string;
   };
   matricula?: {
     id: string;
@@ -40,8 +50,13 @@ export interface AcademicComponentRow {
   disciplineOrder?: number;
   discipline: string;
   cargaHoraria: number;
+  cargaHorariaTeoria?: number;
+  cargaHorariaPratica?: number;
+  cargaHorariaEstagio?: number;
   nota: number | null;
+  notaEstagio?: number | null;
   frequencia: number | null;
+  frequenciaEstagio?: number | null;
   situacao: string;
 }
 
@@ -55,7 +70,11 @@ export interface AcademicPreviewData {
   situacaoAcademica: string;
   mediaGeral: number | null;
   frequenciaGeral: number | null;
+  inicioCurso: string | null;
   fimCurso: string | null;
+  courseArea: string;
+  courseTechnologicalAxis: string;
+  courseProfessionalProfile: string;
   moduleNames: string[];
 }
 
@@ -68,6 +87,9 @@ export interface AcademicPreviewRpcPayload {
   situacaoAcademica?: string;
   mediaGeral?: number | null;
   frequenciaGeral?: number | null;
+  courseArea?: string | null;
+  courseTechnologicalAxis?: string | null;
+  courseProfessionalProfile?: string | null;
 }
 
 export interface TurmaFilter {
