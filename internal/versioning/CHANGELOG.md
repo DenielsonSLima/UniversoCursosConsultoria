@@ -2,6 +2,13 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.7] - 2026-07-27
+
+### Corrigido
+
+- Títulos, descrições, cards, tabelas e rodapé da prestação de contas foram recuados para não sobrepor a faixa azul do fundo institucional.
+- A marca d’água e os demais elementos do modelo institucional permanecem inalterados.
+
 ## [2.2.3-beta.6] - 2026-07-27
 
 ### Alterado
