@@ -379,7 +379,9 @@ const GestorPage: React.FC = () => {
     includeGlobalPartners: gestorScope.isGlobal,
   });
   const canOpenModule = useCallback((moduleId: string) => {
-    const rootModule = moduleId.startsWith('cadastros-')
+    const rootModule = moduleId.startsWith('parceiros-novo-')
+      ? 'parceiros'
+      : moduleId.startsWith('cadastros-')
       ? 'cadastros'
       : moduleId.startsWith('comunicacao-')
         ? 'comunicacao'

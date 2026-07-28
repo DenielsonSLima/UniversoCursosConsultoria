@@ -25,10 +25,12 @@ import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilte
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
 
-type FormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj' | null;
+export type ParceiroFormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj';
+type FormType = ParceiroFormType | null;
 
 interface ParceirosPageProps {
   activeTabInicial?: ParceirosTabType;
+  initialForm?: ParceiroFormType;
   poloId?: string | null;
   includeGlobal?: boolean;
   onRequestScrollTop?: () => void;
@@ -42,9 +44,15 @@ const tabs = [
   { id: 'pf', label: 'Pessoa Física', icon: User },
 ] as const;
 
-const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos', poloId, includeGlobal = false, onRequestScrollTop }) => {
+const ParceirosPage: React.FC<ParceirosPageProps> = ({
+  activeTabInicial = 'todos',
+  initialForm,
+  poloId,
+  includeGlobal = false,
+  onRequestScrollTop,
+}) => {
   const { toasts, removeToast, toast } = useToast();
-  const [showForm, setShowForm] = useState<FormType>(null);
+  const [showForm, setShowForm] = useState<FormType>(initialForm || null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [activeTab, setActiveTab] = useState<ParceirosTabType>(activeTabInicial);
   const [deletingParceiro, setDeletingParceiro] = useState<any | null>(null);
@@ -56,6 +64,10 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({ activeTabInicial = 'todos
   useEffect(() => {
     setActiveTab(activeTabInicial);
   }, [activeTabInicial]);
+
+  useEffect(() => {
+    if (initialForm) setShowForm(initialForm);
+  }, [initialForm]);
 
   const {
     allPartners,
