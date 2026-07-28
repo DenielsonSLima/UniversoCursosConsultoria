@@ -2,6 +2,18 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.6] - 2026-07-27
+
+### Alterado
+
+- O botão da prestação em PDF fica ao lado do seletor de competência, com explicação acessível por foco ou ao passar o mouse.
+- Resultado geral e navegação entre todas as unidades aparecem somente quando a matriz está selecionada e o gestor possui escopo global.
+- Ao acessar Aquidabã ou Porto da Folha, o módulo Caixa permanece restrito visualmente à unidade selecionada.
+
+### Segurança
+
+- A interface acompanha o escopo da unidade ativa, enquanto as RPCs continuam bloqueando consultas fora dos polos autorizados do usuário.
+
 ## [2.2.3-beta.5] - 2026-07-27
 
 ### Adicionado
