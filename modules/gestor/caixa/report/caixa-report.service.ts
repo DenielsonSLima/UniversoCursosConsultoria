@@ -32,21 +32,26 @@ export const caixaReportService = {
   },
 };
 
+export const caixaReportQueryKey = (
+  poloId: string | null | undefined,
+  competencia: string,
+) => [
+  'caixa-report',
+  'monthly',
+  normalizePoloId(poloId) || 'todos',
+  competencia,
+] as const;
+
 export const caixaReportQueryOptions = (
   poloId: string | null | undefined,
   competencia: string,
   enabled: boolean,
 ) => queryOptions({
-  queryKey: [
-    'caixa',
-    'statement',
-    normalizePoloId(poloId) || 'todos',
-    competencia,
-    'pdf',
-  ],
+  queryKey: caixaReportQueryKey(poloId, competencia),
   queryFn: () => caixaReportService.getDetailedMonthlyReport(poloId, competencia),
   enabled,
-  staleTime: 30_000,
+  staleTime: 0,
   gcTime: 0,
+  refetchOnMount: 'always',
   refetchOnWindowFocus: false,
 });
