@@ -1,0 +1,41 @@
+name: Qualidade do produto
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-product:
+    name: TypeScript, lint, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar TypeScript
+        run: npx tsc --noEmit
+
+      - name: Validar lint
+        run: npm run lint
+
+      - name: Testar relatório do Caixa
+        run: npm run test:caixa-report
+
+      - name: Gerar build de produção
+        run: npm run build
