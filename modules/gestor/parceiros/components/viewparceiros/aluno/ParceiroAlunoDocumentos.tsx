@@ -10,6 +10,7 @@ import { documentosAlunoV2Service } from '../../../../../shared/documentos-aluno
 import AlunoDocumentosSummary from './documentos/AlunoDocumentosSummary';
 import DocumentoArchiveDialog from './documentos/DocumentoArchiveDialog';
 import DocumentoDeleteDialog from './documentos/DocumentoDeleteDialog';
+import DocumentoLegacyReceiptModal from './documentos/DocumentoLegacyReceiptModal';
 import DocumentoPreviewHistoryModal from './documentos/DocumentoPreviewHistoryModal';
 import DocumentoReviewModal from './documentos/DocumentoReviewModal';
 import DocumentosChecklist from './documentos/DocumentosChecklist';
@@ -43,6 +44,9 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
   const [mappingLot, setMappingLot] = useState<DocumentoAlunoLotePdf | null>(null);
   const [mappings, setMappings] = useState<DocumentoAlunoPdfMapeamento[]>([]);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [legacyReceiptItem, setLegacyReceiptItem] =
+    useState<DocumentoAlunoChecklistItem | null>(null);
+  const [legacyReceiptReason, setLegacyReceiptReason] = useState('');
 
   if (workflow.painelQuery.isError) {
     return (
@@ -86,6 +90,10 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
       ? workflow.uploadMutation.variables?.documentoId || null
       : reviewItem?.id && workflow.reviewMutation.isPending
       ? reviewItem.id
+      : legacyReceiptItem?.id && workflow.legacyReceiptMutation.isPending
+        ? legacyReceiptItem.id
+      : workflow.legacyReceiptRevokeMutation.isPending
+        ? workflow.legacyReceiptRevokeMutation.variables?.documentoId || null
       : archiveItem?.id && workflow.archiveMutation.isPending
         ? archiveItem.id
         : deleteItem?.id && workflow.deleteMutation.isPending
@@ -340,6 +348,30 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
           void workflow.uploadMutation.mutateAsync({ documentoId: item.id, files })
             .catch((error) => setOperationError(errorMessage(error)));
         }}
+        onMarkReceived={painel.podeRegistrarRecebimentoSemAnexo
+          ? (item) => {
+            setOperationError(null);
+            setLegacyReceiptReason(
+              'Documento conferido no sistema acadêmico anterior durante a migração.',
+            );
+            setLegacyReceiptItem(item);
+          }
+          : undefined}
+        onRevokeReceived={(item) => {
+          const motivo = window.prompt(
+            'Informe o motivo da correção deste registro (mínimo de 10 caracteres):',
+          )?.trim();
+          if (!motivo) return;
+          if (motivo.length < 10) {
+            setOperationError('O motivo da correção deve ter pelo menos 10 caracteres.');
+            return;
+          }
+          setOperationError(null);
+          void workflow.legacyReceiptRevokeMutation.mutateAsync({
+            documentoId: item.id,
+            motivo,
+          }).catch((error) => setOperationError(errorMessage(error)));
+        }}
       />
 
       {matriculas.length > 0 ? (
@@ -351,7 +383,9 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
                 Concluir análise da matrícula
               </h4>
               <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800">
-                A ativação só será aceita quando o pagamento e todos os documentos enviados estiverem aprovados.
+                A ativação só será aceita quando o pagamento estiver confirmado
+                e a conferência documental estiver concluída, por anexo ou
+                registro legado auditado.
               </p>
               <div className="mt-4 space-y-3">
                 {matriculas.map((matricula) => (
@@ -434,6 +468,25 @@ const ParceiroAlunoDocumentos: React.FC<ParceiroAlunoDocumentosProps> = ({ aluno
           }).then(() => setReviewItem(null)).catch((error) => setOperationError(errorMessage(error)));
         }}
         onClose={() => setReviewItem(null)}
+      />
+
+      <DocumentoLegacyReceiptModal
+        open={Boolean(legacyReceiptItem)}
+        documentName={legacyReceiptItem?.nome || ''}
+        reason={legacyReceiptReason}
+        submitting={workflow.legacyReceiptMutation.isPending}
+        error={operationError}
+        onReasonChange={setLegacyReceiptReason}
+        onSubmit={() => {
+          const documentoId = legacyReceiptItem?.id;
+          if (!documentoId) return;
+          void workflow.legacyReceiptMutation.mutateAsync({
+            documentoId,
+            motivo: legacyReceiptReason,
+          }).then(() => setLegacyReceiptItem(null)).catch((error) =>
+            setOperationError(errorMessage(error)));
+        }}
+        onClose={() => setLegacyReceiptItem(null)}
       />
 
       <DocumentoArchiveDialog

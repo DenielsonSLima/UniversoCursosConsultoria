@@ -10,6 +10,7 @@ import type {
   DocumentoAlunoLoteCriado,
   DocumentoAlunoMapeamentoPagina,
   DocumentoAlunoPainel,
+  DocumentoAlunoRecebimentoSemAnexo,
 } from './documentos-aluno.types';
 
 const throwIfError = (error: unknown) => {
@@ -43,12 +44,69 @@ const throwUploadAndCleanupError = (uploadError: unknown, cleanupError: unknown)
 };
 
 export const documentosAlunoV2Service = {
-  async getPainel(alunoId?: string | null) {
-    const { data, error } = await supabase.rpc('listar_painel_documentos_aluno', {
+  async getPainel(
+    alunoId?: string | null,
+    options?: { includeLegacyReceipts?: boolean },
+  ) {
+    const painelResult = await supabase.rpc('listar_painel_documentos_aluno', {
       p_aluno_id: alunoId || null,
     });
-    throwIfError(error);
-    return data as DocumentoAlunoPainel;
+    throwIfError(painelResult.error);
+
+    const painel = painelResult.data as DocumentoAlunoPainel;
+    if (!options?.includeLegacyReceipts) {
+      return painel;
+    }
+
+    const [recebimentosResult, elegibilidadeResult] = await Promise.all([
+      supabase.rpc('listar_documentos_recebidos_sem_anexo', {
+        p_aluno_id: alunoId || null,
+      }),
+      supabase.rpc('aluno_pode_registrar_documento_sem_anexo', {
+        p_aluno_id: alunoId || null,
+      }),
+    ]);
+    throwIfError(recebimentosResult.error);
+    throwIfError(elegibilidadeResult.error);
+
+    const recebimentos = (recebimentosResult.data || []) as Array<{
+        id: string;
+        documento_id: string;
+        aluno_id: string;
+        origem: DocumentoAlunoRecebimentoSemAnexo['origem'];
+        motivo: string;
+        recebido_em: string;
+        recebido_por_nome?: string | null;
+      }>;
+    const recebimentosPorDocumento = new Map(
+      recebimentos.map((recebimento) => [
+        recebimento.documento_id,
+        {
+          id: recebimento.id,
+          documentoId: recebimento.documento_id,
+          alunoId: recebimento.aluno_id,
+          origem: recebimento.origem,
+          motivo: recebimento.motivo,
+          recebidoEm: recebimento.recebido_em,
+          recebidoPorNome: recebimento.recebido_por_nome || null,
+        } satisfies DocumentoAlunoRecebimentoSemAnexo,
+      ]),
+    );
+
+    return {
+      ...painel,
+      podeRegistrarRecebimentoSemAnexo:
+        elegibilidadeResult.data === true,
+      itens: painel.itens.map((item) => {
+        const recebimentoSemAnexo =
+          recebimentosPorDocumento.get(item.id) || null;
+        return {
+          ...item,
+          status: recebimentoSemAnexo ? 'aprovado' : item.status,
+          recebimentoSemAnexo,
+        };
+      }),
+    } satisfies DocumentoAlunoPainel;
   },
 
   getArquivoUrl: createDocumentoAlunoSignedUrl,
@@ -219,6 +277,30 @@ export const documentosAlunoV2Service = {
         p_versao_id: versaoId,
         p_status: status,
         p_observacao: observacao?.trim() || null,
+      },
+    );
+    throwIfError(error);
+    return data;
+  },
+
+  async marcarRecebidoSemAnexo(documentoId: string, motivo: string) {
+    const { data, error } = await supabase.rpc(
+      'marcar_documento_recebido_sem_anexo',
+      {
+        p_documento_id: documentoId,
+        p_motivo: motivo.trim(),
+      },
+    );
+    throwIfError(error);
+    return data;
+  },
+
+  async revogarRecebidoSemAnexo(documentoId: string, motivo: string) {
+    const { data, error } = await supabase.rpc(
+      'revogar_documento_recebido_sem_anexo',
+      {
+        p_documento_id: documentoId,
+        p_motivo: motivo.trim(),
       },
     );
     throwIfError(error);
