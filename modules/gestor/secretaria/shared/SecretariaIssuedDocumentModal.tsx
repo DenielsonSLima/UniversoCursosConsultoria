@@ -318,7 +318,9 @@ const SecretariaIssuedDocumentModal: React.FC<SecretariaIssuedDocumentModalProps
                   : `Preparando PDF agregado com ${totalEmissions} documentos...`
             : preparedPdf
               ? 'PDF único pronto. Clique em “Baixar PDF pronto” para salvar.'
-            : `Emissão: ${definition.singularLabel} (${totalEmissions} ${totalEmissions === 1 ? 'pág.' : 'documentos'})`)
+            : totalEmissions === 1
+              ? `Emissão: ${definition.singularLabel} (${Math.max(1, Number(preview.template?.pageCount || 1))} ${Math.max(1, Number(preview.template?.pageCount || 1)) === 1 ? 'pág.' : 'págs.'})`
+              : `Emissão: ${definition.singularLabel} (${totalEmissions} documentos)`)
         }
         downloadLabel={preparedPdf ? 'Baixar PDF pronto' : undefined}
         printLabel="Imprimir"

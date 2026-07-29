@@ -22,6 +22,7 @@ import {
   TurmaGradeColorTheme,
 } from './grade/turma-grade-ui';
 import { TurmaAulaUpdateInput } from '../turma-grade.types';
+import { ACADEMIC_CLASS_CONTENT_PENDING } from '../../../../../../lib/academicClassMeetings';
 
 interface TurmaGradeProps {
   turma: Turma;
@@ -90,10 +91,12 @@ const TurmaGrade = ({
   const addAulaMutation = useAddTurmaAulaMutation(
     turma.id,
     (input) => {
-      setNewAulaTitulo((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaHoras((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaData((current) => ({ ...current, [input.disciplinaId]: '' }));
-      toast.success('Aula salva', 'O planejamento foi registrado e já aparece no diário e na agenda.');
+      toast.success(
+        'Horário planejado',
+        'Data e carga horária foram registradas. O professor já pode preencher o título/conteúdo no diário.',
+      );
     },
     (error) => {
       console.error('Erro ao adicionar aula:', error);
@@ -146,7 +149,7 @@ const TurmaGrade = ({
   const updateAulaMutation = useUpdateTurmaAulaMutation(
     turma.id,
     () => {
-      toast.success('Aula atualizada', 'Título, data e carga horária foram atualizados no diário.');
+      toast.success('Horário atualizado', 'Data e carga horária foram atualizadas no diário.');
     },
     (error) => {
       console.error('Erro ao atualizar aula:', error);
@@ -199,11 +202,17 @@ const TurmaGrade = ({
   };
 
   const handleAddAula = async (disciplinaId: string) => {
-    const titulo = newAulaTitulo[disciplinaId]?.trim();
     const horasStr = newAulaHoras[disciplinaId]?.trim();
     const dataStr = newAulaData[disciplinaId]?.trim();
-    if (!titulo || !horasStr || !dataStr) {
-      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
+    const isExtraClasse = Boolean(newAulaExtraClasse[disciplinaId]);
+    const tituloExtraClasse = newAulaTitulo[disciplinaId]?.trim();
+    if (!horasStr || !dataStr || (isExtraClasse && !tituloExtraClasse)) {
+      toast.info(
+        'Complete os dados',
+        isExtraClasse
+          ? 'Informe tema, prazo e carga horária antes de criar a atividade.'
+          : 'Informe data da aula e carga horária antes de salvar.',
+      );
       return;
     }
 
@@ -213,31 +222,35 @@ const TurmaGrade = ({
       return;
     }
 
-    if (newAulaExtraClasse[disciplinaId]) {
+    if (isExtraClasse) {
       const turmaStatus = String(turma.status || '').toUpperCase();
       const isPreparacao = turmaStatus === 'PLANEJADA' || turmaStatus === 'INSCRICOES_ABERTAS';
       await addAtividadeExtraClasseMutation.mutateAsync({
         disciplinaId,
-        titulo,
+        titulo: tituloExtraClasse!,
         horas,
         prazoEntrega: dataStr,
-        texto: `Desenvolva uma resposta sobre o tema "${titulo}". Registre sua entrega no portal do aluno.`,
+        texto: `Desenvolva uma resposta sobre o tema "${tituloExtraClasse}". Registre sua entrega no portal do aluno.`,
         criadoPorTipo: 'GESTOR',
         status: isPreparacao ? 'RASCUNHO' : 'PUBLICADA',
       });
       return;
     }
 
-    await addAulaMutation.mutateAsync({ disciplinaId, titulo, horas, dataAula: dataStr });
+    await addAulaMutation.mutateAsync({
+      disciplinaId,
+      titulo: ACADEMIC_CLASS_CONTENT_PENDING,
+      horas,
+      dataAula: dataStr,
+    });
   };
 
   const handleUpdateAula = async (input: TurmaAulaUpdateInput) => {
-    const titulo = input.titulo.trim();
     const dataAula = input.dataAula.trim();
     const horas = Number(input.horas);
 
-    if (!titulo || !dataAula) {
-      toast.info('Complete os dados', 'Informe descrição, data da aula e carga horária antes de salvar.');
+    if (!dataAula) {
+      toast.info('Complete os dados', 'Informe data da aula e carga horária antes de salvar.');
       return;
     }
     if (!Number.isFinite(horas) || horas <= 0) {
@@ -247,7 +260,6 @@ const TurmaGrade = ({
 
     await updateAulaMutation.mutateAsync({
       ...input,
-      titulo,
       dataAula,
       horas,
     });

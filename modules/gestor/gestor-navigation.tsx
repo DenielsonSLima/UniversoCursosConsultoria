@@ -2,7 +2,8 @@ import React from 'react';
 import {
   Award, BarChart, BookOpen, Briefcase, Building, CalendarDays, ClipboardCheck,
   FileCode, FileSignature, FileText, Handshake, LayoutDashboard, MessageCircle,
-  MessageSquare, MonitorPlay, Settings, ShoppingCart, TrendingUp, UserPlus, Zap,
+  MessageSquare, MonitorPlay, Settings, ShoppingCart, TrendingUp, UserPlus,
+  UserRound, Zap,
 } from 'lucide-react';
 import { canAccessTab, GestorPermissions } from './access-control';
 import { GestorMenuItem } from './components/GestorPortalShell';
@@ -16,7 +17,8 @@ export const POLO_CADASTROS_ALLOWED = new Set([
 
 export const GESTOR_MODULE_ORDER = [
   'inicio', 'parceiros', 'cadastros', 'gestao', 'secretaria', 'caixa',
-  'financeiro', 'biblioteca', 'calendario', 'comunicacao', 'relatorios', 'configuracoes',
+  'financeiro', 'biblioteca', 'calendario', 'comunicacao', 'relatorios',
+  'configuracoes', 'meu-perfil',
 ];
 
 interface BuildNavigationOptions {
@@ -62,6 +64,7 @@ export const buildGestorNavigation = ({
     { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: pendingChatsCount, subItems: communicationSubItems },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={20} /> },
+    { id: 'meu-perfil', label: 'Meu Perfil', icon: <UserRound size={20} /> },
     { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
   ];
   const visibleMenuItems = (isMatrizSelected ? menuItems : menuItems.filter(item => item.id !== 'configuracoes'))

@@ -15,7 +15,7 @@ const ROUTE_METADATA: Record<string, RouteMetadata> = {
   '/': {
     title: 'Universo Cursos e Consultoria | Educação que transforma',
     description: 'Cursos técnicos, EAD, cursos livres, especializações e ensino superior com atendimento próximo e formação de qualidade.',
-    image: '/social-share/home-v2.jpg',
+    image: '/social-share/home-dona-v5.jpg',
   },
   '/ead': {
     title: 'Cursos EAD | Universo Cursos e Consultoria',

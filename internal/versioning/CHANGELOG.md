@@ -2,6 +2,41 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.12] - 2026-07-29
+
+### Adicionado
+
+- O portal do Gestor passa a oferecer o módulo independente `Meu Perfil`, disponível mesmo sem acesso às Configurações, para atualizar nome, telefone, foto privada, e-mail e senha.
+- O Histórico Escolar ganha modelo institucional em duas páginas, grade curricular detalhada por módulo, dados acadêmicos ampliados e perfil profissional de conclusão.
+- Contratos automatizados cobrem liberação de matrículas pendentes no Diário, recebimento documental legado e separação das responsabilidades entre Gestão e Professor no planejamento das aulas.
+
+### Alterado
+
+- A Gestão define data e carga horária das aulas, enquanto o Professor preenche o conteúdo programático pelo Diário de Classe; calendário, grade e diário permanecem sincronizados.
+- A identidade dos portais de Gestor, Professor e Aluno passa a usar o usuário autenticado como referência canônica, reduzindo dependência de correspondência por e-mail.
+- Compartilhamentos sociais da página inicial usam metadados Open Graph e Twitter completos, com imagem institucional em proporção `1200x630`.
+- A política local de senhas exige no mínimo oito caracteres com letras maiúsculas, minúsculas e números e requer autenticação recente para alteração.
+
+### Corrigido
+
+- Matrículas pendentes válidas voltam a aparecer nos Diários de Classe sem ampliar acesso a turmas ou disciplinas não autorizadas.
+- Recebimentos documentais legados podem ser reconhecidos com trilha de auditoria, preservando os registros e anexos existentes.
+- O PDF agregado informa corretamente a quantidade de páginas quando um único documento possui mais de uma página.
+- A tipografia do acesso público do Aluno fica mais nítida no Safari sem alterar o restante do portal.
+
+### Segurança
+
+- Avatares do Gestor ficam em bucket privado, isolados pelo usuário autenticado e entregues por URL temporária.
+- Alterações de perfil e fronteiras do Diário são validadas no banco, com RPCs específicas e permissões mínimas por função.
+- O Gestor não recebe vínculo Google; essa opção permanece exclusiva dos portais de Professor e Aluno.
+- Materiais brutos, documentos recebidos e artefatos que não devem permanecer no repositório público são removidos, preservando o registro técnico de homologação necessário para auditoria.
+- A proteção remota contra senhas vazadas permanece como melhoria futura por depender do plano Pro do Supabase.
+
+### Qualidade
+
+- As 15 migrations incluídas nesta consolidação foram conferidas contra o histórico remoto e já estão aplicadas no projeto Supabase.
+- TypeScript, lint, contratos Deno, testes de Caixa, validação documental, integrações Banese e build de produção são executados antes da publicação.
+
 ## [2.2.3-beta.11] - 2026-07-29
 
 ### Alterado

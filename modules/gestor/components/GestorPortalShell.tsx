@@ -30,6 +30,7 @@ export interface GestorMenuItem {
 
 interface GestorPortalShellProps {
   profile: PortalAuthProfile;
+  profileAvatarUrl: string | null;
   visibleMenuItems: GestorMenuItem[];
   activeModule: string;
   setActiveModule: (moduleId: string) => void;
@@ -72,6 +73,7 @@ const formatPoloDetails = (polo: PoloOption) =>
 
 const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
   profile,
+  profileAvatarUrl,
   visibleMenuItems,
   activeModule,
   setActiveModule,
@@ -194,9 +196,20 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
 
         <div className="p-4 border-t border-white/10 mt-auto">
           <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-md flex-shrink-0">
-                {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
+            <button
+              type="button"
+              onClick={() => setActiveModule('meu-perfil')}
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              title="Abrir Meu Perfil"
+            >
+              <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl bg-blue-600 text-white shadow-md">
+                {profileAvatarUrl ? (
+                  <img src={profileAvatarUrl} alt={`Foto de ${profile.nome}`} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-sm font-black">
+                    {(profile?.nome || 'Administrador').slice(0, 2).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white truncate leading-tight">
@@ -207,7 +220,7 @@ const GestorPortalShell: React.FC<GestorPortalShellProps> = ({
                   Sessão ativa
                 </p>
               </div>
-            </div>
+            </button>
             <button
               onClick={handleLogout}
               title="Sair"

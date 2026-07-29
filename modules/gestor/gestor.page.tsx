@@ -6,7 +6,7 @@ import { CreditCard, Handshake, Search, Settings, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile } from '../login/portal-session';
+import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile, savePortalSession } from '../login/portal-session';
 import { isPortalScheduleBlocked } from '../login/portal-schedule';
 import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
@@ -38,6 +38,8 @@ import PoloTransitionOverlay, {
   PoloTransitionStatus,
 } from '../shared/components/PoloTransitionOverlay';
 import { waitForActivePoloQueries } from '../shared/utils/poloTransitionQueries';
+import { meuPerfilService } from './meu-perfil/meu-perfil.service';
+import type { MeuPerfilGestorData } from './meu-perfil/meu-perfil.types';
 
 const MOCK_SEARCH_DATA = [
   { id: 1, type: 'student', title: 'Ana Clara Souza', subtitle: 'Enfermagem - Matutino', module: 'cadastros-alunos' },
@@ -100,7 +102,9 @@ const GestorPage: React.FC = () => {
   // Nunca use dados do storage como autorização. O portal permanece coberto pela
   // tela de verificação até perfil, módulos, polos e agenda virem do servidor.
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAccessRefreshing, setIsAccessRefreshing] = useState(false);
   // current_polo_id: estado de sessão UI (polo selecionado) — usa sessionStorage pois não é dado compartilhado entre usuários
   const [currentPoloId, setCurrentPoloId] = useState<string | null>(() =>
     sessionStorage.getItem('current_polo_id') ||
@@ -132,11 +136,23 @@ const GestorPage: React.FC = () => {
   const isScheduleBlocked = Boolean(
     profile && isPortalScheduleBlocked(profile.restricao_horario, currentDateTime),
   );
-  const canUsePortal = Boolean(profile) && !isAuthLoading && !isScheduleBlocked;
+  const canUsePortal = Boolean(profile) && !isAuthLoading && !isAccessRefreshing && !isScheduleBlocked;
   const canUseCommunication = canUsePortal && canAccessGestorModule(gestorPermissions, 'comunicacao');
   const needsOperationalRealtime = activeModule === 'gestao'
     || activeModule === 'parceiros'
     || activeModule === 'secretaria';
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfileAvatar = async () => {
+      const url = await meuPerfilService.createAvatarUrl(profile?.fotoPath);
+      if (!cancelled) setProfileAvatarUrl(url);
+    };
+    void loadProfileAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.fotoPath]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -245,6 +261,7 @@ const GestorPage: React.FC = () => {
         }
 
         queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
+        savePortalSession(portalProfile);
         setProfile(portalProfile);
       } catch {
         queryClient.clear();
@@ -269,7 +286,7 @@ const GestorPage: React.FC = () => {
 
     let cancelled = false;
     const revalidateAccess = async () => {
-      setIsAuthLoading(true);
+      setIsAccessRefreshing(true);
       try {
         const refreshed = await getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] });
         if (cancelled) return;
@@ -278,11 +295,12 @@ const GestorPage: React.FC = () => {
           return;
         }
         queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
+        savePortalSession(refreshed);
         setProfile(refreshed);
       } catch {
         if (!cancelled) await executeLogout();
       } finally {
-        if (!cancelled) setIsAuthLoading(false);
+        if (!cancelled) setIsAccessRefreshing(false);
       }
     };
 
@@ -379,6 +397,7 @@ const GestorPage: React.FC = () => {
     includeGlobalPartners: gestorScope.isGlobal,
   });
   const canOpenModule = useCallback((moduleId: string) => {
+    if (moduleId === 'meu-perfil') return true;
     const rootModule = moduleId.startsWith('parceiros-novo-')
       ? 'parceiros'
       : moduleId.startsWith('cadastros-')
@@ -647,6 +666,24 @@ const GestorPage: React.FC = () => {
       onRequestScrollTop={scrollContentToTop}
       permissions={gestorPermissions}
       profile={profile}
+      profileAvatarUrl={profileAvatarUrl}
+      onProfileUpdated={(updated: MeuPerfilGestorData) => {
+        setProfile((current) => {
+          if (!current) return current;
+          const nextProfile: PortalAuthProfile = {
+            ...current,
+            nome: updated.nome,
+            email: updated.email,
+            telefone: updated.telefone,
+            fotoPath: updated.fotoPath,
+          };
+          savePortalSession(nextProfile);
+          return nextProfile;
+        });
+        void meuPerfilService
+          .createAvatarUrl(updated.fotoPath)
+          .then(setProfileAvatarUrl);
+      }}
     />
   );
 
@@ -664,6 +701,7 @@ const GestorPage: React.FC = () => {
     <>
       <GestorPortalShell
         profile={profile}
+        profileAvatarUrl={profileAvatarUrl}
         visibleMenuItems={visibleMenuItems}
         activeModule={activeModule}
         setActiveModule={setActiveModule}
@@ -729,6 +767,12 @@ const GestorPage: React.FC = () => {
             status={poloTransition.status}
           />
         )
+      ) : null}
+
+      {isAccessRefreshing ? (
+        <div className="fixed inset-0 z-[75]">
+          <AccessCheckingScreen portal="Gestor" />
+        </div>
       ) : null}
     </>
   );

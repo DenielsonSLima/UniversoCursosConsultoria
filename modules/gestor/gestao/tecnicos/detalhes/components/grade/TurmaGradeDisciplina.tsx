@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
+  CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -21,6 +22,7 @@ import {
   TurmaAulaUpdateInput,
   TurmaDisciplinaConfig,
 } from '../../turma-grade.types';
+import { isAcademicClassContentPending } from '../../../../../../../lib/academicClassMeetings';
 import { formatGradeHours, TurmaGradeTheme } from './turma-grade-ui';
 
 interface TurmaGradeDisciplinaProps {
@@ -77,7 +79,6 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   onAddPlanejamento,
 }) => {
   const [editingAulaId, setEditingAulaId] = useState<string | null>(null);
-  const [editingTitulo, setEditingTitulo] = useState('');
   const [editingData, setEditingData] = useState('');
   const [editingHoras, setEditingHoras] = useState('');
   const cargaHoraria = Number(metricas?.carga_horaria ?? disciplina.cargaHoraria ?? 0);
@@ -100,14 +101,12 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
 
   const startEditingAula = (aula: TurmaAulaPlanejada) => {
     setEditingAulaId(aula.id);
-    setEditingTitulo(aula.titulo);
     setEditingData(aula.dataAula || '');
     setEditingHoras(String(aula.cargaHoraria).replace('.', ','));
   };
 
   const resetEditingAula = () => {
     setEditingAulaId(null);
-    setEditingTitulo('');
     setEditingData('');
     setEditingHoras('');
   };
@@ -120,7 +119,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
   const saveEditingAula = async () => {
     if (!editingAulaId) return;
     const horasValue = Number(editingHoras.replace(',', '.'));
-    if (!editingTitulo.trim() || !editingData.trim() || !Number.isFinite(horasValue) || horasValue <= 0) {
+    if (!editingData.trim() || !Number.isFinite(horasValue) || horasValue <= 0) {
       return;
     }
 
@@ -128,7 +127,6 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
       await onUpdateAula({
         aulaId: editingAulaId,
         disciplinaId: disciplina.id,
-        titulo: editingTitulo,
         dataAula: editingData,
         horas: horasValue,
       });
@@ -211,8 +209,13 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
 
       {isExpanded && (
         <div className="px-6 pb-6 pt-2 border-t border-slate-50 bg-slate-50/5 animate-slideDown">
-          <div className="flex items-center justify-between gap-4 mb-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-inner">
-            <span className="text-xs font-bold text-slate-500">Planejamento das Aulas:</span>
+          <div className="flex flex-col gap-3 mb-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-inner lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-700">Planejamento das aulas</span>
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                Etapa 1: a Gestão informa data e carga horária. Etapa 2: o professor completa o conteúdo no diário.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               {horasStatus === 'EXATA' ? (
                 <span className={`${theme.bg} ${theme.text} text-[10px] font-bold px-2.5 py-1 rounded-lg border ${theme.border} uppercase tracking-wider flex items-center gap-1`}>
@@ -248,8 +251,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
 
                   if (editingAulaId === aula.id) {
                     const isUpdating = updatingAulaId === aula.id;
-                    const canSave = editingTitulo.trim()
-                      && editingData.trim()
+                    const canSave = editingData.trim()
                       && Number(editingHoras.replace(',', '.')) > 0;
 
                     return (
@@ -273,16 +275,11 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                             <X size={15} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_150px_90px_auto]">
-                          <input
-                            type="text"
-                            value={editingTitulo}
-                            onChange={(event) => setEditingTitulo(event.target.value)}
-                            disabled={isUpdating}
-                            className={`min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none ${theme.focusBorder}`}
-                            placeholder="Título da aula / conteúdo"
-                            aria-label="Título da aula"
-                          />
+                        <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-[10px] font-semibold text-blue-700">
+                          <CalendarClock size={13} className="shrink-0" />
+                          A Gestão altera somente data e carga horária. O conteúdo pertence ao professor.
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[150px_90px_auto] sm:justify-end">
                           <input
                             type="date"
                             value={editingData}
@@ -373,7 +370,12 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                         </div>
                       </div>
                       <div className="pl-5 text-xs text-slate-600 font-normal leading-relaxed break-words">
-                        {aula.titulo}
+                        {isAcademicClassContentPending(aula.titulo) ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700">
+                            <Pencil size={11} />
+                            Aguardando conteúdo do professor
+                          </span>
+                        ) : aula.titulo}
                       </div>
                     </div>
                   );
@@ -432,16 +434,24 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
               />
               <ClipboardCheck size={14} /> {isExtraClasse ? 'Extra-classe ativa' : 'Marcar extra-classe'}
             </label>
-            <input
-              type="text"
-              placeholder={isExtraClasse ? 'Tema da atividade extra-classe...' : 'Título da aula / conteúdo...'}
-              className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
-              value={titulo}
-              onChange={(event) => onTituloChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') document.getElementById(`turma-data-input-${disciplina.id}`)?.focus();
-              }}
-            />
+            {isExtraClasse ? (
+              <input
+                type="text"
+                placeholder="Tema da atividade extra-classe..."
+                className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[150px]`}
+                value={titulo}
+                onChange={(event) => onTituloChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') document.getElementById(`turma-data-input-${disciplina.id}`)?.focus();
+                }}
+                aria-label="Tema da atividade extra-classe"
+              />
+            ) : (
+              <div className="flex min-w-[190px] flex-1 items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-[10px] font-semibold text-blue-700">
+                <CalendarClock size={14} className="shrink-0" />
+                Gestor agenda; professor preenche o conteúdo no diário.
+              </div>
+            )}
             <input
               id={`turma-data-input-${disciplina.id}`}
               type="date"
@@ -472,11 +482,11 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
               type="button"
               onClick={onAddPlanejamento}
               className={`min-h-[38px] px-4 py-2.5 ${theme.bg} ${theme.text} rounded-xl ${theme.hoverBg} hover:text-white transition-colors border ${theme.border} flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-[10px] font-black uppercase tracking-widest`}
-              disabled={isSaving || !titulo.trim() || !horas.trim() || !data.trim()}
-              aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Salvar aula'}
+              disabled={isSaving || !horas.trim() || !data.trim() || (isExtraClasse && !titulo.trim())}
+              aria-label={isExtraClasse ? 'Criar atividade extra-classe' : 'Planejar horário da aula'}
             >
               {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              {isExtraClasse ? 'Criar atividade' : 'Salvar aula'}
+              {isExtraClasse ? 'Criar atividade' : 'Planejar horário'}
             </button>
           </div>
         </div>

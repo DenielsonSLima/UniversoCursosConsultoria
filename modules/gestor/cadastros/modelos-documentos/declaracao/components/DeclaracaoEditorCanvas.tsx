@@ -35,6 +35,30 @@ const withEditorAssetPlaceholders = (
         <div style="border-top:1px solid #0f172a;padding-top:5px;">DEFERIMENTO DA DIRETORIA</div>
       `
     : '<p style="margin:0;color:#94a3b8;font-size:10px;text-align:center;">Área de assinaturas desativada</p>';
+  const historyTableHtml = `
+    <section data-template-token="TABELA_HISTORICO_ESCOLAR">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-family:Arial,Helvetica,sans-serif;font-size:6.5px;line-height:1.05;color:#000;">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:49%;border:1px solid #111;padding:2px;">MÓDULO / UNIDADE CURRICULAR</th>
+            <th colspan="3" style="border:1px solid #111;padding:2px;">CARGA HORÁRIA</th>
+            <th colspan="2" style="border:1px solid #111;padding:2px;">NOTA</th>
+            <th colspan="2" style="border:1px solid #111;padding:2px;">FREQUÊNCIA</th>
+            <th rowspan="2" style="width:12%;border:1px solid #111;padding:2px;">SITUAÇÃO</th>
+          </tr>
+          <tr>
+            <th style="border:1px solid #111;padding:1px;">T</th><th style="border:1px solid #111;padding:1px;">P</th><th style="border:1px solid #111;padding:1px;">E</th>
+            <th style="border:1px solid #111;padding:1px;">T/P</th><th style="border:1px solid #111;padding:1px;">E</th>
+            <th style="border:1px solid #111;padding:1px;">T/P</th><th style="border:1px solid #111;padding:1px;">E</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th colspan="9" style="border:1px solid #111;padding:2px;text-align:left;">MÓDULO I</th></tr>
+          <tr><td style="border:1px solid #111;padding:2px;">Relações Humanas no Trabalho</td><td style="border:1px solid #111;text-align:center;">20</td><td style="border:1px solid #111;text-align:center;">-</td><td style="border:1px solid #111;text-align:center;">-</td><td style="border:1px solid #111;text-align:center;">9,0</td><td style="border:1px solid #111;text-align:center;">-</td><td style="border:1px solid #111;text-align:center;">100%</td><td style="border:1px solid #111;text-align:center;">-</td><td style="border:1px solid #111;text-align:center;">Aprovado</td></tr>
+          <tr><td colspan="9" style="border:1px solid #111;padding:3px;text-align:center;color:#64748b;font-style:italic;">A grade completa será inserida automaticamente na emissão.</td></tr>
+        </tbody>
+      </table>
+    </section>`;
 
   return html
     .replace(/src=(["']){{ALUNO_FOTO_URL}}\1/gi, 'src="/sem-foto-aluno.svg"')
@@ -49,7 +73,8 @@ const withEditorAssetPlaceholders = (
     .replace(
       /{{FICHA_ASSINATURAS}}/g,
       `<section data-template-token="FICHA_ASSINATURAS" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;text-align:center;font-size:8px;color:#0f172a;">${signaturesHtml}</section>`,
-    );
+    )
+    .replace(/{{TABELA_HISTORICO_ESCOLAR}}/g, historyTableHtml);
 };
 
 interface DeclaracaoAbsoluteFieldProps {

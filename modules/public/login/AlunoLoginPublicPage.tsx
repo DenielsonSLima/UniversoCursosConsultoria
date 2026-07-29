@@ -417,7 +417,7 @@ const AlunoLoginPublicPage: React.FC = () => {
     <div className="relative min-h-screen bg-slate-50">
       <main className="grid min-h-screen lg:grid-cols-[1.04fr_0.96fr]">
         <AlunoLoginHero {...heroProps} />
-        <section className="relative flex min-h-screen flex-col items-center justify-start bg-slate-50 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] text-slate-900 sm:px-8 sm:py-8 lg:justify-center">
+        <section className="aluno-auth-typography relative flex min-h-screen flex-col items-center justify-start bg-slate-50 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] text-slate-900 sm:px-8 sm:py-8 lg:justify-center">
           <AlunoLoginMobileHeader {...heroProps} />
           <AlunoLoginAuthCard
             mode={mode}

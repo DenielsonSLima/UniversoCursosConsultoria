@@ -60,6 +60,8 @@ const buildStudentRegistrationSnapshot = (matricula: any) => ({
   studentReservist: matricula.parceiros?.reservista || '',
   studentMotherName: matricula.parceiros?.nome_mae || '',
   studentFatherName: matricula.parceiros?.nome_pai || '',
+  highSchoolInstitution: matricula.parceiros?.escola_ensino_medio || '',
+  highSchoolCompletionYear: matricula.parceiros?.ano_conclusao_ensino_medio || '',
   studentPcd: matricula.parceiros?.pcd ? 'SIM' : 'NÃO',
   studentPcdType: matricula.parceiros?.pcd_tipo || '',
   studentZipCode: matricula.parceiros?.cep || '',
@@ -81,6 +83,11 @@ const buildStudentRegistrationSnapshot = (matricula: any) => ({
   ),
   courseName: matricula.turmas?.cursos?.nome || '',
   courseModality: matricula.turmas?.cursos?.modalidade || '',
+  courseHours: Number(matricula.turmas?.cursos?.carga_horaria || 0),
+  courseArea: matricula.turmas?.cursos?.area || '',
+  courseTechnologicalAxis: matricula.turmas?.cursos?.eixo_tecnologico || '',
+  courseProfessionalProfile: matricula.turmas?.cursos?.perfil_profissional_conclusao || '',
+  courseStartDate: matricula.turmas?.data_inicio || '',
   classShift: matricula.turmas?.turno || '',
   className: matricula.turmas?.nome || '',
   unitName: matricula.turmas?.polos?.nome || '',
@@ -330,11 +337,19 @@ export const secretariaDocumentosService = {
           rg, tipo_documento, orgao_emissor, rg_uf_emissao, rg_data_emissao,
           nacionalidade, naturalidade, titulo_eleitor, reservista,
           nome_mae, nome_pai, pcd, pcd_tipo,
+          escola_ensino_medio, ano_conclusao_ensino_medio,
           cep, endereco, numero, complemento, bairro, cidade, uf,
           responsavel_nome, responsavel_cpf, responsavel_parentesco, responsavel_telefone,
           observacao
         ),
-        turmas!inner(nome, codigo, turno, polo_id, cursos!inner(id, nome, modalidade), polos!inner(nome))
+        turmas!inner(
+          nome, codigo, turno, polo_id, data_inicio, data_previsao_termino,
+          cursos!inner(
+            id, nome, modalidade, carga_horaria, area,
+            eixo_tecnologico, perfil_profissional_conclusao
+          ),
+          polos!inner(nome)
+        )
       `)
       .or(`polo_id.eq.${input.context.poloId},polo_id.is.null`, { foreignTable: 'turmas' });
 
@@ -540,7 +555,11 @@ export const secretariaDocumentosService = {
         .from('documentos_validacao')
         .select(`
           *,
-          aluno:parceiros(id, nome, cpf_cnpj, rg, data_nascimento, foto_url),
+          aluno:parceiros(
+            id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
+            nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
+            nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
+          ),
           matricula:matriculas(id, status, turma:turmas(id, nome, codigo))
         `)
         .in('codigo', codes);

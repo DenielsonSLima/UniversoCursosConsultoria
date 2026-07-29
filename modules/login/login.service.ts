@@ -159,5 +159,24 @@ export const loginService = {
     }
 
     return null;
+  },
+
+  async reauthenticateWithPassword(currentPassword: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const email = userData.user?.email;
+    if (userError || !email) {
+      return 'Sua sessão expirou. Entre novamente para alterar a senha.';
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+
+    if (error) {
+      return 'A senha atual está incorreta.';
+    }
+
+    return null;
   }
 };
