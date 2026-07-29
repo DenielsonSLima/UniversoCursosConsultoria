@@ -30,7 +30,7 @@ const baneseConsolePath = new URL(
   '../modules/gestor/configuracoes/consulta-api-banese/ConsultaApiBaneseConfig.tsx',
   import.meta.url,
 );
-const rootHtmlPath = new URL('../index.html', import.meta.url);
+const rootStylesPath = new URL('../styles.css', import.meta.url);
 const financialCycleMigrationPath = new URL(
   '../supabase/migrations/20260727045711_use_configured_installments_in_financial_cycles.sql',
   import.meta.url,
@@ -52,7 +52,7 @@ const eadModalPath = new URL(
   import.meta.url,
 );
 
-const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, financialCycleMigration, worker, boletoAdapter, authAdapter, eadModal, baneseConsole, rootHtml] = await Promise.all([
+const [migration, profileExpansionMigration, historyHardeningMigration, healthGuardMigration, priorityProfilesMigration, profilePolicyMigration, financialCycleMigration, worker, boletoAdapter, authAdapter, eadModal, baneseConsole, rootStyles] = await Promise.all([
   readFile(migrationPath, 'utf8'),
   readFile(profileExpansionMigrationPath, 'utf8'),
   readFile(historyHardeningMigrationPath, 'utf8'),
@@ -65,7 +65,7 @@ const [migration, profileExpansionMigration, historyHardeningMigration, healthGu
   readFile(authAdapterPath, 'utf8'),
   readFile(eadModalPath, 'utf8'),
   readFile(baneseConsolePath, 'utf8'),
-  readFile(rootHtmlPath, 'utf8'),
+  readFile(rootStylesPath, 'utf8'),
 ]);
 
 test('preserva a escada conservadora e o histórico paginado da versão anterior', () => {
@@ -110,11 +110,11 @@ test('separa testes gerais, prioridade de vencimento e perfis aguardando Banese'
 test('console Banese mantém tipografia nítida e amostra dinâmica', () => {
   assert.match(baneseConsole, /O avanço do P\$\{autopilot\.currentProfileId\}/);
   assert.doesNotMatch(baneseConsole, /No P2, portanto/);
-  assert.match(rootHtml, /#root \.banese-console/);
-  assert.match(rootHtml, /font-size: 0\.75rem !important/);
-  assert.match(rootHtml, /-webkit-font-smoothing: auto/);
-  assert.match(rootHtml, /#root \.banese-console \.font-black/);
-  assert.match(rootHtml, /font-weight: 700 !important/);
+  assert.match(rootStyles, /#root \.banese-console/);
+  assert.match(rootStyles, /font-size: 0\.75rem !important/);
+  assert.match(rootStyles, /-webkit-font-smoothing: auto/);
+  assert.match(rootStyles, /#root \.banese-console \.font-black/);
+  assert.match(rootStyles, /font-weight: 700 !important/);
 });
 
 test('agenda um único ciclo por minuto e desativa a reserva legada', () => {

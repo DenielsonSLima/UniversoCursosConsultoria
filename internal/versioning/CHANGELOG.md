@@ -2,6 +2,25 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.11] - 2026-07-29
+
+### Alterado
+
+- O login institucional em homologação local passa a validar o Turnstile com uma chave secreta separada da produção.
+
+### Corrigido
+
+- O teste de conciliação Banese passa a validar os estilos no arquivo canônico `styles.css`.
+
+### Segurança
+
+- Somente endereços locais explicitamente autorizados podem usar a configuração de homologação; origens desconhecidas ou sem segredo configurado continuam bloqueadas.
+- Credenciais e arquivos locais de ambiente permanecem fora do repositório.
+
+### Qualidade
+
+- O gate de reconciliação Banese acompanha a localização atual dos estilos e preserva a verificação visual do fluxo.
+
 ## [2.2.3-beta.10] - 2026-07-28
 
 ### Adicionado

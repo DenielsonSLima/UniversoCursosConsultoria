@@ -214,11 +214,11 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
     return (
       <>
         <ToastNotification toasts={toasts} onRemove={removeToast} />
-        <UserFormAdd 
+        <UserFormAdd
           contextId={contextId}
           initialUser={editingUser || undefined}
-          onSave={handleSaveUser} 
-          onCancel={handleCloseForm} 
+          onSave={handleSaveUser}
+          onCancel={handleCloseForm}
         />
       </>
     );
