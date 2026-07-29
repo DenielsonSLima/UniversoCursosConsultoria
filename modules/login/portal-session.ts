@@ -13,6 +13,8 @@ export interface PortalAuthProfile {
   nome: string;
   email: string;
   tipo: PortalRole;
+  telefone?: string | null;
+  fotoPath?: string | null;
   activePoloId?: string | null;
   poloIds?: string[];
   context?: string | null;
@@ -261,6 +263,8 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
     nome: gestorRows.nome,
     email: gestorRows.email,
     tipo: 'Gestor',
+    telefone: gestorRows.telefone || null,
+    fotoPath: gestorRows.foto_path || null,
     context: gestorRows.context || null,
     activePoloId: explicitPoloIds[0] || null,
     poloIds: explicitPoloIds,
@@ -282,33 +286,20 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
   const email = authenticatedUser?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const partnerSelect = 'id, nome, email, auth_login_email, tipo, polo_id, polo_ids, status, foto_url';
+  const partnerSelect = 'id, nome, email, auth_login_email, auth_user_id, tipo, polo_id, polo_ids, status, foto_url';
   const shouldQueryPartners = !options.allowedRoles?.length
     || options.allowedRoles.some((role) => role === 'Aluno' || role === 'Professor');
   let partnerRows: any[] = [];
 
   if (shouldQueryPartners) {
-    const [byContactEmail, byAuthIdentity] = await Promise.all([
-      supabase
-        .from('parceiros')
-        .select(partnerSelect)
-        .ilike('email', email)
-        .in('tipo', ['Aluno', 'Professor']),
-      supabase
-        .from('parceiros')
-        .select(partnerSelect)
-        .eq('auth_login_email', email)
-        .eq('tipo', 'Aluno'),
-    ]);
+    const { data, error } = await supabase
+      .from('parceiros')
+      .select(partnerSelect)
+      .eq('auth_user_id', authenticatedUser.id)
+      .in('tipo', ['Aluno', 'Professor']);
 
-    if (byContactEmail.error) throw new Error(byContactEmail.error.message);
-    if (byAuthIdentity.error) throw new Error(byAuthIdentity.error.message);
-    partnerRows = Array.from(
-      new Map(
-        [...(byContactEmail.data || []), ...(byAuthIdentity.data || [])]
-          .map((partner) => [partner.id, partner]),
-      ).values(),
-    );
+    if (error) throw new Error(error.message);
+    partnerRows = data || [];
   }
 
   const orderedPartnerRoles = options.preferredRole && options.preferredRole !== 'Gestor'
@@ -329,8 +320,8 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
 
   const { data: gestorRows, error: gestorError } = await supabase
     .from('usuarios_sistema')
-    .select('id, nome, email, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)')
-    .ilike('email', email)
+    .select('id, auth_user_id, nome, email, telefone, foto_path, status, context, polo_ids, permissoes, perfil_acesso_id, personalizar_permissoes, restricao_horario, setor_comunicacao, polo_comunicacao_id, pode_visualizar_todos_polos, pode_visualizar_todos_setores, perfis_acesso(permissoes, restricao_horario)')
+    .eq('auth_user_id', authenticatedUser.id)
     .limit(1)
     .maybeSingle();
 

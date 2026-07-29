@@ -153,6 +153,16 @@ export const diarioClasseService = {
     };
   },
 
+  async saveAulaTitulo(aulaId: string, titulo: string) {
+    const { data, error } = await supabase.rpc('atualizar_titulo_encontro_professor', {
+      p_aula_id: aulaId,
+      p_titulo: titulo,
+    });
+
+    if (error) throw error;
+    return data;
+  },
+
   async getAttendance(turmaId: string, disciplinaId: string) {
     const { data, error } = await supabase
       .from('diario_frequencia')

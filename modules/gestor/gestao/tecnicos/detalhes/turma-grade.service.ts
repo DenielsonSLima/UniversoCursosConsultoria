@@ -244,13 +244,10 @@ export const turmaGradeService = {
 
   async updateAula(turmaId: string, input: TurmaAulaUpdateInput): Promise<TurmaAulaPlanejada> {
     const { data, error } = await supabase
-      .rpc('salvar_encontro_turma', {
-        p_turma_id: turmaId,
-        p_disciplina_id: input.disciplinaId,
-        p_titulo: input.titulo,
+      .rpc('atualizar_horario_encontro_gestor', {
+        p_aula_id: input.aulaId,
         p_carga_horaria: input.horas,
         p_data_aula: input.dataAula,
-        p_aula_id: input.aulaId,
       });
 
     if (error) throw error;

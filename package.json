@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.10",
+  "version": "2.2.3-beta.12",
   "type": "module",
   "scripts": {
     "dev": "vite --force",

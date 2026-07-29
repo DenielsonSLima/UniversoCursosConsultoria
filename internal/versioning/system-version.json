@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.11",
+  "version": "2.2.3-beta.12",
   "display": "BETA",
   "stage": "beta",
-  "revision": 11,
+  "revision": 12,
   "releasedAt": "2026-07-29",
-  "summary": "Turnstile separado e seguro para homologação em endereços locais autorizados"
+  "summary": "Perfis, Diários e documentos acadêmicos consolidados com identidade canônica e controles por função"
 }

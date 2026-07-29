@@ -26,6 +26,7 @@ import {
   useSaveDiarioGradesMutation,
   useSaveDiarioObservacoesMutation,
   useSaveDiarioPraticaMutation,
+  useSaveDiarioAulaTitleMutation,
   useToggleDiarioAttendanceMutation,
 } from './hooks/useDiarioClasse';
 import { useDiarioPdfDownload } from './hooks/useDiarioPdfDownload';
@@ -171,6 +172,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   const [localAttendance, setLocalAttendance] = useState<AttendanceMap>({});
   const [localGrades, setLocalGrades] = useState<GradesMap>({});
   const [localPraticas, setLocalPraticas] = useState<Record<string, string>>({});
+  const [localTitulos, setLocalTitulos] = useState<Record<string, string>>({});
   const [localObservacoes, setLocalObservacoes] = useState('');
 
   useEffect(() => {
@@ -193,6 +195,10 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   useEffect(() => {
     setLocalPraticas(praticasMap);
   }, [praticasMap]);
+
+  useEffect(() => {
+    setLocalTitulos(Object.fromEntries(aulas.map((aula) => [aula.id, aula.titulo])));
+  }, [aulas]);
 
   useEffect(() => {
     if (dbObservacoes !== undefined) setLocalObservacoes(dbObservacoes);
@@ -245,6 +251,20 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
     (error) => {
       console.error('Erro ao salvar conteúdo:', error);
       toast.error('Conteúdo não salvo', error?.message || 'Não foi possível atualizar o conteúdo.');
+    },
+  );
+  const saveAulaTitleMutation = useSaveDiarioAulaTitleMutation(
+    turma.id,
+    disciplina.id,
+    () => {
+      toast.success('Conteúdo programático salvo', 'O título/conteúdo da aula foi atualizado no diário e na agenda.');
+    },
+    (error) => {
+      console.error('Erro ao salvar título/conteúdo da aula:', error);
+      toast.error(
+        'Conteúdo programático não salvo',
+        error?.message || 'Não foi possível atualizar o título/conteúdo desta aula.',
+      );
     },
   );
   const saveObservacoesMutation = useSaveDiarioObservacoesMutation(
@@ -383,6 +403,7 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
   const hasPendingWrites = toggleAttendanceMutation.isPending
     || saveStudentGradesMutation.isPending
     || savePraticaMutation.isPending
+    || saveAulaTitleMutation.isPending
     || saveObservacoesMutation.isPending
     || savingInstruments
     || setClosureMutation.isPending;
@@ -488,9 +509,23 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
           {activeTab === 'conteudo' && (
             <DiarioConteudoTab
               aulas={aulas}
+              localTitulos={localTitulos}
+              setLocalTitulos={setLocalTitulos}
               localPraticas={localPraticas}
               setLocalPraticas={setLocalPraticas}
-              isReadOnly={isReadOnly}
+              canEditAulaTitle={effectiveAccessMode === 'PROFESSOR' && !isReadOnly}
+              canEditPratica={effectiveAccessMode === 'PROFESSOR' && !isReadOnly}
+              savingAulaId={saveAulaTitleMutation.isPending
+                ? saveAulaTitleMutation.variables?.aulaId
+                : undefined}
+              onSaveAulaTitle={(aulaId, titulo) => {
+                const normalizedTitle = titulo.trim();
+                if (!normalizedTitle) {
+                  toast.info('Informe o conteúdo', 'Descreva o conteúdo programático antes de salvar.');
+                  return;
+                }
+                saveAulaTitleMutation.mutate({ aulaId, titulo: normalizedTitle });
+              }}
               onSavePratica={(aulaId, text) => savePraticaMutation.mutate({ aulaId, text })}
             />
           )}

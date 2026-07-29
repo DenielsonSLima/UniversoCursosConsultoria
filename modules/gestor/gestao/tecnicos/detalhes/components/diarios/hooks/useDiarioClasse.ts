@@ -20,7 +20,10 @@ const useInvalidateDiario = (turmaId: string, disciplinaId: string) => {
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.aulas(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.resultados(turmaId, disciplinaId) }),
       queryClient.invalidateQueries({ queryKey: diarioClasseKeys.praticas(turmaId, disciplinaId) }),
+      queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.grade(turmaId) }),
       queryClient.invalidateQueries({ queryKey: academicLifecycleKeys.diarios(turmaId) }),
+      queryClient.invalidateQueries({ queryKey: ['professor-calendario'] }),
+      queryClient.invalidateQueries({ queryKey: ['gestor-calendario'] }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.classesByModality('TECNICO') }),
       queryClient.invalidateQueries({ queryKey: gestaoQueryKeys.activeClassesRoot() }),
     ]),
@@ -60,6 +63,25 @@ export const useAddDiarioAulaMutation = (
 
   return useMutation({
     mutationFn: (input: DiarioAulaInput) => diarioClasseService.addAula(turmaId, disciplinaId, input),
+    onSuccess: async (_data, input) => {
+      await invalidate.aulasAndResults();
+      await onSuccess?.(input);
+    },
+    onError,
+  });
+};
+
+export const useSaveDiarioAulaTitleMutation = (
+  turmaId: string,
+  disciplinaId: string,
+  onSuccess?: (input: { aulaId: string; titulo: string }) => void | Promise<void>,
+  onError?: (error: any) => void,
+) => {
+  const invalidate = useInvalidateDiario(turmaId, disciplinaId);
+
+  return useMutation({
+    mutationFn: (input: { aulaId: string; titulo: string }) =>
+      diarioClasseService.saveAulaTitulo(input.aulaId, input.titulo),
     onSuccess: async (_data, input) => {
       await invalidate.aulasAndResults();
       await onSuccess?.(input);

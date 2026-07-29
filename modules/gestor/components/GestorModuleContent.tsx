@@ -24,6 +24,7 @@ const ConfiguracoesPage = lazy(() => import('../configuracoes/ConfiguracoesPage'
 const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
 const FinanceiroPage = lazy(() => import('../financeiro/FinanceiroPage'));
 const GestaoPage = lazy(() => import('../gestao/GestaoPage'));
+const MeuPerfilPage = lazy(() => import('../meu-perfil/MeuPerfilPage'));
 const ParceirosPage = lazy(() => import('../parceiros/ParceirosPage'));
 const RelatoriosPage = lazy(() => import('../relatorios/RelatoriosPage'));
 const SecretariaPage = lazy(loadSecretariaPage);
@@ -42,6 +43,14 @@ interface GestorModuleContentProps {
   onRequestScrollTop: () => void;
   permissions: GestorPermissions;
   profile: PortalAuthProfile;
+  profileAvatarUrl: string | null;
+  onProfileUpdated: (updated: {
+    id: string;
+    nome: string;
+    email: string;
+    telefone: string | null;
+    fotoPath: string | null;
+  }) => void;
 }
 
 const AccessDenied = () => (
@@ -149,6 +158,8 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   onRequestScrollTop,
   permissions,
   profile,
+  profileAvatarUrl,
+  onProfileUpdated,
 }) => {
   if (!canOpenModule(activeModule)) return <AccessDenied />;
   if (!isMatrizSelected && activeModule.startsWith('cadastros-') && !POLO_CADASTROS_ALLOWED.has(activeModule)) {
@@ -200,6 +211,14 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'comunicacao-mensagem': return <ComunicacaoPage gestorProfile={profile} channel="mensagem" />;
     case 'comunicacao-whatsapp': return <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
     case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
+    case 'meu-perfil':
+      return (
+        <MeuPerfilPage
+          profile={profile}
+          avatarUrl={profileAvatarUrl}
+          onProfileUpdated={onProfileUpdated}
+        />
+      );
     case 'configuracoes':
       if (!isMatrizSelected) {
         return <div className="animate-fadeIn rounded-[2rem] border border-amber-100 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Settings size={26} /></div><h2 className="text-xl font-black uppercase tracking-tight text-[#001a33]">Configurações disponíveis apenas na matriz</h2><p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">Troque para o polo matriz no seletor superior para alterar integrações, tokens e regras globais do sistema.</p></div>;

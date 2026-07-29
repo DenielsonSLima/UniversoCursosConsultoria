@@ -1,5 +1,11 @@
 export type AcademicSessionPeriod = 'M' | 'T' | 'N' | 'U';
 
+export const ACADEMIC_CLASS_CONTENT_PENDING = 'Conteúdo a definir pelo professor';
+
+export const isAcademicClassContentPending = (title?: string | null) => (
+  !title?.trim() || title.trim() === ACADEMIC_CLASS_CONTENT_PENDING
+);
+
 export interface AcademicClassSession {
   id: string;
   periodo: AcademicSessionPeriod;
