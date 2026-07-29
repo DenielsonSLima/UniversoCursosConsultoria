@@ -33,6 +33,13 @@ type TurnstileVerification = {
   "error-codes"?: string[];
 };
 
+const LOCAL_TURNSTILE_HOSTNAMES = new Set([
+  "localhost",
+  "127.0.0.1",
+  "192.168.1.109",
+  "192.168.3.107",
+]);
+
 const normalizeIdentifier = (value?: string) =>
   String(value || "").trim().toLowerCase();
 
@@ -136,9 +143,14 @@ const verifyTurnstile = async (
   token: string,
   expectedAction: "login" | "recover",
 ) => {
-  const secret = String(Deno.env.get("TURNSTILE_SECRET_KEY") || "").trim();
   const expectedHostname = getRequestHostname(request);
-  if (!secret || !expectedHostname) return false;
+  if (!expectedHostname) return false;
+
+  const secretName = LOCAL_TURNSTILE_HOSTNAMES.has(expectedHostname)
+    ? "TURNSTILE_LOCAL_SECRET_KEY"
+    : "TURNSTILE_SECRET_KEY";
+  const secret = String(Deno.env.get(secretName) || "").trim();
+  if (!secret) return false;
 
   const form = new FormData();
   form.set("secret", secret);
@@ -146,7 +158,7 @@ const verifyTurnstile = async (
   form.set("remoteip", getClientIp(request));
   form.set("idempotency_key", crypto.randomUUID());
 
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
@@ -259,7 +271,7 @@ Deno.serve(async (request: Request) => {
     }, 403);
   }
 
-  let resolvedEmail: string | null = null;
+  let resolvedEmail: string | null;
   try {
     resolvedEmail = await resolveLoginIdentity(admin, identifier);
   } catch (error) {
