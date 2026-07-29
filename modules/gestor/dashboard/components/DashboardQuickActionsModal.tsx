@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Building2,
@@ -120,7 +121,9 @@ const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
     staleTime: 60_000,
   });
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[#001a33]/70 p-4 backdrop-blur-sm"
       role="dialog"
@@ -237,7 +240,8 @@ const DashboardQuickActionsModal: React.FC<DashboardQuickActionsModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
