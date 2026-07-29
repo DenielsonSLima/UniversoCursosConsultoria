@@ -1,10 +1,12 @@
 import React, { useId } from 'react';
 import {
   Archive,
+  ClipboardCheck,
   Eye,
   FileClock,
   FileText,
   MoreHorizontal,
+  RotateCcw,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -19,6 +21,8 @@ interface DocumentoChecklistCardProps {
   onReview?: (item: DocumentoAlunoChecklistItem) => void;
   onArchive?: (item: DocumentoAlunoChecklistItem) => void;
   onUpload?: (item: DocumentoAlunoChecklistItem, files: File[]) => void;
+  onMarkReceived?: (item: DocumentoAlunoChecklistItem) => void;
+  onRevokeReceived?: (item: DocumentoAlunoChecklistItem) => void;
 }
 
 const actionClassName =
@@ -32,11 +36,16 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
   onReview,
   onArchive,
   onUpload,
+  onMarkReceived,
+  onRevokeReceived,
 }) => {
   const uploadInputId = useId();
   const hasVersion = Boolean(item.versaoAtual);
   const canReview = item.status === 'pendente' && hasVersion;
-  const canUpload = ['nao_enviado', 'recusado'].includes(item.status);
+  const hasLegacyReceipt = Boolean(item.recebimentoSemAnexo);
+  const canUpload =
+    ['nao_enviado', 'recusado'].includes(item.status) || hasLegacyReceipt;
+  const canMarkReceived = !hasVersion && !hasLegacyReceipt;
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md">
@@ -60,7 +69,11 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <DocumentoStatusBadge status={item.status} />
-              {item.versaoAtual ? (
+              {hasLegacyReceipt ? (
+                <span className="text-[9px] font-bold text-blue-600">
+                  Recebido no sistema anterior · sem arquivo anexado
+                </span>
+              ) : item.versaoAtual ? (
                 <span className="text-[9px] font-bold text-slate-400">
                   Versão {item.versaoAtual.numero} · {item.versaoAtual.fontes.length}{' '}
                   {item.versaoAtual.fontes.length === 1 ? 'arquivo' : 'arquivos'}
@@ -72,6 +85,11 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
             {item.versaoAtual?.motivoRecusa ? (
               <p className="mt-2 max-w-2xl text-[10px] font-semibold leading-relaxed text-red-600">
                 Motivo: {item.versaoAtual.motivoRecusa}
+              </p>
+            ) : null}
+            {item.recebimentoSemAnexo ? (
+              <p className="mt-2 max-w-2xl text-[10px] font-semibold leading-relaxed text-slate-600">
+                Registro legado: {item.recebimentoSemAnexo.motivo}
               </p>
             ) : null}
           </div>
@@ -100,6 +118,26 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
                 <FileText aria-hidden="true" size={13} /> Anexar
               </label>
             </>
+          ) : null}
+          {canMarkReceived && onMarkReceived ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onMarkReceived(item)}
+              className={`${actionClassName} border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100`}
+            >
+              <ClipboardCheck aria-hidden="true" size={13} /> Recebido
+            </button>
+          ) : null}
+          {hasLegacyReceipt && onRevokeReceived ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onRevokeReceived(item)}
+              className={`${actionClassName} border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100`}
+            >
+              <RotateCcw aria-hidden="true" size={13} /> Corrigir registro
+            </button>
           ) : null}
           <button
             type="button"

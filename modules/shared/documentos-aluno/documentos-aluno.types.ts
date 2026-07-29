@@ -46,6 +46,16 @@ export interface DocumentoAlunoVersao {
   fontes: DocumentoAlunoFonte[];
 }
 
+export interface DocumentoAlunoRecebimentoSemAnexo {
+  id: string;
+  documentoId: string;
+  alunoId: string;
+  origem: 'GESTOR_MIGRACAO_LEGADA' | 'MIGRACAO_LEGADA_T41';
+  motivo: string;
+  recebidoEm: string;
+  recebidoPorNome?: string | null;
+}
+
 export interface DocumentoAlunoChecklistItem {
   id: string;
   nome: string;
@@ -53,6 +63,7 @@ export interface DocumentoAlunoChecklistItem {
   status: DocumentoAlunoStatus;
   versaoAtual: DocumentoAlunoVersao | null;
   versoes: DocumentoAlunoVersao[];
+  recebimentoSemAnexo?: DocumentoAlunoRecebimentoSemAnexo | null;
 }
 
 export interface DocumentoAlunoResumo {
@@ -98,6 +109,7 @@ export interface DocumentoAlunoPainel {
   alunoId: string;
   itens: DocumentoAlunoChecklistItem[];
   lotesPdf: DocumentoAlunoLotePdf[];
+  podeRegistrarRecebimentoSemAnexo?: boolean;
 }
 
 export interface DocumentoAlunoArquivoReservado {

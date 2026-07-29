@@ -43,6 +43,7 @@ supabase/.temp
 
 # Bundles locais de diagnóstico e planilhas operacionais com dados de turmas
 /scratch/
+/DIARIOS/
 /Documentos/turma*.xls
 /Documentos/radiologia*.xls
 

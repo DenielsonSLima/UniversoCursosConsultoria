@@ -14,7 +14,10 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
 
   const painelQuery = useQuery({
     queryKey: documentosAlunoKeys.painel(alunoId),
-    queryFn: () => documentosAlunoV2Service.getPainel(alunoId),
+    queryFn: () => documentosAlunoV2Service.getPainel(
+      alunoId,
+      { includeLegacyReceipts: true },
+    ),
     enabled: Boolean(alunoId),
   });
 
@@ -46,6 +49,24 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
   const archiveMutation = useMutation({
     mutationFn: (input: { versaoId: string; motivo: string }) =>
       documentosAlunoV2Service.arquivar(input.versaoId, input.motivo),
+    onSuccess: invalidate,
+  });
+
+  const legacyReceiptMutation = useMutation({
+    mutationFn: (input: { documentoId: string; motivo: string }) =>
+      documentosAlunoV2Service.marcarRecebidoSemAnexo(
+        input.documentoId,
+        input.motivo,
+      ),
+    onSuccess: invalidate,
+  });
+
+  const legacyReceiptRevokeMutation = useMutation({
+    mutationFn: (input: { documentoId: string; motivo: string }) =>
+      documentosAlunoV2Service.revogarRecebidoSemAnexo(
+        input.documentoId,
+        input.motivo,
+      ),
     onSuccess: invalidate,
   });
 
@@ -104,6 +125,8 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
     reviewMutation,
     uploadMutation,
     archiveMutation,
+    legacyReceiptMutation,
+    legacyReceiptRevokeMutation,
     deleteMutation,
     pagesMutation,
     mappingMutation,

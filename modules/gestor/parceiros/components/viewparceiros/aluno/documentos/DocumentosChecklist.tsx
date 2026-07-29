@@ -11,6 +11,8 @@ interface DocumentosChecklistProps {
   onReview?: (item: DocumentoAlunoChecklistItem) => void;
   onArchive?: (item: DocumentoAlunoChecklistItem) => void;
   onUpload?: (item: DocumentoAlunoChecklistItem, files: File[]) => void;
+  onMarkReceived?: (item: DocumentoAlunoChecklistItem) => void;
+  onRevokeReceived?: (item: DocumentoAlunoChecklistItem) => void;
 }
 
 const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
@@ -21,6 +23,8 @@ const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
   onReview,
   onArchive,
   onUpload,
+  onMarkReceived,
+  onRevokeReceived,
 }) => {
   if (itens.length === 0) {
     return (
@@ -54,6 +58,8 @@ const DocumentosChecklist: React.FC<DocumentosChecklistProps> = ({
             onReview={onReview}
             onArchive={onArchive}
             onUpload={onUpload}
+            onMarkReceived={onMarkReceived}
+            onRevokeReceived={onRevokeReceived}
           />
         ))}
       </div>
