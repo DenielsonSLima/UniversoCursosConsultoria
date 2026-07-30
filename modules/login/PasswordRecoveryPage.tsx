@@ -16,7 +16,9 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import ArkhenSignature from '../shared/components/ArkhenSignature';
-import TurnstileWidget from '../shared/auth/TurnstileWidget';
+import TurnstileWidget, {
+  type TurnstileStatus,
+} from '../shared/auth/TurnstileWidget';
 
 type RecoveryMode = 'request' | 'reset';
 interface RecoveryAuthorization {
@@ -88,11 +90,13 @@ const PasswordRecoveryPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const [recoveryAuthorization, setRecoveryAuthorization] =
     useState<RecoveryAuthorization | null>(null);
 
   const [showConfirmation, setShowConfirmation] = useState(false);
   const loginRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recoverySubmitInFlightRef = useRef(false);
 
   const passwordChecks = useMemo(() => {
     const hasMinLength = password.length >= 6;
@@ -213,31 +217,35 @@ const PasswordRecoveryPage: React.FC = () => {
     event.preventDefault();
     setMessage(null);
 
-    if (!turnstileToken) {
-      setMessage({
-        tone: 'error',
-        text: 'Não foi possível validar o acesso. Atualize a página e tente novamente.',
-      });
-      return;
-    }
+    if (
+      recoverySubmitInFlightRef.current
+      || !turnstileToken
+      || turnstileStatus !== 'verified'
+    ) return;
 
+    recoverySubmitInFlightRef.current = true;
     setIsLoading(true);
+    const verifiedToken = turnstileToken;
+    setTurnstileToken('');
 
     try {
       const genericMessage = await loginService.requestPasswordRecovery(
         identifier,
-        turnstileToken,
+        verifiedToken,
       );
       setMessage({
         tone: 'success',
         text: genericMessage,
       });
-    } catch {
+    } catch (error) {
       setMessage({
-        tone: 'success',
-        text: 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.',
+        tone: 'error',
+        text: error instanceof Error
+          ? error.message
+          : 'A verificação de segurança não pôde ser concluída. Tente novamente.',
       });
     } finally {
+      recoverySubmitInFlightRef.current = false;
       setIsLoading(false);
       setTurnstileResetSignal((value) => value + 1);
     }
@@ -534,6 +542,7 @@ const PasswordRecoveryPage: React.FC = () => {
                         action="recover"
                         resetSignal={turnstileResetSignal}
                         onTokenChange={setTurnstileToken}
+                        onStatusChange={setTurnstileStatus}
                         onError={() => {
                           setTurnstileToken('');
                         }}
@@ -542,7 +551,11 @@ const PasswordRecoveryPage: React.FC = () => {
 
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={
+                        isLoading
+                        || !turnstileToken
+                        || turnstileStatus !== 'verified'
+                      }
                       className="group mt-6 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-xl shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-blue-700/30 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
@@ -550,7 +563,11 @@ const PasswordRecoveryPage: React.FC = () => {
                       ) : (
                         <Mail size={18} />
                       )}
-                      {isLoading ? 'Enviando link...' : 'Receber link seguro'}
+                      {isLoading
+                        ? 'Enviando link...'
+                        : turnstileStatus === 'verified'
+                          ? 'Receber link seguro'
+                          : 'Aguardando verificação'}
                       {!isLoading ? (
                         <ArrowRight
                           className="transition-transform group-hover:translate-x-1"
