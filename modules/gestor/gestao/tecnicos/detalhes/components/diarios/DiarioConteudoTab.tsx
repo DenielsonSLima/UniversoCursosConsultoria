@@ -41,9 +41,9 @@ const DiarioConteudoTab: React.FC<DiarioConteudoTabProps> = ({
           <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-xs text-blue-800">
             <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-blue-600" />
             <div>
-              <p className="font-black">Etapa do professor</p>
+              <p className="font-black">Diário aberto para edição</p>
               <p className="mt-0.5 font-medium text-blue-700">
-                Data e carga horária são definidas e ajustadas pela Gestão. Preencha aqui o conteúdo programático de cada aula.
+                Gestão e professor podem ajustar o conteúdo programático e a prática pedagógica. Data e carga horária continuam sob responsabilidade da Gestão.
               </p>
             </div>
           </div>
