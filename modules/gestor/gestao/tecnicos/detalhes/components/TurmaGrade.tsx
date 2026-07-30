@@ -91,11 +91,14 @@ const TurmaGrade = ({
   const addAulaMutation = useAddTurmaAulaMutation(
     turma.id,
     (input) => {
+      setNewAulaTitulo((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaHoras((current) => ({ ...current, [input.disciplinaId]: '' }));
       setNewAulaData((current) => ({ ...current, [input.disciplinaId]: '' }));
       toast.success(
-        'Horário planejado',
-        'Data e carga horária foram registradas. O professor já pode preencher o título/conteúdo no diário.',
+        'Aula planejada',
+        input.titulo === ACADEMIC_CLASS_CONTENT_PENDING
+          ? 'Data e carga horária foram registradas. O professor poderá preencher o conteúdo no diário.'
+          : 'Data, carga horária e conteúdo foram registrados. O professor poderá ajustar o conteúdo no diário.',
       );
     },
     (error) => {
@@ -205,8 +208,8 @@ const TurmaGrade = ({
     const horasStr = newAulaHoras[disciplinaId]?.trim();
     const dataStr = newAulaData[disciplinaId]?.trim();
     const isExtraClasse = Boolean(newAulaExtraClasse[disciplinaId]);
-    const tituloExtraClasse = newAulaTitulo[disciplinaId]?.trim();
-    if (!horasStr || !dataStr || (isExtraClasse && !tituloExtraClasse)) {
+    const tituloInformado = newAulaTitulo[disciplinaId]?.trim();
+    if (!horasStr || !dataStr || (isExtraClasse && !tituloInformado)) {
       toast.info(
         'Complete os dados',
         isExtraClasse
@@ -227,10 +230,10 @@ const TurmaGrade = ({
       const isPreparacao = turmaStatus === 'PLANEJADA' || turmaStatus === 'INSCRICOES_ABERTAS';
       await addAtividadeExtraClasseMutation.mutateAsync({
         disciplinaId,
-        titulo: tituloExtraClasse!,
+        titulo: tituloInformado!,
         horas,
         prazoEntrega: dataStr,
-        texto: `Desenvolva uma resposta sobre o tema "${tituloExtraClasse}". Registre sua entrega no portal do aluno.`,
+        texto: `Desenvolva uma resposta sobre o tema "${tituloInformado}". Registre sua entrega no portal do aluno.`,
         criadoPorTipo: 'GESTOR',
         status: isPreparacao ? 'RASCUNHO' : 'PUBLICADA',
       });
@@ -239,7 +242,7 @@ const TurmaGrade = ({
 
     await addAulaMutation.mutateAsync({
       disciplinaId,
-      titulo: ACADEMIC_CLASS_CONTENT_PENDING,
+      titulo: tituloInformado || ACADEMIC_CLASS_CONTENT_PENDING,
       horas,
       dataAula: dataStr,
     });
