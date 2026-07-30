@@ -25,19 +25,6 @@ import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types
 const normalizeSearchTerm = (term: string) =>
   term.trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ');
 
-const buildAlunoPoloScopeFilter = (poloId: string) =>
-  `polo_id.eq.${poloId},polo_ids.cs.{${poloId}},polo_id.is.null`;
-
-const normalizeStatus = (status?: string) => (status || '').toUpperCase();
-
-const enrollmentStatusRank = (status?: string) => {
-  const normalized = normalizeStatus(status);
-  if (normalized === 'ATIVO') return 0;
-  if (normalized === 'EM_ANDAMENTO') return 1;
-  if (normalized === 'CONCLUIDO') return 2;
-  return 3;
-};
-
 const buildStudentRegistrationSnapshot = (matricula: any) => ({
   studentName: matricula.parceiros?.nome || '',
   studentSocialName: matricula.parceiros?.nome_social || '',
@@ -95,37 +82,36 @@ const buildStudentRegistrationSnapshot = (matricula: any) => ({
   enrollmentDate: matricula.data_matricula || '',
 });
 
-const getAlunoEnrollmentSummaries = async (poloId: string, alunoIds: string[]) => {
-  if (!alunoIds.length) return new Map<string, any>();
+const searchSecretariaStudents = async (
+  poloId: string,
+  term: string,
+  documento?: SecretariaDocumentoId,
+) => {
+  const safeTerm = normalizeSearchTerm(term);
+  if (safeTerm.length < 2) return [];
 
-  const { data, error } = await supabase
-    .from('matriculas')
-    .select('id, aluno_id, status, data_matricula, turmas!inner(id, nome, codigo, polo_id, cursos(nome, modalidade))')
-    .in('aluno_id', alunoIds)
-    .or(`polo_id.eq.${poloId},polo_id.is.null`, { foreignTable: 'turmas' })
-    .order('data_matricula', { ascending: false });
-
+  const { data, error } = await supabase.rpc('search_secretaria_students_secure', {
+    p_polo_id: poloId,
+    p_search: safeTerm,
+    p_limit: 20,
+    p_documento: documento || null,
+  });
   if (error) throw error;
 
-  const ordered = [...(data || [])].sort((a: any, b: any) => {
-    const statusDiff = enrollmentStatusRank(a.status) - enrollmentStatusRank(b.status);
-    if (statusDiff !== 0) return statusDiff;
-    return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
-  });
-
-  const summaries = new Map<string, any>();
-  ordered.forEach((matricula: any) => {
-    if (summaries.has(matricula.aluno_id)) return;
-    summaries.set(matricula.aluno_id, {
-      matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id || poloId),
-      cursoNome: matricula.turmas?.cursos?.nome || '',
-      turmaNome: matricula.turmas?.nome || '',
-      turmaCodigo: matricula.turmas?.codigo || '',
-      matriculaStatus: matricula.status || '',
-    });
-  });
-
-  return summaries;
+  return (Array.isArray(data) ? data : []).map((aluno: any) => ({
+    ...aluno,
+    matricula: aluno.matricula_id
+      ? formatMatricula(
+          aluno.matricula_id,
+          aluno.matricula_data,
+          aluno.turma_polo_id || poloId,
+        )
+      : '',
+    cursoNome: aluno.curso_nome || '',
+    turmaNome: aluno.turma_nome || '',
+    turmaCodigo: aluno.turma_codigo || '',
+    matriculaStatus: aluno.matricula_status || '',
+  }));
 };
 
 export const getSecretariaContext = (): SecretariaContext => ({
@@ -139,30 +125,33 @@ export const getSecretariaContext = (): SecretariaContext => ({
 });
 
 export const secretariaDocumentosService = {
-  async searchAlunos(poloId: string, term: string): Promise<SecretariaAlunoResumo[]> {
-    const safeTerm = normalizeSearchTerm(term);
-    if (safeTerm.length < 2) return [];
-
-    const { data, error } = await supabase
-      .from('parceiros')
-      .select('id, nome, cpf_cnpj, email, telefone, foto_url, polo_id, polo_ids')
-      .eq('tipo', 'Aluno')
-      .or(buildAlunoPoloScopeFilter(poloId))
-      .or(`nome.ilike.%${safeTerm}%,cpf_cnpj.ilike.%${safeTerm}%`)
-      .order('nome', { ascending: true })
-      .limit(20);
-
-    if (error) throw error;
-    const summaries = await getAlunoEnrollmentSummaries(poloId, (data || []).map((aluno: any) => aluno.id));
-    return (data || []).map((aluno) => ({
+  async searchAlunos(
+    poloId: string,
+    term: string,
+    documento?: SecretariaDocumentoId,
+  ): Promise<SecretariaAlunoResumo[]> {
+    const alunos = await searchSecretariaStudents(poloId, term, documento);
+    return alunos.map((aluno: any) => ({
       id: aluno.id,
       nome: aluno.nome,
       cpf: aluno.cpf_cnpj,
       email: aluno.email,
       telefone: aluno.telefone,
       fotoUrl: aluno.foto_url,
-      ...summaries.get(aluno.id),
+      matricula: aluno.matricula,
+      cursoNome: aluno.cursoNome,
+      turmaNome: aluno.turmaNome,
+      turmaCodigo: aluno.turmaCodigo,
+      matriculaStatus: aluno.matriculaStatus,
     }));
+  },
+
+  async searchAlunosDetalhados(
+    poloId: string,
+    term: string,
+    documento?: SecretariaDocumentoId,
+  ): Promise<any[]> {
+    return searchSecretariaStudents(poloId, term, documento);
   },
 
   async getMatriculas(

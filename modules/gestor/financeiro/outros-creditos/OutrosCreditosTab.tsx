@@ -35,6 +35,7 @@ import { useOutrosCreditosQueries } from './hooks/useOutrosCreditosQueries';
 import ManualSettlementModal from '../receber/components/manual-settlement/ManualSettlementModal';
 import type { ManualSettlementPayload } from '../receber/components/manual-settlement/useManualSettlementForm';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
+import { textMatchesSearch } from '../../../../lib/search';
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import DespesaCredorPicker, {
   DespesaCredorTipo,
@@ -262,13 +263,12 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
   };
 
   const baseFiltered = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('pt-BR');
     return credits.filter((item) => {
       const matchesStart = !startDate || item.dataVencimento >= startDate;
       const matchesEnd = !endDate || item.dataVencimento <= endDate;
       const matchesCategory = !categoryFilterId
         || item.categoriaFinanceiraId === categoryFilterId;
-      const matchesSearch = !term || [
+      const matchesSearch = textMatchesSearch(search, [
         item.descricao,
         item.categoriaFinanceiraNome,
         item.clienteNome,
@@ -279,7 +279,7 @@ const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({ poloId: scopedPol
         item.poloUf,
         item.formaPagamento,
         item.asaasStatus,
-      ].some((field) => field?.toLocaleLowerCase('pt-BR').includes(term));
+      ]);
 
       return matchesStart && matchesEnd && matchesCategory && matchesSearch;
     });

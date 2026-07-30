@@ -1,6 +1,7 @@
 import type { SecretariaFinanceiraRecebivel } from './secretariaFinanceira.service';
 import type { CourseDebtGroup, CustomFinanceStudent } from './secretaria-financeira.types';
 import { generateSafeUuid } from '../../../../lib/randomUuid';
+import { normalizeSecretariaSearch } from '../secretaria-search';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -22,7 +23,7 @@ export const formatCurrencyInput = (value: number) =>
   });
 
 export const normalizeFinanceSearch = (value?: string) => (
-  String(value || '').trim().toLocaleLowerCase('pt-BR')
+  normalizeSecretariaSearch(value)
 );
 
 export const safeRandomUUID = generateSafeUuid;

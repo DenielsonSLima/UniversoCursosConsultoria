@@ -5,6 +5,10 @@ import {
   getEadProgressKey,
   hasValidEadCertificateCompletion,
 } from './eadCertificateEligibility';
+import {
+  normalizeSecretariaSearch,
+  secretariaSearchIncludes,
+} from '../secretaria-search';
 
 export const certificadosService = {
   async list(filters: {
@@ -54,12 +58,12 @@ export const certificadosService = {
       ));
     }
 
-    const search = filters.search?.trim().toLocaleLowerCase('pt-BR');
+    const search = normalizeSecretariaSearch(filters.search);
     return search
       ? rows.filter(row =>
-          row.aluno?.nome?.toLocaleLowerCase('pt-BR').includes(search)
-          || row.aluno?.cpf_cnpj?.includes(search)
-          || row.codigo_validacao?.toLocaleLowerCase('pt-BR').includes(search)
+          secretariaSearchIncludes(row.aluno?.nome, search)
+          || secretariaSearchIncludes(row.aluno?.cpf_cnpj, search)
+          || secretariaSearchIncludes(row.codigo_validacao, search)
         )
       : rows;
   },

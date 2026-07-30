@@ -335,37 +335,20 @@ export const historicoEmissoesService = {
     page: number;
   }): Promise<{ emissions: EmissionLog[]; total: number }> {
     const from = (params.page - 1) * PAGE_SIZE;
-    const enrollmentRelation = params.turmaId === 'todos'
-      ? 'matricula:matriculas(id, status, turma:turmas(id, nome, codigo))'
-      : 'matricula:matriculas!inner(id, status, turma_id, turma:turmas(id, nome, codigo))';
-    let query = supabase
-      .from('documentos_validacao')
-      .select(`
-        *,
-        aluno:parceiros(
-          id, nome, cpf_cnpj, rg, data_nascimento, foto_url, sexo,
-          nacionalidade, naturalidade, orgao_emissor, titulo_eleitor, reservista,
-          nome_mae, nome_pai, escola_ensino_medio, ano_conclusao_ensino_medio
-        ),
-        ${enrollmentRelation}
-      `, { count: 'exact' })
-      .eq('status', 'ATIVO');
-
-    if (params.activeTab !== 'todos') query = query.eq('documento', params.activeTab);
-    if (params.poloId) query = query.eq('polo_id', params.poloId);
-    if (params.turmaId !== 'todos') query = query.eq('matricula.turma_id', params.turmaId);
-    if (params.search.trim()) {
-      const search = params.search.trim().replace(/[%_,()]/g, ' ');
-      query = query.or(
-        `codigo.ilike.%${search}%,dados_emissao->>studentName.ilike.%${search}%,dados_emissao->>studentCpf.ilike.%${search}%`
-      );
-    }
-
-    const { data, count, error } = await query
-      .order('ultima_emissao_em', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
+    const { data, error } = await supabase.rpc('search_secretaria_emissions_secure', {
+      p_polo_id: params.poloId,
+      p_documento: params.activeTab === 'todos' ? null : params.activeTab,
+      p_turma_id: params.turmaId === 'todos' ? null : params.turmaId,
+      p_search: params.search.trim().replace(/[%_,()]/g, ' '),
+      p_offset: from,
+      p_limit: PAGE_SIZE,
+    });
     if (error) throw error;
-    return { emissions: (data || []) as EmissionLog[], total: count || 0 };
+    const payload = (data || {}) as { items?: EmissionLog[]; total?: number };
+    return {
+      emissions: payload.items || [],
+      total: Number(payload.total || 0),
+    };
   },
 
   async loadEmissionByCode(code: string): Promise<EmissionLog> {

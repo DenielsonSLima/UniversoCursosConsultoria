@@ -15,6 +15,7 @@ import { ValidatableDocumentType } from '../../../shared/document-validation/doc
 import { getDocumentValidationUrl } from '../../../shared/document-validation/document-validation.url';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { onlyDigits } from '../../../../lib/documentFormatters';
+import { matchesSecretariaSearch } from '../secretaria-search';
 import { sanitizedHtml } from '../../../../lib/htmlSanitizer';
 import DocumentHeader from '../../components/DocumentHeader';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
@@ -124,13 +125,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
   }, [isDownloading, isPrinting]);
 
   const matchesAlunoSearch = (aluno: Aluno, term: string) => {
-    const normalized = term.trim().toUpperCase();
     const digits = onlyDigits(term);
-    return aluno.nome.toUpperCase().includes(normalized)
+    return matchesSecretariaSearch(term, [aluno.nome, aluno.curso, aluno.turmaNome])
       || Boolean(aluno.cpf && (aluno.cpf.includes(term) || (digits && onlyDigits(aluno.cpf).includes(digits))))
-      || Boolean(aluno.rg && aluno.rg.includes(term))
-      || Boolean(aluno.curso && aluno.curso.toUpperCase().includes(normalized))
-      || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
+      || Boolean(aluno.rg && aluno.rg.includes(term));
   };
 
   const loadAcademicoData = async (activePoloId: string) => {
@@ -244,8 +242,10 @@ const SecretariaDeclaracaoMatriculaPage = ({
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-    const query = searchQuery.toUpperCase();
-    const result = alunos.find(a => a.nome.includes(query) || a.cpf.includes(query) || a.rg.includes(query));
+    const result = alunos.find((aluno) => matchesSecretariaSearch(
+      searchQuery,
+      [aluno.nome, aluno.cpf, aluno.rg, aluno.curso, aluno.turmaNome],
+    ));
     if (result) {
       setSelectedAluno(result);
       setSearchQuery('');

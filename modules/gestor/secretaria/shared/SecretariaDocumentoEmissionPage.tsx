@@ -142,7 +142,11 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const normalizedTerm = useDebouncedValue(searchTerm.trim(), 300);
   const alunosQuery = useQuery({
     queryKey: secretariaDocumentosKeys.search(context, definition.id, normalizedTerm),
-    queryFn: () => secretariaDocumentosService.searchAlunos(context.poloId, normalizedTerm),
+    queryFn: () => secretariaDocumentosService.searchAlunos(
+      context.poloId,
+      normalizedTerm,
+      definition.id,
+    ),
     enabled: mode !== 'lote' && normalizedTerm.length >= 2,
     staleTime: 30_000,
   });

@@ -4,14 +4,18 @@ import React, { useState } from 'react';
 import { FileText, ArrowRightLeft, Search, Printer, CheckCircle2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { formatMatricula } from '../../../../lib/academicUtils';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
+import {
+  getSecretariaContext,
+  secretariaDocumentosService,
+} from '../shared/secretaria-documentos.service';
 
 interface SecretariaDocumentosPageProps {
   initialType: string;
 }
 
 const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ initialType }) => {
+  const context = getSecretariaContext();
   const [docType, setDocType] = useState<'declaracao' | 'transferencia'>(
     initialType === 'transferencia' ? 'transferencia' : 'declaracao'
   );
@@ -20,53 +24,17 @@ const SecretariaDocumentosPage: React.FC<SecretariaDocumentosPageProps> = ({ ini
   const [selectedAlunoObj, setSelectedAlunoObj] = useState<any | null>(null);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('');
   const isTransferencia = docType === 'transferencia';
+  const documento = isTransferencia ? 'transferencia' : 'declaracao_matricula';
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
-    queryKey: ['secretaria-documentos-search', searchTerm],
+    queryKey: ['secretaria-documentos-search', context.poloId, documento, searchTerm],
     queryFn: async () => {
       if (!searchTerm) return [];
-      const { data, error } = await supabase
-        .from('parceiros')
-        .select('*')
-        .eq('tipo', 'Aluno')
-        .or(`nome.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`)
-        .order('nome', { ascending: true });
-      if (error) {
-        console.error('Erro ao buscar alunos para documentos:', error);
-        throw error;
-      }
-      const alunoIds = (data || []).map((aluno: any) => aluno.id);
-      const { data: matriculas, error: matriculasError } = alunoIds.length
-        ? await supabase
-          .from('matriculas')
-          .select('id, aluno_id, status, data_matricula, turmas(id, nome, codigo, polo_id, cursos(nome, modalidade))')
-          .in('aluno_id', alunoIds)
-          .order('data_matricula', { ascending: false })
-        : { data: [], error: null };
-
-      if (matriculasError) {
-        console.error('Erro ao buscar matrículas dos alunos:', matriculasError);
-        throw matriculasError;
-      }
-
-      const summaries = new Map<string, any>();
-      [...(matriculas || [])]
-        .sort((a: any, b: any) => {
-          if (a.status === 'ATIVO' && b.status !== 'ATIVO') return -1;
-          if (b.status === 'ATIVO' && a.status !== 'ATIVO') return 1;
-          return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
-        })
-        .forEach((matricula: any) => {
-          if (summaries.has(matricula.aluno_id)) return;
-          summaries.set(matricula.aluno_id, {
-            matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
-            cursoNome: matricula.turmas?.cursos?.nome || '',
-            turmaNome: matricula.turmas?.nome || '',
-            turmaCodigo: matricula.turmas?.codigo || '',
-          });
-        });
-
-      return (data || []).map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
+      return secretariaDocumentosService.searchAlunosDetalhados(
+        context.poloId,
+        searchTerm,
+        documento,
+      );
     },
     enabled: searchTerm.length >= 2,
     refetchOnWindowFocus: false,

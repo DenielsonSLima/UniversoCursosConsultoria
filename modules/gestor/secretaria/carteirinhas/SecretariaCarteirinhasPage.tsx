@@ -19,6 +19,7 @@ import SecretariaCarteirinhasControls, {
 import SecretariaCarteirinhasPrintLayout, {
   type CarteirinhaLayoutType,
 } from './SecretariaCarteirinhasPrintLayout';
+import { matchesSecretariaSearch } from '../secretaria-search';
 
 interface SecretariaCarteirinhasPageProps {
   poloId?: string | null;
@@ -121,9 +122,9 @@ const SecretariaCarteirinhasPage: React.FC<SecretariaCarteirinhasPageProps> = ({
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-    const query = searchQuery.toUpperCase();
-    const result = alunos.find((aluno) => (
-      aluno.nome.includes(query) || aluno.cpf.includes(query) || aluno.rg.includes(query)
+    const result = alunos.find((aluno) => matchesSecretariaSearch(
+      searchQuery,
+      [aluno.nome, aluno.cpf, aluno.rg, aluno.curso, aluno.turmaNome],
     ));
     if (result) {
       setSelectedAluno(result);

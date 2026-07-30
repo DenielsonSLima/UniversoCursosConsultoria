@@ -8,6 +8,7 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react';
+import { textMatchesSearch } from '../../../../../lib/search';
 
 export type DespesaCredorTipo = 'Aluno' | 'Professor' | 'PJ' | 'PF';
 
@@ -35,13 +36,6 @@ const credorTipos: {
   { value: 'PJ', label: 'Pessoa Jurídica', shortLabel: 'Pessoa jurídica', Icon: Building2 },
   { value: 'PF', label: 'Pessoa Física (CPF)', shortLabel: 'Pessoa física', Icon: UserRound },
 ];
-
-const normalizeSearch = (value: string) => (
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-);
 
 const formatDocument = (value?: string) => {
   const digits = String(value || '').replace(/\D/g, '');
@@ -123,11 +117,11 @@ const DespesaCredorPicker: React.FC<DespesaCredorPickerProps> = ({
   );
   const selected = parceirosDoTipo.find((parceiro) => parceiro.id === value);
   const filtered = useMemo(() => {
-    const term = normalizeSearch(search.trim());
-    if (!term) return parceirosDoTipo;
-    return parceirosDoTipo.filter((parceiro) => (
-      normalizeSearch(`${parceiro.nome || ''} ${parceiro.cpf_cnpj || ''}`).includes(term)
-    ));
+    if (!search.trim()) return parceirosDoTipo;
+    return parceirosDoTipo.filter((parceiro) => textMatchesSearch(search, [
+      parceiro.nome,
+      parceiro.cpf_cnpj,
+    ]));
   }, [parceirosDoTipo, search]);
   const accentClasses = accent === 'emerald'
     ? {

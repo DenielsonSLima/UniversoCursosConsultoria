@@ -20,6 +20,7 @@ import {
   formatConciliacaoCurrency,
   formatConciliacaoDate,
 } from '../conciliacao-bancaria.formatters';
+import { textMatchesSearch } from '../../../../../lib/search';
 
 interface ConciliacaoOrigemBaixaPanelProps {
   rows: BaneseReceivable[];
@@ -124,13 +125,12 @@ export const ConciliacaoOrigemBaixaPanel: React.FC<ConciliacaoOrigemBaixaPanelPr
       result = result.filter((r) => r.status === selectedStatus);
     }
 
-    const search = searchTerm.trim().toLowerCase();
-    if (search) {
-      result = result.filter((r) => (
-        r.descricao.toLowerCase().includes(search)
-        || r.nossoNumero?.toLowerCase().includes(search)
-        || r.status.toLowerCase().includes(search)
-      ));
+    if (searchTerm.trim()) {
+      result = result.filter((row) => textMatchesSearch(searchTerm, [
+        row.descricao,
+        row.nossoNumero,
+        row.status,
+      ]));
     }
 
     return result;

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { textMatchesSearch } from '../../../../lib/search';
 import type { AlunoModalidadeFilter } from '../components/ParceirosFilters';
 
 export type ParceirosTabType = 'todos' | 'professores' | 'alunos' | 'pj' | 'pf';
@@ -36,9 +37,15 @@ export const useParceirosFilters = (allPartners: any[], activeTab: ParceirosTabT
       }
 
       if (searchTerm) {
-        const lowerTerm = searchTerm.toLowerCase();
-        const contentStr = `${item.nome} ${item.cpf || ''} ${item.cnpj || ''} ${item.cidade || ''}`.toLowerCase();
-        if (!contentStr.includes(lowerTerm)) return false;
+        const matchesSearch = textMatchesSearch(searchTerm, [
+          item.nome,
+          item.cpf,
+          item.cnpj,
+          item.cidade,
+          item.email,
+          item.telefone,
+        ]);
+        if (!matchesSearch) return false;
       }
 
       if (alunoModalidadeFilter.length > 0) {

@@ -5,6 +5,7 @@ import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 import type { Aluno } from './secretaria-carteirinhas.types';
 import type { CarteirinhaTechnicalClass } from './secretaria-carteirinhas.service';
 import type { CarteirinhaLayoutType } from './SecretariaCarteirinhasPrintLayout';
+import { matchesSecretariaSearch } from '../secretaria-search';
 
 export type CarteirinhaMode = 'individual' | 'lote' | 'custom';
 
@@ -34,13 +35,10 @@ interface SecretariaCarteirinhasControlsProps {
 }
 
 const matchesAlunoSearch = (aluno: Aluno, term: string) => {
-  const normalized = term.trim().toUpperCase();
   const digits = onlyDigits(term);
-  return aluno.nome.toUpperCase().includes(normalized)
+  return matchesSecretariaSearch(term, [aluno.nome, aluno.curso, aluno.turmaNome])
     || Boolean(aluno.cpf && (aluno.cpf.includes(term) || (digits && onlyDigits(aluno.cpf).includes(digits))))
-    || Boolean(aluno.rg && aluno.rg.includes(term))
-    || Boolean(aluno.curso && aluno.curso.toUpperCase().includes(normalized))
-    || Boolean(aluno.turmaNome && aluno.turmaNome.toUpperCase().includes(normalized));
+    || Boolean(aluno.rg && aluno.rg.includes(term));
 };
 
 const ModeNavigation: React.FC<{

@@ -8,6 +8,7 @@ import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
 import { formatCpf } from '../../../../lib/documentFormatters';
 import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
+import { secretariaDocumentosService } from '../shared/secretaria-documentos.service';
 
 interface SecretariaAlunosPageProps {
   poloId?: string | null;
@@ -23,56 +24,7 @@ const SecretariaAlunosPage: React.FC<SecretariaAlunosPageProps> = ({ poloId }) =
     queryKey: ['secretaria-alunos-search', poloId || 'sem-polo', searchTerm],
     queryFn: async () => {
       if (!searchTerm || !poloId) return [];
-      const { data, error } = await supabase
-        .from('parceiros')
-        .select('*, polos(nome)')
-        .eq('tipo', 'Aluno')
-        .or(`nome.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`)
-        .order('nome', { ascending: true });
-      
-      if (error) {
-        console.error('Erro ao buscar alunos:', error);
-        throw error;
-      }
-      const alunoIds = (data || []).map((aluno: any) => aluno.id);
-      const { data: matriculasResumo, error: matriculasError } = alunoIds.length
-        ? await supabase
-          .from('matriculas')
-          .select('id, aluno_id, status, data_matricula, turmas!inner(id, nome, codigo, polo_id, cursos(nome, modalidade))')
-          .in('aluno_id', alunoIds)
-          .eq('turmas.polo_id', poloId)
-          .order('data_matricula', { ascending: false })
-        : { data: [], error: null };
-
-      if (matriculasError) {
-        console.error('Erro ao buscar resumo acadêmico dos alunos:', matriculasError);
-        throw matriculasError;
-      }
-
-      const summaries = new Map<string, any>();
-      [...(matriculasResumo || [])]
-        .sort((a: any, b: any) => {
-          if (a.status === 'ATIVO' && b.status !== 'ATIVO') return -1;
-          if (b.status === 'ATIVO' && a.status !== 'ATIVO') return 1;
-          return new Date(b.data_matricula || 0).getTime() - new Date(a.data_matricula || 0).getTime();
-        })
-        .forEach((matricula: any) => {
-          if (summaries.has(matricula.aluno_id)) return;
-          summaries.set(matricula.aluno_id, {
-            matricula: formatMatricula(matricula.id, matricula.data_matricula, matricula.turmas?.polo_id),
-            cursoNome: matricula.turmas?.cursos?.nome || '',
-            turmaNome: matricula.turmas?.nome || '',
-            turmaCodigo: matricula.turmas?.codigo || '',
-          });
-        });
-
-      return (data || [])
-        .filter((aluno: any) => {
-          const directScope = aluno.polo_id === poloId
-            || (Array.isArray(aluno.polo_ids) && aluno.polo_ids.includes(poloId));
-          return directScope || summaries.has(aluno.id);
-        })
-        .map((aluno: any) => ({ ...aluno, ...summaries.get(aluno.id) }));
+      return secretariaDocumentosService.searchAlunosDetalhados(poloId, searchTerm);
     },
     enabled: searchTerm.length >= 2 && Boolean(poloId),
     refetchOnWindowFocus: false,

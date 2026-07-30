@@ -25,6 +25,7 @@ import {
 import FinancialUnderlineTabs from '../components/FinancialUnderlineTabs';
 import { financeiroQueryKeys } from '../financeiro.queryKeys';
 import { caixaQueryKeys } from '../../caixa/caixa.service';
+import { textMatchesSearch } from '../../../../lib/search';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -74,12 +75,13 @@ const OutrosDebitosTab: React.FC<{ poloId?: string | null }> = ({ poloId: scoped
   const categorias = categoriasQuery.data || [];
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return lancamentos;
-    return lancamentos.filter((i) =>
-      [i.descricao, i.categoriaNome, i.fornecedorNome, i.poloNome]
-        .some((f) => f?.toLowerCase().includes(term))
-    );
+    if (!search.trim()) return lancamentos;
+    return lancamentos.filter((item) => textMatchesSearch(search, [
+      item.descricao,
+      item.categoriaNome,
+      item.fornecedorNome,
+      item.poloNome,
+    ]));
   }, [lancamentos, search]);
 
   const totals = useMemo(() => ({

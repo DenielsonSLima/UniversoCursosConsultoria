@@ -15,6 +15,7 @@ import {
   Building,
   Sparkles
 } from 'lucide-react';
+import { textMatchesSearch } from '../../../lib/search';
 import { parceirosService } from './parceiros.service';
 
 interface AlunoDocumentoData {
@@ -100,11 +101,8 @@ const ParceiroDocumentosPage: React.FC = () => {
   // Filter Alunos
   const filteredAlunos = alunos.filter(aluno => {
     // 1. Search term
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      const matchName = aluno.nome.toLowerCase().includes(lower);
-      const matchCpf = (aluno.cpf || '').includes(lower);
-      if (!matchName && !matchCpf) return false;
+    if (searchTerm && !textMatchesSearch(searchTerm, [aluno.nome, aluno.cpf])) {
+      return false;
     }
 
     // 2. Class/Turma filter

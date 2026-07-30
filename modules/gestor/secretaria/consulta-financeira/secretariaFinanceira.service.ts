@@ -1,5 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { formatMatricula } from '../../../../lib/academicUtils';
+import { normalizeSecretariaSearch } from '../secretaria-search';
 
 export interface SecretariaFinanceiraAluno {
   id: string;
@@ -271,7 +272,7 @@ export const secretariaFinanceiraService = {
     const safeTerm = normalizeSearchTerm(term);
     const rows = await getOpenReceivablesSecure(poloId);
     if (safeTerm.length < 2) return rows;
-    const normalized = safeTerm.toLowerCase();
+    const normalized = normalizeSecretariaSearch(safeTerm);
     return rows.filter((item) =>
       [
         item.alunoNome,
@@ -285,7 +286,7 @@ export const secretariaFinanceiraService = {
         item.asaasPaymentId,
       ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalized))
+        .some((value) => normalizeSecretariaSearch(String(value)).includes(normalized))
     );
   },
 };

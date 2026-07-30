@@ -23,6 +23,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { getSecretariaErrorMessage } from '../shared/secretaria-error';
+import { matchesSecretariaSearch } from '../secretaria-search';
 
 
 
@@ -106,8 +107,10 @@ const SecretariaSolicitacoesPage: React.FC = () => {
     return solicitacoes
       .filter(s => s.status === 'Pendente')
       .filter(s => {
-        const q = searchPend.toLowerCase();
-        const matchSearch = !q || s.alunoNome.toLowerCase().includes(q) || s.alunoMatricula.toLowerCase().includes(q);
+        const matchSearch = matchesSecretariaSearch(
+          searchPend,
+          [s.alunoNome, s.alunoMatricula],
+        );
         const matchType = typeFilterPend === 'todos' || s.tipo === typeFilterPend;
         return matchSearch && matchType;
       })
@@ -118,8 +121,10 @@ const SecretariaSolicitacoesPage: React.FC = () => {
     return solicitacoes
       .filter(s => s.status !== 'Pendente')
       .filter(s => {
-        const q = searchHist.toLowerCase();
-        const matchSearch = !q || s.alunoNome.toLowerCase().includes(q) || s.alunoMatricula.toLowerCase().includes(q);
+        const matchSearch = matchesSecretariaSearch(
+          searchHist,
+          [s.alunoNome, s.alunoMatricula],
+        );
         const matchType = typeFilterHist === 'todos' || s.tipo === typeFilterHist;
         const matchStatus = statusFilterHist === 'todos' || s.status === statusFilterHist;
         return matchSearch && matchType && matchStatus;

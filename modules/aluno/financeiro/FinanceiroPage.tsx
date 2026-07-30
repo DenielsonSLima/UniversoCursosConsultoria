@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { textMatchesSearch } from '../../../lib/search';
 import { CalendarDays, CheckCircle, Clock, CreditCard, ExternalLink, Filter, Search, TrendingUp, X, BadgeAlert, FileText, LayoutGrid, List, Download, Zap, RotateCcw } from 'lucide-react';
 import FinanceiroCardItem from './FinanceiroCardItem';
 import ReciboDespesaPreview, { ReciboData } from '../../gestor/cadastros/modelos-documentos/recibo/ReciboDespesaPreview';
@@ -368,14 +369,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [refetchBanesePayment, refetchFinanceiro, selectedBanesePaymentSummary]);
 
   const filteredBySearchDateModality = installmentRows.filter((inst) => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const matchesSearch = !normalizedSearch || [
+    const matchesSearch = textMatchesSearch(searchTerm, [
       inst.descricao,
       inst.cursoNome,
       inst.turmaNome,
       inst.status,
       inst.forma_pagamento
-    ].some((item) => String(item || '').toLowerCase().includes(normalizedSearch));
+    ]);
 
     const dueDate = parseDate(inst.data_vencimento);
     const start = startDate ? parseDate(startDate) : null;

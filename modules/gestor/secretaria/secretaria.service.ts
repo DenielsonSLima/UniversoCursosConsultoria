@@ -180,46 +180,28 @@ export const secretariaService = {
     pageSize: number;
   }): Promise<{ data: any[]; total: number }> {
     const from = (params.page - 1) * params.pageSize;
-    const to = from + params.pageSize - 1;
-
-    let query = supabase
-      .from('documentos_validacao')
-      .select(`
-          *,
-          aluno:parceiros(id, nome, cpf_cnpj),
-          matricula:matriculas(
-            id,
-            status,
-            turma:turmas(id, nome, codigo)
-          )
-        `, { count: 'exact' });
-
-    if (params.documento && params.documento !== 'todos') {
-      query = query.eq('documento', params.documento);
+    if (!params.poloId) {
+      throw new Error('Selecione um polo antes de consultar o histórico de emissões.');
     }
-
-    if (params.poloId) {
-      query = query.eq('polo_id', params.poloId);
-    }
-
-    if (params.turmaId && params.turmaId !== 'todos') {
-      query = query.eq('matriculas.turma_id', params.turmaId);
-    }
-
-    if (params.search) {
-      const cleanSearch = params.search.trim();
-      query = query.or(`codigo.ilike.%${cleanSearch}%,dados_emissao->>studentName.ilike.%${cleanSearch}%,dados_emissao->>studentCpf.ilike.%${cleanSearch}%`);
-    }
-
-    const { data, count, error } = await query
-      .order('ultima_emissao_em', { ascending: false })
-      .range(from, to);
+    const { data, error } = await supabase.rpc('search_secretaria_emissions_secure', {
+      p_polo_id: params.poloId,
+      p_documento: params.documento && params.documento !== 'todos'
+        ? params.documento
+        : null,
+      p_turma_id: params.turmaId && params.turmaId !== 'todos'
+        ? params.turmaId
+        : null,
+      p_search: params.search?.trim().replace(/[%_,()]/g, ' ') || '',
+      p_offset: from,
+      p_limit: params.pageSize,
+    });
 
     if (error) throw error;
+    const payload = (data || {}) as { items?: any[]; total?: number };
 
     return {
-      data: data || [],
-      total: count || 0
+      data: payload.items || [],
+      total: Number(payload.total || 0),
     };
   }
 };

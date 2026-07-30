@@ -15,6 +15,10 @@ import {
 import { CertificadoAcademico, CertificadoModalidade, CertificadoStatus } from './certificados.types';
 import { documentValidationService } from '../../../shared/document-validation/document-validation.service';
 import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
+import {
+  normalizeSecretariaSearch,
+  secretariaSearchIncludes,
+} from '../secretaria-search';
 
 const MODALIDADES = [
   { id: 'TECNICO', label: 'Cursos Técnicos', icon: GraduationCap },
@@ -96,12 +100,12 @@ const SecretariaCertificadosPage: React.FC = () => {
   }, [modalidade]);
 
   const grouped = useMemo<Record<string, CertificadoAcademico[]>>(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR');
+    const normalizedSearch = normalizeSecretariaSearch(search);
     const filtered = normalizedSearch
       ? items.filter(item => (
-          item.aluno?.nome?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-          || item.aluno?.cpf_cnpj?.includes(normalizedSearch)
-          || item.codigo_validacao?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+          secretariaSearchIncludes(item.aluno?.nome, normalizedSearch)
+          || secretariaSearchIncludes(item.aluno?.cpf_cnpj, normalizedSearch)
+          || secretariaSearchIncludes(item.codigo_validacao, normalizedSearch)
         ))
       : items;
     return filtered.reduce<Record<string, CertificadoAcademico[]>>((acc, item) => {
