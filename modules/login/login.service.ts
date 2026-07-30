@@ -10,6 +10,8 @@ import {
 
 const AUTH_GENERIC_ERROR = 'Não foi possível autenticar com as credenciais informadas. Verifique seus dados e tente novamente.';
 const AUTH_RATE_LIMIT_ERROR = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+const AUTH_CHALLENGE_ERROR = 'A verificação de segurança expirou ou falhou. Tente verificá-la novamente.';
+const AUTH_SERVICE_ERROR = 'O serviço de autenticação está temporariamente indisponível. Tente novamente em instantes.';
 const RECOVERY_GENERIC_MESSAGE = 'Se existir uma conta vinculada aos dados informados, enviaremos as instruções de recuperação.';
 
 const getFriendlyOAuthError = (message: string) => {
@@ -22,6 +24,54 @@ const getFriendlyOAuthError = (message: string) => {
   }
 
   return message;
+};
+
+const readPortalAuthFailure = async (error: unknown) => {
+  const context = (error as {
+    context?: {
+      status?: number;
+      clone?: () => Response;
+    };
+  })?.context;
+  const status = context?.status;
+  const errorName = error instanceof Error ? error.name : '';
+  let code = '';
+
+  if (typeof context?.clone === 'function') {
+    try {
+      const body = await context.clone().json() as { code?: unknown };
+      code = typeof body?.code === 'string' ? body.code : '';
+    } catch {
+      // A categoria HTTP ainda permite uma mensagem segura e útil.
+    }
+  }
+
+  return {
+    status,
+    code,
+    transportFailure:
+      !context
+      || errorName === 'FunctionsFetchError'
+      || errorName === 'FunctionsRelayError',
+  };
+};
+
+const getPortalAuthFailureMessage = (
+  failure: { status?: number; code: string; transportFailure: boolean },
+) => {
+  if (failure.status === 429 || failure.code === 'rate_limited') {
+    return AUTH_RATE_LIMIT_ERROR;
+  }
+  if (failure.status === 403 || failure.code === 'challenge_failed') {
+    return AUTH_CHALLENGE_ERROR;
+  }
+  if (failure.status === 503 || failure.code === 'service_unavailable') {
+    return AUTH_SERVICE_ERROR;
+  }
+  if (failure.transportFailure) {
+    return AUTH_SERVICE_ERROR;
+  }
+  return AUTH_GENERIC_ERROR;
 };
 
 export const loginService = {
@@ -40,11 +90,11 @@ export const loginService = {
     });
 
     if (error) {
-      const responseStatus = (error as { context?: { status?: number } }).context?.status;
+      const failure = await readPortalAuthFailure(error);
       return {
         user: null,
         session: null,
-        error: responseStatus === 429 ? AUTH_RATE_LIMIT_ERROR : AUTH_GENERIC_ERROR,
+        error: getPortalAuthFailureMessage(failure),
       };
     }
 
@@ -123,6 +173,15 @@ export const loginService = {
     });
 
     if (error) {
+      const failure = await readPortalAuthFailure(error);
+      if (
+        failure.status === 403
+        || failure.status === 429
+        || failure.status === 503
+        || failure.transportFailure
+      ) {
+        throw new Error(getPortalAuthFailureMessage(failure));
+      }
       console.warn('Não foi possível concluir a solicitação de recuperação.');
     }
     return RECOVERY_GENERIC_MESSAGE;
