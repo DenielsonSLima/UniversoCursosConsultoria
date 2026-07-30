@@ -33,19 +33,39 @@ type TurnstileVerification = {
   "error-codes"?: string[];
 };
 
-const LOCAL_TURNSTILE_HOSTNAMES = new Set([
+const DEFAULT_LOCAL_TURNSTILE_HOSTNAMES = [
   "localhost",
   "127.0.0.1",
-  "192.168.1.109",
-  "192.168.3.107",
-]);
+] as const;
+const DEFAULT_PRODUCTION_TURNSTILE_HOSTNAMES = [
+  "universocc.com.br",
+  "www.universocc.com.br",
+];
+const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 
 const normalizeIdentifier = (value?: string) =>
   String(value || "").trim().toLowerCase();
 
-const isTurnstileRequired = () =>
-  String(Deno.env.get("TURNSTILE_REQUIRED") || "").trim().toLowerCase() ===
-    "true";
+const parseHostnameList = (value?: string | null) =>
+  String(value || "")
+    .split(/[,\s]+/)
+    .map((hostname) => hostname.trim().toLowerCase())
+    .filter(Boolean);
+
+const getProductionTurnstileHostnames = () =>
+  new Set([
+    ...DEFAULT_PRODUCTION_TURNSTILE_HOSTNAMES,
+    ...parseHostnameList(Deno.env.get("TURNSTILE_ALLOWED_HOSTNAMES")),
+  ]);
+
+const getLocalTurnstileHostnames = () =>
+  new Set([
+    ...DEFAULT_LOCAL_TURNSTILE_HOSTNAMES,
+    ...parseHostnameList(Deno.env.get("TURNSTILE_LOCAL_HOSTNAMES")),
+  ]);
+
+const isUniversalTurnstileTestSecret = (secret: string) =>
+  /^[123]x0{31}AA$/.test(secret);
 
 const resolvePublicApiKey = (serviceRoleKey: string) => {
   const publicApiKey = [
@@ -87,29 +107,37 @@ const consumeRateLimit = async (
   return row?.allowed === true;
 };
 
-const checkRateLimits = async (
+const checkIpRateLimit = async (
   admin: any,
   action: "login" | "recover",
   request: Request,
+) => {
+  const ipHash = await sha256(
+    `portal-auth:${action}:ip:${getClientIp(request)}`,
+  );
+  return consumeRateLimit(
+    admin,
+    `${action}:ip:${ipHash}`,
+    60,
+    RATE_LIMIT_WINDOW_SECONDS,
+  );
+};
+
+const checkIdentifierRateLimit = async (
+  admin: any,
+  action: "login" | "recover",
   identifier: string,
 ) => {
-  const [ipHash, identifierHash] = await Promise.all([
-    sha256(`portal-auth:${action}:ip:${getClientIp(request)}`),
-    sha256(`portal-auth:${action}:identifier:${identifier}`),
-  ]);
+  const identifierHash = await sha256(
+    `portal-auth:${action}:identifier:${identifier}`,
+  );
   const identifierLimit = action === "login" ? 10 : 5;
-
-  const [ipAllowed, identifierAllowed] = await Promise.all([
-    consumeRateLimit(admin, `${action}:ip:${ipHash}`, 60, 15 * 60),
-    consumeRateLimit(
-      admin,
-      `${action}:identifier:${identifierHash}`,
-      identifierLimit,
-      15 * 60,
-    ),
-  ]);
-
-  return ipAllowed && identifierAllowed;
+  return consumeRateLimit(
+    admin,
+    `${action}:identifier:${identifierHash}`,
+    identifierLimit,
+    RATE_LIMIT_WINDOW_SECONDS,
+  );
 };
 
 const resolveLoginIdentity = async (admin: any, identifier: string) => {
@@ -129,10 +157,10 @@ const readAuthResponse = async (response: Response) => {
     : null;
 };
 
-const getRequestHostname = (request: Request) => {
+const getRequestOrigin = (request: Request) => {
   try {
     const origin = request.headers.get("origin");
-    return origin ? new URL(origin).hostname.toLowerCase() : null;
+    return origin ? new URL(origin) : null;
   } catch {
     return null;
   }
@@ -143,14 +171,32 @@ const verifyTurnstile = async (
   token: string,
   expectedAction: "login" | "recover",
 ) => {
-  const expectedHostname = getRequestHostname(request);
-  if (!expectedHostname) return false;
+  const requestOrigin = getRequestOrigin(request);
+  const expectedHostname = requestOrigin?.hostname.toLowerCase() || "";
+  if (!requestOrigin || !expectedHostname) return false;
 
-  const secretName = LOCAL_TURNSTILE_HOSTNAMES.has(expectedHostname)
+  const isLocalHostname = getLocalTurnstileHostnames().has(expectedHostname);
+  const isProductionHostname =
+    getProductionTurnstileHostnames().has(expectedHostname);
+  const isAllowedProtocol = isLocalHostname
+    ? requestOrigin.protocol === "http:" || requestOrigin.protocol === "https:"
+    : requestOrigin.protocol === "https:";
+  if ((!isLocalHostname && !isProductionHostname) || !isAllowedProtocol) {
+    return false;
+  }
+
+  const secretName = isLocalHostname
     ? "TURNSTILE_LOCAL_SECRET_KEY"
     : "TURNSTILE_SECRET_KEY";
   const secret = String(Deno.env.get(secretName) || "").trim();
-  if (!secret) return false;
+  if (!secret || isUniversalTurnstileTestSecret(secret)) {
+    if (secret) {
+      console.error(
+        "portal-auth: chave universal de teste Turnstile recusada no endpoint público",
+      );
+    }
+    return false;
+  }
 
   const form = new FormData();
   form.set("secret", secret);
@@ -191,6 +237,7 @@ Deno.serve(async (request: Request) => {
   const corsHeaders = buildCorsHeaders(request);
   const json = (payload: unknown, status = 200) =>
     sendJson(payload, status, request);
+  const requestStartedAt = globalThis.performance.now();
 
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -211,7 +258,10 @@ Deno.serve(async (request: Request) => {
 
   if (!supabaseUrl || !serviceRoleKey || !publicApiKey) {
     console.error("portal-auth: configuração obrigatória ausente ou insegura");
-    return json({ error: "Serviço temporariamente indisponível." }, 503);
+    return json({
+      error: "Serviço temporariamente indisponível.",
+      code: "service_unavailable",
+    }, 503);
   }
 
   let payload: PortalAuthPayload;
@@ -234,6 +284,7 @@ Deno.serve(async (request: Request) => {
       error: action === "recover"
         ? GENERIC_RECOVERY_MESSAGE
         : GENERIC_LOGIN_ERROR,
+      code: "invalid_request",
     }, 400);
   }
 
@@ -241,45 +292,117 @@ Deno.serve(async (request: Request) => {
     action === "login" &&
     (!payload.password || payload.password.length > 256)
   ) {
-    return json({ error: GENERIC_LOGIN_ERROR }, 401);
+    return json({
+      error: GENERIC_LOGIN_ERROR,
+      code: "invalid_credentials",
+    }, 401);
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const timings = {
+    ipRateLimitMs: 0,
+    turnstileMs: 0,
+    identifierRateLimitMs: 0,
+    identityMs: 0,
+    authMs: 0,
+  };
+  const elapsedSince = (startedAt: number) =>
+    Math.round((globalThis.performance.now() - startedAt) * 100) / 100;
+  const logTiming = (outcome: string) => {
+    console.info(
+      "portal-auth: timing",
+      JSON.stringify({
+        action,
+        outcome,
+        ...timings,
+        totalMs: elapsedSince(requestStartedAt),
+      }),
+    );
+  };
 
+  const ipRateLimitStartedAt = globalThis.performance.now();
   try {
-    const allowed = await checkRateLimits(admin, action, request, identifier);
-    if (!allowed) return json({ error: RATE_LIMIT_ERROR }, 429);
+    const allowed = await checkIpRateLimit(admin, action, request);
+    timings.ipRateLimitMs = elapsedSince(ipRateLimitStartedAt);
+    if (!allowed) {
+      logTiming("ip_rate_limited");
+      return json({
+        error: RATE_LIMIT_ERROR,
+        code: "rate_limited",
+      }, 429);
+    }
   } catch (error) {
+    timings.ipRateLimitMs = elapsedSince(ipRateLimitStartedAt);
     console.error(
       "portal-auth: falha fechada no limitador",
       error instanceof Error ? error.message : "erro desconhecido",
     );
-    return json({ error: "Serviço temporariamente indisponível." }, 503);
+    logTiming("ip_rate_limit_error");
+    return json({
+      error: "Serviço temporariamente indisponível.",
+      code: "service_unavailable",
+    }, 503);
   }
 
-  const requiresTurnstile = isTurnstileRequired();
+  const turnstileStartedAt = globalThis.performance.now();
   const turnstileValid = turnstileToken
     ? await verifyTurnstile(request, turnstileToken, action)
-    : !requiresTurnstile;
+    : false;
+  timings.turnstileMs = elapsedSince(turnstileStartedAt);
   if (!turnstileValid) {
+    logTiming("turnstile_rejected");
     return json({
       error: action === "recover"
         ? GENERIC_RECOVERY_MESSAGE
         : GENERIC_LOGIN_ERROR,
+      code: "challenge_failed",
     }, 403);
   }
 
-  let resolvedEmail: string | null;
+  const identifierRateLimitStartedAt = globalThis.performance.now();
   try {
-    resolvedEmail = await resolveLoginIdentity(admin, identifier);
+    const allowed = await checkIdentifierRateLimit(admin, action, identifier);
+    timings.identifierRateLimitMs = elapsedSince(identifierRateLimitStartedAt);
+    if (!allowed) {
+      logTiming("identifier_rate_limited");
+      return json({
+        error: RATE_LIMIT_ERROR,
+        code: "rate_limited",
+      }, 429);
+    }
   } catch (error) {
+    timings.identifierRateLimitMs = elapsedSince(identifierRateLimitStartedAt);
+    console.error(
+      "portal-auth: falha fechada no limitador por identificador",
+      error instanceof Error ? error.message : "erro desconhecido",
+    );
+    logTiming("identifier_rate_limit_error");
+    return json({
+      error: "Serviço temporariamente indisponível.",
+      code: "service_unavailable",
+    }, 503);
+  }
+
+  let resolvedEmail: string | null;
+  const identityStartedAt = globalThis.performance.now();
+  try {
+    resolvedEmail = identifier.includes("@")
+      ? identifier
+      : await resolveLoginIdentity(admin, identifier);
+    timings.identityMs = elapsedSince(identityStartedAt);
+  } catch (error) {
+    timings.identityMs = elapsedSince(identityStartedAt);
     console.error(
       "portal-auth: falha ao resolver identidade",
       error instanceof Error ? error.message : "erro desconhecido",
     );
-    return json({ error: "Serviço temporariamente indisponível." }, 503);
+    logTiming("identity_error");
+    return json({
+      error: "Serviço temporariamente indisponível.",
+      code: "service_unavailable",
+    }, 503);
   }
 
   // Mantém o caminho e o custo da chamada ao Auth semelhantes mesmo quando a
@@ -293,9 +416,11 @@ Deno.serve(async (request: Request) => {
       payload.redirectTo || "/recuperar-senha",
     );
     if (!redirect.redirectTo) {
+      logTiming("recovery_redirect_rejected");
       return json({ message: GENERIC_RECOVERY_MESSAGE });
     }
 
+    const authStartedAt = globalThis.performance.now();
     try {
       const recoveryUrl = new URL(`${supabaseUrl}/auth/v1/recover`);
       recoveryUrl.searchParams.set("redirect_to", redirect.redirectTo);
@@ -313,11 +438,15 @@ Deno.serve(async (request: Request) => {
         "portal-auth: falha interna na recuperação",
         error instanceof Error ? error.message : "erro desconhecido",
       );
+    } finally {
+      timings.authMs = elapsedSince(authStartedAt);
     }
 
+    logTiming("recovery_accepted");
     return json({ message: GENERIC_RECOVERY_MESSAGE });
   }
 
+  const authStartedAt = globalThis.performance.now();
   try {
     const authResponse = await fetch(
       `${supabaseUrl}/auth/v1/token?grant_type=password`,
@@ -335,24 +464,35 @@ Deno.serve(async (request: Request) => {
       },
     );
     const authData = await readAuthResponse(authResponse);
+    timings.authMs = elapsedSince(authStartedAt);
 
     if (
       !authResponse.ok ||
       typeof authData?.access_token !== "string" ||
       typeof authData?.refresh_token !== "string"
     ) {
-      return json({ error: GENERIC_LOGIN_ERROR }, 401);
+      logTiming("invalid_credentials");
+      return json({
+        error: GENERIC_LOGIN_ERROR,
+        code: "invalid_credentials",
+      }, 401);
     }
 
+    logTiming("success");
     return json({
       accessToken: authData.access_token,
       refreshToken: authData.refresh_token,
     });
   } catch (error) {
+    timings.authMs = elapsedSince(authStartedAt);
     console.error(
       "portal-auth: falha interna no login",
       error instanceof Error ? error.message : "erro desconhecido",
     );
-    return json({ error: GENERIC_LOGIN_ERROR }, 401);
+    logTiming("auth_error");
+    return json({
+      error: "Serviço temporariamente indisponível.",
+      code: "service_unavailable",
+    }, 503);
   }
 });
