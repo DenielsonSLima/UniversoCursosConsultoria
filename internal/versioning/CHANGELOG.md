@@ -2,6 +2,31 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.13] - 2026-07-30
+
+### Alterado
+
+- O login informa claramente quando a verificação de segurança está carregando, exige interação, tenta reconectar ou precisa de nova tentativa.
+- O usuário autenticado é reutilizado durante a resolução dos perfis institucionais, reduzindo chamadas redundantes antes da abertura do portal.
+- A conexão com o serviço do Turnstile é preparada antecipadamente e o relógio da tela de acesso deixa de renderizar novamente todo o formulário a cada segundo.
+
+### Corrigido
+
+- Cliques realizados antes da conclusão do Turnstile deixam de produzir uma falsa mensagem de falha de acesso.
+- Tokens de desafio são consumidos uma única vez e submissões concorrentes são bloqueadas no login institucional, no login do Aluno e na recuperação de senha.
+- Falhas de rede passam a ser apresentadas como indisponibilidade temporária, sem serem confundidas com credenciais incorretas.
+
+### Segurança
+
+- O Turnstile permanece obrigatório no backend, com validação de ação, hostname, protocolo e segredo real por ambiente.
+- Chaves universais de teste da Cloudflare são recusadas no endpoint público e endereços privados permanecem somente na configuração local ignorada pelo Git.
+- O limite por identificador é consumido apenas depois de um desafio válido, evitando bloqueios provocados por tokens inválidos.
+
+### Qualidade
+
+- O backend registra tempos separados de rate limit, Turnstile, identidade e autenticação sem expor identificadores, senhas ou tokens.
+- O fluxo recebe contratos automatizados para estados do widget, segurança do endpoint, reutilização de sessão, mensagens seguras e ausência de IPs privados na configuração pública.
+
 ## [2.2.3-beta.12] - 2026-07-29
 
 ### Adicionado

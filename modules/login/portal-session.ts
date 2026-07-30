@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { onlyDigits } from '../shared/utils/identityValidation';
 import { GestorPermissions, normalizeGestorPermissions } from '../gestor/access-control';
 import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
@@ -36,6 +37,7 @@ export interface PortalAuthProfile {
 export interface PortalProfileOptions {
   preferredRole?: PortalRole;
   allowedRoles?: PortalRole[];
+  authenticatedUser?: User | null;
 }
 
 export interface GestorAccessScope {
@@ -282,7 +284,8 @@ const buildGestorProfile = (gestorRows: any): PortalAuthProfile | null => {
 };
 
 export const getPortalProfile = async (options: PortalProfileOptions = {}): Promise<PortalAuthProfile | null> => {
-  const authenticatedUser = await getAuthenticatedUser();
+  const authenticatedUser =
+    options.authenticatedUser || await getAuthenticatedUser();
   const email = authenticatedUser?.email?.trim().toLowerCase();
   if (!email) return null;
 
@@ -332,10 +335,23 @@ export const getPortalProfile = async (options: PortalProfileOptions = {}): Prom
   return buildGestorProfile(gestorRows);
 };
 
-export const getInstitutionalProfiles = async (): Promise<PortalAuthProfile[]> => {
+export const getInstitutionalProfiles = async (
+  authenticatedUser?: User | null,
+): Promise<PortalAuthProfile[]> => {
+  const resolvedUser = authenticatedUser || await getAuthenticatedUser();
+  if (!resolvedUser) return [];
+
   const [gestor, professor] = await Promise.all([
-    getPortalProfile({ preferredRole: 'Gestor', allowedRoles: ['Gestor'] }),
-    getPortalProfile({ preferredRole: 'Professor', allowedRoles: ['Professor'] }),
+    getPortalProfile({
+      preferredRole: 'Gestor',
+      allowedRoles: ['Gestor'],
+      authenticatedUser: resolvedUser,
+    }),
+    getPortalProfile({
+      preferredRole: 'Professor',
+      allowedRoles: ['Professor'],
+      authenticatedUser: resolvedUser,
+    }),
   ]);
 
   return [gestor, professor].filter(Boolean) as PortalAuthProfile[];

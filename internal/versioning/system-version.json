@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.12",
+  "version": "2.2.3-beta.13",
   "display": "BETA",
   "stage": "beta",
-  "revision": 12,
-  "releasedAt": "2026-07-29",
-  "summary": "Perfis, Diários e documentos acadêmicos consolidados com identidade canônica e controles por função"
+  "revision": 13,
+  "releasedAt": "2026-07-30",
+  "summary": "Login e Turnstile mais rápidos, previsíveis e seguros em produção e homologação"
 }

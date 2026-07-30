@@ -19,6 +19,39 @@ import {
   INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES,
   getRandomMotivationalPhrase,
 } from './motivationalPhrases';
+import type { User } from '@supabase/supabase-js';
+
+const InstitutionalLoginClock: React.FC = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const formattedDate = currentTime.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+  });
+  const formattedTime = currentTime.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  return (
+    <>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-100/90">
+        {formattedDate}
+      </p>
+      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black tabular-nums tracking-widest text-white">
+        <Clock size={13} className="text-blue-200" />
+        {formattedTime}
+      </span>
+    </>
+  );
+};
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +64,6 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [loginStep, setLoginStep] = useState<'credentials' | 'role_select' | 'polo_select'>('credentials');
   const [institutionalProfiles, setInstitutionalProfiles] = useState<PortalAuthProfile[]>([]);
@@ -87,8 +119,10 @@ const LoginPage: React.FC = () => {
     return true;
   };
 
-  const resolveInstitutionalAccess = async () => {
-    const profiles = await getInstitutionalProfiles();
+  const resolveInstitutionalAccess = async (
+    authenticatedUser?: User | null,
+  ) => {
+    const profiles = await getInstitutionalProfiles(authenticatedUser);
     if (profiles.length === 0) return null;
     if (profiles.length === 1) return profiles[0];
     setInstitutionalProfiles(profiles);
@@ -109,11 +143,6 @@ const LoginPage: React.FC = () => {
     }
     return null;
   };
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -154,7 +183,7 @@ const LoginPage: React.FC = () => {
           return;
         }
 
-        const profile = await resolveInstitutionalAccess();
+        const profile = await resolveInstitutionalAccess(session.user);
         if (!mounted) return;
 
         if (profile === undefined) return;
@@ -190,20 +219,18 @@ const LoginPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      const { error } = await loginService.login(credentials);
+      const { error, user } = await loginService.login(credentials);
       if (error) {
         setErrorMessage(error);
-        alert(error);
         return;
       }
 
-      const profile = await resolveInstitutionalAccess();
+      const profile = await resolveInstitutionalAccess(user);
       if (profile === undefined) return;
       if (!profile) {
         await loginService.logout();
         const message = 'Usuário autenticado, mas sem perfil válido para acesso. Verifique o cadastro do e-mail em parceiros/usuários do sistema.';
         setErrorMessage(message);
-        alert(message);
         return;
       }
 
@@ -212,7 +239,6 @@ const LoginPage: React.FC = () => {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Não foi possível autenticar.';
       setErrorMessage(message);
-      alert(message);
     } finally {
       setIsLoading(false);
     }
@@ -227,7 +253,6 @@ const LoginPage: React.FC = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Não foi possível iniciar o login com Google.';
       setErrorMessage(message);
-      alert(message);
       setIsLoading(false);
     }
   };
@@ -246,16 +271,6 @@ const LoginPage: React.FC = () => {
     await handleAuthenticatedProfile(profile);
   };
 
-  const formattedDate = currentTime.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-  });
-  const formattedTime = currentTime.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
   const dailyPhrase = useMemo(
     () => getRandomMotivationalPhrase(INSTITUTIONAL_LOGIN_MOTIVATIONAL_PHRASES),
     []
@@ -301,14 +316,10 @@ const LoginPage: React.FC = () => {
               <p className="mt-5 max-w-xl text-base font-semibold leading-relaxed text-slate-200/90">
                 Entre para administrar turmas, acompanhar alunos, lançar atividades e manter a operação acadêmica no ritmo da Universo.
               </p>
-              <div className="mt-7 max-w-xl rounded-3xl border border-blue-100/15 bg-white/10 p-4 shadow-2xl shadow-blue-950/20 backdrop-blur-xl">
-                <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-100/90">{formattedDate}</p>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black tabular-nums tracking-widest text-white">
-                    <Clock size={13} className="text-blue-200" />
-                    {formattedTime}
-                  </span>
-                </div>
+                <div className="mt-7 max-w-xl rounded-3xl border border-blue-100/15 bg-white/10 p-4 shadow-2xl shadow-blue-950/20 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <InstitutionalLoginClock />
+                  </div>
                 <div className="mt-3 flex gap-3 text-sm font-semibold leading-relaxed text-blue-50/90">
                   <Quote size={18} className="mt-0.5 shrink-0 text-blue-200" />
                   <p>{dailyPhrase}</p>

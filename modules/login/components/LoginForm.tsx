@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { UserRound, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { LoginCredentials } from '../login.types';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
-import TurnstileWidget from '../../shared/auth/TurnstileWidget';
+import TurnstileWidget, {
+  type TurnstileStatus,
+} from '../../shared/auth/TurnstileWidget';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginCredentials) => void;
@@ -24,11 +26,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
   const [rememberMe, setRememberMe] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
-  const [turnstileErrorMessage, setTurnstileErrorMessage] = useState<string | null>(null);
+  const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const wasLoadingRef = useRef(false);
+  const submitInFlightRef = useRef(false);
 
   useEffect(() => {
     if (wasLoadingRef.current && !isLoading) {
+      submitInFlightRef.current = false;
       setTurnstileResetSignal((value) => value + 1);
     }
     wasLoadingRef.current = isLoading;
@@ -36,13 +40,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!turnstileToken) {
-      setTurnstileErrorMessage(
-        'Não foi possível validar o acesso. Atualize a página e tente novamente.',
-      );
-      return;
-    }
-    onSubmit({ email: identifier, password, turnstileToken });
+    if (
+      submitInFlightRef.current
+      || !turnstileToken
+      || turnstileStatus !== 'verified'
+    ) return;
+
+    submitInFlightRef.current = true;
+    const verifiedToken = turnstileToken;
+    setTurnstileToken('');
+    onSubmit({ email: identifier, password, turnstileToken: verifiedToken });
   };
 
   return (
@@ -101,22 +108,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <TurnstileWidget
-          action="login"
-          resetSignal={turnstileResetSignal}
-          onTokenChange={(token) => {
-            setTurnstileToken(token);
-            if (token) setTurnstileErrorMessage(null);
-          }}
-          onError={() => setTurnstileToken('')}
-        />
-        {turnstileErrorMessage ? (
-          <p role="alert" className="text-xs font-bold text-red-600">
-            {turnstileErrorMessage}
-          </p>
-        ) : null}
-      </div>
+      <TurnstileWidget
+        action="login"
+        resetSignal={turnstileResetSignal}
+        onTokenChange={setTurnstileToken}
+        onStatusChange={setTurnstileStatus}
+        onError={() => setTurnstileToken('')}
+      />
 
       {/* Checkbox Lembrar-me */}
       <div className="flex items-center ml-1">
@@ -144,10 +142,20 @@ const LoginForm: React.FC<LoginFormProps> = ({
       {/* Botão de Ação */}
       <button 
         type="submit"
-        disabled={isLoading}
+        disabled={
+          isLoading
+          || !turnstileToken
+          || turnstileStatus !== 'verified'
+        }
         className="w-full bg-[#001a33] hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-900/20 text-white font-black py-4 rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 group transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <span>{isLoading ? 'Autenticando...' : 'Acessar Plataforma'}</span>
+        <span>
+          {isLoading
+            ? 'Autenticando...'
+            : turnstileStatus === 'verified'
+              ? 'Acessar Plataforma'
+              : 'Aguardando verificação'}
+        </span>
         {!isLoading && (
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         )}

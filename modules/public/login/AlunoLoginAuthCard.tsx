@@ -15,7 +15,9 @@ import {
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { formatCpf, formatPhone, type AuthMessage, type AuthMode, type PasswordChecks } from './aluno-login.utils';
 import { getPublicAlunoBirthDateMax } from './aluno-birth-date';
-import TurnstileWidget from '../../shared/auth/TurnstileWidget';
+import TurnstileWidget, {
+  type TurnstileStatus,
+} from '../../shared/auth/TurnstileWidget';
 
 type Props = {
   mode: AuthMode;
@@ -131,12 +133,14 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   const [birthDateInputActive, setBirthDateInputActive] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
-  const [turnstileErrorMessage, setTurnstileErrorMessage] = useState<string | null>(null);
+  const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const wasLoadingRef = useRef(false);
+  const submitInFlightRef = useRef(false);
   const maximumBirthDate = getPublicAlunoBirthDateMax();
 
   useEffect(() => {
     if (wasLoadingRef.current && !loading) {
+      submitInFlightRef.current = false;
       setTurnstileResetSignal((value) => value + 1);
     }
     wasLoadingRef.current = loading;
@@ -144,7 +148,8 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
 
   useEffect(() => {
     setTurnstileToken('');
-    setTurnstileErrorMessage(null);
+    setTurnstileStatus('loading');
+    submitInFlightRef.current = false;
   }, [mode]);
 
   return (
@@ -199,14 +204,18 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
     {mode === 'login' ? (
       <form
         onSubmit={(event) => {
-          if (!turnstileToken) {
+          if (
+            submitInFlightRef.current
+            || !turnstileToken
+            || turnstileStatus !== 'verified'
+          ) {
             event.preventDefault();
-            setTurnstileErrorMessage(
-              'Não foi possível validar o acesso. Atualize a página e tente novamente.',
-            );
             return;
           }
-          onLogin(event, turnstileToken);
+          submitInFlightRef.current = true;
+          const verifiedToken = turnstileToken;
+          setTurnstileToken('');
+          onLogin(event, verifiedToken);
         }}
         className="space-y-4"
       >
@@ -252,26 +261,29 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </div>
         </label>
 
-        <div className="space-y-2">
-          <TurnstileWidget
-            action="login"
-            resetSignal={turnstileResetSignal}
-            onTokenChange={(token) => {
-              setTurnstileToken(token);
-              if (token) setTurnstileErrorMessage(null);
-            }}
-            onError={() => setTurnstileToken('')}
-          />
-          {turnstileErrorMessage ? (
-            <p role="alert" className="text-xs font-bold text-red-600">
-              {turnstileErrorMessage}
-            </p>
-          ) : null}
-        </div>
+        <TurnstileWidget
+          action="login"
+          resetSignal={turnstileResetSignal}
+          onTokenChange={setTurnstileToken}
+          onStatusChange={setTurnstileStatus}
+          onError={() => setTurnstileToken('')}
+        />
 
-        <button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={
+            loading
+            || !turnstileToken
+            || turnstileStatus !== 'verified'
+          }
+          className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
           {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
-          Entrar e continuar
+          {loading
+            ? 'Autenticando…'
+            : turnstileStatus === 'verified'
+              ? 'Entrar e continuar'
+              : 'Aguardando verificação'}
         </button>
 
         <div className="flex items-center gap-3 py-1">
