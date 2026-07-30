@@ -513,8 +513,8 @@ const DiarioClasse: React.FC<DiarioClasseProps> = ({
               setLocalTitulos={setLocalTitulos}
               localPraticas={localPraticas}
               setLocalPraticas={setLocalPraticas}
-              canEditAulaTitle={effectiveAccessMode === 'PROFESSOR' && !isReadOnly}
-              canEditPratica={effectiveAccessMode === 'PROFESSOR' && !isReadOnly}
+              canEditAulaTitle={!isReadOnly}
+              canEditPratica={!isReadOnly}
               savingAulaId={saveAulaTitleMutation.isPending
                 ? saveAulaTitleMutation.variables?.aulaId
                 : undefined}
