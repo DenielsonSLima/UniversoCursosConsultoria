@@ -213,7 +213,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
             <div>
               <span className="text-xs font-bold text-slate-700">Planejamento das aulas</span>
               <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                Etapa 1: a Gestão informa data e carga horária. Etapa 2: o professor completa o conteúdo no diário.
+                A Gestão informa data e carga horária e pode adiantar o conteúdo. Se deixar em branco, o professor completa no diário.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                         </div>
                         <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-[10px] font-semibold text-blue-700">
                           <CalendarClock size={13} className="shrink-0" />
-                          A Gestão altera somente data e carga horária. O conteúdo pertence ao professor.
+                          Data e carga horária são ajustadas aqui. Gestão e professor podem editar o conteúdo no diário.
                         </div>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[150px_90px_auto] sm:justify-end">
                           <input
@@ -447,10 +447,19 @@ const TurmaGradeDisciplina: React.FC<TurmaGradeDisciplinaProps> = ({
                 aria-label="Tema da atividade extra-classe"
               />
             ) : (
-              <div className="flex min-w-[190px] flex-1 items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-[10px] font-semibold text-blue-700">
-                <CalendarClock size={14} className="shrink-0" />
-                Gestor agenda; professor preenche o conteúdo no diário.
-              </div>
+              <input
+                type="text"
+                placeholder="Conteúdo da aula (opcional)"
+                className={`flex-1 text-xs bg-white border border-slate-200 rounded-xl outline-none ${theme.focusBorder} px-3 py-2.5 transition-colors font-medium text-slate-700 placeholder-slate-400 min-w-[190px]`}
+                value={titulo}
+                onChange={(event) => onTituloChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') document.getElementById(`turma-data-input-${disciplina.id}`)?.focus();
+                }}
+                maxLength={1000}
+                title="Opcional: deixe em branco para o professor preencher no diário"
+                aria-label="Conteúdo programático opcional da aula"
+              />
             )}
             <input
               id={`turma-data-input-${disciplina.id}`}
