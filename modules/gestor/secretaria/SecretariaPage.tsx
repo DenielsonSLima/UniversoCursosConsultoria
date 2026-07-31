@@ -15,6 +15,7 @@ const moduleLoaders = {
   boletim: () => import('./boletins/SecretariaBoletinsPage'),
   carteirinha: () => import('./carteirinhas/SecretariaCarteirinhasPage'),
   solicitacoes: () => import('./solicitacoes/SecretariaSolicitacoesPage'),
+  'dependencias-academicas': () => import('./dependencias-academicas/DependenciasAcademicasPage'),
   'declaracao-matricula': () => import('./declaracao-matricula/SecretariaDeclaracaoMatriculaPage'),
   'declaracao-frequencia': () => import('./declaracao-frequencia/SecretariaDeclaracaoFrequenciaPage'),
   'declaracao-irpf': () => import('./declaracao-irpf/SecretariaDeclaracaoIrpfPage'),
@@ -34,6 +35,7 @@ const SecretariaAlunosPage = lazy(moduleLoaders.alunos);
 const SecretariaBoletinsPage = lazy(moduleLoaders.boletim);
 const SecretariaCarteirinhasPage = lazy(moduleLoaders.carteirinha);
 const SecretariaSolicitacoesPage = lazy(moduleLoaders.solicitacoes);
+const DependenciasAcademicasPage = lazy(moduleLoaders['dependencias-academicas']);
 const SecretariaDeclaracaoMatriculaPage = lazy(moduleLoaders['declaracao-matricula']);
 const SecretariaDeclaracaoFrequenciaPage = lazy(moduleLoaders['declaracao-frequencia']);
 const SecretariaDeclaracaoIrpfPage = lazy(moduleLoaders['declaracao-irpf']);
@@ -100,6 +102,10 @@ const secretariaModuleHeaders: Record<string, { title: string; description: stri
   solicitacoes: {
     title: 'Solicitações Acadêmicas',
     description: 'Análise e homologação de requerimentos.',
+  },
+  'dependencias-academicas': {
+    title: 'Dependências Acadêmicas',
+    description: 'Reoferta por disciplina, cobrança Banese e acompanhamento do diário de destino.',
   },
   certificados: {
     title: 'Certificados',
@@ -220,6 +226,8 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ poloId, gestorPermissio
         return <SecretariaCarteirinhasPage poloId={poloId} />;
       case 'solicitacoes':
         return <SecretariaSolicitacoesPage />;
+      case 'dependencias-academicas':
+        return <DependenciasAcademicasPage poloId={poloId} />;
       case 'historico-emissoes':
         return <SecretariaHistoricoEmissoesPage />;
       case 'certificados':
