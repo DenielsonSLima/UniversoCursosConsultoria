@@ -26,6 +26,8 @@ export const hasRemoteTitleReference = (receivable: any) =>
   Boolean(
     receivable?.gateway_payment_id ||
       receivable?.gateway_payment_link_id ||
+      receivable?.gateway_boleto_linha_digitavel ||
+      receivable?.gateway_boleto_codigo_barras ||
       receivable?.gateway_boleto_nosso_numero ||
       receivable?.asaas_payment_id ||
       receivable?.asaas_payment_link_id,
@@ -225,6 +227,8 @@ const REMOTE_IDENTITY_FIELDS = [
   "gateway_payment_method",
   "gateway_payment_id",
   "gateway_payment_link_id",
+  "gateway_boleto_linha_digitavel",
+  "gateway_boleto_codigo_barras",
   "gateway_boleto_nosso_numero",
   "asaas_payment_id",
   "asaas_payment_link_id",
