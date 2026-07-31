@@ -19,6 +19,7 @@ import {
   Vote,
   FolderKanban,
   FileSignature,
+  BookOpenCheck,
 } from 'lucide-react';
 
 interface SecretariaDashboardProps {
@@ -44,6 +45,7 @@ const cards = [
   { id: 'consulta-financeira', title: 'Financeiro', desc: 'Recebimentos por aluno e curso: individual, lote ou personalizado.', icon: CircleDollarSign, color: 'cyan' },
   { id: 'transferencia', title: 'Transferência', desc: 'Transferência externa e emissão de guia.', icon: ArrowRightLeft, color: 'orange' },
   { id: 'solicitacoes', title: 'Solicitações Acadêmicas', desc: 'Análise e homologação de requerimentos.', icon: ClipboardList, color: 'red' },
+  { id: 'dependencias-academicas', title: 'Dependências Acadêmicas', desc: 'Reoferta por disciplina, cobrança Banese e diário de destino.', icon: BookOpenCheck, color: 'cyan' },
   { id: 'certificados', title: 'Certificados', desc: 'Fila de concluintes, registros, SISTEC e emissão por modalidade.', icon: Award, color: 'emerald' },
   { id: 'historico-emissoes', title: 'Histórico de Emissões', desc: 'Controle, filtros e 2ª via de todos os documentos emitidos.', icon: History, color: 'blue' },
 ] as const;
