@@ -70,8 +70,12 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-indigo-700',
     softAccent: 'bg-indigo-50',
     technicalOnly: true,
-    activeEnrollmentOnly: true,
-    activeTurmaOnly: true,
+    enrollmentStatuses: [
+      'ATIVO',
+      'EM_DEPENDENCIA',
+      'CONCLUIDO',
+      'REPROVADO',
+    ],
     academicPreview: 'boletim_tecnico',
   },
   atestadoConclusao: {
@@ -111,7 +115,12 @@ export const secretariaDocumentoDefinitions: Record<string, SecretariaDocumentoD
     accent: 'text-slate-700',
     softAccent: 'bg-slate-100',
     technicalOnly: true,
-    enrollmentStatuses: ['ATIVO', 'CONCLUIDO'],
+    enrollmentStatuses: [
+      'ATIVO',
+      'EM_DEPENDENCIA',
+      'CONCLUIDO',
+      'REPROVADO',
+    ],
   },
   crachaEstagio: {
     id: 'cracha_estagio',
