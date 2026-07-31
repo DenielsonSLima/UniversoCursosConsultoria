@@ -14,6 +14,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { polosService, Polo } from './polos.service';
 import { supabase } from '../../../../lib/supabase';
+import { usuariosKeys } from '../usuarios/usuarios.keys';
 
 // Novos componentes de modal customizados
 import ModalExcluirPolo from './components/ModalExcluirPolo';
@@ -92,6 +93,7 @@ const PolosConfig: React.FC = () => {
         () => {
           console.log('Alteração detectada em polos, recarregando...');
           queryClient.invalidateQueries({ queryKey: ['polos'] });
+          queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
         }
       )
       .subscribe();
@@ -113,6 +115,7 @@ const PolosConfig: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polos'] });
       queryClient.invalidateQueries({ queryKey: ['active_polos'] });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
       setIsEditing(null);
       setEditingPolo({});
     },
@@ -124,6 +127,7 @@ const PolosConfig: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['polos'] });
       queryClient.invalidateQueries({ queryKey: ['active_polos'] });
+      queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
       if (isEditing) {
         setIsEditing(null);
         setEditingPolo({});
