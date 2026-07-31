@@ -13,6 +13,7 @@ interface GradesTabProps {
 
 const RESULT_LABELS: Record<string, string> = {
   APROVADO: 'Aprovado',
+  APROVADO_DEPENDENCIA: 'Aprovado em dependência',
   APROVEITADO: 'Aproveitado',
   EM_RECUPERACAO: 'Em recuperação',
   REPROVADO: 'Reprovado',
