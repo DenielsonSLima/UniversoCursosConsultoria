@@ -1,16 +1,37 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
 import { polosService } from '../../polos/polos.service';
 import { usuariosKeys } from '../usuarios.keys';
 import { usuariosService } from '../usuarios.service';
 import { UsuarioSistema } from '../usuarios.types';
 
-export const useUsuariosPolosQuery = () =>
-  useQuery({
+export const useUsuariosPolosQuery = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('usuarios_config_polos_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'polos' },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return useQuery({
     queryKey: usuariosKeys.polos(),
     queryFn: polosService.getAll,
     staleTime: 60_000,
   });
+};
 
 export const useUsuariosCountsQuery = () =>
   useQuery<Record<string, number>>({

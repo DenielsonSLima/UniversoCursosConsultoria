@@ -1,21 +1,19 @@
 import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { assertCaixaStatementRequest, normalizeCaixaPoloId } from '../caixa.service';
 import { mapCaixaDetailedReport } from './caixa-report.mapper';
 import type { CaixaDetailedReport } from './caixa-report.types';
-
-const normalizePoloId = (poloId: string | null | undefined) => (
-  poloId && poloId !== 'todos' ? poloId : null
-);
 
 export const caixaReportService = {
   async getDetailedMonthlyReport(
     poloId: string | null | undefined,
     competencia: string,
   ): Promise<CaixaDetailedReport> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
     const { data, error } = await supabase.rpc(
       'get_caixa_relatorio_mensal_detalhado_secure',
       {
-        p_polo_id: normalizePoloId(poloId),
+        p_polo_id: normalizedPoloId,
         p_competencia: competencia,
       },
     );
@@ -28,17 +26,27 @@ export const caixaReportService = {
       throw error;
     }
 
-    return mapCaixaDetailedReport(data);
+    const report = mapCaixaDetailedReport(data);
+    assertCaixaStatementRequest(report.resumo, normalizedPoloId, competencia);
+    return report;
   },
+};
+
+export const caixaReportQueryKeys = {
+  root: ['caixa-report'] as const,
+  monthly: ['caixa-report', 'monthly'] as const,
+  monthlyForPolo: (poloId: string | null | undefined) => [
+    'caixa-report',
+    'monthly',
+    normalizeCaixaPoloId(poloId) || 'todos',
+  ] as const,
 };
 
 export const caixaReportQueryKey = (
   poloId: string | null | undefined,
   competencia: string,
 ) => [
-  'caixa-report',
-  'monthly',
-  normalizePoloId(poloId) || 'todos',
+  ...caixaReportQueryKeys.monthlyForPolo(poloId),
   competencia,
 ] as const;
 

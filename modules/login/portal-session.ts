@@ -6,6 +6,7 @@ import { syncAlunoGoogleAvatar } from './partner-avatar-sync';
 import { isPortalScheduleBlocked, PortalScheduleRestriction } from './portal-schedule';
 import { isActivePortalStatus } from './portal-status';
 import { PORTAL_LAST_ACTIVITY_STORAGE_KEY } from '../shared/hooks/inactivity-policy';
+import { resolveGestorPoloScope } from './gestor-polo-scope';
 
 export type PortalRole = 'Aluno' | 'Professor' | 'Gestor';
 
@@ -171,21 +172,16 @@ export const getGestorAccessScope = (profile?: PortalAuthProfile | null): Gestor
     };
   }
 
-  const context = (profile.context || '').trim();
   const permissions = profile.gestorPermissions || normalizeGestorPermissions(null, {
     fallbackFullAccess: false,
   });
-  const explicitPoloIds = normalizeStringArray(profile.poloIds);
-  const contextPoloIds = context && context !== 'global' ? [context] : [];
-  const allowedPoloIds = explicitPoloIds.length > 0 ? explicitPoloIds : contextPoloIds;
-  const isGlobal = permissions.allPolos && allowedPoloIds.length === 0;
-  const activePoloId = isGlobal ? (profile.activePoloId || null) : allowedPoloIds[0] || null;
 
-  return {
-    isGlobal,
-    allowedPoloIds: isGlobal ? null : allowedPoloIds,
-    activePoloId,
-  };
+  return resolveGestorPoloScope({
+    context: profile.context,
+    explicitPoloIds: profile.poloIds,
+    allPolos: permissions.allPolos,
+    preferredPoloId: profile.activePoloId,
+  });
 };
 
 const buildPartnerProfile = async (selectedPartner: any, fallbackEmail: string): Promise<PortalAuthProfile | null> => {

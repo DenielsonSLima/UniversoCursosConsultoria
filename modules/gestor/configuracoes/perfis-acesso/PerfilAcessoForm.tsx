@@ -243,7 +243,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
               <span>
                 <span className="block text-sm font-bold">Todos os polos</span>
                 <span className="mt-1 block text-xs font-medium text-slate-500">
-                  Use somente para funções com atuação multiunidade.
+                  Inclui automaticamente polos criados depois. Use somente para funções com atuação multiunidade.
                 </span>
               </span>
               <span className={`flex h-6 w-6 items-center justify-center rounded-full border ${
@@ -254,7 +254,11 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
             </button>
 
             {!todosPolos && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <p className="mb-3 text-xs font-medium text-slate-500">
+                  Perfis restritos mantêm somente as unidades marcadas; polos novos não são concedidos automaticamente.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {polos.map((polo) => {
                   const selected = polosAcesso.includes(polo.id);
                   return (
@@ -282,6 +286,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
                     </button>
                   );
                 })}
+                </div>
               </div>
             )}
           </div>

@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.18] - 2026-07-31
+
+### Corrigido
+
+- Os polos do Caixa passam a respeitar a ordem cronológica de cadastro, mantendo novas unidades ao final da lista.
+- A lista de polos do Caixa e os seletores de usuários são atualizados imediatamente após criação ou alteração, sem aguardar a expiração do cache.
+- O escopo de polos do Gestor passou a validar identificadores de forma compatível com UUIDs legados do PostgreSQL e permanece fechado diante de configurações ambíguas.
+
+### Segurança
+
+- Respostas dos RPCs do Caixa e do relatório mensal são validadas pelo polo e pela competência solicitados antes de entrarem no cache.
+- Perfis globais continuam incluindo polos futuros, enquanto perfis restritos preservam somente as unidades explicitamente concedidas.
+- A auditoria confirmou as guardas de autorização dos RPCs financeiros, RLS por polo e ausência de referências de polo órfãs nos usuários ativos.
+
+### Qualidade
+
+- Testes automatizados cobrem ordem de polos, chaves de cache, invalidação Realtime, escopo global/restrito e compatibilidade do polo matriz legado.
+
 ## [2.2.3-beta.17] - 2026-07-31
 
 ### Corrigido
