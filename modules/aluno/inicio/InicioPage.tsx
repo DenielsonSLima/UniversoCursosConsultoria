@@ -61,7 +61,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
         .from('matriculas')
         .select('*', { count: 'exact', head: true })
         .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO']);
+        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']);
       
       if (error) throw error;
       return count || 0;
@@ -76,7 +76,7 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
         .from('matriculas')
         .select('*, turmas(*, cursos(*))')
         .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO']);
+        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']);
       if (error) throw error;
       return data || [];
     }
