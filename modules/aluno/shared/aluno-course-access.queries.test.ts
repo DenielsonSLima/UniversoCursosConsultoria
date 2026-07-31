@@ -1,16 +1,16 @@
-import assert from 'node:assert/strict';
+import assert from "node:assert/strict";
 import {
   alunoCourseAccessKeys,
   alunoCourseAccessQueryKeys,
   invalidateAlunoCourseAccessQueries,
-} from './aluno-course-access.queries.ts';
+} from "./aluno-course-access.queries.ts";
 
 declare const Deno: {
   test(name: string, testFunction: () => void | Promise<void>): void;
 };
 
-Deno.test('centraliza todas as consultas afetadas pela liberação de curso', () => {
-  const alunoId = 'student-1';
+Deno.test("centraliza todas as consultas afetadas pela liberação de curso", () => {
+  const alunoId = "student-1";
   const keys = alunoCourseAccessQueryKeys(alunoId);
 
   assert.equal(keys.length, 9);
@@ -21,7 +21,7 @@ Deno.test('centraliza todas as consultas afetadas pela liberação de curso', ()
   assert.deepEqual(keys[8], alunoCourseAccessKeys.calendarEligibility(alunoId));
 });
 
-Deno.test('invalida somente chaves exatas e ativas do aluno afetado', () => {
+Deno.test("invalida chaves exatas e raízes acadêmicas ativas do aluno", () => {
   const calls: Array<Record<string, unknown>> = [];
   const queryClient = {
     invalidateQueries(options: Record<string, unknown>) {
@@ -30,18 +30,26 @@ Deno.test('invalida somente chaves exatas e ativas do aluno afetado', () => {
     },
   };
 
-  invalidateAlunoCourseAccessQueries(queryClient as any, 'student-1');
+  invalidateAlunoCourseAccessQueries(queryClient as any, "student-1");
 
-  assert.equal(calls.length, 9);
-  assert.equal(calls.every((call) => call.exact === true), true);
+  assert.equal(calls.length, 13);
+  assert.equal(calls.filter((call) => call.exact === true).length, 9);
+  assert.equal(calls.filter((call) => call.exact === false).length, 4);
   assert.equal(
-    calls.every((call) => call.refetchType === 'active'),
+    calls.every((call) => call.refetchType === "active"),
     true,
   );
   assert.equal(
-    calls.every((call) =>
-      JSON.stringify(call.queryKey).includes('student-1')
-    ),
+    calls.every((call) => JSON.stringify(call.queryKey).includes("student-1")),
     true,
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.exact === false).map((call) => call.queryKey),
+    [
+      alunoCourseAccessKeys.eadProgressRoot("student-1"),
+      alunoCourseAccessKeys.technicalAcademicRoot("student-1"),
+      alunoCourseAccessKeys.bulletinModulesRoot("student-1"),
+      alunoCourseAccessKeys.bulletinResultsRoot("student-1"),
+    ],
   );
 });
