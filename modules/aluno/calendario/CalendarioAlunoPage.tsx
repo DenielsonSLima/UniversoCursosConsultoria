@@ -27,7 +27,7 @@ const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) =>
           )
         `)
         .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO'])
+        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA'])
         .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO']);
 
       if (errMat) throw errMat;
