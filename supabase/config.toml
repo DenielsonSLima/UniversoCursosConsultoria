@@ -449,6 +449,9 @@ verify_jwt = false
 [functions.banese-cnab240-api]
 verify_jwt = true
 
+[functions.dependencia-banese-checkout]
+verify_jwt = true
+
 [functions.whatsapp-webhook]
 verify_jwt = false
 
