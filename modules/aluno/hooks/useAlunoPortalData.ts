@@ -21,7 +21,7 @@ export const useAlunoCalendarEligibility = (alunoId: string, enabled: boolean) =
           )
         `)
         .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO'])
+        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA'])
         .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
         .limit(1);
 
