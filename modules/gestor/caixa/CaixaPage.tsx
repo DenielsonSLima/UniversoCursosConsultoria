@@ -17,11 +17,12 @@ import {
 } from 'lucide-react';
 import {
   caixaDashboardQueryOptions,
+  caixaPolosQueryOptions,
   getCurrentCaixaCompetencia,
   shiftCaixaCompetencia,
 } from './caixa.service';
 import { useCaixaRealtime } from './useCaixaRealtime';
-import { financeiroService } from '../financeiro/financeiro.service';
+import type { CaixaPolo } from './caixa-polos';
 import {
   formatCaixaCompetencia,
   formatCaixaCurrency,
@@ -38,14 +39,6 @@ interface CaixaPageProps {
   poloName?: string;
   isGlobal?: boolean;
   isMatriz?: boolean;
-}
-
-interface CaixaPolo {
-  id: string;
-  nome: string;
-  cidade: string | null;
-  estado: string | null;
-  is_matriz: boolean;
 }
 
 const formatPoloName = (polo?: CaixaPolo) => {
@@ -68,11 +61,8 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
   );
 
   const { data: polos = [] } = useQuery({
-    queryKey: ['caixa-polos-list', 'global'],
-    queryFn: financeiroService.getPolos,
+    ...caixaPolosQueryOptions(),
     enabled: canViewConsolidated,
-    staleTime: 30 * 60_000,
-    gcTime: 60 * 60_000,
   });
 
   useEffect(() => {
@@ -88,6 +78,7 @@ const CaixaPage: React.FC<CaixaPageProps> = ({
       cidade: null,
       estado: null,
       is_matriz: false,
+      created_at: null,
     }];
   }, [canViewConsolidated, poloId, poloName, polos]);
 
