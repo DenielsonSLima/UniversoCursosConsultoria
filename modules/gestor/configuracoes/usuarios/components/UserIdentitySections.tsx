@@ -127,7 +127,7 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
       <button type="button" onClick={onToggleAllPolos} disabled={contextId !== 'global'} className={`mb-4 flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${formData.todosPolos ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200'}`}>
         <span>
           <span className="block text-xs font-black uppercase tracking-widest">Todos os polos</span>
-          <span className="mt-1 block text-[11px] font-semibold text-slate-500">{contextId === 'global' ? 'Acesso liberado para todas as unidades ativas.' : 'Disponível somente no grupo global/multiunidade.'}</span>
+          <span className="mt-1 block text-[11px] font-semibold text-slate-500">{contextId === 'global' ? 'Acesso dinâmico a todas as unidades ativas, incluindo polos criados depois.' : 'Disponível somente no grupo global/multiunidade.'}</span>
         </span>
         {formData.todosPolos && <span className="rounded-full bg-blue-500 p-1 text-white"><Check size={12} /></span>}
       </button>
@@ -142,6 +142,11 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
           </div>
         ))}
       </div>
+      {!formData.todosPolos && (
+        <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-500">
+          O acesso restrito inclui somente os polos marcados. Novos polos não serão adicionados automaticamente.
+        </p>
+      )}
     </section>
   </>
 );
