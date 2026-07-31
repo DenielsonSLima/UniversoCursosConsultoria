@@ -43,15 +43,30 @@ export const saldoInicialService = {
   },
 
   /**
-   * Retorna as contas de um polo específico.
+   * Retorna as contas disponíveis para um polo, incluindo contas compartilhadas.
    */
   async getAccountsByCompany(poloId: string): Promise<any[]> {
     const { data, error } = await supabase
-      .from('contas_bancarias')
-      .select('*')
+      .from('contas_bancarias_polos')
+      .select(`
+        polo_id,
+        conta_bancaria:contas_bancarias!contas_bancarias_polos_conta_bancaria_id_fkey(
+          id,
+          polo_id,
+          banco,
+          titular,
+          agencia,
+          conta,
+          tipo,
+          saldo_inicial,
+          data_saldo,
+          ativo,
+          natureza,
+          system_managed
+        )
+      `)
       .eq('polo_id', poloId)
-      .eq('ativo', true)
-      .order('banco', { ascending: true });
+      .eq('conta_bancaria.ativo', true);
 
     if (error) {
       console.error('Erro ao buscar contas do polo para saldo inicial:', error);
@@ -59,7 +74,11 @@ export const saldoInicialService = {
     }
 
     return (data || [])
-      .filter((account) => !account.system_managed || account.natureza === 'CAIXA_INTERNO')
+      .map((item: any) => item.conta_bancaria)
+      .filter(Boolean)
+      .sort((first: any, second: any) =>
+        String(first.banco || '').localeCompare(String(second.banco || ''), 'pt-BR')
+      )
       .map(mapAccountToFrontend);
   },
 
