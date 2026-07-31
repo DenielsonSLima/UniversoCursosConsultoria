@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.15",
+  "version": "2.2.3-beta.16",
   "display": "BETA",
   "stage": "beta",
-  "revision": 15,
-  "releasedAt": "2026-07-30",
-  "summary": "Dependências acadêmicas integradas à Secretaria, ao Diário, ao boletim e ao financeiro Banese"
+  "revision": 16,
+  "releasedAt": "2026-07-31",
+  "summary": "Página de links da bio modernizada com identidade institucional, acessos oficiais e melhor experiência responsiva"
 }
