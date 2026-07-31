@@ -11,6 +11,43 @@ export const alunoCourseAccessKeys = {
   calendar: (alunoId: string) => ['aluno-calendario', alunoId] as const,
   calendarEligibility: (alunoId: string) =>
     ['aluno', alunoId, 'calendario', 'elegibilidade'] as const,
+  eadProgressRoot: (alunoId: string) =>
+    ['aluno-turma-ead-progress', alunoId] as const,
+  eadProgress: (
+    alunoId: string,
+    cursoId: string,
+    status: string,
+  ) => [...alunoCourseAccessKeys.eadProgressRoot(alunoId), cursoId, status] as const,
+  technicalAcademicRoot: (alunoId: string) =>
+    ['aluno-turma-technical-academic', alunoId] as const,
+  technicalAcademic: (
+    alunoId: string,
+    matriculaId: string,
+    turmaId: string,
+    status: string,
+  ) => [
+    ...alunoCourseAccessKeys.technicalAcademicRoot(alunoId),
+    matriculaId,
+    turmaId,
+    status,
+  ] as const,
+  bulletinModulesRoot: (alunoId: string) =>
+    ['secretaria', 'academic-modules', 'self', alunoId] as const,
+  bulletinModules: (alunoId: string, turmaId?: string | null) =>
+    [...alunoCourseAccessKeys.bulletinModulesRoot(alunoId), turmaId] as const,
+  bulletinResultsRoot: (alunoId: string) =>
+    ['secretaria', 'academic-results', 'self', alunoId] as const,
+  bulletinResults: (
+    alunoId: string,
+    turmaId: string | null | undefined,
+    periodoId: string | null,
+    disciplinaIds: string[],
+  ) => [
+    ...alunoCourseAccessKeys.bulletinResultsRoot(alunoId),
+    turmaId,
+    periodoId,
+    disciplinaIds,
+  ] as const,
 };
 
 export const alunoCourseAccessQueryKeys = (alunoId: string) => [
@@ -34,6 +71,18 @@ export const invalidateAlunoCourseAccessQueries = (
     void queryClient.invalidateQueries({
       queryKey,
       exact: true,
+      refetchType: 'active',
+    });
+  }
+  for (const queryKey of [
+    alunoCourseAccessKeys.eadProgressRoot(alunoId),
+    alunoCourseAccessKeys.technicalAcademicRoot(alunoId),
+    alunoCourseAccessKeys.bulletinModulesRoot(alunoId),
+    alunoCourseAccessKeys.bulletinResultsRoot(alunoId),
+  ]) {
+    void queryClient.invalidateQueries({
+      queryKey,
+      exact: false,
       refetchType: 'active',
     });
   }
