@@ -92,7 +92,11 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
 
   const eadProgressQueries = useQueries({
     queries: eadMatriculas.map((item) => ({
-      queryKey: ['aluno-turma-ead-progress', alunoId, item.turmas?.cursos?.id, item.status],
+      queryKey: alunoCourseAccessKeys.eadProgress(
+        alunoId,
+        item.turmas?.cursos?.id || '',
+        item.status,
+      ),
       enabled: Boolean(alunoId && item.turmas?.cursos?.id),
       staleTime: 30_000,
       queryFn: async () => {
@@ -110,7 +114,12 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     queries: technicalMatriculas.map((item) => {
       const turmaId = item.turmas?.id || item.turma_id || '';
       return {
-        queryKey: ['aluno-turma-technical-academic', alunoId, item.id, turmaId, item.status],
+        queryKey: alunoCourseAccessKeys.technicalAcademic(
+          alunoId,
+          item.id,
+          turmaId,
+          item.status,
+        ),
         enabled: Boolean(alunoId && turmaId),
         staleTime: 30_000,
         queryFn: async (): Promise<TechnicalAcademicData> => {
