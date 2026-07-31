@@ -7,6 +7,8 @@ import { build } from 'esbuild';
 const root = resolve(import.meta.dirname, '..');
 const outputDirectory = mkdtempSync(join(tmpdir(), 'caixa-report-tests-'));
 const tests = [
+  'modules/gestor/caixa/caixa-data-scope.test.ts',
+  'modules/gestor/caixa/caixa-polos.test.ts',
   'modules/gestor/caixa/report/caixa-report.layout.test.ts',
   'modules/gestor/caixa/report/caixa-report.mapper.test.ts',
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
