@@ -39,6 +39,9 @@ jobs:
       - name: Validar lint
         run: npm run lint
 
+      - name: Testar acessos do Gestor
+        run: npm run test:gestor-access
+
       - name: Testar relatório do Caixa
         run: npm run test:caixa-report
 
