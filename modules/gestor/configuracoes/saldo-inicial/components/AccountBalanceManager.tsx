@@ -6,6 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../../lib/supabase';
 import { financeiroQueryKeys } from '../../../financeiro/financeiro.queryKeys';
 import { caixaQueryKeys } from '../../../caixa/caixa.service';
+import {
+  formatBRLCurrency,
+  formatBRLInput,
+  normalizeBRLInput,
+  parseBRLInput,
+} from '../saldo-inicial.currency';
 
 interface AccountBalanceManagerProps {
   company: any;
@@ -36,6 +42,15 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
           queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contas_bancarias_polos' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['saldo_inicial_accounts'] });
+          queryClient.invalidateQueries({ queryKey: financeiroQueryKeys.contasBancariasSaldos });
+          queryClient.invalidateQueries({ queryKey: caixaQueryKeys.dashboards });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -58,8 +73,8 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
     onError: (err: any) => alert(`Erro ao atualizar saldo: ${err.message}`),
   });
 
-  const handleUpdate = async (id: string, value: string, date: string) => {
-    updateBalanceMutation.mutate({ id, value: parseFloat(value) || 0, date });
+  const handleUpdate = async (id: string, value: number, date: string) => {
+    updateBalanceMutation.mutate({ id, value, date });
   };
 
   const getBankColor = (bankName: string) => {
@@ -136,14 +151,17 @@ const AccountBalanceManager: React.FC<AccountBalanceManagerProps> = ({ company, 
 
 // Sub-componente interno para o Card de Conta
 const AccountCard = ({ account, onSave, bankColor, isSaving }: any) => {
-  const [saldo, setSaldo] = useState(account.saldoInicial || 0);
+  const [saldo, setSaldo] = useState(formatBRLInput(account.saldoInicial || 0));
   const [data, setData] = useState(account.dataSaldo || '');
+  const isIntegrationManaged = account.systemManaged && account.natureza !== 'CAIXA_INTERNO';
+  const parsedSaldo = parseBRLInput(saldo);
+  const canSave = !isIntegrationManaged && parsedSaldo !== null && Boolean(data) && !isSaving;
 
   // Sincronizar o estado interno se a prop account mudar por conta de um evento realtime
   useEffect(() => {
-    setSaldo(account.saldoInicial || 0);
+    setSaldo(formatBRLInput(account.saldoInicial || 0));
     setData(account.dataSaldo || '');
-  }, [account]);
+  }, [account.saldoInicial, account.dataSaldo]);
 
   return (
     <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row hover:shadow-xl transition-shadow">
@@ -168,6 +186,11 @@ const AccountCard = ({ account, onSave, bankColor, isSaving }: any) => {
                Saldo Definido
              </span>
           )}
+          {isIntegrationManaged && (
+            <span className="bg-blue-50 text-blue-600 text-[10px] font-bold uppercase px-2 py-1 rounded-md border border-blue-100">
+              Integração Banese
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -176,12 +199,15 @@ const AccountCard = ({ account, onSave, bankColor, isSaving }: any) => {
               <DollarSign size={10} /> Saldo Inicial (R$)
             </label>
             <input 
-              type="number" 
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={saldo}
               onChange={(e) => setSaldo(e.target.value)}
+              onBlur={() => setSaldo((current) => normalizeBRLInput(current))}
+              disabled={isIntegrationManaged}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-black focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 outline-none transition-all"
-              placeholder="0.00"
+              placeholder="0,00"
+              aria-label={`Saldo inicial de ${account.banco} em reais`}
             />
           </div>
 
@@ -193,20 +219,35 @@ const AccountCard = ({ account, onSave, bankColor, isSaving }: any) => {
               type="date" 
               value={data}
               onChange={(e) => setData(e.target.value)}
+              disabled={isIntegrationManaged}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] font-medium focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 outline-none transition-all"
             />
           </div>
         </div>
 
+        {isIntegrationManaged && (
+          <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold leading-relaxed text-blue-700">
+            Conta criada e protegida pela integração Banese. Saldo inicial registrado:{' '}
+            <strong>{formatBRLCurrency(account.saldoInicial || 0)}</strong>. A posição do Caixa é
+            atualizada pelas cobranças e baixas conciliadas.
+          </div>
+        )}
+
         <div className="pt-4 border-t border-slate-50 flex justify-end">
-          <button 
-            onClick={() => onSave(account.id, saldo, data)}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={14} />
-            {isSaving ? 'Salvando...' : 'Atualizar Saldo'}
-          </button>
+          {isIntegrationManaged ? (
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Gerenciada automaticamente
+            </span>
+          ) : (
+            <button
+              onClick={() => parsedSaldo !== null && onSave(account.id, parsedSaldo, data)}
+              disabled={!canSave}
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save size={14} />
+              {isSaving ? 'Salvando...' : 'Atualizar Saldo'}
+            </button>
+          )}
         </div>
       </div>
     </div>
