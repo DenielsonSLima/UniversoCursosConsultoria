@@ -17,6 +17,7 @@ import AcademicResultsModal from '../../shared/secretaria/AcademicResultsModal';
 import TemplateDocumentModal from '../../shared/secretaria/TemplateDocumentModal';
 import { secretariaAcademicResultsService } from '../../shared/secretaria/academic-results.service';
 import { selectDefaultAcademicModule } from '../../shared/secretaria/academic-results.modules';
+import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
 import { buildDocumentVariableReplacer, buildFallbackValidationCode, buildValidationUrl } from '../../shared/secretaria/document-template.helpers';
 import AlunoIdentityDocuments, { AlunoIdentityTab } from './components/AlunoIdentityDocuments';
 import AlunoSecretariaServicesPanel from './components/AlunoSecretariaServicesPanel';
@@ -84,7 +85,7 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
 
   const bulletinTurmaId = bulletinEnrollment?.turma_id;
   const bulletinModulesQuery = useQuery({
-    queryKey: ['secretaria', 'academic-modules', 'self', alunoId, bulletinTurmaId],
+    queryKey: alunoCourseAccessKeys.bulletinModules(alunoId, bulletinTurmaId),
     queryFn: () => bulletinTurmaId
       ? secretariaAcademicResultsService.getAvailableModulesForAuthenticatedStudent(bulletinTurmaId)
       : Promise.resolve([]),
@@ -99,15 +100,12 @@ const SecretariaPage: React.FC<SecretariaPageProps> = ({ alunoId }) => {
     (discipline) => discipline.id,
   ) || [];
   const academicResultsQuery = useQuery({
-    queryKey: [
-      'secretaria',
-      'academic-results',
-      'self',
+    queryKey: alunoCourseAccessKeys.bulletinResults(
       alunoId,
       bulletinTurmaId,
       selectedBulletinPeriodId,
       selectedBulletinDisciplineIds,
-    ],
+    ),
     queryFn: () => bulletinTurmaId && selectedBulletinModule
       ? secretariaAcademicResultsService.getForAuthenticatedStudent(
         bulletinTurmaId,
