@@ -2,6 +2,24 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.16] - 2026-07-31
+
+### Alterado
+
+- A página de links da bio recebeu um cabeçalho institucional mais completo, com fotografia, faixa da marca, indicadores de confiança e acesso direto aos canais oficiais.
+- Os cards de formações foram reorganizados com proporções consistentes, imagens otimizadas e degradê contínuo, sem cortes visíveis nem sobreposição do texto.
+- Os acessos ao Portal do Aluno, site institucional e Instagram foram compactados para priorizar cursos e atendimento.
+
+### Corrigido
+
+- O primeiro card deixa de crescer desproporcionalmente em telas de computador e mantém o mesmo padrão visual dos demais.
+- O compartilhamento usa o endereço canônico `/links`, e o card de copiar link foi removido.
+
+### Qualidade
+
+- TypeScript, lint e build de produção foram executados sem erros antes da publicação.
+- As novas imagens WebP foram comprimidas para reduzir o carregamento da página em conexões móveis.
+
 ## [2.2.3-beta.15] - 2026-07-30
 
 ### Adicionado
