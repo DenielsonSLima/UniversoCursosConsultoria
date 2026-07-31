@@ -46,6 +46,19 @@ interface StartedDisciplineRow extends DisciplineRow {
     | null;
 }
 
+interface CanonicalAcademicComponent {
+  disciplineId?: string | null;
+  discipline?: string | null;
+  nota?: number | null;
+  frequencia?: number | null;
+  situacao?: string | null;
+  dependencyAttemptId?: string | null;
+}
+
+interface CanonicalAcademicDocument {
+  componentes?: CanonicalAcademicComponent[];
+}
+
 const nullableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -55,15 +68,6 @@ const nullableNumber = (value: unknown): number | null => {
 const disciplineName = (row: DisciplineRow) => {
   const relation = Array.isArray(row.disciplinas) ? row.disciplinas[0] : row.disciplinas;
   return relation?.nome || 'Disciplina';
-};
-
-const loadDisciplines = async (turmaId: string): Promise<DisciplineRow[]> => {
-  const { data, error } = await supabase
-    .from('turmas_disciplinas')
-    .select('disciplina_id, disciplinas(nome)')
-    .eq('turma_id', turmaId);
-  if (error) throw error;
-  return (data || []) as unknown as DisciplineRow[];
 };
 
 const mapResult = (
@@ -84,6 +88,28 @@ const mapResult = (
   frequenciaPercent: nullableNumber(row.frequencia_percent),
   resultadoFinal: String(row.resultado_final || 'SEM_LANCAMENTO').toUpperCase(),
 });
+
+const canonicalResultStatus = (
+  component: CanonicalAcademicComponent,
+): string => {
+  if (component.dependencyAttemptId) return 'APROVADO_DEPENDENCIA';
+  const status = String(component.situacao || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toUpperCase()
+    .replaceAll(' ', '_');
+  const map: Record<string, string> = {
+    APROVADO: 'APROVADO',
+    APROVEITADO: 'APROVEITADO',
+    REPROVADO: 'REPROVADO',
+    REPROVADO_POR_FREQUENCIA: 'REPROVADO_FREQUENCIA',
+    RECUPERACAO: 'EM_RECUPERACAO',
+    FREQUENCIA_PENDENTE: 'FREQUENCIA_PENDENTE',
+    SEM_LANCAMENTO: 'SEM_LANCAMENTO',
+  };
+  return map[status] || status || 'SEM_LANCAMENTO';
+};
 
 export const secretariaAcademicResultsService = {
   async getAvailableModulesForAuthenticatedStudent(
@@ -154,22 +180,32 @@ export const secretariaAcademicResultsService = {
     return (data || []).map((row: any) => mapResult(row, namesById));
   },
 
-  async getForManagedStudent(
-    turmaId: string,
-    alunoId: string,
+  async getForManagedEnrollment(
+    matriculaId: string,
   ): Promise<SecretariaAcademicResult[]> {
-    const disciplines = await loadDisciplines(turmaId);
-    const rows = await Promise.all(disciplines.map(async (discipline) => {
-      const { data, error } = await supabase
-        .rpc('get_diario_resultados', {
-          p_turma_id: turmaId,
-          p_disciplina_id: discipline.disciplina_id,
-        })
-        .eq('aluno_id', alunoId);
-      if (error) throw error;
-      return data || [];
+    const { data, error } = await supabase.rpc(
+      'get_secretaria_documento_academico',
+      {
+        p_matricula_id: matriculaId,
+        p_documento: 'boletim',
+      },
+    );
+    if (error) throw error;
+    const payload = (data || {}) as CanonicalAcademicDocument;
+    return (payload.componentes || []).map((component, index) => ({
+      id: `${matriculaId}:${component.disciplineId || index}`,
+      disciplinaId: String(component.disciplineId || ''),
+      disciplinaNome: component.discipline || 'Disciplina',
+      notaP: null,
+      notaTi: null,
+      notaTg: null,
+      notaS: null,
+      notaCq: null,
+      notaO: null,
+      notaRec: null,
+      mediaFinal: nullableNumber(component.nota),
+      frequenciaPercent: nullableNumber(component.frequencia),
+      resultadoFinal: canonicalResultStatus(component),
     }));
-    const namesById = new Map(disciplines.map((item) => [item.disciplina_id, disciplineName(item)]));
-    return rows.flat().map((row: any) => mapResult(row, namesById));
   },
 };
