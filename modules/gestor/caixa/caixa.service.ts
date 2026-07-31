@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { orderCaixaPolosByCreation } from './caixa-polos';
+import type { CaixaPolo } from './caixa-polos';
 
 export type CaixaResultStatus = 'POSITIVO' | 'NEGATIVO' | 'NEUTRO';
 export type CaixaScopeType = 'GLOBAL' | 'POLO';
@@ -180,6 +182,29 @@ export const getCurrentCaixaCompetencia = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 };
 
+export const normalizeCaixaPoloId = (poloId: string | null | undefined) => (
+  poloId && poloId !== 'todos' ? poloId : null
+);
+
+const getCaixaScopeKey = (poloId: string | null | undefined) => (
+  normalizeCaixaPoloId(poloId) || 'todos'
+);
+
+export const assertCaixaStatementRequest = (
+  statement: CaixaMonthlyStatement,
+  poloId: string | null | undefined,
+  competencia: string,
+) => {
+  const expectedPoloId = normalizeCaixaPoloId(poloId);
+  const hasExpectedScope = expectedPoloId
+    ? statement.meta.escopoTipo === 'POLO' && statement.meta.poloId === expectedPoloId
+    : statement.meta.escopoTipo === 'GLOBAL' && statement.meta.poloId === null;
+
+  if (!hasExpectedScope || statement.meta.competencia !== competencia) {
+    throw new Error('A prestação mensal do Caixa retornou um escopo diferente do solicitado.');
+  }
+};
+
 export const shiftCaixaCompetencia = (competencia: string, months: number) => {
   const [yearValue, monthValue] = competencia.split('-').map(Number);
   const shifted = new Date(yearValue, monthValue - 1 + months, 1, 12);
@@ -299,12 +324,29 @@ export const mapCaixaStatement = (value: unknown): CaixaMonthlyStatement => {
 };
 
 export const caixaService = {
+  async getPolos(): Promise<CaixaPolo[]> {
+    const { data, error } = await supabase
+      .from('polos')
+      .select('id, nome, cidade, estado, is_matriz, created_at')
+      .eq('status', 'ativo')
+      .order('created_at', { ascending: true, nullsFirst: false })
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar os polos do Caixa:', error);
+      throw error;
+    }
+
+    return orderCaixaPolosByCreation((data || []) as CaixaPolo[]);
+  },
+
   async getMonthlyStatement(
     poloId: string | null | undefined,
     competencia: string,
   ): Promise<CaixaMonthlyStatement> {
+    const normalizedPoloId = normalizeCaixaPoloId(poloId);
     const { data, error } = await supabase.rpc('get_caixa_prestacao_mensal_secure', {
-      p_polo_id: poloId && poloId !== 'todos' ? poloId : null,
+      p_polo_id: normalizedPoloId,
       p_competencia: competencia,
       p_meses_historico: 6,
     });
@@ -314,28 +356,40 @@ export const caixaService = {
       throw error;
     }
 
-    return mapCaixaStatement(data);
+    const statement = mapCaixaStatement(data);
+    assertCaixaStatementRequest(statement, normalizedPoloId, competencia);
+    return statement;
   },
 };
 
 export const caixaQueryKeys = {
   root: ['caixa'] as const,
+  polos: ['caixa', 'polos'] as const,
   statements: ['caixa', 'statement'] as const,
-  statement: (poloId: string | null | undefined, competencia: string) => [
+  statementsForPolo: (poloId: string | null | undefined) => [
     'caixa',
     'statement',
-    poloId && poloId !== 'todos' ? poloId : 'todos',
+    getCaixaScopeKey(poloId),
+  ] as const,
+  statement: (poloId: string | null | undefined, competencia: string) => [
+    ...caixaQueryKeys.statementsForPolo(poloId),
     competencia,
   ] as const,
   // Alias mantido para as invalidações dos formulários financeiros existentes.
   dashboards: ['caixa', 'statement'] as const,
   dashboard: (poloId: string | null | undefined, competencia = getCurrentCaixaCompetencia()) => [
-    'caixa',
-    'statement',
-    poloId && poloId !== 'todos' ? poloId : 'todos',
+    ...caixaQueryKeys.statementsForPolo(poloId),
     competencia,
   ] as const,
 };
+
+export const caixaPolosQueryOptions = () => queryOptions({
+  queryKey: caixaQueryKeys.polos,
+  queryFn: caixaService.getPolos,
+  staleTime: 0,
+  gcTime: 60 * 60_000,
+  refetchOnMount: 'always' as const,
+});
 
 export const caixaDashboardQueryOptions = (
   poloId?: string | null,
