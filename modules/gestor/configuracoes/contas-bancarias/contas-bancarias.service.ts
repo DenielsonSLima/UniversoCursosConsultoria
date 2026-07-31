@@ -29,7 +29,16 @@ export const contasBancariasService = {
   async getCompanies(): Promise<any[]> {
     const { data, error } = await supabase
       .from('polos')
-      .select('id, nome, cnpj, cidade, estado, status, is_matriz, contas_bancarias(count)')
+      .select(`
+        id,
+        nome,
+        cnpj,
+        cidade,
+        estado,
+        status,
+        is_matriz,
+        contas_bancarias:contas_bancarias!contas_bancarias_polo_id_fkey(count)
+      `)
       .order('is_matriz', { ascending: false })
       .order('nome', { ascending: true });
 

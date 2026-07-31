@@ -21,6 +21,7 @@ interface AcademicResultsModalProps {
 
 const RESULT_LABELS: Record<string, string> = {
   APROVADO: 'Aprovado',
+  APROVADO_DEPENDENCIA: 'Aprovado em dependência',
   APROVEITADO: 'Aproveitado',
   EM_RECUPERACAO: 'Em recuperação',
   REPROVADO: 'Reprovado',
@@ -33,7 +34,11 @@ const formatNumber = (value: number | null, fractionDigits = 1) =>
   value === null ? '—' : value.toFixed(fractionDigits);
 
 const resultClass = (result: string) => {
-  if (result === 'APROVADO' || result === 'APROVEITADO') {
+  if (
+    result === 'APROVADO'
+    || result === 'APROVADO_DEPENDENCIA'
+    || result === 'APROVEITADO'
+  ) {
     return 'bg-emerald-100 text-emerald-800';
   }
   if (result === 'EM_RECUPERACAO' || result === 'FREQUENCIA_PENDENTE' || result === 'SEM_LANCAMENTO') {

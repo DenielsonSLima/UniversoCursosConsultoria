@@ -2,6 +2,31 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.15] - 2026-07-30
+
+### Adicionado
+
+- A Secretaria passa a contar com o submódulo de Dependências Acadêmicas, organizado por pendentes, agendadas ou em andamento, finalizadas e regras financeiras.
+- O encaminhamento permite selecionar somente a disciplina reprovada e uma oferta compatível, com pré-financeiro calculado no backend e cobrança Banese vinculada à tentativa.
+- O Diário recebe o aluno apenas na disciplina de dependência e registra o resultado da nova tentativa sem criar uma segunda matrícula completa.
+
+### Alterado
+
+- O boletim e o histórico preservam a turma de origem e apresentam o resultado canônico da dependência na mesma disciplina, evitando duplicidade acadêmica.
+- O portal do aluno mantém o curso na turma original enquanto a dependência estiver em andamento e conclui o progresso somente após a aprovação de todas as pendências.
+- Hooks, serviços, chaves de consulta, invalidações TanStack Query e atualizações Realtime foram separados por responsabilidade no novo fluxo.
+
+### Segurança
+
+- Regras de valor, transições de estado, confirmação financeira e liberação acadêmica são validadas no backend com idempotência e trilha de auditoria.
+- O Pix Banese permanece bloqueado enquanto não houver liberação formal de produção; a dependência utiliza apenas o boleto/BolePix permitido pela configuração vigente.
+- A cobrança não é recriada em repetição de requisição e uma baixa ou reversão não deixa acesso acadêmico órfão.
+
+### Qualidade
+
+- Contratos automatizados cobrem reprovação terminal, cálculo financeiro, Diário, boletim, portal do aluno, máquina de estados e permissões granulares.
+- A revisão ampliada alinhou o teste de cancelamento ao snapshot completo da identidade bancária remota.
+
 ## [2.2.3-beta.14] - 2026-07-30
 
 ### Adicionado

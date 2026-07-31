@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.14",
+  "version": "2.2.3-beta.15",
   "type": "module",
   "scripts": {
     "dev": "vite --force",
@@ -14,6 +14,7 @@
     "test:portal-auth": "node --test scripts/test-portal-auth-flow.mjs",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
+    "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",
     "test:document-validation": "node scripts/test-document-validation.mjs",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",

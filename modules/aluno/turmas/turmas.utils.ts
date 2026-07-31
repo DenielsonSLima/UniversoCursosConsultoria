@@ -93,7 +93,10 @@ export const getMatriculaModalidade = (matricula?: MatriculaAluno | null) => {
 export const isPortalEnrollmentVisible = (matricula?: MatriculaAluno | null) => {
   const status = String(matricula?.status || '').toUpperCase();
   return ACCESS_STATUS.has(status)
-    || (getMatriculaModalidade(matricula) === 'TECNICO' && status === 'REPROVADO');
+    || (
+      getMatriculaModalidade(matricula) === 'TECNICO'
+      && (status === 'REPROVADO' || status === 'EM_DEPENDENCIA')
+    );
 };
 
 export const hasTechnicalAcademicAccess = (matricula?: MatriculaAluno | null) => {
@@ -103,7 +106,11 @@ export const hasTechnicalAcademicAccess = (matricula?: MatriculaAluno | null) =>
   return (classStatus === 'EM_ANDAMENTO' && enrollmentStatus === 'ATIVO')
     || (
       classStatus === 'FINALIZADA'
-      && (enrollmentStatus === 'CONCLUIDO' || enrollmentStatus === 'REPROVADO')
+      && (
+        enrollmentStatus === 'CONCLUIDO'
+        || enrollmentStatus === 'REPROVADO'
+        || enrollmentStatus === 'EM_DEPENDENCIA'
+      )
     );
 };
 
@@ -115,7 +122,9 @@ export const asNullableNumber = (value: unknown): number | null => {
 
 export const isResultadoConcluido = (resultado?: ResultadoDiarioAluno | null) => {
   const status = String(resultado?.resultado_final || '').toUpperCase();
-  return status === 'APROVADO' || status === 'APROVEITADO';
+  return status === 'APROVADO'
+    || status === 'APROVADO_DEPENDENCIA'
+    || status === 'APROVEITADO';
 };
 
 export const calculateAcademicProgress = (

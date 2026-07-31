@@ -15,6 +15,7 @@ export const SECRETARIA_ACCESS_OPTIONS = [
   { id: 'consulta-financeira', label: 'Financeiro / Recebimentos', legacyTab: 'recebimentos' },
   { id: 'transferencia', label: 'Transferência', legacyTab: 'solicitacoes' },
   { id: 'solicitacoes', label: 'Solicitações Acadêmicas', legacyTab: 'solicitacoes' },
+  { id: 'dependencias-academicas', label: 'Dependências Acadêmicas', legacyTab: 'solicitacoes' },
   { id: 'certificados', label: 'Certificados', legacyTab: 'historico' },
   { id: 'historico-emissoes', label: 'Histórico de Emissões', legacyTab: 'historico' },
 ] as const;

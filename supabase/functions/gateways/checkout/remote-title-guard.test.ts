@@ -386,6 +386,8 @@ Deno.test("cancelamento local preserva snapshot da identidade remota", () => {
     ["is", "gateway_payment_method", null],
     ["eq", "gateway_payment_id", "pay_123"],
     ["is", "gateway_payment_link_id", null],
+    ["is", "gateway_boleto_linha_digitavel", null],
+    ["is", "gateway_boleto_codigo_barras", null],
     ["is", "gateway_boleto_nosso_numero", null],
     ["eq", "asaas_payment_id", "pay_123"],
     ["is", "asaas_payment_link_id", null],
