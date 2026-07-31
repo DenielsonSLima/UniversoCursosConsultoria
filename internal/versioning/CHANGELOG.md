@@ -2,6 +2,12 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.17] - 2026-07-31
+
+### Corrigido
+
+- O card da página de links oficiais passa a usar somente o título `Especializações`, distinguindo essa oferta do Ensino Superior.
+
 ## [2.2.3-beta.16] - 2026-07-31
 
 ### Alterado

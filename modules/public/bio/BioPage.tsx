@@ -82,7 +82,7 @@ const COURSE_LINKS: CourseLink[] = [
   },
   {
     id: 'especializacao',
-    title: 'Pós e Especializações',
+    title: 'Especializações',
     description: 'Conhecimento avançado para evoluir profissionalmente.',
     action: 'Ver especializações',
     url: '/especializacao',
