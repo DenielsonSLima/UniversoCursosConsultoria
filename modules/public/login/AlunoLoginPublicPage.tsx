@@ -309,7 +309,10 @@ const AlunoLoginPublicPage: React.FC = () => {
     setMessage(null);
   };
 
-  const handleSignup = async (event: React.FormEvent) => {
+  const handleSignup = async (
+    event: React.FormEvent,
+    turnstileToken: string,
+  ) => {
     event.preventDefault();
     setMessage(null);
 
@@ -347,6 +350,7 @@ const AlunoLoginPublicPage: React.FC = () => {
         bairro,
         cidade,
         uf,
+        turnstileToken,
         redirectPath: hasExplicitRedirect ? redirectPath : undefined,
       });
 

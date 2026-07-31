@@ -25,6 +25,7 @@ export interface PublicAlunoSignupData {
   bairro: string;
   cidade: string;
   uf: string;
+  turnstileToken: string;
   redirectPath?: string;
 }
 
@@ -39,7 +40,7 @@ interface FinalizeAlunoFirstAccessData {
 type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath'>;
 type LegacyPublicAlunoProfileData = Omit<
   PublicAlunoProfileData,
-  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'turnstileToken'
 > & Partial<Pick<
   PublicAlunoProfileData,
   'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
@@ -77,7 +78,57 @@ const getFriendlySignupError = (message: string) => {
   if (lower.includes('duplicate') || lower.includes('cpf_cnpj')) {
     return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
   }
+  if (
+    lower.includes('public_aluno_cpf_unique')
+    || lower.includes('cpf ja esta cadastrado')
+    || lower.includes('cpf já está cadastrado')
+  ) {
+    return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
+  }
   return message;
+};
+
+const assertPublicAlunoCpfAvailable = async (
+  cpf: string,
+  email: string,
+  turnstileToken: string,
+) => {
+  const { data, error } = await supabase.functions.invoke('portal-auth', {
+    body: {
+      action: 'signup',
+      identifier: email,
+      cpf,
+      turnstileToken,
+    },
+  });
+
+  if (!error && data?.available === true) return;
+
+  const context = (error as {
+    context?: { status?: number; clone?: () => Response };
+  } | null)?.context;
+  let code = '';
+
+  if (typeof context?.clone === 'function') {
+    try {
+      const body = await context.clone().json() as { code?: unknown };
+      code = typeof body?.code === 'string' ? body.code : '';
+    } catch {
+      // O status HTTP abaixo ainda produz uma mensagem segura.
+    }
+  }
+
+  if (context?.status === 409 || code === 'cpf_already_registered') {
+    throw new Error('Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.');
+  }
+  if (context?.status === 403 || code === 'challenge_failed') {
+    throw new Error('A verificação de segurança expirou ou falhou. Tente verificá-la novamente.');
+  }
+  if (context?.status === 429 || code === 'rate_limited') {
+    throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  }
+
+  throw new Error('Não foi possível verificar o CPF agora. Tente novamente em instantes.');
 };
 
 const isExistingUserError = (message: string) => {
@@ -349,6 +400,8 @@ export const alunoPublicAuthService = {
       cidade,
       uf,
     });
+
+    await assertPublicAlunoCpfAvailable(cpf, email, data.turnstileToken);
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,

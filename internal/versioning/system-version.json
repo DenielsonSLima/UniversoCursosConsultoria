@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.13",
+  "version": "2.2.3-beta.14",
   "display": "BETA",
   "stage": "beta",
-  "revision": 13,
+  "revision": 14,
   "releasedAt": "2026-07-30",
-  "summary": "Login e Turnstile mais rápidos, previsíveis e seguros em produção e homologação"
+  "summary": "Cadastro público sem CPF duplicado e gráfico do Caixa mais informativo"
 }

@@ -14,8 +14,9 @@ const RATE_LIMIT_ERROR =
   "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 
 type PortalAuthPayload = {
-  action?: "login" | "recover";
+  action?: "login" | "recover" | "signup";
   identifier?: string;
+  cpf?: string;
   password?: string;
   redirectTo?: string;
   turnstileToken?: string;
@@ -109,7 +110,7 @@ const consumeRateLimit = async (
 
 const checkIpRateLimit = async (
   admin: any,
-  action: "login" | "recover",
+  action: "login" | "recover" | "signup",
   request: Request,
 ) => {
   const ipHash = await sha256(
@@ -125,7 +126,7 @@ const checkIpRateLimit = async (
 
 const checkIdentifierRateLimit = async (
   admin: any,
-  action: "login" | "recover",
+  action: "login" | "recover" | "signup",
   identifier: string,
 ) => {
   const identifierHash = await sha256(
@@ -169,7 +170,7 @@ const getRequestOrigin = (request: Request) => {
 const verifyTurnstile = async (
   request: Request,
   token: string,
-  expectedAction: "login" | "recover",
+  expectedAction: "login" | "recover" | "signup",
 ) => {
   const requestOrigin = getRequestOrigin(request);
   const expectedHostname = requestOrigin?.hostname.toLowerCase() || "";
@@ -273,11 +274,13 @@ Deno.serve(async (request: Request) => {
 
   const action = payload.action;
   const identifier = normalizeIdentifier(payload.identifier);
+  const cpf = String(payload.cpf || "").replace(/\D/g, "");
   const turnstileToken = String(payload.turnstileToken || "").trim();
   if (
-    (action !== "login" && action !== "recover") ||
+    (action !== "login" && action !== "recover" && action !== "signup") ||
     !identifier ||
     identifier.length > 254 ||
+    (action === "signup" && cpf.length !== 11) ||
     turnstileToken.length > 2048
   ) {
     return json({
@@ -388,6 +391,29 @@ Deno.serve(async (request: Request) => {
   let resolvedEmail: string | null;
   const identityStartedAt = globalThis.performance.now();
   try {
+    if (action === "signup") {
+      const { data: available, error: availabilityError } = await admin.rpc(
+        "is_public_aluno_cpf_available",
+        {
+          p_cpf: cpf,
+          p_exclude_auth_user_id: null,
+        },
+      );
+      if (availabilityError) throw availabilityError;
+      timings.identityMs = elapsedSince(identityStartedAt);
+
+      if (available !== true) {
+        logTiming("cpf_already_registered");
+        return json({
+          error: "Este CPF já está cadastrado.",
+          code: "cpf_already_registered",
+        }, 409);
+      }
+
+      logTiming("signup_available");
+      return json({ available: true });
+    }
+
     resolvedEmail = identifier.includes("@")
       ? identifier
       : await resolveLoginIdentity(admin, identifier);

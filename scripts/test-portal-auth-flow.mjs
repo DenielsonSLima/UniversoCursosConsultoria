@@ -69,6 +69,7 @@ test('all credential flows wait for a verified Turnstile token', () => {
 
   assert.match(institutionalLoginForm, /Aguardando verificação/)
   assert.match(studentLoginForm, /Aguardando verificação/)
+  assert.match(studentLoginForm, /action="signup"/)
   assert.doesNotMatch(
     institutionalLoginForm,
     /Não foi possível validar o acesso\. Atualize a página/,
@@ -97,6 +98,8 @@ test('portal-auth validates challenge before consuming identifier quota', () => 
   assert.match(portalAuthFunction, /challenge_failed/)
   assert.match(portalAuthFunction, /rate_limited/)
   assert.match(portalAuthFunction, /service_unavailable/)
+  assert.match(portalAuthFunction, /cpf_already_registered/)
+  assert.match(portalAuthFunction, /is_public_aluno_cpf_available/)
 })
 
 test('portal-auth emits non-sensitive timing breakdowns', () => {

@@ -70,7 +70,7 @@ type Props = {
   onSignupBack: () => void;
   onLogin: (event: React.FormEvent, turnstileToken: string) => void;
   onSignupNext: React.FormEventHandler;
-  onSignup: React.FormEventHandler;
+  onSignup: (event: React.FormEvent, turnstileToken: string) => void;
   onGoogleLogin: () => void;
 };
 
@@ -394,7 +394,23 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         </button>
       </form>
     ) : (
-      <form onSubmit={onSignup} className="grid gap-4 sm:grid-cols-6">
+      <form
+        onSubmit={(event) => {
+          if (
+            submitInFlightRef.current
+            || !turnstileToken
+            || turnstileStatus !== 'verified'
+          ) {
+            event.preventDefault();
+            return;
+          }
+          submitInFlightRef.current = true;
+          const verifiedToken = turnstileToken;
+          setTurnstileToken('');
+          onSignup(event, verifiedToken);
+        }}
+        className="grid gap-4 sm:grid-cols-6"
+      >
         <div className="flex items-center gap-3 sm:col-span-6" aria-label="Etapa 2 de 2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <CheckCircle2 size={14} />
@@ -475,13 +491,35 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </p>
         )}
 
+        <div className="sm:col-span-6">
+          <TurnstileWidget
+            action="signup"
+            resetSignal={turnstileResetSignal}
+            onTokenChange={setTurnstileToken}
+            onStatusChange={setTurnstileStatus}
+            onError={() => setTurnstileToken('')}
+          />
+        </div>
+
         <button type="button" onClick={onSignupBack} disabled={loading} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-xs font-black uppercase tracking-widest text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60 sm:col-span-2">
           <ChevronLeft size={16} />
           Voltar
         </button>
-        <button type="submit" disabled={loading} className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60 sm:col-span-4">
+        <button
+          type="submit"
+          disabled={
+            loading
+            || !turnstileToken
+            || turnstileStatus !== 'verified'
+          }
+          className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-4"
+        >
           {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />}
-          Criar cadastro e continuar
+          {loading
+            ? 'Criando cadastro…'
+            : turnstileStatus === 'verified'
+              ? 'Criar cadastro e continuar'
+              : 'Aguardando verificação'}
         </button>
       </form>
     )}

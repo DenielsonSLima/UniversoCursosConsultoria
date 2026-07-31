@@ -2,6 +2,28 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.14] - 2026-07-30
+
+### Adicionado
+
+- O cadastro público consulta a disponibilidade do CPF antes de criar a identidade do aluno e mantém uma trava transacional no Auth para impedir cadastros simultâneos duplicados.
+- O gráfico do Caixa passa a exibir também a linha do resultado líquido dos três meses mais recentes, além das entradas e saídas.
+
+### Alterado
+
+- O Turnstile passa a usar uma ação própria para o cadastro público, separada das validações de login e recuperação de senha.
+- Mensagens de CPF já cadastrado orientam o aluno a entrar com o acesso existente ou procurar a Secretaria.
+
+### Segurança
+
+- A verificação de CPF permanece privada no backend, acessível somente pela `service_role`, sem expor a existência do cadastro diretamente ao navegador.
+- O endpoint público valida Turnstile e limites de requisição antes de consultar a disponibilidade do CPF.
+
+### Qualidade
+
+- Contratos automatizados cobrem a ação `signup`, a resposta segura para CPF duplicado e a RPC usada pela Edge Function.
+- A migration canônica e a versão ativa da `portal-auth` foram conferidas no projeto Supabase de produção antes da publicação.
+
 ## [2.2.3-beta.13] - 2026-07-30
 
 ### Alterado
