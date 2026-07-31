@@ -15,6 +15,7 @@ const TECHNICAL_HISTORY_STATUSES = new Set([
   'TRANCADO',
   'DESISTENTE',
   'TRANSFERIDO',
+  'EM_DEPENDENCIA',
 ]);
 
 export const normalizeAlunoSecretariaText = (value?: string | null) =>
@@ -68,6 +69,11 @@ export const buildAlunoSecretariaEligibility = (
     && !isAlunoSecretariaEad(matricula)
   )) || null;
   const activeTechnical = sorted.find(isAlunoSecretariaActiveTechnical) || null;
+  const dependencyTechnical = sorted.find((matricula) => (
+    isAlunoSecretariaTechnical(matricula)
+    && normalizeAlunoSecretariaText(matricula.status) === 'EM_DEPENDENCIA'
+    && normalizeAlunoSecretariaText(matricula.turmas?.status) === 'FINALIZADA'
+  )) || null;
   const internshipTurmaIds = new Set((estagios || []).map((estagio) => estagio.turma_id));
   const activeInternshipEnrollment = sorted.find((matricula) => (
     isAlunoSecretariaActiveTechnical(matricula)
@@ -77,14 +83,19 @@ export const buildAlunoSecretariaEligibility = (
   const historicalTechnical = sorted.find(isAlunoSecretariaHistoricalTechnical) || null;
   const onlineEnrollments = sorted.filter(isAlunoSecretariaOnline);
   const declarationEnrollment = activeTechnical || activeDeclarationEnrollment;
-  const primaryEnrollment = activeTechnical || activeAny || historicalTechnical || sorted[0] || null;
+  const primaryEnrollment = activeTechnical
+    || dependencyTechnical
+    || activeAny
+    || historicalTechnical
+    || sorted[0]
+    || null;
   const hasAnyTechnicalEnrollment = sorted.some(isAlunoSecretariaTechnical);
   const hasOnlineOnlyAccess = onlineEnrollments.length > 0 && !hasAnyTechnicalEnrollment;
 
   const canEmitStudentCard = Boolean(activeTechnical);
   const canEmitInternshipBadge = Boolean(activeTechnical);
   const canEmitElectionBadge = Boolean(activeInternshipEnrollment);
-  const canEmitBulletin = Boolean(activeTechnical);
+  const canEmitBulletin = Boolean(activeTechnical || dependencyTechnical);
   const canEmitEnrollmentDeclaration = Boolean(declarationEnrollment);
   const canEmitIrpf = Boolean(historicalTechnical);
   const canRequestHistory = Boolean(historicalTechnical);
@@ -100,6 +111,8 @@ export const buildAlunoSecretariaEligibility = (
     ? 'Cursos EAD não liberam declaração de cursando. Cursos EAD, livres e especializações também não liberam carteirinha, crachá, boletim técnico, transferência ou IRPF nesta secretaria.'
     : !hasAnyTechnicalEnrollment
       ? 'Nenhuma matrícula técnica foi localizada para liberar documentos acadêmicos restritos.'
+      : dependencyTechnical
+        ? 'Matrícula em dependência: boletim e histórico continuam disponíveis pela turma de origem; documentos de vínculo ativo permanecem bloqueados.'
       : !activeTechnical
         ? 'Há vínculo técnico histórico, mas documentos de vínculo ativo exigem matrícula ativa em turma em andamento.'
         : '';
@@ -122,7 +135,7 @@ export const buildAlunoSecretariaEligibility = (
     primaryEnrollment,
     technicalIdentityEnrollment: activeTechnical,
     electionBadgeEnrollment: activeInternshipEnrollment,
-    bulletinEnrollment: activeTechnical,
+    bulletinEnrollment: activeTechnical || dependencyTechnical,
     declarationEnrollment,
     irpfEnrollment: historicalTechnical,
     requestEnrollment: historicalTechnical || activeTechnical || primaryEnrollment,
