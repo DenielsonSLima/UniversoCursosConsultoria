@@ -1,1 +1,202 @@
-m«ëˆ§½©buªàºg§¶jºW¬þ››–'?•©ÝŠx)j¬ýË«²‹-yÉâr‹?²«yßÓyÈg‰Æ¥-©ÝŠxzº-³,j›jÇºà7an{¦Š)ßŠW¨¢ë_ŠW›n·š‘ºÞjG§r‡^v‹­¦ën¦)í¢X§zÊ•éà¶î˜7]yÊy×œ¡×¢ž›­†¥¥Ø¬¦V²¶¬™ë,j¢Šzn¶)éº×â•ç^}«¥µú+²×bžŠ.¶›­¢ëiº×â•ç^}«¥µú+²×hº
+import React from 'react';
+import { ArrowDown, CalendarDays, Clock3, GraduationCap, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import type { TechnicalLandingConfig, TechnicalLandingData } from '../technicalLanding.types';
+import { formatLandingDate } from './technicalLanding.utils';
+
+interface TechnicalLandingHeroProps {
+  data: TechnicalLandingData;
+  config: TechnicalLandingConfig;
+}
+
+const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, config }) => {
+  const onlineEnrollmentAvailable = data.turma.onlineEnrollmentAvailable;
+  const campaign = config.marketingCampaign;
+
+  if (campaign) {
+    return (
+      <section className="relative overflow-hidden border-b border-blue-100 bg-[#f4f8ff] text-[#001a4d]">
+        <div className="pointer-events-none absolute -left-40 -top-56 h-[34rem] w-[34rem] rounded-full bg-blue-200/60 blur-3xl" />
+        <div className="relative mx-auto grid min-h-[42rem] max-w-7xl lg:grid-cols-[1.03fr_0.97fr]">
+          <div className="z-10 flex flex-col justify-center px-6 py-14 md:px-10 lg:py-20 xl:pl-14">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-red-600/20">
+              <Sparkles size={15} /> {config.eyebrow}
+            </div>
+            <p className="mt-7 text-xl font-black text-red-600 md:text-2xl">{campaign.promise}</p>
+            <h1 className="mt-2 max-w-3xl text-5xl font-black uppercase leading-[0.93] tracking-[-0.045em] text-[#001a4d] md:text-7xl xl:text-[5.2rem]">
+              {data.course.name}
+            </h1>
+            <p className="mt-6 max-w-2xl text-base font-semibold leading-relaxed text-slate-600 md:text-lg">
+              {config.description}
+            </p>
+            <p className="mt-4 flex max-w-2xl items-start gap-2 text-sm font-bold leading-relaxed text-blue-900">
+              <ShieldCheck className="mt-0.5 shrink-0 text-blue-600" size={19} /> {campaign.eligibility}
+            </p>
+
+            <div className="mt-8 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ['DuraÃ§Ã£o', campaign.durationLabel],
+                ['Turno', data.turma.shift],
+                ['InÃ­cio', formatLandingDate(data.turma.startDate)],
+                ['Polo', `${data.polo.city}/${data.polo.state}`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-blue-100 bg-white/85 p-3 shadow-sm backdrop-blur">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p>
+                  <p className="mt-1 text-sm font-black text-[#001a4d]">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a href="#inscricao-tecnica" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#001f5b] px-7 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-blue-950/20 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                Falar com a secretaria <ArrowDown size={18} />
+              </a>
+              <div className="rounded-2xl border-2 border-red-200 bg-white px-5 py-3">
+                <p className="text-xs font-black uppercase tracking-wide text-red-600">AtÃ© o vencimento</p>
+                <p className="text-2xl font-black text-[#001a4d]">R$ 259,90 <span className="text-xs text-slate-500">/ mensalidade</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative min-h-[29rem] overflow-hidden lg:min-h-full">
+            <img
+              src={campaign.heroImageUrl}
+              alt="Profissional de enfermagem em ambiente clÃ­nico"
+              className="absolute inset-0 h-full w-full object-cover object-[66%_center]"
+              width="1600"
+              height="840"
+              fetchPriority="high"
+            />
+            <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-[#f4f8ff] to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/60 bg-white/90 p-5 shadow-2xl backdrop-blur-md lg:left-auto lg:w-[23rem]">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-red-600">MatrÃ­cula</p>
+                  <p className="text-3xl font-black text-[#001a4d]">R$ 200,00</p>
+                </div>
+                <div className="rounded-2xl bg-blue-50 px-4 py-3 text-right">
+                  <p className="text-xs font-black uppercase text-blue-700">Incluso</p>
+                  <p className="text-sm font-black text-[#001a4d]">2 fardas</p>
+                </div>
+              </div>
+              <div className="mt-4 border-t border-slate-200 pt-4 text-sm font-bold text-slate-600">
+                12 mensalidades <span className="text-red-500">â†’</span> rematrÃ­cula <span className="text-red-500">â†’</span> 12 mensalidades
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="relative overflow-hidden bg-[#000d1a] text-white">
+      {/* Background ambient lighting and gradient overlays */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/40 via-[#001833] to-[#000d1a]" />
+      <div className="pointer-events-none absolute -left-32 top-0 h-[30rem] w-[30rem] rounded-full bg-blue-500/15 blur-[120px]" />
+      <div className="pointer-events-none absolute right-0 bottom-0 h-[28rem] w-[28rem] rounded-full bg-emerald-500/10 blur-[120px]" />
+
+      {/* Optional Course Image background overlay with dark filter */}
+      {data.course.imageUrl ? (
+        <div className="absolute inset-0 opacity-20 mix-blend-luminosity">
+          <img src={data.course.imageUrl} alt="" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#000d1a] via-[#000d1a]/80 to-transparent" />
+        </div>
+      ) : null}
+
+      <div className="relative mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-24 items-center">
+        {/* Left Column: Hero Content */}
+        <div>
+          {/* Eyebrow badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-blue-300 backdrop-blur-md">
+            <Sparkles size={14} className="text-blue-400 animate-pulse" />
+            <span>{config.eyebrow || 'FormaÃ§Ã£o TÃ©cnica Profissional'}</span>
+          </div>
+
+          {/* Title with sleek gradient */}
+          <h1 className="mt-6 text-4xl font-black uppercase leading-[1.08] tracking-tight text-white md:text-6xl lg:text-6xl">
+            <span className="bg-gradient-to-r from-white via-blue-50 to-blue-200 bg-clip-text text-transparent">
+              {data.course.name}
+            </span>
+          </h1>
+
+          {/* Description */}
+          <p className="mt-6 max-w-2xl text-base font-medium leading-relaxed text-blue-100/80 md:text-lg">
+            {config.description}
+          </p>
+
+          {/* Feature Pills */}
+          <div className="mt-8 flex flex-wrap gap-3">
+            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
+              <MapPin size={16} className="text-blue-400" />
+              <span>{data.polo.name} Â· {data.polo.city}/{data.polo.state}</span>
+            </span>
+            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
+              <Clock3 size={16} className="text-blue-400" />
+              <span>Turno: {data.turma.shift}</span>
+            </span>
+            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
+              <CalendarDays size={16} className="text-blue-400" />
+              <span>InÃ­cio: {formatLandingDate(data.turma.startDate)}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Right Column: Quick Enrollment Card */}
+        <div className="flex items-center">
+          <div className="relative w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/10 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+            {/* Ambient Card Light */}
+            <div className={`pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-2xl ${
+              onlineEnrollmentAvailable ? 'bg-emerald-500/25' : 'bg-blue-500/25'
+            }`} />
+
+            <div className="flex items-center gap-3.5">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner ${
+                onlineEnrollmentAvailable ? 'bg-emerald-400/20 text-emerald-300' : 'bg-blue-400/20 text-blue-200'
+              }`}>
+                <GraduationCap size={28} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${
+                    onlineEnrollmentAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-blue-300'
+                  }`} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-200/80">
+                    Status da Turma
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xl font-black text-white">{data.turma.availabilityLabel}</p>
+              </div>
+            </div>
+
+            <p className="mt-6 text-xs font-semibold leading-relaxed text-blue-100/80 border-t border-white/10 pt-5">
+              {onlineEnrollmentAvailable
+                ? `InscriÃ§Ãµes online abertas atÃ© ${formatLandingDate(data.turma.enrollmentEndDate)}. Garanta sua vaga com matrÃ­cula imediata no portal.`
+                : 'Esta turma estÃ¡ disponÃ­vel para consulta. A prÃ©-matrÃ­cula e orientaÃ§Ãµes sÃ£o realizadas presencialmente na unidade.'}
+            </p>
+
+            {onlineEnrollmentAvailable ? (
+              <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-emerald-300/90">
+                <ShieldCheck size={16} className="shrink-0 text-emerald-400" />
+                <span>Processo 100% online com confirmaÃ§Ã£o rÃ¡pida</span>
+              </div>
+            ) : null}
+
+            <a
+              href="#inscricao-tecnica"
+              className={`mt-7 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] shadow-xl ${
+                onlineEnrollmentAvailable
+                  ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 text-emerald-950 hover:brightness-110 shadow-emerald-500/20'
+                  : 'bg-white text-blue-900 hover:bg-blue-50'
+              }`}
+            >
+              <span>{onlineEnrollmentAvailable ? 'Inscrever-se Agora' : 'Ver Atendimento Presencial'}</span>
+              <ArrowDown size={16} />
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default TechnicalLandingHero;
