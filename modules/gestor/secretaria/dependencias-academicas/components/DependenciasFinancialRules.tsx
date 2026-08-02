@@ -1,9 +1,21 @@
-import { BadgePercent, CalendarClock, Landmark, Loader2, Save, Scale } from 'lucide-react';
+import {
+  BadgePercent,
+  CalendarClock,
+  Landmark,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Save,
+  Scale,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type {
   DependenciaDisciplinaConfiguravel,
   DependenciaPoliticaInput,
+  DependenciaPoliticaRemocaoInput,
   DependenciaRegraFinanceira,
 } from '../dependencias-academicas.types';
 import {
@@ -20,6 +32,7 @@ interface DependenciasFinancialRulesProps {
   rules: DependenciaRegraFinanceira[];
   disciplines: DependenciaDisciplinaConfiguravel[];
   mutation: UseMutationResult<void, Error, DependenciaPoliticaInput>;
+  removeMutation: UseMutationResult<void, Error, DependenciaPoliticaRemocaoInput>;
 }
 
 const createIdempotencyKey = () => (
@@ -33,10 +46,13 @@ const DependenciasFinancialRules = ({
   rules,
   disciplines,
   mutation,
+  removeMutation,
 }: DependenciasFinancialRulesProps) => {
   const [disciplineId, setDisciplineId] = useState('');
   const [percentage, setPercentage] = useState('50');
   const policyAttemptRef = useRef<DependencyPolicyAttempt | null>(null);
+  const formRef = useRef<HTMLElement | null>(null);
+  const [removingRuleId, setRemovingRuleId] = useState<string | null>(null);
 
   const selectDiscipline = (nextId: string) => {
     setDisciplineId(nextId);
@@ -53,6 +69,25 @@ const DependenciasFinancialRules = ({
         ? '50'
         : '100',
     );
+  };
+
+  const editRule = (rule: DependenciaRegraFinanceira) => {
+    if (!rule.disciplinaId) return;
+    selectDiscipline(rule.disciplinaId);
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const removeRule = (rule: DependenciaRegraFinanceira) => {
+    if (!rule.disciplinaId) return;
+    removeMutation.mutate({ poloId, politicaId: rule.id }, {
+      onSuccess: () => {
+        setRemovingRuleId(null);
+        if (disciplineId === rule.disciplinaId) {
+          setDisciplineId('');
+          setPercentage('50');
+        }
+      },
+    });
   };
 
   const save = () => {
@@ -105,18 +140,30 @@ const DependenciasFinancialRules = ({
       </article>
     </div>
 
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section ref={formRef} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
         <div className="flex-1">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">
             Configuração por disciplina
           </p>
           <h3 className="mt-1 text-base font-black text-[#001a33]">
-            Sobrescrever a faixa institucional
+            {disciplineId ? 'Editar regra da disciplina' : 'Sobrescrever a faixa institucional'}
           </h3>
           <p className="mt-1 text-xs font-medium text-slate-500">
             O percentual é versionado no servidor. Cobranças já confirmadas preservam o snapshot anterior.
           </p>
+          {disciplineId ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDisciplineId('');
+                setPercentage('50');
+              }}
+              className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 transition hover:text-blue-700"
+            >
+              <X size={12} /> Cancelar edição
+            </button>
+          ) : null}
         </div>
         <label className="block min-w-0 lg:w-72">
           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Disciplina técnica do polo</span>
@@ -164,6 +211,14 @@ const DependenciasFinancialRules = ({
       {mutation.isError ? (
         <p className="mt-3 text-xs font-bold text-rose-700">{mutation.error.message}</p>
       ) : null}
+      {removeMutation.isSuccess ? (
+        <p className="mt-3 text-xs font-bold text-emerald-700">
+          Personalização removida. A disciplina voltou a usar a faixa institucional.
+        </p>
+      ) : null}
+      {removeMutation.isError ? (
+        <p className="mt-3 text-xs font-bold text-rose-700">{removeMutation.error.message}</p>
+      ) : null}
       {!disciplines.length ? (
         <p className="mt-3 text-xs font-semibold text-amber-700">
           Nenhuma disciplina de curso técnico foi ofertada neste polo.
@@ -198,6 +253,56 @@ const DependenciasFinancialRules = ({
                 <span>Base: {formatCurrency(rule.valorReferencia)}</span>
                 <span className="col-span-2">Vigência: {formatDate(rule.vigenciaInicio)}</span>
               </div>
+              {rule.disciplinaId ? (
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  {removingRuleId === rule.id ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+                      <p className="text-[11px] font-bold text-rose-800">
+                        Remover esta personalização e voltar à regra institucional?
+                      </p>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => removeRule(rule)}
+                          disabled={removeMutation.isPending}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-rose-700 px-3 text-[9px] font-black uppercase tracking-wider text-white disabled:opacity-50"
+                        >
+                          {removeMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                          Confirmar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRemovingRuleId(null)}
+                          className="min-h-9 rounded-lg border border-rose-200 bg-white px-3 text-[9px] font-black uppercase tracking-wider text-rose-700"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editRule(rule)}
+                        className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 text-[9px] font-black uppercase tracking-wider text-blue-700"
+                      >
+                        <Pencil size={12} /> Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRemovingRuleId(rule.id)}
+                        className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 text-[9px] font-black uppercase tracking-wider text-rose-700"
+                      >
+                        <Trash2 size={12} /> Remover
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-500">
+                  <RotateCcw size={12} /> Regra padrão do sistema
+                </p>
+              )}
             </article>
           ))}
         </div>
@@ -211,6 +316,7 @@ const DependenciasFinancialRules = ({
                 <th className="px-4 py-3">Percentual</th>
                 <th className="px-4 py-3">Referência</th>
                 <th className="px-4 py-3">Vigência / origem</th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -226,6 +332,58 @@ const DependenciasFinancialRules = ({
                       <CalendarClock size={12} /> {formatDate(rule.vigenciaInicio)}
                     </span>
                     <p className="mt-1 text-[10px] font-bold text-slate-400">{rule.origem}</p>
+                  </td>
+                  <td className="px-4 py-4">
+                    {rule.disciplinaId ? (
+                      removingRuleId === rule.id ? (
+                        <div className="ml-auto w-56 rounded-xl border border-rose-200 bg-rose-50 p-3">
+                          <p className="text-[10px] font-bold leading-relaxed text-rose-800">
+                            Voltar à regra institucional?
+                          </p>
+                          <div className="mt-2 flex justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setRemovingRuleId(null)}
+                              className="min-h-8 rounded-lg border border-rose-200 bg-white px-2.5 text-[8px] font-black uppercase tracking-wider text-rose-700"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeRule(rule)}
+                              disabled={removeMutation.isPending}
+                              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-rose-700 px-2.5 text-[8px] font-black uppercase tracking-wider text-white disabled:opacity-50"
+                            >
+                              {removeMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                              Confirmar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => editRule(rule)}
+                            title="Editar criando uma nova versão"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[9px] font-black uppercase tracking-wider text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                          >
+                            <Pencil size={12} /> Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRemovingRuleId(rule.id)}
+                            title="Remover personalização"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-[9px] font-black uppercase tracking-wider text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                          >
+                            <Trash2 size={12} /> Remover
+                          </button>
+                        </div>
+                      )
+                    ) : (
+                      <span className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[8px] font-black uppercase tracking-wider text-slate-500">
+                        <RotateCcw size={11} /> Padrão
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

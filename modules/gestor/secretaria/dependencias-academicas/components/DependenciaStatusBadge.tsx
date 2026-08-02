@@ -15,6 +15,11 @@ const PRESENTATION: Record<string, {
   classes: string;
   icon: typeof Clock3;
 }> = {
+  DIARIO_EM_ABERTO: {
+    label: 'Diário em aberto',
+    classes: 'border-amber-300 bg-amber-50 text-amber-900',
+    icon: Clock3,
+  },
   PENDENTE_ENCAMINHAMENTO: {
     label: 'Aguardando encaminhamento',
     classes: 'border-amber-200 bg-amber-50 text-amber-800',
@@ -90,7 +95,7 @@ const DependenciaStatusBadge = ({ status }: DependenciaStatusBadgeProps) => {
   };
   const Icon = presentation.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] ${presentation.classes}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] ${presentation.classes}`}>
       <Icon size={11} className={normalized === 'PAGAMENTO_PROCESSANDO' ? 'animate-spin' : ''} />
       {presentation.label}
     </span>

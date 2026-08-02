@@ -92,7 +92,7 @@ export interface ContasReceber {
   jurosAplicados?: number;
   multaAplicada?: number;
   createdAt?: string;
-  tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA';
+  tipoLancamento?: 'MATRICULA' | 'PARCELA' | 'REMATRICULA' | 'DEPENDENCIA';
   parcelaNumero?: number;
   origemCronogramaId?: string;
   turmaNome?: string;

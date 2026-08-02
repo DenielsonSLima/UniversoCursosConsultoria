@@ -43,6 +43,13 @@ export interface TurmaDisciplinaAluno {
   disciplinas?: {
     id?: string | null;
     nome?: string | null;
+    ordem?: number | string | null;
+    modulo_id?: string | null;
+    modulo?: {
+      id?: string | null;
+      nome?: string | null;
+      ordem?: number | string | null;
+    } | null;
     carga_horaria?: number | string | null;
     carga_horaria_estagio?: number | string | null;
   } | null;
@@ -118,12 +125,27 @@ export interface CertificadoAluno {
 export interface DisciplinaResumoAluno {
   id: string;
   nome: string;
+  ordem: number;
+  modulo: {
+    id: string;
+    nome: string;
+    ordem: number;
+    status?: string | null;
+  };
   cargaHoraria: number;
   professor: string;
   concluida: boolean;
   notas: ResultadoDiarioAluno | null;
   attendance: { presentes: number; faltas: number; total: number };
   frequency: number | null;
+}
+
+export interface ModuloCurricularAluno<T> {
+  id: string;
+  nome: string;
+  ordem: number;
+  status?: string | null;
+  itens: T[];
 }
 
 export type TurmaDetailTab = 'resumo' | 'diario' | 'atividades' | 'notas' | 'estagio' | 'certificado';

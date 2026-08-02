@@ -22,6 +22,8 @@ import {
   ComunicacaoMensagem,
   ComunicacaoPageProps,
 } from './comunicacao.types';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
+import AlunoMobileComunicacao from './mobile/AlunoMobileComunicacao';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ const playMessageSound = (tone: 'send' | 'receive') => {
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
+  const isMobile = useAlunoMobileLayout();
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -60,6 +63,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
   const [pendingPage, setPendingPage] = useState(1);
   const [resolvedPage, setResolvedPage] = useState(1);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
 
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -239,6 +243,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       setActiveCallTab('pendentes');
       setPendingPage(1);
       setActiveChatId(newChat.id);
+      if (isMobile) setMobileConversationOpen(true);
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
       console.error(err);
@@ -249,6 +254,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   // ── Helpers ──
   const currentChat = chats.find(c => c.id === activeChatId);
 
+  useEffect(() => {
+    if (!currentChat) setMobileConversationOpen(false);
+  }, [currentChat]);
+
   const getCategoryInfo = (catId: string | null) => {
     if (!catId) return { nome: 'Geral', cor: '#475569' };
     return categories.find(c => c.id === catId) || { nome: 'Geral', cor: '#475569' };
@@ -256,8 +265,48 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+    <>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+
+      {isMobile ? (
+        <AlunoMobileComunicacao
+          activeCallTab={activeCallTab}
+          activePage={activePage}
+          categories={categories}
+          currentChat={currentChat}
+          displayedChats={displayedChats}
+          fileInputRef={fileInputRef}
+          loadingChats={loadingChats}
+          loadingMessages={loadingMessages}
+          messages={messages}
+          messagesEndRef={messagesEndRef}
+          messageText={messageText}
+          pendingCount={pendentes.length}
+          pendingFile={pendingFile}
+          resolvedCount={resolvidos.length}
+          showConversation={mobileConversationOpen}
+          totalChatsInTab={activeCallChats.length}
+          unreadChatIds={unreadChatIds}
+          uploadingFile={uploadingFile}
+          onBack={() => setMobileConversationOpen(false)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onFileChange={setPendingFile}
+          onMessageChange={setMessageText}
+          onNewChat={() => setShowNewChatModal(true)}
+          onPageChange={handlePageChange}
+          onSelectChat={(chatId) => {
+            setActiveChatId(chatId);
+            setMobileConversationOpen(true);
+          }}
+          onSend={handleSendMessage}
+          onTabChange={(tab) => {
+            setActiveCallTab(tab);
+            if (tab === 'pendentes') setPendingPage(1);
+            else setResolvedPage(1);
+          }}
+        />
+      ) : (
+    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
 
       {/* ── Top Header ── */}
       <div className="bg-white px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
@@ -461,6 +510,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
         )}
       </div>
 
+    </div>
+      )}
+
       {/* ── Delete Confirmation Modal ── */}
       {showDeleteConfirm && (
         <AlunoDeleteChatModal deleting={deletingChat} onCancel={() => setShowDeleteConfirm(false)} onConfirm={handleDeleteChat} />
@@ -478,7 +530,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           onSubjectChange={setNewChatSubject}
         />
       )}
-    </div>
+    </>
   );
 };
 

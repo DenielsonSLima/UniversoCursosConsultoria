@@ -2,6 +2,7 @@ import React from 'react';
 import { Camera, ShieldCheck, Upload, User } from 'lucide-react';
 import ProfilePhotoAdjustModal from '../../shared/components/ProfilePhotoAdjustModal';
 import { PerfilData } from './perfil.types';
+import AlunoMobileProfilePhotoCard from './components/mobile/AlunoMobileProfilePhotoCard';
 
 type Props = {
   profile: PerfilData;
@@ -31,7 +32,13 @@ const PerfilPhotoCard: React.FC<Props> = ({
       />
     )}
 
-    <aside className="space-y-4">
+    <AlunoMobileProfilePhotoCard
+      profile={profile}
+      uploadingPhoto={uploadingPhoto}
+      onFileSelected={onPendingPhotoChange}
+    />
+
+    <aside className="hidden space-y-4 md:block">
       <div className="rounded-3xl border border-blue-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem]">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600">

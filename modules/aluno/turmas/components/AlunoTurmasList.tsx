@@ -14,6 +14,8 @@ import {
 } from '../turmas.utils';
 import { getStudentCourseAccessKey } from '../../cursos/courseAccessHistory';
 import CourseStatusBadge from './CourseStatusBadge';
+import AlunoMobileCourseCard from './mobile/AlunoMobileCourseCard';
+import useAlunoMobileLayout from '../../hooks/useAlunoMobileLayout';
 
 interface AlunoTurmasListProps {
   matriculas: MatriculaAluno[];
@@ -43,6 +45,7 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
   onOpenEad,
   onTogglePinned,
 }) => {
+  const isMobileLayout = useAlunoMobileLayout();
   const [searchTerm, setSearchTerm] = useState('');
   const [modalityFilter, setModalityFilter] = useState('todos');
 
@@ -98,6 +101,22 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
       : progressState?.isError
         ? 'indisponível'
       : waitingForTechnicalStart ? 'aguardando início' : locked ? 'bloqueado' : `${percent}%`;
+
+    if (isMobileLayout) {
+      return (
+        <React.Fragment key={matricula.id}>
+          <AlunoMobileCourseCard
+            isPinned={isPinned}
+            matricula={matricula}
+            percent={percent}
+            progressState={progressState}
+            onOpen={onOpen}
+            onOpenEad={onOpenEad}
+            onTogglePinned={onTogglePinned}
+          />
+        </React.Fragment>
+      );
+    }
 
     return (
       <article key={matricula.id} className={`relative min-w-0 overflow-hidden rounded-[1.5rem] border bg-white shadow-sm transition-all duration-300 hover:border-blue-400 hover:shadow-md ${isPinned ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-100'}`}>
@@ -183,8 +202,8 @@ const AlunoTurmasList: React.FC<AlunoTurmasListProps> = ({
         <div className="rounded-[2rem] border border-slate-100 bg-white p-7 text-center shadow-sm sm:p-10"><p className="text-sm font-black text-[#001a33]">Nenhum curso encontrado</p><p className="mt-1 text-xs font-bold text-slate-400">Ajuste a busca ou selecione outro tipo de curso.</p></div>
       ) : (
         <>
-          {pinned.length > 0 ? <section className="space-y-3"><div className="flex items-center gap-3"><h3 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700"><Pin size={14} fill="currentColor" /> Cursos fixados</h3><span className="h-px flex-1 bg-blue-100" /><span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{pinned.length}</span></div><div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{pinned.map(renderCard)}</div></section> : null}
-          {grouped.map(([modality, items]) => <section key={modality} className="space-y-3"><div className="flex items-center gap-3"><h3 className="text-xs font-black uppercase tracking-widest text-[#001a33]">{MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}</h3><span className="h-px flex-1 bg-slate-100" /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{items.length}</span></div><div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{items.map(renderCard)}</div></section>)}
+          {pinned.length > 0 ? <section className="space-y-3"><div className="flex items-center gap-3"><h3 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-700"><Pin size={14} fill="currentColor" /> Cursos fixados</h3><span className="h-px flex-1 bg-blue-100" /><span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{pinned.length}</span></div><div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{pinned.map(renderCard)}</div></section> : null}
+          {grouped.map(([modality, items]) => <section key={modality} className="space-y-3"><div className="flex items-center gap-3"><h3 className="text-xs font-black uppercase tracking-widest text-[#001a33]">{MODALITY_LABELS[modality] || MODALITY_LABELS.OUTROS}</h3><span className="h-px flex-1 bg-slate-100" /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{items.length}</span></div><div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{items.map(renderCard)}</div></section>)}
         </>
       )}
     </div>

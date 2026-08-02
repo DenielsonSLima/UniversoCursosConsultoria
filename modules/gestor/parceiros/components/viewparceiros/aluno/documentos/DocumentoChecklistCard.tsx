@@ -71,7 +71,7 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
               <DocumentoStatusBadge status={item.status} />
               {hasLegacyReceipt ? (
                 <span className="text-[9px] font-bold text-blue-600">
-                  Recebido no sistema anterior · sem arquivo anexado
+                  Entregue e conferido · sem arquivo anexado
                 </span>
               ) : item.versaoAtual ? (
                 <span className="text-[9px] font-bold text-slate-400">
@@ -89,7 +89,14 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
             ) : null}
             {item.recebimentoSemAnexo ? (
               <p className="mt-2 max-w-2xl text-[10px] font-semibold leading-relaxed text-slate-600">
-                Registro legado: {item.recebimentoSemAnexo.motivo}
+                Registro administrativo: {item.recebimentoSemAnexo.motivo}
+                {' · '}
+                {item.recebimentoSemAnexo.recebidoPorNome || 'Gestor responsável'}
+                {' · '}
+                {new Intl.DateTimeFormat('pt-BR', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                }).format(new Date(item.recebimentoSemAnexo.recebidoEm))}
               </p>
             ) : null}
           </div>
@@ -126,7 +133,7 @@ const DocumentoChecklistCard: React.FC<DocumentoChecklistCardProps> = ({
               onClick={() => onMarkReceived(item)}
               className={`${actionClassName} border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100`}
             >
-              <ClipboardCheck aria-hidden="true" size={13} /> Recebido
+              <ClipboardCheck aria-hidden="true" size={13} /> Marcar entregue
             </button>
           ) : null}
           {hasLegacyReceipt && onRevokeReceived ? (

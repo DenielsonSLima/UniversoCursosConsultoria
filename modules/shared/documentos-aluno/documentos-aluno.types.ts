@@ -50,7 +50,10 @@ export interface DocumentoAlunoRecebimentoSemAnexo {
   id: string;
   documentoId: string;
   alunoId: string;
-  origem: 'GESTOR_MIGRACAO_LEGADA' | 'MIGRACAO_LEGADA_T41';
+  origem:
+    | 'GESTOR_CONFIRMACAO_SEM_ANEXO'
+    | 'GESTOR_MIGRACAO_LEGADA'
+    | 'MIGRACAO_LEGADA_T41';
   motivo: string;
   recebidoEm: string;
   recebidoPorNome?: string | null;
@@ -59,6 +62,13 @@ export interface DocumentoAlunoRecebimentoSemAnexo {
 export interface DocumentoAlunoChecklistItem {
   id: string;
   nome: string;
+  codigo?: string;
+  regraObrigatoriedade?:
+    | 'OBRIGATORIO'
+    | 'MAIOR_18'
+    | 'HOMEM_MAIOR_18'
+    | 'OPCIONAL';
+  aplicavel?: boolean | null;
   obrigatorio?: boolean;
   status: DocumentoAlunoStatus;
   versaoAtual: DocumentoAlunoVersao | null;

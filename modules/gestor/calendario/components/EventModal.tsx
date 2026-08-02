@@ -13,11 +13,11 @@ interface EventModalProps {
   eventTypeOptions?: EventType[];
   teachers: any[];
   turmas: any[];
-  variant?: 'manager' | 'professor';
+  variant?: 'manager' | 'professor' | 'student';
   professorId?: string;
   canDeleteEvent?: (event: CalendarEvent) => boolean;
-  onAddEvent: (event: Omit<CalendarEvent, 'id'>) => void | Promise<void>;
-  onDeleteEvent: (id: string) => void | Promise<void>;
+  onAddEvent?: (event: Omit<CalendarEvent, 'id'>) => void | Promise<void>;
+  onDeleteEvent?: (id: string) => void | Promise<void>;
 }
 
 const EventModal: React.FC<EventModalProps> = ({ 
@@ -49,6 +49,7 @@ const EventModal: React.FC<EventModalProps> = ({
   if (!isOpen) return null;
 
   const isProfessor = variant === 'professor';
+  const isStudent = variant === 'student';
   const selectableEventTypes = eventTypeOptions || eventTypes;
   const dateStr = toDateKey(selectedDate);
   const displayDate = selectedDate.toLocaleDateString('pt-BR', { 
@@ -62,6 +63,7 @@ const EventModal: React.FC<EventModalProps> = ({
     setIsSaving(true);
     setFormError('');
     try {
+      if (!onAddEvent) return;
       await onAddEvent({
         ...formData,
         date: dateStr,
@@ -97,7 +99,7 @@ const EventModal: React.FC<EventModalProps> = ({
                {displayDate}
              </h3>
              <p className="text-xs text-slate-500 font-medium">
-               {isProfessor ? 'Sua agenda pessoal e os compromissos deste dia.' : 'Observações e eventos.'}
+               {isProfessor ? 'Sua agenda pessoal e os compromissos deste dia.' : isStudent ? 'Aulas, comunicados e datas oficiais.' : 'Observações e eventos.'}
              </p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-50 text-slate-400 hover:text-red-500 transition-colors">
@@ -156,7 +158,7 @@ const EventModal: React.FC<EventModalProps> = ({
                         )}
                     </div>
                 </div>
-                {(canDeleteEvent
+                {!isStudent && onDeleteEvent && (canDeleteEvent
                   ? canDeleteEvent(event)
                   : !event.id.startsWith('class-') && !event.id.startsWith('official-')) && (
                   <button 
@@ -278,12 +280,12 @@ const EventModal: React.FC<EventModalProps> = ({
             </div>
           </form>
         ) : (
-          <button 
+          !isStudent ? <button 
             onClick={() => setShowForm(true)}
             className="w-full py-3 bg-[#001a33] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-blue-900 transition-colors shadow-lg flex items-center justify-center gap-2"
           >
             <Plus size={16} /> {isProfessor ? 'Adicionar evento pessoal' : 'Adicionar observação'}
-          </button>
+          </button> : null
         )}
       </div>
     </div>
