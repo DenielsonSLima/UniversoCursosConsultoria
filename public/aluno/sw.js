@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'universo-aluno-shell-v3';
+const CACHE_VERSION = 'universo-aluno-shell-v4';
 const SAFE_SHELL_ASSETS = [
   '/aluno/',
   '/aluno/manifest.webmanifest',
@@ -29,3 +29,18 @@ self.addEventListener('activate', (event) => {
 
 // Este worker não intercepta fetches. Assim, Auth, Supabase, pagamentos,
 // documentos, PDFs e dados acadêmicos nunca são persistidos pelo PWA.
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const destination = event.notification.data?.url || '/aluno/comunicacao';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => 'focus' in client);
+      if (existing) {
+        existing.navigate(destination);
+        return existing.focus();
+      }
+      return self.clients.openWindow(destination);
+    }),
+  );
+});
