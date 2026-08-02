@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.22",
+  "version": "2.2.3-beta.23",
   "display": "BETA",
   "stage": "beta",
-  "revision": 22,
+  "revision": 23,
   "releasedAt": "2026-08-02",
-  "summary": "Login e cadastro exclusivos do aplicativo do aluno"
+  "summary": "Atendimento multicanal e suporte persistente no aplicativo"
 }
