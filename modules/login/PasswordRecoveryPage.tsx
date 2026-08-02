@@ -81,7 +81,12 @@ const clearRecoveryAuthParams = () => {
 
 const PasswordRecoveryPage: React.FC = () => {
   const navigate = useNavigate();
-  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
+  const recoverySource = new URLSearchParams(window.location.search).get('source');
+  const alunoLoginPath = recoverySource === 'login-app'
+    ? '/aluno/login-app'
+    : window.location.pathname.startsWith('/aluno/')
+      ? '/aluno/entrar'
+      : '/login';
   const [mode, setMode] = useState<RecoveryMode>('request');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
