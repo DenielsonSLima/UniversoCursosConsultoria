@@ -10,6 +10,83 @@ interface TechnicalLandingHeroProps {
 
 const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, config }) => {
   const onlineEnrollmentAvailable = data.turma.onlineEnrollmentAvailable;
+  const campaign = config.marketingCampaign;
+
+  if (campaign) {
+    return (
+      <section className="relative overflow-hidden border-b border-blue-100 bg-[#f4f8ff] text-[#001a4d]">
+        <div className="pointer-events-none absolute -left-40 -top-56 h-[34rem] w-[34rem] rounded-full bg-blue-200/60 blur-3xl" />
+        <div className="relative mx-auto grid min-h-[42rem] max-w-7xl lg:grid-cols-[1.03fr_0.97fr]">
+          <div className="z-10 flex flex-col justify-center px-6 py-14 md:px-10 lg:py-20 xl:pl-14">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-red-600/20">
+              <Sparkles size={15} /> {config.eyebrow}
+            </div>
+            <p className="mt-7 text-xl font-black text-red-600 md:text-2xl">{campaign.promise}</p>
+            <h1 className="mt-2 max-w-3xl text-5xl font-black uppercase leading-[0.93] tracking-[-0.045em] text-[#001a4d] md:text-7xl xl:text-[5.2rem]">
+              {data.course.name}
+            </h1>
+            <p className="mt-6 max-w-2xl text-base font-semibold leading-relaxed text-slate-600 md:text-lg">
+              {config.description}
+            </p>
+            <p className="mt-4 flex max-w-2xl items-start gap-2 text-sm font-bold leading-relaxed text-blue-900">
+              <ShieldCheck className="mt-0.5 shrink-0 text-blue-600" size={19} /> {campaign.eligibility}
+            </p>
+
+            <div className="mt-8 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                ['Duração', campaign.durationLabel],
+                ['Turno', data.turma.shift],
+                ['Início', formatLandingDate(data.turma.startDate)],
+                ['Polo', `${data.polo.city}/${data.polo.state}`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-blue-100 bg-white/85 p-3 shadow-sm backdrop-blur">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p>
+                  <p className="mt-1 text-sm font-black text-[#001a4d]">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <a href="#inscricao-tecnica" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#001f5b] px-7 py-4 text-sm font-black uppercase tracking-wider text-white shadow-xl shadow-blue-950/20 transition hover:-translate-y-0.5 hover:bg-blue-800 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                Falar com a secretaria <ArrowDown size={18} />
+              </a>
+              <div className="rounded-2xl border-2 border-red-200 bg-white px-5 py-3">
+                <p className="text-xs font-black uppercase tracking-wide text-red-600">Até o vencimento</p>
+                <p className="text-2xl font-black text-[#001a4d]">R$ 259,90 <span className="text-xs text-slate-500">/ mensalidade</span></p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative min-h-[29rem] overflow-hidden lg:min-h-full">
+            <img
+              src={campaign.heroImageUrl}
+              alt="Profissional de enfermagem em ambiente clínico"
+              className="absolute inset-0 h-full w-full object-cover object-[66%_center]"
+              width="1600"
+              height="840"
+              fetchPriority="high"
+            />
+            <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-[#f4f8ff] to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/60 bg-white/90 p-5 shadow-2xl backdrop-blur-md lg:left-auto lg:w-[23rem]">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-red-600">Matrícula</p>
+                  <p className="text-3xl font-black text-[#001a4d]">R$ 200,00</p>
+                </div>
+                <div className="rounded-2xl bg-blue-50 px-4 py-3 text-right">
+                  <p className="text-xs font-black uppercase text-blue-700">Incluso</p>
+                  <p className="text-sm font-black text-[#001a4d]">2 fardas</p>
+                </div>
+              </div>
+              <div className="mt-4 border-t border-slate-200 pt-4 text-sm font-bold text-slate-600">
+                12 mensalidades <span className="text-red-500">→</span> rematrícula <span className="text-red-500">→</span> 12 mensalidades
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative overflow-hidden bg-[#000d1a] text-white">

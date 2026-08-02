@@ -32,6 +32,19 @@ export interface TechnicalLandingConfig {
   documents: TechnicalLandingDocument[];
   documentationNotice?: string;
   accent: 'blue' | 'emerald' | 'cyan' | 'violet';
+  marketingCampaign?: {
+    promise: string;
+    heroImageUrl: string;
+    durationLabel: string;
+    enrollmentFee: number;
+    enrollmentBenefit: string;
+    regularMonthlyValue: number;
+    punctualMonthlyValue: number;
+    installmentsPerCycle: number;
+    cycles: number;
+    reEnrollmentLabel: string;
+    eligibility: string;
+  };
 }
 
 export interface TechnicalLandingCourse {

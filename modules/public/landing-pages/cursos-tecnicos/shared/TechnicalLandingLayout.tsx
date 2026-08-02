@@ -28,7 +28,7 @@ const TechnicalLandingLayout: React.FC<TechnicalLandingLayoutProps> = ({
       <TechnicalLandingHero data={data} config={config} />
 
       <div className="mx-auto max-w-6xl space-y-12 px-6 py-12 md:py-20">
-        <TechnicalClassSummary data={data} />
+        <TechnicalClassSummary data={data} config={config} />
 
         <div className="grid items-start gap-10 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-10">

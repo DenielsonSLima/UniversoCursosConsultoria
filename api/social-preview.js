@@ -22,6 +22,13 @@ const TEMPLATES = {
   },
 };
 
+const TECHNICAL_NURSING_SOCIAL = {
+  pathPrefix: '/cursos-tecnicos/tecnico-em-enfermagem/',
+  title: 'Técnico em Enfermagem | Universo Cursos e Consultoria',
+  description: 'Transforme cuidado em profissão. Conheça a nova turma de Técnico em Enfermagem em Japoatã e fale com a nossa secretaria.',
+  image: `${SITE_URL}/social-share/tecnico-enfermagem-2026.jpg`,
+};
+
 const firstQueryValue = (value) => Array.isArray(value) ? value[0] : value;
 
 const escapeHtmlAttribute = (value) => String(value)
@@ -42,6 +49,32 @@ const injectRequestedUrl = (html, requestedUrl) => {
   }
 
   return html.replace('</head>', `    ${tags}\n</head>`);
+};
+
+const replaceMetaContent = (html, attribute, key, content) => {
+  const safeContent = escapeHtmlAttribute(content);
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`<meta\\b(?=[^>]*\\b${attribute}=["']${escapedKey}["'])[^>]*>`, 'i');
+  const tag = `<meta ${attribute}="${key}" content="${safeContent}">`;
+  return pattern.test(html) ? html.replace(pattern, tag) : html;
+};
+
+const applySocialOverride = (html, metadata) => {
+  let nextHtml = html.replace(
+    /<title\b[^>]*>[\s\S]*?<\/title>/i,
+    `<title>${escapeHtmlAttribute(metadata.title)}</title>`,
+  );
+  nextHtml = replaceMetaContent(nextHtml, 'name', 'description', metadata.description);
+  nextHtml = replaceMetaContent(nextHtml, 'property', 'og:title', metadata.title);
+  nextHtml = replaceMetaContent(nextHtml, 'property', 'og:description', metadata.description);
+  nextHtml = replaceMetaContent(nextHtml, 'property', 'og:image', metadata.image);
+  nextHtml = replaceMetaContent(nextHtml, 'property', 'og:image:secure_url', metadata.image);
+  nextHtml = replaceMetaContent(nextHtml, 'property', 'og:image:alt', metadata.title);
+  nextHtml = replaceMetaContent(nextHtml, 'name', 'twitter:title', metadata.title);
+  nextHtml = replaceMetaContent(nextHtml, 'name', 'twitter:description', metadata.description);
+  nextHtml = replaceMetaContent(nextHtml, 'name', 'twitter:image', metadata.image);
+  nextHtml = replaceMetaContent(nextHtml, 'name', 'twitter:image:alt', metadata.title);
+  return nextHtml;
 };
 
 export default async function socialPreview(request, response) {
@@ -71,7 +104,11 @@ export default async function socialPreview(request, response) {
     );
     const templateHtml = await readFile(templatePath, 'utf8');
     const canonicalUrl = `${SITE_URL}${requestedPath}`;
-    const html = injectRequestedUrl(templateHtml, canonicalUrl);
+    const socialHtml = templateName === 'cursos-tecnicos-detail'
+      && requestedPath.startsWith(TECHNICAL_NURSING_SOCIAL.pathPrefix)
+      ? applySocialOverride(templateHtml, TECHNICAL_NURSING_SOCIAL)
+      : templateHtml;
+    const html = injectRequestedUrl(socialHtml, canonicalUrl);
 
     response.setHeader('Content-Type', 'text/html; charset=utf-8');
     response.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');

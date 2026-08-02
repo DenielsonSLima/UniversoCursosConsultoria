@@ -3,6 +3,12 @@ import { useLocation } from 'react-router-dom';
 
 const SITE_URL = 'https://universocc.com.br';
 
+const TECHNICAL_NURSING_METADATA: RouteMetadata = {
+  title: 'Técnico em Enfermagem | Universo Cursos e Consultoria',
+  description: 'Transforme cuidado em profissão. Conheça a nova turma de Técnico em Enfermagem em Japoatã e fale com a nossa secretaria.',
+  image: '/social-share/tecnico-enfermagem-2026.jpg',
+};
+
 type RouteMetadata = {
   title: string;
   description: string;
@@ -184,7 +190,9 @@ const SeoManager: React.FC = () => {
 
   useEffect(() => {
     const basePath = getMetadataPath(pathname);
-    const metadata = ROUTE_METADATA[basePath] || ROUTE_METADATA['/'];
+    const metadata = pathname.startsWith('/cursos-tecnicos/tecnico-em-enfermagem/')
+      ? TECHNICAL_NURSING_METADATA
+      : ROUTE_METADATA[basePath] || ROUTE_METADATA['/'];
     let cleanPath = pathname;
     if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
       cleanPath = cleanPath.slice(0, -1);

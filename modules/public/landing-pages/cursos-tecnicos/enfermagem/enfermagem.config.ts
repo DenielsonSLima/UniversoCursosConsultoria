@@ -20,4 +20,17 @@ export const enfermagemLandingConfig: TechnicalLandingConfig = {
   documents: cloneDocuments(BASE_TECHNICAL_DOCUMENTS, HEALTH_STAGE_DOCUMENTS),
   documentationNotice: 'A carteira de vacinação não bloqueia o pagamento, mas deverá ser regularizada antes do estágio supervisionado.',
   accent: 'emerald',
+  marketingCampaign: {
+    promise: 'Transforme cuidado em profissão.',
+    heroImageUrl: '/images/landing/enfermagem-campanha-2026.webp',
+    durationLabel: '24 meses',
+    enrollmentFee: 200,
+    enrollmentBenefit: 'Inclui duas fardas',
+    regularMonthlyValue: 279.9,
+    punctualMonthlyValue: 259.9,
+    installmentsPerCycle: 12,
+    cycles: 2,
+    reEnrollmentLabel: 'Rematrícula entre os ciclos',
+    eligibility: 'Para quem concluiu o Ensino Médio ou está cursando, no mínimo, o 2º ano.',
+  },
 };
