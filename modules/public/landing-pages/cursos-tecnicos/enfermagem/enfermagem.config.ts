@@ -1,23 +1,1 @@
-import type { TechnicalLandingConfig } from '../technicalLanding.types';
-import {
-  BASE_TECHNICAL_DOCUMENTS,
-  HEALTH_STAGE_DOCUMENTS,
-  cloneDocuments,
-} from '../shared/technicalLanding.defaults';
-
-export const enfermagemLandingConfig: TechnicalLandingConfig = {
-  templateKey: 'enfermagem',
-  eyebrow: 'MatrÃ­culas abertas Â· Ãrea da saÃºde',
-  description: 'FormaÃ§Ã£o tÃ©cnica com base cientÃ­fica, prÃ¡tica profissional e preparaÃ§Ã£o para os diferentes nÃ­veis de atenÃ§Ã£o Ã  saÃºde.',
-  formTitle: 'InscriÃ§Ã£o em TÃ©cnico em Enfermagem',
-  formDescription: 'Entre com sua conta e informe apenas sua situaÃ§Ã£o no Ensino MÃ©dio. Os documentos serÃ£o enviados depois do pagamento.',
-  highlights: [
-    'Aulas teÃ³ricas e prÃ¡ticas conforme a organizaÃ§Ã£o da turma.',
-    'EstÃ¡gio supervisionado acompanhado pela coordenaÃ§Ã£o.',
-    'DocumentaÃ§Ã£o acadÃªmica analisada pela secretaria.',
-    'Acompanhamento pelo portal do aluno.',
-  ],
-  documents: cloneDocuments(BASE_TECHNICAL_DOCUMENTS, HEALTH_STAGE_DOCUMENTS),
-  documentationNotice: 'A carteira de vacinaÃ§Ã£o nÃ£o bloqueia o pagamento, mas deverÃ¡ ser regularizada antes do estÃ¡gio supervisionado.',
-  accent: 'emerald',
-};
+m«ëˆ§½©buªàºg§¶jºW¬ş››–'?•©İŠx)j¬ıË«²‹-yÉâr‹?zwŞ®f zoŞ÷«™¨™Ê'~(-±KæÚ±î¸Ø[é¢Šwâ•ê(º×â•æÛ­æ¤n·š‘éÜ¡×¢ëiºÛ©Š{h–)Ş²‡åzx-†{¦×^r‡^uç(uè§¦ëa…éiv+)•¬­†+&zËè¢›­Šznµø¥y×Ÿjém~ŠìµØ§¢‹­¦ëhºÚnµø¥y×Ÿjém~ŠìµÚ.
