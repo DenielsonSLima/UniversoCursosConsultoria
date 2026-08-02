@@ -1,19 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../../../parceiros.service';
-import { documentosAlunoKeys } from '../../../../../shared/documentos-aluno/documentos-aluno.query-keys';
+import {
+  documentosAlunoKeys,
+  matriculaTecnicaWorkflowKeys,
+} from '../../../../../shared/documentos-aluno/documentos-aluno.query-keys';
 import { documentosAlunoV2Service } from '../../../../../shared/documentos-aluno/documentos-aluno.service';
 import type {
   DocumentoAlunoDecisaoRevisao,
   DocumentoAlunoMapeamentoPagina,
 } from '../../../../../shared/documentos-aluno/documentos-aluno.types';
 import { useDocumentosAlunoRealtime } from '../../../../../shared/documentos-aluno/use-documentos-aluno-realtime';
+import { reconcileMatriculaTecnicaWorkflowCache } from './matricula-tecnica-workflow-cache';
+import { useMatriculaTecnicaWorkflowRealtime } from './useMatriculaTecnicaWorkflowRealtime';
 
 export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
   const queryClient = useQueryClient();
   useDocumentosAlunoRealtime(alunoId);
+  useMatriculaTecnicaWorkflowRealtime(alunoId);
 
   const painelQuery = useQuery({
-    queryKey: documentosAlunoKeys.painel(alunoId),
+    queryKey: documentosAlunoKeys.painel(alunoId, 'gestor'),
     queryFn: () => documentosAlunoV2Service.getPainel(
       alunoId,
       { includeLegacyReceipts: true },
@@ -22,13 +28,20 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
   });
 
   const matriculasQuery = useQuery({
-    queryKey: ['matriculas-tecnicas-documentos-pendentes', alunoId],
+    queryKey: matriculaTecnicaWorkflowKeys.aluno(alunoId),
     queryFn: () => parceirosService.getMatriculasTecnicasPendentes(alunoId),
     enabled: Boolean(alunoId),
   });
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey: documentosAlunoKeys.aluno(alunoId) });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: documentosAlunoKeys.aluno(alunoId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: matriculaTecnicaWorkflowKeys.aluno(alunoId),
+      }),
+    ]);
   };
 
   const reviewMutation = useMutation({
@@ -111,11 +124,43 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
   const activateMutation = useMutation({
     mutationFn: (matriculaId: string) =>
       parceirosService.ativarMatriculaTecnicaAposDocumentos(matriculaId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['matriculas-tecnicas-documentos-pendentes', alunoId],
-      });
-      await queryClient.invalidateQueries({ queryKey: ['matriculas', alunoId] });
+    onSuccess: async (snapshot) => {
+      await Promise.all([
+        reconcileMatriculaTecnicaWorkflowCache(queryClient, alunoId, snapshot),
+        queryClient.invalidateQueries({
+          queryKey: documentosAlunoKeys.aluno(alunoId),
+        }),
+      ]);
+    },
+  });
+
+  const implantationReleaseMutation = useMutation({
+    mutationFn: (input: { matriculaId: string; motivo: string }) =>
+      parceirosService.liberarMatriculaImplantacao(
+        input.matriculaId,
+        input.motivo,
+      ),
+    onSuccess: async (snapshot) => {
+      await reconcileMatriculaTecnicaWorkflowCache(
+        queryClient,
+        alunoId,
+        snapshot,
+      );
+    },
+  });
+
+  const implantationRevokeMutation = useMutation({
+    mutationFn: (input: { matriculaId: string; motivo: string }) =>
+      parceirosService.revogarLiberacaoImplantacao(
+        input.matriculaId,
+        input.motivo,
+      ),
+    onSuccess: async (snapshot) => {
+      await reconcileMatriculaTecnicaWorkflowCache(
+        queryClient,
+        alunoId,
+        snapshot,
+      );
     },
   });
 
@@ -132,5 +177,7 @@ export const useParceiroAlunoDocumentosWorkflow = (alunoId: string) => {
     mappingMutation,
     cancelPdfMutation,
     activateMutation,
+    implantationReleaseMutation,
+    implantationRevokeMutation,
   };
 };

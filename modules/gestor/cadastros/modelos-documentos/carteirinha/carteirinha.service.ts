@@ -44,21 +44,32 @@ const normalizeTemplate = (template: unknown): CarteirinhaTemplate | null => {
   };
 };
 
+const fetchStoredTemplate = async (): Promise<CarteirinhaTemplate | null> => {
+  const { data, error } = await supabase
+    .from('documentos_templates')
+    .select('conteudo')
+    .eq('id', 'carteirinha')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[carteirinhaService] Erro ao buscar template do Supabase:', error);
+    throw error;
+  }
+
+  return normalizeTemplate(data?.conteudo);
+};
+
 export const carteirinhaService = {
   async getTemplate(): Promise<CarteirinhaTemplate> {
-    const { data, error } = await supabase
-      .from('documentos_templates')
-      .select('conteudo')
-      .eq('id', 'carteirinha')
-      .maybeSingle();
+    return (await fetchStoredTemplate()) || DEFAULT_TEMPLATE;
+  },
 
-    if (error) {
-      console.error('[carteirinhaService] Erro ao buscar template do Supabase:', error);
-      throw error;
+  async getStudentTemplate(): Promise<CarteirinhaTemplate> {
+    const template = await fetchStoredTemplate();
+    if (!template) {
+      throw new Error('O modelo oficial da carteirinha não está disponível para este acesso.');
     }
-
-    if (!data?.conteudo) return DEFAULT_TEMPLATE;
-    return normalizeTemplate(data.conteudo) || DEFAULT_TEMPLATE;
+    return template;
   },
 
   async saveTemplate(data: CarteirinhaTemplate) {

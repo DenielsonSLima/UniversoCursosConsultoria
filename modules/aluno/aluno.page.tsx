@@ -134,6 +134,7 @@ const AlunoPage: React.FC = () => {
         return (
           <InicioPage
             alunoId={alunoId}
+            canViewCalendar={canViewCalendar}
             onNavigate={setActiveModule}
             onOpenCourse={(courseId, turmaId, targetModule) => {
               setInitialCourseId(courseId);
@@ -182,7 +183,7 @@ const AlunoPage: React.FC = () => {
           />
         );
       default:
-        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
+        return <InicioPage alunoId={alunoId} canViewCalendar={canViewCalendar} onNavigate={setActiveModule} />;
     }
   };
 

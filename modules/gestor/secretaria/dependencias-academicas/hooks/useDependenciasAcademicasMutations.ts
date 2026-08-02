@@ -8,6 +8,7 @@ import type {
   DependenciaConfirmacao,
   DependenciaConfirmacaoInput,
   DependenciaPoliticaInput,
+  DependenciaPoliticaRemocaoInput,
 } from '../dependencias-academicas.types';
 
 export class DependenciaCheckoutError extends Error {
@@ -115,6 +116,16 @@ export const useConfigurarPoliticaDependenciaMutation = (poloId: string) => {
   return useMutation<void, Error, DependenciaPoliticaInput>({
     mutationFn: (input) =>
       dependenciasAcademicasService.configurarPoliticaDisciplina(input),
+    onSuccess: () => invalidate(),
+  });
+};
+
+export const useRemoverPoliticaDependenciaMutation = (poloId: string) => {
+  const invalidate = useDependenciaMutationInvalidation(poloId);
+
+  return useMutation<void, Error, DependenciaPoliticaRemocaoInput>({
+    mutationFn: (input) =>
+      dependenciasAcademicasService.removerPoliticaDisciplina(input),
     onSuccess: () => invalidate(),
   });
 };

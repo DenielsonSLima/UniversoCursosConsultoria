@@ -81,8 +81,30 @@ body,
 
 #root .aluno-auth-typography input::placeholder {
   color: rgb(100 116 139);
-  font-weight: 500;
+  font-weight: 400;
   opacity: 1;
+}
+
+/* Os valores digitados usam a fonte nativa da plataforma: ela é mais leve e
+   mais estável em campos editáveis no Safari do que a variação semibold da
+   fonte de marca usada no restante da página. */
+#root .aluno-auth-typography .aluno-auth-input {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  font-variant-ligatures: none;
+  text-rendering: auto;
+  -webkit-font-smoothing: auto;
+}
+
+#root .aluno-auth-typography .aluno-auth-input[type='password'] {
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+#root .aluno-auth-typography .aluno-auth-input::placeholder {
+  letter-spacing: 0;
 }
 
 .animate-fadeIn {

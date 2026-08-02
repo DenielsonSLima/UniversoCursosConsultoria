@@ -20,6 +20,7 @@ import {
   hasTechnicalAcademicAccess,
   isEadMatricula,
   isPortalEnrollmentVisible,
+  sortCurriculumDisciplines,
 } from '../turmas.utils';
 import { useAlunoInternships } from './useAlunoInternships';
 
@@ -60,13 +61,32 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
     queryKey: alunoCourseAccessKeys.enrollments(alunoId),
     enabled: Boolean(alunoId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('matriculas')
-        .select('*, turmas(*, cursos(*))')
-        .eq('aluno_id', alunoId)
-        .order('data_matricula', { ascending: false });
-      if (error) throw error;
-      return (data || []) as unknown as MatriculaAluno[];
+      const [enrollmentsResult, pendingTechnicalResult] = await Promise.all([
+        supabase
+          .from('matriculas')
+          .select('*, turmas(*, cursos(*))')
+          .eq('aluno_id', alunoId)
+          .order('data_matricula', { ascending: false }),
+        supabase.rpc('get_aluno_matriculas_tecnicas_pendentes_secure'),
+      ]);
+      if (enrollmentsResult.error) throw enrollmentsResult.error;
+      if (pendingTechnicalResult.error) throw pendingTechnicalResult.error;
+
+      const byId = new Map<string, MatriculaAluno>();
+      ((enrollmentsResult.data || []) as unknown as MatriculaAluno[])
+        .forEach((item) => byId.set(item.id, item));
+      const pendingRows = Array.isArray(pendingTechnicalResult.data)
+        ? pendingTechnicalResult.data as unknown as MatriculaAluno[]
+        : [];
+      pendingRows.forEach((item) => {
+        const current = byId.get(item.id);
+        if (!current?.turmas?.cursos) byId.set(item.id, item);
+      });
+
+      return [...byId.values()].sort((a, b) => (
+        String(b.data_matricula || b.created_at || '')
+          .localeCompare(String(a.data_matricula || a.created_at || ''))
+      ));
     },
   });
 
@@ -126,14 +146,16 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
           const { data: disciplineData, error: disciplineError } = await supabase
             .from('turmas_disciplinas')
             .select(`
-              *, disciplinas(*),
+              *, disciplinas(*, modulo:modulos(id, nome, ordem)),
               periodo_letivo:periodos_letivos!turmas_disciplinas_periodo_letivo_id_fkey(
                 id, nome, ordem, status, data_inicio, data_fim
               )
             `)
             .eq('turma_id', turmaId);
           if (disciplineError) throw disciplineError;
-          const disciplines = (disciplineData || []) as unknown as TurmaDisciplinaAluno[];
+          const disciplines = sortCurriculumDisciplines(
+            (disciplineData || []) as unknown as TurmaDisciplinaAluno[],
+          );
           const disciplineIds = disciplines
             .map((discipline) => discipline.disciplinas?.id || discipline.disciplina_id)
             .filter((id): id is string => Boolean(id));
@@ -220,14 +242,16 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
       const { data, error } = await supabase
         .from('turmas_disciplinas')
         .select(`
-          *, disciplinas(*),
+          *, disciplinas(*, modulo:modulos(id, nome, ordem)),
           periodo_letivo:periodos_letivos!turmas_disciplinas_periodo_letivo_id_fkey(
             id, nome, ordem, status, data_inicio, data_fim
           )
         `)
         .eq('turma_id', selectedTurmaId!);
       if (error) throw error;
-      return (data || []) as unknown as TurmaDisciplinaAluno[];
+      return sortCurriculumDisciplines(
+        (data || []) as unknown as TurmaDisciplinaAluno[],
+      );
     },
   });
   const disciplines = selectedIsTechnical
@@ -248,7 +272,7 @@ export const useAlunoTurmasData = (alunoId: string, selectedMatricula: Matricula
         .from('aulas_turma')
         .select('id, titulo, carga_horaria, data_aula, disciplina_id, sessao')
         .eq('turma_id', selectedTurmaId!)
-        .order('created_at', { ascending: true });
+        .order('data_aula', { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data || []) as AulaTurmaAluno[];
     },

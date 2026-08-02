@@ -247,8 +247,8 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   return (
     <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
       <div>
-        <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><User size={22} className="shrink-0 text-blue-600" /> Meu Perfil</h2>
-        <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">Mantenha seus dados, documentos e formas de acesso atualizados.</p>
+        <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><User size={21} className="shrink-0 text-blue-600" /> Meu Perfil</h2>
+        <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Dados, documentos e formas de acesso em um só lugar.</p>
       </div>
 
       <div className="w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [scrollbar-width:none]">
@@ -258,7 +258,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wider transition lg:flex-1 lg:text-xs lg:tracking-widest ${
+              className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wide transition lg:flex-1 lg:text-xs lg:tracking-widest ${
                 activeTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >

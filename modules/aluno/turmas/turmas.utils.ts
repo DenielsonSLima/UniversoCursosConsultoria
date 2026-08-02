@@ -1,6 +1,7 @@
 import type {
   DisciplinaResumoAluno,
   MatriculaAluno,
+  ModuloCurricularAluno,
   ResultadoDiarioAluno,
   TurmaDisciplinaAluno,
 } from './turmas.types';
@@ -24,7 +25,8 @@ export const MODALITY_LABELS: Record<string, string> = {
 
 export const formatDate = (value?: string | null) => {
   if (!value) return 'Data não informada';
-  const date = new Date(value);
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
+  const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return 'Data não informada';
   return date.toLocaleDateString('pt-BR');
 };
@@ -95,7 +97,7 @@ export const isPortalEnrollmentVisible = (matricula?: MatriculaAluno | null) => 
   return ACCESS_STATUS.has(status)
     || (
       getMatriculaModalidade(matricula) === 'TECNICO'
-      && (status === 'REPROVADO' || status === 'EM_DEPENDENCIA')
+      && (status === 'PENDENTE' || status === 'REPROVADO' || status === 'EM_DEPENDENCIA')
     );
 };
 
@@ -125,6 +127,63 @@ export const isResultadoConcluido = (resultado?: ResultadoDiarioAluno | null) =>
   return status === 'APROVADO'
     || status === 'APROVADO_DEPENDENCIA'
     || status === 'APROVEITADO';
+};
+
+export const sortCurriculumDisciplines = (disciplines: TurmaDisciplinaAluno[]) =>
+  [...disciplines].sort((a, b) => {
+    const moduleOrder = Number(
+      a.disciplinas?.modulo?.ordem ?? a.periodo_letivo?.ordem ?? Number.MAX_SAFE_INTEGER,
+    ) - Number(
+      b.disciplinas?.modulo?.ordem ?? b.periodo_letivo?.ordem ?? Number.MAX_SAFE_INTEGER,
+    );
+    if (moduleOrder !== 0) return moduleOrder;
+
+    const disciplineOrder = Number(a.disciplinas?.ordem ?? Number.MAX_SAFE_INTEGER)
+      - Number(b.disciplinas?.ordem ?? Number.MAX_SAFE_INTEGER);
+    if (disciplineOrder !== 0) return disciplineOrder;
+
+    return String(a.disciplinas?.nome || '').localeCompare(
+      String(b.disciplinas?.nome || ''),
+      'pt-BR',
+    );
+  });
+
+export const groupCurriculumDisciplines = (
+  disciplines: TurmaDisciplinaAluno[],
+): ModuloCurricularAluno<TurmaDisciplinaAluno>[] => {
+  const groups = new Map<string, ModuloCurricularAluno<TurmaDisciplinaAluno>>();
+  sortCurriculumDisciplines(disciplines).forEach((discipline) => {
+    const period = discipline.periodo_letivo;
+    const module = discipline.disciplinas?.modulo;
+    const id = module?.id || period?.id || 'sem-modulo';
+    const current = groups.get(id) || {
+      id,
+      nome: module?.nome || period?.nome || 'Módulo não definido',
+      ordem: Number(module?.ordem ?? period?.ordem ?? Number.MAX_SAFE_INTEGER),
+      status: period?.status,
+      itens: [],
+    };
+    current.itens.push(discipline);
+    groups.set(id, current);
+  });
+  return [...groups.values()].sort((a, b) => a.ordem - b.ordem);
+};
+
+export const groupDisciplineSummaries = (
+  disciplines: DisciplinaResumoAluno[],
+): ModuloCurricularAluno<DisciplinaResumoAluno>[] => {
+  const groups = new Map<string, ModuloCurricularAluno<DisciplinaResumoAluno>>();
+  [...disciplines]
+    .sort((a, b) => a.modulo.ordem - b.modulo.ordem || a.ordem - b.ordem)
+    .forEach((discipline) => {
+      const current = groups.get(discipline.modulo.id) || {
+        ...discipline.modulo,
+        itens: [],
+      };
+      current.itens.push(discipline);
+      groups.set(discipline.modulo.id, current);
+    });
+  return [...groups.values()].sort((a, b) => a.ordem - b.ordem);
 };
 
 export const calculateAcademicProgress = (
@@ -160,12 +219,19 @@ export const buildDisciplineSummaries = (
   const attendance = attendanceByDiscipline.get(id) || { presentes: 0, faltas: 0, total: 0 };
   const rpcFrequency = asNullableNumber(result?.frequencia_percent);
   const calculatedFrequency = attendance.total > 0
-    ? Math.round((attendance.presentes / attendance.total) * 100)
+    ? Math.round(((attendance.total - attendance.faltas) / attendance.total) * 100)
     : null;
 
   return [{
     id,
     nome: disciplina.disciplinas?.nome || 'Disciplina',
+    ordem: Number(disciplina.disciplinas?.ordem ?? Number.MAX_SAFE_INTEGER),
+    modulo: {
+      id: disciplina.disciplinas?.modulo?.id || disciplina.periodo_letivo?.id || 'sem-modulo',
+      nome: disciplina.disciplinas?.modulo?.nome || disciplina.periodo_letivo?.nome || 'Módulo não definido',
+      ordem: Number(disciplina.disciplinas?.modulo?.ordem ?? disciplina.periodo_letivo?.ordem ?? Number.MAX_SAFE_INTEGER),
+      status: disciplina.periodo_letivo?.status,
+    },
     cargaHoraria: Number(disciplina.disciplinas?.carga_horaria || 0),
     professor: disciplina.professor_nome || 'A definir',
     concluida: isResultadoConcluido(result),

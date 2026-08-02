@@ -63,7 +63,7 @@ const DependenciasKpis = ({ items }: DependenciasKpisProps) => {
         return (
           <article key={card.label} className={`rounded-2xl border p-4 shadow-sm ${card.tone}`}>
             <div className="flex items-start justify-between gap-3">
-              <p className="max-w-[12rem] text-[9px] font-black uppercase tracking-[0.15em] opacity-75">
+              <p className="max-w-[12rem] text-[10px] font-extrabold uppercase tracking-[0.1em] opacity-80">
                 {card.label}
               </p>
               <Icon size={18} className="shrink-0 opacity-75" />

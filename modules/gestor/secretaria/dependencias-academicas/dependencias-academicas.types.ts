@@ -5,6 +5,7 @@ export type DependenciaWorkspaceTab =
   | 'regras';
 
 export type DependenciaStatus =
+  | 'DIARIO_EM_ABERTO'
   | 'PENDENTE_ENCAMINHAMENTO'
   | 'AGUARDANDO_OFERTA'
   | 'AGUARDANDO_PAGAMENTO'
@@ -35,7 +36,9 @@ export interface DependenciaAcademica {
   alunoId: string;
   alunoNome: string;
   alunoCpf: string | null;
+  modalidade: string;
   cursoNome: string;
+  turmaOrigemId: string;
   turmaOrigemNome: string;
   turmaOrigemCodigo: string | null;
   disciplinaId: string;
@@ -45,6 +48,11 @@ export interface DependenciaAcademica {
   resultadoOriginal: string;
   notaOriginal: number | null;
   frequenciaOriginal: number | null;
+  resultadoConsolidado: boolean;
+  acionavel: boolean;
+  diarioBloqueio: string | null;
+  diarioFechadoEm: string | null;
+  diarioObservacao: string | null;
   status: DependenciaStatus;
   turmaDestinoId: string | null;
   turmaDestinoNome: string | null;
@@ -151,4 +159,9 @@ export interface DependenciaPoliticaInput {
   disciplinaId: string;
   multiplicadorParcela: number;
   idempotencyKey: string;
+}
+
+export interface DependenciaPoliticaRemocaoInput {
+  poloId: string;
+  politicaId: string;
 }

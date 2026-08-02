@@ -26,6 +26,7 @@ interface CarteirinhaPreviewProps {
   };
   showValidationQrCode?: boolean;
   isEditable?: boolean;
+  transformOrigin?: React.CSSProperties['transformOrigin'];
   onChangePositions?: (positions: any) => void;
 }
 
@@ -60,6 +61,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
   aluno,
   showValidationQrCode = true,
   isEditable = false,
+  transformOrigin = 'top center',
   onChangePositions
 }) => {
   // Tamanho padrão CR80: 85.6mm x 54mm (landscape)
@@ -170,6 +172,7 @@ const CarteirinhaPreview: React.FC<CarteirinhaPreviewProps> = ({
     fontVariantLigatures: 'none',
     textRendering: 'geometricPrecision',
     WebkitFontSmoothing: 'antialiased',
+    transformOrigin,
   };
 
   // LÓGICA DO DRAG & DROP NATIVO EM PORCENTAGEM

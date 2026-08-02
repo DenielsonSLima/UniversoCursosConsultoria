@@ -24,10 +24,56 @@ export interface DocumentoAluno {
   revisadoEm: string | null;
 }
 
+export type MatriculaTecnicaWorkflowBloqueio =
+  | 'SEM_PERMISSAO'
+  | 'FLUXO_NAO_REGULAR'
+  | 'STATUS_INCOMPATIVEL'
+  | 'TURMA_FORA_DE_ANDAMENTO'
+  | 'PAGAMENTO_PENDENTE'
+  | 'DOCUMENTACAO_INCOMPLETA'
+  | 'DADOS_PESSOAIS_INCOMPLETOS'
+  | 'ENVIO_DOCUMENTAL_EM_ANDAMENTO'
+  | 'COBRANCA_EXISTENTE'
+  | 'LIBERACAO_JA_ATIVA'
+  | 'LIBERACAO_INATIVA_OU_SEM_PERMISSAO';
+
+interface MatriculaTecnicaWorkflowAcao {
+  permitida: boolean;
+  bloqueios: MatriculaTecnicaWorkflowBloqueio[];
+}
+
 export interface MatriculaTecnicaPendenteDocumento {
-  id: string;
+  matriculaId: string;
+  alunoId: string;
+  turmaId: string;
   turmaNome: string;
   cursoNome: string;
+  status: string;
+  turmaStatus: string;
+  fluxo: 'REGULAR' | 'IMPLANTACAO';
+  pagamento: {
+    estado: 'CONFIRMADO' | 'PENDENTE' | 'NAO_APLICAVEL';
+  };
+  documentacao: {
+    concluida: boolean;
+    obrigatoriosTotal: number;
+    concluidos: number;
+    pendentes: number;
+    dadosPessoaisPendentes: boolean;
+    envioEmAndamento: boolean;
+  };
+  liberacaoAcademica: {
+    id: string;
+    ativa: true;
+    liberadoEm: string;
+    liberadoPorNome: string | null;
+    motivo: string;
+  } | null;
+  acoes: {
+    ativarRegular: MatriculaTecnicaWorkflowAcao;
+    liberarImplantacao: MatriculaTecnicaWorkflowAcao;
+    revogarLiberacao: MatriculaTecnicaWorkflowAcao;
+  };
 }
 
 const normalizeDocumentStatus = (status?: string | null): DocumentoAlunoStatus => {
@@ -66,31 +112,55 @@ const validateDocumentFile = (file: File) => {
 
 export const documentosAlunoService = {
   async getMatriculasTecnicasPendentes(alunoId: string): Promise<MatriculaTecnicaPendenteDocumento[]> {
-    const { data, error } = await supabase
-      .from('matriculas')
-      .select('id, status, turmas(nome, cursos(nome, modalidade))')
-      .eq('aluno_id', alunoId)
-      .in('status', ['PENDENTE', 'AGUARDANDO_CONFIRMACAO']);
+    const { data, error } = await supabase.rpc(
+      'listar_fluxos_matriculas_tecnicas',
+      { p_aluno_id: alunoId },
+    );
     if (error) throw error;
-
-    return (data || []).flatMap((row: any) => {
-      const turma = Array.isArray(row.turmas) ? row.turmas[0] : row.turmas;
-      const curso = turma && (Array.isArray(turma.cursos) ? turma.cursos[0] : turma.cursos);
-      if (String(curso?.modalidade || '').toUpperCase() !== 'TECNICO') return [];
-      return [{
-        id: String(row.id),
-        turmaNome: String(turma?.nome || 'Turma técnica'),
-        cursoNome: String(curso?.nome || 'Curso técnico'),
-      }];
-    });
+    return (data || []) as MatriculaTecnicaPendenteDocumento[];
   },
 
-  async ativarMatriculaTecnicaAposDocumentos(matriculaId: string) {
+  async ativarMatriculaTecnicaAposDocumentos(
+    matriculaId: string,
+  ): Promise<MatriculaTecnicaPendenteDocumento> {
     const { data, error } = await supabase.rpc('ativar_matricula_tecnica_apos_documentos', {
       p_matricula_id: matriculaId,
     });
     if (error) throw new Error(errorMessage(error, 'Não foi possível ativar a matrícula'));
-    return data;
+    return data as MatriculaTecnicaPendenteDocumento;
+  },
+
+  async liberarMatriculaImplantacao(
+    matriculaId: string,
+    motivo: string,
+  ): Promise<MatriculaTecnicaPendenteDocumento> {
+    const { data, error } = await supabase.rpc('liberar_matricula_implantacao', {
+      p_matricula_id: matriculaId,
+      p_motivo: motivo.trim(),
+    });
+    if (error) {
+      throw new Error(
+        errorMessage(error, 'Não foi possível liberar o acesso acadêmico'),
+      );
+    }
+    return data as MatriculaTecnicaPendenteDocumento;
+  },
+
+  async revogarLiberacaoImplantacao(
+    matriculaId: string,
+    motivo: string,
+  ): Promise<MatriculaTecnicaPendenteDocumento> {
+    const { data, error } = await supabase.rpc('set_matricula_liberacao_diario', {
+      p_matricula_id: matriculaId,
+      p_liberada: false,
+      p_motivo: motivo.trim(),
+    });
+    if (error) {
+      throw new Error(
+        errorMessage(error, 'Não foi possível revogar o acesso acadêmico'),
+      );
+    }
+    return data as MatriculaTecnicaPendenteDocumento;
   },
 
   async getDocumentos(alunoId: string): Promise<DocumentoAluno[]> {

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 import AlunoAtividadeExtraClasseCard from './AlunoAtividadeExtraClasseCard';
 import { useAlunoAtividadesExtraClasse } from './useAlunoAtividadesExtraClasse';
+import type { AtividadeExtraClasse } from './alunoAtividadesExtra.types';
+import CurriculumModuleSection from '../turma-detail/CurriculumModuleSection';
 
 interface AlunoAtividadesExtraClasseTabProps {
   alunoId: string;
@@ -24,6 +26,35 @@ const AlunoAtividadesExtraClasseTab: React.FC<AlunoAtividadesExtraClasseTabProps
     submitError,
     updateAtividadeDraft,
   } = useAlunoAtividadesExtraClasse(alunoId, turmaId);
+  const modules = useMemo(() => {
+    const grouped = new Map<string, { id: string; nome: string; ordem: number; itens: AtividadeExtraClasse[] }>();
+    atividades.forEach((atividade) => {
+      const module = atividade.disciplina?.modulo;
+      const id = module?.id || 'atividades-gerais';
+      const current = grouped.get(id) || {
+        id,
+        nome: module?.nome || 'Atividades gerais',
+        ordem: Number(module?.ordem ?? Number.MAX_SAFE_INTEGER),
+        itens: [],
+      };
+      current.itens.push(atividade);
+      grouped.set(id, current);
+    });
+    return [...grouped.values()]
+      .sort((a, b) => a.ordem - b.ordem)
+      .map((module) => ({
+        ...module,
+        itens: [...module.itens].sort((a, b) => {
+          const disciplineOrder = Number(a.disciplina?.ordem ?? Number.MAX_SAFE_INTEGER)
+            - Number(b.disciplina?.ordem ?? Number.MAX_SAFE_INTEGER);
+          if (disciplineOrder !== 0) return disciplineOrder;
+          if (a.prazo_entrega && !b.prazo_entrega) return -1;
+          if (!a.prazo_entrega && b.prazo_entrega) return 1;
+          return String(a.prazo_entrega || '').localeCompare(String(b.prazo_entrega || ''))
+            || a.titulo.localeCompare(b.titulo, 'pt-BR');
+        }),
+      }));
+  }, [atividades]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -64,7 +95,18 @@ const AlunoAtividadesExtraClasseTab: React.FC<AlunoAtividadesExtraClasseTabProps
         </div>
       ) : (
         <div className="space-y-4">
-          {atividades.map((atividade) => (
+          {modules.map((module, moduleIndex) => (
+            <CurriculumModuleSection
+              key={module.id}
+              title={module.nome}
+              order={module.ordem}
+              itemCount={module.itens.length}
+              itemLabel="atividade"
+              detail={`${module.itens.length} atividade${module.itens.length === 1 ? '' : 's'} publicada${module.itens.length === 1 ? '' : 's'}`}
+              defaultOpen={moduleIndex === 0}
+            >
+              <div className="space-y-3">
+          {module.itens.map((atividade) => (
             <AlunoAtividadeExtraClasseCard
               key={atividade.id}
               atividade={atividade}
@@ -78,6 +120,9 @@ const AlunoAtividadesExtraClasseTab: React.FC<AlunoAtividadesExtraClasseTabProps
               onSubmit={(item) => submitAtividadeMutation.mutate(item)}
               updateAtividadeDraft={updateAtividadeDraft}
             />
+          ))}
+              </div>
+            </CurriculumModuleSection>
           ))}
         </div>
       )}

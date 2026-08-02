@@ -19,12 +19,15 @@ import {
   matchesLibrarySearch
 } from './libraryAccess';
 import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import AlunoMobileLibrary from './components/mobile/AlunoMobileLibrary';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 interface BibliotecaPageProps {
   alunoId: string;
 }
 
 const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
+  const isMobileLayout = useAlunoMobileLayout();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
@@ -199,6 +202,22 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
       });
   };
 
+  const handleDownloadDocument = async (document: any) => {
+    try {
+      await downloadSingleLibraryFile({
+        id: document.id,
+        folderId: document.pasta_id || null,
+        name: document.titulo,
+        url: document.arquivo_url,
+        fileType: document.tipo_arquivo,
+        sizeBytes: document.tamanho_bytes,
+      });
+      incrementDocumentAccess(document.id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.');
+    }
+  };
+
   const toggleFolderSelection = (folderId: string) => {
     setSelectedFolderIds((current) => {
       const next = new Set(current);
@@ -307,6 +326,29 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
   return (
     <div className="space-y-6 animate-fadeIn text-xs font-sans">
+      {isMobileLayout ? <AlunoMobileLibrary
+        breadcrumbs={breadcrumbs}
+        documents={filteredDocuments}
+        folders={dbFolders}
+        isDownloadingSelection={isDownloadingSelection}
+        isLoading={isLoading}
+        progressMessage={downloadProgress}
+        searchQuery={searchQuery}
+        selectedDocumentIds={selectedDocumentIds}
+        selectedFolderIds={selectedFolderIds}
+        onBreadcrumbClick={handleBreadcrumbClick}
+        onClearSelection={clearSelection}
+        onDownloadSelection={() => void handleDownloadSelection()}
+        onDownloadDocument={(document) => void handleDownloadDocument(document)}
+        onOpenFolder={handleOpenFolder}
+        onOpenPreview={handleOpenPreview}
+        onSearchChange={setSearchQuery}
+        onSelectVisible={selectVisibleItems}
+        onToggleDocument={toggleDocumentSelection}
+        onToggleFolder={toggleFolderSelection}
+      /> : null}
+
+      {!isMobileLayout ? <div className="space-y-6">
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
@@ -573,6 +615,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
           </div>
         </div>
       )}
+      </div> : null}
 
       {/* Preview Modal */}
       <QuickPreviewModal 

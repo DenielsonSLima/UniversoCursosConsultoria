@@ -50,11 +50,11 @@ const FinancialUnderlineTabs = <T extends string,>({
   };
 
   return (
-    <div className="border-b border-slate-200">
+    <div className="max-w-full overflow-x-auto border-b border-slate-200">
       <div
         role="tablist"
         aria-label={ariaLabel}
-        className={`flex gap-6 overflow-x-auto pb-px ${equalWidth ? 'min-w-full' : 'min-w-max'}`}
+        className={`flex gap-6 pb-px ${equalWidth ? 'min-w-full' : 'min-w-max'}`}
       >
         {items.map((item, index) => {
           const isActive = value === item.id;

@@ -13,6 +13,8 @@ import {
   type StudentCourseAccessItem,
 } from '../cursos/courseAccessHistory';
 import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import AlunoMobileHome from './components/AlunoMobileHome';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 type InicioUpcomingEvent = {
   id: string;
@@ -48,25 +50,36 @@ const getCourseModalityClasses = (value?: string | null) => {
 
 interface InicioPageProps {
   alunoId: string;
+  canViewCalendar: boolean;
   onNavigate: (module: string) => void;
   onOpenCourse?: (courseId: string, turmaId: string | null, targetModule: 'turmas' | 'cursos') => void;
 }
 
-const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCourse }) => {
-  // Query to count enrolled classes
-  const { data: matriculasCount = 0 } = useQuery({
+const InicioPage: React.FC<InicioPageProps> = ({ alunoId, canViewCalendar, onNavigate, onOpenCourse }) => {
+  const isMobileLayout = useAlunoMobileLayout();
+  // Conta também a matrícula técnica pendente para o aluno enxergar que já
+  // está registrado, sem liberar conteúdo acadêmico antes da ativação.
+  const { data: enrollmentSummary = { visible: 0, pendingTechnical: 0 } } = useQuery({
     queryKey: alunoCourseAccessKeys.homeEnrollmentCount(alunoId),
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('matriculas')
-        .select('*', { count: 'exact', head: true })
-        .eq('aluno_id', alunoId)
-        .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']);
-      
-      if (error) throw error;
-      return count || 0;
+      const [releasedResult, pendingResult] = await Promise.all([
+        supabase
+          .from('matriculas')
+          .select('*', { count: 'exact', head: true })
+          .eq('aluno_id', alunoId)
+          .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA']),
+        supabase.rpc('get_aluno_matriculas_tecnicas_pendentes_secure'),
+      ]);
+      if (releasedResult.error) throw releasedResult.error;
+      if (pendingResult.error) throw pendingResult.error;
+      const pendingTechnical = Array.isArray(pendingResult.data)
+        ? pendingResult.data.length
+        : 0;
+      const released = releasedResult.count || 0;
+      return { visible: released + pendingTechnical, pendingTechnical };
     }
   });
+  const matriculasCount = enrollmentSummary.visible;
 
   // 2. Informações de matrícula para contexto de acesso
   const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
@@ -365,7 +378,22 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn antialiased">
+    <>
+      {isMobileLayout ? <AlunoMobileHome
+        bibliotecaCount={bibliotecaCount}
+        canViewCalendar={canViewCalendar}
+        chatsCount={chatsCount}
+        financeiroResumo={financeiroResumo}
+        loadingFinanceiro={loadingFinanceiro}
+        loadingProximosEventos={loadingProximosEventos}
+        matriculasCount={matriculasCount}
+        primaryCourse={quickAccessCourses[0]}
+        proximosEventos={proximosEventos}
+        onNavigate={onNavigate}
+        onOpenCourse={handleOpenQuickAccessCourse}
+      /> : null}
+
+      {!isMobileLayout ? <div className="space-y-8 animate-fadeIn antialiased">
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {/* KPI 1 */}
@@ -376,7 +404,11 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Meus Cursos</p>
             <p className="text-3xl font-black text-[#001a33]">{matriculasCount}</p>
-            <p className="text-[10px] text-slate-500 font-medium">Cursos matriculados e liberados</p>
+            <p className="text-[10px] text-slate-500 font-medium">
+              {enrollmentSummary.pendingTechnical > 0
+                ? `${enrollmentSummary.pendingTechnical} aguardando liberação acadêmica`
+                : 'Cursos matriculados e liberados'}
+            </p>
           </div>
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <GraduationCap size={22} />
@@ -651,7 +683,8 @@ const InicioPage: React.FC<InicioPageProps> = ({ alunoId, onNavigate, onOpenCour
           </div>
         </div>
       </div>
-    </div>
+      </div> : null}
+    </>
   );
 };
 

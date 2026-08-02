@@ -1,160 +1,356 @@
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+
 import { formatAcademicSessions, groupAcademicClassMeetings } from '../../../lib/academicClassMeetings';
-import { CalendarEvent, DEFAULT_EVENT_TYPES } from '../../gestor/calendario/calendario.types';
-import CalendarioReadOnly from '../../shared/components/CalendarioReadOnly';
-import { CalendarDays } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import {
+  getBrazilianOfficialEvents,
+  OFFICIAL_EVENT_TYPES,
+  toDateKey,
+} from '../../gestor/calendario/calendario.official';
+import { calendarioService } from '../../gestor/calendario/calendario.service';
+import type { CalendarEvent, EventType } from '../../gestor/calendario/calendario.types';
+import AgendaWorkspace from '../../gestor/calendario/components/AgendaWorkspace';
+import EventModal from '../../gestor/calendario/components/EventModal';
 import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import {
+  filterStudentCalendarEvents,
+  isCalendarEventVisibleToStudent,
+} from './calendario-aluno.utils';
+import AlunoMobileAgenda from './components/mobile/AlunoMobileAgenda';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 interface CalendarioAlunoPageProps {
   alunoId: string;
 }
 
+interface StudentCalendarTurma {
+  id: string;
+  nome: string;
+  codigo?: string | null;
+  turno?: string | null;
+  polo_id?: string | null;
+}
+
+interface StudentCalendarData {
+  events: CalendarEvent[];
+  eventTypes: EventType[];
+  turmas: StudentCalendarTurma[];
+  teachers: Array<{ id: string; nome: string }>;
+}
+
+const relation = <T,>(value: T | T[] | null | undefined): T | null => (
+  Array.isArray(value) ? value[0] || null : value || null
+);
+
+const EMPTY_CALENDAR_DATA: StudentCalendarData = {
+  events: [],
+  eventTypes: [],
+  turmas: [],
+  teachers: [],
+};
+
 const CalendarioAlunoPage: React.FC<CalendarioAlunoPageProps> = ({ alunoId }) => {
-  const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
+  const isMobileLayout = useAlunoMobileLayout();
+  const today = useMemo(() => new Date(), []);
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(today.getMonth());
+  const [focusedDate, setFocusedDate] = useState(today);
+  const [selectedTurmaId, setSelectedTurmaId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+
+  const {
+    data: calendarData = EMPTY_CALENDAR_DATA,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<StudentCalendarData>({
     queryKey: alunoCourseAccessKeys.calendar(alunoId),
-    enabled: !!alunoId,
-    queryFn: async () => {
-      // 1. Buscar turmas do aluno via matrículas
-      const { data: matriculas, error: errMat } = await supabase
+    enabled: Boolean(alunoId),
+    staleTime: 30_000,
+    queryFn: async ({ signal }) => {
+      const { data: matriculas, error: enrollmentError } = await supabase
         .from('matriculas')
         .select(`
           turma_id,
           turmas!inner(
-            id,
+            id, nome, codigo, turno, polo_id,
             cursos!inner(id, modalidade)
           )
         `)
         .eq('aluno_id', alunoId)
         .in('status', ['ATIVO', 'CONCLUIDO', 'EM_DEPENDENCIA'])
-        .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO']);
+        .in('turmas.cursos.modalidade', ['TECNICO', 'LIVRE', 'ESPECIALIZACAO'])
+        .abortSignal(signal);
 
-      if (errMat) throw errMat;
+      if (enrollmentError) throw enrollmentError;
 
-      const turmaIds = [...new Set((matriculas || []).map(m => m.turma_id).filter(Boolean))];
+      const turmaById = new Map<string, StudentCalendarTurma>();
+      (matriculas || []).forEach((enrollment: any) => {
+        const turma = relation<any>(enrollment.turmas);
+        if (!turma?.id) return;
+        turmaById.set(String(turma.id), {
+          id: String(turma.id),
+          nome: String(turma.nome || 'Turma'),
+          codigo: turma.codigo || null,
+          turno: turma.turno || null,
+          polo_id: turma.polo_id || null,
+        });
+      });
 
-      // 2. Buscar aulas agendadas das turmas do aluno
-      let classEvents: CalendarEvent[] = [];
-      if (turmaIds.length > 0) {
-        const { data: aulas, error: errAulas } = await supabase
-          .from('aulas_turma')
-          .select('id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id')
-          .in('turma_id', turmaIds)
-          .not('data_aula', 'is', null);
+      const turmas = [...turmaById.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      const turmaIds = turmas.map((turma) => turma.id);
+      const turmaIdSet = new Set(turmaIds);
+      const poloIds = [...new Set(turmas.map((turma) => turma.polo_id).filter(Boolean) as string[])];
 
-        if (errAulas) throw errAulas;
-
-        const disciplinaIds = [...new Set((aulas || []).map((aula: any) => aula.disciplina_id).filter(Boolean))];
-        const [
-          { data: turmasData, error: errTurmas },
-          { data: disciplinasData, error: errDisciplinas },
-          { data: configs, error: errConfigs },
-        ] = await Promise.all([
-          supabase
-            .from('turmas')
-            .select('id, nome, codigo, turno')
-            .in('id', turmaIds),
-          disciplinaIds.length > 0
-            ? supabase
-              .from('disciplinas')
-              .select('id, nome')
-              .in('id', disciplinaIds)
-            : Promise.resolve({ data: [], error: null } as any),
-          supabase
+      const [eventTypes, eventsByPolo, aulasResult, configsResult] = await Promise.all([
+        calendarioService.getEventTypes(),
+        Promise.all(poloIds.map((poloId) => calendarioService.getEvents(poloId, signal))),
+        turmaIds.length > 0
+          ? supabase
+            .from('aulas_turma')
+            .select(`
+              id, titulo, carga_horaria, sessao, data_aula, turma_id, disciplina_id,
+              turmas!inner(id, nome, codigo, turno, polo_id),
+              disciplinas(nome)
+            `)
+            .in('turma_id', turmaIds)
+            .not('data_aula', 'is', null)
+            .abortSignal(signal)
+          : Promise.resolve({ data: [], error: null } as any),
+        turmaIds.length > 0
+          ? supabase
             .from('turmas_disciplinas')
             .select('turma_id, disciplina_id, professor_nome, professor_id')
-            .in('turma_id', turmaIds),
-        ]);
+            .in('turma_id', turmaIds)
+            .abortSignal(signal)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
 
-        if (errTurmas) throw errTurmas;
-        if (errDisciplinas) throw errDisciplinas;
-        if (errConfigs) throw errConfigs;
+      if (aulasResult.error) throw aulasResult.error;
+      if (configsResult.error) throw configsResult.error;
 
-        const turmaById = new Map<string, any>(
-          (turmasData || []).map((turma: any) => [String(turma.id), turma])
-        );
-        const disciplinaNames = new Map<string, string>(
-          (disciplinasData || []).map((disciplina: any) => [
-            String(disciplina.id),
-            String(disciplina.nome || 'Disciplina'),
-          ])
-        );
-        const configMap: Record<string, { nome: string; id: string | null }> = {};
-        configs?.forEach((config: any) => {
-          configMap[`${config.turma_id}-${config.disciplina_id}`] = {
-            nome: config.professor_nome || 'Não informado',
-            id: config.professor_id || null,
-          };
+      const configs = configsResult.data || [];
+      const configByClassDiscipline = new Map<string, { id: string | null; nome: string }>();
+      const professorById = new Map<string, string>();
+      configs.forEach((config: any) => {
+        const professorId = config.professor_id ? String(config.professor_id) : null;
+        const professorNome = String(config.professor_nome || 'Não informado');
+        configByClassDiscipline.set(`${config.turma_id}-${config.disciplina_id}`, {
+          id: professorId,
+          nome: professorNome,
         });
+        if (professorId) professorById.set(professorId, professorNome);
+      });
 
-        classEvents = groupAcademicClassMeetings((aulas || []) as any[]).map((a: any) => {
-          const config = configMap[`${a.turma_id}-${a.disciplina_id}`] || { nome: 'Não informado', id: null };
-          const turma = turmaById.get(String(a.turma_id)) || {};
-          const turmaNome = turma.nome || 'Turma';
-          const disciplinaNome = disciplinaNames.get(String(a.disciplina_id)) || 'Disciplina';
-          const cargaHoraria = Number(a.carga_horaria || 0);
-          const cargaLabel = cargaHoraria > 0 ? `${cargaHoraria}H` : 'carga não informada';
-          const sessoesLabel = formatAcademicSessions(a.sessoes);
+      const publicEvents = [...new Map(
+        eventsByPolo
+          .flat()
+          .filter((event) => isCalendarEventVisibleToStudent(event, turmaIdSet))
+          .map((event) => [event.id, {
+            ...event,
+            turmaName: event.turmaId ? turmaById.get(event.turmaId)?.nome || event.turmaName : event.turmaName,
+            professorName: event.professorId
+              ? professorById.get(event.professorId) || event.professorName
+              : event.professorName,
+          }]),
+      ).values()];
+
+      const classEvents: CalendarEvent[] = groupAcademicClassMeetings((aulasResult.data || []) as any[])
+        .map((aula: any) => {
+          const turma = turmaById.get(String(aula.turma_id));
+          const disciplina = relation<any>(aula.disciplinas);
+          const config = configByClassDiscipline.get(`${aula.turma_id}-${aula.disciplina_id}`)
+            || { id: null, nome: 'Não informado' };
+          const turmaNome = turma?.nome || relation<any>(aula.turmas)?.nome || 'Turma';
+          const disciplinaNome = String(disciplina?.nome || 'Disciplina');
+          const cargaHoraria = Number(aula.carga_horaria || 0);
+          const sessoesLabel = formatAcademicSessions(aula.sessoes);
 
           return {
-            id: `class-${a.id}`,
+            id: `class-${aula.id}`,
             title: `${turmaNome} — ${disciplinaNome}`,
             description: [
-              `Aula: ${a.titulo || 'Aula cadastrada'}`,
+              aula.titulo || 'Aula cadastrada',
               `Professor: ${config.nome}`,
-              `Turma: ${turmaNome}${turma.codigo ? ` (${turma.codigo})` : ''}`,
-              `Carga horária: ${cargaLabel}`,
+              turma?.codigo ? `Turma: ${turmaNome} (${turma.codigo})` : `Turma: ${turmaNome}`,
+              cargaHoraria ? `Carga horária: ${cargaHoraria}h` : null,
               sessoesLabel ? `Sessões: ${sessoesLabel}` : null,
-              turma.turno ? `Turno: ${turma.turno}` : null,
+              turma?.turno ? `Turno: ${turma.turno}` : null,
             ].filter(Boolean).join(' • '),
-            date: a.data_aula,
+            date: aula.data_aula,
             typeId: 'ped',
             professorId: config.id,
             professorName: config.nome,
-            turmaId: a.turma_id,
+            turmaId: String(aula.turma_id),
             turmaName: turmaNome,
-            disciplinaId: a.disciplina_id,
+            disciplinaId: aula.disciplina_id,
             disciplinaName: disciplinaNome,
             cargaHoraria,
-            turno: turma.turno || null,
+            turno: turma?.turno || null,
+            poloId: turma?.polo_id || null,
+            visibility: 'TURMA',
           };
         });
-      }
 
-      // 3. Eventos públicos globais (feriados, recessos, institucionais)
-      const { calendarioService } = await import('../../gestor/calendario/calendario.service');
-      const globalEvents = await calendarioService.getEvents();
-      const publicEvents = globalEvents.filter(event => (
-        event.visibility === 'GENERAL'
-        || (event.visibility === 'TURMA' && turmaIds.includes(event.turmaId || ''))
-      ));
-
-      return [...publicEvents, ...classEvents];
+      return {
+        events: [...publicEvents, ...classEvents],
+        eventTypes,
+        turmas,
+        teachers: [...professorById.entries()]
+          .map(([id, nome]) => ({ id, nome }))
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      };
     },
   });
 
-  const eventTypes = DEFAULT_EVENT_TYPES;
+  const allEventTypes = useMemo(() => {
+    const byId = new Map<string, EventType>();
+    OFFICIAL_EVENT_TYPES.forEach((type) => byId.set(type.id, type));
+    calendarData.eventTypes.forEach((type) => byId.set(type.id, type));
+    return [...byId.values()];
+  }, [calendarData.eventTypes]);
+
+  const officialEvents = useMemo(
+    () => [-1, 0, 1].flatMap((yearOffset) => getBrazilianOfficialEvents(currentYear + yearOffset)),
+    [currentYear],
+  );
+
+  const visibleEvents = useMemo(
+    () => filterStudentCalendarEvents(
+      [...calendarData.events, ...officialEvents],
+      selectedTurmaId,
+      selectedCategoryId,
+    ).sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'pt-BR')),
+    [calendarData.events, officialEvents, selectedCategoryId, selectedTurmaId],
+  );
+
+  const monthEvents = useMemo(
+    () => visibleEvents.filter((event) => (
+      event.date.startsWith(`${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-`)
+    )),
+    [currentMonthIndex, currentYear, visibleEvents],
+  );
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    visibleEvents.forEach((event) => {
+      const dayEvents = map.get(event.date) || [];
+      dayEvents.push(event);
+      map.set(event.date, dayEvents);
+    });
+    return map;
+  }, [visibleEvents]);
+
+  const getTypeInfo = useCallback((typeId: string): EventType => (
+    allEventTypes.find((type) => type.id === typeId)
+    || { id: 'other', label: 'Outro', color: '#94a3b8' }
+  ), [allEventTypes]);
+
+  const focusMonth = (year: number, monthIndex: number) => {
+    setCurrentYear(year);
+    setCurrentMonthIndex(monthIndex);
+    setFocusedDate(new Date(year, monthIndex, 1));
+  };
+
+  const changeMonth = (direction: -1 | 1) => {
+    const nextMonth = new Date(currentYear, currentMonthIndex + direction, 1);
+    focusMonth(nextMonth.getFullYear(), nextMonth.getMonth());
+  };
+
+  const openDay = (date: Date) => {
+    setFocusedDate(date);
+    setSelectedDate(date);
+    setIsDayModalOpen(true);
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-black text-[#001a33] uppercase tracking-tight flex items-center gap-2">
-          <CalendarDays className="text-blue-600" />
-          Minha Agenda
-        </h2>
-        <p className="text-xs text-slate-450 font-medium mt-1">
-          Acompanhe suas aulas, feriados e eventos da instituição. Você visualiza apenas as turmas em que está matriculado.
-        </p>
-      </div>
+    <>
+      {isError ? (
+        <div className="mb-5 flex flex-col items-center justify-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-6 text-center">
+          <AlertCircle size={24} className="text-rose-500" />
+          <div>
+            <p className="text-sm font-bold text-rose-700">Não foi possível carregar sua agenda.</p>
+            <p className="mt-1 text-xs text-rose-600">Tente novamente sem alterar suas matrículas ou filtros.</p>
+          </div>
+          <button type="button" onClick={() => void refetch()} className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-white">
+            <RefreshCw size={13} /> Tentar novamente
+          </button>
+        </div>
+      ) : null}
 
-      <CalendarioReadOnly
-        events={events}
-        eventTypes={eventTypes}
+      {isMobileLayout ? <AlunoMobileAgenda
+        currentYear={currentYear}
+        currentMonthIndex={currentMonthIndex}
+        today={today}
+        focusedDate={focusedDate}
+        events={visibleEvents}
+        eventsByDate={eventsByDate}
+        eventTypes={allEventTypes}
+        turmas={calendarData.turmas}
+        selectedTurmaId={selectedTurmaId}
+        selectedCategoryId={selectedCategoryId}
         isLoading={isLoading}
-      />
-    </div>
+        getTypeInfo={getTypeInfo}
+        onTurmaChange={setSelectedTurmaId}
+        onCategoryChange={setSelectedCategoryId}
+        onChangeMonth={changeMonth}
+        onSelectDate={(date) => {
+          if (date.getFullYear() !== currentYear || date.getMonth() !== currentMonthIndex) {
+            focusMonth(date.getFullYear(), date.getMonth());
+          }
+          setFocusedDate(date);
+        }}
+        onOpenDate={openDay}
+      /> : null}
+
+      {!isMobileLayout ? <AgendaWorkspace
+        variant="student"
+        currentYear={currentYear}
+        currentMonthIndex={currentMonthIndex}
+        today={today}
+        focusedDate={focusedDate}
+        events={visibleEvents}
+        monthEvents={monthEvents}
+        eventsByDate={eventsByDate}
+        eventTypes={allEventTypes}
+        teachers={calendarData.teachers}
+        turmas={calendarData.turmas}
+        selectedTeacherId=""
+        selectedTurmaId={selectedTurmaId}
+        selectedCategoryId={selectedCategoryId}
+        isLoading={isLoading}
+        isExportingPdf={false}
+        getTypeInfo={getTypeInfo}
+        onTeacherChange={() => undefined}
+        onTurmaChange={setSelectedTurmaId}
+        onCategoryChange={setSelectedCategoryId}
+        onClearFilters={() => {
+          setSelectedTurmaId('');
+          setSelectedCategoryId('');
+        }}
+        onMonthChange={(monthIndex) => focusMonth(currentYear, monthIndex)}
+        onChangeMonth={changeMonth}
+        onFocusDate={setFocusedDate}
+        onOpenDate={openDay}
+      /> : null}
+
+      {selectedDate ? (
+        <EventModal
+          isOpen={isDayModalOpen}
+          onClose={() => setIsDayModalOpen(false)}
+          selectedDate={selectedDate}
+          eventsOnDate={eventsByDate.get(toDateKey(selectedDate)) || []}
+          eventTypes={allEventTypes}
+          teachers={calendarData.teachers}
+          turmas={calendarData.turmas}
+          variant="student"
+        />
+      ) : null}
+    </>
   );
 };
 

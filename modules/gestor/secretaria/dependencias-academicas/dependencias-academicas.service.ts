@@ -9,6 +9,7 @@ import type {
   DependenciaDisciplinaConfiguravel,
   DependenciaOferta,
   DependenciaPoliticaInput,
+  DependenciaPoliticaRemocaoInput,
   DependenciaPrevia,
   DependenciaPreviaInput,
   DependenciaRegraFinanceira,
@@ -33,6 +34,16 @@ const nullableNumber = (...values: unknown[]) => {
   if (value === undefined) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const nullableBoolean = (...values: unknown[]) => {
+  const value = values.find((item) => (
+    typeof item === 'boolean'
+    || item === 'true'
+    || item === 'false'
+  ));
+  if (value === undefined) return null;
+  return value === true || value === 'true';
 };
 
 const unwrap = (value: unknown): Record<string, any> => {
@@ -115,6 +126,7 @@ const normalizeDependencia = (raw: unknown): DependenciaAcademica => {
     row.status,
   );
   const statusMap: Record<string, string> = {
+    DIARIO_EM_ABERTO: 'DIARIO_EM_ABERTO',
     PENDENTE_DEPENDENCIA: 'PENDENTE_ENCAMINHAMENTO',
     DEPENDENCIA_AGENDADA: 'AGUARDANDO_PAGAMENTO',
     LIBERADA: 'PROGRAMADA',
@@ -127,6 +139,14 @@ const normalizeDependencia = (raw: unknown): DependenciaAcademica => {
     CANCELADA: 'CANCELADA',
   };
   const status = statusMap[rawStatus] || rawStatus || 'PENDENTE_ENCAMINHAMENTO';
+  const diarioBloqueio = nullableText(row.diarioBloqueio, row.diario_bloqueio);
+  const diarioFechadoEm = nullableText(row.diarioFechadoEm, row.diario_fechado_em);
+  const resultadoConsolidado = nullableBoolean(
+    row.resultadoConsolidado,
+    row.resultado_consolidado,
+  ) ?? status !== 'DIARIO_EM_ABERTO';
+  const acionavel = nullableBoolean(row.acionavel, row.actionable)
+    ?? resultadoConsolidado;
   return {
     id: text(row.id, row.dependencia_id, row.vinculo_id) || `${matriculaId}:${disciplinaId}`,
     tentativaId: nullableText(row.tentativaId, row.tentativa_id, row.current_attempt_id),
@@ -135,7 +155,18 @@ const normalizeDependencia = (raw: unknown): DependenciaAcademica => {
     alunoId: text(row.alunoId, row.aluno_id, aluno.id),
     alunoNome: text(row.alunoNome, row.aluno_nome, aluno.nome) || 'Aluno sem nome',
     alunoCpf: nullableText(row.aluno_cpf, aluno.cpf, aluno.cpf_cnpj),
+    modalidade: text(
+      row.modalidade,
+      row.cursoModalidade,
+      row.curso_modalidade,
+      origem.modalidade,
+    ) || 'TECNICO',
     cursoNome: text(row.cursoNome, row.curso_nome, origem.curso_nome) || 'Curso técnico',
+    turmaOrigemId: text(
+      row.turmaOrigemId,
+      row.turma_origem_id,
+      origem.turma_id,
+    ),
     turmaOrigemNome: text(row.turmaOrigemNome, row.turma_origem_nome, origem.turma_nome) || 'Turma de origem',
     turmaOrigemCodigo: nullableText(row.turmaOrigemCodigo, row.turma_origem_codigo, origem.turma_codigo),
     disciplinaId,
@@ -155,6 +186,14 @@ const normalizeDependencia = (raw: unknown): DependenciaAcademica => {
       row.frequenciaPercent,
       row.frequencia_original,
       origem.frequencia_percent,
+    ),
+    resultadoConsolidado,
+    acionavel,
+    diarioBloqueio,
+    diarioFechadoEm,
+    diarioObservacao: nullableText(
+      row.diarioObservacao,
+      row.diario_observacao,
     ),
     status,
     turmaDestinoId: nullableText(row.turmaDestinoId, row.turma_destino_id, destino.turma_id),
@@ -216,7 +255,15 @@ const normalizeRegra = (raw: unknown, index: number): DependenciaRegraFinanceira
     percentual,
     valorReferencia: nullableNumber(row.valor_referencia, row.valor_base),
     vigenciaInicio: nullableText(row.vigencia_inicio, row.created_at),
-    origem: text(row.origem, row.tipo_regra) || 'Regra institucional',
+    origem: (() => {
+      const origin = text(row.origem, row.tipo_regra);
+      const labels: Record<string, string> = {
+        DEPENDENCIA_ATE_40H: 'Faixa institucional · Até 40h',
+        DEPENDENCIA_ACIMA_40H: 'Faixa institucional · Acima de 40h',
+        DEPENDENCIA_DISCIPLINA: 'Personalização por disciplina',
+      };
+      return labels[origin] || origin.replaceAll('_', ' ') || 'Regra institucional';
+    })(),
     atualizadoEm: nullableText(row.updated_at, row.atualizado_em),
   };
 };
@@ -395,6 +442,19 @@ export const dependenciasAcademicasService = {
         p_disciplina_id: input.disciplinaId,
         p_multiplicador_parcela: input.multiplicadorParcela,
         p_idempotency_key: input.idempotencyKey,
+      },
+    );
+    if (error) throw error;
+  },
+
+  async removerPoliticaDisciplina(
+    input: DependenciaPoliticaRemocaoInput,
+  ): Promise<void> {
+    const { error } = await supabase.rpc(
+      'remover_politica_dependencia_disciplina_secure',
+      {
+        p_polo_id: input.poloId,
+        p_politica_id: input.politicaId,
       },
     );
     if (error) throw error;

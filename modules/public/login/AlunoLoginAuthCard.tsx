@@ -74,7 +74,7 @@ type Props = {
   onGoogleLogin: () => void;
 };
 
-const inputClassName = 'h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100';
+const inputClassName = 'aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100';
 
 const AlunoLoginAuthCard: React.FC<Props> = ({
   mode,
@@ -231,7 +231,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
               value={loginIdentifier}
               onChange={(event) => onLoginIdentifierChange(event.target.value)}
               placeholder="UNIV-A-00000001 ou seu@email.com"
-              className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
           </div>
         </label>
@@ -253,7 +253,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
               value={loginPassword}
               onChange={(event) => onLoginPasswordChange(event.target.value)}
               placeholder="Sua senha"
-              className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+              className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
             />
             <button type="button" onClick={onToggleLoginPassword} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600" aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'}>
               {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -342,7 +342,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">WhatsApp</span>
           <div className="relative">
             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type="tel" name="tel" inputMode="tel" autoComplete="tel" required value={telefone} onChange={(event) => onTelefoneChange(formatPhone(event.target.value))} placeholder="(79) 99999-9999" className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+            <input type="tel" name="tel" inputMode="tel" autoComplete="tel" required value={telefone} onChange={(event) => onTelefoneChange(formatPhone(event.target.value))} placeholder="(79) 99999-9999" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
           </div>
         </label>
         <label className="block sm:col-span-2">
@@ -353,7 +353,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</span>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type={showSignupPassword ? 'text' : 'password'} name="new-password" autoComplete="new-password" required value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Mínimo 6 caracteres e 1 maiúscula" className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+            <input type={showSignupPassword ? 'text' : 'password'} name="new-password" autoComplete="new-password" required value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Mínimo 6 caracteres e 1 maiúscula" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
             <button type="button" onClick={onToggleSignupPassword} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600" aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'}>
               {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -372,7 +372,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmar senha</span>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type={showSignupConfirmPassword ? 'text' : 'password'} name="confirm-password" autoComplete="new-password" required minLength={6} value={confirmPassword} onChange={(event) => onConfirmPasswordChange(event.target.value)} placeholder="Repita sua senha" className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+            <input type={showSignupConfirmPassword ? 'text' : 'password'} name="confirm-password" autoComplete="new-password" required minLength={6} value={confirmPassword} onChange={(event) => onConfirmPasswordChange(event.target.value)} placeholder="Repita sua senha" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
             <button type="button" onClick={onToggleSignupConfirmPassword} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600" aria-label={showSignupConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}>
               {showSignupConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>

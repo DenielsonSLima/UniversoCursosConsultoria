@@ -23,6 +23,8 @@ import {
   renderPaymentWindowError,
 } from '../shared/paymentWindow';
 import { fetchBaneseBoletoDocument } from '../shared/baneseBoletoDocument';
+import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
+import AlunoMobileFinanceSummary from './components/mobile/AlunoMobileFinanceSummary';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -425,7 +427,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const mobileQuery = window.matchMedia('(max-width: 639px)');
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
     const keepMobileCards = () => {
       if (mobileQuery.matches) setViewMode('cards');
     };
@@ -930,20 +932,27 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }
 
   return (
-    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
+    <div className="min-w-0 space-y-4 animate-fadeIn sm:space-y-6">
       {/* Header Panel */}
-      <div className="mb-5 flex items-start justify-between sm:mb-6 sm:items-center">
+      <div className="mb-4 flex items-start justify-between sm:mb-6 sm:items-center">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
+          <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
             <CreditCard className="shrink-0 text-blue-600" size={22} />
             <span>Financeiro</span>
           </h2>
-          <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-slate-500">Acompanhe parcelas, vencimentos e comprovantes em um só lugar.</p>
+          <p className="mt-1 max-w-xl text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Parcelas, vencimentos e comprovantes em um só lugar.</p>
         </div>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+      <AlunoMobileFinanceSummary
+        totalPaid={totalPaid}
+        totalPending={totalPending}
+        formatCurrency={formatCurrency}
+        onViewCharges={() => document.getElementById('aluno-finance-charges')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      />
+
+      <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 md:gap-5">
         <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Pago</p>
@@ -968,16 +977,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       </div>
 
       {openSummaryByModality.length > 0 && (
-        <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
+        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Em aberto por tipo</p>
               <p className="text-xs font-bold leading-relaxed text-slate-500">Valores pendentes organizados por modalidade.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-4">
             {openSummaryByModality.map((item) => (
-              <div key={item.modality} className={`rounded-2xl border px-4 py-3 ${getModalityAccent(item.modality).group}`}>
+              <div key={item.modality} className={`min-w-[78%] snap-start rounded-2xl border px-4 py-3 md:min-w-0 ${getModalityAccent(item.modality).group}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-black uppercase tracking-widest">{getModalityLabel(item.modality)}</span>
                   <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-black uppercase tracking-widest">
@@ -992,7 +1001,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       )}
 
       {/* Filter + List + Views */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
+      <div id="aluno-finance-charges" className="scroll-mt-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
         <div className="mb-5 flex items-center gap-2 sm:mb-6">
           <FileText size={16} className="text-blue-500" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Histórico de Cobranças</h3>
@@ -1070,7 +1079,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             </select>
           </div>
 
-          <div className="hidden sm:block lg:col-span-2">
+          <div className="hidden md:block lg:col-span-2">
             <label className="sr-only">Visualização</label>
             <div className="grid h-12 grid-cols-2 gap-2">
               <button
@@ -1109,28 +1118,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {[
-            { key: 'ABERTO', label: 'Em aberto', count: tabCounts.ABERTO },
-            { key: 'ATRASADO', label: 'Atrasado', count: tabCounts.ATRASADO },
-            { key: 'PAGO', label: 'Pagos', count: tabCounts.PAGO },
-            { key: 'TODOS', label: 'Todos', count: tabCounts.TODOS }
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusTab(tab.key as 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS')}
-              className={`min-h-11 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors sm:rounded-full ${
-                statusTab === tab.key
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-100 text-slate-600 border border-slate-200'
-              }`}
-            >
-              <span className="inline-flex items-center gap-1">
-                {tab.label}
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-black">{tab.count}</span>
-              </span>
-            </button>
-          ))}
+        <div className="mt-4">
+          <FinancialUnderlineTabs
+            items={[
+              { id: 'ABERTO', label: 'Em aberto', icon: <Clock size={15} />, badge: tabCounts.ABERTO },
+              { id: 'ATRASADO', label: 'Atrasado', icon: <BadgeAlert size={15} />, badge: tabCounts.ATRASADO },
+              { id: 'PAGO', label: 'Pagos', icon: <CheckCircle size={15} />, badge: tabCounts.PAGO },
+              { id: 'TODOS', label: 'Todos', icon: <List size={15} />, badge: tabCounts.TODOS },
+            ]}
+            value={statusTab}
+            onChange={setStatusTab}
+            ariaLabel="Filtrar histórico de cobranças por situação"
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-1 text-[11px] font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
@@ -1295,7 +1294,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                       {installmentsByModality.length} item{installmentsByModality.length > 1 ? 's' : ''}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {installmentsByModality.map((inst) => (
                       <FinanceiroCardItem
                         key={inst.id}
