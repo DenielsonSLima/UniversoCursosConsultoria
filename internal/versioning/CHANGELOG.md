@@ -2,6 +2,23 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.20] - 2026-08-02
+
+### Corrigido
+
+- A instalação pelo Safari agora identifica corretamente o aplicativo do aluno como `Universo CC`, inclusive quando iniciada pelas páginas públicas de login, cadastro, confirmação ou recuperação de senha.
+- O atalho instalado abre o escopo `/aluno/`; sessões válidas seguem para o início do aluno e sessões ausentes ou expiradas retornam para `/aluno/entrar`.
+- O ícone do aplicativo passou a usar fundo azul-marinho institucional totalmente opaco, eliminando o fundo preto criado pelo iOS ao compor imagens transparentes.
+
+### Segurança
+
+- O manifesto, os ícones e o service worker permanecem exclusivos do aluno; site institucional, gestor e professor continuam usando os próprios metadados e não são controlados pelo escopo `/aluno/`.
+
+### Qualidade
+
+- Ícones versionados quebram o cache anterior do Safari, e o fluxo de autenticação realiza uma nova carga do documento antes de entrar no portal.
+- Build de produção, TypeScript, lint, testes de autenticação e auditoria dos HTMLs gerados foram executados antes da publicação.
+
 ## [2.2.3-beta.19] - 2026-08-02
 
 Esta versão consolida integralmente o conjunto de alterações acumuladas nos portais, módulos acadêmicos, financeiro, documentos, integrações, banco de dados, testes e materiais do projeto.

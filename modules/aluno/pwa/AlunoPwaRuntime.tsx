@@ -18,7 +18,19 @@ const STUDENT_META: ManagedMeta[] = [
   { name: 'application-name', content: 'Universo CC' },
 ];
 
-const isAlunoAppPath = (pathname: string) => pathname === '/aluno' || pathname.startsWith('/aluno/');
+const STUDENT_PUBLIC_AUTH_PATHS = new Set([
+  '/login',
+  '/cadastro',
+  '/primeiro-acesso',
+  '/confirmacao-email',
+  '/recuperar-senha',
+]);
+
+const isAlunoAppPath = (pathname: string) => (
+  pathname === '/aluno'
+  || pathname.startsWith('/aluno/')
+  || STUDENT_PUBLIC_AUTH_PATHS.has(pathname)
+);
 
 const AlunoPwaRuntime = () => {
   const { pathname } = useLocation();
@@ -44,7 +56,7 @@ const AlunoPwaRuntime = () => {
     const previousAppleTouchIconHref = appleTouchIcon?.getAttribute('href') || null;
     const appleTouchIconElement = appleTouchIcon || document.createElement('link');
     appleTouchIconElement.rel = 'apple-touch-icon';
-    appleTouchIconElement.href = '/aluno/icons/apple-touch-icon.png';
+    appleTouchIconElement.href = '/aluno/icons/apple-touch-icon-v2.png';
     appleTouchIconElement.setAttribute('sizes', '180x180');
     if (!appleTouchIcon) document.head.appendChild(appleTouchIconElement);
 

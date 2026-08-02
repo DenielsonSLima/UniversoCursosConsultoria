@@ -100,30 +100,35 @@ const ROUTES = [
     'login',
     'Portal do Aluno | Universo Cursos e Consultoria',
     'Entre no Portal do Aluno para acessar seus cursos, matrículas, pagamentos e documentos acadêmicos.',
+    { alunoPwa: true },
   ),
   privateRoute(
     '/cadastro',
     'cadastro',
     'Crie seu cadastro | Universo Cursos e Consultoria',
     'Crie seu cadastro de aluno para fazer sua matrícula, acompanhar pagamentos e acessar seus cursos.',
+    { alunoPwa: true },
   ),
   privateRoute(
     '/primeiro-acesso',
     'cadastro',
     'Primeiro acesso | Universo Cursos e Consultoria',
     'Conclua seu cadastro e prepare seu acesso ao Portal do Aluno da Universo Cursos e Consultoria.',
+    { alunoPwa: true },
   ),
   privateRoute(
     '/confirmacao-email',
     'cadastro',
     'Confirmação de e-mail | Universo Cursos e Consultoria',
     'Confirme seu e-mail para continuar seu acesso aos serviços da Universo Cursos e Consultoria.',
+    { alunoPwa: true },
   ),
   privateRoute(
     '/recuperar-senha',
     'login',
     'Recuperar senha | Universo Cursos e Consultoria',
     'Recupere com segurança o acesso à sua conta da Universo Cursos e Consultoria.',
+    { alunoPwa: true },
   ),
   privateRoute(
     '/sistema/login',
@@ -263,7 +268,7 @@ const buildRouteHtml = (sourceHtml, metadata) => {
   let html = setTitle(sourceHtml, metadata.title);
   if (metadata.alunoPwa) {
     html = setManifest(html, '/aluno/manifest.webmanifest');
-    html = setAppleTouchIcon(html, '/aluno/icons/apple-touch-icon.png');
+    html = setAppleTouchIcon(html, '/aluno/icons/apple-touch-icon-v2.png');
     html = setMeta(html, 'name', 'theme-color', '#001a33');
     html = setMeta(html, 'name', 'apple-mobile-web-app-capable', 'yes');
     html = setMeta(html, 'name', 'apple-mobile-web-app-status-bar-style', 'black-translucent');

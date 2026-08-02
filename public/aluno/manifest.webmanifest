@@ -1,6 +1,6 @@
 {
   "id": "/aluno/",
-  "name": "Universo Cursos e Consultoria — Portal do Aluno",
+  "name": "Universo CC",
   "short_name": "Universo CC",
   "description": "Acesso aos cursos, agenda, financeiro, biblioteca e serviços do aluno da Universo Cursos e Consultoria.",
   "lang": "pt-BR",
@@ -15,25 +15,25 @@
   "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/aluno/icons/icon-192.png",
+      "src": "/aluno/icons/app-icon-v2-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/aluno/icons/icon-512.png",
+      "src": "/aluno/icons/app-icon-v2-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/aluno/icons/icon-maskable-192.png",
+      "src": "/aluno/icons/app-icon-v2-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/aluno/icons/icon-maskable-512.png",
+      "src": "/aluno/icons/app-icon-v2-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

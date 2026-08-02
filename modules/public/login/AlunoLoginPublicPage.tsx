@@ -32,6 +32,16 @@ import {
 type SignupStep = 'dados' | 'endereco';
 type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
 
+const openAlunoAppDocument = (path: string): boolean => {
+  if (path !== '/aluno' && !path.startsWith('/aluno/')) return false;
+
+  // O Safari captura manifesto, nome e ícone no carregamento do documento.
+  // Uma navegação completa impede que a identidade global do site permaneça
+  // em cache quando o aluno entra no portal a partir do login público.
+  window.location.replace(path);
+  return true;
+};
+
 const AlunoLoginPublicPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -103,17 +113,23 @@ const AlunoLoginPublicPage: React.FC = () => {
       const redirect = hasExplicitRedirect ? redirectPath : '/aluno/';
       const firstAccessParams = new URLSearchParams();
       firstAccessParams.set('next', redirect);
-      navigate(`${alunoAppBasePath}/primeiro-acesso?${firstAccessParams.toString()}`, { replace: true });
+      openAlunoAppDocument(`/aluno/primeiro-acesso?${firstAccessParams.toString()}`);
       return true;
     }
 
     savePortalSession(profile as any);
 
     if (hasExplicitRedirect) {
-      navigate(redirectPath, { replace: true });
+      if (!openAlunoAppDocument(redirectPath)) {
+        navigate(redirectPath, { replace: true });
+      }
       return true;
     }
-    navigate(profile?.tipo === 'Aluno' ? '/aluno/' : redirectPath, { replace: true });
+    if (profile?.tipo === 'Aluno') {
+      openAlunoAppDocument('/aluno/');
+    } else {
+      navigate(redirectPath, { replace: true });
+    }
     return true;
   };
 
