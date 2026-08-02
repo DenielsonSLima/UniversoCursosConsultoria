@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.20",
+  "version": "2.2.3-beta.21",
   "display": "BETA",
   "stage": "beta",
-  "revision": 20,
+  "revision": 21,
   "releasedAt": "2026-08-02",
-  "summary": "Correção da instalação do Universo CC no Safari"
+  "summary": "Ícone branco e centralizado do Universo CC"
 }

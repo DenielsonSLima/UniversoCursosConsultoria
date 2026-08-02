@@ -1,10 +1,10 @@
-const CACHE_VERSION = 'universo-aluno-shell-v2';
+const CACHE_VERSION = 'universo-aluno-shell-v3';
 const SAFE_SHELL_ASSETS = [
   '/aluno/',
   '/aluno/manifest.webmanifest',
-  '/aluno/icons/app-icon-v2-192.png',
-  '/aluno/icons/app-icon-v2-512.png',
-  '/aluno/icons/apple-touch-icon-v2.png',
+  '/aluno/icons/app-icon-v3-192.png',
+  '/aluno/icons/app-icon-v3-512.png',
+  '/aluno/icons/apple-touch-icon-v3.png',
 ];
 
 self.addEventListener('install', (event) => {

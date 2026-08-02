@@ -2,6 +2,19 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.21] - 2026-08-02
+
+### Alterado
+
+- O ícone instalável do `Universo CC` passou a usar fundo branco puro e totalmente opaco.
+- A marca foi recortada pelo próprio contorno e centralizada no canvas, eliminando o deslocamento visual causado pelas margens transparentes do arquivo original.
+- Foram gerados ícones versionados em 180, 192 e 512 pixels, com respiro uniforme e cache do aplicativo atualizado para `v3`.
+
+### Qualidade
+
+- A centralização foi validada pelas coordenadas do contorno visível, e os três arquivos foram confirmados sem canal alfa.
+- Build de produção, TypeScript, lint e isolamento dos metadados do gestor foram verificados antes da publicação.
+
 ## [2.2.3-beta.20] - 2026-08-02
 
 ### Corrigido

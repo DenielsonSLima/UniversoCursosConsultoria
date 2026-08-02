@@ -56,7 +56,7 @@ const AlunoPwaRuntime = () => {
     const previousAppleTouchIconHref = appleTouchIcon?.getAttribute('href') || null;
     const appleTouchIconElement = appleTouchIcon || document.createElement('link');
     appleTouchIconElement.rel = 'apple-touch-icon';
-    appleTouchIconElement.href = '/aluno/icons/apple-touch-icon-v2.png';
+    appleTouchIconElement.href = '/aluno/icons/apple-touch-icon-v3.png';
     appleTouchIconElement.setAttribute('sizes', '180x180');
     if (!appleTouchIcon) document.head.appendChild(appleTouchIconElement);
 

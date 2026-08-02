@@ -268,7 +268,7 @@ const buildRouteHtml = (sourceHtml, metadata) => {
   let html = setTitle(sourceHtml, metadata.title);
   if (metadata.alunoPwa) {
     html = setManifest(html, '/aluno/manifest.webmanifest');
-    html = setAppleTouchIcon(html, '/aluno/icons/apple-touch-icon-v2.png');
+    html = setAppleTouchIcon(html, '/aluno/icons/apple-touch-icon-v3.png');
     html = setMeta(html, 'name', 'theme-color', '#001a33');
     html = setMeta(html, 'name', 'apple-mobile-web-app-capable', 'yes');
     html = setMeta(html, 'name', 'apple-mobile-web-app-status-bar-style', 'black-translucent');
