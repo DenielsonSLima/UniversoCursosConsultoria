@@ -5,6 +5,7 @@ import {
   Eye,
   EyeOff,
   LockKeyhole,
+  MessageCircle,
   UserRound,
   UserRoundPlus,
 } from 'lucide-react';
@@ -100,6 +101,7 @@ const AlunoAppLoginPage: React.FC = () => {
   };
 
   const openSignup = () => navigate('/aluno/cadastro-app');
+  const openSupport = () => navigate('/aluno/atendimento-publico');
 
   return (
     <main className="aluno-app-login relative h-dvh min-h-[34rem] overflow-hidden bg-[#001a33] text-white">
@@ -131,7 +133,7 @@ const AlunoAppLoginPage: React.FC = () => {
             <p className="mt-1.5 text-sm font-medium text-blue-100/75">Entre para continuar sua jornada.</p>
           </header>
 
-          <nav className="app-login-tabs mt-5 grid grid-cols-2 border-b border-white/15" aria-label="Acesso do aluno">
+          <nav className="app-login-tabs mt-5 grid grid-cols-3 border-b border-white/15" aria-label="Acesso do aluno">
             <button
               type="button"
               className="relative flex h-11 items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-blue-300 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-blue-400"
@@ -144,6 +146,13 @@ const AlunoAppLoginPage: React.FC = () => {
               className="flex h-11 items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-blue-100/65 transition hover:text-white"
             >
               <UserRoundPlus size={16} /> Cadastrar
+            </button>
+            <button
+              type="button"
+              onClick={openSupport}
+              className="flex h-11 items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-blue-100/65 transition hover:text-white"
+            >
+              <MessageCircle size={15} /> Chat
             </button>
           </nav>
 
@@ -205,7 +214,7 @@ const AlunoAppLoginPage: React.FC = () => {
 
             <div className="flex justify-end">
               <Link
-                to="/aluno/recuperar-senha?source=login-app"
+                to="/aluno/recuperar-senha-app"
                 className="text-xs font-bold text-blue-300 transition hover:text-white"
               >
                 Esqueceu a senha?
