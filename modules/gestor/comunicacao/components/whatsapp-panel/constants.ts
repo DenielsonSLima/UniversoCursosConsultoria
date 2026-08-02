@@ -16,16 +16,16 @@ export const DEFAULT_AUTOMATION: Partial<MensageriaConfigData> = {
   waMultipleOverdueMinInstallments: 2,
   waMultipleOverdueTemplate:
     'Olá, {{nome_aluno}}!\n\nIdentificamos parcelas pendentes em seu cadastro.\n\n*Quantidade:* {{quantidade_parcelas}}\n*Valor total:* {{valor_total_atrasado}}\n*Curso:* {{nome_curso}}\n*Turma:* {{nome_turma}}\n*CPF final:* {{cpf_final}}\n\nPara regularizar sua situação, responda a esta mensagem. Nossa equipe verificará as opções disponíveis.\n\nCaso o pagamento já tenha sido realizado, desconsidere este aviso.\n\nEquipe Universo Cursos e Consultoria.',
-  waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
-  waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
-  waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
-  waMultipleOverdueModalities: ['EAD', 'TECNICO', 'LIVRES', 'ESPECIALIZACAO'],
+  waDueNoticeModalities: ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'],
+  waPaymentReceiptModalities: ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'],
+  waOverdueNoticeModalities: ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'],
+  waMultipleOverdueModalities: ['EAD', 'TECNICO', 'LIVRE', 'ESPECIALIZACAO'],
 };
 
 export const COURSE_MODALITIES = [
   { id: 'EAD', label: 'EAD' },
   { id: 'TECNICO', label: 'Técnico' },
-  { id: 'LIVRES', label: 'Livres' },
+  { id: 'LIVRE', label: 'Livres' },
   { id: 'ESPECIALIZACAO', label: 'Especialização' },
   { id: 'SUPERIOR', label: 'Superior' },
 ];
