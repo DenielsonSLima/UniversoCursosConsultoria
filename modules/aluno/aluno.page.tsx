@@ -79,11 +79,15 @@ const AlunoPage: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedModule = params.get('module');
+    const requestedPathModule = window.location.pathname === '/aluno/comunicacao'
+      ? 'comunicacao'
+      : null;
     const requestedCourseId = params.get('courseId');
     const requestedProfileTab = params.get('tab') as PerfilTabId | null;
 
-    if (requestedModule && ALLOWED_MODULES.has(requestedModule)) {
-      setActiveModule(requestedModule);
+    const resolvedModule = requestedPathModule || requestedModule;
+    if (resolvedModule && ALLOWED_MODULES.has(resolvedModule)) {
+      setActiveModule(resolvedModule);
     }
     if (requestedCourseId) {
       setInitialCourseId(requestedCourseId);
@@ -208,7 +212,10 @@ const AlunoPage: React.FC = () => {
         unreadChatsCount={unreadChatsCount}
         onLogout={() => setIsLogoutConfirmOpen(true)}
         onMobileMenuChange={setIsMobileMenuOpen}
-        onModuleChange={setActiveModule}
+        onModuleChange={(moduleId) => {
+          setActiveModule(moduleId);
+          navigate(moduleId === 'comunicacao' ? '/aluno/comunicacao' : `/aluno/?module=${moduleId}`);
+        }}
       >
         <Suspense fallback={<AlunoModuleLoading />}>
           {renderContent()}
