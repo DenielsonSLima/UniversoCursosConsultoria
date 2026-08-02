@@ -8,6 +8,7 @@ import {
   ComunicacaoCategoria,
   ComunicacaoChat,
   ComunicacaoMensagem,
+  AlunoAtendimentoConfig,
   CreateAlunoChatInput,
   SendAlunoMessageInput,
 } from './comunicacao.types';
@@ -16,6 +17,13 @@ export const alunoComunicacaoKeys = {
   categories: ['comunicacao-categorias'] as const,
   chats: (alunoId: string) => ['aluno-chats', alunoId] as const,
   messages: (chatId: string | null) => ['chat-messages', chatId] as const,
+  supportConfig: (alunoId: string) => ['aluno-support-config', alunoId] as const,
+};
+
+const getSupportConfig = async (): Promise<AlunoAtendimentoConfig> => {
+  const { data, error } = await supabase.rpc('get_my_comunicacao_atendimento_config');
+  if (error) throw error;
+  return data as AlunoAtendimentoConfig;
 };
 
 const getCategories = async (): Promise<ComunicacaoCategoria[]> => {
@@ -152,35 +160,16 @@ const deleteChatForAluno = async (chatId: string, alunoId: string) => {
   if (error) throw error;
 };
 
-const createChat = async ({ alunoId, alunoNome, categoryId, categoryName, subject }: CreateAlunoChatInput) => {
-  const { data: newChat, error: chatError } = await supabase
-    .from('comunicacao_chats')
-    .insert({
-      remetente_id: alunoId,
-      remetente_nome: alunoNome,
-      remetente_tipo: 'Aluno',
-      categoria_id: categoryId,
-      status: 'pendente',
-      ultimo_texto: subject,
-      ultima_data: new Date().toISOString(),
-    })
-    .select()
-    .single();
+const createChat = async ({ categoryId, categoryName, subject, notifyOnResponse }: CreateAlunoChatInput) => {
+  const { data, error } = await supabase.rpc('create_my_comunicacao_chat', {
+    p_categoria_id: categoryId,
+    p_categoria_nome: categoryName,
+    p_assunto: subject,
+    p_notificar_resposta: Boolean(notifyOnResponse),
+  });
 
-  if (chatError) throw chatError;
-
-  const { error: messageError } = await supabase
-    .from('comunicacao_mensagens')
-    .insert({
-      chat_id: newChat.id,
-      remetente_id: alunoId,
-      remetente_nome: alunoNome,
-      remetente_tipo: 'aluno',
-      conteudo: `Iniciou o chamado sobre [${categoryName}]: ${subject}`,
-    });
-
-  if (messageError) throw messageError;
-  return newChat as ComunicacaoChat;
+  if (error) throw error;
+  return data as ComunicacaoChat;
 };
 
 export const alunoComunicacaoService = {
@@ -190,6 +179,7 @@ export const alunoComunicacaoService = {
   getCategories,
   getChatById,
   getMessages,
+  getSupportConfig,
   getUnreadChatIds,
   markMessagesAsRead,
   resolveMessages: resolveCommunicationAttachmentUrls,
