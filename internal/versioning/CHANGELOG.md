@@ -2,6 +2,27 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.23] - 2026-08-02
+
+### Adicionado
+
+- A Comunicação do gestor foi reorganizada em Atendimento, Atendimento por polo, Atrasados, Automações, Fluxos, Agentes e Canais e perfis.
+- O atendimento público do aplicativo ganhou rota própria, protocolo e histórico persistente, sem exigir login.
+- O aluno autenticado agora visualiza disponibilidade, horário e prazo médio do atendimento do seu polo, com criação segura de novas conversas.
+- Foi criada a configuração de atendimento por polo, incluindo horários, estado on-line, mensagens, SLA, responsáveis e canais habilitados.
+
+### Alterado
+
+- Atendimento do portal/app e WhatsApp passaram a compartilhar a Central de Atendimento, preservando a identificação do canal de origem.
+- Fluxos e automações passaram a apresentar a operação multicanal para mensagem no app, notificação no celular e WhatsApp.
+- A navegação e as permissões do gestor foram alinhadas aos novos submódulos de Comunicação.
+
+### Segurança e qualidade
+
+- Abertura de chamados do aluno foi movida para funções atômicas protegidas, com RLS, validação de polo e metadados de protocolo.
+- O suporte público usa função de borda, desafio antiabuso e token próprio de retomada, sem expor gravações diretas do banco.
+- TypeScript, lint, build de produção e testes de autenticação, acesso e comunicação multicanal foram executados antes da publicação.
+
 ## [2.2.3-beta.22] - 2026-08-02
 
 ### Adicionado
