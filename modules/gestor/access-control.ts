@@ -187,6 +187,32 @@ export const canAccessGestorModule = (
   return permissions.modules.includes(normalized as GestorModuleId);
 };
 
+const WHATSAPP_OPERATIONAL_ROUTES = new Set([
+  'comunicacao-atrasados',
+  'comunicacao-fluxos',
+  'comunicacao-agentes',
+  'comunicacao-configuracoes',
+]);
+
+export const canAccessCommunicationRoute = (
+  permissions: GestorPermissions,
+  routeId: string,
+) => {
+  if (!canAccessGestorModule(permissions, 'comunicacao')) return false;
+  if (routeId === 'comunicacao-atendimento') {
+    return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')
+      || canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp');
+  }
+  if (routeId === 'comunicacao-atendimento-config') {
+    return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')
+      || canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp');
+  }
+  if (WHATSAPP_OPERATIONAL_ROUTES.has(routeId)) {
+    return canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp');
+  }
+  return canAccessTab(permissions, 'comunicacao', routeId);
+};
+
 export const canAccessFinanceiroTab = (
   permissions: GestorPermissions,
   tabId: string,
