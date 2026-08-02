@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildDashboardAccessKey,
+  canAccessCommunicationRoute,
   canAccessTab,
   canAccessGestaoTurmaTab,
   canAccessFinanceiroTab,
@@ -21,6 +22,47 @@ const permissions = (overrides: Partial<GestorPermissions> = {}): GestorPermissi
   financeiroTabs: ['resumo', 'receber', 'conciliacao-bancaria'],
   allPolos: true,
   ...overrides,
+});
+
+test('rotas de Comunicação preservam permissões legadas sem ampliar acesso', () => {
+  const internalOnly = permissions({
+    modules: ['comunicacao'],
+    financeiroTabs: [],
+    tabs: { comunicacao: ['comunicacao-mensagem'] },
+  });
+  assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-atendimento'), true);
+  assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-fluxos'), false);
+  assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-configuracoes'), false);
+
+  const whatsappOnly = permissions({
+    modules: ['comunicacao'],
+    financeiroTabs: [],
+    tabs: { comunicacao: ['comunicacao-whatsapp'] },
+  });
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-atendimento'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-atrasados'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-fluxos'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-agentes'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-configuracoes'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-automacoes'), false);
+});
+
+test('Automação multicanal exige sua permissão explícita e o módulo Comunicação', () => {
+  const automationOnly = permissions({
+    modules: ['comunicacao'],
+    financeiroTabs: [],
+    tabs: { comunicacao: ['comunicacao-automacoes'] },
+  });
+  assert.equal(canAccessCommunicationRoute(automationOnly, 'comunicacao-automacoes'), true);
+  assert.equal(canAccessCommunicationRoute(automationOnly, 'comunicacao-atendimento'), false);
+
+  const withoutCommunicationModule = permissions({
+    modules: ['inicio'],
+    financeiroTabs: [],
+    tabs: { comunicacao: ['comunicacao-whatsapp', 'comunicacao-automacoes'] },
+  });
+  assert.equal(canAccessCommunicationRoute(withoutCommunicationModule, 'comunicacao-atendimento'), false);
+  assert.equal(canAccessCommunicationRoute(withoutCommunicationModule, 'comunicacao-automacoes'), false);
 });
 
 test('usa financeiroTabs legado quando não existe escopo novo para o Financeiro', () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-type TurnstileAction = 'login' | 'recover' | 'signup';
+type TurnstileAction = 'login' | 'recover' | 'signup' | 'support';
 export type TurnstileStatus =
   | 'loading'
   | 'verifying'

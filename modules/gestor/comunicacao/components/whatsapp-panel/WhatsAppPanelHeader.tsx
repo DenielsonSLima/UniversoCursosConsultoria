@@ -1,8 +1,8 @@
 import React from 'react';
 import {
-  CalendarClock,
   Bot,
   Cake,
+  CalendarClock,
   MessageCircle,
   Settings,
   UserCircle,
@@ -19,7 +19,7 @@ interface WhatsAppPanelHeaderProps {
 const tabs = [
   { id: 'conversas', label: 'Conversas', icon: MessageCircle },
   { id: 'atrasados', label: 'Atrasados', icon: Wallet },
-  { id: 'automacoes', label: 'Automações', icon: CalendarClock },
+  { id: 'automacoes', label: 'Automações atuais', icon: CalendarClock },
   { id: 'fluxos', label: 'Fluxos', icon: Bot },
   { id: 'agentes', label: 'Agentes', icon: Cake },
   { id: 'perfil', label: 'Perfil', icon: UserCircle },
@@ -33,10 +33,10 @@ const WhatsAppPanelHeader: React.FC<WhatsAppPanelHeaderProps> = ({
 }) => (
   <div className="shrink-0 border-b border-slate-200 bg-white px-5">
     <nav
-      aria-label="Navegação do WhatsApp"
+      aria-label="Navegação da central de comunicação"
       className="flex w-fit max-w-full flex-nowrap items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {tabs.filter((item) => isFinancialLine || !['atrasados', 'automacoes'].includes(item.id)).map((item) => {
+      {tabs.filter((item) => isFinancialLine || (item.id !== 'atrasados' && item.id !== 'automacoes')).map((item) => {
         const Icon = item.icon;
         return (
           <button

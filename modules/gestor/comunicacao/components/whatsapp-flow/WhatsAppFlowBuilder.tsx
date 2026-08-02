@@ -324,7 +324,7 @@ const WhatsAppFlowBuilder: React.FC<WhatsAppFlowBuilderProps> = ({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h4 className="text-sm font-bold text-[#001a33]">Opções e destinos</h4>
-              <p className="mt-1 text-xs font-medium text-slate-400">A ordem abaixo será a mesma exibida no WhatsApp.</p>
+              <p className="mt-1 text-xs font-medium text-slate-400">A ordem abaixo será preservada em todos os canais vinculados a este fluxo.</p>
             </div>
             <button
               type="button"

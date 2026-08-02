@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, BellOff, Bot, CheckCircle2, Clock3, Send } from 'lucide-react';
 import { ContasReceber, financeiroService } from '../../financeiro/financeiro.service';
 import ToastNotification, { useToast } from '../../components/ToastNotification';
@@ -19,27 +19,27 @@ import { defaultMessageFor, normalizePhone } from './whatsapp/whatsapp.utils';
 import { useWhatsAppRealtime } from './whatsapp/useWhatsAppRealtime';
 import { installWhatsAppSoundUnlock, isWhatsAppSoundEnabled, playIncomingWhatsAppSound, setWhatsAppSoundEnabled } from './whatsapp/inbox/notificationSound';
 import { DEFAULT_AUTOMATION, DEFAULT_MODALITIES } from './whatsapp-panel/constants';
-import AutomationsTab from './whatsapp-panel/AutomationsTab';
 import OverdueTab from './whatsapp-panel/OverdueTab';
 import StartConversationModal, { StartConversationBatchResult } from './whatsapp-panel/StartConversationModal';
 import WhatsAppPanelHeader from './whatsapp-panel/WhatsAppPanelHeader';
 import WhatsAppLineSwitcher from './whatsapp-panel/WhatsAppLineSwitcher';
-import { AutomationField, AutomationKey, WhatsAppOpsTab } from './whatsapp-panel/types';
+import { WhatsAppOpsTab } from './whatsapp-panel/types';
 import { applyTemplate, firstPaymentLink, formatCpfFinal, formatDate, formatMoney, groupOverdueReceivables, isOverdue, receivableId } from './whatsapp-panel/utils';
+import LegacyWhatsAppAutomationsPanel from '../automacoes-multicanal/LegacyWhatsAppAutomationsPanel';
 
-const automationLabels: Record<AutomationKey, string> = {
-  due: 'Aviso de vencimento',
-  receipt: 'Aviso de recebimento',
-  overdue: 'Aviso de atraso',
-  multiple: 'Múltiplas parcelas em atraso',
-};
+interface WhatsAppCommunicationPanelProps {
+  initialTab?: WhatsAppOpsTab;
+  showModuleTabs?: boolean;
+}
 
-const WhatsAppCommunicationPanel: React.FC = () => {
+const WhatsAppCommunicationPanel: React.FC<WhatsAppCommunicationPanelProps> = ({
+  initialTab = 'conversas',
+  showModuleTabs = true,
+}) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
-  const [activeTab, setActiveTab] = useState<WhatsAppOpsTab>('conversas');
+  const [activeTab, setActiveTab] = useState<WhatsAppOpsTab>(initialTab);
   const [automation, setAutomation] = useState<MensageriaConfigData>({ tipo: 'whatsapp', ...DEFAULT_AUTOMATION });
-  const [openAutomation, setOpenAutomation] = useState<AutomationKey | null>(null);
   const [contactSearch, setContactSearch] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [quickMessage, setQuickMessage] = useState('');
@@ -75,7 +75,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   );
   const isFinancialLine = activeConnection?.is_matriz_financeira === true;
 
-  const { data: config, isLoading: loadingConfig } = useQuery({
+  const { data: config } = useQuery({
     queryKey: ['mensageria_config', 'whatsapp'],
     queryFn: () => mensageriaService.getConfig('whatsapp'),
   });
@@ -136,6 +136,10 @@ const WhatsAppCommunicationPanel: React.FC = () => {
 
   useEffect(() => installWhatsAppSoundUnlock(), []);
 
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   const toggleSound = () => {
     setSoundEnabled((current) => {
       const next = !current;
@@ -156,7 +160,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
     setQuickMessage('');
     setSelectedOverdueIds(new Set());
     if (!connections.find((item) => item.id === connectionId)?.is_matriz_financeira &&
-      ['automacoes', 'atrasados'].includes(activeTab)) {
+      (activeTab === 'atrasados' || activeTab === 'automacoes')) {
       setActiveTab('conversas');
     }
   };
@@ -232,19 +236,6 @@ const WhatsAppCommunicationPanel: React.FC = () => {
 
     setQuickMessage((current) => current || defaultMessageFor(selectedContact));
   }, [selectedContactId, selectedContact?.id, selectedContact]);
-
-  const saveAutomationMutation = useMutation({
-    mutationFn: (key: AutomationKey) => mensageriaService.saveWhatsappAutomationConfig(automation).then(() => key),
-    onSuccess: (key) => {
-      queryClient.invalidateQueries({ queryKey: ['mensageria_config', 'whatsapp'] });
-      toast.success('Aviso salvo', `${automationLabels[key]} atualizado.`);
-    },
-    onError: (err: any) => toast.error('Erro ao salvar', err?.message || 'Não foi possível salvar as automações.'),
-  });
-
-  const updateAutomationModalities = (field: AutomationField, value: string[]) => {
-    setAutomation((current) => ({ ...current, [field]: value }));
-  };
 
   const toggleCollapsedOverdueGroup = (groupId: string) => {
     setCollapsedOverdueGroups((current) => {
@@ -502,7 +493,7 @@ const WhatsAppCommunicationPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-white antialiased">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white antialiased">
       <ToastNotification toasts={toasts} onRemove={removeToast} />
 
       <div className="flex min-h-[68px] shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-5 py-3">
@@ -545,22 +536,24 @@ const WhatsAppCommunicationPanel: React.FC = () => {
         </div>
       </div>
 
-      <WhatsAppPanelHeader
-        activeTab={activeTab}
-        isFinancialLine={isFinancialLine}
-        onTabChange={setActiveTab}
-      />
+      {showModuleTabs && (
+        <WhatsAppPanelHeader
+          activeTab={activeTab}
+          isFinancialLine={isFinancialLine}
+          onTabChange={setActiveTab}
+        />
+      )}
 
       {activeTab === 'conversas' && activeConnectionId && (
         <WhatsAppInbox connectionId={activeConnectionId} conversations={conversations} messages={conversationMessages} flowSessions={whatsappFlow.sessions} activeConversationId={activeConversationId} apiReady={apiReady} loadingConversations={loadingConversations} loadingMessages={loadingConversationMessages} onSelectConversation={selectConversation} onSendReply={sendConversationReply} onDeleteConversations={deleteWhatsAppConversations} onPauseFlow={whatsappFlow.pause} onResetFlow={whatsappFlow.reset} onCloseConversation={whatsappFlow.close} onReopenConversation={whatsappFlow.reopen} onTransferConversation={transferConversation} />
       )}
 
-      {activeTab === 'automacoes' && (
-        <AutomationsTab automation={automation} loadingConfig={loadingConfig} openAutomation={openAutomation} onToggleOpen={(key) => setOpenAutomation((current) => current === key ? null : key)} onAutomationChange={setAutomation} onModalitiesChange={updateAutomationModalities} onSave={(key) => saveAutomationMutation.mutate(key)} isSaving={saveAutomationMutation.isPending} savingKey={saveAutomationMutation.variables} />
-      )}
-
       {activeTab === 'atrasados' && (
         <OverdueTab loading={loadingReceivables} totals={overdueTotals} groups={overdueGroups} selectedIds={selectedOverdueIds} selectedSummary={selectedOverdueSummary} collapsedGroups={collapsedOverdueGroups} apiReady={apiReady} isSending={isSendingOverdueBatch} onToggleGroup={toggleCollapsedOverdueGroup} onSetItemsSelected={setOverdueItemsSelected} onToggleItemSelected={(item, checked) => setOverdueItemsSelected([item], checked)} onClearSelection={() => setSelectedOverdueIds(new Set())} onSendSelected={sendSelectedOverdueMessages} />
+      )}
+
+      {activeTab === 'automacoes' && (
+        <LegacyWhatsAppAutomationsPanel />
       )}
 
       {activeTab === 'fluxos' && (

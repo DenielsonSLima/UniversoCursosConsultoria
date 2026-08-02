@@ -64,7 +64,7 @@ const WhatsAppLineSwitcher: React.FC<WhatsAppLineSwitcherProps> = ({
               {active ? (
                 <span className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] font-semibold opacity-65">
                   <Phone size={11} />
-                  {connection.telefone || 'Número pendente'} · operação isolada desta linha
+                  {connection.telefone || 'Número pendente'} · configuração própria deste número
                 </span>
               ) : null}
             </span>

@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.22",
+  "version": "2.2.3-beta.23",
   "type": "module",
   "scripts": {
     "dev": "vite --force",
@@ -13,6 +13,7 @@
     "test:banese-reconciliation": "node --test scripts/test-banese-reconciliation-control.mjs",
     "test:portal-auth": "node --test scripts/test-portal-auth-flow.mjs",
     "test:gestor-access": "node scripts/test-gestor-access.mjs",
+    "test:multichannel": "deno test --allow-read modules/gestor/comunicacao/automacoes-multicanal/multichannel-automation.test.ts",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",

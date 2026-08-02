@@ -229,7 +229,11 @@ export const AlunoNewChatModal: React.FC<{
   onClose: () => void;
   onSubmit: (event: React.FormEvent) => void;
   onSubjectChange: (value: string) => void;
-}> = ({ categories, categoryId, subject, onCategoryChange, onClose, onSubmit, onSubjectChange }) => {
+  notifyOnResponse: boolean;
+  notificationText?: string;
+  showNotificationOption: boolean;
+  onNotificationChange: (value: boolean) => void;
+}> = ({ categories, categoryId, subject, onCategoryChange, onClose, onSubmit, onSubjectChange, notifyOnResponse, notificationText, showNotificationOption, onNotificationChange }) => {
   const dialogRef = useAccessibleDialog(onClose);
 
   return (
@@ -253,6 +257,15 @@ export const AlunoNewChatModal: React.FC<{
           <label htmlFor="aluno-new-chat-subject" className="text-[10px] font-black uppercase tracking-wider text-slate-500">Dúvida / Assunto</label>
           <textarea id="aluno-new-chat-subject" required rows={4} placeholder="Descreva detalhadamente o que você precisa..." value={subject} onChange={(event) => onSubjectChange(event.target.value)} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-medium text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white motion-reduce:transition-none md:text-xs" />
         </div>
+        {showNotificationOption ? (
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <input type="checkbox" checked={notifyOnResponse} onChange={(event) => void onNotificationChange(event.target.checked)} className="mt-0.5 h-5 w-5 rounded border-blue-200 text-blue-600 focus:ring-blue-500" />
+            <span>
+              <strong className="block text-xs font-black text-[#001a33]">Avisar quando responderem</strong>
+              <span className="mt-1 block text-[10px] font-medium leading-relaxed text-slate-600">{notificationText || 'Ative as notificações para ser informado quando sua solicitação for respondida.'}</span>
+            </span>
+          </label>
+        ) : null}
         <button type="submit" className="min-h-12 w-full rounded-xl bg-[#001a33] py-3 text-xs font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:bg-blue-900">Abrir Chamado</button>
       </form>
     </div>

@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  Award, BarChart, BookOpen, Briefcase, Building, CalendarDays, ClipboardCheck,
-  FileCode, FileSignature, FileText, Handshake, LayoutDashboard, MessageCircle,
-  MessageSquare, MonitorPlay, Settings, ShoppingCart, TrendingUp, UserPlus,
-  UserRound, Zap,
+  Award, BarChart, BookOpen, Bot, Briefcase, Building, CalendarDays, ClipboardCheck,
+  FileCode, FileSignature, FileText, Handshake, Inbox, LayoutDashboard,
+  MessageSquare, MonitorPlay, Settings, Settings2, ShoppingCart, SlidersHorizontal, TrendingUp,
+  UserPlus, UserRound, WalletCards, Workflow, Zap,
 } from 'lucide-react';
-import { canAccessTab, GestorPermissions } from './access-control';
+import { canAccessCommunicationRoute, canAccessTab, GestorPermissions } from './access-control';
 import { GestorMenuItem } from './components/GestorPortalShell';
 
 export const POLO_CADASTROS_ALLOWED = new Set([
@@ -48,9 +48,15 @@ export const buildGestorNavigation = ({
     ? cadastroSubItems
     : cadastroSubItems.filter(item => POLO_CADASTROS_ALLOWED.has(item.id));
   const communicationSubItems = [
-    { id: 'comunicacao-mensagem', label: 'Mensagem', icon: <MessageSquare size={16} /> },
-    { id: 'comunicacao-whatsapp', label: 'WhatsApp', icon: <MessageCircle size={16} /> },
-  ].filter(item => canAccessTab(permissions, 'comunicacao', item.id));
+    { id: 'comunicacao-atendimento', label: 'Atendimento', icon: <Inbox size={16} /> },
+    { id: 'comunicacao-atendimento-config', label: 'Atendimento por polo', icon: <SlidersHorizontal size={16} /> },
+    { id: 'comunicacao-atrasados', label: 'Atrasados', icon: <WalletCards size={16} /> },
+    { id: 'comunicacao-automacoes', label: 'Automações', icon: <Workflow size={16} /> },
+    { id: 'comunicacao-fluxos', label: 'Fluxos', icon: <Workflow size={16} /> },
+    { id: 'comunicacao-agentes', label: 'Agentes', icon: <Bot size={16} /> },
+    { id: 'comunicacao-configuracoes', label: 'Canais e perfis', icon: <Settings2 size={16} /> },
+  ].filter(item => canAccessCommunicationRoute(permissions, item.id))
+    .filter(item => item.id !== 'comunicacao-automacoes' || (permissions.allPolos && isMatrizSelected));
 
   const menuItems: GestorMenuItem[] = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },

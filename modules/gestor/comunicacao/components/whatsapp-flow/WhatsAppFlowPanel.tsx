@@ -225,7 +225,7 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-[#f4f7fa] custom-scrollbar">
+    <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain bg-[#f4f7fa] pb-10 custom-scrollbar">
       <section className="min-h-full border-y border-slate-200 bg-white">
         <header className="border-b border-slate-200 px-5 py-4 lg:px-7">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -243,9 +243,9 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
                     {draft.enabled ? 'Em operação' : 'Pausado'}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-sm font-medium text-slate-400">
+                <p className="mt-0.5 text-sm font-medium text-slate-400">
                   {draft.flow_type === 'universo_main'
-                    ? 'Triagem por aluno, matrícula, financeiro, cursos, setor e polo.'
+                    ? 'Fluxo compartilhado pelo WhatsApp principal, chat do aluno logado e chat público.'
                     : 'Roteiro independente desta linha de atendimento.'}
                 </p>
               </div>
@@ -401,7 +401,9 @@ const WhatsAppFlowPanel: React.FC<WhatsAppFlowPanelProps> = ({
           </div>
           <p className="text-xs font-medium text-slate-400">
             {editorMode === 'builder'
-              ? 'Edite etapas, opções, ordem e destinos do atendimento.'
+              ? draft.flow_type === 'universo_main'
+                ? 'Edite uma vez: este roteiro atende o número principal, o app e o site público.'
+                : 'Edite etapas, opções, ordem e destinos exclusivos deste número.'
               : 'Ajuste textos de CPF, cobrança, IRPF, falha e transferência.'}
           </p>
         </div>

@@ -15,10 +15,12 @@ import {
 } from '../AlunoComunicacaoParts';
 import { formatChatTime } from '../comunicacao.helpers';
 import type {
+  AlunoAtendimentoConfig,
   ComunicacaoCategoria,
   ComunicacaoChat,
   ComunicacaoMensagem,
 } from '../comunicacao.types';
+import AlunoSupportAvailabilityCard from '../AlunoSupportAvailabilityCard';
 
 interface AlunoMobileComunicacaoProps {
   activeCallTab: 'pendentes' | 'resolvidos';
@@ -41,6 +43,9 @@ interface AlunoMobileComunicacaoProps {
   unreadChatIds: Set<string>;
   uploadingFile: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  supportConfig?: AlunoAtendimentoConfig;
+  supportConfigLoading: boolean;
+  canOpenNewChat: boolean;
   onBack: () => void;
   onDelete: () => void;
   onFileChange: (file: File | null) => void;
@@ -75,6 +80,9 @@ const AlunoMobileComunicacao = ({
   unreadChatIds,
   uploadingFile,
   fileInputRef,
+  supportConfig,
+  supportConfigLoading,
+  canOpenNewChat,
   onBack,
   onDelete,
   onFileChange,
@@ -157,10 +165,12 @@ const AlunoMobileComunicacao = ({
             <MessageSquare size={23} />
           </div>
         </div>
-        <button type="button" onClick={onNewChat} className="relative mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-950/30 active:scale-[0.99] motion-reduce:transform-none">
+        <button type="button" onClick={onNewChat} disabled={!canOpenNewChat} className="relative mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-950/30 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-500 disabled:shadow-none motion-reduce:transform-none">
           <Plus size={17} /> Abrir novo chamado
         </button>
       </header>
+
+      <AlunoSupportAvailabilityCard config={supportConfig} loading={supportConfigLoading} compact />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Filtrar chamados">
         <div className="grid grid-cols-2 gap-1">
