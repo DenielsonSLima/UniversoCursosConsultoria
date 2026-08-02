@@ -2,6 +2,34 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.19] - 2026-08-02
+
+Esta versão consolida integralmente o conjunto de alterações acumuladas nos portais, módulos acadêmicos, financeiro, documentos, integrações, banco de dados, testes e materiais do projeto.
+
+### Adicionado
+
+- O Portal do Aluno agora possui experiência instalável exclusiva em `/aluno/`, com nome `Universo CC`, manifesto próprio, ícones regulares e maskable e tela de abertura institucional.
+- A versão mobile recebeu navegação inferior com cinco acessos, componentes compactos por módulo e suporte às áreas seguras de Android e iPhone.
+
+### Alterado
+
+- O acesso do aluno abre em modo standalone quando instalado e preserva login, primeiro acesso, recuperação de senha e retorno seguro para a página solicitada.
+- O botão Institucional permanece disponível no login público para acesso ao sistema de gestão em computador e celular.
+- Foram incorporadas em uma única publicação as revisões pendentes dos fluxos do gestor, aluno, integrações financeiras, comunicação, secretaria e infraestrutura de dados.
+
+### Removido
+
+- Arquivos legados e materiais locais marcados para exclusão foram retirados do repositório, permanecendo recuperáveis pelo histórico do Git.
+
+### Segurança
+
+- O service worker permanece restrito ao caminho `/aluno/` e não intercepta gestor, professor, Supabase, pagamentos, documentos ou dados acadêmicos privados.
+- Falhas temporárias de conexão não encerram a sessão; sessões realmente inválidas retornam ao login do aluno com o destino preservado.
+
+### Qualidade
+
+- Build de produção, TypeScript, lint e verificações de isolamento entre os manifestos do aluno e do gestor foram executados antes da publicação.
+
 ## [2.2.3-beta.18] - 2026-07-31
 
 ### Corrigido

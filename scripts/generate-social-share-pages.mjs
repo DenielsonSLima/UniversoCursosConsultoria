@@ -148,6 +148,7 @@ const ROUTES = [
     'login',
     'Área do Aluno | Universo Cursos e Consultoria',
     'Área exclusiva para acompanhar cursos, materiais, avaliações e informações acadêmicas.',
+    { alunoPwa: true },
   ),
   publicRoute(
     '/localizacao',
@@ -240,6 +241,18 @@ const removeCanonical = (html) => html.replace(
   '',
 );
 
+const setManifest = (html, href) => {
+  const tag = `<link rel="manifest" href="${escapeHtml(href)}">`;
+  const pattern = /<link\b(?=[^>]*\brel=["']manifest["'])[^>]*>/i;
+  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+};
+
+const setAppleTouchIcon = (html, href) => {
+  const tag = `<link rel="apple-touch-icon" sizes="180x180" href="${escapeHtml(href)}">`;
+  const pattern = /<link\b(?=[^>]*\brel=["']apple-touch-icon["'])[^>]*>/i;
+  return pattern.test(html) ? html.replace(pattern, tag) : insertBeforeHeadEnd(html, tag);
+};
+
 const buildRouteHtml = (sourceHtml, metadata) => {
   const canonicalPath = metadata.canonicalPath || metadata.route;
   const canonicalUrl = `${SITE_URL}${canonicalPath === '/' ? '/' : canonicalPath}`;
@@ -248,6 +261,14 @@ const buildRouteHtml = (sourceHtml, metadata) => {
   const imageAlt = `${metadata.title} — Universo Cursos e Consultoria`;
 
   let html = setTitle(sourceHtml, metadata.title);
+  if (metadata.alunoPwa) {
+    html = setManifest(html, '/aluno/manifest.webmanifest');
+    html = setAppleTouchIcon(html, '/aluno/icons/apple-touch-icon.png');
+    html = setMeta(html, 'name', 'theme-color', '#001a33');
+    html = setMeta(html, 'name', 'apple-mobile-web-app-capable', 'yes');
+    html = setMeta(html, 'name', 'apple-mobile-web-app-status-bar-style', 'black-translucent');
+    html = setMeta(html, 'name', 'apple-mobile-web-app-title', 'Universo CC');
+  }
   html = setMeta(html, 'name', 'description', metadata.description);
   html = setMeta(html, 'name', 'robots', metadata.robots);
 

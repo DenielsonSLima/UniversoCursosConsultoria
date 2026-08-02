@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SeoManager from './modules/public/components/SeoManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
 import AccessCheckingScreen from './modules/shared/components/AccessCheckingScreen';
+import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
+import AlunoPwaRuntime from './modules/aluno/pwa/AlunoPwaRuntime';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 const PublicPage = lazy(() => import('./modules/public/public.page'));
@@ -40,7 +42,7 @@ const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
   if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
   if (pathname.startsWith('/professor')) return <AccessCheckingScreen portal="Professor" />;
-  if (pathname.startsWith('/aluno')) return <AccessCheckingScreen portal="Aluno" />;
+  if (pathname === '/aluno' || pathname.startsWith('/aluno/')) return <AlunoAppSplash />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -56,6 +58,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <SeoManager />
+      <AlunoPwaRuntime />
       <Suspense fallback={<RouteLoadingScreen />}>
         <Routes>
 
@@ -84,6 +87,13 @@ const App: React.FC = () => {
         <Route path="/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/primeiro-acesso" element={<AlunoFirstAccessPage />} />
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
+
+        {/* ── Rotas instaláveis do aluno: mantidas dentro do escopo /aluno/ ── */}
+        <Route path="/aluno/entrar" element={<AlunoLoginPublicPage />} />
+        <Route path="/aluno/cadastro" element={<AlunoLoginPublicPage />} />
+        <Route path="/aluno/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
+        <Route path="/aluno/primeiro-acesso" element={<AlunoFirstAccessPage />} />
+        <Route path="/aluno/recuperar-senha" element={<PasswordRecoveryPage />} />
 
         {/* ── Atalhos compartilháveis para unidades e localização ── */}
         <Route path="/localizacao" element={<ContactPage />} />

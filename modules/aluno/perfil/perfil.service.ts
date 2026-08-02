@@ -6,7 +6,7 @@ import { documentosAlunoKeys } from '../../shared/documentos-aluno/documentos-al
 
 export const alunoPerfilKeys = {
   profile: (alunoId: string) => ['aluno-perfil', alunoId] as const,
-  documents: (alunoId: string) => documentosAlunoKeys.painel(alunoId),
+  documents: (alunoId: string) => documentosAlunoKeys.painel(alunoId, 'aluno'),
   vacinaContexts: (alunoId: string) => ['aluno-perfil-vacina-contexts', alunoId] as const,
   vacinas: (alunoId: string) => ['aluno-perfil-vacinas', alunoId] as const,
 };

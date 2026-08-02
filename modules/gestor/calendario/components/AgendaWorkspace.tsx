@@ -149,9 +149,10 @@ interface MonthAgendaProps {
   events: CalendarEvent[];
   getTypeInfo: GetTypeInfo;
   onOpenDate: (date: Date) => void;
+  readOnly?: boolean;
 }
 
-const MonthAgenda: React.FC<MonthAgendaProps> = ({ year, monthIndex, events, getTypeInfo, onOpenDate }) => (
+const MonthAgenda: React.FC<MonthAgendaProps> = ({ year, monthIndex, events, getTypeInfo, onOpenDate, readOnly = false }) => (
   <div className="flex min-h-[435px] flex-col overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/45">
     <div className="border-b border-blue-100 px-4 py-4">
       <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Agenda do mês</p>
@@ -164,7 +165,7 @@ const MonthAgenda: React.FC<MonthAgendaProps> = ({ year, monthIndex, events, get
         <div className="flex h-full min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-blue-200 bg-white/70 px-5 text-center">
           <CalendarDays size={24} className="mb-2 text-blue-200" />
           <p className="text-sm font-semibold text-slate-600">Nenhum compromisso no mês</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Selecione um dia e use o botão “Novo evento”.</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{readOnly ? 'Não há aulas, eventos ou datas oficiais neste período.' : 'Selecione um dia e use o botão “Novo evento”.'}</p>
         </div>
       ) : events.map(event => {
         const type = getTypeInfo(event.typeId);
@@ -280,7 +281,7 @@ const AgendaColumn: React.FC<AgendaColumnProps> = ({
 };
 
 interface AgendaWorkspaceProps {
-  variant?: 'manager' | 'professor';
+  variant?: 'manager' | 'professor' | 'student';
   currentYear: number;
   currentMonthIndex: number;
   today: Date;
@@ -306,9 +307,9 @@ interface AgendaWorkspaceProps {
   onFocusDate: (date: Date) => void;
   onOpenDate: (date: Date) => void;
   onManageTypes?: () => void;
-  onExportCsv: () => void;
-  onExportIcs: () => void;
-  onExportPdf: () => void;
+  onExportCsv?: () => void;
+  onExportIcs?: () => void;
+  onExportPdf?: () => void;
 }
 
 const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
@@ -343,6 +344,7 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
   onExportPdf,
 }) => {
   const isProfessor = variant === 'professor';
+  const isStudent = variant === 'student';
   const previousMonth = getPreviousMonth(currentYear, currentMonthIndex);
   const focusedDateKey = toDateKey(focusedDate);
   const todayKey = toDateKey(today);
@@ -369,19 +371,21 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
         <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
           <div className="min-w-64">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">
-              {isProfessor ? 'Planejamento docente' : 'Planejamento acadêmico'}
+              {isProfessor ? 'Planejamento docente' : isStudent ? 'Agenda acadêmica' : 'Planejamento acadêmico'}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight">
-              {isProfessor ? 'Minha agenda e calendário' : 'Agenda e calendário'}
+              {isProfessor || isStudent ? 'Minha agenda e calendário' : 'Agenda e calendário'}
             </h1>
             <p className="mt-1 text-[13px] font-normal text-slate-500">
               {isProfessor
                 ? 'Suas aulas, seus compromissos e as datas gerais da instituição.'
+                : isStudent
+                  ? 'Aulas das suas turmas, comunicados institucionais e datas oficiais para todos.'
                 : 'Aulas, eventos internos e datas oficiais em uma visão operacional.'}
             </p>
           </div>
 
-          <div className={`grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 ${isProfessor ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
+          <div className={`grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 ${isProfessor || isStudent ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
             <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mês</span>
               <select value={currentMonthIndex} onChange={event => onMonthChange(Number(event.target.value))} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
@@ -389,7 +393,7 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute bottom-3 right-3 text-slate-400" />
             </label>
-            {!isProfessor ? <label className="relative">
+            {!isProfessor && !isStudent ? <label className="relative">
               <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Professor</span>
               <select value={selectedTeacherId} onChange={event => onTeacherChange(event.target.value)} className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 pr-8 text-xs font-semibold uppercase text-slate-700 outline-none focus:border-blue-400">
                 <option value="">Todos</option>
@@ -419,10 +423,12 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
             {hasActiveFilters ? (
               <button type="button" onClick={onClearFilters} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Filter size={13} /> Limpar</button>
             ) : null}
-            <button type="button" onClick={onExportCsv} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Download size={13} /> CSV</button>
-            <button type="button" onClick={onExportIcs} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Share2 size={13} /> ICS</button>
-            <button type="button" onClick={onExportPdf} disabled={isExportingPdf} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-50"><FileDown size={13} /> PDF</button>
-            <button type="button" onClick={() => onOpenDate(focusedDate)} className="flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700"><Plus size={14} /> {isProfessor ? 'Novo evento pessoal' : 'Novo evento'}</button>
+            {!isStudent ? <>
+              <button type="button" onClick={onExportCsv} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Download size={13} /> CSV</button>
+              <button type="button" onClick={onExportIcs} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50"><Share2 size={13} /> ICS</button>
+              <button type="button" onClick={onExportPdf} disabled={isExportingPdf} className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-50"><FileDown size={13} /> PDF</button>
+              <button type="button" onClick={() => onOpenDate(focusedDate)} className="flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-[11px] font-semibold uppercase text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700"><Plus size={14} /> {isProfessor ? 'Novo evento pessoal' : 'Novo evento'}</button>
+            </> : null}
           </div>
         </div>
       </section>
@@ -442,13 +448,13 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
             focusedDateKey={focusedDateKey} todayKey={todayKey} muted getTypeInfo={getTypeInfo} onFocusDate={onFocusDate} />
           <MiniCalendar year={currentYear} monthIndex={currentMonthIndex} eventsByDate={eventsByDate}
             focusedDateKey={focusedDateKey} todayKey={todayKey} getTypeInfo={getTypeInfo} onFocusDate={onFocusDate} />
-          <MonthAgenda year={currentYear} monthIndex={currentMonthIndex} events={monthEvents} getTypeInfo={getTypeInfo} onOpenDate={onOpenDate} />
+          <MonthAgenda year={currentYear} monthIndex={currentMonthIndex} events={monthEvents} getTypeInfo={getTypeInfo} onOpenDate={onOpenDate} readOnly={isStudent} />
         </div>
 
         <div className="grid gap-3 border-t border-slate-100 px-4 py-4 text-[11px] font-medium text-slate-600 lg:grid-cols-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-[#001a33]">Origem</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-600" /> {isProfessor ? 'Meu evento' : 'Manual'}</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-blue-600" /> {isProfessor ? 'Meu evento' : isStudent ? 'Institucional' : 'Manual'}</span>
             <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Aula</span>
             <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Geral</span>
           </div>
@@ -458,14 +464,16 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-[#001a33]">{isProfessor ? 'Visibilidade' : 'Professores'}</span>
+              <span className="font-semibold text-[#001a33]">{isProfessor ? 'Visibilidade' : isStudent ? 'Escopo' : 'Professores'}</span>
               {isProfessor
                 ? <span>Somente você cria e exclui seus eventos pessoais.</span>
+                : isStudent
+                  ? <span>Suas turmas • feriados e datas oficiais para todos</span>
                 : visibleTeachers.length === 0
                   ? <span>Sem responsável</span>
                   : visibleTeachers.map(name => <span key={name}>• {name}</span>)}
             </div>
-            {!isProfessor && onManageTypes ? <button type="button" onClick={onManageTypes} className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50" title="Gerenciar categorias"><Settings size={14} /></button> : null}
+            {!isProfessor && !isStudent && onManageTypes ? <button type="button" onClick={onManageTypes} className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50" title="Gerenciar categorias"><Settings size={14} /></button> : null}
           </div>
         </div>
       </section>
@@ -483,6 +491,15 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
               <AgendaColumn eyebrow="Agenda geral" title="Instituição, feriados e datas oficiais" icon={Landmark} events={generalEvents} focusedDate={focusedDate}
                 getTypeInfo={getTypeInfo} emptyCurrent="Nenhum evento geral neste dia." emptyFuture="Nenhum evento geral futuro." onOpenDate={onOpenDate} />
             </>
+          ) : isStudent ? (
+            <>
+              <AgendaColumn eyebrow="Minha turma" title="Comunicados e eventos da instituição" icon={CalendarDays} events={manualEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhum comunicado para este dia." emptyFuture="Nenhum comunicado futuro." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Aulas e atividades" title="Programação das minhas turmas" icon={BookOpen} events={classEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma aula programada neste dia." emptyFuture="Nenhuma aula futura encontrada." onOpenDate={onOpenDate} />
+              <AgendaColumn eyebrow="Calendário oficial" title="Feriados e datas para todos" icon={Landmark} events={officialEvents} focusedDate={focusedDate}
+                getTypeInfo={getTypeInfo} emptyCurrent="Nenhuma data oficial neste dia." emptyFuture="Nenhuma data oficial futura." onOpenDate={onOpenDate} />
+            </>
           ) : (
             <>
               <AgendaColumn eyebrow="Agenda" title="Eventos manuais" icon={CalendarDays} events={manualEvents} focusedDate={focusedDate}
@@ -498,8 +515,8 @@ const AgendaWorkspace: React.FC<AgendaWorkspaceProps> = ({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-medium text-slate-500 shadow-sm">
         <span className="flex items-center gap-2"><Clock3 size={13} /> Selecione um dia para atualizar as três colunas.</span>
-        {!isProfessor && onManageTypes ? <button type="button" onClick={onManageTypes} className="flex items-center gap-2 rounded-lg px-2 py-1.5 font-semibold uppercase text-blue-700 hover:bg-blue-50"><ListPlus size={13} /> Gerenciar categorias</button> : null}
-        <span className="flex items-center gap-2"><SlidersHorizontal size={13} /> {isProfessor ? 'Mês e categoria afetam sua agenda e as exportações.' : 'Os filtros afetam calendário, agenda e exportações.'}</span>
+        {!isProfessor && !isStudent && onManageTypes ? <button type="button" onClick={onManageTypes} className="flex items-center gap-2 rounded-lg px-2 py-1.5 font-semibold uppercase text-blue-700 hover:bg-blue-50"><ListPlus size={13} /> Gerenciar categorias</button> : null}
+        <span className="flex items-center gap-2"><SlidersHorizontal size={13} /> {isProfessor ? 'Mês e categoria afetam sua agenda e as exportações.' : isStudent ? 'O filtro de turma não oculta feriados nem datas oficiais.' : 'Os filtros afetam calendário, agenda e exportações.'}</span>
       </div>
     </div>
   );

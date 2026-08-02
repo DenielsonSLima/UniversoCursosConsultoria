@@ -39,13 +39,19 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [hasExternalAuthReturn] = useState(
     () => hasOAuthReturnInUrl() || Boolean(pendingGoogleReturn),
   );
-  const initialMode = window.location.pathname === '/cadastro' || searchParams.get('mode') === 'cadastro'
+  const isInstalledAlunoRoute = window.location.pathname.startsWith('/aluno/');
+  const alunoAppBasePath = isInstalledAlunoRoute ? '/aluno' : '';
+  const initialMode = ['/cadastro', '/aluno/cadastro'].includes(window.location.pathname) || searchParams.get('mode') === 'cadastro'
     ? 'cadastro'
     : 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [loading, setLoading] = useState(false);
   const [checkingExternalLogin, setCheckingExternalLogin] = useState(hasExternalAuthReturn);
-  const [message, setMessage] = useState<AuthMessage | null>(null);
+  const [message, setMessage] = useState<AuthMessage | null>(() => (
+    searchParams.get('reason') === 'session_expired'
+      ? { tone: 'error', text: 'Sua sessão expirou. Entre novamente para continuar com segurança.' }
+      : null
+  ));
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -94,10 +100,10 @@ const AlunoLoginPublicPage: React.FC = () => {
     if (!profile) return false;
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
-      const redirect = hasExplicitRedirect ? redirectPath : '/aluno';
+      const redirect = hasExplicitRedirect ? redirectPath : '/aluno/';
       const firstAccessParams = new URLSearchParams();
       firstAccessParams.set('next', redirect);
-      navigate(`/primeiro-acesso?${firstAccessParams.toString()}`, { replace: true });
+      navigate(`${alunoAppBasePath}/primeiro-acesso?${firstAccessParams.toString()}`, { replace: true });
       return true;
     }
 
@@ -107,7 +113,7 @@ const AlunoLoginPublicPage: React.FC = () => {
       navigate(redirectPath, { replace: true });
       return true;
     }
-    navigate(profile?.tipo === 'Aluno' ? '/aluno' : redirectPath, { replace: true });
+    navigate(profile?.tipo === 'Aluno' ? '/aluno/' : redirectPath, { replace: true });
     return true;
   };
 
@@ -450,6 +456,7 @@ const AlunoLoginPublicPage: React.FC = () => {
             uf={uf}
             cepStatus={cepStatus}
             passwordChecks={passwordChecks}
+            recoveryHref={`${alunoAppBasePath}/recuperar-senha`}
             onModeChange={switchMode}
             onLoginIdentifierChange={setLoginIdentifier}
             onLoginPasswordChange={setLoginPassword}

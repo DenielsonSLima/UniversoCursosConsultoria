@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.18",
+  "version": "2.2.3-beta.19",
   "display": "BETA",
   "stage": "beta",
-  "revision": 18,
-  "releasedAt": "2026-07-31",
-  "summary": "Ordem dos polos no Caixa e escopos de acesso financeiro revisados"
+  "revision": 19,
+  "releasedAt": "2026-08-02",
+  "summary": "Consolidação das atualizações acadêmicas, financeiras e dos portais"
 }

@@ -22,6 +22,12 @@ export interface AtividadeExtraClasse {
   disciplina?: {
     id?: string;
     nome?: string | null;
+    ordem?: number | string | null;
+    modulo?: {
+      id?: string | null;
+      nome?: string | null;
+      ordem?: number | string | null;
+    } | null;
   } | null;
   respostas?: AtividadeExtraClasseResposta[];
 }

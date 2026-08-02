@@ -51,7 +51,8 @@ export const useAlunoInternships = ({
       .eq('turma_id', turmaId)
       .eq('aluno_id', alunoId)
       .in('disciplina_id', disciplineIds)
-      .order('data_avaliacao', { ascending: false });
+      .order('data_avaliacao', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false, nullsFirst: false });
     if (error) throw error;
     return ensureOwnInternships(data, alunoId, turmaId, disciplineIds);
   },

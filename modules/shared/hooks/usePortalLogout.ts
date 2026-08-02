@@ -6,7 +6,7 @@ import { loginService } from '../../login/login.service';
 import { clearPortalSession } from '../../login/portal-session';
 
 interface UsePortalLogoutOptions {
-  loginPath: '/login' | '/sistema/login';
+  loginPath: '/login' | '/aluno/entrar' | '/sistema/login';
 }
 
 const QUERY_CACHE_AUTH_UID_KEY = 'portal_query_cache_auth_uid';

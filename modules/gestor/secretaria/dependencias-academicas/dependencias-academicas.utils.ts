@@ -5,6 +5,7 @@ import type {
 } from './dependencias-academicas.types';
 
 const PENDING_STATUSES = new Set([
+  'DIARIO_EM_ABERTO',
   'PENDENTE_ENCAMINHAMENTO',
   'AGUARDANDO_OFERTA',
   'AGUARDANDO_PAGAMENTO',
@@ -82,6 +83,7 @@ export const matchesDependenciaSearch = (
   return normalizeSearch([
     item.alunoNome,
     item.alunoCpf,
+    item.modalidade,
     item.cursoNome,
     item.turmaOrigemNome,
     item.turmaOrigemCodigo,
@@ -89,6 +91,7 @@ export const matchesDependenciaSearch = (
     item.turmaDestinoNome,
     item.turmaDestinoCodigo,
     item.status,
+    item.diarioObservacao,
   ].filter(Boolean).join(' ')).includes(term);
 };
 

@@ -81,6 +81,7 @@ const clearRecoveryAuthParams = () => {
 
 const PasswordRecoveryPage: React.FC = () => {
   const navigate = useNavigate();
+  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
   const [mode, setMode] = useState<RecoveryMode>('request');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -312,7 +313,7 @@ const PasswordRecoveryPage: React.FC = () => {
 
       loginRedirectTimerRef.current = setTimeout(() => {
         loginRedirectTimerRef.current = null;
-        navigate('/login');
+        navigate(alunoLoginPath);
       }, 1000);
     } catch (error) {
       setMessage({
@@ -445,7 +446,7 @@ const PasswordRecoveryPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate(mode === 'reset' ? '/login' : '/login')}
+              onClick={() => navigate(alunoLoginPath)}
               className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
             >
               <ArrowLeft size={15} />

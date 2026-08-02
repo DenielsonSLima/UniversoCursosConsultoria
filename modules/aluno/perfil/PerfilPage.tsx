@@ -1,17 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, KeyRound, ShieldCheck, Syringe, User } from 'lucide-react';
 import PerfilDadosTab from './PerfilDadosTab';
-import PerfilDocumentosTab from './PerfilDocumentosTab';
-import PerfilGoogleTab from './PerfilGoogleTab';
-import PerfilSenhaTab from './PerfilSenhaTab';
-import PerfilVacinasTab from './PerfilVacinasTab';
 import { alunoPerfilKeys, alunoPerfilService } from './perfil.service';
 import { PerfilPageProps, PerfilTabId, PerfilUpdatePayload } from './perfil.types';
 import { alunoVacinasService } from '../../shared/vacinas/vacinas.service';
 import { SaveAlunoVacinaInput } from '../../shared/vacinas/vacinas.types';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 import { useDocumentosAlunoRealtime } from '../../shared/documentos-aluno/use-documentos-aluno-realtime';
+
+const PerfilDocumentosTab = lazy(() => import('./PerfilDocumentosTab'));
+const PerfilGoogleTab = lazy(() => import('./PerfilGoogleTab'));
+const PerfilSenhaTab = lazy(() => import('./PerfilSenhaTab'));
+const PerfilVacinasTab = lazy(() => import('./PerfilVacinasTab'));
+
+const PerfilTabLoading = () => (
+  <div className="flex min-h-48 items-center justify-center rounded-2xl border border-slate-200 bg-white" role="status" aria-live="polite">
+    <div className="flex items-center gap-3 text-xs font-black uppercase tracking-wider text-slate-500">
+      <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent motion-reduce:animate-none" />
+      Carregando seção
+    </div>
+  </div>
+);
 
 const tabs: Array<{ id: PerfilTabId; label: string; icon: React.ReactNode }> = [
   { id: 'perfil', label: 'Meu perfil', icon: <User size={15} /> },
@@ -36,7 +46,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
     setActiveTab(initialTab);
   }, [initialTab]);
 
-  const { data: profile, isLoading: loadingProfile } = useQuery({
+  const { data: profile, isLoading: loadingProfile, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: alunoPerfilKeys.profile(alunoId),
     queryFn: () => alunoPerfilService.getProfile(alunoId),
   });
@@ -50,16 +60,19 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   } = useQuery({
     queryKey: alunoPerfilKeys.documents(alunoId),
     queryFn: () => alunoPerfilService.getDocuments(alunoId),
+    enabled: activeTab === 'documentos',
   });
 
-  const { data: vacinaContexts = [], isLoading: loadingVacinaContexts } = useQuery({
+  const { data: vacinaContexts = [], isLoading: loadingVacinaContexts, isError: vacinaContextsError, refetch: refetchVacinaContexts } = useQuery({
     queryKey: alunoPerfilKeys.vacinaContexts(alunoId),
     queryFn: () => alunoVacinasService.getCursoContexts(alunoId),
+    enabled: activeTab === 'vacinas',
   });
 
-  const { data: vacinas = [], isLoading: loadingVacinas } = useQuery({
+  const { data: vacinas = [], isLoading: loadingVacinas, isError: vacinasError, refetch: refetchVacinas } = useQuery({
     queryKey: alunoPerfilKeys.vacinas(alunoId),
     queryFn: () => alunoVacinasService.getAlunoVacinas(alunoId),
+    enabled: activeTab === 'vacinas',
   });
 
   const updateProfileMutation = useMutation({
@@ -216,30 +229,21 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
     },
   });
 
-  if (documentsError) {
+  if (loadingProfile) {
     return (
-      <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm font-black text-red-700">Não foi possível carregar seus documentos.</p>
-        <p className="mt-2 text-xs font-medium text-slate-500">
-          {documentsQueryError instanceof Error
-            ? documentsQueryError.message
-            : 'Tente novamente em alguns instantes.'}
-        </p>
-        <button
-          type="button"
-          onClick={() => void refetchDocuments()}
-          className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white"
-        >
-          Tentar novamente
-        </button>
+      <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent motion-reduce:animate-none" />
+        <span className="sr-only">Carregando perfil</span>
       </div>
     );
   }
 
-  if (loadingProfile || loadingDocs || loadingVacinaContexts || loadingVacinas || !documentosPainel) {
+  if (profileError || !profile) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <div role="alert" className="rounded-3xl border border-red-100 bg-white p-6 text-center shadow-sm md:p-8">
+        <p className="text-sm font-black text-red-700">Não foi possível carregar seu perfil.</p>
+        <p className="mt-2 text-xs font-medium text-slate-500">Verifique sua conexão e tente novamente.</p>
+        <button type="button" onClick={() => void refetchProfile()} className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
       </div>
     );
   }
@@ -247,8 +251,8 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
   return (
     <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
       <div>
-        <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><User size={22} className="shrink-0 text-blue-600" /> Meu Perfil</h2>
-        <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">Mantenha seus dados, documentos e formas de acesso atualizados.</p>
+        <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl"><User size={21} className="shrink-0 text-blue-600" /> Meu Perfil</h2>
+        <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Dados, documentos e formas de acesso em um só lugar.</p>
       </div>
 
       <div className="w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm [scrollbar-width:none]">
@@ -258,7 +262,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wider transition lg:flex-1 lg:text-xs lg:tracking-widest ${
+              className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-wide transition lg:flex-1 lg:text-xs lg:tracking-widest ${
                 activeTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >
@@ -280,7 +284,18 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
         />
       )}
 
-      {activeTab === 'documentos' && (
+      <Suspense fallback={<PerfilTabLoading />}>
+      {activeTab === 'documentos' && loadingDocs ? <PerfilTabLoading /> : null}
+
+      {activeTab === 'documentos' && documentsError ? (
+        <div role="alert" className="rounded-3xl border border-red-100 bg-white p-6 text-center shadow-sm md:p-8">
+          <p className="text-sm font-black text-red-700">Não foi possível carregar seus documentos.</p>
+          <p className="mt-2 text-xs font-medium text-slate-500">{documentsQueryError instanceof Error ? documentsQueryError.message : 'Tente novamente em alguns instantes.'}</p>
+          <button type="button" onClick={() => void refetchDocuments()} className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
+        </div>
+      ) : null}
+
+      {activeTab === 'documentos' && !loadingDocs && !documentsError && documentosPainel ? (
         <PerfilDocumentosTab
           painel={documentosPainel}
           cancellingLotId={
@@ -314,9 +329,19 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
           onCancelLote={(loteId, arquivos) =>
             cancelDocumentBatchMutation.mutateAsync({ loteId, arquivos })}
         />
-      )}
+      ) : null}
 
-      {activeTab === 'vacinas' && (
+      {activeTab === 'vacinas' && (loadingVacinaContexts || loadingVacinas) ? <PerfilTabLoading /> : null}
+
+      {activeTab === 'vacinas' && (vacinaContextsError || vacinasError) ? (
+        <div role="alert" className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-center shadow-sm">
+          <p className="text-sm font-black text-amber-800">Não foi possível carregar suas vacinas.</p>
+          <p className="mt-2 text-xs font-medium text-slate-600">Tente novamente para consultar os registros acadêmicos.</p>
+          <button type="button" onClick={() => void Promise.all([refetchVacinaContexts(), refetchVacinas()])} className="mt-5 min-h-11 rounded-xl bg-[#001a33] px-5 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
+        </div>
+      ) : null}
+
+      {activeTab === 'vacinas' && !loadingVacinaContexts && !loadingVacinas && !vacinaContextsError && !vacinasError ? (
         <PerfilVacinasTab
           alunoId={alunoId}
           contexts={vacinaContexts}
@@ -326,11 +351,12 @@ const PerfilPage: React.FC<PerfilPageProps> = ({
           onSave={(payload) => saveVacinaMutation.mutate(payload)}
           onUpload={(payload, file) => uploadVacinaMutation.mutate({ payload, file })}
         />
-      )}
+      ) : null}
 
       {activeTab === 'google' && <PerfilGoogleTab />}
 
       {activeTab === 'senha' && <PerfilSenhaTab />}
+      </Suspense>
 
       <ToastNotification toasts={toasts} onRemove={removeToast} />
     </div>

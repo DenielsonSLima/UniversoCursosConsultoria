@@ -23,6 +23,8 @@ import {
   renderPaymentWindowError,
 } from '../shared/paymentWindow';
 import { fetchBaneseBoletoDocument } from '../shared/baneseBoletoDocument';
+import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
+import AlunoMobileFinanceSummary from './components/mobile/AlunoMobileFinanceSummary';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -52,6 +54,9 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
   const receiptRef = useRef<HTMLDivElement>(null);
+  const paymentDialogRef = useRef<HTMLElement>(null);
+  const receiptDialogRef = useRef<HTMLElement>(null);
+  const previousOverlayFocusRef = useRef<HTMLElement | null>(null);
 
   const invalidateAlunoPaymentQueries = React.useCallback(() => {
     invalidateAlunoCourseAccessQueries(queryClient, alunoId);
@@ -425,7 +430,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }, [searchTerm, startDate, endDate, modalityFilter, statusTab, viewMode]);
 
   useEffect(() => {
-    const mobileQuery = window.matchMedia('(max-width: 639px)');
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
     const keepMobileCards = () => {
       if (mobileQuery.matches) setViewMode('cards');
     };
@@ -455,12 +460,21 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
     const bodyOverflow = document.body.style.overflow;
     const rootOverflow = document.documentElement.style.overflow;
+    previousOverlayFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => {
+      const activeDialog = selectedReceipt ? receiptDialogRef.current : paymentDialogRef.current;
+      activeDialog?.querySelector<HTMLElement>('[data-finance-modal-close]')?.focus();
+    }, 0);
 
     return () => {
+      window.clearTimeout(focusTimer);
       document.body.style.overflow = bodyOverflow;
       document.documentElement.style.overflow = rootOverflow;
+      previousOverlayFocusRef.current?.focus();
     };
   }, [selectedReceipt, selectedEadPayment]);
 
@@ -930,20 +944,27 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
   }
 
   return (
-    <div className="min-w-0 space-y-5 animate-fadeIn sm:space-y-6">
+    <div className="min-w-0 space-y-4 animate-fadeIn sm:space-y-6">
       {/* Header Panel */}
-      <div className="mb-5 flex items-start justify-between sm:mb-6 sm:items-center">
+      <div className="mb-4 flex items-start justify-between sm:mb-6 sm:items-center">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-xl font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
+          <h2 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight text-[#001a33] sm:text-2xl">
             <CreditCard className="shrink-0 text-blue-600" size={22} />
             <span>Financeiro</span>
           </h2>
-          <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-slate-500">Acompanhe parcelas, vencimentos e comprovantes em um só lugar.</p>
+          <p className="mt-1 max-w-xl text-[11px] font-medium leading-relaxed text-slate-500 sm:text-xs">Parcelas, vencimentos e comprovantes em um só lugar.</p>
         </div>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+      <AlunoMobileFinanceSummary
+        totalPaid={totalPaid}
+        totalPending={totalPending}
+        formatCurrency={formatCurrency}
+        onViewCharges={() => document.getElementById('aluno-finance-charges')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      />
+
+      <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 md:gap-5">
         <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="space-y-1">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Pago</p>
@@ -968,16 +989,16 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       </div>
 
       {openSummaryByModality.length > 0 && (
-        <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
+        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[2rem]">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Em aberto por tipo</p>
               <p className="text-xs font-bold leading-relaxed text-slate-500">Valores pendentes organizados por modalidade.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-4">
             {openSummaryByModality.map((item) => (
-              <div key={item.modality} className={`rounded-2xl border px-4 py-3 ${getModalityAccent(item.modality).group}`}>
+              <div key={item.modality} className={`min-w-[78%] snap-start rounded-2xl border px-4 py-3 md:min-w-0 ${getModalityAccent(item.modality).group}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-black uppercase tracking-widest">{getModalityLabel(item.modality)}</span>
                   <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-black uppercase tracking-widest">
@@ -992,7 +1013,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       )}
 
       {/* Filter + List + Views */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
+      <div id="aluno-finance-charges" className="scroll-mt-4 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:p-6 md:rounded-[2.5rem] md:p-8">
         <div className="mb-5 flex items-center gap-2 sm:mb-6">
           <FileText size={16} className="text-blue-500" />
           <h3 className="font-bold text-xs uppercase tracking-wider text-[#001a33]">Histórico de Cobranças</h3>
@@ -1014,7 +1035,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por descrição, curso ou status"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-sm"
             />
           </div>
 
@@ -1037,7 +1058,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             />
           </div>
 
@@ -1049,7 +1070,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             />
           </div>
 
@@ -1060,7 +1081,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             <select
               value={modalityFilter}
               onChange={(e) => setModalityFilter(e.target.value as 'TODOS' | 'EAD' | 'TECNICO' | 'LIVRE' | 'ESPECIALIZACAO')}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 lg:bg-slate-50"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-base font-bold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:text-xs lg:bg-slate-50"
             >
               <option value="TODOS">Todos os tipos</option>
               <option value="EAD">EAD</option>
@@ -1070,7 +1091,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
             </select>
           </div>
 
-          <div className="hidden sm:block lg:col-span-2">
+          <div className="hidden md:block lg:col-span-2">
             <label className="sr-only">Visualização</label>
             <div className="grid h-12 grid-cols-2 gap-2">
               <button
@@ -1109,28 +1130,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {[
-            { key: 'ABERTO', label: 'Em aberto', count: tabCounts.ABERTO },
-            { key: 'ATRASADO', label: 'Atrasado', count: tabCounts.ATRASADO },
-            { key: 'PAGO', label: 'Pagos', count: tabCounts.PAGO },
-            { key: 'TODOS', label: 'Todos', count: tabCounts.TODOS }
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusTab(tab.key as 'ABERTO' | 'ATRASADO' | 'PAGO' | 'TODOS')}
-              className={`min-h-11 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors sm:rounded-full ${
-                statusTab === tab.key
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'bg-slate-100 text-slate-600 border border-slate-200'
-              }`}
-            >
-              <span className="inline-flex items-center gap-1">
-                {tab.label}
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[9px] font-black">{tab.count}</span>
-              </span>
-            </button>
-          ))}
+        <div className="mt-4">
+          <FinancialUnderlineTabs
+            items={[
+              { id: 'ABERTO', label: 'Em aberto', icon: <Clock size={15} />, badge: tabCounts.ABERTO },
+              { id: 'ATRASADO', label: 'Atrasado', icon: <BadgeAlert size={15} />, badge: tabCounts.ATRASADO },
+              { id: 'PAGO', label: 'Pagos', icon: <CheckCircle size={15} />, badge: tabCounts.PAGO },
+              { id: 'TODOS', label: 'Todos', icon: <List size={15} />, badge: tabCounts.TODOS },
+            ]}
+            value={statusTab}
+            onChange={setStatusTab}
+            ariaLabel="Filtrar histórico de cobranças por situação"
+          />
         </div>
 
         <div className="mt-4 flex flex-col gap-1 text-[11px] font-bold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
@@ -1295,7 +1306,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                       {installmentsByModality.length} item{installmentsByModality.length > 1 ? 's' : ''}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {installmentsByModality.map((inst) => (
                       <FinanceiroCardItem
                         key={inst.id}
@@ -1343,19 +1354,21 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
 
       {selectedEadPayment && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed left-0 top-0 right-0 bottom-0 z-[9999] flex h-dvh w-screen items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-sm pointer-events-auto"
+          className="fixed inset-0 z-[9999] flex h-dvh w-screen items-end justify-center overflow-hidden bg-slate-950/70 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm pointer-events-auto md:items-center md:p-4"
           onClick={closeEadPaymentChoice}
         >
-          <div
-            className="w-full max-w-xl overflow-hidden rounded-[1.75rem] border border-white/20 bg-white shadow-2xl"
+          <section
+            ref={paymentDialogRef}
+            className="flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-t-[1.75rem] border border-white/20 bg-white shadow-2xl md:max-h-[calc(100dvh-2rem)] md:rounded-[1.75rem]"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="ead-payment-choice-title"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-              <div>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 md:gap-4 md:px-5">
+              <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600">Pagamento EAD</p>
-                <h3 className="mt-1 text-xl font-black uppercase tracking-tight text-[#001a33]">
+                <h3 id="ead-payment-choice-title" className="mt-1 text-lg font-black uppercase tracking-tight text-[#001a33] md:text-xl">
                   Escolha como pagar
                 </h3>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-slate-500">
@@ -1363,16 +1376,18 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 </p>
               </div>
               <button
+                data-finance-modal-close
                 type="button"
                 onClick={closeEadPaymentChoice}
                 disabled={isStartingEadPayment}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 hover:text-slate-700 disabled:opacity-50 md:h-10 md:w-10"
+                aria-label="Fechar escolha de pagamento"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 px-5 py-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:px-5 md:pb-4">
               <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Curso</p>
                 <p className="mt-1 text-sm font-black text-[#001a33]">{selectedEadPayment.cursoNome || selectedEadPayment.descricao}</p>
@@ -1419,12 +1434,12 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 A forma escolhida usa a rota bancária configurada para este curso. Cartão pode abrir o checkout seguro em nova aba.
               </div>
 
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-1 pt-3 backdrop-blur-md sm:flex-row sm:justify-end md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
                 <button
                   type="button"
                   onClick={closeEadPaymentChoice}
                   disabled={isStartingEadPayment}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 disabled:opacity-50 md:min-h-0"
                 >
                   Fechar
                 </button>
@@ -1432,13 +1447,13 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                   type="button"
                   onClick={startEadPayment}
                   disabled={isStartingEadPayment}
-                  className="rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="min-h-12 rounded-xl bg-emerald-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 md:min-h-0"
                 >
                   {isStartingEadPayment ? 'Preparando...' : 'Continuar pagamento'}
                 </button>
               </div>
             </div>
-          </div>
+          </section>
         </div>,
         document.body,
       )}
@@ -1471,40 +1486,62 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
       {/* Recibo Modal Overlay */}
       {selectedReceipt && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed left-0 top-0 right-0 bottom-0 bg-black/60 backdrop-blur-sm z-[9999] pointer-events-auto flex h-dvh w-screen items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-[9999] flex h-dvh w-screen items-end justify-center overflow-hidden bg-black/60 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm pointer-events-auto md:items-center md:p-4"
           onClick={closeReceipt}
         >
-          <div
-            className="bg-white rounded-[1.75rem] p-5 sm:p-6 max-w-2xl w-full border border-slate-100 shadow-2xl relative animate-fadeIn overflow-y-auto"
+          <section
+            ref={receiptDialogRef}
+            className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-t-[1.75rem] border border-slate-100 bg-white shadow-2xl animate-fadeIn md:max-h-[calc(100dvh-2rem)] md:rounded-[1.75rem] md:p-6"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
+            aria-label="Recibo de pagamento"
           >
+            <header className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 md:hidden">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600">Documento financeiro</p>
+                <h3 id="student-receipt-title" className="mt-0.5 text-base font-black uppercase tracking-tight text-[#001a33]">Recibo de pagamento</h3>
+              </div>
+              <button
+                data-finance-modal-close
+                type="button"
+                onClick={closeReceipt}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 text-slate-400 active:bg-slate-50"
+                aria-label="Fechar recibo"
+              >
+                <X size={18} />
+              </button>
+            </header>
             <button
+              data-finance-modal-close
+              type="button"
               onClick={closeReceipt}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
+              className="absolute right-4 top-4 z-10 hidden h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700 md:flex"
+              aria-label="Fechar recibo"
             >
               <X size={16} />
             </button>
 
-            <div
-              ref={receiptRef}
-              className="print-area"
-            >
-              <ReciboDespesaPreview data={receiptPayload || undefined} />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 md:overflow-y-auto md:p-0">
+              <div
+                ref={receiptRef}
+                className="print-area"
+              >
+                <ReciboDespesaPreview data={receiptPayload || undefined} />
+              </div>
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <div className="flex shrink-0 flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:flex-row md:mt-6 md:border-0 md:p-0">
               <button
                 onClick={closeReceipt}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors"
+                className="min-h-12 rounded-xl bg-slate-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-200 md:min-h-0"
               >
                 Fechar
               </button>
               <button
                 onClick={downloadReceiptPdf}
                 disabled={isGeneratingReceiptPdf}
-                className={`px-4 py-2.5 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-colors shadow-md inline-flex items-center gap-2 justify-center ${
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider shadow-md transition-colors md:min-h-0 ${
                   isGeneratingReceiptPdf
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
@@ -1514,7 +1551,7 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
                 {isGeneratingReceiptPdf ? 'Gerando PDF...' : 'Baixar PDF'}
               </button>
             </div>
-          </div>
+          </section>
         </div>,
         document.body,
       )}

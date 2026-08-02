@@ -30,8 +30,8 @@ const DocumentoLegacyReceiptModal: React.FC<
   return (
     <DocumentosModalShell
       open={open}
-      title="Registrar documento recebido"
-      eyebrow="Migração de sistema anterior"
+      title="Marcar documento como entregue"
+      eyebrow="Registro administrativo sem anexo"
       description={documentName}
       size="md"
       closeDisabled={submitting}
@@ -47,9 +47,9 @@ const DocumentoLegacyReceiptModal: React.FC<
         <div className="flex gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
           <ClipboardCheck aria-hidden="true" className="mt-0.5 shrink-0" size={20} />
           <p className="text-xs font-semibold leading-relaxed">
-            Use quando a secretaria conferiu o documento no sistema anterior,
-            mas não possui uma cópia digital para anexar. O registro guardará
-            data, responsável e justificativa.
+            Use quando o gestor recebeu e conferiu o documento, mas não possui
+            uma cópia digital para anexar. Data, responsável e justificativa
+            ficarão registradas para auditoria.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ const DocumentoLegacyReceiptModal: React.FC<
             maxLength={1000}
             value={reason}
             onChange={(event) => onReasonChange(event.target.value)}
-            placeholder="Ex.: Documento conferido no sistema acadêmico anterior durante a migração."
+            placeholder="Ex.: Documento original entregue e conferido presencialmente na secretaria."
             className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white p-3 text-xs font-medium normal-case tracking-normal text-[#001a33] outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
           />
           <span className="mt-1 block text-right text-[8px] text-slate-400">
@@ -73,7 +73,7 @@ const DocumentoLegacyReceiptModal: React.FC<
 
         <p className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs font-semibold leading-relaxed text-amber-900">
           Nenhum arquivo será criado. Um anexo real poderá ser enviado depois
-          e substituirá automaticamente este registro legado.
+          e substituirá automaticamente este registro administrativo.
         </p>
 
         {error ? (
@@ -96,7 +96,7 @@ const DocumentoLegacyReceiptModal: React.FC<
             disabled={!canSubmit}
             className="min-h-11 rounded-xl bg-blue-700 px-5 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'Registrando…' : 'Confirmar recebimento'}
+            {submitting ? 'Registrando…' : 'Marcar como entregue'}
           </button>
         </div>
       </form>

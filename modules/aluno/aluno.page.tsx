@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AccessCheckingScreen from '../shared/components/AccessCheckingScreen';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
@@ -9,6 +8,7 @@ import { useAlunoCourseAccessRealtime } from './hooks/useAlunoCourseAccessRealti
 import { useAlunoCalendarEligibility, useAlunoUnreadChats } from './hooks/useAlunoPortalData';
 import { useAlunoPortalProfile } from './hooks/useAlunoPortalProfile';
 import type { PerfilTabId } from './perfil/perfil.types';
+import AlunoAppSplash from './pwa/AlunoAppSplash';
 
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
 const InicioPage = lazy(() => import('./inicio/InicioPage'));
@@ -48,7 +48,7 @@ const AlunoModuleLoading = () => (
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
-  const executeLogout = usePortalLogout({ loginPath: '/login' });
+  const executeLogout = usePortalLogout({ loginPath: '/aluno/entrar' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,7 +57,7 @@ const AlunoPage: React.FC = () => {
   const [initialProfileTab, setInitialProfileTab] = useState<PerfilTabId>('perfil');
   const [initialCourseId, setInitialCourseId] = useState<string | null>(null);
   const [initialTurmaId, setInitialTurmaId] = useState<string | null>(null);
-  const { profile, isAuthLoading, isAuthorized } = useAlunoPortalProfile();
+  const { profile, isAuthLoading, isAuthorized, connectionError, retry } = useAlunoPortalProfile();
 
   // O ID só é disponibilizado a queries e subscriptions depois da validação
   // autoritativa do perfil. Dados graváveis do sessionStorage nunca autorizam o portal.
@@ -96,12 +96,12 @@ const AlunoPage: React.FC = () => {
       setProfileNotice('technical-enrollment');
       setInitialProfileTab('documentos');
       setActiveModule('perfil');
-      navigate('/aluno', { replace: true });
+      navigate('/aluno/', { replace: true });
       return;
     }
     if (params.get('asaas') === 'success') {
       setActiveModule('turmas');
-      navigate('/aluno', { replace: true });
+      navigate('/aluno/', { replace: true });
     }
   }, [navigate]);
 
@@ -116,8 +116,17 @@ const AlunoPage: React.FC = () => {
     }
   }, [activeModule, canViewCalendar]);
 
+  if (connectionError) {
+    return (
+      <AlunoAppSplash
+        message="Não foi possível conectar. Verifique sua internet e tente novamente."
+        onRetry={retry}
+      />
+    );
+  }
+
   if (isAuthLoading || !isAuthorized || !profile) {
-    return <AccessCheckingScreen portal="Aluno" />;
+    return <AlunoAppSplash />;
   }
 
   const alunoNome = profile.nome || '';
@@ -134,6 +143,7 @@ const AlunoPage: React.FC = () => {
         return (
           <InicioPage
             alunoId={alunoId}
+            canViewCalendar={canViewCalendar}
             onNavigate={setActiveModule}
             onOpenCourse={(courseId, turmaId, targetModule) => {
               setInitialCourseId(courseId);
@@ -182,7 +192,7 @@ const AlunoPage: React.FC = () => {
           />
         );
       default:
-        return <InicioPage alunoId={alunoId} onNavigate={setActiveModule} />;
+        return <InicioPage alunoId={alunoId} canViewCalendar={canViewCalendar} onNavigate={setActiveModule} />;
     }
   };
 

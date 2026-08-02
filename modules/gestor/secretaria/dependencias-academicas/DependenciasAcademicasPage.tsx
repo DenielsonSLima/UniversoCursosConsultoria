@@ -1,10 +1,11 @@
 import {
   BookOpenCheck,
   CalendarRange,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
-  RefreshCw,
   Scale,
-  Search,
+  School,
   ShieldAlert,
   X,
 } from 'lucide-react';
@@ -13,11 +14,16 @@ import DependenciaEncaminhamentoWizard from './components/DependenciaEncaminhame
 import DependenciasFinancialRules from './components/DependenciasFinancialRules';
 import DependenciasKpis from './components/DependenciasKpis';
 import DependenciasTable from './components/DependenciasTable';
+import DependenciasFilters, {
+  type DependenciasViewMode,
+} from './components/DependenciasFilters';
 import DependenciaBoletoPanel from './components/DependenciaBoletoPanel';
+import FinancialUnderlineTabs from '../../financeiro/components/FinancialUnderlineTabs';
 import { useDependenciasAcademicasRealtime } from './hooks/useDependenciasAcademicasRealtime';
 import {
   useConfigurarPoliticaDependenciaMutation,
   useEmitirBoletoDependenciaMutation,
+  useRemoverPoliticaDependenciaMutation,
 } from './hooks/useDependenciasAcademicasMutations';
 import { useDependenciasWorkspaceQuery } from './hooks/useDependenciasAcademicasQueries';
 import type {
@@ -47,30 +53,176 @@ const tabs: Array<{
   { id: 'regras', label: 'Regras financeiras', shortLabel: 'Regras', icon: Scale },
 ];
 
+const STUDENTS_PER_PAGE = 8;
+
 const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps) => {
   const activePoloId = poloId || '';
   const [activeTab, setActiveTab] = useState<DependenciaWorkspaceTab>('pendentes');
   const [search, setSearch] = useState('');
+  const [modalidadeFilter, setModalidadeFilter] = useState('');
+  const [cursoFilter, setCursoFilter] = useState('');
+  const [turmaFilter, setTurmaFilter] = useState('');
+  const [viewMode, setViewMode] = useState<DependenciasViewMode>('table');
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<DependenciaAcademica | null>(null);
   const [activeBoleto, setActiveBoleto] = useState<DependenciaBoleto | null>(null);
   const workspaceQuery = useDependenciasWorkspaceQuery(activePoloId);
   const policyMutation = useConfigurarPoliticaDependenciaMutation(activePoloId);
+  const removePolicyMutation = useRemoverPoliticaDependenciaMutation(activePoloId);
   const boletoMutation = useEmitirBoletoDependenciaMutation(activePoloId);
   useDependenciasAcademicasRealtime(activePoloId);
 
   useEffect(() => {
     setSelected(null);
     setActiveBoleto(null);
+    setSearch('');
+    setModalidadeFilter('');
+    setCursoFilter('');
+    setTurmaFilter('');
+    setPage(1);
   }, [activePoloId]);
 
   const workspace = workspaceQuery.data;
   const boletoPendingId = boletoMutation.isPending
     ? boletoMutation.variables?.recebivelId || null
     : null;
+  const tabItems = useMemo(
+    () => filterByTab(workspace?.dependencias || [], activeTab),
+    [activeTab, workspace?.dependencias],
+  );
+  const modalidadeOptions = useMemo(() => (
+    [...new Set<string>(tabItems.map((item) => item.modalidade).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((value) => ({
+        value,
+        label: value === 'TECNICO' || value === 'TÉCNICO'
+          ? 'Técnico'
+          : value.replaceAll('_', ' '),
+      }))
+  ), [tabItems]);
+  const courseOptions = useMemo(() => (
+    [...new Set<string>(
+      tabItems
+        .filter((item) => !modalidadeFilter || item.modalidade === modalidadeFilter)
+        .map((item) => item.cursoNome)
+        .filter(Boolean),
+    )]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((value) => ({ value, label: value }))
+  ), [modalidadeFilter, tabItems]);
+  const turmaOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    tabItems
+      .filter((item) => !modalidadeFilter || item.modalidade === modalidadeFilter)
+      .filter((item) => !cursoFilter || item.cursoNome === cursoFilter)
+      .forEach((item) => {
+        const id = item.turmaOrigemId
+          || item.turmaOrigemCodigo
+          || item.turmaOrigemNome;
+        byId.set(
+          id,
+          [item.turmaOrigemCodigo, item.turmaOrigemNome]
+            .filter(Boolean)
+            .filter((value, index, values) => values.indexOf(value) === index)
+            .join(' · '),
+        );
+      });
+    return [...byId.entries()]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  }, [cursoFilter, modalidadeFilter, tabItems]);
   const visibleItems = useMemo(() => {
-    const byTab = filterByTab(workspace?.dependencias || [], activeTab);
-    return byTab.filter((item) => matchesDependenciaSearch(item, search));
-  }, [activeTab, search, workspace?.dependencias]);
+    return tabItems
+      .filter((item) => !modalidadeFilter || item.modalidade === modalidadeFilter)
+      .filter((item) => !cursoFilter || item.cursoNome === cursoFilter)
+      .filter((item) => (
+        !turmaFilter
+        || (item.turmaOrigemId || item.turmaOrigemCodigo || item.turmaOrigemNome)
+          === turmaFilter
+      ))
+      .filter((item) => matchesDependenciaSearch(item, search));
+  }, [
+    cursoFilter,
+    modalidadeFilter,
+    search,
+    tabItems,
+    turmaFilter,
+  ]);
+  const studentUnits = useMemo(() => {
+    const byStudent = new Map<string, DependenciaAcademica[]>();
+    visibleItems.forEach((item) => {
+      const turmaKey = item.turmaOrigemId
+        || item.turmaOrigemCodigo
+        || item.turmaOrigemNome;
+      const studentKey = item.alunoId || item.matriculaId || item.alunoNome;
+      const key = `${turmaKey}:${studentKey}`;
+      const current = byStudent.get(key) || [];
+      current.push(item);
+      byStudent.set(key, current);
+    });
+    return [...byStudent.entries()]
+      .map(([key, items]) => ({ key, items }))
+      .sort((a, b) => {
+        const turmaA = a.items[0]?.turmaOrigemCodigo
+          || a.items[0]?.turmaOrigemNome
+          || '';
+        const turmaB = b.items[0]?.turmaOrigemCodigo
+          || b.items[0]?.turmaOrigemNome
+          || '';
+        const turmaOrder = turmaA.localeCompare(turmaB, 'pt-BR');
+        if (turmaOrder !== 0) return turmaOrder;
+        return (a.items[0]?.alunoNome || '').localeCompare(
+          b.items[0]?.alunoNome || '',
+          'pt-BR',
+        );
+      });
+  }, [visibleItems]);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(studentUnits.length / STUDENTS_PER_PAGE),
+  );
+  const paginatedItems = useMemo(
+    () => studentUnits
+      .slice((page - 1) * STUDENTS_PER_PAGE, page * STUDENTS_PER_PAGE)
+      .flatMap((unit) => unit.items),
+    [page, studentUnits],
+  );
+  const groupedItems = useMemo(() => {
+    const byTurma = new Map<string, DependenciaAcademica[]>();
+    paginatedItems.forEach((item) => {
+      const key = item.turmaOrigemId
+        || item.turmaOrigemCodigo
+        || item.turmaOrigemNome;
+      const current = byTurma.get(key) || [];
+      current.push(item);
+      byTurma.set(key, current);
+    });
+    return [...byTurma.entries()]
+      .map(([key, items]) => ({ key, items }))
+      .sort((a, b) => (
+        (a.items[0]?.turmaOrigemCodigo || a.items[0]?.turmaOrigemNome || '')
+          .localeCompare(
+            b.items[0]?.turmaOrigemCodigo || b.items[0]?.turmaOrigemNome || '',
+            'pt-BR',
+          )
+      ));
+  }, [paginatedItems]);
+  const filteredTurmaCount = useMemo(
+    () => new Set(
+      visibleItems.map((item) => (
+        item.turmaOrigemId || item.turmaOrigemCodigo || item.turmaOrigemNome
+      )),
+    ).size,
+    [visibleItems],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, cursoFilter, modalidadeFilter, search, turmaFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const counts = useMemo(() => ({
     pendentes: filterByTab(workspace?.dependencias || [], 'pendentes').length,
@@ -78,6 +230,19 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
     encerradas: filterByTab(workspace?.dependencias || [], 'encerradas').length,
     regras: workspace?.regrasFinanceiras.length || 0,
   }), [workspace]);
+  const tabNavigationItems = tabs.map((tab) => {
+    const Icon = tab.icon;
+    return {
+      id: tab.id,
+      label: tab.label,
+      icon: <Icon size={14} />,
+      badge: counts[tab.id],
+      badgeClassName: 'bg-blue-50 text-blue-700',
+    };
+  });
+  const hasFilters = Boolean(
+    search || modalidadeFilter || cursoFilter || turmaFilter,
+  );
 
   const openOrEmitBoleto = (item: DependenciaAcademica) => {
     if (hasCompleteDependencyBoleto(item.boleto)) {
@@ -110,32 +275,6 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
 
   return (
     <div className="space-y-5 animate-fadeIn">
-      <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[#001a33] text-white shadow-lg">
-        <div className="relative p-6 sm:p-7">
-          <div className="pointer-events-none absolute -right-14 -top-16 h-48 w-48 rounded-full border-[28px] border-cyan-400/10" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-cyan-200">
-                <BookOpenCheck size={12} /> Gestão por disciplina
-              </span>
-              <h3 className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl">Dependências acadêmicas</h3>
-              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-300">
-                Encaminhe reprovações para uma nova oferta, gere a cobrança Banese e acompanhe a entrada exclusiva no diário da disciplina.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void workspaceQuery.refetch()}
-              disabled={workspaceQuery.isFetching}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-white/15 disabled:opacity-50 sm:w-auto"
-            >
-              <RefreshCw size={14} className={workspaceQuery.isFetching ? 'animate-spin' : ''} />
-              Atualizar workspace
-            </button>
-          </div>
-        </div>
-      </div>
-
       <DependenciasKpis items={workspace?.dependencias || []} />
 
       {activeBoleto ? (
@@ -160,54 +299,53 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
         </div>
       ) : null}
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
-        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                type="button"
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-[10px] font-black uppercase tracking-wider transition ${
-                  active
-                    ? 'bg-[#001a33] text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-blue-700'
-                }`}
-              >
-                <Icon size={14} />
-                <span className="sm:hidden">{tab.shortLabel}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[9px] ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                  {counts[tab.id]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <FinancialUnderlineTabs
+        items={tabNavigationItems}
+        value={activeTab}
+        onChange={setActiveTab}
+        ariaLabel="Etapas das dependências acadêmicas"
+      />
 
       {activeTab !== 'regras' ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-3">
           <div>
             <h4 className="text-sm font-black uppercase tracking-tight text-[#001a33]">
               {tabs.find((tab) => tab.id === activeTab)?.label}
             </h4>
             <p className="mt-0.5 text-xs font-medium text-slate-500">
-              {visibleItems.length} registro(s) no filtro atual.
+              {visibleItems.length} resultado(s) de {studentUnits.length} aluno(s)
+              {' '}em {filteredTurmaCount} turma(s).
             </p>
           </div>
-          <label className="relative block w-full sm:max-w-sm">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar aluno, curso ou disciplina"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-xs font-bold text-slate-700 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
-            />
-          </label>
+          <DependenciasFilters
+            search={search}
+            modalidade={modalidadeFilter}
+            curso={cursoFilter}
+            turma={turmaFilter}
+            modalidades={modalidadeOptions}
+            cursos={courseOptions}
+            turmas={turmaOptions}
+            viewMode={viewMode}
+            hasFilters={hasFilters}
+            onSearchChange={setSearch}
+            onModalidadeChange={(value) => {
+              setModalidadeFilter(value);
+              setCursoFilter('');
+              setTurmaFilter('');
+            }}
+            onCursoChange={(value) => {
+              setCursoFilter(value);
+              setTurmaFilter('');
+            }}
+            onTurmaChange={setTurmaFilter}
+            onViewModeChange={setViewMode}
+            onClear={() => {
+              setSearch('');
+              setModalidadeFilter('');
+              setCursoFilter('');
+              setTurmaFilter('');
+            }}
+          />
         </div>
       ) : null}
 
@@ -233,16 +371,113 @@ const DependenciasAcademicasPage = ({ poloId }: DependenciasAcademicasPageProps)
           rules={workspace?.regrasFinanceiras || []}
           disciplines={workspace?.disciplinasConfiguraveis || []}
           mutation={policyMutation}
+          removeMutation={removePolicyMutation}
         />
       ) : (
-        <DependenciasTable
-          items={visibleItems}
-          mode={activeTab}
-          onEncaminhar={setSelected}
-          onBoleto={openOrEmitBoleto}
-          boletoPendingId={boletoPendingId}
-        />
+        groupedItems.length ? (
+          <div className="space-y-7">
+            {groupedItems.map((group) => {
+              const first = group.items[0];
+              return (
+                <section key={group.key} className="space-y-3">
+                  <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
+                        <School size={17} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-blue-600">
+                          {first.modalidade === 'TECNICO' || first.modalidade === 'TÉCNICO'
+                            ? 'Curso técnico'
+                            : first.modalidade.replaceAll('_', ' ')}
+                        </p>
+                        <h5 className="truncate text-sm font-black text-[#001a33]">
+                          {first.turmaOrigemCodigo || first.turmaOrigemNome}
+                        </h5>
+                        <p className="truncate text-[11px] font-semibold text-slate-500">
+                          {first.cursoNome}
+                          {first.turmaOrigemCodigo && first.turmaOrigemNome
+                            ? ` · ${first.turmaOrigemNome}`
+                            : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-slate-600">
+                      {group.items.length} resultado(s)
+                    </span>
+                  </header>
+                  <DependenciasTable
+                    items={group.items}
+                    mode={activeTab}
+                    onEncaminhar={setSelected}
+                    onBoleto={openOrEmitBoleto}
+                    boletoPendingId={boletoPendingId}
+                    viewMode={viewMode}
+                  />
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <DependenciasTable
+            items={[]}
+            mode={activeTab}
+            onEncaminhar={setSelected}
+            onBoleto={openOrEmitBoleto}
+            boletoPendingId={boletoPendingId}
+            viewMode={viewMode}
+          />
+        )
       )}
+
+      {activeTab !== 'regras' && studentUnits.length > STUDENTS_PER_PAGE ? (
+        <nav
+          aria-label="Paginação das dependências"
+          className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-[11px] font-semibold text-slate-500">
+            Página <strong className="text-[#001a33]">{page}</strong> de{' '}
+            <strong className="text-[#001a33]">{totalPages}</strong>
+            {' '}· até {STUDENTS_PER_PAGE} alunos por página
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              aria-label="Página anterior"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                type="button"
+                key={pageNumber}
+                onClick={() => setPage(pageNumber)}
+                aria-label={`Página ${pageNumber}`}
+                aria-current={page === pageNumber ? 'page' : undefined}
+                className={`grid h-9 min-w-9 place-items-center rounded-lg px-2 text-[11px] font-extrabold transition ${
+                  page === pageNumber
+                    ? 'bg-[#001a33] text-white'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600'
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={page === totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              aria-label="Próxima página"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </nav>
+      ) : null}
 
       <DependenciaEncaminhamentoWizard
         poloId={activePoloId}

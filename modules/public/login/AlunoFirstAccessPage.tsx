@@ -8,12 +8,12 @@ import { TERMS_VERSION } from '../../shared/constants/terms';
 
 const getDefaultNext = (searchParams: URLSearchParams) => {
   const next = searchParams.get('next');
-  if (!next) return '/aluno';
+  if (!next) return '/aluno/';
   try {
     const decoded = decodeURIComponent(next);
-    return decoded.startsWith('/') ? decoded : '/aluno';
+    return decoded.startsWith('/') ? decoded : '/aluno/';
   } catch {
-    return '/aluno';
+    return '/aluno/';
   }
 };
 
@@ -29,6 +29,7 @@ type NavigateState = 'idle' | 'loading' | 'success' | 'error';
 
 const AlunoFirstAccessPage: React.FC = () => {
   const navigate = useNavigate();
+  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
   const [searchParams] = useSearchParams();
   const next = getDefaultNext(searchParams);
   const [isChecking, setIsChecking] = useState(true);
@@ -47,7 +48,7 @@ const AlunoFirstAccessPage: React.FC = () => {
 
       if (!currentProfile) {
         await loginService.logout();
-        navigate('/login', { replace: true });
+        navigate(alunoLoginPath, { replace: true });
         return;
       }
 
@@ -68,7 +69,7 @@ const AlunoFirstAccessPage: React.FC = () => {
     };
 
     loadProfile();
-  }, [next, navigate]);
+  }, [alunoLoginPath, next, navigate]);
 
   const termsAccepted = useMemo(() => Boolean(acceptedTerms), [acceptedTerms]);
   const requiresPasswordChange = Boolean(profile?.requiresPasswordReset);
@@ -153,7 +154,7 @@ const AlunoFirstAccessPage: React.FC = () => {
               Para proteger sua conta e concluir a entrada, valide os itens abaixo antes de seguir.
             </p>
           </div>
-          <Link to="/aluno" className="text-xs font-black uppercase tracking-widest text-slate-500">
+          <Link to="/aluno/" className="text-xs font-black uppercase tracking-widest text-slate-500">
             Interromper
           </Link>
         </div>

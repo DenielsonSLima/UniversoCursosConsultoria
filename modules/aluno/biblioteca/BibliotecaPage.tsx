@@ -19,12 +19,15 @@ import {
   matchesLibrarySearch
 } from './libraryAccess';
 import { alunoCourseAccessKeys } from '../shared/aluno-course-access.queries';
+import AlunoMobileLibrary from './components/mobile/AlunoMobileLibrary';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 
 interface BibliotecaPageProps {
   alunoId: string;
 }
 
 const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
+  const isMobileLayout = useAlunoMobileLayout();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
@@ -38,7 +41,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   const [previewDoc, setPreviewDoc] = useState<LibraryDocument | null>(null);
 
   // 1. Busca as matrículas ativas do aluno para obter cursos, turmas e polos
-  const { data: matriculas = [], isLoading: loadingMatriculas } = useQuery<any[]>({
+  const { data: matriculas = [], isLoading: loadingMatriculas, isError: matriculasError, refetch: refetchMatriculas } = useQuery<any[]>({
     queryKey: alunoCourseAccessKeys.libraryEnrollments(alunoId),
     queryFn: async () => {
       const { data, error } = await supabase
@@ -56,7 +59,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   const activePoloIds = Array.from(new Set(matriculas.map(m => m.polo_id).filter(Boolean)));
 
   // 2. Busca os professores vinculados às turmas do aluno
-  const { data: activeTeachers = [] } = useQuery<any[]>({
+  const { data: activeTeachers = [], isError: activeTeachersError, refetch: refetchActiveTeachers } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-professores', activeTurmaIds.join(',')],
     queryFn: async () => {
       if (activeTurmaIds.length === 0) return [];
@@ -70,7 +73,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     enabled: matriculas.length > 0
   });
 
-  const { data: turmaDisciplinas = [] } = useQuery<any[]>({
+  const { data: turmaDisciplinas = [], isError: turmaDisciplinasError, refetch: refetchTurmaDisciplinas } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-turma-disciplinas', activeTurmaIds.join(',')],
     queryFn: async () => {
       if (activeTurmaIds.length === 0) return [];
@@ -87,7 +90,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   const teacherIds = activeTeachers.map(at => at.professor_id).filter(Boolean);
 
   // 3. Busca pastas reais da biblioteca (Gestão + Seus Professores)
-  const { data: dbFolders = [], isLoading: loadingFolders } = useQuery<any[]>({
+  const { data: dbFolders = [], isLoading: loadingFolders, isError: foldersError, refetch: refetchFolders } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-pastas', selectedFolderId, teacherIds],
     queryFn: async () => {
       let query = supabase.from('biblioteca_pastas').select('*');
@@ -109,7 +112,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   });
 
   // 4. Busca os documentos reais da biblioteca
-  const { data: dbDocs = [], isLoading: loadingDocs } = useQuery<any[]>({
+  const { data: dbDocs = [], isLoading: loadingDocs, isError: documentsError, refetch: refetchDocuments } = useQuery<any[]>({
     queryKey: ['aluno-biblioteca-documentos', selectedFolderId],
     queryFn: async () => {
       let query = supabase.from('biblioteca_documentos').select('*');
@@ -197,6 +200,22 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
         const current = data?.acessos || 0;
         supabase.from('biblioteca_documentos').update({ acessos: current + 1 }).eq('id', documentId);
       });
+  };
+
+  const handleDownloadDocument = async (document: any) => {
+    try {
+      await downloadSingleLibraryFile({
+        id: document.id,
+        folderId: document.pasta_id || null,
+        name: document.titulo,
+        url: document.arquivo_url,
+        fileType: document.tipo_arquivo,
+        sizeBytes: document.tamanho_bytes,
+      });
+      incrementDocumentAccess(document.id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível baixar o arquivo.');
+    }
   };
 
   const toggleFolderSelection = (folderId: string) => {
@@ -303,10 +322,45 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
   };
 
   const isLoading = loadingMatriculas || loadingFolders || loadingDocs;
+  const hasLibraryError = matriculasError || activeTeachersError || turmaDisciplinasError || foldersError || documentsError;
+  const retryLibrary = () => {
+    void Promise.all([
+      refetchMatriculas(),
+      refetchActiveTeachers(),
+      refetchTurmaDisciplinas(),
+      refetchFolders(),
+      refetchDocuments(),
+    ]);
+  };
   const selectionCount = selectedFolderIds.size + selectedDocumentIds.size;
 
   return (
     <div className="space-y-6 animate-fadeIn text-xs font-sans">
+      {isMobileLayout ? <AlunoMobileLibrary
+        breadcrumbs={breadcrumbs}
+        documents={filteredDocuments}
+        folders={dbFolders}
+        isDownloadingSelection={isDownloadingSelection}
+        isLoading={isLoading}
+        isError={hasLibraryError}
+        progressMessage={downloadProgress}
+        searchQuery={searchQuery}
+        selectedDocumentIds={selectedDocumentIds}
+        selectedFolderIds={selectedFolderIds}
+        onBreadcrumbClick={handleBreadcrumbClick}
+        onClearSelection={clearSelection}
+        onDownloadSelection={() => void handleDownloadSelection()}
+        onDownloadDocument={(document) => void handleDownloadDocument(document)}
+        onOpenFolder={handleOpenFolder}
+        onOpenPreview={handleOpenPreview}
+        onRetry={retryLibrary}
+        onSearchChange={setSearchQuery}
+        onSelectVisible={selectVisibleItems}
+        onToggleDocument={toggleDocumentSelection}
+        onToggleFolder={toggleFolderSelection}
+      /> : null}
+
+      {!isMobileLayout ? <div className="space-y-6">
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
@@ -573,6 +627,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
           </div>
         </div>
       )}
+      </div> : null}
 
       {/* Preview Modal */}
       <QuickPreviewModal 

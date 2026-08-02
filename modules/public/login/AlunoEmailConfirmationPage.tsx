@@ -58,6 +58,7 @@ const getConfirmedAlunoData = async (profile: any): Promise<ConfirmedAlunoData> 
 const AlunoEmailConfirmationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
   const [state, setState] = useState<ConfirmationState>({
     status: 'loading',
     message: 'Confirmando seu e-mail...',
@@ -65,8 +66,8 @@ const AlunoEmailConfirmationPage: React.FC = () => {
 
   const nextPath = useMemo(() => {
     const redirect = searchParams.get('redirect');
-    return getSafePublicAlunoRedirectPath(redirect, '/login');
-  }, [searchParams]);
+    return getSafePublicAlunoRedirectPath(redirect, alunoLoginPath);
+  }, [alunoLoginPath, searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -226,7 +227,7 @@ const AlunoEmailConfirmationPage: React.FC = () => {
               </>
             ) : (
               <Link
-                to="/login"
+                to={alunoLoginPath}
                 className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#001a33] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-[#06284a]"
               >
                 Ir para login

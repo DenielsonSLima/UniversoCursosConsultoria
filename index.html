@@ -2,7 +2,36 @@
 <html lang="pt-br" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script>
+      if (location.pathname === '/aluno' || location.pathname.startsWith('/aluno/')) {
+        document.documentElement.setAttribute('data-aluno-bootstrap', 'true');
+      }
+    </script>
+    <style>
+      #aluno-app-bootstrap-splash { display: none; }
+      html[data-aluno-bootstrap="true"],
+      html[data-aluno-bootstrap="true"] body { margin: 0; background: #001a33; }
+      html[data-aluno-bootstrap="true"] #aluno-app-bootstrap-splash {
+        position: fixed; inset: 0; z-index: 99999; display: flex; min-height: 100dvh;
+        align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;
+        padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom));
+        background: radial-gradient(circle at 50% 38%, rgba(37,99,235,.3), transparent 38%), #001a33;
+        color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-align: center;
+      }
+      .aluno-bootstrap-mark {
+        width: 7rem; height: 7rem; display: flex; align-items: center; justify-content: center;
+        margin: 0 auto; border: 1px solid rgba(255,255,255,.7); border-radius: 1.8rem;
+        background: white; box-shadow: 0 24px 70px rgba(0,0,0,.32);
+      }
+      .aluno-bootstrap-mark img { width: 6rem; height: 6rem; border-radius: 1.35rem; object-fit: cover; }
+      .aluno-bootstrap-title { margin: 1.75rem 0 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -.025em; }
+      .aluno-bootstrap-subtitle { margin: .5rem 0 0; color: #bfdbfe; font-size: .625rem; font-weight: 900; letter-spacing: .3em; text-transform: uppercase; }
+      .aluno-bootstrap-loader { width: 1.5rem; height: 1.5rem; margin: 2.25rem auto 0; border: 2px solid rgba(255,255,255,.15); border-top-color: #93c5fd; border-radius: 999px; animation: aluno-bootstrap-spin .8s linear infinite; }
+      .aluno-bootstrap-message { margin: 1rem 0 0; color: rgba(219,234,254,.75); font-size: .75rem; font-weight: 600; }
+      @keyframes aluno-bootstrap-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .aluno-bootstrap-loader { animation: none; } }
+    </style>
     <title>Universo Cursos e Consultoria</title>
     <meta name="google-site-verification" content="9kiqVJ2Ikiq8MoLwOyORZRGKJdYcGn2eZxkeHLwpT-8" />
     <meta name="description" content="Referência em educação humanizada e consultoria com alcance nacional. Mais de 15 anos oferecendo cursos técnicos, profissionalizantes, EAD e Ensino Superior (Graduação). Polos em Japoatã, Aquidabã e Porto da Folha.">
@@ -98,6 +127,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body class="bg-white text-slate-900">
+    <div id="aluno-app-bootstrap-splash" role="status" aria-live="polite" aria-label="Preparando seu portal">
+      <div>
+        <div class="aluno-bootstrap-mark"><img src="/aluno/icons/icon-192.png" alt="" width="96" height="96"></div>
+        <p class="aluno-bootstrap-title">Universo CC</p>
+        <p class="aluno-bootstrap-subtitle">Portal do Aluno</p>
+        <div class="aluno-bootstrap-loader" aria-hidden="true"></div>
+        <p class="aluno-bootstrap-message">Preparando seu portal</p>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

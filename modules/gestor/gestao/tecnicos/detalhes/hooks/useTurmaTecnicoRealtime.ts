@@ -12,6 +12,7 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
 
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let refreshFinanceiro = false;
+    let subscribedOnce = false;
     const turmaKeys = [
       academicLifecycleKeys.turma(turmaId),
       academicLifecycleKeys.grade(turmaId),
@@ -20,6 +21,7 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
       ['turma-financeiro', turmaId] as const,
       ['financeiro-alunos', turmaId] as const,
       ['diario-alunos', turmaId] as const,
+      ['diario-notas-resultados', turmaId] as const,
     ];
 
     const scheduleRefresh = (financeiro = false) => {
@@ -109,7 +111,11 @@ export const useTurmaTecnicoRealtime = (turmaId: string) => {
         { event: '*', schema: 'public', table: 'transferencias_academicas', filter: `turma_destino_id=eq.${turmaId}` },
         () => scheduleRefresh(),
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') return;
+        if (subscribedOnce) scheduleRefresh(true);
+        subscribedOnce = true;
+      });
 
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginService } from '../../login/login.service';
+import { supabase } from '../../../lib/supabase';
 import {
   clearPortalSession,
   getPortalProfile,
@@ -9,13 +10,19 @@ import {
 
 const buildLoginRedirect = () => {
   const currentPath = window.location.pathname + window.location.search;
-  return `/login?redirect=${encodeURIComponent(currentPath)}`;
+  const params = new URLSearchParams({
+    reason: 'session_expired',
+    redirect: currentPath,
+  });
+  return `/aluno/entrar?${params.toString()}`;
 };
 
 export const useAlunoPortalProfile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
+  const [retrySignal, setRetrySignal] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -27,10 +34,25 @@ export const useAlunoPortalProfile = () => {
     };
 
     const hydrateProfile = async () => {
+      setIsAuthLoading(true);
+      setConnectionError(false);
       try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData.user) {
+          const status = Number((authError as { status?: number } | null)?.status || 0);
+          const sessionIsMissing = authError?.name === 'AuthSessionMissingError' || status === 401;
+          if (sessionIsMissing || (!authError && !authData.user)) {
+            await rejectSession();
+            return;
+          }
+          if (mounted) setConnectionError(true);
+          return;
+        }
+
         const portalProfile = await getPortalProfile({
           preferredRole: 'Aluno',
           allowedRoles: ['Aluno'],
+          authenticatedUser: authData.user,
         });
         if (!mounted) return;
 
@@ -41,7 +63,7 @@ export const useAlunoPortalProfile = () => {
 
         setProfile(portalProfile);
       } catch {
-        await rejectSession();
+        if (mounted) setConnectionError(true);
       } finally {
         if (mounted) setIsAuthLoading(false);
       }
@@ -52,11 +74,13 @@ export const useAlunoPortalProfile = () => {
     return () => {
       mounted = false;
     };
-  }, [navigate]);
+  }, [navigate, retrySignal]);
 
   return {
     profile,
     isAuthLoading,
     isAuthorized: Boolean(profile) && !isAuthLoading,
+    connectionError,
+    retry: () => setRetrySignal((value) => value + 1),
   };
 };

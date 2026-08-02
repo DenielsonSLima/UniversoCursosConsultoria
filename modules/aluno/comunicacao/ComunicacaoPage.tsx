@@ -22,6 +22,8 @@ import {
   ComunicacaoMensagem,
   ComunicacaoPageProps,
 } from './comunicacao.types';
+import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
+import AlunoMobileComunicacao from './mobile/AlunoMobileComunicacao';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -50,6 +52,7 @@ const playMessageSound = (tone: 'send' | 'receive') => {
 const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
+  const isMobile = useAlunoMobileLayout();
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -60,6 +63,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
   const [pendingPage, setPendingPage] = useState(1);
   const [resolvedPage, setResolvedPage] = useState(1);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
 
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -79,7 +83,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   });
 
   // ── 2. Fetch Aluno's Chats (mais recente primeiro, excluindo soft-deleted) ──
-  const { data: chats = [], isLoading: loadingChats } = useQuery<ComunicacaoChat[]>({
+  const {
+    data: chats = [],
+    isError: chatsError,
+    isLoading: loadingChats,
+    refetch: refetchChats,
+  } = useQuery<ComunicacaoChat[]>({
     queryKey: alunoComunicacaoKeys.chats(alunoId),
     queryFn: () => alunoComunicacaoService.getAlunoChats(alunoId),
     staleTime: 0,
@@ -87,7 +96,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   });
 
   // ── 3. Fetch Messages for Active Chat ──
-  const { data: messages = [], isLoading: loadingMessages } = useQuery<ComunicacaoMensagem[]>({
+  const {
+    data: messages = [],
+    isError: messagesError,
+    isLoading: loadingMessages,
+    refetch: refetchMessages,
+  } = useQuery<ComunicacaoMensagem[]>({
     queryKey: alunoComunicacaoKeys.messages(activeChatId),
     enabled: !!activeChatId,
     queryFn: () => alunoComunicacaoService.getMessages(activeChatId!)
@@ -127,7 +141,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ── 6. Autoscroll ──
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
   }, [messages]);
 
   // ── 7. Default active chat ──
@@ -239,6 +254,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       setActiveCallTab('pendentes');
       setPendingPage(1);
       setActiveChatId(newChat.id);
+      if (isMobile) setMobileConversationOpen(true);
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
       console.error(err);
@@ -249,6 +265,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   // ── Helpers ──
   const currentChat = chats.find(c => c.id === activeChatId);
 
+  useEffect(() => {
+    if (!currentChat) setMobileConversationOpen(false);
+  }, [currentChat]);
+
   const getCategoryInfo = (catId: string | null) => {
     if (!catId) return { nome: 'Geral', cor: '#475569' };
     return categories.find(c => c.id === catId) || { nome: 'Geral', cor: '#475569' };
@@ -256,8 +276,52 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
+    <>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+
+      {isMobile ? (
+        <AlunoMobileComunicacao
+          activeCallTab={activeCallTab}
+          activePage={activePage}
+          categories={categories}
+          chatsError={chatsError}
+          currentChat={currentChat}
+          displayedChats={displayedChats}
+          fileInputRef={fileInputRef}
+          loadingChats={loadingChats}
+          loadingMessages={loadingMessages}
+          messagesError={messagesError}
+          messages={messages}
+          messagesEndRef={messagesEndRef}
+          messageText={messageText}
+          pendingCount={pendentes.length}
+          pendingFile={pendingFile}
+          resolvedCount={resolvidos.length}
+          showConversation={mobileConversationOpen}
+          totalChatsInTab={activeCallChats.length}
+          unreadChatIds={unreadChatIds}
+          uploadingFile={uploadingFile}
+          onBack={() => setMobileConversationOpen(false)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onFileChange={setPendingFile}
+          onMessageChange={setMessageText}
+          onNewChat={() => setShowNewChatModal(true)}
+          onPageChange={handlePageChange}
+          onRetryChats={() => void refetchChats()}
+          onRetryMessages={() => void refetchMessages()}
+          onSelectChat={(chatId) => {
+            setActiveChatId(chatId);
+            setMobileConversationOpen(true);
+          }}
+          onSend={handleSendMessage}
+          onTabChange={(tab) => {
+            setActiveCallTab(tab);
+            if (tab === 'pendentes') setPendingPage(1);
+            else setResolvedPage(1);
+          }}
+        />
+      ) : (
+    <div className="flex flex-col h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm animate-fadeIn">
 
       {/* ── Top Header ── */}
       <div className="bg-white px-6 py-4 border-b border-slate-200 flex justify-between items-center shrink-0">
@@ -321,8 +385,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
             {loadingChats ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <div className="flex justify-center items-center py-10" role="status" aria-label="Carregando chamados">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin motion-reduce:animate-none" />
+              </div>
+            ) : chatsError ? (
+              <div className="px-4 py-10 text-center" role="alert">
+                <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">Não foi possível carregar os chamados</p>
+                <button type="button" onClick={() => void refetchChats()} className="mt-3 rounded-xl bg-[#001a33] px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white">Tentar novamente</button>
               </div>
             ) : displayedChats.length === 0 ? (
               <div className="text-center py-12 text-slate-400 px-4">
@@ -425,7 +494,13 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
             </div>
 
             {/* Messages Area — scrollable */}
-            <AlunoMessageList loading={loadingMessages} messages={messages} endRef={messagesEndRef} />
+            <AlunoMessageList
+              loading={loadingMessages}
+              error={messagesError}
+              messages={messages}
+              endRef={messagesEndRef}
+              onRetry={() => void refetchMessages()}
+            />
 
             {/* ── Input Box — FIXED at bottom ── */}
             <div className="shrink-0 border-t border-slate-200 bg-white">
@@ -461,6 +536,9 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
         )}
       </div>
 
+    </div>
+      )}
+
       {/* ── Delete Confirmation Modal ── */}
       {showDeleteConfirm && (
         <AlunoDeleteChatModal deleting={deletingChat} onCancel={() => setShowDeleteConfirm(false)} onConfirm={handleDeleteChat} />
@@ -478,7 +556,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           onSubjectChange={setNewChatSubject}
         />
       )}
-    </div>
+    </>
   );
 };
 

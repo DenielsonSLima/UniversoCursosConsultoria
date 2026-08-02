@@ -86,21 +86,21 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Nome Completo</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">Nome Completo</label>
               <p className="cursor-not-allowed break-words rounded-xl border border-transparent bg-slate-50 p-3 font-bold text-slate-800">
                 {profile?.nomeCompleto || profile?.nome}
               </p>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">CPF</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">CPF</label>
               <p className="cursor-not-allowed break-words rounded-xl border border-transparent bg-slate-50 p-3 font-bold text-slate-800">
                 {profile?.cpf || 'Não Informado'}
               </p>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">E-mail Acadêmico</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">E-mail Acadêmico</label>
               <p className="flex min-w-0 items-start gap-2 rounded-xl border border-transparent bg-slate-50 p-3 font-bold text-slate-800">
                 <Mail size={13} className="mt-0.5 shrink-0 text-slate-400" />
                 <span className="min-w-0 break-all">{profile?.email || 'Sem e-mail'}</span>
@@ -108,9 +108,9 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Telefone celular</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 md:text-[9px]">Telefone celular</label>
               {editing ? (
-                <input value={form.telefone} onChange={(event) => form.setTelefone(event.target.value)} inputMode="tel" autoComplete="tel" className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+                <input value={form.telefone} onChange={(event) => form.setTelefone(event.target.value)} inputMode="tel" autoComplete="tel" className="min-h-12 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-base font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 md:text-xs" />
               ) : (
                 <p className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/50 p-3 font-bold text-slate-850">
                   <Phone size={13} className="text-slate-400" />
@@ -124,11 +124,11 @@ const PerfilDadosTab: React.FC<PerfilDadosTabProps> = ({
           <PerfilTechnicalSection editing={editing} form={form} />
 
           {editing && (
-            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setEditing(false)} className="min-h-12 w-full rounded-xl bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-650 transition-all hover:bg-slate-250 sm:w-auto">
+            <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 -mx-4 flex flex-col-reverse gap-2 border-t border-slate-100 bg-white/95 px-4 pb-1 pt-3 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md md:static md:mx-0 md:flex-row md:justify-end md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pt-4 md:shadow-none">
+              <button type="button" onClick={() => setEditing(false)} className="min-h-12 w-full rounded-xl bg-slate-100 px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-650 transition-all hover:bg-slate-250 md:w-auto">
                 Voltar
               </button>
-              <button type="submit" disabled={saving} className="min-h-12 w-full rounded-xl bg-[#001a33] px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-900 disabled:opacity-50 sm:w-auto">
+              <button type="submit" disabled={saving} className="min-h-12 w-full rounded-xl bg-[#001a33] px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-900 disabled:opacity-50 md:w-auto">
                 {saving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
