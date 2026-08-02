@@ -20,6 +20,10 @@ const FichaMatriculaPage = lazy(() => import('../cadastros/ficha-matricula/Ficha
 const ModelosDocumentosPage = lazy(() => import('../cadastros/modelos-documentos/ModelosDocumentosPage'));
 const CalendarioPage = lazy(() => import('../calendario/CalendarioPage'));
 const ComunicacaoPage = lazy(() => import('../comunicacao/ComunicacaoPage'));
+const UnifiedCommunicationPage = lazy(() => import('../comunicacao/UnifiedCommunicationPage'));
+const AutomacoesMulticanalPage = lazy(() => import('../comunicacao/automacoes-multicanal/AutomacoesMulticanalPage'));
+const MultichannelOperationsPage = lazy(() => import('../comunicacao/multicanal/MultichannelOperationsPage'));
+const AtendimentoConfigPage = lazy(() => import('../comunicacao/atendimento-config/AtendimentoConfigPage'));
 const ConfiguracoesPage = lazy(() => import('../configuracoes/ConfiguracoesPage'));
 const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
 const FinanceiroPage = lazy(() => import('../financeiro/FinanceiroPage'));
@@ -44,6 +48,7 @@ interface GestorModuleContentProps {
   permissions: GestorPermissions;
   profile: PortalAuthProfile;
   profileAvatarUrl: string | null;
+  onAutomationDraftDirtyChange: (dirty: boolean) => void;
   onProfileUpdated: (updated: {
     id: string;
     nome: string;
@@ -159,6 +164,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
   permissions,
   profile,
   profileAvatarUrl,
+  onAutomationDraftDirtyChange,
   onProfileUpdated,
 }) => {
   if (!canOpenModule(activeModule)) return <AccessDenied />;
@@ -207,9 +213,35 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
     case 'caixa': return <CaixaPage poloId={scopedPoloId} poloName={currentPoloName} isGlobal={isGlobal} isMatriz={isMatrizSelected} />;
     case 'financeiro': return <FinanceiroPage poloId={scopedPoloId} isMatriz={isMatrizSelected} allowedTabs={getEffectiveFinanceiroTabs(permissions)} />;
     case 'biblioteca': return <BibliotecaPage />;
-    case 'comunicacao': return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') ? <ComunicacaoPage gestorProfile={profile} channel="mensagem" /> : <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
-    case 'comunicacao-mensagem': return <ComunicacaoPage gestorProfile={profile} channel="mensagem" />;
-    case 'comunicacao-whatsapp': return <ComunicacaoPage gestorProfile={profile} channel="whatsapp" />;
+    case 'comunicacao':
+      if (canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem') || canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')) return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
+      if (permissions.allPolos && isMatrizSelected && canAccessTab(permissions, 'comunicacao', 'comunicacao-automacoes')) return <AutomacoesMulticanalPage canAccessLegacyWhatsApp={false} onDirtyChange={onAutomationDraftDirtyChange} />;
+      return <AccessDenied />;
+    case 'comunicacao-atendimento': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
+    case 'comunicacao-atendimento-config': return <AtendimentoConfigPage poloId={currentPoloId} isGlobal={isGlobal} />;
+    case 'comunicacao-atrasados': return <MultichannelOperationsPage mode="overdue" />;
+    case 'comunicacao-automacoes': return <AutomacoesMulticanalPage canAccessLegacyWhatsApp={false} onDirtyChange={onAutomationDraftDirtyChange} />;
+    case 'comunicacao-fluxos':
+      return (
+        <ComunicacaoPage
+          gestorProfile={profile}
+          channel="whatsapp"
+          whatsappInitialTab="fluxos"
+          showWhatsAppModuleTabs={false}
+        />
+      );
+    case 'comunicacao-agentes': return <MultichannelOperationsPage mode="agents" />;
+    case 'comunicacao-configuracoes':
+      return (
+        <ComunicacaoPage
+          gestorProfile={profile}
+          channel="whatsapp"
+          whatsappInitialTab="perfil"
+          showWhatsAppModuleTabs={false}
+        />
+      );
+    case 'comunicacao-mensagem': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
+    case 'comunicacao-whatsapp': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp />;
     case 'relatorios': return <RelatoriosPage poloId={scopedPoloId} />;
     case 'meu-perfil':
       return (
