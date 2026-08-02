@@ -48,7 +48,7 @@ const AlunoModuleLoading = () => (
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
-  const executeLogout = usePortalLogout({ loginPath: '/aluno/entrar' });
+  const executeLogout = usePortalLogout({ loginPath: '/aluno/login-app' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

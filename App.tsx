@@ -27,6 +27,8 @@ const EspecializacaoDetailPage = lazy(() => import('./modules/public/especializa
 const EadPublicPage = lazy(() => import('./modules/public/ead/EadPublicPage'));
 const EadDetailPage = lazy(() => import('./modules/public/ead/EadDetailPage'));
 const AlunoLoginPublicPage = lazy(() => import('./modules/public/login/AlunoLoginPublicPage'));
+const AlunoAppLoginPage = lazy(() => import('./modules/aluno/login-app/AlunoAppLoginPage'));
+const AlunoAppSignupPage = lazy(() => import('./modules/aluno/login-app/AlunoAppSignupPage'));
 const AlunoEmailConfirmationPage = lazy(() => import('./modules/public/login/AlunoEmailConfirmationPage'));
 const AlunoFirstAccessPage = lazy(() => import('./modules/public/login/AlunoFirstAccessPage'));
 const ValidatorPage = lazy(() => import('./modules/public/validator/ValidatorPage'));
@@ -89,8 +91,10 @@ const App: React.FC = () => {
         <Route path="/recuperar-senha" element={<PasswordRecoveryPage />} />
 
         {/* ── Rotas instaláveis do aluno: mantidas dentro do escopo /aluno/ ── */}
+        <Route path="/aluno/login-app" element={<AlunoAppLoginPage />} />
+        <Route path="/aluno/cadastro-app" element={<AlunoAppSignupPage />} />
         <Route path="/aluno/entrar" element={<AlunoLoginPublicPage />} />
-        <Route path="/aluno/cadastro" element={<AlunoLoginPublicPage />} />
+        <Route path="/aluno/cadastro" element={<Navigate to="/aluno/cadastro-app" replace />} />
         <Route path="/aluno/confirmacao-email" element={<AlunoEmailConfirmationPage />} />
         <Route path="/aluno/primeiro-acesso" element={<AlunoFirstAccessPage />} />
         <Route path="/aluno/recuperar-senha" element={<PasswordRecoveryPage />} />

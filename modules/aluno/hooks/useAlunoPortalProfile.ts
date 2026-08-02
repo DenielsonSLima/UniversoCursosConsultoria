@@ -14,7 +14,7 @@ const buildLoginRedirect = () => {
     reason: 'session_expired',
     redirect: currentPath,
   });
-  return `/aluno/entrar?${params.toString()}`;
+  return `/aluno/login-app?${params.toString()}`;
 };
 
 export const useAlunoPortalProfile = () => {

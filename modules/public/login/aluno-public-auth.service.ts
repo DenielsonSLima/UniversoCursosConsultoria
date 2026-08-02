@@ -27,6 +27,7 @@ export interface PublicAlunoSignupData {
   uf: string;
   turnstileToken: string;
   redirectPath?: string;
+  appFlow?: boolean;
 }
 
 interface FinalizeAlunoFirstAccessData {
@@ -37,7 +38,7 @@ interface FinalizeAlunoFirstAccessData {
   newPassword?: string;
 }
 
-type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath'>;
+type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'>;
 type LegacyPublicAlunoProfileData = Omit<
   PublicAlunoProfileData,
   'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'turnstileToken'
@@ -343,10 +344,12 @@ export const alunoPublicAuthService = {
     const requestedRedirectPath = data.redirectPath
       ? getSafePublicAlunoRedirectPath(data.redirectPath)
       : null;
+    const loginPath = data.appFlow ? '/aluno/login-app' : '/login';
+    const confirmationPagePath = data.appFlow ? '/aluno/confirmacao-email' : '/confirmacao-email';
     const postConfirmationPath = requestedRedirectPath
-      ? `/login?${new URLSearchParams({ redirect: requestedRedirectPath }).toString()}`
-      : '/login';
-    const confirmationPath = `/confirmacao-email?${new URLSearchParams({
+      ? `${loginPath}?${new URLSearchParams({ redirect: requestedRedirectPath }).toString()}`
+      : loginPath;
+    const confirmationPath = `${confirmationPagePath}?${new URLSearchParams({
       redirect: postConfirmationPath,
     }).toString()}`;
 

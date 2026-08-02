@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.21",
+  "version": "2.2.3-beta.22",
   "display": "BETA",
   "stage": "beta",
-  "revision": 21,
+  "revision": 22,
   "releasedAt": "2026-08-02",
-  "summary": "Ícone branco e centralizado do Universo CC"
+  "summary": "Login e cadastro exclusivos do aplicativo do aluno"
 }

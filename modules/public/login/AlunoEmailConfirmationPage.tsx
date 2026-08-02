@@ -58,7 +58,7 @@ const getConfirmedAlunoData = async (profile: any): Promise<ConfirmedAlunoData> 
 const AlunoEmailConfirmationPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/entrar' : '/login';
+  const alunoLoginPath = window.location.pathname.startsWith('/aluno/') ? '/aluno/login-app' : '/login';
   const [state, setState] = useState<ConfirmationState>({
     status: 'loading',
     message: 'Confirmando seu e-mail...',
