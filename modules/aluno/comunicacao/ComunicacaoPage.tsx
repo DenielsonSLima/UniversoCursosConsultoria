@@ -24,6 +24,7 @@ import {
 } from './comunicacao.types';
 import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 import AlunoMobileComunicacao from './mobile/AlunoMobileComunicacao';
+import AlunoSupportAvailabilityCard from './AlunoSupportAvailabilityCard';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -59,6 +60,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatCategory, setNewChatCategory] = useState('');
   const [newChatSubject, setNewChatSubject] = useState('');
+  const [notifyOnResponse, setNotifyOnResponse] = useState(false);
   const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
   const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
   const [pendingPage, setPendingPage] = useState(1);
@@ -81,6 +83,20 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     queryKey: alunoComunicacaoKeys.categories,
     queryFn: alunoComunicacaoService.getCategories
   });
+
+  const {
+    data: supportConfig,
+    isLoading: loadingSupportConfig,
+  } = useQuery({
+    queryKey: alunoComunicacaoKeys.supportConfig(alunoId),
+    queryFn: alunoComunicacaoService.getSupportConfig,
+    enabled: Boolean(alunoId),
+    staleTime: 60_000,
+  });
+
+  const canOpenNewChat = supportConfig
+    ? supportConfig.permite_chat_app && supportConfig.permite_novo_chamado
+    : true;
 
   // ── 2. Fetch Aluno's Chats (mais recente primeiro, excluindo soft-deleted) ──
   const {
@@ -119,7 +135,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     else setResolvedPage(page);
   };
 
-  useAlunoComunicacaoRealtime({ alunoId, activeChatId, setUnreadChatIds });
+  useAlunoComunicacaoRealtime({
+    alunoId,
+    activeChatId,
+    supportPoloId: supportConfig?.polo_id,
+    setUnreadChatIds,
+  });
 
   useEffect(() => {
     seenMessageIdsRef.current = new Set();
@@ -234,6 +255,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   // ── Open New Chat ──
   const handleCreateNewChat = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canOpenNewChat) {
+      toast.error('Atendimento indisponível', supportConfig?.mensagem_offline || 'Não é possível abrir um novo chamado neste momento.');
+      return;
+    }
     if (!newChatCategory || !newChatSubject.trim()) return;
     try {
       const selectedCat = categories.find(c => c.id === newChatCategory);
@@ -245,6 +270,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
         categoryId: newChatCategory,
         categoryName: catName,
         subject: newChatSubject,
+        notifyOnResponse,
       });
 
       setShowNewChatModal(false);
@@ -260,6 +286,32 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       console.error(err);
       toast.error('Erro ao abrir chamado', 'Não foi possível abrir o chamado.');
     }
+  };
+
+  const handleNotificationPreference = async (enabled: boolean) => {
+    if (!enabled) {
+      setNotifyOnResponse(false);
+      return;
+    }
+
+    if (!('Notification' in window)) {
+      toast.error('Notificações indisponíveis', 'Este navegador não permite avisos do aplicativo.');
+      setNotifyOnResponse(false);
+      return;
+    }
+
+    const permission = window.Notification.permission === 'default'
+      ? await window.Notification.requestPermission()
+      : window.Notification.permission;
+
+    if (permission !== 'granted') {
+      toast.error('Permissão necessária', 'Autorize as notificações do Universo CC nas configurações do aparelho.');
+      setNotifyOnResponse(false);
+      return;
+    }
+
+    setNotifyOnResponse(true);
+    toast.success('Avisos ativados', 'Este chamado será marcado para avisar quando houver resposta.');
   };
 
   // ── Helpers ──
@@ -301,11 +353,14 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           totalChatsInTab={activeCallChats.length}
           unreadChatIds={unreadChatIds}
           uploadingFile={uploadingFile}
+          supportConfig={supportConfig}
+          supportConfigLoading={loadingSupportConfig}
+          canOpenNewChat={canOpenNewChat}
           onBack={() => setMobileConversationOpen(false)}
           onDelete={() => setShowDeleteConfirm(true)}
           onFileChange={setPendingFile}
           onMessageChange={setMessageText}
-          onNewChat={() => setShowNewChatModal(true)}
+          onNewChat={() => canOpenNewChat && setShowNewChatModal(true)}
           onPageChange={handlePageChange}
           onRetryChats={() => void refetchChats()}
           onRetryMessages={() => void refetchMessages()}
@@ -335,12 +390,15 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           </div>
         </div>
         <button
-          onClick={() => setShowNewChatModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md"
+          onClick={() => canOpenNewChat && setShowNewChatModal(true)}
+          disabled={!canOpenNewChat}
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#001a33] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           <Plus size={14} /> Novo Chamado
         </button>
       </div>
+
+      <AlunoSupportAvailabilityCard config={supportConfig} loading={loadingSupportConfig} />
 
       {/* ── Main Layout ── */}
       <div className="flex-1 flex overflow-hidden min-h-0">
@@ -550,10 +608,14 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
           categories={categories}
           categoryId={newChatCategory}
           subject={newChatSubject}
+          notifyOnResponse={notifyOnResponse}
+          notificationText={supportConfig?.texto_notificacao_optin}
+          showNotificationOption={supportConfig?.solicitar_notificacao_resposta ?? false}
           onCategoryChange={setNewChatCategory}
           onClose={() => setShowNewChatModal(false)}
           onSubmit={handleCreateNewChat}
           onSubjectChange={setNewChatSubject}
+          onNotificationChange={handleNotificationPreference}
         />
       )}
     </>
