@@ -2,6 +2,23 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.22] - 2026-08-02
+
+### Adicionado
+
+- O aplicativo do aluno recebeu login exclusivo em `/aluno/login-app`, compacto, imersivo e separado do acesso público do site.
+- O cadastro do aplicativo agora usa a rota `/aluno/cadastro-app`, dividida em três etapas próprias para celular: dados pessoais, acesso e endereço.
+
+### Alterado
+
+- Logout, expiração de sessão, recuperação de senha e confirmação de e-mail do aplicativo retornam ao novo login exclusivo.
+- O aviso visual sobre proteção e criptografia foi removido da tela de login conforme revisão de interface.
+- O cadastro público e o acesso do gestor continuam usando seus fluxos existentes, sem alterações visuais.
+
+### Qualidade
+
+- Build de produção, TypeScript, lint e testes de autenticação foram executados antes da publicação.
+
 ## [2.2.3-beta.21] - 2026-08-02
 
 ### Alterado
