@@ -86,7 +86,7 @@ const verifyTurnstile = async (request: Request, token: string) => {
   form.set("response", token);
   form.set("remoteip", getClientIp(request));
   form.set("idempotency_key", crypto.randomUUID());
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form, signal: controller.signal });
