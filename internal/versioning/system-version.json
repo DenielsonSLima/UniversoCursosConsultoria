@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.23",
+  "version": "2.2.3-beta.24",
   "display": "BETA",
   "stage": "beta",
-  "revision": 23,
-  "releasedAt": "2026-08-02",
-  "summary": "Atendimento multicanal e suporte persistente no aplicativo"
+  "revision": 24,
+  "releasedAt": "2026-08-03",
+  "summary": "Unidades públicas integradas aos cadastros oficiais"
 }

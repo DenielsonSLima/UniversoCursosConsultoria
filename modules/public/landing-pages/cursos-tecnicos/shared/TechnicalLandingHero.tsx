@@ -34,6 +34,13 @@ const getEligibilityLabel = (data: TechnicalLandingData) => {
   return 'Para quem já concluiu o Ensino Médio.';
 };
 
+const getPoloLocationLabel = (data: TechnicalLandingData) => {
+  const location = [data.polo.city, data.polo.state?.toLocaleUpperCase('pt-BR')]
+    .filter(Boolean)
+    .join('/');
+  return [data.polo.name, location].filter(Boolean).join(' · ');
+};
+
 const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, config }) => {
   const onlineEnrollmentAvailable = data.turma.onlineEnrollmentAvailable;
   const campaign = config.marketingCampaign;
@@ -58,8 +65,8 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
       <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,#001532_0%,rgba(0,21,50,.98)_46%,rgba(0,21,50,.62)_66%,rgba(0,21,50,.05)_100%)] lg:block" />
       <div className="pointer-events-none absolute inset-0 opacity-[0.055] [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:56px_56px]" />
 
-      <div className="relative mx-auto grid max-w-[90rem] lg:min-h-[44rem] lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="z-10 flex flex-col justify-center px-6 py-14 sm:px-10 lg:px-14 lg:py-20 xl:pl-20">
+      <div className="relative mx-auto grid max-w-[90rem] lg:min-h-[39rem] lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="z-10 flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 lg:py-14 xl:pl-20">
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-300/25 bg-blue-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-100 backdrop-blur">
               <Sparkles size={14} className="text-[#73b9ff]" /> {config.eyebrow}
@@ -77,12 +84,12 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
           </div>
 
           {campaign?.promise ? (
-            <p className="mt-8 text-lg font-black text-[#7ec0ff] md:text-xl">{campaign.promise}</p>
+            <p className="mt-6 text-lg font-black text-[#7ec0ff] md:text-xl">{campaign.promise}</p>
           ) : null}
           <h1
             id="technical-landing-title"
             tabIndex={-1}
-            className={`${campaign?.promise ? 'mt-2' : 'mt-8'} max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.05em] text-white outline-none sm:text-6xl xl:text-[5.15rem]`}
+            className={`${campaign?.promise ? 'mt-2' : 'mt-7'} max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.05em] text-white outline-none sm:text-6xl xl:text-[4.5rem]`}
           >
             {data.course.name}
           </h1>
@@ -96,7 +103,7 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
 
           <div className="mt-7 flex flex-wrap gap-2.5">
             <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 py-2.5 text-xs font-bold text-blue-50 backdrop-blur">
-              <MapPin size={15} className="text-blue-300" /> {data.polo.name}
+              <MapPin size={15} className="text-blue-300" /> {getPoloLocationLabel(data)}
             </span>
             <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 py-2.5 text-xs font-bold text-blue-50 backdrop-blur">
               <Clock3 size={15} className="text-blue-300" /> {data.turma.shift}
@@ -107,7 +114,7 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
           </div>
 
           {financial.hasInstallment ? (
-            <div className="mt-8 max-w-[39rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/20 backdrop-blur-md">
+            <div className="mt-6 max-w-[39rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/20 backdrop-blur-md">
               <div className="grid sm:grid-cols-[1fr_auto] sm:items-stretch">
                 <div className="p-5 sm:p-6">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -143,30 +150,19 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
                   </div>
                 ) : null}
               </div>
-              {onlineEnrollmentAvailable ? (
-                <a
-                  href="#inscricao-tecnica"
-                  className="group flex min-h-16 w-full items-center justify-between gap-4 border-t border-white/10 bg-emerald-400 px-5 py-4 text-emerald-950 transition hover:bg-emerald-300 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-[-4px] focus-visible:outline-white sm:px-6"
-                >
-                  <span>
-                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] opacity-70">Inscrições abertas</span>
-                    <span className="mt-0.5 block text-sm font-black uppercase tracking-[0.11em] sm:text-base">Cadastre-se online</span>
-                  </span>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-emerald-300 transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-                    <ArrowRight size={19} strokeWidth={2.75} />
-                  </span>
-                </a>
-              ) : null}
             </div>
           ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {onlineEnrollmentAvailable && !financial.hasInstallment ? (
+            {onlineEnrollmentAvailable ? (
               <a
                 href="#inscricao-tecnica"
-                className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-emerald-400 px-7 py-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-950 shadow-xl transition hover:bg-emerald-300 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-emerald-200"
+                className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-blue-600 px-7 py-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-blue-950/25 transition hover:bg-blue-500 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-200"
               >
-                Cadastre-se online <ArrowDown size={18} />
+                Fazer inscrição online
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 transition-transform group-hover:translate-y-0.5 motion-reduce:transform-none">
+                  <ArrowDown size={17} />
+                </span>
               </a>
             ) : null}
             <a
@@ -179,7 +175,7 @@ const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, confi
           </div>
         </div>
 
-        <div className="relative min-h-[29rem] overflow-hidden lg:min-h-full">
+        <div className="relative min-h-[25rem] overflow-hidden lg:min-h-full">
           {heroImageUrl ? (
             <img
               src={heroImageUrl}

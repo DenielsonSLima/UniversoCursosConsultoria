@@ -16,6 +16,7 @@ export interface Polo {
   logoUrl?: string;
   endereco?: string;
   numero?: string;
+  complemento?: string;
   bairro?: string;
   cep?: string;
   telefone?: string;
@@ -62,6 +63,7 @@ export const polosService = {
       logoUrl: p.logo_url || p.empresas?.logo_url || principalCompany?.logo_url || '',
       endereco: p.endereco || p.empresas?.endereco || '',
       numero: p.numero || p.empresas?.numero || '',
+      complemento: p.complemento || p.empresas?.complemento || '',
       bairro: p.bairro || p.empresas?.bairro || '',
       cep: p.cep || p.empresas?.cep || '',
       telefone: p.telefone || p.empresas?.telefone || '',
@@ -103,6 +105,7 @@ export const polosService = {
       is_matriz: false,
       endereco: polo.endereco || null,
       numero: polo.numero || null,
+      complemento: polo.complemento || null,
       bairro: polo.bairro || null,
       cep: polo.cep || null,
       telefone: polo.telefone || null,
@@ -205,6 +208,7 @@ export const polosService = {
       logoUrl: p.logo_url || p.empresas?.logo_url || principalCompany?.logo_url || '',
       endereco: p.endereco || p.empresas?.endereco || '',
       numero: p.numero || p.empresas?.numero || '',
+      complemento: p.complemento || p.empresas?.complemento || '',
       bairro: p.bairro || p.empresas?.bairro || '',
       cep: p.cep || p.empresas?.cep || '',
       telefone: p.telefone || p.empresas?.telefone || '',

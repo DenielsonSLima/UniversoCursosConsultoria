@@ -32,7 +32,7 @@ export interface TechnicalLandingConfig {
   accent: 'blue' | 'emerald' | 'cyan' | 'violet';
   marketingCampaign?: {
     promise?: string;
-    heroImageUrl: string;
+    heroImageUrl?: string;
     eligibility?: string;
   };
 }
