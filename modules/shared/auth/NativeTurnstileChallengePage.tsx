@@ -89,6 +89,7 @@ const NativeTurnstileChallengePage: React.FC = () => {
         widgetId = turnstile.render(containerRef.current, {
           sitekey: NATIVE_SITE_KEY,
           action,
+          language: 'pt-BR',
           theme: 'light',
           size: 'flexible',
           appearance: 'interaction-only',
