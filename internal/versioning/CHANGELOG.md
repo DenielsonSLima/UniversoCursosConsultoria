@@ -9,6 +9,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 - Todas as unidades passam a atender de segunda a sexta, das 08:00 às 17:00, e aos sábados, das 08:00 às 16:00.
 - Domingos e feriados ficam identificados como períodos sem funcionamento.
 - Novos polos herdam automaticamente o mesmo horário padrão na configuração de atendimento.
+- A listagem de Polos e Filiais passa a manter a matriz sempre no primeiro card, seguida dos demais polos por cidade e nome.
 
 ### Qualidade
 
