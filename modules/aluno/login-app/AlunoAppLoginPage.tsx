@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
@@ -12,7 +12,8 @@ import {
 import { alunoPublicAuthService, getSafePublicAlunoRedirectPath } from '../../public/login/aluno-public-auth.service';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
 import GoogleLogo from '../../shared/auth/GoogleLogo';
-import TurnstileWidget, { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
+import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
+import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
 
 type LoginMessage = {
   tone: 'success' | 'error';
@@ -47,7 +48,7 @@ const AlunoAppLoginPage: React.FC = () => {
     wasLoadingRef.current = loading;
   }, [loading]);
 
-  const finishLogin = (profile?: PortalAuthProfile | null) => {
+  const finishLogin = useCallback((profile?: PortalAuthProfile | null) => {
     if (!profile) return;
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
@@ -58,7 +59,54 @@ const AlunoAppLoginPage: React.FC = () => {
 
     savePortalSession(profile);
     window.location.replace(redirectPath);
-  };
+  }, [redirectPath]);
+
+  useEffect(() => {
+    const oauthReturn = searchParams.get('oauth_return');
+    const oauthError = searchParams.get('oauth_error');
+    if (!oauthReturn && !oauthError) return undefined;
+
+    let mounted = true;
+
+    if (oauthError) {
+      const errorMessages: Record<string, string> = {
+        cancelled: 'O acesso com Google foi cancelado.',
+        expired: 'O acesso com Google expirou. Tente novamente.',
+        invalid_callback: 'O retorno do Google não pôde ser validado.',
+        missing_session: 'Não foi possível recuperar a sessão do Google. Tente novamente.',
+        oauth_failed: 'Não foi possível concluir o acesso com Google. Tente novamente.',
+      };
+      setMessage({
+        tone: 'error',
+        text: errorMessages[oauthError] || errorMessages.oauth_failed,
+      });
+      setLoading(false);
+      navigate('/aluno/login-app', { replace: true });
+      return undefined;
+    }
+
+    setLoading(true);
+    setMessage(null);
+    void alunoPublicAuthService.finishExternalLogin()
+      .then((profile) => {
+        if (mounted) finishLogin(profile);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setMessage({
+          tone: 'error',
+          text: error instanceof Error
+            ? error.message
+            : 'Não foi possível concluir o acesso com Google.',
+        });
+        setLoading(false);
+        navigate('/aluno/login-app', { replace: true });
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [finishLogin, navigate, searchParams]);
 
   const handleSubmit: React.FormEventHandler = async (event) => {
     event.preventDefault();
@@ -104,7 +152,7 @@ const AlunoAppLoginPage: React.FC = () => {
   const openSupport = () => navigate('/aluno/atendimento-publico');
 
   return (
-    <main className="aluno-app-login relative h-dvh min-h-[34rem] overflow-hidden bg-[#001a33] text-white">
+    <main className="aluno-app-login fixed inset-0 overflow-hidden bg-[#001a33] text-white">
       <img
         src="/banner1.png"
         alt=""
@@ -175,9 +223,13 @@ const AlunoAppLoginPage: React.FC = () => {
               <span className="relative block">
                 <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={19} />
                 <input
+                  id="aluno-app-username"
                   type="text"
                   name="username"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
@@ -192,8 +244,9 @@ const AlunoAppLoginPage: React.FC = () => {
               <span className="relative block">
                 <LockKeyhole className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={19} />
                 <input
+                  id="aluno-app-password"
                   type={showPassword ? 'text' : 'password'}
-                  name="current-password"
+                  name="password"
                   autoComplete="current-password"
                   required
                   value={password}
@@ -222,7 +275,7 @@ const AlunoAppLoginPage: React.FC = () => {
             </div>
 
             <div className="app-login-turnstile rounded-xl bg-white/95 px-2.5 py-2 text-slate-700">
-              <TurnstileWidget
+              <AdaptiveTurnstileWidget
                 action="login"
                 resetSignal={turnstileResetSignal}
                 onTokenChange={setTurnstileToken}
