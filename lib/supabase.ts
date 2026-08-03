@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 
 const supabaseUrl =
   import.meta.env.VITE_SUPABASE_URL ||
@@ -14,7 +15,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Native apps are public OAuth clients. PKCE keeps access and refresh tokens
+    // out of the callback URL and binds the one-time code to this app instance.
+    flowType: Capacitor.isNativePlatform() ? 'pkce' : 'implicit',
+  },
+});
 
 const PASSWORD_RECOVERY_MARKER_KEY = 'universo.password-recovery-session';
 const PASSWORD_RECOVERY_MARKER_MAX_AGE_MS = 15 * 60 * 1000;
