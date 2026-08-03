@@ -2,6 +2,18 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.25] - 2026-08-03
+
+### Alterado
+
+- Todas as unidades passam a atender de segunda a sexta, das 08:00 às 17:00, e aos sábados, das 08:00 às 16:00.
+- Domingos e feriados ficam identificados como períodos sem funcionamento.
+- Novos polos herdam automaticamente o mesmo horário padrão na configuração de atendimento.
+
+### Qualidade
+
+- A configuração foi conferida nas quatro unidades ativas e na consulta pública anônima usada pelo site.
+
 ## [2.2.3-beta.24] - 2026-08-03
 
 ### Adicionado
