@@ -7,7 +7,6 @@ import {
   Clock3,
   GraduationCap,
   MapPin,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -23,6 +22,13 @@ const formatDate = (value?: string | null) => {
 
 const titleCase = (value: string) =>
   value.toLocaleLowerCase('pt-BR').replace(/(^|\s)\S/g, (char) => char.toLocaleUpperCase('pt-BR'));
+
+const formatPoloLocation = (polo: TechnicalLandingData['polo']) => {
+  const location = [titleCase(polo.city), polo.state?.toLocaleUpperCase('pt-BR')]
+    .filter(Boolean)
+    .join('/');
+  return [titleCase(polo.name), location].filter(Boolean).join(' · ');
+};
 
 interface TechnicalClassCardProps {
   item: TechnicalLandingData;
@@ -49,7 +55,6 @@ const ClassDetail: React.FC<ClassDetailProps> = ({ icon: Icon, label, value }) =
 
 const TechnicalClassCard: React.FC<TechnicalClassCardProps> = ({ item, featured }) => {
   const onlineEnrollmentAvailable = item.turma.onlineEnrollmentAvailable;
-  const showAvailableSeats = onlineEnrollmentAvailable && item.turma.availableSeats > 0;
   const landingPath = buildTechnicalLandingPath(item.course.name, item.turma.id);
   const ctaLabel = onlineEnrollmentAvailable ? 'Inscrever-se online' : 'Conhecer esta turma';
 
@@ -57,13 +62,13 @@ const TechnicalClassCard: React.FC<TechnicalClassCardProps> = ({ item, featured 
     <article
       className={`group overflow-hidden border border-slate-200 bg-white shadow-[0_24px_70px_-38px_rgba(0,26,51,0.5)] transition duration-300 hover:border-blue-300 hover:shadow-[0_28px_80px_-36px_rgba(0,72,180,0.45)] motion-reduce:transform-none ${
         featured
-          ? 'grid rounded-[1.75rem] lg:grid-cols-[minmax(0,1.05fr)_minmax(26rem,0.95fr)]'
+          ? 'mx-auto grid max-w-[76rem] rounded-[1.75rem] lg:grid-cols-[minmax(0,0.92fr)_minmax(26rem,1.08fr)]'
           : 'flex h-full flex-col rounded-[1.5rem]'
       }`}
     >
       <div
         className={`relative isolate overflow-hidden bg-[#001a33] ${
-          featured ? 'min-h-[22rem] lg:min-h-[34rem]' : 'h-60'
+          featured ? 'min-h-[20rem] lg:min-h-[26rem]' : 'h-60'
         }`}
       >
         {item.course.imageUrl ? (
@@ -91,25 +96,19 @@ const TechnicalClassCard: React.FC<TechnicalClassCardProps> = ({ item, featured 
             <span className={`h-2 w-2 rounded-full ${onlineEnrollmentAvailable ? 'bg-emerald-950' : 'bg-blue-300'}`} />
             {item.turma.availabilityLabel}
           </span>
-          {showAvailableSeats ? (
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/90 px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-[#001a33] shadow-lg backdrop-blur-md">
-              <Sparkles size={12} className="text-amber-500" />
-              {item.turma.availableSeats} vaga{item.turma.availableSeats > 1 ? 's' : ''}
-            </span>
-          ) : null}
         </div>
 
         <div className="absolute inset-x-6 bottom-6 text-white sm:inset-x-8 sm:bottom-8">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">
             {item.course.area || 'Formação técnica'}
           </p>
-          <p className={`mt-2 max-w-xl font-black leading-tight ${featured ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
-            {item.course.name}
-          </p>
+          {!featured ? (
+            <p className="mt-2 max-w-xl text-2xl font-black leading-tight">{item.course.name}</p>
+          ) : null}
         </div>
       </div>
 
-      <div className={`flex flex-1 flex-col ${featured ? 'p-6 sm:p-8 lg:p-10' : 'p-6'}`}>
+      <div className={`flex flex-1 flex-col ${featured ? 'p-6 sm:p-7 lg:p-8' : 'p-6'}`}>
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600">Turma em destaque</p>
           <h3 className={`mt-3 font-black leading-tight tracking-tight text-[#001a33] ${featured ? 'text-3xl' : 'text-2xl'}`}>
@@ -121,7 +120,7 @@ const TechnicalClassCard: React.FC<TechnicalClassCardProps> = ({ item, featured 
         </div>
 
         <dl className={`mt-6 grid gap-x-6 ${featured ? 'sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
-          <ClassDetail icon={MapPin} label="Polo" value={titleCase(item.polo.name)} />
+          <ClassDetail icon={MapPin} label="Polo e cidade" value={formatPoloLocation(item.polo)} />
           <ClassDetail icon={Clock3} label="Turno" value={titleCase(item.turma.shift)} />
           <ClassDetail icon={CalendarDays} label="Início previsto" value={formatDate(item.turma.startDate)} />
           <ClassDetail icon={Users} label="Inscrições até" value={formatDate(item.turma.enrollmentEndDate)} />
@@ -167,13 +166,13 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
     : 'grid gap-7 md:grid-cols-2 xl:grid-cols-3';
 
   return (
-    <section id="matriculas-tecnicas-abertas" className="relative isolate overflow-hidden bg-[#f5f8fc] py-16 md:py-24">
+    <section id="matriculas-tecnicas-abertas" className="relative isolate overflow-hidden bg-[#f5f8fc] py-14 md:py-16">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
       <div className="pointer-events-none absolute -right-44 top-8 h-[28rem] w-[28rem] rounded-full bg-blue-100/70 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-52 -left-40 h-[30rem] w-[30rem] rounded-full bg-emerald-100/50 blur-3xl" />
 
       <div className="container relative mx-auto px-5 md:px-8">
-        <div className="mb-10 grid items-end gap-7 border-b border-slate-200 pb-9 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="mb-8 grid items-end gap-6 border-b border-slate-200 pb-7 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="max-w-3xl">
             <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.24em] text-blue-700">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md shadow-blue-600/20">
@@ -181,10 +180,10 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
               </span>
               Formação profissional técnica
             </div>
-            <h2 className="mt-5 max-w-2xl text-4xl font-black leading-[1.02] tracking-[-0.035em] text-[#001a33] sm:text-5xl">
+            <h2 className="mt-4 max-w-2xl text-3xl font-black leading-[1.02] tracking-[-0.035em] text-[#001a33] sm:text-4xl">
               Turmas técnicas <span className="text-blue-600">em destaque</span>
             </h2>
-            <p className="mt-5 max-w-2xl text-base font-medium leading-relaxed text-slate-600">
+            <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
               Conheça as próximas turmas, confira as condições cadastradas e escolha a formação ideal para o seu futuro.
             </p>
           </div>
@@ -216,7 +215,7 @@ const OpenTechnicalEnrollmentsSection: React.FC = () => {
         ) : query.isLoading ? (
           <div role="status" className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <span className="sr-only">Carregando turmas técnicas em destaque</span>
-            <div aria-hidden="true" className="grid min-h-[30rem] animate-pulse bg-white motion-reduce:animate-none lg:grid-cols-2">
+            <div aria-hidden="true" className="grid min-h-[25rem] animate-pulse bg-white motion-reduce:animate-none lg:grid-cols-2">
               <div className="bg-slate-200" />
               <div className="space-y-5 p-8">
                 <div className="h-4 w-28 rounded bg-slate-200" />
