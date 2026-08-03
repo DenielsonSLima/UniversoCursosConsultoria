@@ -183,7 +183,7 @@ export const gestaoService = {
       bloquear_matriculas_apos_completar_vagas: turma.bloquearMatriculasAposCompletarVagas ?? true,
       turno: turma.turno,
       status: turma.status || 'EM_ANDAMENTO',
-      valor_matricula: Number(turma.valorMatricula ?? 150),
+      valor_matricula: Number(turma.valorMatricula ?? 0),
       valor_rematricula: Number(turma.valorRematricula ?? (isTechnical ? 150 : 100)),
       qtd_parcelas: Number(turma.qtdParcelas ?? (isTechnical ? 12 : 1)),
       valor_parcela: Number(turma.valorParcela ?? (isTechnical ? 279.90 : 0)),
@@ -343,6 +343,91 @@ export const gestaoService = {
       throw error;
     }
   },
+
+  async saveTechnicalClassConfiguration(
+    turma: Turma,
+    input: {
+      nome: string;
+      dataInicio: string | null;
+      dataPrevisaoTermino: string | null;
+      dataInicioInscricao?: string | null;
+      dataFimInscricao?: string | null;
+      publicarNoSite?: boolean;
+      permitirInscricoesOnline?: boolean;
+      exigeMatricula?: boolean;
+      aceitaConcomitante?: boolean;
+      aceitaSubsequente?: boolean;
+      serieMinimaEnsinoMedio?: number;
+      qtdVagasMinima?: number;
+      frequenciaMinimaPercent?: number;
+      mediaMinima?: number;
+      bloquearMatriculasAposCompletarVagas?: boolean;
+      origemFinanceira?: 'NORMAL' | 'LEGADO';
+      financeiroHerdado?: boolean;
+      gerarCobrancasFuturas?: boolean;
+      sincronizarAsaasFuturo?: boolean;
+      obsFinanceiraOrigem?: string;
+    },
+  ): Promise<Turma> {
+    if (input.aceitaConcomitante === false && input.aceitaSubsequente === false) {
+      throw new Error('A turma técnica deve aceitar ingresso concomitante, subsequente ou ambos.');
+    }
+
+    const { data, error } = await supabase.rpc('salvar_configuracao_turma_tecnica', {
+      p_turma_id: turma.id,
+      p_config: {
+        nome: input.nome.trim(),
+        data_inicio: input.dataInicio || null,
+        data_previsao_termino: input.dataPrevisaoTermino || null,
+        data_inicio_inscricao: input.dataInicioInscricao || null,
+        data_fim_inscricao: input.dataFimInscricao || null,
+        publicar_no_site: input.publicarNoSite === true,
+        permitir_inscricoes_online: input.permitirInscricoesOnline === true,
+        exige_matricula: input.exigeMatricula !== false,
+        aceita_concomitante: input.aceitaConcomitante === true,
+        aceita_subsequente: input.aceitaSubsequente === true,
+        serie_minima_ensino_medio: Number(input.serieMinimaEnsinoMedio ?? 2),
+        qtd_vagas_minima: Number(input.qtdVagasMinima ?? 0),
+        frequencia_minima_percent: Number(input.frequenciaMinimaPercent ?? 75),
+        media_minima: Number(input.mediaMinima ?? 6),
+        bloquear_matriculas_apos_completar_vagas: input.bloquearMatriculasAposCompletarVagas !== false,
+        origem_financeira: input.origemFinanceira || 'NORMAL',
+        financeiro_herdado: input.financeiroHerdado === true,
+        gerar_cobrancas_futuras: input.gerarCobrancasFuturas === true,
+        sincronizar_asaas_futuro: input.sincronizarAsaasFuturo === true,
+        ...(input.obsFinanceiraOrigem !== undefined
+          ? { obs_financeira_origem: input.obsFinanceiraOrigem || null }
+          : {}),
+      },
+    });
+
+    if (error) {
+      console.error('Erro ao salvar configuração da turma técnica:', error);
+      throw error;
+    }
+    if (!data) throw new Error('O banco não retornou a turma atualizada.');
+
+    const mapped = mapTurma({
+      ...data,
+      cursos: { nome: turma.cursoNome, modalidade: turma.modalidade },
+      polos: {
+        nome: turma.poloNome,
+        cnpj: turma.poloCnpj,
+        cidade: turma.poloCidade,
+        estado: turma.poloEstado,
+      },
+      matriculas: [],
+    });
+
+    return {
+      ...turma,
+      ...mapped,
+      alunosMatriculados: turma.alunosMatriculados,
+      alunosAtivos: turma.alunosAtivos,
+      alunosInativos: turma.alunosInativos,
+    };
+  },
+
 
   // Busca cursos do cadastro por modalidade
   async getCursosByModalidade(modalidade: string): Promise<any[]> {
