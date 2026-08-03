@@ -21,7 +21,8 @@ import { formatCpf, formatPhone } from '../../public/login/aluno-login.utils';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
 import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
-import TurnstileWidget, { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
+import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
+import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
 
 type SignupStep = 'pessoal' | 'acesso' | 'endereco';
 type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
@@ -221,7 +222,7 @@ const AlunoAppSignupPage: React.FC = () => {
 
   if (confirmationEmail) {
     return (
-      <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#001a33] px-5 py-[max(1.5rem,env(safe-area-inset-top))] text-white">
+      <main className="fixed inset-0 flex items-center justify-center overflow-hidden bg-[#001a33] px-5 py-[max(1.5rem,env(safe-area-inset-top))] text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(37,99,235,0.40),transparent_36%),linear-gradient(160deg,#001225_0%,#003b7a_55%,#001a33_100%)]" />
         <section className="relative z-10 w-full max-w-md rounded-[2rem] border border-white/15 bg-white/[0.08] p-7 text-center shadow-2xl backdrop-blur-xl">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/20">
@@ -240,7 +241,7 @@ const AlunoAppSignupPage: React.FC = () => {
   }
 
   return (
-    <main className="aluno-app-signup relative h-dvh min-h-[36rem] overflow-hidden bg-[#001a33] text-white">
+    <main className="aluno-app-signup fixed inset-0 overflow-hidden bg-[#001a33] text-white">
       <img src="/banner1.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-35" />
       <div className="absolute inset-0 bg-[linear-gradient(155deg,rgba(0,15,38,0.98),rgba(0,49,108,0.93)_52%,rgba(0,23,56,0.98))]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_5%,rgba(59,130,246,0.30),transparent_31%)]" />
@@ -404,7 +405,7 @@ const AlunoAppSignupPage: React.FC = () => {
                   </label>
                 </div>
                 <div className="rounded-xl bg-white/95 px-2.5 py-2 text-slate-700">
-                  <TurnstileWidget action="signup" resetSignal={turnstileResetSignal} onTokenChange={setTurnstileToken} onStatusChange={setTurnstileStatus} onError={() => setTurnstileToken('')} />
+                  <AdaptiveTurnstileWidget action="signup" resetSignal={turnstileResetSignal} onTokenChange={setTurnstileToken} onStatusChange={setTurnstileStatus} onError={() => setTurnstileToken('')} />
                 </div>
                 <div className="grid grid-cols-[0.72fr_1.28fr] gap-2.5">
                   <button type="button" onClick={goBack} disabled={loading} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.06] text-xs font-black disabled:opacity-60"><ArrowLeft size={17} /> Voltar</button>
