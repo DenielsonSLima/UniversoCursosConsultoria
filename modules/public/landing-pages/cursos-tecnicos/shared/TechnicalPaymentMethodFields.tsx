@@ -1,5 +1,5 @@
 import React from 'react';
-import { Banknote, CheckCircle2, CreditCard, QrCode, Sparkles } from 'lucide-react';
+import { Banknote, CheckCircle2, CreditCard, QrCode } from 'lucide-react';
 import type { TechnicalPaymentMethod } from '../technicalLanding.types';
 
 interface TechnicalPaymentMethodFieldsProps {
@@ -10,9 +10,9 @@ interface TechnicalPaymentMethodFieldsProps {
 }
 
 const METHODS = [
-  { value: 'PIX', label: 'Pix', description: 'Aprovação instantânea', badge: 'Mais Rápido', icon: QrCode },
-  { value: 'CREDIT_CARD', label: 'Cartão de Crédito', description: 'Parcele com segurança', badge: 'Até 12x', icon: CreditCard },
-  { value: 'BOLETO', label: 'Boleto Bancário', description: 'Vencimento informado no checkout', badge: null, icon: Banknote },
+  { value: 'PIX', label: 'Pix', description: 'Condições informadas no checkout', icon: QrCode },
+  { value: 'CREDIT_CARD', label: 'Cartão de Crédito', description: 'Condições informadas no checkout', icon: CreditCard },
+  { value: 'BOLETO', label: 'Boleto Bancário', description: 'Vencimento informado no checkout', icon: Banknote },
 ] as const;
 
 const TechnicalPaymentMethodFields: React.FC<TechnicalPaymentMethodFieldsProps> = ({
@@ -56,10 +56,6 @@ const TechnicalPaymentMethodFields: React.FC<TechnicalPaymentMethodFieldsProps> 
                 </div>
                 {selected ? (
                   <CheckCircle2 size={18} className="text-blue-600 shrink-0" />
-                ) : method.badge ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[8px] font-black uppercase text-emerald-800">
-                    <Sparkles size={8} /> {method.badge}
-                  </span>
                 ) : null}
               </div>
               <span className="mt-3 block text-xs font-black">{method.label}</span>
