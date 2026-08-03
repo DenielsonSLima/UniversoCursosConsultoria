@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.24",
+  "version": "2.2.3-beta.25",
   "display": "BETA",
   "stage": "beta",
-  "revision": 24,
+  "revision": 25,
   "releasedAt": "2026-08-03",
-  "summary": "Unidades públicas integradas aos cadastros oficiais"
+  "summary": "Horários oficiais padronizados em todas as unidades"
 }
