@@ -1,14 +1,15 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { getTechnicalLandingComponent } from './technicalLanding.registry';
+import { getTechnicalLandingConfig } from './technicalLanding.registry';
 import { technicalLandingService } from './technicalLanding.service';
 import { technicalLandingKeys } from './technicalLanding.keys';
 import type { TechnicalEnrollmentPayload } from './technicalLanding.types';
 import { useTechnicalEnrollmentController } from './useTechnicalEnrollmentController';
+import TechnicalLandingLayout from './shared/TechnicalLandingLayout';
 
 interface TechnicalLandingRouteProps {
   isAuthenticated?: boolean;
@@ -46,8 +47,19 @@ const TechnicalLandingRoute: React.FC<TechnicalLandingRouteProps> = ({
     staleTime: 30_000,
     refetchOnMount: 'always',
   });
+  const loadedTurmaId = query.data?.turma.id;
 
-  if (query.isLoading) return <><Header /><LoadingState /><Footer /></>;
+  React.useEffect(() => {
+    if (!loadedTurmaId || internalEnrollment.isCheckingAuth) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('technical-landing-title')?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [internalEnrollment.isCheckingAuth, loadedTurmaId]);
+
+  if (query.isLoading || (!isAuthenticated && internalEnrollment.isCheckingAuth)) {
+    return <><Header /><LoadingState /><Footer /></>;
+  }
 
   if (query.isError || !query.data) {
     const message = query.error instanceof Error
@@ -75,7 +87,7 @@ const TechnicalLandingRoute: React.FC<TechnicalLandingRouteProps> = ({
     );
   }
 
-  const LandingPage = getTechnicalLandingComponent(
+  const landingConfig = getTechnicalLandingConfig(
     query.data.course.name,
     query.data.course.landingTemplateKey,
   );
@@ -88,17 +100,16 @@ const TechnicalLandingRoute: React.FC<TechnicalLandingRouteProps> = ({
   };
 
   return (
-    <Suspense fallback={<><Header /><LoadingState /><Footer /></>}>
-      <LandingPage
-        data={query.data}
-        enrollment={{
-          isAuthenticated: isAuthenticated || internalEnrollment.isAuthenticated,
-          isSubmitting: isSubmitting || internalEnrollment.isSubmitting,
-          onRequireAuthentication: requireAuthentication,
-          onSubmit: onSubmitEnrollment || internalEnrollment.submit,
-        }}
-      />
-    </Suspense>
+    <TechnicalLandingLayout
+      data={query.data}
+      config={landingConfig}
+      enrollment={{
+        isAuthenticated: isAuthenticated || internalEnrollment.isAuthenticated,
+        isSubmitting: isSubmitting || internalEnrollment.isSubmitting,
+        onRequireAuthentication: requireAuthentication,
+        onSubmit: onSubmitEnrollment || internalEnrollment.submit,
+      }}
+    />
   );
 };
 
