@@ -7,7 +7,7 @@ import {
 
 export const enfermagemLandingConfig: TechnicalLandingConfig = {
   templateKey: 'enfermagem',
-  eyebrow: 'Matrículas abertas · Área da saúde',
+  eyebrow: 'Nova turma · Área da saúde',
   description: 'Formação técnica com base científica, prática profissional e preparação para os diferentes níveis de atenção à saúde.',
   formTitle: 'Inscrição em Técnico em Enfermagem',
   formDescription: 'Entre com sua conta e informe apenas sua situação no Ensino Médio. Os documentos serão enviados depois do pagamento.',
@@ -20,4 +20,8 @@ export const enfermagemLandingConfig: TechnicalLandingConfig = {
   documents: cloneDocuments(BASE_TECHNICAL_DOCUMENTS, HEALTH_STAGE_DOCUMENTS),
   documentationNotice: 'A carteira de vacinação não bloqueia o pagamento, mas deverá ser regularizada antes do estágio supervisionado.',
   accent: 'emerald',
+  marketingCampaign: {
+    promise: 'Transforme cuidado em profissão.',
+    eligibility: 'Para quem concluiu o Ensino Médio ou está cursando, no mínimo, o 2º ano.',
+  },
 };

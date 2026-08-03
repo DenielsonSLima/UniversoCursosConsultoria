@@ -1,120 +1,216 @@
 import React from 'react';
-import { ArrowDown, CalendarDays, Clock3, GraduationCap, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowRight,
+  CalendarDays,
+  Check,
+  Clock3,
+  GraduationCap,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Tag,
+} from 'lucide-react';
 import type { TechnicalLandingConfig, TechnicalLandingData } from '../technicalLanding.types';
-import { formatLandingDate } from './technicalLanding.utils';
+import {
+  formatLandingDate,
+  formatLandingMoney,
+  getTechnicalFinancialSummary,
+} from './technicalLanding.utils';
 
 interface TechnicalLandingHeroProps {
   data: TechnicalLandingData;
   config: TechnicalLandingConfig;
 }
 
+const getEligibilityLabel = (data: TechnicalLandingData) => {
+  const minimumGrade = `${data.turma.minimumHighSchoolGrade}º ano`;
+  if (data.turma.acceptsConcurrent && data.turma.acceptsSubsequent) {
+    return `Para quem concluiu o Ensino Médio ou está cursando, no mínimo, o ${minimumGrade}.`;
+  }
+  if (data.turma.acceptsConcurrent) {
+    return `Para estudantes que estão cursando, no mínimo, o ${minimumGrade} do Ensino Médio.`;
+  }
+  return 'Para quem já concluiu o Ensino Médio.';
+};
+
 const TechnicalLandingHero: React.FC<TechnicalLandingHeroProps> = ({ data, config }) => {
   const onlineEnrollmentAvailable = data.turma.onlineEnrollmentAvailable;
+  const campaign = config.marketingCampaign;
+  const heroImageUrl = campaign?.heroImageUrl || data.course.imageUrl;
+  const financial = getTechnicalFinancialSummary(data.turma);
+  const durationLabel = data.course.durationMonths && data.course.durationMonths > 0
+    ? `${data.course.durationMonths} meses`
+    : null;
 
   return (
-    <section className="relative overflow-hidden bg-[#000d1a] text-white">
-      {/* Background ambient lighting and gradient overlays */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/40 via-[#001833] to-[#000d1a]" />
-      <div className="pointer-events-none absolute -left-32 top-0 h-[30rem] w-[30rem] rounded-full bg-blue-500/15 blur-[120px]" />
-      <div className="pointer-events-none absolute right-0 bottom-0 h-[28rem] w-[28rem] rounded-full bg-emerald-500/10 blur-[120px]" />
-
-      {/* Optional Course Image background overlay with dark filter */}
-      {data.course.imageUrl ? (
-        <div className="absolute inset-0 opacity-20 mix-blend-luminosity">
-          <img src={data.course.imageUrl} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#000d1a] via-[#000d1a]/80 to-transparent" />
-        </div>
+    <section className="relative isolate overflow-hidden bg-[#001532] text-white">
+      {heroImageUrl ? (
+        <img
+          src={heroImageUrl}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover object-center lg:block"
+          fetchPriority="high"
+        />
       ) : null}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(26,96,190,0.35),transparent_31%),radial-gradient(circle_at_78%_86%,rgba(13,148,136,0.16),transparent_27%)]" />
+      <div className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,#001532_0%,rgba(0,21,50,.98)_46%,rgba(0,21,50,.62)_66%,rgba(0,21,50,.05)_100%)] lg:block" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.055] [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:56px_56px]" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-24 items-center">
-        {/* Left Column: Hero Content */}
-        <div>
-          {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-blue-300 backdrop-blur-md">
-            <Sparkles size={14} className="text-blue-400 animate-pulse" />
-            <span>{config.eyebrow || 'Formação Técnica Profissional'}</span>
-          </div>
-
-          {/* Title with sleek gradient */}
-          <h1 className="mt-6 text-4xl font-black uppercase leading-[1.08] tracking-tight text-white md:text-6xl lg:text-6xl">
-            <span className="bg-gradient-to-r from-white via-blue-50 to-blue-200 bg-clip-text text-transparent">
-              {data.course.name}
-            </span>
-          </h1>
-
-          {/* Description */}
-          <p className="mt-6 max-w-2xl text-base font-medium leading-relaxed text-blue-100/80 md:text-lg">
-            {config.description}
-          </p>
-
-          {/* Feature Pills */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
-              <MapPin size={16} className="text-blue-400" />
-              <span>{data.polo.name} · {data.polo.city}/{data.polo.state}</span>
-            </span>
-            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
-              <Clock3 size={16} className="text-blue-400" />
-              <span>Turno: {data.turma.shift}</span>
-            </span>
-            <span className="inline-flex items-center gap-2.5 rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-bold backdrop-blur-md shadow-sm">
-              <CalendarDays size={16} className="text-blue-400" />
-              <span>Início: {formatLandingDate(data.turma.startDate)}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Right Column: Quick Enrollment Card */}
-        <div className="flex items-center">
-          <div className="relative w-full overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/10 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-            {/* Ambient Card Light */}
-            <div className={`pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-2xl ${
-              onlineEnrollmentAvailable ? 'bg-emerald-500/25' : 'bg-blue-500/25'
-            }`} />
-
-            <div className="flex items-center gap-3.5">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner ${
-                onlineEnrollmentAvailable ? 'bg-emerald-400/20 text-emerald-300' : 'bg-blue-400/20 text-blue-200'
-              }`}>
-                <GraduationCap size={28} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${
-                    onlineEnrollmentAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-blue-300'
-                  }`} />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-200/80">
-                    Status da Turma
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xl font-black text-white">{data.turma.availabilityLabel}</p>
-              </div>
+      <div className="relative mx-auto grid max-w-[90rem] lg:min-h-[44rem] lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="z-10 flex flex-col justify-center px-6 py-14 sm:px-10 lg:px-14 lg:py-20 xl:pl-20">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-300/25 bg-blue-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-blue-100 backdrop-blur">
+              <Sparkles size={14} className="text-[#73b9ff]" /> {config.eyebrow}
             </div>
-
-            <p className="mt-6 text-xs font-semibold leading-relaxed text-blue-100/80 border-t border-white/10 pt-5">
-              {onlineEnrollmentAvailable
-                ? `Inscrições online abertas até ${formatLandingDate(data.turma.enrollmentEndDate)}. Garanta sua vaga com matrícula imediata no portal.`
-                : 'Esta turma está disponível para consulta. A pré-matrícula e orientações são realizadas presencialmente na unidade.'}
-            </p>
-
-            {onlineEnrollmentAvailable ? (
-              <div className="mt-4 flex items-center gap-2 text-[11px] font-bold text-emerald-300/90">
-                <ShieldCheck size={16} className="shrink-0 text-emerald-400" />
-                <span>Processo 100% online com confirmação rápida</span>
-              </div>
-            ) : null}
-
-            <a
-              href="#inscricao-tecnica"
-              className={`mt-7 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-xs font-black uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] shadow-xl ${
+            <div
+              className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.14em] ${
                 onlineEnrollmentAvailable
-                  ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 text-emerald-950 hover:brightness-110 shadow-emerald-500/20'
-                  : 'bg-white text-blue-900 hover:bg-blue-50'
+                  ? 'bg-emerald-400 text-emerald-950'
+                  : 'border border-blue-200/20 bg-blue-200/10 text-blue-100'
               }`}
             >
-              <span>{onlineEnrollmentAvailable ? 'Inscrever-se Agora' : 'Ver Atendimento Presencial'}</span>
-              <ArrowDown size={16} />
+              <span className={`h-2 w-2 rounded-full ${onlineEnrollmentAvailable ? 'bg-emerald-900' : 'bg-blue-300'}`} />
+              {data.turma.availabilityLabel}
+            </div>
+          </div>
+
+          {campaign?.promise ? (
+            <p className="mt-8 text-lg font-black text-[#7ec0ff] md:text-xl">{campaign.promise}</p>
+          ) : null}
+          <h1
+            id="technical-landing-title"
+            tabIndex={-1}
+            className={`${campaign?.promise ? 'mt-2' : 'mt-8'} max-w-3xl text-5xl font-black leading-[0.94] tracking-[-0.05em] text-white outline-none sm:text-6xl xl:text-[5.15rem]`}
+          >
+            {data.course.name}
+          </h1>
+          <p className="mt-6 max-w-2xl text-base font-medium leading-relaxed text-blue-100/75 md:text-lg">
+            {data.course.description || config.description}
+          </p>
+          <p className="mt-4 flex max-w-2xl items-start gap-2.5 text-sm font-bold leading-relaxed text-blue-50">
+            <ShieldCheck className="mt-0.5 shrink-0 text-emerald-400" size={19} />
+            {campaign?.eligibility || getEligibilityLabel(data)}
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-2.5">
+            <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 py-2.5 text-xs font-bold text-blue-50 backdrop-blur">
+              <MapPin size={15} className="text-blue-300" /> {data.polo.name}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 py-2.5 text-xs font-bold text-blue-50 backdrop-blur">
+              <Clock3 size={15} className="text-blue-300" /> {data.turma.shift}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3.5 py-2.5 text-xs font-bold text-blue-50 backdrop-blur">
+              <CalendarDays size={15} className="text-blue-300" /> Início {formatLandingDate(data.turma.startDate)}
+            </span>
+          </div>
+
+          {financial.hasInstallment ? (
+            <div className="mt-8 max-w-[39rem] overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/20 backdrop-blur-md">
+              <div className="grid sm:grid-cols-[1fr_auto] sm:items-stretch">
+                <div className="p-5 sm:p-6">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-xs font-black uppercase tracking-[0.16em] text-blue-200">Mensalidade</span>
+                    {financial.hasPunctualDiscount ? (
+                      <span className="text-sm font-bold text-blue-100/60 line-through decoration-red-400 decoration-2">
+                        {formatLandingMoney(financial.regularInstallmentValue)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex items-end gap-2">
+                    <strong className="text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
+                      {formatLandingMoney(financial.payableInstallmentValue)}
+                    </strong>
+                    <span className="pb-1 text-xs font-bold text-blue-100/65">por mês</span>
+                  </div>
+                  {financial.hasPunctualDiscount ? (
+                    <p className="mt-2 flex items-center gap-2 text-sm font-black text-emerald-300">
+                      <Check size={17} strokeWidth={3} /> pagando até o vencimento
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs font-bold text-blue-100/60">Valor cadastrado para esta turma.</p>
+                  )}
+                </div>
+                {financial.hasPunctualDiscount ? (
+                  <div className="flex items-center border-t border-white/10 bg-emerald-400 px-5 py-4 text-emerald-950 sm:w-44 sm:border-l sm:border-t-0">
+                    <div>
+                      <Tag size={20} />
+                      <p className="mt-2 text-[10px] font-black uppercase tracking-[0.15em]">Desconto cadastrado</p>
+                      <p className="text-xl font-black">{formatLandingMoney(financial.punctualDiscount)}</p>
+                      <p className="text-[11px] font-bold">em cada mensalidade</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              {onlineEnrollmentAvailable ? (
+                <a
+                  href="#inscricao-tecnica"
+                  className="group flex min-h-16 w-full items-center justify-between gap-4 border-t border-white/10 bg-emerald-400 px-5 py-4 text-emerald-950 transition hover:bg-emerald-300 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-[-4px] focus-visible:outline-white sm:px-6"
+                >
+                  <span>
+                    <span className="block text-[10px] font-black uppercase tracking-[0.18em] opacity-70">Inscrições abertas</span>
+                    <span className="mt-0.5 block text-sm font-black uppercase tracking-[0.11em] sm:text-base">Cadastre-se online</span>
+                  </span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-950 text-emerald-300 transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
+                    <ArrowRight size={19} strokeWidth={2.75} />
+                  </span>
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {onlineEnrollmentAvailable && !financial.hasInstallment ? (
+              <a
+                href="#inscricao-tecnica"
+                className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-emerald-400 px-7 py-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-950 shadow-xl transition hover:bg-emerald-300 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-emerald-200"
+              >
+                Cadastre-se online <ArrowDown size={18} />
+              </a>
+            ) : null}
+            <a
+              href={onlineEnrollmentAvailable ? '/contato' : '#inscricao-tecnica'}
+              className="group inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-white/25 bg-white/10 px-7 py-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-xl shadow-black/10 backdrop-blur transition hover:bg-white/15 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-blue-300"
+            >
+              Falar com a secretaria
+              {onlineEnrollmentAvailable ? <ArrowRight size={18} /> : <ArrowDown size={18} />}
             </a>
+          </div>
+        </div>
+
+        <div className="relative min-h-[29rem] overflow-hidden lg:min-h-full">
+          {heroImageUrl ? (
+            <img
+              src={heroImageUrl}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover object-center lg:hidden"
+              fetchPriority="high"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_center,rgba(59,130,246,.28),transparent_60%)] lg:hidden">
+              <GraduationCap size={120} className="text-blue-200/30" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#001532] via-transparent to-[#001532]/10 lg:hidden" />
+          <div className="absolute inset-x-6 bottom-6 grid gap-3 sm:grid-cols-2 lg:left-12 lg:right-10">
+            {data.turma.enrollmentFee > 0 ? (
+              <div className="rounded-3xl border border-white/30 bg-white/95 p-5 text-[#001a4d] shadow-2xl backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-[0.17em] text-red-600">Matrícula</p>
+                <p className="mt-1 text-3xl font-black">{formatLandingMoney(data.turma.enrollmentFee)}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs font-bold text-slate-600">Valor cadastrado na turma</p>
+              </div>
+            ) : null}
+            {durationLabel ? (
+              <div className="rounded-3xl border border-white/20 bg-[#001f5b]/90 p-5 text-white shadow-2xl backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-[0.17em] text-blue-200">Duração cadastrada</p>
+                <p className="mt-1 text-2xl font-black">{durationLabel}</p>
+                {data.turma.installments > 0 ? (
+                  <p className="mt-1 text-xs font-bold text-blue-100/70">{data.turma.installments} mensalidades por ciclo</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

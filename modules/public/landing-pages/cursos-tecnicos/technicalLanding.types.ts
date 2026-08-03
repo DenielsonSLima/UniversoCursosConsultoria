@@ -1,5 +1,3 @@
-import type { ComponentType, LazyExoticComponent } from 'react';
-
 export type TechnicalLandingTemplateKey =
   | 'enfermagem'
   | 'seguranca-do-trabalho'
@@ -32,6 +30,11 @@ export interface TechnicalLandingConfig {
   documents: TechnicalLandingDocument[];
   documentationNotice?: string;
   accent: 'blue' | 'emerald' | 'cyan' | 'violet';
+  marketingCampaign?: {
+    promise?: string;
+    heroImageUrl: string;
+    eligibility?: string;
+  };
 }
 
 export interface TechnicalLandingCourse {
@@ -62,8 +65,12 @@ export interface TechnicalLandingClass {
   availableSeats: number;
   onlineEnrollmentAvailable: boolean;
   enrollmentFee: number;
+  reEnrollmentFee: number;
   installments: number;
   installmentValue: number;
+  punctualDiscount: number;
+  punctualDiscountEnabled: boolean;
+  punctualInstallmentValue: number;
   availabilityLabel: string;
   acceptsConcurrent: boolean;
   acceptsSubsequent: boolean;
@@ -116,7 +123,3 @@ export interface TechnicalCourseLandingPageProps {
   data: TechnicalLandingData;
   enrollment: TechnicalLandingEnrollmentController;
 }
-
-export type TechnicalLandingLazyComponent = LazyExoticComponent<
-  ComponentType<TechnicalCourseLandingPageProps>
->;

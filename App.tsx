@@ -5,6 +5,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import SeoManager from './modules/public/components/SeoManager';
+import RouteScrollManager from './modules/shared/components/RouteScrollManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
 import AccessCheckingScreen from './modules/shared/components/AccessCheckingScreen';
 import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
@@ -61,6 +62,7 @@ const RouteLoadingScreen = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <RouteScrollManager />
       <SeoManager />
       <AlunoPwaRuntime />
       <Suspense fallback={<RouteLoadingScreen />}>

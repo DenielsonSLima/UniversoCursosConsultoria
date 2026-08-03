@@ -1,4 +1,8 @@
-import type { HighSchoolSituation, TechnicalDocumentPhase } from '../technicalLanding.types';
+import type {
+  HighSchoolSituation,
+  TechnicalDocumentPhase,
+  TechnicalLandingClass,
+} from '../technicalLanding.types';
 
 export const formatLandingDate = (value?: string | null) => {
   if (!value) return 'A definir';
@@ -9,6 +13,41 @@ export const formatLandingDate = (value?: string | null) => {
 
 export const formatLandingMoney = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+export const getTechnicalFinancialSummary = (turma: TechnicalLandingClass) => {
+  const hasInstallment = Number.isFinite(turma.installmentValue) && turma.installmentValue > 0;
+  const hasPunctualDiscount = hasInstallment
+    && turma.punctualDiscountEnabled
+    && turma.punctualDiscount > 0
+    && turma.punctualInstallmentValue > 0
+    && turma.punctualInstallmentValue < turma.installmentValue;
+
+  return {
+    hasInstallment,
+    hasPunctualDiscount,
+    regularInstallmentValue: turma.installmentValue,
+    payableInstallmentValue: hasPunctualDiscount
+      ? turma.punctualInstallmentValue
+      : turma.installmentValue,
+    punctualDiscount: hasPunctualDiscount ? turma.punctualDiscount : 0,
+  };
+};
+
+export type TechnicalEnrollmentState = 'OPEN' | 'UPCOMING' | 'SOLD_OUT' | 'CLOSED' | 'OFFLINE';
+
+export const getTechnicalEnrollmentState = (turma: TechnicalLandingClass): TechnicalEnrollmentState => {
+  if (turma.onlineEnrollmentAvailable) return 'OPEN';
+
+  const label = turma.availabilityLabel
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleUpperCase('pt-BR');
+
+  if (label.includes('ESGOTAD')) return 'SOLD_OUT';
+  if (label.includes('EM BREVE')) return 'UPCOMING';
+  if (label.includes('ENCERRAD')) return 'CLOSED';
+  return 'OFFLINE';
+};
 
 export const SCHOOL_SITUATION_LABELS: Record<HighSchoolSituation, string> = {
   CURSANDO_2_ANO: 'Cursando a 2ª série do Ensino Médio',
