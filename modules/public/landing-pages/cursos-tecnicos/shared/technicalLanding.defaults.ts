@@ -26,17 +26,33 @@ export const BASE_TECHNICAL_DOCUMENTS: TechnicalLandingDocument[] = [
   },
   {
     key: 'declaracao-matricula-ensino-medio',
-    label: 'Declaração de matrícula no Ensino Médio',
-    description: 'Para estudantes que estão cursando a 2ª ou a 3ª série.',
+    label: 'Declaração de escolaridade',
+    description: 'Documento escolar atualizado solicitado para regularização da matrícula.',
     phase: 'ANTES_ATIVACAO',
-    situations: ['CURSANDO_2_ANO', 'CURSANDO_3_ANO'],
   },
   {
     key: 'historico-certificado-ensino-medio',
     label: 'Histórico e certificado do Ensino Médio',
-    description: 'Para quem já concluiu o Ensino Médio.',
+    description: 'Histórico escolar e, quando houver conclusão, o respectivo certificado.',
     phase: 'ANTES_ATIVACAO',
-    situations: ['CONCLUIDO'],
+  },
+  {
+    key: 'foto-3x4',
+    label: 'Foto 3x4 recente',
+    description: 'Imagem frontal, nítida e atualizada.',
+    phase: 'ANTES_ATIVACAO',
+  },
+  {
+    key: 'titulo-eleitor',
+    label: 'Título de eleitor',
+    description: 'Solicitado quando o aluno for maior de 18 anos.',
+    phase: 'ANTES_ATIVACAO',
+  },
+  {
+    key: 'reservista',
+    label: 'Certificado de reservista',
+    description: 'Solicitado aos alunos homens, quando aplicável.',
+    phase: 'ANTES_ATIVACAO',
   },
 ];
 
