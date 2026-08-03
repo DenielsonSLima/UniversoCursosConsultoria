@@ -20,10 +20,17 @@ const DAYS = [
   ['5', 'Sexta'], ['6', 'Sábado'], ['0', 'Domingo'],
 ] as const;
 
-const DEFAULT_HOURS: AtendimentoHorarios = Object.fromEntries(DAYS.map(([id]) => [
-  id,
-  { ativo: Number(id) >= 1 && Number(id) <= 5, inicio: '08:00', fim: id === '6' || id === '0' ? '12:00' : '18:00' },
-]));
+const DEFAULT_HOURS: AtendimentoHorarios = {
+  ...Object.fromEntries(DAYS.map(([id]) => [
+    id,
+    {
+      ativo: Number(id) >= 1 && Number(id) <= 6,
+      inicio: '08:00',
+      fim: id === '6' ? '16:00' : id === '0' ? '00:00' : '17:00',
+    },
+  ])),
+  feriados: { ativo: false, inicio: '00:00', fim: '00:00' },
+};
 
 const createDefaultConfig = (poloId: string): AtendimentoConfig => ({
   polo_id: poloId,
@@ -158,7 +165,7 @@ const AtendimentoConfigPage: React.FC<AtendimentoConfigPageProps> = ({ poloId, i
             </section>
 
             <section className="grid gap-5 xl:grid-cols-2">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><Clock3 className="text-blue-600" size={20} /><div><h3 className="font-black text-[#001a33]">Horários e prazo</h3><p className="text-xs text-slate-500">Usados quando o modo está em automático.</p></div></div><label className="mt-5 block"><span className="text-xs font-black uppercase tracking-wide text-slate-500">Tempo médio de resposta (minutos)</span><input type="number" min={1} max={10080} value={draft.tempo_medio_resposta_minutos} onChange={(event) => update('tempo_medio_resposta_minutos', Math.max(1, Number(event.target.value)))} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 font-bold text-slate-700 outline-none focus:border-blue-500" /></label><div className="mt-4 space-y-2">{DAYS.map(([id, label]) => { const rule = draft.horarios[id]; return <div key={id} className="grid grid-cols-[95px_1fr_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2"><label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox" checked={rule.ativo} onChange={(event) => updateSchedule(id, 'ativo', event.target.checked)} />{label}</label><input type="time" disabled={!rule.ativo} value={rule.inicio} onChange={(event) => updateSchedule(id, 'inicio', event.target.value)} className="h-9 min-w-0 rounded-lg border border-slate-200 px-2 text-xs font-bold disabled:opacity-40" /><input type="time" disabled={!rule.ativo} value={rule.fim} onChange={(event) => updateSchedule(id, 'fim', event.target.value)} className="h-9 min-w-0 rounded-lg border border-slate-200 px-2 text-xs font-bold disabled:opacity-40" /></div>; })}</div></div>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><Clock3 className="text-blue-600" size={20} /><div><h3 className="font-black text-[#001a33]">Horários e prazo</h3><p className="text-xs text-slate-500">Usados quando o modo está em automático.</p></div></div><label className="mt-5 block"><span className="text-xs font-black uppercase tracking-wide text-slate-500">Tempo médio de resposta (minutos)</span><input type="number" min={1} max={10080} value={draft.tempo_medio_resposta_minutos} onChange={(event) => update('tempo_medio_resposta_minutos', Math.max(1, Number(event.target.value)))} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 font-bold text-slate-700 outline-none focus:border-blue-500" /></label><div className="mt-4 space-y-2">{DAYS.map(([id, label]) => { const rule = draft.horarios[id]; return <div key={id} className="grid grid-cols-[95px_1fr_1fr] items-center gap-2 rounded-xl bg-slate-50 p-2"><label className="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="checkbox" checked={rule.ativo} onChange={(event) => updateSchedule(id, 'ativo', event.target.checked)} />{label}</label><input type="time" disabled={!rule.ativo} value={rule.inicio} onChange={(event) => updateSchedule(id, 'inicio', event.target.value)} className="h-9 min-w-0 rounded-lg border border-slate-200 px-2 text-xs font-bold disabled:opacity-40" /><input type="time" disabled={!rule.ativo} value={rule.fim} onChange={(event) => updateSchedule(id, 'fim', event.target.value)} className="h-9 min-w-0 rounded-lg border border-slate-200 px-2 text-xs font-bold disabled:opacity-40" /></div>; })}<div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-black text-slate-700">Feriados: fechado</div></div></div>
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><MessageSquare className="text-blue-600" size={20} /><div><h3 className="font-black text-[#001a33]">Mensagens ao usuário</h3><p className="text-xs text-slate-500">Textos curtos, claros e específicos do polo.</p></div></div><label className="mt-5 block"><span className="text-xs font-black uppercase tracking-wide text-slate-500">Quando online</span><textarea value={draft.mensagem_online} onChange={(event) => update('mensagem_online', event.target.value)} className="mt-2 h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-5 outline-none focus:border-blue-500" /></label><label className="mt-4 block"><span className="text-xs font-black uppercase tracking-wide text-slate-500">Quando offline</span><textarea value={draft.mensagem_offline} onChange={(event) => update('mensagem_offline', event.target.value)} className="mt-2 h-28 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold leading-5 outline-none focus:border-blue-500" /></label></div>
             </section>
 
