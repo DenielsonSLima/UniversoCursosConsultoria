@@ -33,6 +33,8 @@ export const polosService = {
       supabase
         .from('polos')
         .select('*, empresas(*)')
+        .order('is_matriz', { ascending: false })
+        .order('cidade', { ascending: true })
         .order('nome', { ascending: true }),
       supabase
         .from('empresas')
