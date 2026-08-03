@@ -1,9 +1,14 @@
 import { supabase } from '../../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 import { buildAuthRedirectUrl } from '../../../lib/app-url';
 import {
   clearPendingOAuthReturn,
   rememberPendingOAuthReturn,
 } from '../../shared/auth/oauth-return-state';
+import {
+  isNativeOAuthPlatform,
+  startNativeGoogleOAuth,
+} from '../../shared/auth/native-oauth';
 import { loginService } from '../../login/login.service';
 import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
@@ -100,6 +105,7 @@ const assertPublicAlunoCpfAvailable = async (
       identifier: email,
       cpf,
       turnstileToken,
+      challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
     },
   });
 
@@ -285,6 +291,17 @@ export const alunoPublicAuthService = {
 
   async loginWithGoogle(redirectPath = '/aluno') {
     const safeRedirectPath = getSafePublicAlunoRedirectPath(redirectPath);
+
+    if (isNativeOAuthPlatform()) {
+      try {
+        await startNativeGoogleOAuth('aluno', safeRedirectPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error || '');
+        throw new Error(getFriendlyOAuthError(message), { cause: error });
+      }
+      return;
+    }
+
     rememberPendingOAuthReturn('aluno', safeRedirectPath);
 
     // O callback precisa ser uma URL fixa da allowlist do Supabase. O destino
@@ -488,7 +505,8 @@ export const alunoPublicAuthService = {
         throw new Error(passwordUpdateError);
       }
 
-      updates.troca_senha_obrigatoria = false;
+      // O trigger do Auth é a autoridade que conclui a troca obrigatória e
+      // ativa o acesso depois que a senha foi realmente persistida.
     }
 
     if (Object.keys(updates).length === 0) {
