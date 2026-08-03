@@ -78,17 +78,23 @@ const formatSchedule = (schedule: PublicUnitSchedule | null) => {
       : [];
   });
 
-  return activeDays.reduce<Array<{ label: string; time: string }>>((groups, day) => {
-    const previous = groups.at(-1);
+  const groups = activeDays.reduce<Array<{ label: string; time: string }>>((result, day) => {
+    const previous = result.at(-1);
     if (!previous || previous.time !== day.time) {
-      groups.push({ ...day });
-      return groups;
+      result.push({ ...day });
+      return result;
     }
 
     const firstDay = previous.label.split(' a ')[0];
     previous.label = `${firstDay} a ${day.label}`;
-    return groups;
+    return result;
   }, []);
+
+  if (schedule.feriados?.ativo === false) {
+    groups.push({ label: 'Feriados', time: 'Fechado' });
+  }
+
+  return groups;
 };
 
 const UnitCard = ({ unit }: { unit: PublicUnit; key?: React.Key }) => {
