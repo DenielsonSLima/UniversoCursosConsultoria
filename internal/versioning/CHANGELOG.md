@@ -2,6 +2,28 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.24] - 2026-08-03
+
+### Adicionado
+
+- A página Fale Conosco agora publica automaticamente as unidades ativas cadastradas em Empresas e Polos, incluindo a unidade de Propriá.
+- O complemento do endereço passou a ser persistido nos cadastros de empresa e polo e exibido no site público.
+
+### Alterado
+
+- Todas as unidades passaram a exibir os dois números oficiais de WhatsApp, com abertura direta da conversa.
+- Endereços, contatos, imagens e horários públicos deixaram de ser duplicados no componente e agora usam uma consulta pública restrita aos campos necessários.
+- A landing de cursos técnicos ganhou cards mais compactos, cidade do polo e chamadas de inscrição mais distintas, sem divulgar a quantidade de vagas.
+
+### Corrigido
+
+- A navegação móvel do aluno voltou a receber a permissão de calendário exigida pelo componente.
+- Unidades sem horário configurado agora informam que o atendimento está sob consulta, sem exibir uma programação inventada.
+
+### Qualidade
+
+- TypeScript, lint e build de produção foram validados antes da publicação.
+
 ## [2.2.3-beta.23] - 2026-08-02
 
 ### Adicionado
