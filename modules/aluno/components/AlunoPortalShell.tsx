@@ -282,6 +282,7 @@ const AlunoPortalShell = ({
 
       <AlunoMobileBottomNav
         activeModule={activeModule}
+        canViewCalendar={canViewCalendar}
         isMoreOpen={isMobileMenuOpen}
         unreadChatsCount={unreadChatsCount}
         onMoreOpen={() => onMobileMenuChange(true)}
