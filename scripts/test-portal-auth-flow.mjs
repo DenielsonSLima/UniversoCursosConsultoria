@@ -16,6 +16,11 @@ const [
   loginPage,
   indexHtml,
   envExample,
+  appRouter,
+  appLoginPage,
+  appRecoveryPage,
+  nativeOAuth,
+  supabaseClient,
 ] = await Promise.all([
   readSource('modules/shared/auth/TurnstileWidget.tsx'),
   readSource('modules/login/components/LoginForm.tsx'),
@@ -27,6 +32,11 @@ const [
   readSource('modules/login/LoginPage.tsx'),
   readSource('index.html'),
   readSource('.env.example'),
+  readSource('App.tsx'),
+  readSource('modules/aluno/login-app/AlunoAppLoginPage.tsx'),
+  readSource('modules/aluno/login-app/AlunoAppRecoveryPage.tsx'),
+  readSource('modules/shared/auth/native-oauth.ts'),
+  readSource('lib/supabase.ts'),
 ])
 
 test('Turnstile exposes explicit loading, verification and recovery states', () => {
@@ -78,6 +88,27 @@ test('all credential flows wait for a verified Turnstile token', () => {
     studentLoginForm,
     /Não foi possível validar o acesso\. Atualize a página/,
   )
+})
+
+test('installed student app keeps password recovery inside the aluno scope', () => {
+  assert.match(appLoginPage, /to="\/aluno\/recuperar-senha-app"/)
+  assert.match(appRouter, /path="\/aluno\/recuperar-senha-app"/)
+  assert.match(appRecoveryPage, /<PasswordRecoveryPage appFlow \/>/)
+  assert.match(
+    passwordRecoveryPage,
+    /appFlow \? '\/aluno\/recuperar-senha-app' : '\/recuperar-senha'/,
+  )
+  assert.match(loginService, /redirectPath = '\/recuperar-senha'/)
+  assert.match(loginService, /buildAuthRedirectUrl\(redirectPath\)/)
+})
+
+test('native Google OAuth uses PKCE and never returns session tokens in the callback URL', () => {
+  assert.match(supabaseClient, /flowType:\s*Capacitor\.isNativePlatform\(\)\s*\?\s*'pkce'/)
+  assert.match(nativeOAuth, /exchangeCodeForSession\(callback\.code\)/)
+  assert.match(nativeOAuth, /code:\s*read\('code'\)/)
+  assert.doesNotMatch(nativeOAuth, /read\('access_token'\)/)
+  assert.doesNotMatch(nativeOAuth, /read\('refresh_token'\)/)
+  assert.doesNotMatch(nativeOAuth, /auth\.setSession/)
 })
 
 test('portal-auth validates challenge before consuming identifier quota', () => {
@@ -145,6 +176,12 @@ test('Cloudflare challenge origin is preconnected', () => {
     indexHtml,
     /rel="dns-prefetch"\s+href="\/\/challenges\.cloudflare\.com"/,
   )
+})
+
+test('student login switches to the native Turnstile bridge inside the apps', () => {
+  assert.match(studentLoginForm, /import AdaptiveTurnstileWidget/)
+  assert.match(studentLoginForm, /<AdaptiveTurnstileWidget/)
+  assert.doesNotMatch(studentLoginForm, /<TurnstileWidget/)
 })
 
 test('public configuration does not expose private LAN addresses', () => {

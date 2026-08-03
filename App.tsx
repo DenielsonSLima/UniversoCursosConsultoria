@@ -5,11 +5,12 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import SeoManager from './modules/public/components/SeoManager';
-import RouteScrollManager from './modules/shared/components/RouteScrollManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';
 import AccessCheckingScreen from './modules/shared/components/AccessCheckingScreen';
+import RouteScrollManager from './modules/shared/components/RouteScrollManager';
 import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
 import AlunoPwaRuntime from './modules/aluno/pwa/AlunoPwaRuntime';
+import NativeAuthBridge from './modules/shared/auth/NativeAuthBridge';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 const PublicPage = lazy(() => import('./modules/public/public.page'));
@@ -42,6 +43,7 @@ const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
 const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
+const NativeTurnstileChallengePage = lazy(() => import('./modules/shared/auth/NativeTurnstileChallengePage'));
 
 const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
@@ -62,6 +64,7 @@ const RouteLoadingScreen = () => {
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <NativeAuthBridge />
       <RouteScrollManager />
       <SeoManager />
       <AlunoPwaRuntime />
@@ -69,6 +72,7 @@ const App: React.FC = () => {
         <Routes>
 
         {/* ── Rotas Públicas (sempre disponíveis) ── */}
+        <Route path="/native-auth/turnstile" element={<NativeTurnstileChallengePage />} />
         <Route path="/" element={<PublicPage />} />
         <Route path="/links" element={<BioPage />} />
         <Route path="/bio" element={<BioPage />} />

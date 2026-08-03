@@ -15,9 +15,9 @@ import {
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { formatCpf, formatPhone, type AuthMessage, type AuthMode, type PasswordChecks } from './aluno-login.utils';
 import { getPublicAlunoBirthDateMax } from './aluno-birth-date';
-import TurnstileWidget, {
+import AdaptiveTurnstileWidget, {
   type TurnstileStatus,
-} from '../../shared/auth/TurnstileWidget';
+} from '../../shared/auth/AdaptiveTurnstileWidget';
 
 type Props = {
   mode: AuthMode;
@@ -263,7 +263,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           </div>
         </label>
 
-        <TurnstileWidget
+        <AdaptiveTurnstileWidget
           action="login"
           resetSignal={turnstileResetSignal}
           onTokenChange={setTurnstileToken}
@@ -494,7 +494,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         )}
 
         <div className="sm:col-span-6">
-          <TurnstileWidget
+          <AdaptiveTurnstileWidget
             action="signup"
             resetSignal={turnstileResetSignal}
             onTokenChange={setTurnstileToken}
