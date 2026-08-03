@@ -26,6 +26,7 @@ interface BrasilApiCnpjResponse {
   descricao_tipo_de_logradouro?: string;
   logradouro?: string;
   numero?: string;
+  complemento?: string;
   bairro?: string;
   cep?: string;
   municipio?: string;
@@ -59,6 +60,14 @@ const maskPhone = (value: string) => {
     .replace(/^(\d{2})(\d)/, '($1) $2')
     .replace(/(\d{5})(\d)/, '$1-$2');
 };
+
+const maskPhoneList = (value: string) =>
+  value
+    .split('/')
+    .slice(0, 2)
+    .map((phone) => maskPhone(phone))
+    .filter(Boolean)
+    .join(' / ');
 
 const PolosConfig: React.FC = () => {
   const queryClient = useQueryClient();
@@ -179,11 +188,12 @@ const PolosConfig: React.FC = () => {
           : (data.nome_fantasia || data.razao_social || '').toUpperCase(),
         endereco: endereco ? endereco.toUpperCase() : prev.endereco,
         numero: data.numero ? data.numero.toUpperCase() : prev.numero,
+        complemento: data.complemento ? data.complemento.toUpperCase() : prev.complemento,
         bairro: data.bairro ? data.bairro.toUpperCase() : prev.bairro,
         cep: data.cep ? maskCep(data.cep) : prev.cep,
         cidade: data.municipio ? data.municipio.toUpperCase() : prev.cidade,
         estado: data.uf ? data.uf.toUpperCase() : prev.estado,
-        telefone: telefone ? maskPhone(telefone) : prev.telefone,
+        telefone: telefone ? maskPhoneList(telefone) : prev.telefone,
         email: data.email ? data.email.toLowerCase() : prev.email,
       }));
       setCnpjMessage({
@@ -256,6 +266,7 @@ const PolosConfig: React.FC = () => {
         status: editingPolo.status || 'ativo',
         endereco: editingPolo.endereco || '',
         numero: editingPolo.numero || '',
+        complemento: editingPolo.complemento || '',
         bairro: editingPolo.bairro || '',
         cep: editingPolo.cep || '',
         telefone: editingPolo.telefone || '',
@@ -413,6 +424,18 @@ const PolosConfig: React.FC = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Complemento</label>
+                <input
+                  type="text"
+                  value={editingPolo.complemento || ''}
+                  disabled={editingPolo.is_matriz}
+                  onChange={e => setEditingPolo({...editingPolo, complemento: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: Edifício, sala ou referência"}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">CNPJ</label>
@@ -565,10 +588,10 @@ const PolosConfig: React.FC = () => {
                     type="text"
                     value={editingPolo.telefone || ''}
                     disabled={editingPolo.is_matriz}
-                    onChange={e => setEditingPolo({...editingPolo, telefone: maskPhone(e.target.value)})}
+                    onChange={e => setEditingPolo({...editingPolo, telefone: maskPhoneList(e.target.value)})}
                     inputMode="tel"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 focus:bg-white font-bold text-slate-700 text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: (79) 99999-0000"}
+                    placeholder={editingPolo.is_matriz ? "Sincronizado da empresa principal" : "Ex: (79) 99999-0000 / (79) 99999-0001"}
                   />
                 </div>
                 <div className="space-y-2">
