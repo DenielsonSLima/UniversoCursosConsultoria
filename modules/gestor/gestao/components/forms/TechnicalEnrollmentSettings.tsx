@@ -69,10 +69,10 @@ const TechnicalEnrollmentSettings: React.FC<TechnicalEnrollmentSettingsProps> = 
         />
         <span>
           <span className="flex items-center gap-2 text-xs font-bold uppercase text-[#001a33]">
-            <MonitorPlay size={14} className="text-emerald-600" /> Permitir inscrições online
+            <MonitorPlay size={14} className="text-emerald-600" /> Habilitar inscrições online
           </span>
           <span className="mt-1 block text-[10px] font-semibold leading-relaxed text-slate-500">
-            Libera cadastro e pagamento online no site e no portal do aluno.
+            Dentro da janela configurada, salvar abre o cadastro e o pagamento online.
           </span>
         </span>
       </label>
