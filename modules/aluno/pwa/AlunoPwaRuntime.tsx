@@ -13,9 +13,9 @@ const STUDENT_META: ManagedMeta[] = [
   { name: 'theme-color', content: STUDENT_THEME_COLOR },
   { name: 'apple-mobile-web-app-capable', content: 'yes' },
   { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-  { name: 'apple-mobile-web-app-title', content: 'Universo CC' },
+  { name: 'apple-mobile-web-app-title', content: 'Universo Cursos e Consultoria' },
   { name: 'mobile-web-app-capable', content: 'yes' },
-  { name: 'application-name', content: 'Universo CC' },
+  { name: 'application-name', content: 'Universo Cursos e Consultoria' },
 ];
 
 const STUDENT_PUBLIC_AUTH_PATHS = new Set([

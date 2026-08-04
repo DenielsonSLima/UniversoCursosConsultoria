@@ -1,4 +1,4 @@
-import { BellRing, Clock3, Wifi, WifiOff } from 'lucide-react';
+import { Clock3, Wifi, WifiOff } from 'lucide-react';
 import type { AlunoAtendimentoConfig } from './comunicacao.types';
 
 export const resolveSupportAvailability = (config?: AlunoAtendimentoConfig) => {
@@ -47,11 +47,6 @@ const AlunoSupportAvailabilityCard = ({ config, loading = false, compact = false
             ) : null}
           </div>
           <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">{availability.message}</p>
-          {config?.solicitar_notificacao_resposta ? (
-            <p className="mt-2 flex items-start gap-1.5 text-[10px] font-bold leading-relaxed text-blue-700">
-              <BellRing size={13} className="mt-0.5 shrink-0" /> {config.texto_notificacao_optin}
-            </p>
-          ) : null}
         </div>
       </div>
     </aside>

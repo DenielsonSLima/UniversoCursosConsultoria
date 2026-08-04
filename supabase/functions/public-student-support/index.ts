@@ -1,12 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildCorsHeaders, getClientIp, json as sendJson } from "../_shared/http.ts";
-import { normalizeCpf } from "../_shared/whatsapp-flow/format.ts";
+import { normalizeCpf, normalizePersonName } from "../_shared/whatsapp-flow/format.ts";
 
-type Action = "bootstrap" | "create-ticket" | "history" | "send-message" | "send-attachment";
+type Action = "bootstrap" | "create-ticket" | "history" | "register-push" | "send-message" | "send-attachment";
 type Payload = {
   action?: Action;
   turnstileToken?: string;
+  challengeContext?: "web" | "native";
   accessToken?: string;
+  name?: string;
   cpf?: string;
   subject?: string;
   message?: string;
@@ -18,6 +20,10 @@ type Payload = {
   mimeType?: string;
   size?: number;
   fileBase64?: string;
+  installationId?: string;
+  platform?: "android" | "ios";
+  pushToken?: string;
+  permissionStatus?: "granted" | "provisional";
 };
 
 const ALLOWED_SECTORS = new Set([
@@ -25,6 +31,15 @@ const ALLOWED_SECTORS = new Set([
   "secretaria", "atendimento_geral",
 ]);
 const ALLOWED_HOSTS = new Set(["universocc.com.br", "www.universocc.com.br", "localhost", "127.0.0.1"]);
+const NATIVE_APP_ORIGINS = new Set(["capacitor://localhost", "https://localhost"]);
+const NATIVE_TURNSTILE_HOSTS = new Set([
+  "universocc.com.br",
+  "www.universocc.com.br",
+  ...String(Deno.env.get("TURNSTILE_NATIVE_ALLOWED_HOSTNAMES") || "")
+    .split(/[,\s]+/)
+    .map((hostname) => hostname.trim().toLowerCase())
+    .filter(Boolean),
+]);
 const TOKEN_MAX_AGE_DAYS = 90;
 const ATTACHMENT_BUCKET = "anexos";
 const ATTACHMENT_MAX_BYTES = 12 * 1024 * 1024;
@@ -66,8 +81,10 @@ const protocol = () => {
 };
 
 const validOrigin = (request: Request) => {
+  const rawOrigin = String(request.headers.get("origin") || "").trim();
+  if (NATIVE_APP_ORIGINS.has(rawOrigin)) return true;
   try {
-    const origin = new URL(String(request.headers.get("origin") || ""));
+    const origin = new URL(rawOrigin);
     return ALLOWED_HOSTS.has(origin.hostname.toLowerCase())
       && (origin.hostname === "localhost" || origin.hostname === "127.0.0.1" || origin.protocol === "https:");
   } catch {
@@ -75,11 +92,28 @@ const validOrigin = (request: Request) => {
   }
 };
 
-const verifyTurnstile = async (request: Request, token: string) => {
+const verifyTurnstile = async (
+  request: Request,
+  token: string,
+  challengeContext: "web" | "native",
+) => {
   if (!validOrigin(request) || !token || token.length > 2048) return false;
-  const hostname = new URL(String(request.headers.get("origin"))).hostname.toLowerCase();
+  const rawOrigin = String(request.headers.get("origin") || "").trim();
+  const native = challengeContext === "native";
+  if (native && !NATIVE_APP_ORIGINS.has(rawOrigin)) return false;
+  if (!native && NATIVE_APP_ORIGINS.has(rawOrigin)) return false;
+  const hostname = new URL(rawOrigin).hostname.toLowerCase();
   const local = hostname === "localhost" || hostname === "127.0.0.1";
-  const secret = String(Deno.env.get(local ? "TURNSTILE_LOCAL_SECRET_KEY" : "TURNSTILE_SECRET_KEY") || "").trim();
+  const secretName = native
+    ? "TURNSTILE_NATIVE_SECRET_KEY"
+    : local
+      ? "TURNSTILE_LOCAL_SECRET_KEY"
+      : "TURNSTILE_SECRET_KEY";
+  const secret = String(
+    Deno.env.get(secretName) ||
+      (native ? Deno.env.get("TURNSTILE_SECRET_KEY") : "") ||
+      "",
+  ).trim();
   if (!secret) return false;
   const form = new FormData();
   form.set("secret", secret);
@@ -92,7 +126,11 @@ const verifyTurnstile = async (request: Request, token: string) => {
     const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form, signal: controller.signal });
     if (!response.ok) return false;
     const result = await response.json() as { success?: boolean; hostname?: string; action?: string };
-    return result.success === true && result.hostname?.toLowerCase() === hostname && result.action === "support";
+    const verifiedHostname = String(result.hostname || "").toLowerCase();
+    const hostnameAccepted = native
+      ? NATIVE_TURNSTILE_HOSTS.has(verifiedHostname)
+      : verifiedHostname === hostname;
+    return result.success === true && hostnameAccepted && result.action === "support";
   } catch {
     return false;
   } finally {
@@ -169,7 +207,7 @@ Deno.serve(async (request: Request) => {
   let payload: Payload;
   try { payload = await request.json(); } catch { return json({ error: "Dados inválidos." }, 400); }
   const action = payload.action;
-  if (!action || !["bootstrap", "create-ticket", "history", "send-message", "send-attachment"].includes(action)) return json({ error: "Ação inválida." }, 400);
+  if (!action || !["bootstrap", "create-ticket", "history", "register-push", "send-message", "send-attachment"].includes(action)) return json({ error: "Ação inválida." }, 400);
 
   try {
     if (!await rateLimit(admin, request, action, action === "bootstrap" ? 120 : 40)) return json({ error: "Muitas tentativas. Aguarde alguns minutos." }, 429);
@@ -177,12 +215,16 @@ Deno.serve(async (request: Request) => {
     if (action === "bootstrap") return json(await loadBootstrap(admin));
 
     if (action === "create-ticket") {
+      const providedName = normalizePersonName(payload.name);
       const cpf = normalizeCpf(payload.cpf);
       const subject = String(payload.subject || "").trim().slice(0, 180);
       const message = String(payload.message || "").trim().slice(0, 4000);
       const sector = ALLOWED_SECTORS.has(String(payload.sector)) ? String(payload.sector) : "atendimento_geral";
-      if (!cpf || subject.length < 2 || message.length < 2) return json({ error: "Informe um CPF válido, o assunto e a mensagem." }, 400);
-      if (!await verifyTurnstile(request, String(payload.turnstileToken || ""))) return json({ error: "Confirme a verificação de segurança novamente." }, 400);
+      if (!providedName) return json({ error: "Informe seu nome completo, sem números ou abreviações." }, 400);
+      if (!cpf) return json({ error: "Informe um CPF válido. Confira os 11 números e tente novamente." }, 400);
+      if (subject.length < 2 || message.length < 2) return json({ error: "Informe o assunto e a mensagem do chamado." }, 400);
+      const challengeContext = payload.challengeContext === "native" ? "native" : "web";
+      if (!await verifyTurnstile(request, String(payload.turnstileToken || ""), challengeContext)) return json({ error: "Confirme a verificação de segurança novamente." }, 400);
       const identity = await resolveIdentity(admin, cpf);
       const requestedPoloId = payload.poloId || identity?.polo_id || null;
       const polo = await resolvePolo(admin, requestedPoloId, payload.poloLabel);
@@ -194,7 +236,7 @@ Deno.serve(async (request: Request) => {
       const accessHash = await sha256(accessToken);
       const expiresAt = new Date(Date.now() + TOKEN_MAX_AGE_DAYS * 86400000).toISOString();
       const ticketProtocol = protocol();
-      const requesterName = identity?.display_name || "Visitante";
+      const requesterName = identity?.display_name || providedName;
       const requesterType = identity?.identity_kind === "aluno" ? "Aluno" : "Visitante";
       const requesterId = identity?.identity_kind === "aluno" ? identity.partner_id : null;
       const { data: chat, error: chatError } = await admin.from("comunicacao_chats").insert({
@@ -232,10 +274,40 @@ Deno.serve(async (request: Request) => {
     if (accessToken.length !== 64) return json({ error: "Atendimento não encontrado." }, 404);
     const accessHash = await sha256(accessToken);
     const { data: chat, error: chatError } = await admin.from("comunicacao_chats")
-      .select("id,remetente_id,remetente_nome,status,origem,polo_id,setor,assunto,protocolo,ultima_data,created_at,primeira_resposta_em,encerrado_em")
+      .select("id,remetente_id,remetente_nome,status,origem,polo_id,setor,assunto,protocolo,ultima_data,created_at,primeira_resposta_em,encerrado_em,public_access_expires_at")
       .eq("public_access_hash", accessHash).eq("origem", "publico").gt("public_access_expires_at", new Date().toISOString()).maybeSingle();
     if (chatError) throw chatError;
     if (!chat) return json({ error: "Atendimento não encontrado ou expirado." }, 404);
+
+    if (action === "register-push") {
+      const installationId = String(payload.installationId || "").trim();
+      const pushToken = String(payload.pushToken || "").trim();
+      const platform = payload.platform;
+      const permissionStatus = payload.permissionStatus;
+      if (installationId.length < 8 || installationId.length > 255
+        || pushToken.length < 8 || pushToken.length > 4096
+        || !platform || !["android", "ios"].includes(platform)
+        || !permissionStatus || !["granted", "provisional"].includes(permissionStatus)) {
+        return json({ error: "Não foi possível registrar este aparelho para notificações." }, 400);
+      }
+      const { error: registrationError } = await admin.from("public_support_push_devices").upsert({
+        chat_id: chat.id,
+        installation_id: installationId,
+        platform,
+        push_token: pushToken,
+        permission_status: permissionStatus,
+        active: true,
+        expires_at: chat.public_access_expires_at,
+        last_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "chat_id,installation_id" });
+      if (registrationError) throw registrationError;
+      const { error: notificationError } = await admin.from("comunicacao_chats")
+        .update({ notificar_resposta: true })
+        .eq("id", chat.id);
+      if (notificationError) throw notificationError;
+      return json({ registered: true });
+    }
 
     if (action === "send-message") {
       if (chat.status !== "pendente") return json({ error: "Este atendimento já foi encerrado. Abra um novo chamado." }, 409);

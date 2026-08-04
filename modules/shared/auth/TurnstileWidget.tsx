@@ -16,6 +16,7 @@ type TurnstileApi = {
     options: {
       sitekey: string;
       action: TurnstileAction;
+      language: 'pt-BR';
       theme: 'light';
       size: 'flexible';
       appearance: 'always' | 'interaction-only';
@@ -191,6 +192,7 @@ const TurnstileWidget: React.FC<Props> = ({
         widgetIdRef.current = turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           action,
+          language: 'pt-BR',
           theme: 'light',
           size: 'flexible',
           appearance: isLocalTurnstileHost() ? 'always' : 'interaction-only',

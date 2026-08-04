@@ -20,6 +20,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // Native apps are public OAuth clients. PKCE keeps access and refresh tokens
     // out of the callback URL and binds the one-time code to this app instance.
     flowType: Capacitor.isNativePlatform() ? 'pkce' : 'implicit',
+    // O WebView mantém esta sessão entre fechamentos normais do app. Ela só é
+    // removida por logout explícito, revogação/expiração ou limpeza dos dados.
+    persistSession: true,
+    autoRefreshToken: true,
   },
 });
 

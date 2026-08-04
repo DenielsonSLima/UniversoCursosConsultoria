@@ -1,6 +1,9 @@
+import type { WhatsAppSector } from '../../gestor/comunicacao/components/whatsapp/whatsapp.types';
+
 export interface ComunicacaoPageProps {
   alunoId: string;
   alunoNome: string;
+  onNavigate?: (moduleId: string) => void;
 }
 
 export interface ComunicacaoCategoria {
@@ -63,12 +66,12 @@ export interface ComunicacaoMensagem {
 }
 
 export interface CreateAlunoChatInput {
-  alunoId: string;
-  alunoNome: string;
-  categoryId: string;
-  categoryName: string;
+  sector: WhatsAppSector;
   subject: string;
+  message: string;
+  poloLabel?: string | null;
   notifyOnResponse?: boolean;
+  origin: 'app' | 'portal';
 }
 
 export interface SendAlunoMessageInput {

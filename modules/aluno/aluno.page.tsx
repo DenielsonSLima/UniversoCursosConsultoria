@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
 import { usePortalLogout } from '../shared/hooks/usePortalLogout';
@@ -9,6 +9,9 @@ import { useAlunoCalendarEligibility, useAlunoUnreadChats } from './hooks/useAlu
 import { useAlunoPortalProfile } from './hooks/useAlunoPortalProfile';
 import type { PerfilTabId } from './perfil/perfil.types';
 import AlunoAppSplash from './pwa/AlunoAppSplash';
+import AlunoNativeAppDeviceRuntime from './native-app/AlunoNativeAppDeviceRuntime';
+import { nativeAppService } from './native-app/native-app.service';
+import { useAlunoUnreadNotifications } from './notificacoes/useAlunoNotifications';
 
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
 const InicioPage = lazy(() => import('./inicio/InicioPage'));
@@ -20,6 +23,7 @@ const ComunicacaoPage = lazy(() => import('./comunicacao/ComunicacaoPage'));
 const PerfilPage = lazy(() => import('./perfil/PerfilPage'));
 const SecretariaPage = lazy(() => import('./secretaria/SecretariaPage'));
 const CalendarioAlunoPage = lazy(() => import('./calendario/CalendarioAlunoPage'));
+const NotificacoesPage = lazy(() => import('./notificacoes/NotificacoesPage'));
 
 const ALLOWED_MODULES = new Set([
   'inicio',
@@ -28,8 +32,10 @@ const ALLOWED_MODULES = new Set([
   'financeiro',
   'biblioteca',
   'comunicacao',
+  'calendario',
   'secretaria',
   'perfil',
+  'notificacoes',
 ]);
 
 const ALLOWED_PROFILE_TABS = new Set<PerfilTabId>([
@@ -48,6 +54,7 @@ const AlunoModuleLoading = () => (
 
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const executeLogout = usePortalLogout({ loginPath: '/aluno/login-app' });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
@@ -64,7 +71,21 @@ const AlunoPage: React.FC = () => {
   const alunoId = isAuthorized ? profile?.id || '' : '';
   const canViewCalendar = useAlunoCalendarEligibility(alunoId, isAuthorized);
   const unreadChatsCount = useAlunoUnreadChats(alunoId, isAuthorized);
+  const unreadNotificationsCount = useAlunoUnreadNotifications(alunoId, isAuthorized);
   useAlunoCourseAccessRealtime(alunoId, isAuthorized);
+
+  const handleLogout = useCallback(() => {
+    if (!nativeAppService.isAvailable()) {
+      executeLogout();
+      return;
+    }
+    void Promise.race([
+      nativeAppService.logout(),
+      new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), 4_000)),
+    ]).catch((error) => {
+      console.warn('A presença do aplicativo não pôde ser encerrada antes do logout.', error);
+    }).finally(executeLogout);
+  }, [executeLogout]);
 
   const scrollContentToTop = useCallback(() => {
     requestAnimationFrame(() => {
@@ -77,9 +98,9 @@ const AlunoPage: React.FC = () => {
   }, [activeModule, scrollContentToTop]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const requestedModule = params.get('module');
-    const requestedPathModule = window.location.pathname === '/aluno/comunicacao'
+    const requestedPathModule = location.pathname === '/aluno/comunicacao'
       ? 'comunicacao'
       : null;
     const requestedCourseId = params.get('courseId');
@@ -107,11 +128,11 @@ const AlunoPage: React.FC = () => {
       setActiveModule('turmas');
       navigate('/aluno/', { replace: true });
     }
-  }, [navigate]);
+  }, [location.pathname, location.search, navigate]);
 
   useInactivityLogout({
     isEnabled: isAuthorized,
-    onTimeout: executeLogout,
+    onTimeout: handleLogout,
   });
 
   useEffect(() => {
@@ -183,9 +204,17 @@ const AlunoPage: React.FC = () => {
       case 'biblioteca':
         return <BibliotecaPage alunoId={alunoId} />;
       case 'comunicacao':
-        return <ComunicacaoPage alunoId={alunoId} alunoNome={alunoNome} />;
+        return <ComunicacaoPage alunoId={alunoId} alunoNome={alunoNome} onNavigate={setActiveModule} />;
       case 'secretaria':
         return <SecretariaPage alunoId={alunoId} />;
+      case 'notificacoes':
+        return (
+          <NotificacoesPage
+            alunoId={alunoId}
+            unreadCount={unreadNotificationsCount}
+            onNavigate={(deepLink) => navigate(deepLink)}
+          />
+        );
       case 'perfil':
         return (
           <PerfilPage
@@ -202,6 +231,7 @@ const AlunoPage: React.FC = () => {
 
   return (
     <>
+      <AlunoNativeAppDeviceRuntime alunoId={alunoId} />
       <AlunoPortalShell
         activeModule={activeModule}
         alunoEmail={alunoEmail}
@@ -210,6 +240,7 @@ const AlunoPage: React.FC = () => {
         contentScrollRef={contentScrollRef}
         isMobileMenuOpen={isMobileMenuOpen}
         unreadChatsCount={unreadChatsCount}
+        unreadNotificationsCount={unreadNotificationsCount}
         onLogout={() => setIsLogoutConfirmOpen(true)}
         onMobileMenuChange={setIsMobileMenuOpen}
         onModuleChange={(moduleId) => {
@@ -230,7 +261,7 @@ const AlunoPage: React.FC = () => {
         cancelText="Cancelar"
         variant="danger"
         onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={executeLogout}
+        onConfirm={handleLogout}
       />
     </>
   );

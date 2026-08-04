@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, BellRing, Clock3, Loader2, MessageCircle,
+  ArrowLeft, Clock3, Loader2, MessageCircle,
   Plus, RotateCcw, Send, TicketCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
 import { formatCpf, isValidCpf } from '../../shared/utils/identityValidation';
-import { normalizeFlowDefinition } from '../../gestor/comunicacao/components/whatsapp-flow/flowBuilder';
+import {
+  normalizeFlowDefinition,
+  renderFlowTemplate,
+} from '../../gestor/comunicacao/components/whatsapp-flow/flowBuilder';
 import type { WhatsAppFlowOption } from '../../gestor/comunicacao/components/whatsapp/whatsapp.types';
 import {
   PUBLIC_SUPPORT_STORAGE_KEY,
@@ -18,6 +21,11 @@ import {
   playPublicSupportMessageSound,
   unlockPublicSupportSound,
 } from './public-support-media';
+import { nativeAppService, type PublicPushRegistration } from '../native-app/native-app.service';
+import {
+  NATIVE_PUSH_BRIDGE_READY_EVENT,
+  NATIVE_PUSH_PERMISSION_CHANGED_EVENT,
+} from '../native-app/native-app.bridge';
 
 type ChatMessage = {
   id: string;
@@ -34,6 +42,14 @@ type RouteContext = {
 
 const cleanMessage = (value: string) => value.replace(/\*/g, '').trim();
 const formatSla = (minutes: number) => minutes < 60 ? `${minutes} minutos` : `${Math.round(minutes / 60)} ${Math.round(minutes / 60) === 1 ? 'hora' : 'horas'}`;
+const normalizeFullName = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim();
+const isValidFullName = (value: string) => {
+  const name = normalizeFullName(value);
+  return name.length >= 5
+    && name.length <= 120
+    && name.split(' ').filter(Boolean).length >= 2
+    && /^[\p{L}\p{M}][\p{L}\p{M}' -]*$/u.test(name);
+};
 
 const AlunoPublicSupportPage: React.FC = () => {
   const bootstrap = useQuery({
@@ -46,13 +62,15 @@ const AlunoPublicSupportPage: React.FC = () => {
   const [currentNodeId, setCurrentNodeId] = useState(startNode.id);
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: `uni-${startNode.id}`, side: 'uni', text: cleanMessage(startNode.message) }]);
   const [route, setRoute] = useState<RouteContext>({ poloLabel: null, sector: 'atendimento_geral', subject: 'Atendimento geral' });
+  const [flowMemory, setFlowMemory] = useState<Record<string, string>>({});
   const [accessToken, setAccessToken] = useState(() => {
     try { return window.localStorage.getItem(PUBLIC_SUPPORT_STORAGE_KEY) || ''; } catch { return ''; }
   });
+  const [requesterName, setRequesterName] = useState('');
   const [cpf, setCpf] = useState('');
   const [ticketMessage, setTicketMessage] = useState('');
   const [selectedPoloId, setSelectedPoloId] = useState('');
-  const [notifyReply, setNotifyReply] = useState(true);
+  const [publicPushRegistration, setPublicPushRegistration] = useState<PublicPushRegistration | null>(null);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileReset, setTurnstileReset] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
@@ -63,13 +81,29 @@ const AlunoPublicSupportPage: React.FC = () => {
   useEffect(() => {
     setCurrentNodeId(startNode.id);
     setMessages([{ id: `uni-${startNode.id}`, side: 'uni', text: cleanMessage(startNode.message) }]);
-  }, [startNode.id]);
+    setFlowMemory({});
+  }, [startNode.id, startNode.message]);
 
   useEffect(() => {
     if (!selectedPoloId && bootstrap.data?.polos.length) {
       setSelectedPoloId(bootstrap.data.polos.find((polo) => polo.is_matriz)?.id || bootstrap.data.polos[0].id);
     }
   }, [bootstrap.data?.polos, selectedPoloId]);
+
+  useEffect(() => {
+    const refreshPushRegistration = () => {
+      void nativeAppService.getPublicPushRegistration()
+        .then(setPublicPushRegistration)
+        .catch(() => setPublicPushRegistration(null));
+    };
+    refreshPushRegistration();
+    window.addEventListener(NATIVE_PUSH_BRIDGE_READY_EVENT, refreshPushRegistration);
+    window.addEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPushRegistration);
+    return () => {
+      window.removeEventListener(NATIVE_PUSH_BRIDGE_READY_EVENT, refreshPushRegistration);
+      window.removeEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPushRegistration);
+    };
+  }, []);
 
   const history = useQuery({
     queryKey: ['public-support', 'history', accessToken],
@@ -87,6 +121,13 @@ const AlunoPublicSupportPage: React.FC = () => {
       setAccessToken('');
     }
   }, [accessToken, history.isError]);
+
+  useEffect(() => {
+    if (!accessToken || !publicPushRegistration) return;
+    void publicSupportService.registerPush(accessToken, publicPushRegistration).catch((error) => {
+      console.warn('Não foi possível vincular as notificações a este atendimento público.', error);
+    });
+  }, [accessToken, publicPushRegistration]);
 
   useEffect(() => {
     seenManagerMessageIdsRef.current = null;
@@ -125,6 +166,7 @@ const AlunoPublicSupportPage: React.FC = () => {
     setCurrentNodeId(startNode.id);
     setMessages([{ id: `uni-${startNode.id}-${Date.now()}`, side: 'uni', text: cleanMessage(startNode.message) }]);
     setRoute({ poloLabel: null, sector: 'atendimento_geral', subject: 'Atendimento geral' });
+    setFlowMemory({});
     setTicketMessage('');
     setErrorMessage('');
   };
@@ -132,18 +174,27 @@ const AlunoPublicSupportPage: React.FC = () => {
   const newTicket = () => {
     try { window.localStorage.removeItem(PUBLIC_SUPPORT_STORAGE_KEY); } catch { /* storage indisponível */ }
     setAccessToken('');
+    setRequesterName('');
     setCpf('');
     resetFlow();
   };
 
-  const openHandoff = (studentMessage: ChatMessage, option: WhatsAppFlowOption) => {
+  const openHandoff = (studentMessage: ChatMessage, option: WhatsAppFlowOption, nextMemory: Record<string, string>) => {
     const nextRoute = {
-      poloLabel: option.poloMode === 'label' ? option.poloLabel || route.poloLabel : route.poloLabel,
+      poloLabel: option.poloMode === 'label'
+        ? option.poloLabel || route.poloLabel
+        : option.poloMode === 'none'
+          ? null
+          : route.poloLabel,
       sector: option.sector || route.sector || 'atendimento_geral',
-      subject: cleanMessage(option.subject || option.label || route.subject),
+      subject: cleanMessage(renderFlowTemplate(option.subject || option.label || route.subject, nextMemory)),
     };
     setRoute(nextRoute);
-    const matchingPolo = bootstrap.data?.polos.find((polo) => polo.nome.toLocaleLowerCase('pt-BR') === nextRoute.poloLabel?.toLocaleLowerCase('pt-BR'));
+    const normalizedPoloLabel = nextRoute.poloLabel?.toLocaleLowerCase('pt-BR');
+    const matchingPolo = bootstrap.data?.polos.find((polo) => (
+      polo.nome.toLocaleLowerCase('pt-BR') === normalizedPoloLabel
+      || polo.cidade.toLocaleLowerCase('pt-BR') === normalizedPoloLabel
+    ));
     if (matchingPolo) setSelectedPoloId(matchingPolo.id);
     setMessages((current) => [...current, studentMessage, {
       id: `uni-handoff-${Date.now()}`,
@@ -155,14 +206,18 @@ const AlunoPublicSupportPage: React.FC = () => {
   };
 
   const selectOption = (option: WhatsAppFlowOption) => {
+    const nextMemory = option.rememberKey
+      ? { ...flowMemory, [option.rememberKey]: option.rememberValue || option.label }
+      : flowMemory;
+    setFlowMemory(nextMemory);
     const studentMessage: ChatMessage = { id: `student-${option.id}-${Date.now()}`, side: 'student', text: option.label };
     if (option.poloMode === 'label' && option.poloLabel) setRoute((current) => ({ ...current, poloLabel: option.poloLabel || null }));
-    if (option.sector || option.subject) setRoute((current) => ({ ...current, sector: option.sector || current.sector, subject: cleanMessage(option.subject || current.subject) }));
+    if (option.sector || option.subject) setRoute((current) => ({ ...current, sector: option.sector || current.sector, subject: cleanMessage(renderFlowTemplate(option.subject || current.subject, nextMemory)) }));
 
     if (option.action === 'goto' && option.targetNodeId) {
       const nextNode = definition.nodes.find((node) => node.id === option.targetNodeId);
       if (nextNode) {
-        setMessages((current) => [...current, studentMessage, { id: `uni-${nextNode.id}-${Date.now()}`, side: 'uni', text: cleanMessage(nextNode.message) }]);
+        setMessages((current) => [...current, studentMessage, { id: `uni-${nextNode.id}-${Date.now()}`, side: 'uni', text: cleanMessage(renderFlowTemplate(nextNode.message, nextMemory)) }]);
         setCurrentNodeId(nextNode.id);
         return;
       }
@@ -178,24 +233,25 @@ const AlunoPublicSupportPage: React.FC = () => {
       return;
     }
     if (option.action === 'route' || option.action === 'handoff') {
-      openHandoff(studentMessage, option);
+      openHandoff(studentMessage, option, nextMemory);
       return;
     }
     const response = option.responseMessage || (option.action === 'redirect' ? `Vou encaminhar você para o atendimento da ${option.institution === 'anhanguera' ? 'Anhanguera' : 'Unopar'}.` : 'Certo. Vamos continuar seu atendimento.');
-    setMessages((current) => [...current, studentMessage, { id: `uni-response-${Date.now()}`, side: 'uni', text: cleanMessage(response) }]);
+    setMessages((current) => [...current, studentMessage, { id: `uni-response-${Date.now()}`, side: 'uni', text: cleanMessage(renderFlowTemplate(response, nextMemory)) }]);
     setCurrentNodeId('');
   };
 
   const createTicketMutation = useMutation({
     mutationFn: () => publicSupportService.createTicket({
       turnstileToken,
+      name: normalizeFullName(requesterName),
       cpf,
       subject: route.subject,
       message: ticketMessage,
       sector: route.sector,
       poloId: selectedPoloId,
       poloLabel: route.poloLabel,
-      notifyReply,
+      notifyReply: Boolean(publicPushRegistration),
     }),
     onSuccess: (result) => {
       try { window.localStorage.setItem(PUBLIC_SUPPORT_STORAGE_KEY, result.accessToken); } catch { /* storage indisponível */ }
@@ -225,9 +281,26 @@ const AlunoPublicSupportPage: React.FC = () => {
   const configuredPolo = bootstrap.data?.configs.find((config) => config.polo_id === selectedPoloId);
   const averageResponse = Number(configuredPolo?.tempo_medio_resposta_minutos || 120);
   const showTicketForm = messages.some((message) => message.action === 'handoff');
+  const submitTicket = (event: React.FormEvent) => {
+    event.preventDefault();
+    setErrorMessage('');
+    if (!isValidFullName(requesterName)) {
+      setErrorMessage('Informe seu nome completo, usando nome e sobrenome.');
+      return;
+    }
+    if (!isValidCpf(cpf)) {
+      setErrorMessage('Informe um CPF válido. Confira os 11 números.');
+      return;
+    }
+    if (!ticketMessage.trim()) {
+      setErrorMessage('Escreva como podemos ajudar.');
+      return;
+    }
+    createTicketMutation.mutate();
+  };
 
   return (
-    <main className="relative flex h-dvh min-h-[36rem] overflow-hidden bg-[#001a33] text-white">
+    <main className="fixed inset-0 flex overflow-hidden bg-[#001a33] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(37,99,235,.42),transparent_36%),radial-gradient(circle_at_90%_85%,rgba(14,165,233,.20),transparent_34%),linear-gradient(155deg,#001126_0%,#002c63_55%,#001a33_100%)]" />
       <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]" />
       <section className="relative z-10 mx-auto flex h-full w-full max-w-[34rem] flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
@@ -241,7 +314,7 @@ const AlunoPublicSupportPage: React.FC = () => {
             ) : <>
               {messages.map((message) => <React.Fragment key={message.id}><div className={`${message.side === 'student' ? 'ml-auto rounded-tr-md bg-blue-600 text-white' : 'rounded-tl-md bg-white text-slate-700 ring-1 ring-slate-100'} max-w-[90%] whitespace-pre-line rounded-2xl p-4 text-sm font-medium leading-6 shadow-sm`}>{message.text}</div>{message.action === 'courses' ? <div className="flex flex-wrap gap-2"><Link to="/cursos-tecnicos" className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white">Cursos técnicos</Link><Link to="/ead" className="rounded-xl bg-[#001a33] px-3 py-2 text-xs font-black text-white">Cursos EAD</Link></div> : null}{message.action === 'secure-access' ? <div className="flex flex-wrap gap-2"><Link to="/aluno/login-app" className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white">Entrar</Link><Link to="/aluno/recuperar-senha-app" className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-black text-blue-700">Recuperar acesso</Link></div> : null}</React.Fragment>)}
               {currentOptions.length > 0 ? <div className="grid gap-2.5">{currentOptions.map((option, index) => <button key={option.id} type="button" onClick={() => selectOption(option)} className="flex min-h-14 items-center gap-3 rounded-2xl border border-blue-100 bg-white p-3 text-left text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50/40"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-black text-blue-700">{index + 1}</span><b className="text-sm text-[#001a33]">{option.label}</b></button>)}</div> : null}
-              {showTicketForm ? <form onSubmit={(event) => { event.preventDefault(); setErrorMessage(''); createTicketMutation.mutate(); }} className="space-y-3 rounded-2xl border border-blue-100 bg-white p-4 text-slate-700 shadow-sm"><div><h2 className="font-black text-[#001a33]">Abrir chamado</h2><p className="mt-1 text-xs font-semibold text-slate-500">Informe seu CPF para localizarmos seu cadastro. Seu histórico ficará salvo neste aparelho por 90 dias.</p></div><Field label="CPF" value={cpf} onChange={(value) => setCpf(formatCpf(value))} placeholder="000.000.000-00" inputMode="numeric" autoComplete="off" /><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Polo</span><select value={selectedPoloId} onChange={(event) => setSelectedPoloId(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-blue-500">{bootstrap.data?.polos.map((polo) => <option key={polo.id} value={polo.id}>{polo.nome} · {polo.cidade}</option>)}</select></label><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Como podemos ajudar?</span><textarea required minLength={2} value={ticketMessage} onChange={(event) => setTicketMessage(event.target.value)} className="mt-1.5 h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold outline-none focus:border-blue-500" /></label><label className="flex items-start gap-3 rounded-xl bg-violet-50 p-3 text-xs font-semibold text-violet-800"><input type="checkbox" checked={notifyReply} onChange={(event) => setNotifyReply(event.target.checked)} className="mt-0.5" /><BellRing size={16} className="shrink-0" /><span>Quero ativar as notificações quando a equipe responder. A permissão do celular será solicitada em uma etapa própria.</span></label><AdaptiveTurnstileWidget action="support" resetSignal={turnstileReset} onTokenChange={setTurnstileToken} />{errorMessage ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{errorMessage}</p> : null}<button type="submit" disabled={!turnstileToken || createTicketMutation.isPending || !isValidCpf(cpf) || !ticketMessage.trim()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white disabled:opacity-40">{createTicketMutation.isPending ? <Loader2 size={17} className="animate-spin" /> : <TicketCheck size={17} />}Gerar protocolo e enviar</button></form> : null}
+              {showTicketForm ? <form onSubmit={submitTicket} className="space-y-3 rounded-2xl border border-blue-100 bg-white p-4 text-slate-700 shadow-sm"><div><h2 className="font-black text-[#001a33]">Abrir chamado</h2><p className="mt-1 text-xs font-semibold text-slate-500">Informe seu nome completo e CPF para localizarmos seu cadastro. Seu histórico ficará salvo neste aparelho por 90 dias.</p></div><Field label="Nome completo" value={requesterName} onChange={setRequesterName} placeholder="Digite seu nome e sobrenome" autoComplete="name" /><CpfField value={cpf} onChange={(value) => setCpf(formatCpf(value))} /><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Polo</span><select value={selectedPoloId} onChange={(event) => setSelectedPoloId(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-blue-500">{bootstrap.data?.polos.map((polo) => <option key={polo.id} value={polo.id}>{polo.nome} · {polo.cidade}</option>)}</select></label><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Como podemos ajudar?</span><textarea required minLength={2} value={ticketMessage} onChange={(event) => setTicketMessage(event.target.value)} className="mt-1.5 h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold outline-none focus:border-blue-500" /></label><AdaptiveTurnstileWidget action="support" resetSignal={turnstileReset} onTokenChange={setTurnstileToken} />{errorMessage ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{errorMessage}</p> : null}<button type="submit" disabled={!turnstileToken || createTicketMutation.isPending || !isValidFullName(requesterName) || !isValidCpf(cpf) || !ticketMessage.trim()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white disabled:opacity-40">{createTicketMutation.isPending ? <Loader2 size={17} className="animate-spin" /> : <TicketCheck size={17} />}Gerar protocolo e enviar</button></form> : null}
               {!showTicketForm && currentOptions.length === 0 ? <button type="button" onClick={resetFlow} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 text-xs font-black text-blue-700"><RotateCcw size={15} />Voltar ao menu principal</button> : null}
             </>}
             <div ref={bottomRef} />
@@ -254,5 +327,15 @@ const AlunoPublicSupportPage: React.FC = () => {
 };
 
 const Field = ({ label, value, onChange, placeholder, inputMode, autoComplete }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; autoComplete?: string }) => <label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</span><input required value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-blue-500" /></label>;
+
+const CpfField = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+  const digits = value.replace(/\D/g, '');
+  const complete = digits.length === 11;
+  const valid = complete && isValidCpf(value);
+  const feedback = complete
+    ? valid ? 'CPF válido' : 'CPF inválido. Confira os números.'
+    : `${digits.length} de 11 números`;
+  return <label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">CPF</span><input required value={value} onChange={(event) => onChange(event.target.value)} placeholder="000.000.000-00" inputMode="numeric" autoComplete="off" maxLength={14} aria-invalid={complete && !valid} className={`mt-1.5 h-11 w-full rounded-xl border bg-slate-50 px-3 text-sm font-semibold outline-none ${complete ? valid ? 'border-emerald-400 focus:border-emerald-500' : 'border-rose-400 focus:border-rose-500' : 'border-slate-200 focus:border-blue-500'}`} /><span className={`mt-1 block text-[10px] font-bold ${complete ? valid ? 'text-emerald-600' : 'text-rose-600' : 'text-slate-400'}`}>{feedback}</span></label>;
+};
 
 export default AlunoPublicSupportPage;

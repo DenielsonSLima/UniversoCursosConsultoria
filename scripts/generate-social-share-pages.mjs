@@ -272,7 +272,7 @@ const buildRouteHtml = (sourceHtml, metadata) => {
     html = setMeta(html, 'name', 'theme-color', '#001a33');
     html = setMeta(html, 'name', 'apple-mobile-web-app-capable', 'yes');
     html = setMeta(html, 'name', 'apple-mobile-web-app-status-bar-style', 'black-translucent');
-    html = setMeta(html, 'name', 'apple-mobile-web-app-title', 'Universo CC');
+    html = setMeta(html, 'name', 'apple-mobile-web-app-title', 'Universo Cursos e Consultoria');
   }
   html = setMeta(html, 'name', 'description', metadata.description);
   html = setMeta(html, 'name', 'robots', metadata.robots);

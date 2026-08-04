@@ -1,4 +1,6 @@
 import { supabase } from '../../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+import type { PublicPushRegistration } from '../native-app/native-app.service';
 
 export const PUBLIC_SUPPORT_STORAGE_KEY = 'universo.public-support.access-token';
 
@@ -56,8 +58,17 @@ const invoke = async <T>(body: Record<string, unknown>): Promise<T> => {
 
 export const publicSupportService = {
   bootstrap: () => invoke<PublicSupportBootstrap>({ action: 'bootstrap' }),
-  createTicket: (input: Record<string, unknown>) => invoke<{ chat: PublicSupportHistory['chat']; accessToken: string; averageResponseMinutes: number }>({ action: 'create-ticket', ...input }),
+  createTicket: (input: Record<string, unknown>) => invoke<{ chat: PublicSupportHistory['chat']; accessToken: string; averageResponseMinutes: number }>({
+    action: 'create-ticket',
+    ...input,
+    challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
+  }),
   history: (accessToken: string) => invoke<PublicSupportHistory>({ action: 'history', accessToken }),
+  registerPush: (accessToken: string, registration: PublicPushRegistration) => invoke<{ registered: boolean }>({
+    action: 'register-push',
+    accessToken,
+    ...registration,
+  }),
   sendMessage: (accessToken: string, message: string) => invoke<PublicSupportHistory>({ action: 'send-message', accessToken, message }),
   sendAttachment: async (accessToken: string, file: File) => invoke<PublicSupportHistory>({
     action: 'send-attachment',

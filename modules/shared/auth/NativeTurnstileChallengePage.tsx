@@ -49,6 +49,7 @@ const loadTurnstile = () => new Promise<TurnstileApi>((resolve, reject) => {
 
 const NativeTurnstileChallengePage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const failureCountRef = useRef(0);
   const [message, setMessage] = useState('Preparando verificação de segurança…');
 
   useEffect(() => {
@@ -99,6 +100,7 @@ const NativeTurnstileChallengePage: React.FC = () => {
           'refresh-timeout': 'auto',
           'feedback-enabled': false,
           callback: (token: string) => {
+            failureCountRef.current = 0;
             setMessage('Verificação de segurança concluída.');
             send({ status: 'verified', token });
           },
@@ -111,8 +113,12 @@ const NativeTurnstileChallengePage: React.FC = () => {
             send({ status: 'unsupported', errorCode: 'unsupported-browser' });
           },
           'error-callback': (errorCode: string) => {
+            failureCountRef.current += 1;
             setMessage('Falha na verificação. Tentando novamente…');
-            send({ status: 'error', errorCode });
+            send({
+              status: failureCountRef.current >= 3 ? 'error' : 'retrying',
+              errorCode,
+            });
             return true;
           },
         });

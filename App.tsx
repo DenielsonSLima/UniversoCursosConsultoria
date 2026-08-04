@@ -10,7 +10,10 @@ import AccessCheckingScreen from './modules/shared/components/AccessCheckingScre
 import RouteScrollManager from './modules/shared/components/RouteScrollManager';
 import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
 import AlunoPwaRuntime from './modules/aluno/pwa/AlunoPwaRuntime';
+import AlunoConnectivityStatus from './modules/aluno/pwa/AlunoConnectivityStatus';
 import NativeAuthBridge from './modules/shared/auth/NativeAuthBridge';
+import NativePushBridge from './modules/aluno/native-app/NativePushBridge';
+import NativePushPermissionBootstrap from './modules/aluno/native-app/NativePushPermissionBootstrap';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
 
 const PublicPage = lazy(() => import('./modules/public/public.page'));
@@ -65,9 +68,12 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <NativeAuthBridge />
+      <NativePushBridge />
+      <NativePushPermissionBootstrap />
       <RouteScrollManager />
       <SeoManager />
       <AlunoPwaRuntime />
+      <AlunoConnectivityStatus />
       <Suspense fallback={<RouteLoadingScreen />}>
         <Routes>
 

@@ -8,9 +8,9 @@ import {
   AlunoDeleteChatModal,
   AlunoMessageComposer,
   AlunoMessageList,
-  AlunoNewChatModal,
   CHAT_PAGE_SIZE,
 } from './AlunoComunicacaoParts';
+import AlunoAutomatedSupportModal from './AlunoAutomatedSupportModal';
 import {
   alunoComunicacaoKeys,
   alunoComunicacaoService,
@@ -21,10 +21,14 @@ import {
   ComunicacaoChat,
   ComunicacaoMensagem,
   ComunicacaoPageProps,
+  CreateAlunoChatInput,
 } from './comunicacao.types';
 import useAlunoMobileLayout from '../hooks/useAlunoMobileLayout';
 import AlunoMobileComunicacao from './mobile/AlunoMobileComunicacao';
 import AlunoSupportAvailabilityCard from './AlunoSupportAvailabilityCard';
+import { useAlunoAppDeviceStatus } from '../native-app/native-app.queries';
+import { nativeAppService } from '../native-app/native-app.service';
+import { NATIVE_PUSH_PERMISSION_CHANGED_EVENT } from '../native-app/native-app.bridge';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -50,17 +54,18 @@ const playMessageSound = (tone: 'send' | 'receive') => {
   }
 };
 
-const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome }) => {
+const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, onNavigate }) => {
   const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const isMobile = useAlunoMobileLayout();
+  const { statusQuery: appNotificationStatusQuery } = useAlunoAppDeviceStatus(alunoId);
+  const appNotificationsEnabled = Boolean(appNotificationStatusQuery.data?.notificationsEnabled);
+  const isNativeApp = nativeAppService.isAvailable();
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [showNewChatModal, setShowNewChatModal] = useState(false);
-  const [newChatCategory, setNewChatCategory] = useState('');
-  const [newChatSubject, setNewChatSubject] = useState('');
-  const [notifyOnResponse, setNotifyOnResponse] = useState(false);
+  const [nativePushAllowed, setNativePushAllowed] = useState(false);
   const [unreadChatIds, setUnreadChatIds] = useState<Set<string>>(new Set());
   const [activeCallTab, setActiveCallTab] = useState<'pendentes' | 'resolvidos'>('pendentes');
   const [pendingPage, setPendingPage] = useState(1);
@@ -73,6 +78,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
+  const requestedChatHandledRef = useRef(false);
 
   // Delete confirm modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -143,6 +149,26 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   });
 
   useEffect(() => {
+    if (!isNativeApp) return undefined;
+    let disposed = false;
+    const refreshPermission = () => {
+      void nativeAppService.getGlobalPushStatus().then((push) => {
+        if (!disposed) setNativePushAllowed(Boolean(
+          push && ['granted', 'provisional'].includes(push.permissionStatus) && push.token,
+        ));
+      }).catch(() => {
+        if (!disposed) setNativePushAllowed(false);
+      });
+    };
+    refreshPermission();
+    window.addEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPermission);
+    return () => {
+      disposed = true;
+      window.removeEventListener(NATIVE_PUSH_PERMISSION_CHANGED_EVENT, refreshPermission);
+    };
+  }, [isNativeApp]);
+
+  useEffect(() => {
     seenMessageIdsRef.current = new Set();
   }, [activeChatId]);
 
@@ -168,6 +194,32 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
   // ── 7. Default active chat ──
   useEffect(() => {
+    if (!requestedChatHandledRef.current) {
+      const requestedChatId = new URLSearchParams(window.location.search).get('chatId');
+      const requestedChat = requestedChatId
+        ? chats.find((chat) => chat.id === requestedChatId)
+        : null;
+
+      if (requestedChat) {
+        const requestedTab = requestedChat.status === 'pendente' ? 'pendentes' : 'resolvidos';
+        const requestedTabChats = requestedTab === 'pendentes' ? pendentes : resolvidos;
+        const requestedIndex = requestedTabChats.findIndex((chat) => chat.id === requestedChat.id);
+        requestedChatHandledRef.current = true;
+        setActiveCallTab(requestedTab);
+        if (requestedTab === 'pendentes') setPendingPage(Math.floor(requestedIndex / CHAT_PAGE_SIZE) + 1);
+        else setResolvedPage(Math.floor(requestedIndex / CHAT_PAGE_SIZE) + 1);
+        setActiveChatId(requestedChat.id);
+        setMobileConversationOpen(true);
+
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('chatId');
+        window.history.replaceState(window.history.state, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+        return;
+      }
+
+      if (requestedChatId && !loadingChats) requestedChatHandledRef.current = true;
+    }
+
     const isCurrentInTab = activeCallChats.some(c => c.id === activeChatId);
     const totalPagesForTab = Math.max(1, Math.ceil(activeCallChats.length / CHAT_PAGE_SIZE));
 
@@ -190,7 +242,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
     activeCallChats,
     activeCallTab,
     activeChatId,
+    chats,
+    loadingChats,
+    pendentes,
     pendingPage,
+    resolvidos,
     resolvedPage
   ]);
 
@@ -253,29 +309,20 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
   };
 
   // ── Open New Chat ──
-  const handleCreateNewChat = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateNewChat = async (
+    input: Pick<CreateAlunoChatInput, 'message' | 'poloLabel' | 'sector' | 'subject'>,
+  ) => {
     if (!canOpenNewChat) {
-      toast.error('Atendimento indisponível', supportConfig?.mensagem_offline || 'Não é possível abrir um novo chamado neste momento.');
-      return;
+      throw new Error(supportConfig?.mensagem_offline || 'Não é possível abrir um novo chamado neste momento.');
     }
-    if (!newChatCategory || !newChatSubject.trim()) return;
     try {
-      const selectedCat = categories.find(c => c.id === newChatCategory);
-      const catName = selectedCat ? selectedCat.nome : 'Suporte';
-
       const newChat = await alunoComunicacaoService.createChat({
-        alunoId,
-        alunoNome,
-        categoryId: newChatCategory,
-        categoryName: catName,
-        subject: newChatSubject,
-        notifyOnResponse,
+        ...input,
+        notifyOnResponse: isNativeApp && (nativePushAllowed || appNotificationsEnabled),
+        origin: isNativeApp ? 'app' : 'portal',
       });
 
       setShowNewChatModal(false);
-      setNewChatCategory('');
-      setNewChatSubject('');
       queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
       setActiveCallTab('pendentes');
       setPendingPage(1);
@@ -284,34 +331,11 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
       toast.success('Chamado aberto', 'Nossa equipe responderá em breve!');
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao abrir chamado', 'Não foi possível abrir o chamado.');
+      throw new Error(
+        err instanceof Error ? err.message : 'Não foi possível abrir o chamado.',
+        { cause: err },
+      );
     }
-  };
-
-  const handleNotificationPreference = async (enabled: boolean) => {
-    if (!enabled) {
-      setNotifyOnResponse(false);
-      return;
-    }
-
-    if (!('Notification' in window)) {
-      toast.error('Notificações indisponíveis', 'Este navegador não permite avisos do aplicativo.');
-      setNotifyOnResponse(false);
-      return;
-    }
-
-    const permission = window.Notification.permission === 'default'
-      ? await window.Notification.requestPermission()
-      : window.Notification.permission;
-
-    if (permission !== 'granted') {
-      toast.error('Permissão necessária', 'Autorize as notificações do Universo CC nas configurações do aparelho.');
-      setNotifyOnResponse(false);
-      return;
-    }
-
-    setNotifyOnResponse(true);
-    toast.success('Avisos ativados', 'Este chamado será marcado para avisar quando houver resposta.');
   };
 
   // ── Helpers ──
@@ -604,18 +628,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome })
 
       {/* ── New Ticket Modal ── */}
       {showNewChatModal && (
-        <AlunoNewChatModal
-          categories={categories}
-          categoryId={newChatCategory}
-          subject={newChatSubject}
-          notifyOnResponse={notifyOnResponse}
-          notificationText={supportConfig?.texto_notificacao_optin}
-          showNotificationOption={supportConfig?.solicitar_notificacao_resposta ?? false}
-          onCategoryChange={setNewChatCategory}
+        <AlunoAutomatedSupportModal
           onClose={() => setShowNewChatModal(false)}
-          onSubmit={handleCreateNewChat}
-          onSubjectChange={setNewChatSubject}
-          onNotificationChange={handleNotificationPreference}
+          onCreate={handleCreateNewChat}
+          onNavigate={onNavigate}
         />
       )}
     </>

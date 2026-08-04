@@ -164,6 +164,13 @@ export const createFlowId = (prefix: string) => {
 export const cloneFlowDefinition = (definition: WhatsAppFlowDefinition): WhatsAppFlowDefinition =>
   JSON.parse(JSON.stringify(definition));
 
+export const renderFlowTemplate = (
+  value: string | null | undefined,
+  memory: Record<string, string>,
+): string => String(value || '').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_match, key: string) => (
+  memory[key] || ''
+)).trim();
+
 export const defaultFlowDefinition = (
   flowType?: 'universo_main' | 'institutional',
 ): WhatsAppFlowDefinition =>

@@ -14,6 +14,9 @@ import { savePortalSession, type PortalAuthProfile } from '../../login/portal-se
 import GoogleLogo from '../../shared/auth/GoogleLogo';
 import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
+import { Capacitor } from '@capacitor/core';
+import { supabase } from '../../../lib/supabase';
+import AlunoAppSplash from '../pwa/AlunoAppSplash';
 
 type LoginMessage = {
   tone: 'success' | 'error';
@@ -27,6 +30,7 @@ const AlunoAppLoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingExistingSession, setCheckingExistingSession] = useState(() => Capacitor.isNativePlatform());
   const [message, setMessage] = useState<LoginMessage | null>(() => (
     searchParams.get('reason') === 'session_expired'
       ? { tone: 'error', text: 'Sua sessão expirou. Entre novamente para continuar.' }
@@ -39,6 +43,30 @@ const AlunoAppLoginPage: React.FC = () => {
   const wasLoadingRef = useRef(false);
 
   const redirectPath = getSafePublicAlunoRedirectPath(searchParams.get('redirect'));
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    if (searchParams.get('oauth_return') || searchParams.get('oauth_error') || searchParams.get('reason') === 'session_expired') {
+      setCheckingExistingSession(false);
+      return undefined;
+    }
+
+    let mounted = true;
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (!error && data.session) {
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+      setCheckingExistingSession(false);
+    }).catch(() => {
+      if (mounted) setCheckingExistingSession(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate, redirectPath, searchParams]);
 
   useEffect(() => {
     if (wasLoadingRef.current && !loading) {
@@ -150,6 +178,8 @@ const AlunoAppLoginPage: React.FC = () => {
 
   const openSignup = () => navigate('/aluno/cadastro-app');
   const openSupport = () => navigate('/aluno/atendimento-publico');
+
+  if (checkingExistingSession) return <AlunoAppSplash />;
 
   return (
     <main className="aluno-app-login fixed inset-0 overflow-hidden bg-[#001a33] text-white">

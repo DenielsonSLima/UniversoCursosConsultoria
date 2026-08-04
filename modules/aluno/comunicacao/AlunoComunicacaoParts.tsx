@@ -5,7 +5,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  MessageSquare,
   Paperclip,
   Send,
   Sparkles,
@@ -14,7 +13,7 @@ import {
 } from 'lucide-react';
 import { CommunicationAttachmentPreview } from '../../shared/comunicacao/CommunicationAttachmentPreview';
 import { ACCEPTED_ATTACHMENT_TYPES, formatChatTime, getFileIcon } from './comunicacao.helpers';
-import { ComunicacaoCategoria, ComunicacaoMensagem } from './comunicacao.types';
+import { ComunicacaoMensagem } from './comunicacao.types';
 
 export const CHAT_PAGE_SIZE = 8;
 
@@ -27,7 +26,7 @@ const DIALOG_FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-const useAccessibleDialog = (onClose: () => void) => {
+export const useAccessibleDialog = (onClose: () => void) => {
   const dialogRef = useRef<React.ElementRef<'div'>>(null);
   const onCloseRef = useRef(onClose);
   const previousFocusRef = useRef<{ focus?: () => void } | null>(null);
@@ -216,58 +215,6 @@ export const AlunoDeleteChatModal: React.FC<{
           </button>
         </div>
       </div>
-    </div>
-  </div>
-  );
-};
-
-export const AlunoNewChatModal: React.FC<{
-  categories: ComunicacaoCategoria[];
-  categoryId: string;
-  subject: string;
-  onCategoryChange: (value: string) => void;
-  onClose: () => void;
-  onSubmit: (event: React.FormEvent) => void;
-  onSubjectChange: (value: string) => void;
-  notifyOnResponse: boolean;
-  notificationText?: string;
-  showNotificationOption: boolean;
-  onNotificationChange: (value: boolean) => void;
-}> = ({ categories, categoryId, subject, onCategoryChange, onClose, onSubmit, onSubjectChange, notifyOnResponse, notificationText, showNotificationOption, onNotificationChange }) => {
-  const dialogRef = useAccessibleDialog(onClose);
-
-  return (
-  <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm md:items-center md:p-4">
-    <div ref={dialogRef} className="relative max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-[2rem] border border-slate-100 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-6 shadow-2xl animate-fadeIn motion-reduce:animate-none md:max-h-[92dvh] md:rounded-[2.5rem] md:p-8" role="dialog" aria-modal="true" aria-labelledby="new-chat-title" aria-describedby="new-chat-description">
-      <button type="button" onClick={onClose} className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700 motion-reduce:transition-none md:right-6 md:top-6 md:h-auto md:w-auto md:p-2" aria-label="Fechar"><X size={18} /></button>
-      <div className="mb-6">
-        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-3"><MessageSquare size={20} /></div>
-        <h4 id="new-chat-title" className="text-lg font-black text-[#001a33] uppercase tracking-tight">Abrir Novo Chamado</h4>
-        <p id="new-chat-description" className="text-slate-500 text-xs mt-1">Selecione o setor e descreva sua dúvida ou problema.</p>
-      </div>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-1">
-          <label htmlFor="aluno-new-chat-category" className="text-[10px] font-black uppercase tracking-wider text-slate-500">Setor de Destino</label>
-          <select data-dialog-autofocus id="aluno-new-chat-category" required value={categoryId} onChange={(event) => onCategoryChange(event.target.value)} className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white motion-reduce:transition-none md:text-xs">
-            <option value="">Selecione uma categoria...</option>
-            {categories.map((category) => <option key={category.id} value={category.id}>{category.nome}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="aluno-new-chat-subject" className="text-[10px] font-black uppercase tracking-wider text-slate-500">Dúvida / Assunto</label>
-          <textarea id="aluno-new-chat-subject" required rows={4} placeholder="Descreva detalhadamente o que você precisa..." value={subject} onChange={(event) => onSubjectChange(event.target.value)} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-medium text-slate-700 outline-none transition-all focus:border-blue-500 focus:bg-white motion-reduce:transition-none md:text-xs" />
-        </div>
-        {showNotificationOption ? (
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-            <input type="checkbox" checked={notifyOnResponse} onChange={(event) => void onNotificationChange(event.target.checked)} className="mt-0.5 h-5 w-5 rounded border-blue-200 text-blue-600 focus:ring-blue-500" />
-            <span>
-              <strong className="block text-xs font-black text-[#001a33]">Avisar quando responderem</strong>
-              <span className="mt-1 block text-[10px] font-medium leading-relaxed text-slate-600">{notificationText || 'Ative as notificações para ser informado quando sua solicitação for respondida.'}</span>
-            </span>
-          </label>
-        ) : null}
-        <button type="submit" className="min-h-12 w-full rounded-xl bg-[#001a33] py-3 text-xs font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:bg-blue-900">Abrir Chamado</button>
-      </form>
     </div>
   </div>
   );

@@ -1,18 +1,17 @@
 import type { ComponentType } from 'react';
 import {
-  CalendarDays,
   CreditCard,
   GraduationCap,
   LayoutDashboard,
-  Library,
   Menu,
+  MessageSquare,
 } from 'lucide-react';
 
 type AlunoMobileBottomNavProps = {
   activeModule: string;
-  canViewCalendar: boolean;
   isMoreOpen: boolean;
   unreadChatsCount: number;
+  unreadNotificationsCount: number;
   onMoreOpen: () => void;
   onModuleChange: (moduleId: string) => void;
 };
@@ -26,20 +25,16 @@ type MobileNavItem = {
 
 const AlunoMobileBottomNav = ({
   activeModule,
-  canViewCalendar,
   isMoreOpen,
   unreadChatsCount,
+  unreadNotificationsCount,
   onMoreOpen,
   onModuleChange,
 }: AlunoMobileBottomNavProps) => {
-  const contextualItem: MobileNavItem = canViewCalendar
-    ? { id: 'calendario', label: 'Agenda', icon: CalendarDays, modules: ['calendario'] }
-    : { id: 'biblioteca', label: 'Biblioteca', icon: Library, modules: ['biblioteca'] };
-
   const items: MobileNavItem[] = [
     { id: 'inicio', label: 'Início', icon: LayoutDashboard, modules: ['inicio'] },
     { id: 'turmas', label: 'Meus cursos', icon: GraduationCap, modules: ['turmas', 'cursos'] },
-    contextualItem,
+    { id: 'comunicacao', label: 'Atendimento', icon: MessageSquare, modules: ['comunicacao'] },
     { id: 'financeiro', label: 'Financeiro', icon: CreditCard, modules: ['financeiro'] },
   ];
 
@@ -68,7 +63,14 @@ const AlunoMobileBottomNav = ({
             >
               <span className={`absolute top-1.5 h-1 w-5 rounded-full transition-all ${isActive ? 'bg-blue-600' : 'bg-transparent'}`} />
               <span className={`flex h-9 w-11 items-center justify-center rounded-xl transition-colors ${isActive ? 'bg-blue-50' : 'bg-transparent'}`}>
-                <Icon size={21} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="relative">
+                  <Icon size={21} strokeWidth={isActive ? 2.5 : 2} />
+                  {item.id === 'comunicacao' && unreadChatsCount > 0 ? (
+                    <span className="absolute -right-2.5 -top-2.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-red-500 px-0.5 text-[9px] font-black leading-none text-white">
+                      {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+                    </span>
+                  ) : null}
+                </span>
               </span>
               <span className={`truncate text-[10px] leading-none ${isActive ? 'font-black' : 'font-bold'}`}>
                 {item.label}
@@ -90,9 +92,9 @@ const AlunoMobileBottomNav = ({
           <span className={`absolute top-1.5 h-1 w-5 rounded-full transition-all ${moreIsActive ? 'bg-blue-600' : 'bg-transparent'}`} />
           <span className={`relative flex h-9 w-11 items-center justify-center rounded-xl transition-colors ${moreIsActive ? 'bg-blue-50' : 'bg-transparent'}`}>
             <Menu size={21} strokeWidth={moreIsActive ? 2.5 : 2} />
-            {unreadChatsCount > 0 ? (
-              <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-red-500 px-0.5 text-[9px] font-black leading-none text-white">
-                {unreadChatsCount > 9 ? '9+' : unreadChatsCount}
+            {unreadNotificationsCount > 0 ? (
+              <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-red-500 px-0.5 text-[9px] font-black leading-none text-white">
+                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
               </span>
             ) : null}
           </span>

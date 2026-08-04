@@ -8,7 +8,7 @@ import {
   type NativeTurnstileAction,
 } from './native-turnstile-bridge';
 
-type NativeTurnstileStatus = 'loading' | 'verified' | 'error' | 'unsupported';
+type NativeTurnstileStatus = 'loading' | 'retrying' | 'verified' | 'error' | 'unsupported';
 
 type Props = {
   action: NativeTurnstileAction;
@@ -55,6 +55,13 @@ const NativeTurnstileWidget: React.FC<Props> = ({
         return;
       }
 
+      if (event.data.status === 'retrying' || event.data.status === 'expired') {
+        onTokenChange('');
+        setStatus('retrying');
+        onStatusChange?.('retrying');
+        return;
+      }
+
       onTokenChange('');
       const nextStatus = event.data.status === 'unsupported' ? 'unsupported' : 'error';
       setStatus(nextStatus);
@@ -75,6 +82,13 @@ const NativeTurnstileWidget: React.FC<Props> = ({
     return url.toString();
   }, [action, challengeOrigin, nonce, parentOrigin]);
 
+  const retry = () => {
+    onTokenChange('');
+    setStatus('loading');
+    onStatusChange?.('loading');
+    setNonce(createNativeTurnstileNonce());
+  };
+
   if (!iframeUrl) {
     return (
       <p role="alert" className="text-xs font-semibold text-red-600">
@@ -94,25 +108,34 @@ const NativeTurnstileWidget: React.FC<Props> = ({
         referrerPolicy="no-referrer"
         className="h-[104px] w-full border-0 bg-white"
       />
-      <p
-        role={status === 'error' || status === 'unsupported' ? 'alert' : 'status'}
-        aria-live="polite"
-        className={`text-xs font-semibold ${
-          status === 'verified'
-            ? 'text-emerald-700'
-            : status === 'error' || status === 'unsupported'
-              ? 'text-red-600'
-              : 'text-slate-500'
-        }`}
-      >
-        {status === 'verified'
-          ? 'Verificação de segurança concluída.'
-          : status === 'error'
-            ? 'Não foi possível concluir a verificação de segurança.'
-            : status === 'unsupported'
-              ? 'Este aparelho não é compatível com a verificação de segurança.'
-              : 'Preparando verificação de segurança…'}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p
+          role={status === 'error' || status === 'unsupported' ? 'alert' : 'status'}
+          aria-live="polite"
+          className={`text-xs font-semibold ${
+            status === 'verified'
+              ? 'text-emerald-700'
+              : status === 'error' || status === 'unsupported'
+                ? 'text-red-600'
+                : 'text-slate-500'
+          }`}
+        >
+          {status === 'verified'
+            ? 'Verificação de segurança concluída.'
+            : status === 'retrying'
+              ? 'Reconectando à verificação de segurança…'
+              : status === 'error'
+                ? 'Não foi possível concluir a verificação de segurança.'
+                : status === 'unsupported'
+                  ? 'Este aparelho não é compatível com a verificação de segurança.'
+                  : 'Preparando verificação de segurança…'}
+        </p>
+        {status === 'error' ? (
+          <button type="button" onClick={retry} className="shrink-0 text-xs font-black text-blue-600">
+            Tentar novamente
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 };

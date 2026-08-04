@@ -30,7 +30,7 @@ const AlunoAppSplash: React.FC<AlunoAppSplashProps> = ({
         />
       </div>
 
-      <h1 className="mt-7 text-2xl font-black tracking-tight">Universo CC</h1>
+      <h1 className="mt-7 text-center text-2xl font-extrabold leading-tight tracking-tight">Universo Cursos e Consultoria</h1>
       <p className="mt-2 text-[10px] font-black uppercase tracking-[0.3em] text-blue-200">
         Portal do Aluno
       </p>

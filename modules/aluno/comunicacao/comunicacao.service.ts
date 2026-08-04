@@ -160,12 +160,14 @@ const deleteChatForAluno = async (chatId: string, alunoId: string) => {
   if (error) throw error;
 };
 
-const createChat = async ({ categoryId, categoryName, subject, notifyOnResponse }: CreateAlunoChatInput) => {
-  const { data, error } = await supabase.rpc('create_my_comunicacao_chat', {
-    p_categoria_id: categoryId,
-    p_categoria_nome: categoryName,
+const createChat = async ({ sector, subject, message, poloLabel, notifyOnResponse, origin }: CreateAlunoChatInput) => {
+  const { data, error } = await supabase.rpc('create_my_routed_comunicacao_chat', {
+    p_setor: sector,
     p_assunto: subject,
+    p_mensagem: message,
+    p_polo_label: poloLabel || null,
     p_notificar_resposta: Boolean(notifyOnResponse),
+    p_origem: origin,
   });
 
   if (error) throw error;

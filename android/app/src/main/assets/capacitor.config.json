@@ -1,0 +1,14 @@
+{
+	"appId": "br.com.universocc.aluno",
+	"appName": "Universo Cursos e Consultoria",
+	"webDir": "dist",
+	"plugins": {
+		"FirebaseMessaging": {
+			"presentationOptions": [
+				"alert",
+				"badge",
+				"sound"
+			]
+		}
+	}
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import {
+  Bell,
   BookOpen,
   CalendarDays,
   CreditCard,
@@ -31,6 +32,7 @@ type AlunoPortalShellProps = {
   contentScrollRef: RefObject<HTMLDivElement | null>;
   isMobileMenuOpen: boolean;
   unreadChatsCount: number;
+  unreadNotificationsCount: number;
   onLogout: () => void;
   onMobileMenuChange: (isOpen: boolean) => void;
   onModuleChange: (moduleId: string) => void;
@@ -51,6 +53,7 @@ const AlunoPortalShell = ({
   contentScrollRef,
   isMobileMenuOpen,
   unreadChatsCount,
+  unreadNotificationsCount,
   onLogout,
   onMobileMenuChange,
   onModuleChange,
@@ -60,6 +63,7 @@ const AlunoPortalShell = ({
   const alunoInitials = (alunoNome.trim().slice(0, 2) || 'AL').toUpperCase();
   const menuItems: AlunoMenuItem[] = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
+    { id: 'notificacoes', label: 'Notificações', icon: <Bell size={20} />, badge: unreadNotificationsCount },
     { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={20} /> },
     ...(canViewCalendar
@@ -172,14 +176,22 @@ const AlunoPortalShell = ({
         <div className="flex h-9 w-[118px] items-center justify-center rounded-xl bg-white px-2 shadow-sm">
           <img src="/LogoUniverso.png" alt="Universo" className="h-7 w-full object-contain" />
         </div>
-        <button
-          type="button"
-          onClick={() => openModule('perfil')}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-xs font-black text-white shadow-sm ring-1 ring-white/15"
-          aria-label="Abrir meu perfil"
-        >
-          {alunoInitials}
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell
+            active={activeModule === 'notificacoes'}
+            count={unreadNotificationsCount}
+            onClick={() => openModule('notificacoes')}
+            onDark
+          />
+          <button
+            type="button"
+            onClick={() => openModule('perfil')}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-xs font-black text-white shadow-sm ring-1 ring-white/15"
+            aria-label="Abrir meu perfil"
+          >
+            {alunoInitials}
+          </button>
+        </div>
       </div>
 
       <div className="fixed inset-x-0 top-0 z-30 hidden h-16 items-center justify-between border-b border-white/10 bg-[#001a33] px-4 text-white shadow-lg md:flex lg:hidden">
@@ -187,6 +199,12 @@ const AlunoPortalShell = ({
           <img src="/LogoUniverso.png" alt="Universo" className="h-7 w-full object-contain" />
         </div>
         <div className="flex items-center gap-2">
+          <NotificationBell
+            active={activeModule === 'notificacoes'}
+            count={unreadNotificationsCount}
+            onClick={() => openModule('notificacoes')}
+            onDark
+          />
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-xs font-black text-white shadow-sm">
             {alunoInitials}
           </div>
@@ -265,6 +283,11 @@ const AlunoPortalShell = ({
         <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-4 shadow-sm lg:flex">
           <h2 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Portal do Aluno</h2>
           <div className="flex items-center gap-4">
+            <NotificationBell
+              active={activeModule === 'notificacoes'}
+              count={unreadNotificationsCount}
+              onClick={() => openModule('notificacoes')}
+            />
             <div className="hidden text-right sm:block">
               <p className="text-xs font-bold text-[#001a33]">{alunoNome}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Aluno</p>
@@ -282,15 +305,48 @@ const AlunoPortalShell = ({
 
       <AlunoMobileBottomNav
         activeModule={activeModule}
-        canViewCalendar={canViewCalendar}
         isMoreOpen={isMobileMenuOpen}
         unreadChatsCount={unreadChatsCount}
+        unreadNotificationsCount={unreadNotificationsCount}
         onMoreOpen={() => onMobileMenuChange(true)}
         onModuleChange={(moduleId) => openModule(moduleId, true)}
       />
     </div>
   );
 };
+
+const NotificationBell = ({
+  active,
+  count,
+  onClick,
+  onDark = false,
+}: {
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  onDark?: boolean;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors ${
+      active
+        ? 'bg-blue-600 text-white shadow-md'
+        : onDark
+          ? 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+          : 'border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-blue-700'
+    }`}
+    aria-label={count > 0 ? `Abrir notificações, ${count} não lidas` : 'Abrir notificações'}
+    aria-current={active ? 'page' : undefined}
+  >
+    <Bell size={20} />
+    {count > 0 ? (
+      <span className="absolute -right-1.5 -top-1.5">
+        <Badge count={count} compact />
+      </span>
+    ) : null}
+  </button>
+);
 
 const AlunoIdentity = ({ email, initials, name }: { email: string; initials: string; name: string }) => (
   <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
