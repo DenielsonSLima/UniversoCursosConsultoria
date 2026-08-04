@@ -14,6 +14,11 @@ import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
 import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
+import { relationshipConsentService } from './relationship-consent.service';
+import {
+  RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+  type RelationshipConsentSurface,
+} from '../../shared/constants/relationship-consent';
 
 export interface PublicAlunoSignupData {
   nome: string;
@@ -23,6 +28,11 @@ export interface PublicAlunoSignupData {
   dataNascimento: string;
   password: string;
   acceptedTerms: boolean;
+  relationshipBirthdayConsent: boolean;
+  relationshipBirthdayConsentSurface: Extract<
+    RelationshipConsentSurface,
+    'public_signup_web' | 'public_signup_app'
+  >;
   cep: string;
   endereco: string;
   numero: string;
@@ -41,15 +51,34 @@ interface FinalizeAlunoFirstAccessData {
   acceptTermsVersion?: string;
   setPassword?: boolean;
   newPassword?: string;
+  relationshipBirthdayConsent?: boolean;
+  relationshipPreferenceDecided?: boolean;
 }
 
 type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'>;
 type LegacyPublicAlunoProfileData = Omit<
   PublicAlunoProfileData,
-  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf' | 'turnstileToken'
+  | 'cep'
+  | 'endereco'
+  | 'numero'
+  | 'complemento'
+  | 'bairro'
+  | 'cidade'
+  | 'uf'
+  | 'turnstileToken'
+  | 'relationshipBirthdayConsent'
+  | 'relationshipBirthdayConsentSurface'
 > & Partial<Pick<
   PublicAlunoProfileData,
-  'cep' | 'endereco' | 'numero' | 'complemento' | 'bairro' | 'cidade' | 'uf'
+  | 'cep'
+  | 'endereco'
+  | 'numero'
+  | 'complemento'
+  | 'bairro'
+  | 'cidade'
+  | 'uf'
+  | 'relationshipBirthdayConsent'
+  | 'relationshipBirthdayConsentSurface'
 >>;
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
@@ -221,6 +250,19 @@ const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => 
     throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
   }
 
+  // O trigger do Auth preserva a escolha mesmo quando há confirmação de
+  // e-mail. Esta chamada autenticada cobre cadastro já existente/fallback e é
+  // idempotente quando o trigger já registrou a mesma decisão.
+  if (
+    typeof data.relationshipBirthdayConsent === 'boolean'
+    && data.relationshipBirthdayConsentSurface
+  ) {
+    await relationshipConsentService.registerPreference(
+      data.relationshipBirthdayConsent,
+      data.relationshipBirthdayConsentSurface,
+    );
+  }
+
   return profile;
 };
 
@@ -246,6 +288,16 @@ const finalizePublicSignupFromMetadata = async () => {
     bairro: String(metadata.bairro || ''),
     cidade: String(metadata.cidade || ''),
     uf: String(metadata.uf || ''),
+    relationshipBirthdayConsent:
+      typeof metadata.relationshipBirthdayConsent === 'boolean'
+        ? metadata.relationshipBirthdayConsent
+        : undefined,
+    relationshipBirthdayConsentSurface:
+      metadata.relationshipBirthdayConsentSurface === 'public_signup_app'
+        ? 'public_signup_app'
+        : metadata.relationshipBirthdayConsentSurface === 'public_signup_web'
+          ? 'public_signup_web'
+          : undefined,
   });
 };
 
@@ -351,6 +403,8 @@ export const alunoPublicAuthService = {
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
     const acceptedTerms = data.acceptedTerms;
+    const relationshipBirthdayConsent = data.relationshipBirthdayConsent;
+    const relationshipBirthdayConsentSurface = data.relationshipBirthdayConsentSurface;
     const cep = onlyDigits(data.cep);
     const endereco = data.endereco.trim().toLocaleUpperCase('pt-BR');
     const numero = data.numero.trim().toLocaleUpperCase('pt-BR');
@@ -412,6 +466,8 @@ export const alunoPublicAuthService = {
       cpf,
       dataNascimento,
       acceptedTerms,
+      relationshipBirthdayConsent,
+      relationshipBirthdayConsentSurface,
       cep,
       endereco,
       numero,
@@ -437,6 +493,10 @@ export const alunoPublicAuthService = {
           dataNascimento,
           acceptedTerms,
           termsVersion: TERMS_VERSION,
+          relationshipBirthdayChoiceMade: true,
+          relationshipBirthdayConsent,
+          relationshipBirthdayPolicyVersion: RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+          relationshipBirthdayConsentSurface,
           cep,
           endereco,
           numero,
@@ -482,8 +542,20 @@ export const alunoPublicAuthService = {
     acceptTermsVersion = TERMS_VERSION,
     setPassword = false,
     newPassword,
+    relationshipBirthdayConsent,
+    relationshipPreferenceDecided = true,
   }: FinalizeAlunoFirstAccessData) {
     const updates: Record<string, any> = {};
+
+    if (!relationshipPreferenceDecided) {
+      if (typeof relationshipBirthdayConsent !== 'boolean') {
+        throw new Error('Escolha se deseja ou não receber felicitações e comunicados de relacionamento.');
+      }
+      await relationshipConsentService.registerPreference(
+        relationshipBirthdayConsent,
+        'student_first_access',
+      );
+    }
 
     if (acceptedTerms) {
       updates.aceitou_termos_uso = true;

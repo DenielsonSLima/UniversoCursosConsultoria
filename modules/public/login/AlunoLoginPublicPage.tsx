@@ -77,6 +77,7 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [relationshipBirthdayChoice, setRelationshipBirthdayChoice] = useState<boolean | null>(null);
   const [signupStep, setSignupStep] = useState<SignupStep>('dados');
   const [cep, setCep] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -320,6 +321,13 @@ const AlunoLoginPublicPage: React.FC = () => {
       setMessage({ tone: 'error', text: 'Você precisa aceitar os Termos de Uso para finalizar o cadastro.' });
       return false;
     }
+    if (relationshipBirthdayChoice === null) {
+      setMessage({
+        tone: 'error',
+        text: 'Escolha se deseja ou não receber felicitações e comunicados de relacionamento.',
+      });
+      return false;
+    }
 
     return true;
   };
@@ -365,6 +373,8 @@ const AlunoLoginPublicPage: React.FC = () => {
         dataNascimento,
         password,
         acceptedTerms,
+        relationshipBirthdayConsent: relationshipBirthdayChoice === true,
+        relationshipBirthdayConsentSurface: 'public_signup_web',
         cep,
         endereco,
         numero,
@@ -462,6 +472,7 @@ const AlunoLoginPublicPage: React.FC = () => {
             confirmPassword={confirmPassword}
             showSignupConfirmPassword={showSignupConfirmPassword}
             acceptedTerms={acceptedTerms}
+            relationshipBirthdayChoice={relationshipBirthdayChoice}
             signupStep={signupStep}
             cep={cep}
             endereco={endereco}
@@ -487,6 +498,7 @@ const AlunoLoginPublicPage: React.FC = () => {
             onConfirmPasswordChange={setConfirmPassword}
             onToggleSignupConfirmPassword={() => setShowSignupConfirmPassword((prev) => !prev)}
             onAcceptedTermsChange={setAcceptedTerms}
+            onRelationshipBirthdayChoiceChange={setRelationshipBirthdayChoice}
             onCepChange={(value) => {
               setCepStatus('idle');
               setCep(formatCep(value));

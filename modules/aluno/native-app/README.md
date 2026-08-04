@@ -24,8 +24,20 @@ A chave `.p8` e credenciais de servidor nunca devem ser copiadas para o reposit�
 
 ## Contrato de deep link do push
 
-O payload pode enviar `deep_link`, `deepLink`, `route`, `path` ou `url` em `data`. Somente destinos internos sob `/aluno` são aceitos. Exemplos:
+O payload pode enviar `deep_link`, `deepLink`, `route`, `path` ou `url` em `data`. Somente destinos internos sob `/aluno` são aceitos.
+
+Para notificações do aluno, o dispatcher também envia `scope`, `category` e o `notificationId` persistente:
+
+- `scope=student` com categoria diferente de `chat` abre o registro persistente na Central de Notificações, com mensagem completa, botão de voltar e ação contextual opcional;
+- `category=chat` preserva o destino direto da conversa;
+- `scope=public_support` preserva o acesso público ao atendimento;
+- payloads antigos sem os metadados continuam usando o deep link original.
+
+O `notificationId` é o destino preferencial. O `jobId` também acompanha o payload apenas como compatibilidade transitória caso a correlação do inbox falhe durante o despacho; ele nunca autoriza leitura da fila privada e é resolvido somente na tabela do próprio aluno sob RLS.
+
+Exemplos de destinos aceitos:
 
 - `/aluno/comunicacao?chatId=<uuid>`
+- `/aluno/?module=notificacoes&notificationId=<uuid>`
 - `/aluno/?module=financeiro`
 - `/aluno/?module=calendario&date=2026-08-10`

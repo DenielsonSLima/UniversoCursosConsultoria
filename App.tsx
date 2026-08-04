@@ -12,6 +12,7 @@ import AlunoAppSplash from './modules/aluno/pwa/AlunoAppSplash';
 import AlunoPwaRuntime from './modules/aluno/pwa/AlunoPwaRuntime';
 import AlunoConnectivityStatus from './modules/aluno/pwa/AlunoConnectivityStatus';
 import NativeAuthBridge from './modules/shared/auth/NativeAuthBridge';
+import NativeTurnstileChallengePage from './modules/shared/auth/NativeTurnstileChallengePage';
 import NativePushBridge from './modules/aluno/native-app/NativePushBridge';
 import NativePushPermissionBootstrap from './modules/aluno/native-app/NativePushPermissionBootstrap';
 import { TECHNICAL_LANDING_ROUTE_PATTERN } from './modules/public/landing-pages/cursos-tecnicos/technicalLanding.routes';
@@ -46,8 +47,6 @@ const ProfessorPage = lazy(() => import('./modules/professor/professor.page'));
 const AlunoPage = lazy(() => import('./modules/aluno/aluno.page'));
 const TechnicalLandingRoute = lazy(() => import('./modules/public/landing-pages/cursos-tecnicos/TechnicalLandingRoute'));
 const BioPage = lazy(() => import('./modules/public/bio/BioPage'));
-const NativeTurnstileChallengePage = lazy(() => import('./modules/shared/auth/NativeTurnstileChallengePage'));
-
 const RouteLoadingScreen = () => {
   const pathname = window.location.pathname;
   if (pathname.startsWith('/gestor')) return <AccessCheckingScreen portal="Gestor" />;
@@ -65,6 +64,13 @@ const RouteLoadingScreen = () => {
 };
 
 const App: React.FC = () => {
+  // Esta página vive dentro do iframe nativo de segurança. Ela não pode
+  // passar pelo Suspense/fallback global (que exibe a marca da Universo), nem
+  // iniciar bridges, consultas ou shells que não pertencem ao Cloudflare.
+  if (window.location.pathname === '/native-auth/turnstile') {
+    return <NativeTurnstileChallengePage />;
+  }
+
   return (
     <BrowserRouter>
       <NativeAuthBridge />
@@ -78,7 +84,6 @@ const App: React.FC = () => {
         <Routes>
 
         {/* ── Rotas Públicas (sempre disponíveis) ── */}
-        <Route path="/native-auth/turnstile" element={<NativeTurnstileChallengePage />} />
         <Route path="/" element={<PublicPage />} />
         <Route path="/links" element={<BioPage />} />
         <Route path="/bio" element={<BioPage />} />

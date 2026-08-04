@@ -226,16 +226,16 @@ const AlunoAutomatedSupportModal: React.FC<AlunoAutomatedSupportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm md:items-center md:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/60 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:p-4">
       <div
         ref={dialogRef}
-        className="flex max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-lg flex-col overflow-hidden rounded-t-[2rem] border border-white/10 bg-[#f3f7fb] shadow-2xl animate-fadeIn motion-reduce:animate-none md:max-h-[90dvh] md:rounded-[2rem]"
+        className="flex max-h-full min-w-0 w-full max-w-lg flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#f3f7fb] shadow-2xl animate-fadeIn motion-reduce:animate-none sm:max-h-[min(46rem,90dvh)] sm:rounded-[2rem]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="automated-support-title"
         aria-describedby="automated-support-description"
       >
-        <header className="flex shrink-0 items-center gap-3 border-b border-slate-100 bg-white px-4 py-4 md:px-5">
+        <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-slate-100 bg-white px-3 py-3.5 sm:gap-3 sm:px-5 sm:py-4">
           <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
             <MessageCircle size={20} />
             <i className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
@@ -244,11 +244,11 @@ const AlunoAutomatedSupportModal: React.FC<AlunoAutomatedSupportModalProps> = ({
             <h2 id="automated-support-title" className="font-black text-[#001a33]">Fale com a Uni</h2>
             <p id="automated-support-description" className="truncate text-xs font-semibold text-slate-500">Atendimento automático · Universo Principal</p>
           </div>
-          <button type="button" onClick={resetFlow} className="flex h-11 w-11 items-center justify-center rounded-xl text-blue-700 transition-colors hover:bg-blue-50" aria-label="Reiniciar atendimento"><RotateCcw size={18} /></button>
-          <button data-dialog-autofocus type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100" aria-label="Fechar atendimento"><X size={19} /></button>
+          <button type="button" onClick={resetFlow} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-blue-700 transition-colors hover:bg-blue-50" aria-label="Reiniciar atendimento"><RotateCcw size={18} /></button>
+          <button data-dialog-autofocus type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100" aria-label="Fechar atendimento"><X size={19} /></button>
         </header>
 
-        <div className="custom-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 md:p-5">
+        <div className="custom-scrollbar min-h-0 min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-contain p-3 sm:p-5">
           {bootstrap.isLoading ? (
             <div className="flex items-center justify-center gap-2 rounded-2xl bg-white p-4 text-xs font-bold text-slate-500" role="status"><Loader2 size={17} className="animate-spin" />Sincronizando o fluxo de atendimento…</div>
           ) : null}

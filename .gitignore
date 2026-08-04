@@ -51,3 +51,6 @@ supabase/.temp
 /output/pdf/banese-homologacao-*.pdf
 /output/pdf/banese/boletos/*.pdf
 /output/pdf/banese/carne/*.pdf
+
+# Triagem local de documentos e artefatos operacionais; nunca publicar no GitHub
+/ARQUIVOS_EM_TRIAGEM_2026-08-03/

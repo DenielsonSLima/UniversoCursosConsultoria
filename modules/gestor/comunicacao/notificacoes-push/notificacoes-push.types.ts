@@ -46,6 +46,17 @@ export interface PushSegments {
   turmas: PushSegmentTurma[];
 }
 
+export interface PushImageAsset {
+  id: string;
+  purpose: 'campaign' | 'birthday';
+  objectPath: string;
+  publicUrl: string;
+  mimeType: 'image/jpeg' | 'image/png';
+  sizeBytes: number;
+  width: number;
+  height: number;
+}
+
 export interface PushCampaignDraft {
   title: string;
   body: string;
@@ -55,6 +66,7 @@ export interface PushCampaignDraft {
   poloId: string | null;
   turmaId: string | null;
   scheduledAt: string | null;
+  image: PushImageAsset | null;
 }
 
 export interface PushCampaignPreview {
@@ -89,7 +101,13 @@ export interface PushCampaign {
   sentCount: number;
   failedCount: number;
   skippedCount: number;
+  recipientCount: number;
+  processedCount: number;
+  progressPercent: number;
   createdByName: string | null;
+  imageAssetId: string | null;
+  imagePath: string | null;
+  imageUrl: string | null;
   totalCount: number;
 }
 
@@ -115,4 +133,24 @@ export interface PushCampaignMutationResult {
   status: PushCampaignStatus;
   requestId: string;
   replayed: boolean;
+}
+
+export interface PushBirthdaySettings {
+  enabled: boolean;
+  title: string;
+  body: string;
+  sendTime: string;
+  timezone: 'America/Maceio';
+  imageAssetId: string | null;
+  imagePath: string | null;
+  imageUrl: string | null;
+  updatedAt: string | null;
+}
+
+export interface UpdatePushBirthdaySettingsInput {
+  enabled: boolean;
+  title: string;
+  body: string;
+  sendTime: string;
+  imageAssetId: string | null;
 }

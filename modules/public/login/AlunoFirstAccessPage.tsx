@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { CheckSquare, Eye, EyeOff, Lock, FileText, LoaderCircle } from 'lucide-react';
+import { CheckSquare, Eye, EyeOff, Lock, FileText, Gift, LoaderCircle } from 'lucide-react';
 import { alunoPublicAuthService } from './aluno-public-auth.service';
 import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../../login/portal-session';
 import { loginService } from '../../login/login.service';
 import { TERMS_VERSION } from '../../shared/constants/terms';
+import { relationshipConsentService } from './relationship-consent.service';
 
 const getDefaultNext = (searchParams: URLSearchParams) => {
   const next = searchParams.get('next');
@@ -37,6 +38,9 @@ const AlunoFirstAccessPage: React.FC = () => {
   const [profile, setProfile] = useState<PortalAuthProfile | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [relationshipPreferenceDecided, setRelationshipPreferenceDecided] = useState(false);
+  const [relationshipBirthdayChoice, setRelationshipBirthdayChoice] = useState<boolean | null>(null);
+  const [relationshipPreferenceLoadFailed, setRelationshipPreferenceLoadFailed] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [state, setState] = useState<NavigateState>('idle');
@@ -63,6 +67,19 @@ const AlunoFirstAccessPage: React.FC = () => {
         return;
       }
 
+      try {
+        const preference = await relationshipConsentService.getPreference();
+        setRelationshipPreferenceDecided(preference.decided);
+        setRelationshipBirthdayChoice(preference.decided ? preference.allowed : null);
+        setRelationshipPreferenceLoadFailed(false);
+      } catch {
+        setRelationshipPreferenceLoadFailed(true);
+        setMessage({
+          tone: 'error',
+          text: 'Não foi possível consultar sua preferência de relacionamento. Recarregue a página para tentar novamente.',
+        });
+      }
+
       setProfile(currentProfile);
       setAcceptedTerms(Boolean(currentProfile.acceptedTermsAt));
       setIsChecking(false);
@@ -76,7 +93,9 @@ const AlunoFirstAccessPage: React.FC = () => {
   const needsTermsAcceptance = !profile?.acceptedTermsAt;
   const canSubmit =
     (needsTermsAcceptance ? termsAccepted : true) &&
-    (!requiresPasswordChange || (hasStrongPassword(newPassword) && newPassword === confirmPassword));
+    (!requiresPasswordChange || (hasStrongPassword(newPassword) && newPassword === confirmPassword)) &&
+    (relationshipPreferenceDecided || relationshipBirthdayChoice !== null) &&
+    !relationshipPreferenceLoadFailed;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -102,6 +121,14 @@ const AlunoFirstAccessPage: React.FC = () => {
       }
     }
 
+    if (!relationshipPreferenceDecided && relationshipBirthdayChoice === null) {
+      setMessage({
+        tone: 'error',
+        text: 'Escolha se deseja ou não receber felicitações e comunicados de relacionamento.',
+      });
+      return;
+    }
+
     setState('loading');
 
     try {
@@ -111,6 +138,8 @@ const AlunoFirstAccessPage: React.FC = () => {
         acceptTermsVersion: TERMS_VERSION,
         setPassword: requiresPasswordChange,
         newPassword,
+        relationshipBirthdayConsent: relationshipBirthdayChoice ?? undefined,
+        relationshipPreferenceDecided,
       });
 
       if (updatedProfile) {
@@ -188,6 +217,46 @@ const AlunoFirstAccessPage: React.FC = () => {
                 Seu aceite dos termos já foi registrado.
               </p>
             </section>
+          )}
+
+          {!relationshipPreferenceDecided && (
+            <fieldset className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+              <legend className="px-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
+                Escolha opcional e separada
+              </legend>
+              <div className="flex items-start gap-3">
+                <Gift size={18} className="mt-0.5 shrink-0 text-pink-600" />
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-tight text-[#001a33]">
+                    Felicitações e relacionamento
+                  </h2>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                    Escolha se deseja receber no app felicitações de aniversário e outros comunicados de relacionamento. Isso não inclui publicidade comercial e não substitui a permissão de notificações do celular.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Receber felicitações e comunicados de relacionamento">
+                {([
+                  { value: true, label: 'Sim, quero receber' },
+                  { value: false, label: 'Não quero receber' },
+                ] as const).map((option) => {
+                  const selected = relationshipBirthdayChoice === option.value;
+                  return (
+                    <label key={String(option.value)} className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-xs font-black transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-100 bg-white text-slate-600 hover:border-blue-300'}`}>
+                      <input
+                        type="radio"
+                        name="first-access-relationship-choice"
+                        value={String(option.value)}
+                        checked={selected}
+                        onChange={() => setRelationshipBirthdayChoice(option.value)}
+                        className="sr-only"
+                      />
+                      {option.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
           )}
 
           {requiresPasswordChange ? (

@@ -33,6 +33,12 @@ const [
   supabaseClient,
   pushDispatcher,
   publicPushMigration,
+  notificationPage,
+  notificationDetail,
+  notificationService,
+  dedicatedChallengeHtml,
+  dedicatedChallengeScript,
+  viteConfig,
 ] = await Promise.all([
   readSource('modules/shared/auth/native-turnstile-bridge.ts'),
   readSource('modules/shared/auth/NativeTurnstileWidget.tsx'),
@@ -62,6 +68,12 @@ const [
   readSource('lib/supabase.ts'),
   readSource('supabase/functions/push-notification-dispatcher/index.ts'),
   readSource('supabase/migrations/20260803224500_add_scoped_public_support_push.sql'),
+  readSource('modules/aluno/notificacoes/NotificacoesPage.tsx'),
+  readSource('modules/aluno/notificacoes/AlunoNotificationDetail.tsx'),
+  readSource('modules/aluno/notificacoes/notificacoes.service.ts'),
+  readSource('native-turnstile.html'),
+  readSource('native-turnstile.ts'),
+  readSource('vite.config.ts'),
 ])
 
 test('native challenge bridge binds messages to origin, frame, nonce and action', () => {
@@ -76,8 +88,9 @@ test('native challenge bridge binds messages to origin, frame, nonce and action'
 })
 
 test('native route and all installed student flows use the adaptive widget', () => {
-  assert.match(appRouter, /path="\/native-auth\/turnstile"/)
-  assert.match(appRouter, /NativeTurnstileChallengePage/)
+  assert.match(appRouter, /window\.location\.pathname === '\/native-auth\/turnstile'/)
+  assert.match(appRouter, /return <NativeTurnstileChallengePage \/>/)
+  assert.doesNotMatch(appRouter, /lazy\(\(\) => import\('\.\/modules\/shared\/auth\/NativeTurnstileChallengePage'\)\)/)
   assert.match(adaptiveWidget, /Capacitor\.isNativePlatform\(\)/)
   assert.match(adaptiveWidget, /<NativeTurnstileWidget/)
   assert.match(adaptiveWidget, /<TurnstileWidget/)
@@ -90,6 +103,29 @@ test('native route and all installed student flows use the adaptive widget', () 
   assert.doesNotMatch(supportPage, /<TurnstileWidget/)
   assert.match(challengePage, /language:\s*'pt-BR'/)
   assert.match(nativeWidget, /Verificação de segurança/)
+})
+
+test('native challenge exposes progress and cannot remain loading indefinitely', () => {
+  assert.match(nativeWidget, /lastChallengeRef/)
+  assert.match(nativeWidget, /CHALLENGE_RESPONSE_TIMEOUT_MS/)
+  assert.match(nativeWidget, /onErrorRef\.current\?\.\('challenge-timeout'\)/)
+  assert.match(challengePage, /status:\s*'verifying'/)
+  assert.match(challengePage, /status:\s*'interaction-required'/)
+  assert.match(challengePage, /appearance:\s*'always'/)
+  assert.match(challengePage, /'timeout-callback'/)
+  assert.match(challengePage, /CHALLENGE_WATCHDOG_TIMEOUT_MS/)
+  assert.match(challengePage, /errorCode:\s*'challenge-timeout'/)
+})
+
+test('native verified state stays refreshable without leaving a blank challenge panel', () => {
+  assert.match(nativeWidget, /const isVerified = status === 'verified'/)
+  assert.match(nativeWidget, /isVerified\s*\? 'relative h-0 overflow-hidden'/)
+  assert.match(nativeWidget, /iframeRef\.current\?\.blur\(\)/)
+  assert.match(nativeWidget, /!isVerified \? \(/)
+  assert.match(nativeWidget, /verifiedTokenCache\.set\(action/)
+  assert.match(nativeWidget, /CACHED_TOKEN_MAX_AGE_MS/)
+  assert.match(nativeWidget, /border-emerald-200 bg-emerald-50/)
+  assert.match(challengePage, /className="sr-only"/)
 })
 
 test('native credential, signup, recovery and support requests declare challenge context', () => {
@@ -141,6 +177,16 @@ test('hosted challenge is the only cross-origin embeddable application route', (
   assert.match(challengeCsp, /img-src 'self' data: https:\/\/challenges\.cloudflare\.com/)
   assert.ok(!globalHeaders.some((header) => header.key === 'X-Frame-Options'))
   assert.equal(challengeHeaders.find((header) => header.key === 'Cache-Control').value, 'no-store, max-age=0')
+
+  const challengeRewrite = config.rewrites.find((entry) => entry.source === '/native-auth/turnstile')
+  assert.equal(challengeRewrite?.destination, '/native-turnstile.html')
+  assert.match(viteConfig, /nativeTurnstile:\s*path\.resolve\(__dirname, 'native-turnstile\.html'\)/)
+  assert.match(dedicatedChallengeHtml, /id="native-turnstile-container"/)
+  assert.match(dedicatedChallengeHtml, /src="\/native-turnstile\.ts"/)
+  assert.doesNotMatch(dedicatedChallengeHtml, /LogoUniverso|aluno-app-bootstrap-splash|Portal do Aluno/)
+  assert.match(dedicatedChallengeScript, /NATIVE_APP_ORIGINS\.has\(parentOrigin\)/)
+  assert.match(dedicatedChallengeScript, /appearance:\s*'always'/)
+  assert.match(dedicatedChallengeScript, /postMessage\([\s\S]+parentOrigin\)/)
 })
 
 test('native logout and external student links fail closed', () => {
@@ -190,6 +236,31 @@ test('native notification permission is a one-time app bootstrap, not an Atendim
   assert.doesNotMatch(alunoMobileCommunication, /AlunoAppNotificationCard/)
   assert.doesNotMatch(supportAvailabilityCard, /texto_notificacao_optin|Ative as notificações/)
   assert.doesNotMatch(supportPage, /Quero ativar as notificações|BellRing|type="checkbox" checked=\{notifyReply\}/)
+})
+
+test('non-chat notifications open a persistent detail while chat keeps its conversation deep link', () => {
+  assert.match(notificationPage, /module=notificacoes&notificationId=/)
+  assert.match(notificationPage, /<AlunoNotificationDetail/)
+  assert.match(notificationDetail, /Voltar às notificações/)
+  assert.match(notificationDetail, /notification\.body/)
+  assert.match(notificationDetail, /Abrir Financeiro/)
+
+  assert.match(notificationService, /source_job_id/)
+  assert.match(notificationService, /query\.eq\('source_job_id', sourceJobId\)/)
+  assert.match(nativeAppBridge, /scope === 'student' && category !== 'chat'/)
+  assert.match(nativeAppBridge, /module=notificacoes&notificationId=/)
+  assert.match(nativeAppBridge, /module=notificacoes&sourceJobId=/)
+  assert.match(nativeAppBridge, /readString\(data, \['deepLink', 'deep_link', 'route', 'path', 'url'\]\)/)
+
+  for (const field of ['deepLink', 'jobId', 'category', 'scope']) {
+    assert.match(pushDispatcher, new RegExp(`result\\.${field} = delivery\\.`))
+  }
+  assert.match(pushDispatcher, /result\.notificationId = notificationId/)
+  assert.match(pushDispatcher, /delete result\[reservedKey\]/)
+  assert.match(pushDispatcher, /result\.deep_link = delivery\.deep_link/)
+  assert.match(pushDispatcher, /\.from\("aluno_notificacoes"\)/)
+  assert.match(pushDispatcher, /notificationIdByJob\.get\(delivery\.job_id\)/)
+  assert.match(pushDispatcher, /data: stringData\(/)
 })
 
 test('public support push is automatically scoped to the public chat access token', () => {

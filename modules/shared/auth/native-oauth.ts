@@ -5,6 +5,8 @@ import { supabase } from '../../../lib/supabase';
 import type { PortalOAuthFlow } from './oauth-return-state';
 
 export const NATIVE_OAUTH_CALLBACK_URL = 'br.com.universocc.aluno://auth/callback';
+export const NATIVE_OAUTH_STARTED_EVENT = 'universo:native-oauth-started';
+export const NATIVE_OAUTH_BROWSER_FINISHED_EVENT = 'universo:native-oauth-browser-finished';
 
 const NATIVE_OAUTH_PENDING_KEY = 'universo.native-oauth.pending.v1';
 const NATIVE_OAUTH_MAX_AGE_MS = 10 * 60 * 1000;
@@ -114,6 +116,7 @@ export const startNativeGoogleOAuth = async (
     key: NATIVE_OAUTH_PENDING_KEY,
     value: JSON.stringify(pending),
   });
+  window.dispatchEvent(new window.CustomEvent(NATIVE_OAUTH_STARTED_EVENT));
 
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({

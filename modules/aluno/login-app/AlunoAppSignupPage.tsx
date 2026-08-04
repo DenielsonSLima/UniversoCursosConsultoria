@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  Gift,
   Loader2,
   LockKeyhole,
   Mail,
@@ -23,6 +24,7 @@ import { formatCep, lookupBrazilianCep } from '../../shared/utils/brazilianCep';
 import { isValidCpf, isValidEmail } from '../../shared/utils/identityValidation';
 import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
+import { useAlunoContainedScroll, useAlunoFullscreenViewport } from './useAlunoFullscreenViewport';
 
 type SignupStep = 'pessoal' | 'acesso' | 'endereco';
 type CepStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'error';
@@ -36,6 +38,7 @@ type SignupForm = {
   password: string;
   confirmPassword: string;
   acceptedTerms: boolean;
+  relationshipBirthdayChoice: boolean | null;
   cep: string;
   endereco: string;
   numero: string;
@@ -54,6 +57,7 @@ const INITIAL_FORM: SignupForm = {
   password: '',
   confirmPassword: '',
   acceptedTerms: false,
+  relationshipBirthdayChoice: null,
   cep: '',
   endereco: '',
   numero: '',
@@ -67,6 +71,9 @@ const STEP_ORDER: SignupStep[] = ['pessoal', 'acesso', 'endereco'];
 const INPUT_CLASS = 'h-[3.35rem] w-full rounded-2xl border border-white/70 bg-white px-4 text-[15px] font-semibold text-slate-800 shadow-[0_12px_30px_rgba(0,0,0,0.14)] outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-400/20';
 
 const AlunoAppSignupPage: React.FC = () => {
+  useAlunoFullscreenViewport();
+
+  const navigate = useNavigate();
   const [step, setStep] = useState<SignupStep>('pessoal');
   const [form, setForm] = useState<SignupForm>(INITIAL_FORM);
   const [message, setMessage] = useState('');
@@ -81,6 +88,8 @@ const AlunoAppSignupPage: React.FC = () => {
   const submitInFlightRef = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const currentStepIndex = STEP_ORDER.indexOf(step);
+
+  useAlunoContainedScroll(contentRef);
 
   const updateField = <K extends keyof SignupForm>(field: K, value: SignupForm[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -150,6 +159,7 @@ const AlunoAppSignupPage: React.FC = () => {
     if (!passwordChecks.every((check) => check.valid)) return 'Crie uma senha com 6 caracteres, letra maiúscula, minúscula e número.';
     if (form.password !== form.confirmPassword) return 'As senhas não conferem.';
     if (!form.acceptedTerms) return 'Você precisa aceitar os Termos de Uso para continuar.';
+    if (form.relationshipBirthdayChoice === null) return 'Escolha se deseja ou não receber felicitações e comunicados de relacionamento.';
     return '';
   };
 
@@ -174,11 +184,11 @@ const AlunoAppSignupPage: React.FC = () => {
   const finishSignup = (profile?: PortalAuthProfile | null) => {
     if (!profile) return;
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
-      window.location.replace('/aluno/primeiro-acesso?next=%2Faluno%2F');
+      navigate('/aluno/primeiro-acesso?next=%2Faluno%2F', { replace: true });
       return;
     }
     savePortalSession(profile);
-    window.location.replace('/aluno/');
+    navigate('/aluno/', { replace: true });
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -200,8 +210,11 @@ const AlunoAppSignupPage: React.FC = () => {
     setTurnstileToken('');
 
     try {
+      const { relationshipBirthdayChoice, ...signupForm } = form;
       const result = await alunoPublicAuthService.signup({
-        ...form,
+        ...signupForm,
+        relationshipBirthdayConsent: relationshipBirthdayChoice === true,
+        relationshipBirthdayConsentSurface: 'public_signup_app',
         turnstileToken: verifiedToken,
         redirectPath: '/aluno/',
         appFlow: true,
@@ -241,13 +254,13 @@ const AlunoAppSignupPage: React.FC = () => {
   }
 
   return (
-    <main className="aluno-app-signup fixed inset-0 overflow-hidden bg-[#001a33] text-white">
+    <main className="aluno-app-signup aluno-fullscreen-shell fixed inset-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full overflow-hidden overscroll-none bg-[#001a33] text-white">
       <img src="/banner1.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-35" />
       <div className="absolute inset-0 bg-[linear-gradient(155deg,rgba(0,15,38,0.98),rgba(0,49,108,0.93)_52%,rgba(0,23,56,0.98))]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_5%,rgba(59,130,246,0.30),transparent_31%)]" />
 
-      <div ref={contentRef} className="relative z-10 h-full overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.1rem,env(safe-area-inset-top))]">
-        <div className="mx-auto w-full max-w-[31rem]">
+      <div ref={contentRef} className="aluno-signup-scroll aluno-contained-scroll relative z-10 h-full min-w-0 overflow-x-hidden overscroll-none px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.1rem,env(safe-area-inset-top))]">
+        <div className="mx-auto min-w-0 w-full max-w-[31rem]">
           <header className="flex items-center justify-between gap-3">
             <Link to="/aluno/login-app" aria-label="Voltar ao login" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white backdrop-blur-md">
               <ArrowLeft size={20} />
@@ -289,7 +302,7 @@ const AlunoAppSignupPage: React.FC = () => {
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Nome completo</span>
                   <span className="relative block">
                     <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input autoFocus required autoComplete="name" value={form.nome} onChange={(event) => updateField('nome', event.target.value.toLocaleUpperCase('pt-BR'))} placeholder="Seu nome completo" className={`${INPUT_CLASS} pl-12`} />
+                    <input required autoComplete="name" value={form.nome} onChange={(event) => updateField('nome', event.target.value.toLocaleUpperCase('pt-BR'))} placeholder="Seu nome completo" className={`${INPUT_CLASS} pl-12`} />
                   </span>
                 </label>
                 <label className="block">
@@ -298,7 +311,7 @@ const AlunoAppSignupPage: React.FC = () => {
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">Data de nascimento</span>
-                  <input required type="date" max={getPublicAlunoBirthDateMax()} value={form.dataNascimento} onChange={(event) => updateField('dataNascimento', event.target.value)} className={INPUT_CLASS} />
+                  <input required type="date" max={getPublicAlunoBirthDateMax()} value={form.dataNascimento} onChange={(event) => updateField('dataNascimento', event.target.value)} className={`${INPUT_CLASS} aluno-signup-date min-w-0 max-w-full`} />
                   <span className="mt-1.5 block text-[10px] font-semibold text-blue-100/55">Cadastro permitido para maiores de 10 anos.</span>
                 </label>
                 <label className="block">
@@ -320,7 +333,7 @@ const AlunoAppSignupPage: React.FC = () => {
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">E-mail de acesso</span>
                   <span className="relative block">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input autoFocus required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} placeholder="seu@email.com" className={`${INPUT_CLASS} pl-12`} />
+                    <input required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} placeholder="seu@email.com" className={`${INPUT_CLASS} pl-12`} />
                   </span>
                 </label>
                 <label className="block">
@@ -356,6 +369,38 @@ const AlunoAppSignupPage: React.FC = () => {
                     Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Termos de Uso</a> e o tratamento dos dados necessários ao acesso acadêmico.
                   </span>
                 </label>
+                <fieldset className="rounded-2xl border border-blue-300/15 bg-blue-400/[0.08] p-3">
+                  <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-blue-200">
+                    Opcional: relacionamento
+                  </legend>
+                  <div className="flex items-start gap-2.5">
+                    <Gift className="mt-0.5 shrink-0 text-pink-200" size={17} />
+                    <p className="text-[11px] font-medium leading-relaxed text-blue-100/75">
+                      Deseja receber no app felicitações de aniversário e comunicados de relacionamento? Não inclui publicidade comercial e não solicita a permissão do celular agora.
+                    </p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Receber felicitações e comunicados de relacionamento">
+                    {([
+                      { value: true, label: 'Sim, quero' },
+                      { value: false, label: 'Não quero' },
+                    ] as const).map((option) => {
+                      const selected = form.relationshipBirthdayChoice === option.value;
+                      return (
+                        <label key={String(option.value)} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-[11px] font-black transition ${selected ? 'border-blue-300 bg-blue-500 text-white' : 'border-white/15 bg-white/[0.05] text-blue-100/70'}`}>
+                          <input
+                            type="radio"
+                            name="relationship-birthday-choice"
+                            value={String(option.value)}
+                            checked={selected}
+                            onChange={() => updateField('relationshipBirthdayChoice', option.value)}
+                            className="sr-only"
+                          />
+                          {option.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
                 <div className="grid grid-cols-[0.8fr_1.2fr] gap-2.5">
                   <button type="button" onClick={goBack} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.06] text-xs font-black"><ArrowLeft size={17} /> Voltar</button>
                   <button type="submit" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-xs font-black shadow-xl shadow-blue-950/30">Continuar <ArrowRight size={17} /></button>
@@ -371,7 +416,7 @@ const AlunoAppSignupPage: React.FC = () => {
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-blue-100/70">CEP</span>
                   <span className="relative block">
-                    <input autoFocus required inputMode="numeric" maxLength={9} value={form.cep} onChange={(event) => { setCepStatus('idle'); updateField('cep', formatCep(event.target.value)); }} placeholder="00000-000" className={`${INPUT_CLASS} pr-12`} />
+                    <input required inputMode="numeric" maxLength={9} value={form.cep} onChange={(event) => { setCepStatus('idle'); updateField('cep', formatCep(event.target.value)); }} placeholder="00000-000" className={`${INPUT_CLASS} pr-12`} />
                     {cepStatus === 'loading' ? <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-blue-600" size={18} /> : null}
                   </span>
                   {cepStatus !== 'idle' && cepStatus !== 'loading' ? <span className={`mt-1.5 block text-[10px] font-bold ${cepStatus === 'resolved' ? 'text-emerald-300' : 'text-amber-300'}`}>{cepStatus === 'resolved' ? 'CEP localizado. Confira os dados.' : 'Preencha o endereço manualmente.'}</span> : null}
@@ -404,7 +449,7 @@ const AlunoAppSignupPage: React.FC = () => {
                     <input required maxLength={2} value={form.uf} onChange={(event) => updateField('uf', event.target.value.toLocaleUpperCase('pt-BR').slice(0, 2))} placeholder="SE" className={`${INPUT_CLASS} text-center`} />
                   </label>
                 </div>
-                <div className="rounded-xl bg-white/95 px-2.5 py-2 text-slate-700">
+                <div className="rounded-xl bg-white px-2.5 py-2 text-slate-700">
                   <AdaptiveTurnstileWidget action="signup" resetSignal={turnstileResetSignal} onTokenChange={setTurnstileToken} onStatusChange={setTurnstileStatus} onError={() => setTurnstileToken('')} />
                 </div>
                 <div className="grid grid-cols-[0.72fr_1.28fr] gap-2.5">

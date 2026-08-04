@@ -12,7 +12,14 @@ export type NativeTurnstileMessage = {
   type: typeof NATIVE_TURNSTILE_MESSAGE_TYPE;
   nonce: string;
   action: NativeTurnstileAction;
-  status: 'verified' | 'expired' | 'retrying' | 'error' | 'unsupported';
+  status:
+    | 'verifying'
+    | 'interaction-required'
+    | 'verified'
+    | 'expired'
+    | 'retrying'
+    | 'error'
+    | 'unsupported';
   token?: string;
   errorCode?: string;
 };
@@ -39,7 +46,15 @@ export const isNativeTurnstileMessage = (value: unknown): value is NativeTurnsti
     candidate.type !== NATIVE_TURNSTILE_MESSAGE_TYPE
     || !isValidNativeTurnstileNonce(candidate.nonce)
     || !isNativeTurnstileAction(candidate.action)
-    || !['verified', 'expired', 'retrying', 'error', 'unsupported'].includes(String(candidate.status))
+    || ![
+      'verifying',
+      'interaction-required',
+      'verified',
+      'expired',
+      'retrying',
+      'error',
+      'unsupported',
+    ].includes(String(candidate.status))
   ) return false;
 
   if (candidate.status === 'verified') {

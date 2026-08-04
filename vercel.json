@@ -54,6 +54,10 @@
   ],
   "rewrites": [
     {
+      "source": "/native-auth/turnstile",
+      "destination": "/native-turnstile.html"
+    },
+    {
       "source": "/",
       "destination": "/_social-share/home.html"
     },

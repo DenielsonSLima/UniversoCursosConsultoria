@@ -135,10 +135,81 @@ body,
   letter-spacing: 0;
 }
 
+/* As telas nativas de acesso ocupam exatamente o viewport. Isso impede o
+   rubber-band do WKWebView/WebView de arrastar logo, cabeçalho e fundo, sem
+   remover a rolagem dos conteúdos internos que realmente transbordam. */
+html[data-aluno-fullscreen='true'],
+html[data-aluno-fullscreen='true'] body,
+html[data-aluno-fullscreen='true'] #root {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #001a33;
+}
+
+html[data-aluno-fullscreen='true'] body {
+  position: fixed;
+  inset: 0;
+}
+
+#root .aluno-fullscreen-shell {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--aluno-visual-viewport-height, 100dvh);
+  max-height: var(--aluno-visual-viewport-height, 100dvh);
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background-color: #001a33;
+}
+
+#root .aluno-login-scroll,
+#root .aluno-signup-scroll,
+#root .aluno-chat-scroll {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root .aluno-contained-scroll {
+  overflow-y: hidden;
+  touch-action: pan-y;
+}
+
+#root .aluno-contained-scroll[data-can-scroll='true'] {
+  overflow-y: auto;
+}
+
+/* O controle de data do WebKit mantém uma largura intrínseca própria. Sem
+   zerar essa largura mínima, ele ultrapassa o cartão em iPhones estreitos. */
+#root .aluno-app-signup,
+#root .aluno-app-signup form,
+#root .aluno-app-signup label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#root .aluno-app-signup .aluno-signup-date {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#root .aluno-app-signup .aluno-signup-date::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
 /* O login instalável ocupa uma única tela nos celulares mais comuns. Em
    alturas reduzidas (ou com o teclado aberto), o conteúdo continua acessível
    pela rolagem interna da própria tela, sem deslocar a aplicação inteira. */
-@media (max-width: 640px) and (max-height: 780px) {
+@media (max-width: 640px) and (max-height: 900px) {
   #root .aluno-app-login .app-login-logo {
     height: 3.65rem;
     width: 11.75rem;

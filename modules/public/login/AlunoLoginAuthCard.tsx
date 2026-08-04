@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  Gift,
   UserRound,
   Loader2,
   Lock,
@@ -36,6 +37,7 @@ type Props = {
   confirmPassword: string;
   showSignupConfirmPassword: boolean;
   acceptedTerms: boolean;
+  relationshipBirthdayChoice: boolean | null;
   signupStep: 'dados' | 'endereco';
   cep: string;
   endereco: string;
@@ -61,6 +63,7 @@ type Props = {
   onConfirmPasswordChange: (value: string) => void;
   onToggleSignupConfirmPassword: () => void;
   onAcceptedTermsChange: (value: boolean) => void;
+  onRelationshipBirthdayChoiceChange: (value: boolean) => void;
   onCepChange: (value: string) => void;
   onEnderecoChange: (value: string) => void;
   onNumeroChange: (value: string) => void;
@@ -94,6 +97,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   confirmPassword,
   showSignupConfirmPassword,
   acceptedTerms,
+  relationshipBirthdayChoice,
   signupStep,
   cep,
   endereco,
@@ -119,6 +123,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   onConfirmPasswordChange,
   onToggleSignupConfirmPassword,
   onAcceptedTermsChange,
+  onRelationshipBirthdayChoiceChange,
   onCepChange,
   onEnderecoChange,
   onNumeroChange,
@@ -387,6 +392,38 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
             e autorizo o uso dos meus dados para operação do acesso ao ambiente acadêmico.
           </span>
         </label>
+        <fieldset className="col-span-2 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+          <legend className="px-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
+            Opcional: relacionamento
+          </legend>
+          <div className="flex items-start gap-3">
+            <Gift className="mt-0.5 shrink-0 text-pink-600" size={18} />
+            <p className="text-xs font-semibold leading-relaxed text-slate-600">
+              Deseja receber no app felicitações de aniversário e comunicados de relacionamento? Não inclui publicidade comercial nem solicita a permissão de notificações do aparelho agora.
+            </p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Receber felicitações e comunicados de relacionamento">
+            {([
+              { value: true, label: 'Sim, quero' },
+              { value: false, label: 'Não quero' },
+            ] as const).map((option) => {
+              const selected = relationshipBirthdayChoice === option.value;
+              return (
+                <label key={String(option.value)} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-xs font-black transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-100 bg-white text-slate-600 hover:border-blue-300'}`}>
+                  <input
+                    type="radio"
+                    name="relationship-birthday-choice"
+                    value={String(option.value)}
+                    checked={selected}
+                    onChange={() => onRelationshipBirthdayChoiceChange(option.value)}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-800 sm:col-span-2">
           <CheckCircle2 className="mb-2 inline-block" size={16} /> Na próxima etapa, informe o endereço necessário para emissão do boleto.
         </div>

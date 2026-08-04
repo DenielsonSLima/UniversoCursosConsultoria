@@ -20,6 +20,7 @@ const [
   appLoginPage,
   appRecoveryPage,
   nativeOAuth,
+  nativeAuthBridge,
   supabaseClient,
 ] = await Promise.all([
   readSource('modules/shared/auth/TurnstileWidget.tsx'),
@@ -36,6 +37,7 @@ const [
   readSource('modules/aluno/login-app/AlunoAppLoginPage.tsx'),
   readSource('modules/aluno/login-app/AlunoAppRecoveryPage.tsx'),
   readSource('modules/shared/auth/native-oauth.ts'),
+  readSource('modules/shared/auth/NativeAuthBridge.tsx'),
   readSource('lib/supabase.ts'),
 ])
 
@@ -109,6 +111,49 @@ test('native Google OAuth uses PKCE and never returns session tokens in the call
   assert.doesNotMatch(nativeOAuth, /read\('access_token'\)/)
   assert.doesNotMatch(nativeOAuth, /read\('refresh_token'\)/)
   assert.doesNotMatch(nativeOAuth, /auth\.setSession/)
+})
+
+test('native OAuth callback bridge is single-flight and preserves pending state on browser close', () => {
+  const claimIndex = nativeAuthBridge.indexOf('processedUrlsRef.current.add(url)')
+  const queueIndex = nativeAuthBridge.indexOf('callbackQueue.then(')
+
+  assert.ok(claimIndex >= 0)
+  assert.ok(queueIndex > claimIndex)
+  assert.match(nativeAuthBridge, /let callbackQueue:\s*Promise<void>\s*=\s*Promise\.resolve\(\)/)
+  assert.match(
+    nativeAuthBridge,
+    /callbackQueue\.then\([\s\S]*?processUrl\(url, source\)[\s\S]*?processUrl\(url, source\)/,
+  )
+  assert.match(nativeAuthBridge, /logNativeOAuthEvent\('callback_deduplicated'/)
+
+  const browserFinishedListener = nativeAuthBridge.slice(
+    nativeAuthBridge.indexOf("Browser.addListener('browserFinished'"),
+    nativeAuthBridge.indexOf("CapacitorApp.addListener('resume'"),
+  )
+  assert.ok(browserFinishedListener.length > 0)
+  assert.doesNotMatch(browserFinishedListener, /clearPendingNativeOAuth/)
+  assert.doesNotMatch(browserFinishedListener, /oauth_error|cancelled/)
+
+  assert.doesNotMatch(nativeAuthBridge, /CapacitorApp\.addListener\('resume'/)
+  assert.match(nativeAuthBridge, /await handleLaunchUrl\(\)/)
+  assert.match(nativeOAuth, /NATIVE_OAUTH_STARTED_EVENT/)
+  assert.match(nativeOAuth, /dispatchEvent\(new window\.CustomEvent\(NATIVE_OAUTH_STARTED_EVENT\)\)/)
+  assert.match(nativeAuthBridge, /processedUrlsRef\.current\.clear\(\)/)
+  assert.match(nativeAuthBridge, /removeEventListener\(NATIVE_OAUTH_STARTED_EVENT/)
+  assert.match(nativeOAuth, /NATIVE_OAUTH_BROWSER_FINISHED_EVENT/)
+  assert.match(
+    nativeAuthBridge,
+    /dispatchEvent\(new window\.CustomEvent\(NATIVE_OAUTH_BROWSER_FINISHED_EVENT\)\)/,
+  )
+  assert.match(appLoginPage, /addEventListener\(NATIVE_OAUTH_BROWSER_FINISHED_EVENT/)
+  assert.match(appLoginPage, /handleBrowserFinished = \(\) => setLoading\(false\)/)
+})
+
+test('native OAuth bridge diagnostics never log callback secrets', () => {
+  assert.match(nativeAuthBridge, /logNativeOAuthEvent\('callback_received'/)
+  assert.match(nativeAuthBridge, /logNativeOAuthEvent\('callback_completed'/)
+  assert.match(nativeAuthBridge, /logNativeOAuthEvent\('callback_failed'/)
+  assert.doesNotMatch(nativeAuthBridge, /console\.(?:info|warn|error)\([^\n]*(?:url|code|token)/i)
 })
 
 test('portal-auth validates challenge before consuming identifier quota', () => {

@@ -111,7 +111,7 @@ const AlunoMobileComunicacao = ({
     const isPending = currentChat.status === 'pendente';
 
     return (
-      <section className="flex h-[calc(100dvh-10.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm animate-fadeIn motion-reduce:animate-none">
+      <section className="flex h-[calc(100dvh-10.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm animate-fadeIn motion-reduce:animate-none">
         <header className="flex shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 py-3 shadow-sm">
           <button type="button" onClick={onBack} aria-label="Voltar para chamados" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#001a33] active:scale-95 motion-reduce:transform-none">
             <ArrowLeft size={20} />
@@ -161,7 +161,7 @@ const AlunoMobileComunicacao = ({
   }
 
   return (
-    <section className="space-y-4 animate-fadeIn motion-reduce:animate-none">
+    <section className="min-w-0 max-w-full space-y-4 overflow-x-clip animate-fadeIn motion-reduce:animate-none">
       <header className="relative overflow-hidden rounded-[1.75rem] bg-[#001a33] px-5 py-5 text-white shadow-lg shadow-slate-900/10">
         <div aria-hidden="true" className="absolute -right-10 -top-12 h-36 w-36 rounded-full border-[22px] border-blue-500/15" />
         <div className="relative flex items-start justify-between gap-4">

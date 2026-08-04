@@ -16,7 +16,9 @@ import { type TurnstileStatus } from '../../shared/auth/TurnstileWidget';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '../../../lib/supabase';
+import { NATIVE_OAUTH_BROWSER_FINISHED_EVENT } from '../../shared/auth/native-oauth';
 import AlunoAppSplash from '../pwa/AlunoAppSplash';
+import { useAlunoContainedScroll, useAlunoFullscreenViewport } from './useAlunoFullscreenViewport';
 
 type LoginMessage = {
   tone: 'success' | 'error';
@@ -24,6 +26,8 @@ type LoginMessage = {
 };
 
 const AlunoAppLoginPage: React.FC = () => {
+  useAlunoFullscreenViewport();
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [identifier, setIdentifier] = useState('');
@@ -41,8 +45,21 @@ const AlunoAppLoginPage: React.FC = () => {
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const submitInFlightRef = useRef(false);
   const wasLoadingRef = useRef(false);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  useAlunoContainedScroll(contentScrollRef);
 
   const redirectPath = getSafePublicAlunoRedirectPath(searchParams.get('redirect'));
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    const handleBrowserFinished = () => setLoading(false);
+    window.addEventListener(NATIVE_OAUTH_BROWSER_FINISHED_EVENT, handleBrowserFinished);
+    return () => window.removeEventListener(
+      NATIVE_OAUTH_BROWSER_FINISHED_EVENT,
+      handleBrowserFinished,
+    );
+  }, []);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined;
@@ -81,13 +98,13 @@ const AlunoAppLoginPage: React.FC = () => {
 
     if (alunoPublicAuthService.needsInitialAccess(profile)) {
       const params = new URLSearchParams({ next: redirectPath });
-      window.location.replace(`/aluno/primeiro-acesso?${params.toString()}`);
+      navigate(`/aluno/primeiro-acesso?${params.toString()}`, { replace: true });
       return;
     }
 
     savePortalSession(profile);
-    window.location.replace(redirectPath);
-  }, [redirectPath]);
+    navigate(redirectPath, { replace: true });
+  }, [navigate, redirectPath]);
 
   useEffect(() => {
     const oauthReturn = searchParams.get('oauth_return');
@@ -144,6 +161,10 @@ const AlunoAppLoginPage: React.FC = () => {
       || turnstileStatus !== 'verified'
     ) return;
 
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     submitInFlightRef.current = true;
     setLoading(true);
     setMessage(null);
@@ -163,6 +184,9 @@ const AlunoAppLoginPage: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setLoading(true);
     setMessage(null);
     try {
@@ -182,7 +206,7 @@ const AlunoAppLoginPage: React.FC = () => {
   if (checkingExistingSession) return <AlunoAppSplash />;
 
   return (
-    <main className="aluno-app-login fixed inset-0 overflow-hidden bg-[#001a33] text-white">
+    <main className="aluno-app-login aluno-fullscreen-shell fixed inset-0 h-[100dvh] max-h-[100dvh] min-h-0 w-full overflow-hidden overscroll-none bg-[#001a33] text-white">
       <img
         src="/banner1.png"
         alt=""
@@ -193,7 +217,7 @@ const AlunoAppLoginPage: React.FC = () => {
       <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full border-[34px] border-blue-400/[0.06]" />
       <div className="absolute -bottom-24 -right-20 h-64 w-64 rotate-12 rounded-[4rem] border border-blue-300/10" />
 
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-[31rem] flex-col overflow-y-auto overscroll-contain px-5 pb-[max(1.15rem,env(safe-area-inset-bottom))] pt-[max(1.15rem,env(safe-area-inset-top))] sm:px-8">
+      <div ref={contentScrollRef} className="aluno-login-scroll aluno-contained-scroll relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[31rem] flex-col overflow-x-hidden overscroll-none px-5 pb-[max(1.15rem,env(safe-area-inset-bottom))] pt-[max(1.15rem,env(safe-area-inset-top))] sm:px-8">
         <section className="app-login-content my-auto flex w-full flex-col">
           <div className="app-login-logo mx-auto flex h-[4.4rem] w-[13.5rem] items-center justify-center rounded-[1.45rem] bg-white px-5 shadow-[0_22px_60px_rgba(0,0,0,0.32)] ring-1 ring-white/80">
             <img
@@ -304,7 +328,7 @@ const AlunoAppLoginPage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="app-login-turnstile rounded-xl bg-white/95 px-2.5 py-2 text-slate-700">
+            <div className="app-login-turnstile rounded-xl bg-white px-2.5 py-2 text-slate-700">
               <AdaptiveTurnstileWidget
                 action="login"
                 resetSignal={turnstileResetSignal}

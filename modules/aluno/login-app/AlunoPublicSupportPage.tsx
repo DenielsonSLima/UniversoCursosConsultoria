@@ -26,6 +26,7 @@ import {
   NATIVE_PUSH_BRIDGE_READY_EVENT,
   NATIVE_PUSH_PERMISSION_CHANGED_EVENT,
 } from '../native-app/native-app.bridge';
+import { useAlunoFullscreenViewport } from './useAlunoFullscreenViewport';
 
 type ChatMessage = {
   id: string;
@@ -52,6 +53,8 @@ const isValidFullName = (value: string) => {
 };
 
 const AlunoPublicSupportPage: React.FC = () => {
+  useAlunoFullscreenViewport();
+
   const bootstrap = useQuery({
     queryKey: ['public-support', 'bootstrap'],
     queryFn: publicSupportService.bootstrap,
@@ -75,7 +78,7 @@ const AlunoPublicSupportPage: React.FC = () => {
   const [turnstileReset, setTurnstileReset] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [newReplyAnnouncement, setNewReplyAnnouncement] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const seenManagerMessageIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
@@ -157,7 +160,19 @@ const AlunoPublicSupportPage: React.FC = () => {
     void playPublicSupportMessageSound();
   }, [history.data]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [history.data?.messages, messages]);
+  useEffect(() => {
+    const scroller = messagesScrollRef.current;
+    if (!scroller) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      scroller.scrollTo({
+        top: scroller.scrollHeight,
+        behavior: 'smooth',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [history.data?.messages, messages]);
 
   const currentNode = useMemo(() => definition.nodes.find((node) => node.id === currentNodeId) || null, [currentNodeId, definition.nodes]);
   const currentOptions = currentNode?.options.filter((option) => option.enabled) || [];
@@ -300,14 +315,14 @@ const AlunoPublicSupportPage: React.FC = () => {
   };
 
   return (
-    <main className="fixed inset-0 flex overflow-hidden bg-[#001a33] text-white">
+    <main className="aluno-public-support aluno-fullscreen-shell fixed inset-0 flex h-[100dvh] max-h-[100dvh] min-h-0 w-full overflow-hidden overscroll-none bg-[#001a33] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(37,99,235,.42),transparent_36%),radial-gradient(circle_at_90%_85%,rgba(14,165,233,.20),transparent_34%),linear-gradient(155deg,#001126_0%,#002c63_55%,#001a33_100%)]" />
       <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:28px_28px]" />
-      <section className="relative z-10 mx-auto flex h-full w-full max-w-[34rem] flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
+      <section className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[34rem] flex-col overflow-hidden overscroll-none px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
         <header className="flex shrink-0 items-center gap-3 py-2"><Link to="/aluno/login-app" aria-label="Voltar ao login" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-blue-100 backdrop-blur-md"><ArrowLeft size={20} /></Link><div className="flex h-11 flex-1 items-center justify-center rounded-2xl bg-white px-4 shadow-lg"><img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-8 w-full object-contain" /></div><button type="button" onClick={accessToken ? newTicket : resetFlow} aria-label={accessToken ? 'Abrir novo chamado' : 'Reiniciar atendimento'} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-950/30">{accessToken ? <Plus size={19} /> : <RotateCcw size={19} />}</button></header>
         <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border border-white/15 bg-white shadow-2xl shadow-black/30">
           <div className="shrink-0 border-b border-slate-100 bg-slate-50 px-5 py-4 text-slate-900"><div className="flex items-center gap-3"><span className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white"><MessageCircle size={20} /><i className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" /></span><div className="min-w-0 flex-1"><h1 className="font-black text-[#001a33]">Fale com a Uni</h1><p className="truncate text-xs font-semibold text-slate-500">{accessToken ? `Protocolo ${history.data?.chat.protocolo || 'carregando…'}` : 'Fluxo Universo Principal · atendimento público'}</p></div>{accessToken ? <button type="button" onClick={newTicket} className="text-xs font-black text-blue-700">Novo</button> : null}</div></div>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f3f7fb] p-4 sm:p-5 custom-scrollbar">
+          <div ref={messagesScrollRef} className="aluno-chat-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-none bg-[#f3f7fb] p-4 sm:p-5 custom-scrollbar">
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{newReplyAnnouncement}</span>
             {accessToken ? (
               history.isLoading ? <div className="flex justify-center py-14"><Loader2 className="animate-spin text-blue-600" /></div> : history.data ? <><div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-slate-700"><div className="flex items-center gap-2 text-blue-700"><TicketCheck size={18} /><b className="text-sm">Chamado registrado</b></div><p className="mt-2 text-xs font-semibold">{history.data.chat.assunto} · {history.data.chat.status === 'pendente' ? 'em atendimento' : 'resolvido'}</p><p className="mt-2 flex items-center gap-1.5 text-xs font-black text-slate-500"><Clock3 size={13} /> Tempo médio informado: {formatSla(averageResponse)}</p></div>{history.data.messages.map((message) => { const outgoing = message.remetente_tipo === 'aluno'; const hasText = Boolean(message.conteudo?.trim() && !message.conteudo.startsWith('📎')); return <div key={message.id} className={`${outgoing ? 'ml-auto rounded-tr-md bg-blue-600 text-white' : 'rounded-tl-md bg-white text-slate-700 ring-1 ring-slate-100'} max-w-[90%] space-y-2 whitespace-pre-line rounded-2xl p-4 text-sm font-medium leading-6 shadow-sm`}><PublicSupportAttachment path={message.anexo_path} url={message.anexo_url} outgoing={outgoing} />{hasText ? <p className="break-words">{message.conteudo}</p> : null}<span className={`block text-[10px] font-bold ${outgoing ? 'text-blue-100' : 'text-slate-400'}`}>{message.remetente_nome} · {new Date(message.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>; })}</> : null
@@ -317,7 +332,7 @@ const AlunoPublicSupportPage: React.FC = () => {
               {showTicketForm ? <form onSubmit={submitTicket} className="space-y-3 rounded-2xl border border-blue-100 bg-white p-4 text-slate-700 shadow-sm"><div><h2 className="font-black text-[#001a33]">Abrir chamado</h2><p className="mt-1 text-xs font-semibold text-slate-500">Informe seu nome completo e CPF para localizarmos seu cadastro. Seu histórico ficará salvo neste aparelho por 90 dias.</p></div><Field label="Nome completo" value={requesterName} onChange={setRequesterName} placeholder="Digite seu nome e sobrenome" autoComplete="name" /><CpfField value={cpf} onChange={(value) => setCpf(formatCpf(value))} /><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Polo</span><select value={selectedPoloId} onChange={(event) => setSelectedPoloId(event.target.value)} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-blue-500">{bootstrap.data?.polos.map((polo) => <option key={polo.id} value={polo.id}>{polo.nome} · {polo.cidade}</option>)}</select></label><label className="block"><span className="text-[10px] font-black uppercase tracking-wide text-slate-500">Como podemos ajudar?</span><textarea required minLength={2} value={ticketMessage} onChange={(event) => setTicketMessage(event.target.value)} className="mt-1.5 h-24 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold outline-none focus:border-blue-500" /></label><AdaptiveTurnstileWidget action="support" resetSignal={turnstileReset} onTokenChange={setTurnstileToken} />{errorMessage ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{errorMessage}</p> : null}<button type="submit" disabled={!turnstileToken || createTicketMutation.isPending || !isValidFullName(requesterName) || !isValidCpf(cpf) || !ticketMessage.trim()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white disabled:opacity-40">{createTicketMutation.isPending ? <Loader2 size={17} className="animate-spin" /> : <TicketCheck size={17} />}Gerar protocolo e enviar</button></form> : null}
               {!showTicketForm && currentOptions.length === 0 ? <button type="button" onClick={resetFlow} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 text-xs font-black text-blue-700"><RotateCcw size={15} />Voltar ao menu principal</button> : null}
             </>}
-            <div ref={bottomRef} />
+            <div aria-hidden="true" />
           </div>
           <div className="shrink-0 border-t border-slate-100 bg-white p-3">{accessToken && history.data?.chat.status === 'pendente' ? <PublicSupportComposer sending={sendMutation.isPending || attachmentMutation.isPending} onSendMessage={async (message) => { setErrorMessage(''); await sendMutation.mutateAsync(message); }} onSendAttachment={async (file) => { setErrorMessage(''); await attachmentMutation.mutateAsync(file); }} /> : <div className="flex h-12 items-center gap-2 rounded-2xl bg-slate-100 px-4 text-xs font-semibold text-slate-400"><span className="flex-1">{accessToken ? 'Atendimento encerrado. Abra um novo chamado quando precisar.' : 'Escolha uma opção do fluxo para continuar'}</span><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200"><Send size={16} /></span></div>}</div>
         </div>

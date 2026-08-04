@@ -9,7 +9,10 @@ import type {
   PushCampaignMutationResult,
   PushCampaignPreview,
   PushCampaignStatus,
+  PushBirthdaySettings,
+  PushImageAsset,
   PushSegments,
+  UpdatePushBirthdaySettingsInput,
 } from './notificacoes-push.types';
 
 type UnknownRecord = Record<string, unknown>;
@@ -37,6 +40,13 @@ const numberValue = (row: UnknownRecord, camel: string, snake: string) => {
 };
 
 const booleanValue = (row: UnknownRecord, key: string) => row[key] === true;
+
+const PUSH_IMAGE_PATH_PATTERN = /^(?:campaigns|birthday)\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|jpeg|png)$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const pushImageUrl = (path: string | null) => path && PUSH_IMAGE_PATH_PATTERN.test(path)
+  ? supabase.storage.from('push-notification-images').getPublicUrl(path).data.publicUrl
+  : null;
 
 const rpcError = (error: { code?: string; message?: string }) => {
   if (error.code === '42883' || error.message?.includes('Could not find the function')) {
@@ -111,7 +121,13 @@ const mapCampaign = (value: unknown): PushCampaign => {
     sentCount: numberValue(row, 'sentCount', 'sent_count'),
     failedCount: numberValue(row, 'failedCount', 'failed_count'),
     skippedCount: numberValue(row, 'skippedCount', 'skipped_count'),
+    recipientCount: numberValue(row, 'recipientCount', 'recipient_count'),
+    processedCount: numberValue(row, 'processedCount', 'processed_count'),
+    progressPercent: numberValue(row, 'progressPercent', 'progress_percent'),
     createdByName: nullableString(row, 'createdByName', 'created_by_name'),
+    imageAssetId: nullableString(row, 'imageAssetId', 'image_asset_id'),
+    imagePath: nullableString(row, 'imagePath', 'image_path'),
+    imageUrl: pushImageUrl(nullableString(row, 'imagePath', 'image_path')),
     totalCount: numberValue(row, 'totalCount', 'total_count'),
   };
 };
@@ -135,12 +151,57 @@ const draftRpcParams = (draft: PushCampaignDraft) => ({
   p_polo_id: draft.audienceType === 'polo' ? draft.poloId : null,
   p_turma_id: draft.audienceType === 'turma' ? draft.turmaId : null,
   p_scheduled_at: draft.scheduledAt,
+  p_image_asset_id: draft.image?.id || null,
 });
+
+const mapAsset = (value: unknown): PushImageAsset => {
+  const row = asRecord(value);
+  const id = stringValue(row, 'id', 'id');
+  const purpose = stringValue(row, 'purpose', 'purpose');
+  const mimeType = stringValue(row, 'mimeType', 'mime_type');
+  const objectPath = stringValue(row, 'objectPath', 'object_path');
+  const publicUrl = pushImageUrl(objectPath);
+  if (
+    !UUID_PATTERN.test(id)
+    || !['campaign', 'birthday'].includes(purpose)
+    || !['image/jpeg', 'image/png'].includes(mimeType)
+    || !publicUrl
+  ) {
+    throw new Error('O servidor rejeitou os metadados da imagem enviada.');
+  }
+  return {
+    id,
+    purpose: purpose as PushImageAsset['purpose'],
+    objectPath,
+    publicUrl,
+    mimeType: mimeType as PushImageAsset['mimeType'],
+    sizeBytes: numberValue(row, 'sizeBytes', 'size_bytes'),
+    width: numberValue(row, 'width', 'width'),
+    height: numberValue(row, 'height', 'height'),
+  };
+};
+
+const mapBirthdaySettings = (value: unknown): PushBirthdaySettings => {
+  const row = asRecord(value);
+  const imagePath = nullableString(row, 'imagePath', 'image_path');
+  return {
+    enabled: booleanValue(row, 'enabled'),
+    title: stringValue(row, 'title', 'title'),
+    body: stringValue(row, 'body', 'body'),
+    sendTime: stringValue(row, 'sendTime', 'send_time', '08:00'),
+    timezone: 'America/Maceio',
+    imageAssetId: nullableString(row, 'imageAssetId', 'image_asset_id'),
+    imagePath,
+    imageUrl: pushImageUrl(imagePath),
+    updatedAt: nullableString(row, 'updatedAt', 'updated_at'),
+  };
+};
 
 export const pushNotificationKeys = {
   all: ['comunicacao', 'notificacoes-push'] as const,
   segments: ['comunicacao', 'notificacoes-push', 'segmentos'] as const,
   campaigns: (params: PushCampaignListParams) => ['comunicacao', 'notificacoes-push', 'campanhas', params] as const,
+  birthdaySettings: ['comunicacao', 'notificacoes-push', 'aniversario'] as const,
 };
 
 export const pushNotificationService = {
@@ -151,7 +212,7 @@ export const pushNotificationService = {
   },
 
   async listCampaigns(params: PushCampaignListParams): Promise<PushCampaignListResult> {
-    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanhas_listar', {
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanhas_listar_v3', {
       p_status: params.status === 'all' ? null : params.status,
       p_search: params.search || null,
       p_limit: params.pageSize,
@@ -164,13 +225,13 @@ export const pushNotificationService = {
   },
 
   async previewCampaign(draft: PushCampaignDraft): Promise<PushCampaignPreview> {
-    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_previsualizar', draftRpcParams(draft));
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_previsualizar_v2', draftRpcParams(draft));
     if (error) throw rpcError(error);
     return mapPreview(data);
   },
 
   async createCampaign(input: CreatePushCampaignInput): Promise<PushCampaignMutationResult> {
-    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_criar', {
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_criar_v2', {
       ...draftRpcParams(input),
       p_preview_token: input.previewToken,
       p_request_id: input.requestId,
@@ -180,11 +241,46 @@ export const pushNotificationService = {
   },
 
   async enqueueCampaign(campaignId: string, requestId: string): Promise<PushCampaignMutationResult> {
-    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_enfileirar', {
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_campanha_enfileirar_v2', {
       p_campaign_id: campaignId,
       p_request_id: requestId,
     });
     if (error) throw rpcError(error);
     return mapMutationResult(data);
+  },
+
+  async uploadImage(file: File, purpose: PushImageAsset['purpose']): Promise<PushImageAsset> {
+    const form = new FormData();
+    form.append('purpose', purpose);
+    form.append('file', file, file.name);
+    const { data, error } = await supabase.functions.invoke('push-notification-assets', { body: form });
+    if (error) {
+      const response = (error as { context?: Response }).context;
+      if (response && typeof response.clone === 'function') {
+        const payload = await response.clone().json().catch(() => null) as { error?: unknown } | null;
+        if (typeof payload?.error === 'string' && payload.error) throw new Error(payload.error);
+      }
+      throw error;
+    }
+    const payload = asRecord(data);
+    return mapAsset(payload.asset);
+  },
+
+  async getBirthdaySettings(): Promise<PushBirthdaySettings> {
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_aniversario_config_obter');
+    if (error) throw rpcError(error);
+    return mapBirthdaySettings(data);
+  },
+
+  async updateBirthdaySettings(input: UpdatePushBirthdaySettingsInput): Promise<PushBirthdaySettings> {
+    const { data, error } = await (supabase.rpc as any)('comunicacao_push_aniversario_config_atualizar', {
+      p_enabled: input.enabled,
+      p_title: input.title.trim(),
+      p_body: input.body.trim(),
+      p_send_time: input.sendTime,
+      p_image_asset_id: input.imageAssetId,
+    });
+    if (error) throw rpcError(error);
+    return mapBirthdaySettings(data);
   },
 };

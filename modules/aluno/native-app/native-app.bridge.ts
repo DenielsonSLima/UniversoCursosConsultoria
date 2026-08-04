@@ -25,6 +25,7 @@ export type NativeForegroundNotification = {
   title: string;
   body?: string;
   destination?: string | null;
+  imageUrl?: string | null;
 };
 type ShowForegroundNotification = (notification: NativeForegroundNotification) => void;
 
@@ -96,9 +97,14 @@ const readToken = async (permissionStatus: NativePushPermission) => {
 const getPushStatus = async (): Promise<NativePushState> => {
   const result = await FirebaseMessaging.checkPermissions();
   const permissionStatus = mapPermission(result.receive);
+  if (permissionStatus !== 'granted' && permissionStatus !== 'provisional') {
+    currentToken = null;
+  }
   return {
     permissionStatus,
-    token: currentToken || await readToken(permissionStatus),
+    token: permissionStatus === 'granted' || permissionStatus === 'provisional'
+      ? currentToken || await readToken(permissionStatus)
+      : null,
   };
 };
 
@@ -133,6 +139,26 @@ const readString = (data: NotificationData, keys: string[]) => {
   return null;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PUSH_IMAGE_PUBLIC_PATH_PATTERN = /^\/storage\/v1\/object\/public\/push-notification-images\/(?:campaigns|birthday)\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|jpeg|png)$/;
+
+const normalizePushImageUrl = (rawValue: string | null) => {
+  if (!rawValue) return null;
+  const configuredSupabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    || import.meta.env.REACT_APP_SUPABASE_URL;
+  if (!configuredSupabaseUrl) return null;
+  try {
+    const imageUrl = new URL(rawValue);
+    const supabaseUrl = new URL(configuredSupabaseUrl);
+    if (imageUrl.protocol !== 'https:' || imageUrl.origin !== supabaseUrl.origin) return null;
+    if (imageUrl.username || imageUrl.password || imageUrl.search || imageUrl.hash) return null;
+    if (!PUSH_IMAGE_PUBLIC_PATH_PATTERN.test(imageUrl.pathname)) return null;
+    return imageUrl.href;
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Pushes may only navigate inside the authenticated student portal. This keeps
  * untrusted notification payloads from opening arbitrary schemes or websites.
@@ -162,10 +188,35 @@ export const normalizeAlunoPushDeepLink = (rawValue: string | null) => {
 
 const getNotificationDeepLink = (notification: { data?: unknown; link?: string }) => {
   const data = asData(notification.data);
+  const scope = readString(data, ['scope']);
+  const category = readString(data, ['category']);
+  const notificationId = readString(data, ['notificationId', 'notification_id']);
+  const jobId = readString(data, ['jobId', 'job_id']);
+  if (scope === 'student' && category !== 'chat') {
+    if (notificationId && UUID_PATTERN.test(notificationId)) {
+      return `/aluno/?module=notificacoes&notificationId=${encodeURIComponent(notificationId)}`;
+    }
+    if (jobId && UUID_PATTERN.test(jobId)) {
+      return `/aluno/?module=notificacoes&sourceJobId=${encodeURIComponent(jobId)}`;
+    }
+  }
   return normalizeAlunoPushDeepLink(
-    readString(data, ['deep_link', 'deepLink', 'route', 'path', 'url'])
+    readString(data, ['deepLink', 'deep_link', 'route', 'path', 'url'])
       || (typeof notification.link === 'string' ? notification.link : null),
   );
+};
+
+const getNotificationImageUrl = (notification: { data?: unknown; image?: string }) => {
+  const data = asData(notification.data);
+  const candidates = [
+    readString(data, ['image_url']),
+    typeof notification.image === 'string' ? notification.image.trim() : null,
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizePushImageUrl(candidate);
+    if (normalized) return normalized;
+  }
+  return null;
 };
 
 const bridge: UniversoNativeAppBridge = {
@@ -252,6 +303,7 @@ export const installUniversoNativeAppBridge = (
       title: notification.title?.trim() || 'Universo Cursos e Consultoria',
       body: notification.body?.trim() || undefined,
       destination: getNotificationDeepLink(notification),
+      imageUrl: getNotificationImageUrl(notification),
     });
   }).then((handle) => listenerHandles.push(handle)).catch((error) => {
     console.warn('Não foi possível acompanhar notificações recebidas com o app aberto.', error);

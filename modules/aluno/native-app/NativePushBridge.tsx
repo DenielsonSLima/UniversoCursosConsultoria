@@ -10,11 +10,13 @@ const NativePushBridge = () => {
 
   useEffect(() => installUniversoNativeAppBridge(
     (destination) => navigate(destination),
-    ({ title, body, destination }) => {
+    ({ title, body, destination, imageUrl }) => {
       // No iPhone o banner nativo já é apresentado pelas presentationOptions.
       if (Capacitor.getPlatform() === 'ios') return;
       toast.info(title, body, {
         contextLabel: 'Notificação do app',
+        avatarUrl: imageUrl,
+        avatarName: title,
         ...(destination ? {
           actionLabel: 'Abrir',
           onAction: () => navigate(destination),

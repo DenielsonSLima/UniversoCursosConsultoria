@@ -19,6 +19,14 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      build: {
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            nativeTurnstile: path.resolve(__dirname, 'native-turnstile.html'),
+          },
+        },
+      },
       define: {
         'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(supabaseUrl),
         'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),

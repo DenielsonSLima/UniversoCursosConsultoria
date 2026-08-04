@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.25",
+  "version": "2.2.3-beta.26",
   "display": "BETA",
   "stage": "beta",
-  "revision": 25,
-  "releasedAt": "2026-08-03",
-  "summary": "Horários oficiais padronizados em todas as unidades"
+  "revision": 26,
+  "releasedAt": "2026-08-04",
+  "summary": "Aplicativo móvel, notificações ricas e consentimento de relacionamento revisados"
 }
