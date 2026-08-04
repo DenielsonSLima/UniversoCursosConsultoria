@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import Header from './components/Header';
 import HeroSlider from './components/HeroSlider';
 import CategoriesSection from './components/CategoriesSection';

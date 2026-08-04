@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import UnitsList from './components/UnitsList';

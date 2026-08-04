@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Quote } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 interface SlideData {
   image: string;

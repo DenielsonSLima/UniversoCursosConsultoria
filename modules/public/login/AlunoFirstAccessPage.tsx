@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CheckSquare, Eye, EyeOff, Lock, FileText, LoaderCircle } from 'lucide-react';
 import { alunoPublicAuthService } from './aluno-public-auth.service';
 import { getPortalProfile, savePortalSession, PortalAuthProfile } from '../../login/portal-session';

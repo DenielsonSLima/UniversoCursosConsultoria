@@ -2,7 +2,7 @@
 // File: modules/public/components/CategoriesSection.tsx
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import CursosLivresCard from '../categories/cursos-livres/CursosLivresCard';
 import CursosEadCard from '../categories/cursos-ead/CursosEadCard';
 import EspecializacaoTecnicaCard from '../categories/especializacao-tecnica/EspecializacaoTecnicaCard';

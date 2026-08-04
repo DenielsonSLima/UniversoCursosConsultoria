@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { CreditCard, Handshake, Search, Settings, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { clearPortalSession, getGestorAccessScope, getPortalProfile, PortalAuthProfile, savePortalSession } from '../login/portal-session';
@@ -16,6 +16,7 @@ import { loginService } from '../login/login.service';
 import {
   buildDashboardAccessKey,
   canAccessGestorModule,
+  canAccessCommunicationRoute,
   normalizeGestorPermissions,
   canAccessTab,
   getAllowedDashboardWidgets,
@@ -82,11 +83,21 @@ const POLO_TRANSITION_SUCCESS_MS = 450;
 
 const GestorPage: React.FC = () => {
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const [activeModule, setActiveModule] = useState('inicio');
+  const [activeModule, setActiveModuleState] = useState('inicio');
+  const [hasUnsavedAutomationDraft, setHasUnsavedAutomationDraft] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
   const [hoveredMenus, setHoveredMenus] = useState<Set<string>>(new Set());
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
+
+  const setActiveModule = useCallback((moduleId: string) => {
+    if (moduleId === activeModule) return;
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair?')) {
+      return;
+    }
+    setHasUnsavedAutomationDraft(false);
+    setActiveModuleState(moduleId);
+  }, [activeModule, hasUnsavedAutomationDraft]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<typeof MOCK_SEARCH_DATA>([]);
@@ -409,13 +420,21 @@ const GestorPage: React.FC = () => {
     if (moduleId.startsWith('cadastros-') && !canAccessTab(gestorPermissions, 'cadastros', moduleId)) {
       return false;
     }
-    if (moduleId.startsWith('comunicacao-') && !canAccessTab(gestorPermissions, 'comunicacao', moduleId)) {
+    if (moduleId.startsWith('comunicacao-') && !canAccessCommunicationRoute(gestorPermissions, moduleId)) {
+      return false;
+    }
+    if (moduleId === 'comunicacao-automacoes' && (!gestorPermissions.allPolos || !isMatrizSelected)) {
       return false;
     }
     if (
       moduleId === 'comunicacao'
       && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-mensagem')
       && !canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-whatsapp')
+      && !(
+        gestorPermissions.allPolos
+        && isMatrizSelected
+        && canAccessTab(gestorPermissions, 'comunicacao', 'comunicacao-automacoes')
+      )
     ) {
       return false;
     }
@@ -446,7 +465,8 @@ const GestorPage: React.FC = () => {
   useEffect(() => {
     if (isAuthLoading || !profile) return;
     if (!canOpenModule(activeModule) && firstAllowedModule) {
-      setActiveModule(firstAllowedModule);
+      setHasUnsavedAutomationDraft(false);
+      setActiveModuleState(firstAllowedModule);
     }
   }, [activeModule, canOpenModule, firstAllowedModule, isAuthLoading, profile]);
 
@@ -530,6 +550,10 @@ const GestorPage: React.FC = () => {
     if (poloTransition?.status === 'loading' || poloTransition?.status === 'success') {
       return;
     }
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de trocar de polo?')) {
+      setIsPoloSelectorOpen(false);
+      return;
+    }
 
     const runId = ++poloTransitionRunRef.current;
     const startedAt = Date.now();
@@ -577,6 +601,7 @@ const GestorPage: React.FC = () => {
       }
       if (poloTransitionRunRef.current !== runId) return;
 
+      setHasUnsavedAutomationDraft(false);
       setPoloTransition((current) => current?.toPoloId === poloId
         ? { ...current, status: 'success' }
         : current);
@@ -614,6 +639,9 @@ const GestorPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    if (hasUnsavedAutomationDraft && !window.confirm('Descartar as alterações não salvas deste rascunho antes de sair do portal?')) {
+      return;
+    }
     setIsLogoutConfirmOpen(true);
   };
 
@@ -667,6 +695,7 @@ const GestorPage: React.FC = () => {
       permissions={gestorPermissions}
       profile={profile}
       profileAvatarUrl={profileAvatarUrl}
+      onAutomationDraftDirtyChange={setHasUnsavedAutomationDraft}
       onProfileUpdated={(updated: MeuPerfilGestorData) => {
         setProfile((current) => {
           if (!current) return current;

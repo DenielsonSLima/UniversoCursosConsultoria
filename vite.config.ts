@@ -28,10 +28,10 @@ export default defineConfig(({ mode }) => {
         'import.meta.env.VITE_APP_MODE': JSON.stringify(env.VITE_APP_MODE || 'production'),
       },
       optimizeDeps: {
-        include: ['react', 'react-dom', 'react-router-dom', 'lucide-react']
+        include: ['react', 'react-dom', 'react-router', 'lucide-react']
       },
       resolve: {
-        dedupe: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
+        dedupe: ['react', 'react-dom', 'react-router', 'lucide-react'],
         alias: {
           '@': path.resolve(__dirname, '.'),
         }

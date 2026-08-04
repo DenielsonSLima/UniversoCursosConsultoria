@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import ToastNotification, { useToast } from '../../gestor/components/ToastNotification';
 import { installUniversoNativeAppBridge } from './native-app.bridge';
 

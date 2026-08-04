@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { XCircle, QrCode } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { validatorService } from './validator.service';

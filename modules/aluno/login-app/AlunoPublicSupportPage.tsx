@@ -4,7 +4,7 @@ import {
   ArrowLeft, Clock3, Loader2, MessageCircle,
   Plus, RotateCcw, Send, TicketCheck,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import AdaptiveTurnstileWidget from '../../shared/auth/AdaptiveTurnstileWidget';
 import { formatCpf, isValidCpf } from '../../shared/utils/identityValidation';
 import {

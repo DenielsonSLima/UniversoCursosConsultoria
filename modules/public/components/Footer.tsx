@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Facebook, Instagram, Phone, Mail, MapPin, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import ArkhenSignature from '../../shared/components/ArkhenSignature';
 
 const Footer: React.FC = () => {

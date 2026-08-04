@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ArrowLeft, Building2, CheckCircle2, ArrowRight, Clock, GraduationCap, Quote, ShieldCheck, UsersRound } from 'lucide-react';
 import LoginForm from './components/LoginForm';
 import { loginService } from './login.service';

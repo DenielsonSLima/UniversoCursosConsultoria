@@ -2,7 +2,7 @@
 // File: App.tsx
 
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 
 import SeoManager from './modules/public/components/SeoManager';
 import VersionedPortal from './modules/shared/components/VersionedPortal';

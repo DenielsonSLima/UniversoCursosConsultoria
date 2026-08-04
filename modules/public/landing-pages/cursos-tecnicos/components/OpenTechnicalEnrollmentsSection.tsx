@@ -9,7 +9,7 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { TechnicalLandingData } from '../technicalLanding.types';
 import { buildTechnicalLandingPath } from '../technicalLanding.routes';
 import { technicalLandingService } from '../technicalLanding.service';

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ArrowRight, CheckCircle2, Home, Loader2, MailCheck, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import {

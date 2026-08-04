@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import {
   clearPendingNativeOAuth,
   consumeNativeOAuthUrl,

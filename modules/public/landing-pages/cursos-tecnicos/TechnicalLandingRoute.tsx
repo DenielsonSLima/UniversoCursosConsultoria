@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { getTechnicalLandingConfig } from './technicalLanding.registry';
