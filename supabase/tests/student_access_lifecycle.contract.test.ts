@@ -56,6 +56,12 @@ Deno.test("backfill vincula Auth somente quando aluno e e-mail são unívocos", 
     migration,
     /not exists \([\s\S]*usuario_sistema\.auth_user_id = auth_user\.id/i,
   );
+  assert.match(migration, /min\(id::text\)::uuid as parceiro_id/i);
+  assert.match(
+    migration,
+    /min\(auth_user\.id::text\)::uuid as auth_user_id/i,
+  );
+  assert.doesNotMatch(migration, /min\((?:auth_user\.)?id\)/i);
 });
 
 Deno.test("auth_user_id é único e duplicidade prévia interrompe a migration", () => {

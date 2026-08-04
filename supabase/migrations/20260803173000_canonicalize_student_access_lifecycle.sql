@@ -78,7 +78,7 @@ with aluno_email as (
     and parceiro.auth_user_id is null
 ),
 aluno_unico as (
-  select email_normalizado, min(id) as parceiro_id
+  select email_normalizado, min(id::text)::uuid as parceiro_id
   from aluno_email
   where email_normalizado is not null
     and email_normalizado <> ''
@@ -88,7 +88,7 @@ aluno_unico as (
 auth_email as (
   select
     lower(btrim(auth_user.email)) as email_normalizado,
-    min(auth_user.id) as auth_user_id
+    min(auth_user.id::text)::uuid as auth_user_id
   from auth.users as auth_user
   where auth_user.email is not null
     and btrim(auth_user.email) <> ''
