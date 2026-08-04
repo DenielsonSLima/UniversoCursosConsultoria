@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { bibliotecaService } from '../biblioteca.service';
 import { bibliotecaQueryKeys } from '../biblioteca.queryKeys';
+import { TargetAudience } from '../biblioteca.types';
 
 interface UseFileExplorerMutationsParams {
   currentFolderId: string | null;
@@ -34,7 +35,9 @@ export function useFileExplorerMutations({
   };
 
   const createFolderMutation = useMutation({
-    mutationFn: (nome: string) => bibliotecaService.createFolder(nome, currentFolderId, teacherId),
+    mutationFn: ({ nome, targetAudience }: { nome: string; targetAudience: TargetAudience }) => (
+      bibliotecaService.createFolder(nome, currentFolderId, teacherId, targetAudience)
+    ),
     onSuccess: () => {
       invalidateFolders();
       onFolderCreated();
@@ -47,6 +50,13 @@ export function useFileExplorerMutations({
       invalidateFolders();
       onFolderRenamed();
     }
+  });
+
+  const updateFolderAudienceMutation = useMutation({
+    mutationFn: ({ id, targetAudience }: { id: string; targetAudience: TargetAudience }) => (
+      bibliotecaService.updateFolderAudience(id, targetAudience)
+    ),
+    onSuccess: invalidateFolders,
   });
 
   const deleteFolderMutation = useMutation({
@@ -90,6 +100,7 @@ export function useFileExplorerMutations({
   return {
     createFolderMutation,
     renameFolderMutation,
+    updateFolderAudienceMutation,
     deleteFolderMutation,
     deleteDocumentMutation,
     moveFolderMutation,

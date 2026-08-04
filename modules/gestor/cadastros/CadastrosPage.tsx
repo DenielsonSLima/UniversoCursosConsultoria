@@ -9,6 +9,7 @@ import {
   ClipboardCheck, 
   FileSignature
 } from 'lucide-react';
+import { GESTOR_CADASTRO_NAVIGATION } from '../gestor-navigation.config';
 
 interface CadastrosPageProps {
   onNavigate?: (id: string) => void;
@@ -17,16 +18,21 @@ interface CadastrosPageProps {
 }
 
 const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = false, allowedTabs }) => {
-  const hubItems = [
-    { id: 'cadastros-checklist', title: 'Check List Estágio', desc: 'Controle de documentos.', icon: <ClipboardCheck size={28} />, color: 'bg-teal-600' },
-    { id: 'cadastros-ead', title: 'Cursos EAD', desc: 'Ambiente digital.', icon: <MonitorPlay size={28} />, color: 'bg-purple-600' },
-    { id: 'cadastros-especializacao', title: 'Cursos Especialização', desc: 'Foco técnico.', icon: <Award size={28} />, color: 'bg-rose-600' },
-    { id: 'cadastros-livres', title: 'Cursos Livres', desc: 'Capacitação rápida.', icon: <Zap size={28} />, color: 'bg-amber-500' },
-    { id: 'cadastros-tecnicos', title: 'Cursos Técnicos', desc: 'Formação profissional.', icon: <Briefcase size={28} />, color: 'bg-emerald-600' },
-    { id: 'cadastros-superior', title: 'Ensino Superior', desc: 'Graduação e Pós.', icon: <Building size={28} />, color: 'bg-blue-800' },
-    { id: 'cadastros-ficha', title: 'Ficha Cadastral', icon: <FileSignature size={28} />, desc: 'Modelos cadastrais do aluno.', color: 'bg-slate-800' },
-    { id: 'cadastros-modelos', title: 'Modelos Documentos', desc: 'Templates oficiais.', icon: <FileCode size={28} />, color: 'bg-slate-700' },
-  ];
+  const hubItemDetails = {
+    'cadastros-tecnicos': { desc: 'Formação profissional.', icon: <Briefcase size={28} />, color: 'bg-emerald-600' },
+    'cadastros-livres': { desc: 'Capacitação rápida.', icon: <Zap size={28} />, color: 'bg-amber-500' },
+    'cadastros-especializacao': { desc: 'Foco técnico.', icon: <Award size={28} />, color: 'bg-rose-600' },
+    'cadastros-ead': { desc: 'Ambiente digital.', icon: <MonitorPlay size={28} />, color: 'bg-purple-600' },
+    'cadastros-superior': { desc: 'Graduação e Pós.', icon: <Building size={28} />, color: 'bg-blue-800' },
+    'cadastros-ficha': { desc: 'Modelos cadastrais do aluno.', icon: <FileSignature size={28} />, color: 'bg-slate-800' },
+    'cadastros-checklist': { desc: 'Controle de documentos.', icon: <ClipboardCheck size={28} />, color: 'bg-teal-600' },
+    'cadastros-modelos': { desc: 'Templates oficiais.', icon: <FileCode size={28} />, color: 'bg-slate-700' },
+  };
+  const hubItems = GESTOR_CADASTRO_NAVIGATION.map(item => ({
+    ...item,
+    title: item.label,
+    ...hubItemDetails[item.id],
+  }));
 
   const visibleItems = (readOnly
     ? hubItems.filter(item => ['cadastros-especializacao', 'cadastros-livres', 'cadastros-superior'].includes(item.id))
@@ -36,11 +42,11 @@ const CadastrosPage: React.FC<CadastrosPageProps> = ({ onNavigate, readOnly = fa
   return (
     <div className="animate-fadeIn">
       <div className="mb-10">
-        <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">Central de Cadastros</h2>
+        <h2 className="text-3xl font-black text-[#001a33] uppercase tracking-tight">Central de Formações</h2>
         <p className="text-slate-500 font-medium">
           {readOnly
             ? 'Consulte os cursos disponíveis para esta unidade. Alterações são realizadas exclusivamente pela Matriz.'
-            : 'Selecione o módulo para gerenciamento de dados institucionais.'}
+            : 'Selecione uma formação ou recurso institucional para gerenciar.'}
         </p>
       </div>
 

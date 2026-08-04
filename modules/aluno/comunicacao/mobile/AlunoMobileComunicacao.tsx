@@ -37,6 +37,8 @@ interface AlunoMobileComunicacaoProps {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   pendingCount: number;
   pendingFile: File | null;
+  recording: boolean;
+  recordingSeconds: number;
   resolvedCount: number;
   showConversation: boolean;
   totalChatsInTab: number;
@@ -50,6 +52,7 @@ interface AlunoMobileComunicacaoProps {
   onDelete: () => void;
   onFileChange: (file: File | null) => void;
   onMessageChange: (value: string) => void;
+  onRecord: () => void;
   onNewChat: () => void;
   onPageChange: (page: number) => void;
   onRetryChats: () => void;
@@ -74,6 +77,8 @@ const AlunoMobileComunicacao = ({
   messagesEndRef,
   pendingCount,
   pendingFile,
+  recording,
+  recordingSeconds,
   resolvedCount,
   showConversation,
   totalChatsInTab,
@@ -87,6 +92,7 @@ const AlunoMobileComunicacao = ({
   onDelete,
   onFileChange,
   onMessageChange,
+  onRecord,
   onNewChat,
   onPageChange,
   onRetryChats,
@@ -140,9 +146,12 @@ const AlunoMobileComunicacao = ({
               fileInputRef={fileInputRef}
               messageText={messageText}
               pendingFile={pendingFile}
+              recording={recording}
+              recordingSeconds={recordingSeconds}
               uploading={uploadingFile}
               onFileChange={onFileChange}
               onMessageChange={onMessageChange}
+              onRecord={onRecord}
               onSend={onSend}
             />
           )}

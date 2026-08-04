@@ -1,3 +1,4 @@
+/* global MediaRecorder, MediaStream */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Clock, CheckCircle, Tag, Plus, Trash2 } from 'lucide-react';
@@ -75,10 +76,125 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
   // Attachment state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
   const requestedChatHandledRef = useRef(false);
+
+  const clearRecordingResources = () => {
+    if (recordingTimerRef.current !== null) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+    recordingStreamRef.current = null;
+  };
+
+  const abortRecording = () => {
+    const recorder = recorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      if (recorder.state !== 'inactive') recorder.stop();
+    }
+    recorderRef.current = null;
+    recordingChunksRef.current = [];
+    clearRecordingResources();
+    setRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const stopRecording = () => {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  };
+
+  const startRecording = async () => {
+    if (recording || uploadingFile || pendingFile) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      toast.error('Gravação indisponível', 'Este dispositivo não oferece suporte à gravação de áudio.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const Recorder = window.MediaRecorder;
+      const preferredTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
+      const mimeType = preferredTypes.find((type) => Recorder.isTypeSupported(type));
+      const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+      recordingStreamRef.current = stream;
+      recorderRef.current = recorder;
+      recordingChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const canonicalType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
+        const extension = canonicalType.includes('ogg')
+          ? 'ogg'
+          : canonicalType.includes('webm')
+            ? 'webm'
+            : canonicalType.includes('mpeg')
+              ? 'mp3'
+              : 'm4a';
+        const blob = new Blob(recordingChunksRef.current, { type: canonicalType });
+
+        if (blob.size > 0 && blob.size <= 25 * 1024 * 1024) {
+          setPendingFile(new File([blob], `mensagem-de-voz-${Date.now()}.${extension}`, {
+            type: canonicalType,
+          }));
+        } else {
+          toast.error(
+            blob.size > 25 * 1024 * 1024 ? 'Áudio muito grande' : 'Áudio vazio',
+            blob.size > 25 * 1024 * 1024
+              ? 'A mensagem de voz deve ter no máximo 25 MB.'
+              : 'Não foi possível capturar a mensagem de voz. Tente novamente.',
+          );
+        }
+
+        recordingChunksRef.current = [];
+        recorderRef.current = null;
+        setRecording(false);
+        setRecordingSeconds(0);
+        clearRecordingResources();
+      };
+
+      recorder.start(250);
+      setRecordingSeconds(0);
+      setRecording(true);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((current) => {
+          if (current >= 299) stopRecording();
+          return Math.min(current + 1, 300);
+        });
+      }, 1_000);
+    } catch (error) {
+      clearRecordingResources();
+      recorderRef.current = null;
+      setRecording(false);
+      const blocked = ['NotAllowedError', 'PermissionDeniedError'].includes(
+        (error as { name?: string } | null)?.name || '',
+      );
+      toast.error(
+        blocked ? 'Microfone bloqueado' : 'Erro ao gravar',
+        blocked
+          ? 'Permita o microfone nas configurações do navegador ou do aplicativo para enviar mensagens de voz.'
+          : 'Não foi possível iniciar a gravação de áudio.',
+      );
+    }
+  };
+
+  const handleRecord = () => {
+    if (recording) stopRecording();
+    else void startRecording();
+  };
 
   // Delete confirm modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -147,6 +263,23 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
     supportPoloId: supportConfig?.polo_id,
     setUnreadChatIds,
   });
+
+  useEffect(() => {
+    abortRecording();
+    setPendingFile(null);
+    setMessageText('');
+  }, [activeChatId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') abortRecording();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      abortRecording();
+    };
+  }, []);
 
   useEffect(() => {
     if (!isNativeApp) return undefined;
@@ -252,7 +385,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
 
   // ── Send Message ──
   const handleSendMessage = async () => {
-    if (!activeChatId) return;
+    if (!activeChatId || recording) return;
     const text = messageText.trim();
     const fileToSend = pendingFile;
     if (!text && !fileToSend) return;
@@ -278,6 +411,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
       playMessageSound('send');
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
+      setMessageText(text);
+      setPendingFile(fileToSend);
       toast.error('Erro ao enviar', 'Não foi possível enviar a mensagem.');
     } finally {
       setUploadingFile(false);
@@ -342,6 +477,10 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
   const currentChat = chats.find(c => c.id === activeChatId);
 
   useEffect(() => {
+    if (currentChat?.status === 'solucionada') abortRecording();
+  }, [currentChat?.status]);
+
+  useEffect(() => {
     if (!currentChat) setMobileConversationOpen(false);
   }, [currentChat]);
 
@@ -372,6 +511,8 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
           messageText={messageText}
           pendingCount={pendentes.length}
           pendingFile={pendingFile}
+          recording={recording}
+          recordingSeconds={recordingSeconds}
           resolvedCount={resolvidos.length}
           showConversation={mobileConversationOpen}
           totalChatsInTab={activeCallChats.length}
@@ -384,6 +525,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
           onDelete={() => setShowDeleteConfirm(true)}
           onFileChange={setPendingFile}
           onMessageChange={setMessageText}
+          onRecord={handleRecord}
           onNewChat={() => canOpenNewChat && setShowNewChatModal(true)}
           onPageChange={handlePageChange}
           onRetryChats={() => void refetchChats()}
@@ -597,9 +739,12 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
                   fileInputRef={fileInputRef}
                   messageText={messageText}
                   pendingFile={pendingFile}
+                  recording={recording}
+                  recordingSeconds={recordingSeconds}
                   uploading={uploadingFile}
                   onFileChange={setPendingFile}
                   onMessageChange={setMessageText}
+                  onRecord={handleRecord}
                   onSend={handleSendMessage}
                 />
               )}

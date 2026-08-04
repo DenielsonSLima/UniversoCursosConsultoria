@@ -76,14 +76,14 @@ const ProfessorNavigation: React.FC<{
         onClick={() => onModuleChange(item.id)}
         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group ${
           activeModule === item.id
-            ? 'bg-[#092744] text-white shadow-lg shadow-purple-950/30 font-black border border-purple-400/35 ring-1 ring-purple-500/20'
-            : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
+            ? 'bg-[#092744] text-white shadow-lg shadow-purple-950/30 font-semibold border border-purple-400/35 ring-1 ring-purple-500/20'
+            : 'text-slate-400 hover:bg-white/5 hover:text-white font-normal'
         }`}
       >
         <div className={`${activeModule === item.id ? 'text-purple-300' : 'text-slate-400 group-hover:text-purple-400'}`}>
           {item.icon}
         </div>
-        <span className="text-sm tracking-wide">{item.label}</span>
+        <span className="whitespace-nowrap text-sm">{item.label}</span>
       </button>
     ))}
   </nav>
@@ -217,7 +217,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
   onPoloSelectorChange,
 }) => (
   <div className="professor-typography flex h-screen overflow-hidden bg-slate-100 font-sans">
-    <aside className="hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
+    <aside className="portal-sidebar-typography hidden lg:flex flex-col w-64 bg-[#001a33] text-white shadow-xl z-20">
       <div className="p-6 border-b border-white/10">
         <div className="bg-white p-3 rounded-2xl shadow-md flex items-center justify-center">
           <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-11 w-full object-contain" />
@@ -244,7 +244,7 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
     {isMobileMenuOpen ? (
       <div className="lg:hidden fixed inset-0 bg-black/50 z-40 animate-fadeIn" onClick={() => onMobileMenuChange(false)}>
         <aside
-          className="w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col"
+          className="portal-sidebar-typography w-64 h-full bg-[#001a33] text-white shadow-2xl p-4 flex flex-col"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="bg-white p-3 rounded-2xl flex items-center justify-center mb-4 mt-12">
@@ -261,12 +261,12 @@ const ProfessorShell: React.FC<ProfessorShellProps> = ({
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   activeModule === item.id
-                    ? 'bg-[#092744] text-white font-black shadow-lg shadow-purple-950/30 border border-purple-400/35'
-                    : 'text-slate-400'
+                    ? 'bg-[#092744] text-white font-semibold shadow-lg shadow-purple-950/30 border border-purple-400/35'
+                    : 'font-normal text-slate-400'
                 }`}
               >
                 {item.icon}
-                <span className="text-sm">{item.label}</span>
+                <span className="whitespace-nowrap text-sm">{item.label}</span>
               </button>
             ))}
           </nav>

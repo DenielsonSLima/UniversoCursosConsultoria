@@ -25,6 +25,16 @@ body,
   -moz-osx-font-smoothing: auto;
 }
 
+/* Mantém as barras laterais do aluno e do professor com a mesma renderização
+   tipográfica nítida usada no portal do gestor. */
+#root .portal-sidebar-typography,
+#root .portal-sidebar-typography * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+
 /* O console Banese usa muitos números e rótulos operacionais. No Safari,
    suavização forçada e texto abaixo de 12px davam aparência turva. */
 #root .banese-console,

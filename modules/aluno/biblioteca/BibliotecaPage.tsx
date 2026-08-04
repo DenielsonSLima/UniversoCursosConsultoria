@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { 
-  BookOpen, Folder, FolderOpen, Download, 
+  BookOpen, FolderOpen, Download, 
   Search, LayoutGrid, List, ChevronRight, Eye, Check
 } from 'lucide-react';
 import QuickPreviewModal from '../../gestor/biblioteca/components/QuickPreviewModal';
 import LibrarySelectionToolbar from '../../gestor/biblioteca/components/LibrarySelectionToolbar';
 import LibraryFileThumbnail from '../../gestor/biblioteca/components/file-preview/LibraryFileThumbnail';
-import { LibraryDocument } from '../../gestor/biblioteca/biblioteca.types';
+import LibraryFolderGrid from '../../gestor/biblioteca/components/LibraryFolderGrid';
+import { LibraryDocument, LibraryFolder } from '../../gestor/biblioteca/biblioteca.types';
 import {
   downloadLibrarySelectionAsZip,
   downloadSingleLibraryFile
 } from '../../shared/library/library-download';
+import { resolveLibraryFileUrl } from '../../shared/library/library-storage';
 import {
   canAccessLibraryDocumentAsAluno,
   isLibraryUrl,
@@ -56,7 +58,7 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
   const activeTurmaIds = matriculas.map(m => m.turma_id).filter(Boolean);
   const activeCursoIds = Array.from(new Set(matriculas.map(m => m.turmas?.cursos?.id).filter(Boolean)));
-  const activePoloIds = Array.from(new Set(matriculas.map(m => m.polo_id).filter(Boolean)));
+  const activePoloIds = Array.from(new Set(matriculas.map(m => m.turmas?.polo_id).filter(Boolean)));
 
   // 2. Busca os professores vinculados às turmas do aluno
   const { data: activeTeachers = [], isError: activeTeachersError, refetch: refetchActiveTeachers } = useQuery<any[]>({
@@ -125,7 +127,10 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
 
       const { data, error } = await query.order('titulo', { ascending: true });
       if (error) throw error;
-      return data || [];
+      return Promise.all((data || []).map(async (document: any) => ({
+        ...document,
+        arquivo_url: await resolveLibraryFileUrl(document.arquivo_url),
+      })));
     }
   });
 
@@ -136,6 +141,15 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
     activeTeacherIds: teacherIds,
     turmaDisciplinas,
   };
+
+  const visibleFolders: LibraryFolder[] = dbFolders.map((folder: any) => ({
+    id: folder.id,
+    nome: folder.nome,
+    parentId: folder.parent_id,
+    teacherId: folder.teacher_id,
+    targetAudience: folder.publico_alvo || 'INTERNO',
+    createdAt: folder.created_at,
+  }));
 
   // 5. Filtro avançado de documentos com base nas regras de liberação do aluno
   const filteredDocuments = (dbDocs || []).filter((doc: any) => {
@@ -303,11 +317,16 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
         }>;
       } | null;
 
+      const resolvedDocuments = await Promise.all((downloadManifest?.documents || []).map(async (document) => ({
+        ...document,
+        url: await resolveLibraryFileUrl(document.url),
+      })));
+
       await downloadLibrarySelectionAsZip({
         selectedFolderIds: folderIds,
         selectedDocumentIds: documentIds,
         folders: downloadManifest?.folders || [],
-        documents: downloadManifest?.documents || [],
+        documents: resolvedDocuments,
         archiveName: breadcrumbs.at(-1)?.nome || 'biblioteca-aluno',
         onProgress: setDownloadProgress
       });
@@ -440,46 +459,12 @@ const BibliotecaPage: React.FC<BibliotecaPageProps> = ({ alunoId }) => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Folders Row */}
-          {dbFolders.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Pastas de Apoio</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {dbFolders.map(folder => (
-                  <div 
-                    key={folder.id}
-                    onClick={() => handleOpenFolder(folder)}
-                    className={`relative p-4 border rounded-2xl hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer flex items-center gap-3 ${
-                      selectedFolderIds.has(folder.id)
-                        ? 'border-blue-300 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.12)]'
-                        : 'border-slate-150 bg-white'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleFolderSelection(folder.id);
-                      }}
-                      className={`absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
-                        selectedFolderIds.has(folder.id)
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-slate-300 bg-white text-transparent hover:border-blue-400'
-                      }`}
-                      aria-label={`${selectedFolderIds.has(folder.id) ? 'Remover' : 'Selecionar'} pasta ${folder.nome}`}
-                      aria-pressed={selectedFolderIds.has(folder.id)}
-                    >
-                      <Check size={12} strokeWidth={3} />
-                    </button>
-                    <div className="p-2.5 bg-blue-50 text-blue-650 rounded-xl">
-                      <Folder size={18} />
-                    </div>
-                    <span className="font-bold text-[#001a33] truncate leading-tight">{folder.nome}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <LibraryFolderGrid
+            folders={visibleFolders}
+            selectedIds={selectedFolderIds}
+            onOpen={handleOpenFolder}
+            onToggle={toggleFolderSelection}
+          />
 
           {/* Documents Section */}
           <div className="space-y-2">

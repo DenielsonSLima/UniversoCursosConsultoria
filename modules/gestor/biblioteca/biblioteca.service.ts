@@ -8,8 +8,9 @@ import {
   TeacherRepository,
   TeacherStorageQuota
 } from './biblioteca.types';
+import { resolveLibraryFileUrl } from '../../shared/library/library-storage';
 
-const LIBRARY_STORAGE_BUCKETS = ['biblioteca', 'anexos', 'documentos'];
+const LIBRARY_STORAGE_BUCKETS = ['biblioteca'];
 const STORAGE_REMOVE_BATCH_SIZE = 100;
 const STORAGE_REFERENCE_QUERY_BATCH_SIZE = 50;
 const MAX_LIBRARY_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -360,7 +361,7 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
@@ -368,7 +369,7 @@ export const bibliotecaService = {
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
       sizeBytes: doc.tamanho_bytes,
-      url: doc.arquivo_url,
+      url: await resolveLibraryFileUrl(doc.arquivo_url),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -384,7 +385,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 2. Buscar Pastas
@@ -441,6 +442,7 @@ export const bibliotecaService = {
       nome: folder.nome,
       parentId: folder.parent_id,
       teacherId: folder.teacher_id,
+      targetAudience: folder.publico_alvo || 'INTERNO',
       createdAt: folder.created_at
     }));
   },
@@ -465,11 +467,17 @@ export const bibliotecaService = {
   },
 
   // 3. Criar Pasta
-  async createFolder(nome: string, parentId: string | null = null, teacherId: string | null = null): Promise<void> {
+  async createFolder(
+    nome: string,
+    parentId: string | null = null,
+    teacherId: string | null = null,
+    targetAudience: LibraryFolder['targetAudience'] = 'INTERNO',
+  ): Promise<void> {
     const { error } = await supabase.from('biblioteca_pastas').insert({
       nome,
       parent_id: parentId || null,
-      teacher_id: teacherId || null
+      teacher_id: teacherId || null,
+      publico_alvo: targetAudience,
     });
 
     if (error) {
@@ -487,6 +495,18 @@ export const bibliotecaService = {
 
     if (error) {
       console.error('Erro ao renomear pasta:', error);
+      throw error;
+    }
+  },
+
+  async updateFolderAudience(id: string, targetAudience: LibraryFolder['targetAudience']): Promise<void> {
+    const { error } = await supabase
+      .from('biblioteca_pastas')
+      .update({ publico_alvo: targetAudience })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao atualizar compartilhamento da pasta:', error);
       throw error;
     }
   },
@@ -592,7 +612,7 @@ export const bibliotecaService = {
       }
       const uploaded = await uploadLibraryFile(doc.file, doc.title || 'documento');
       if (!uploaded) {
-        throw new Error('Não foi possível gerar URL pública do documento.');
+        throw new Error('Não foi possível registrar o arquivo privado do documento.');
       }
       arquivoUrl = uploaded;
     }
@@ -797,14 +817,17 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
       description: doc.descricao || '',
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
-      url: doc.arquivo_url,
+      url: await resolveLibraryFileUrl(doc.arquivo_url).catch((urlError) => {
+        console.warn('Não foi possível assinar o arquivo destacado da biblioteca:', urlError);
+        return '';
+      }),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -820,7 +843,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 12. Top 10 Recentes
@@ -836,14 +859,17 @@ export const bibliotecaService = {
       throw error;
     }
 
-    return (data || []).map((doc: any) => ({
+    return Promise.all((data || []).map(async (doc: any) => ({
       id: doc.id,
       pastaId: doc.pasta_id,
       title: doc.titulo,
       description: doc.descricao || '',
       fileType: doc.tipo_arquivo,
       size: doc.tamanho,
-      url: doc.arquivo_url,
+      url: await resolveLibraryFileUrl(doc.arquivo_url).catch((urlError) => {
+        console.warn('Não foi possível assinar o arquivo recente da biblioteca:', urlError);
+        return '';
+      }),
       targetAudience: doc.publico_alvo,
       scope: doc.abrangencia,
       poloId: doc.polo_id,
@@ -859,7 +885,7 @@ export const bibliotecaService = {
       liberacaoData: doc.liberacao_data,
       liberacaoDisciplinaId: doc.liberacao_disciplina_id,
       liberacaoDiasValidade: doc.liberacao_dias_validade
-    }));
+    })));
   },
 
   // 13. Buscar Repositórios de Professores (Pastas baseadas em parceiros do tipo Professor)

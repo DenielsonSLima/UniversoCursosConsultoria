@@ -8,6 +8,7 @@ const root = resolve(import.meta.dirname, '..');
 const outputDirectory = mkdtempSync(join(tmpdir(), 'gestor-access-tests-'));
 const tests = [
   'modules/gestor/access-control.test.ts',
+  'modules/gestor/gestor-navigation.config.test.ts',
   'modules/login/gestor-polo-scope.test.ts',
 ];
 

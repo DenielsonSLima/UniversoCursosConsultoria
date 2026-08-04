@@ -1,5 +1,4 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
   Building2,
@@ -11,7 +10,7 @@ import {
   MessageCircle,
   Phone,
 } from 'lucide-react';
-import { contactService } from '../contact.service';
+import { usePublicUnits } from '../usePublicUnits';
 import type { PublicUnit, PublicUnitSchedule } from '../contact.types';
 
 const WEEK_DAYS = [
@@ -229,11 +228,7 @@ const UnitCard = ({ unit }: { unit: PublicUnit; key?: React.Key }) => {
 };
 
 const UnitsList: React.FC = () => {
-  const { data: units = [], isLoading, isError } = useQuery({
-    queryKey: ['public', 'contact', 'units'],
-    queryFn: contactService.listPublicUnits,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: units = [], isLoading, isError } = usePublicUnits();
 
   if (isLoading) {
     return (

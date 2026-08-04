@@ -255,11 +255,19 @@ const PerfisAcessoConfig: React.FC = () => {
       return;
     }
     if (selectedModules.includes('cadastros') && (selectedTabs.cadastros || []).length === 0) {
-      setErrorMsg('Selecione ao menos uma aba de Cadastros.');
+      setErrorMsg('Selecione ao menos uma opção de Formações.');
       return;
     }
     if (selectedModules.includes('comunicacao') && (selectedTabs.comunicacao || []).length === 0) {
       setErrorMsg('Selecione ao menos um canal de Comunicação.');
+      return;
+    }
+    if (
+      selectedModules.includes('comunicacao')
+      && (selectedTabs.comunicacao || []).includes('comunicacao-automacoes')
+      && !todosPolos
+    ) {
+      setErrorMsg('Automações multicanal exigem acesso global a todos os polos.');
       return;
     }
     if (!todosPolos && polosAcesso.length === 0) {

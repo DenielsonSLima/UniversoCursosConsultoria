@@ -64,7 +64,7 @@ const WIDGET_OPTIONS: Array<{
     id: 'acoes-rapidas',
     label: 'Ações rápidas',
     description: 'Atalhos de cadastro e consulta financeira compatíveis com o perfil.',
-    requirement: 'Parceiros, Cadastros, Caixa ou Financeiro',
+    requirement: 'Parceiros, Formações, Caixa ou Financeiro',
     icon: Zap,
     tone: 'bg-amber-50 text-amber-600',
   },

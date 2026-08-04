@@ -14,6 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useAlunoNotifications } from './useAlunoNotifications';
+import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
 import type {
   AlunoNotification,
   AlunoNotificationCategory,
@@ -72,12 +73,16 @@ const CATEGORY_PRESENTATION: Record<AlunoNotificationCategory, CategoryPresentat
   },
 };
 
-const FILTERS: Array<{ id: AlunoNotificationFilter; label: string }> = [
-  { id: 'all', label: 'Todas' },
-  { id: 'unread', label: 'Não lidas' },
-  { id: 'financial', label: 'Financeiro' },
-  { id: 'academic', label: 'Acadêmico' },
-  { id: 'institutional', label: 'Comunicados' },
+const FILTERS: Array<{
+  id: AlunoNotificationFilter;
+  label: string;
+  icon: typeof Bell;
+}> = [
+  { id: 'all', label: 'Todas', icon: Bell },
+  { id: 'unread', label: 'Não lidas', icon: CheckCheck },
+  { id: 'financial', label: 'Financeiro', icon: CircleDollarSign },
+  { id: 'academic', label: 'Acadêmico', icon: GraduationCap },
+  { id: 'institutional', label: 'Comunicados', icon: Megaphone },
 ];
 
 const dayKey = (value: string) => {
@@ -197,23 +202,20 @@ const NotificacoesPage = ({ alunoId, unreadCount, onNavigate }: NotificacoesPage
         </div>
       </section>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="flex min-w-max gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setFilter(item.id)}
-              className={`min-h-10 rounded-xl px-4 text-xs font-black transition-colors ${
-                filter === item.id
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-[#001a33]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 pt-2 shadow-sm sm:px-5">
+        <FinancialUnderlineTabs
+          items={FILTERS.map((item) => {
+            const Icon = item.icon;
+            return {
+              id: item.id,
+              label: item.label,
+              icon: <Icon size={15} />,
+            };
+          })}
+          value={filter}
+          onChange={setFilter}
+          ariaLabel="Filtrar notificações por categoria"
+        />
       </div>
 
       {loading ? (

@@ -9,6 +9,7 @@ export interface LibraryFolder {
   nome: string;
   parentId?: string | null;
   teacherId?: string | null;
+  targetAudience: TargetAudience;
   createdAt: string;
 }
 

@@ -113,7 +113,12 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
     });
   }
 
-  const content = text || (file ? `📎 ${file.name}` : '');
+  const attachmentFallback = file?.type.startsWith('audio/')
+    ? '🎤 Mensagem de voz'
+    : file
+      ? `📎 ${file.name}`
+      : '';
+  const content = text || attachmentFallback;
   const { data: newMessage, error: messageError } = await supabase
     .from('comunicacao_mensagens')
     .insert({
@@ -138,7 +143,7 @@ const sendMessage = async ({ chatId, alunoId, alunoNome, text, file }: SendAluno
   const { error: chatError } = await supabase
     .from('comunicacao_chats')
     .update({
-      ultimo_texto: text || `📎 ${file?.name}`,
+      ultimo_texto: text || attachmentFallback,
       ultima_data: new Date().toISOString(),
     })
     .eq('id', chatId);

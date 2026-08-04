@@ -11,8 +11,8 @@ import { bibliotecaService } from '../biblioteca.service';
 import { TargetAudience, LibraryFolder, LibraryDocument } from '../biblioteca.types';
 import DocumentPermissionsModal from './DocumentPermissionsModal';
 import LibraryFileThumbnail from './file-preview/LibraryFileThumbnail';
-import FinderFolderIcon from './file-explorer/FinderFolderIcon';
 import LibrarySelectionToolbar from './LibrarySelectionToolbar';
+import LibraryFolderGrid from './LibraryFolderGrid';
 import {
   downloadLibrarySelectionAsZip,
   downloadSingleLibraryFile
@@ -36,6 +36,22 @@ type PendingDeletion =
   | { type: 'folder'; id: string; name: string }
   | { type: 'document'; id: string; name: string };
 
+const FOLDER_AUDIENCE_OPTIONS: Array<{ value: TargetAudience; label: string; description: string }> = [
+  { value: 'INTERNO', label: 'Somente gestão', description: 'A pasta fica privada e não aparece nos outros portais.' },
+  { value: 'ALUNOS', label: 'Alunos', description: 'A pasta aparece no acesso dos alunos autorizados.' },
+  { value: 'PROFESSORES', label: 'Professores', description: 'A pasta aparece no acesso dos professores.' },
+  { value: 'TODOS', label: 'Alunos e professores', description: 'A pasta aparece nos dois portais.' },
+];
+
+const isAudienceAllowedByParent = (
+  parentAudience: TargetAudience | null,
+  childAudience: TargetAudience,
+): boolean => {
+  if (!parentAudience || parentAudience === 'TODOS') return true;
+  if (parentAudience === 'INTERNO') return childAudience === 'INTERNO';
+  return childAudience === 'INTERNO' || childAudience === parentAudience;
+};
+
 const FileExplorer: React.FC<FileExplorerProps> = ({ 
   teacherId = null, 
   onPreviewClick,
@@ -45,11 +61,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   restrictPermissionsToTeacherScope = false
 }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string }>>([]);
+  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; nome: string; targetAudience: TargetAudience }>>([]);
 
   // Modais e Diálogos
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderAudience, setNewFolderAudience] = useState<TargetAudience>('INTERNO');
+  const [sharingFolder, setSharingFolder] = useState<LibraryFolder | null>(null);
+  const [sharedAudience, setSharedAudience] = useState<TargetAudience>('INTERNO');
   
   const [renamingFolder, setRenamingFolder] = useState<LibraryFolder | null>(null);
   const [renamedName, setRenamedName] = useState('');
@@ -68,6 +87,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const [downloadProgress, setDownloadProgress] = useState('');
 
   const isFiltering = searchQuery.trim().length > 0 || fileTypeFilter !== 'all';
+  const currentParentAudience = breadcrumbs.at(-1)?.targetAudience ?? null;
+  const availableFolderAudienceOptions = FOLDER_AUDIENCE_OPTIONS.filter((option) => (
+    (!teacherId || ['INTERNO', 'ALUNOS'].includes(option.value))
+    && isAudienceAllowedByParent(currentParentAudience, option.value)
+  ));
 
   const {
     folders,
@@ -96,6 +120,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const {
     createFolderMutation,
     renameFolderMutation,
+    updateFolderAudienceMutation,
     deleteFolderMutation,
     deleteDocumentMutation,
     moveFolderMutation,
@@ -108,6 +133,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     onFolderCreated: () => {
       setIsNewFolderOpen(false);
       setNewFolderName('');
+      setNewFolderAudience('INTERNO');
     },
     onFolderRenamed: () => {
       setRenamingFolder(null);
@@ -123,7 +149,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   // Navigate into a folder
   const handleOpenFolder = (folder: LibraryFolder) => {
     setCurrentFolderId(folder.id);
-    setBreadcrumbs([...breadcrumbs, { id: folder.id, nome: folder.nome }]);
+    setBreadcrumbs([...breadcrumbs, {
+      id: folder.id,
+      nome: folder.nome,
+      targetAudience: folder.targetAudience,
+    }]);
     setSelectedFolderIds(new Set());
     setSelectedDocumentIds(new Set());
   };
@@ -144,7 +174,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   const handleCreateFolderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newFolderName.trim()) {
-      createFolderMutation.mutate(newFolderName.trim());
+      createFolderMutation.mutate({
+        nome: newFolderName.trim(),
+        targetAudience: newFolderAudience,
+      });
     }
   };
 
@@ -153,6 +186,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     if (renamingFolder && renamedName.trim()) {
       renameFolderMutation.mutate({ id: renamingFolder.id, nome: renamedName.trim() });
     }
+  };
+
+  const handleSharingSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!sharingFolder) return;
+    updateFolderAudienceMutation.mutate(
+      { id: sharingFolder.id, targetAudience: sharedAudience },
+      { onSuccess: () => setSharingFolder(null) },
+    );
   };
 
   const handleConfirmMove = (targetId: string | null) => {
@@ -394,7 +436,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
           {!readOnly && onNewUploadClick && !isFiltering && (
             <div className="flex gap-2 shrink-0 w-full sm:w-auto">
               <button 
-                onClick={() => setIsNewFolderOpen(true)}
+                onClick={() => {
+                  setNewFolderAudience('INTERNO');
+                  setIsNewFolderOpen(true);
+                }}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-650 hover:text-blue-600 hover:border-blue-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm"
               >
                 <FolderPlus size={14} /> Nova Pasta
@@ -430,88 +475,21 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
       ) : (
         <div className="space-y-9">
 
-          {/* Folders: Finder-style icon grid */}
-          {folders.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-3 px-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Pastas</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{folders.length}</span>
+          <LibraryFolderGrid
+            folders={folders}
+            selectedIds={selectedFolderIds}
+            onOpen={handleOpenFolder}
+            onToggle={toggleFolderSelection}
+            showAudience={!readOnly}
+            renderActions={readOnly ? undefined : (folder) => (
+              <div className="absolute right-1.5 top-1.5 flex gap-0.5 rounded-lg border border-slate-100 bg-white/95 p-0.5 opacity-100 shadow-sm transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                <button onClick={() => { setSharingFolder(folder); setSharedAudience(folder.targetAudience); }} className="rounded-md p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600" title="Compartilhamento"><Lock size={12} /></button>
+                <button onClick={() => { setRenamingFolder(folder); setRenamedName(folder.nome); }} className="rounded-md p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600" title="Renomear"><Edit size={12} /></button>
+                <button onClick={() => setMovingItem({ id: folder.id, type: 'folder' })} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700" title="Mover"><ArrowRight size={12} /></button>
+                <button onClick={() => setPendingDeletion({ type: 'folder', id: folder.id, name: folder.nome })} className="rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Apagar"><Trash2 size={12} /></button>
               </div>
-              <div className="flex flex-wrap items-start gap-x-1 gap-y-4">
-                {folders.map((folder) => (
-                  <div 
-                    key={folder.id}
-                    className={`group relative w-[152px] shrink-0 rounded-2xl border px-3 pb-4 pt-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_28px_rgba(15,55,95,0.08)] focus-within:bg-white focus-within:shadow-[0_10px_28px_rgba(15,55,95,0.08)] active:bg-white ${
-                      selectedFolderIds.has(folder.id)
-                        ? 'border-blue-300 bg-white shadow-[0_10px_28px_rgba(37,99,235,0.12)]'
-                        : 'border-transparent hover:border-slate-200 focus-within:border-blue-200'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleFolderSelection(folder.id)}
-                      className={`absolute left-2 top-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border transition-all ${
-                        selectedFolderIds.has(folder.id)
-                          ? 'border-blue-600 bg-blue-600 text-white opacity-100'
-                          : 'border-slate-300 bg-white/95 text-transparent opacity-60 hover:border-blue-400 hover:opacity-100'
-                      }`}
-                      aria-label={`${selectedFolderIds.has(folder.id) ? 'Remover' : 'Selecionar'} pasta ${folder.nome}`}
-                      aria-pressed={selectedFolderIds.has(folder.id)}
-                      title="Selecionar pasta"
-                    >
-                      <Check size={12} strokeWidth={3} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenFolder(folder)}
-                      className="flex w-full min-w-0 flex-col items-center rounded-xl px-1 pb-1 pt-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                      title={`Abrir pasta ${folder.nome}`}
-                    >
-                      <div className="relative h-[80px] w-[96px] transition-transform duration-200 group-hover:scale-[1.04] group-active:scale-[0.98]">
-                        <FinderFolderIcon className="h-full w-full object-contain drop-shadow-[0_5px_4px_rgba(14,116,165,0.16)]" />
-                      </div>
-                      <span className="mt-1 block min-h-[2.5em] w-full whitespace-normal break-words text-center text-xs font-bold leading-[1.25] text-[#001a33] [overflow-wrap:anywhere]">
-                        {folder.nome}
-                      </span>
-                    </button>
-
-                    {!readOnly && (
-                      <div className="absolute right-1.5 top-1.5 flex gap-0.5 rounded-lg border border-slate-100 bg-white/95 p-0.5 opacity-100 shadow-sm transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-                        <button 
-                          onClick={() => {
-                            setRenamingFolder(folder);
-                            setRenamedName(folder.nome);
-                          }}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                          title="Renomear"
-                        >
-                          <Edit size={12} />
-                        </button>
-                        <button 
-                          onClick={() => setMovingItem({ id: folder.id, type: 'folder' })}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                          title="Mover"
-                        >
-                          <ArrowRight size={12} />
-                        </button>
-                        <button 
-                          onClick={() => setPendingDeletion({
-                            type: 'folder',
-                            id: folder.id,
-                            name: folder.nome
-                          })}
-                          className="rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                          title="Apagar"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+            )}
+          />
 
           {filteredDocs.length > 0 && (
             <section className="space-y-3">
@@ -674,6 +652,24 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                 required
                 autoFocus
               />
+              <div className="space-y-2">
+                <label htmlFor="new-folder-audience" className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  Quem pode ver esta pasta?
+                </label>
+                <select
+                  id="new-folder-audience"
+                  value={newFolderAudience}
+                  onChange={(event) => setNewFolderAudience(event.target.value as TargetAudience)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
+                >
+                  {availableFolderAudienceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] font-medium leading-relaxed text-slate-500">
+                  {FOLDER_AUDIENCE_OPTIONS.find((option) => option.value === newFolderAudience)?.description}
+                </p>
+              </div>
               <div className="flex justify-end gap-2">
                 <button 
                   type="button" 
@@ -687,6 +683,48 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider"
                 >
                   Criar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL: COMPARTILHAMENTO DA PASTA */}
+      {sharingFolder && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#001a33]/60 backdrop-blur-sm" onClick={() => setSharingFolder(null)} />
+          <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl animate-fadeIn">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><Lock size={19} /></div>
+              <div className="min-w-0">
+                <h4 className="text-lg font-black uppercase tracking-tight text-[#001a33]">Compartilhar Pasta</h4>
+                <p className="truncate text-xs font-semibold text-slate-500">{sharingFolder.nome}</p>
+              </div>
+            </div>
+            <form onSubmit={handleSharingSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="folder-audience" className="block text-[10px] font-black uppercase tracking-wider text-slate-500">Quem pode ver?</label>
+                <select
+                  id="folder-audience"
+                  value={sharedAudience}
+                  onChange={(event) => setSharedAudience(event.target.value as TargetAudience)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
+                >
+                  {availableFolderAudienceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] font-medium leading-relaxed text-slate-500">
+                  {FOLDER_AUDIENCE_OPTIONS.find((option) => option.value === sharedAudience)?.description}
+                  {sharingFolder.parentId ? ' A pasta também respeita a permissão de todas as pastas acima dela.' : ''}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setSharingFolder(null)} className="rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-50">Cancelar</button>
+                <button type="submit" disabled={updateFolderAudienceMutation.isPending} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 disabled:opacity-50">
+                  {updateFolderAudienceMutation.isPending ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </form>

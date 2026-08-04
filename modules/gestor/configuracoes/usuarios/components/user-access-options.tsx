@@ -17,21 +17,31 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { SECRETARIA_ACCESS_OPTIONS } from '../../../secretaria/secretaria-access';
+import {
+  GESTOR_CADASTRO_NAVIGATION,
+  GESTOR_MAIN_NAVIGATION,
+} from '../../../gestor-navigation.config';
 
-export const USER_FORM_MODULES = [
-  { id: 'inicio', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={18} /> },
-  { id: 'cadastros', label: 'Cadastros', icon: <UserPlus size={18} /> },
-  { id: 'gestao', label: 'Gestão', icon: <Briefcase size={18} /> },
-  { id: 'secretaria', label: 'Secretaria', icon: <FileText size={18} /> },
-  { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={18} /> },
-  { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={18} /> },
-  { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={18} /> },
-  { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={18} /> },
-  { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={18} /> },
-  { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={18} /> },
-  { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
-];
+const USER_FORM_MODULE_ICONS: Record<string, React.ReactNode> = {
+  inicio: <LayoutDashboard size={18} />,
+  gestao: <Briefcase size={18} />,
+  secretaria: <FileText size={18} />,
+  calendario: <CalendarDays size={18} />,
+  comunicacao: <MessageSquare size={18} />,
+  parceiros: <Handshake size={18} />,
+  financeiro: <TrendingUp size={18} />,
+  caixa: <ShoppingCart size={18} />,
+  cadastros: <UserPlus size={18} />,
+  biblioteca: <BookOpen size={18} />,
+  relatorios: <BarChart size={18} />,
+  configuracoes: <Settings size={18} />,
+};
+
+export const USER_FORM_MODULES = GESTOR_MAIN_NAVIGATION.map(item => ({
+  id: item.id,
+  label: item.id === 'inicio' ? 'Dashboard' : item.label,
+  icon: USER_FORM_MODULE_ICONS[item.id],
+}));
 
 export const USER_FORM_FINANCEIRO_TABS = [
   { id: 'resumo', label: 'Resumo', icon: <Layers size={16} /> },
@@ -43,20 +53,12 @@ export const USER_FORM_FINANCEIRO_TABS = [
   { id: 'outros-creditos', label: 'Outros Créditos', icon: <TrendingUp size={16} /> },
 ];
 
-const CADASTROS_TABS = [
-  { id: 'cadastros-checklist', label: 'Check List Estágio' },
-  { id: 'cadastros-ead', label: 'Cursos EAD' },
-  { id: 'cadastros-especializacao', label: 'Cursos Especialização' },
-  { id: 'cadastros-livres', label: 'Cursos Livres' },
-  { id: 'cadastros-tecnicos', label: 'Cursos Técnicos' },
-  { id: 'cadastros-superior', label: 'Ensino Superior' },
-  { id: 'cadastros-ficha', label: 'Ficha Cadastral' },
-  { id: 'cadastros-modelos', label: 'Modelos Documentos' },
-];
+const CADASTROS_TABS = GESTOR_CADASTRO_NAVIGATION.map(item => ({ ...item }));
 
 const COMUNICACAO_TABS = [
-  { id: 'comunicacao-mensagem', label: 'Mensagens internas' },
-  { id: 'comunicacao-whatsapp', label: 'WhatsApp' },
+  { id: 'comunicacao-mensagem', label: 'Atendimento — Portal e app' },
+  { id: 'comunicacao-whatsapp', label: 'Atendimento — WhatsApp e operações' },
+  { id: 'comunicacao-automacoes', label: 'Automações multicanal' },
 ];
 
 const GESTAO_TURMA_TABS = [

@@ -63,7 +63,6 @@ const AlunoPortalShell = ({
   const alunoInitials = (alunoNome.trim().slice(0, 2) || 'AL').toUpperCase();
   const menuItems: AlunoMenuItem[] = [
     { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
-    { id: 'notificacoes', label: 'Notificações', icon: <Bell size={20} />, badge: unreadNotificationsCount },
     { id: 'turmas', label: 'Meus Cursos', icon: <GraduationCap size={20} /> },
     { id: 'cursos', label: 'Cursos', icon: <BookOpen size={20} /> },
     ...(canViewCalendar
@@ -72,6 +71,7 @@ const AlunoPortalShell = ({
     { id: 'financeiro', label: 'Financeiro', icon: <CreditCard size={20} /> },
     { id: 'biblioteca', label: 'Biblioteca', icon: <Library size={20} /> },
     { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: unreadChatsCount },
+    { id: 'notificacoes', label: 'Notificações', icon: <Bell size={20} />, badge: unreadNotificationsCount },
     { id: 'secretaria', label: 'Secretaria', icon: <FileText size={20} /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <User size={20} /> },
   ];
@@ -128,7 +128,7 @@ const AlunoPortalShell = ({
 
   return (
     <div className="flex h-dvh min-w-0 overflow-hidden bg-slate-100 font-sans antialiased">
-      <aside className="hidden w-64 flex-col bg-[#001a33] text-white shadow-xl z-20 lg:flex">
+      <aside className="portal-sidebar-typography hidden w-64 flex-col bg-[#001a33] text-white shadow-xl z-20 lg:flex">
         <div className="border-b border-white/10 p-6">
           <div className="flex items-center justify-center rounded-2xl bg-white p-3 shadow-md">
             <img src="/LogoUniverso.png" alt="Universo Cursos e Consultoria" className="h-11 w-full object-contain" />
@@ -145,8 +145,8 @@ const AlunoPortalShell = ({
                 onClick={() => openModule(item.id)}
                 className={`group flex w-full items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
                   isActive
-                    ? 'bg-blue-600 font-bold text-white shadow-lg shadow-blue-900/50'
-                    : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-blue-600 font-semibold text-white shadow-lg shadow-blue-900/50'
+                    : 'font-normal text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ const AlunoPortalShell = ({
                       </span>
                     ) : null}
                   </div>
-                  <span className="text-sm tracking-wide">{item.label}</span>
+                  <span className="whitespace-nowrap text-sm">{item.label}</span>
                 </div>
                 {badge > 0 && !isActive ? <Badge count={badge} /> : null}
               </button>
@@ -225,7 +225,7 @@ const AlunoPortalShell = ({
           <aside
             ref={mobileDrawerRef}
             id="aluno-mobile-drawer"
-            className="flex h-full w-[86vw] max-w-[320px] flex-col bg-[#001a33] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] text-white shadow-2xl"
+            className="portal-sidebar-typography flex h-full w-[86vw] max-w-[320px] flex-col bg-[#001a33] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] text-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -250,8 +250,8 @@ const AlunoPortalShell = ({
                     onClick={() => openModule(item.id, true)}
                     className={`flex min-h-12 w-full items-center justify-between rounded-xl px-4 py-3 transition-all ${
                       isActive
-                        ? 'bg-blue-600 font-bold text-white shadow-lg shadow-blue-900/50'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-blue-600 font-semibold text-white shadow-lg shadow-blue-900/50'
+                        : 'font-normal text-slate-400 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -263,7 +263,7 @@ const AlunoPortalShell = ({
                           </span>
                         ) : null}
                       </div>
-                      <span className="text-sm tracking-wide">{item.label}</span>
+                      <span className="whitespace-nowrap text-sm">{item.label}</span>
                     </div>
                     {badge > 0 && !isActive ? <Badge count={badge} compact /> : null}
                   </button>

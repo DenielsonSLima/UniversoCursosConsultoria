@@ -7,7 +7,6 @@ import {
   Download,
   Eye,
   FileText,
-  Folder,
   FolderOpen,
   Search,
   RefreshCw,
@@ -15,10 +14,16 @@ import {
 } from 'lucide-react';
 
 import LibraryFileThumbnail from '../../../../gestor/biblioteca/components/file-preview/LibraryFileThumbnail';
+import LibraryFolderGrid from '../../../../gestor/biblioteca/components/LibraryFolderGrid';
+import type { LibraryFolder as StandardLibraryFolder } from '../../../../gestor/biblioteca/biblioteca.types';
 
 type LibraryFolder = {
   id: string;
   nome: string;
+  parent_id?: string | null;
+  teacher_id?: string | null;
+  publico_alvo?: StandardLibraryFolder['targetAudience'];
+  created_at?: string;
 };
 
 type LibraryDocumentItem = {
@@ -84,6 +89,14 @@ const AlunoMobileLibrary = ({
 }: AlunoMobileLibraryProps) => {
   const selectionCount = selectedFolderIds.size + selectedDocumentIds.size;
   const currentFolderName = breadcrumbs.at(-1)?.nome || 'Biblioteca principal';
+  const standardFolders: StandardLibraryFolder[] = folders.map((folder) => ({
+    id: folder.id,
+    nome: folder.nome,
+    parentId: folder.parent_id,
+    teacherId: folder.teacher_id,
+    targetAudience: folder.publico_alvo || 'INTERNO',
+    createdAt: folder.created_at || '',
+  }));
 
   return (
     <div className="space-y-4 md:hidden">
@@ -173,33 +186,13 @@ const AlunoMobileLibrary = ({
       ) : (
         <>
           {folders.length > 0 ? (
-            <section aria-labelledby="mobile-library-folders-title">
-              <div className="mb-2 flex items-center justify-between gap-3 px-1">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Pastas</p>
-                  <h2 id="mobile-library-folders-title" className="mt-0.5 text-sm font-black text-[#001a33]">{currentFolderName}</h2>
-                </div>
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black text-blue-700">{folders.length}</span>
-              </div>
-              <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
-                {folders.map((folder) => {
-                  const isSelected = selectedFolderIds.has(folder.id);
-                  return (
-                    <article key={folder.id} className={`relative min-w-[72%] snap-start rounded-[1.35rem] border bg-white p-4 shadow-sm ${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200/80'}`}>
-                      <button type="button" onClick={() => onToggleFolder(folder.id)} className={`absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-xl border ${isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-400'}`} aria-label={`${isSelected ? 'Remover' : 'Selecionar'} pasta ${folder.nome}`} aria-pressed={isSelected}>
-                        <Check size={17} strokeWidth={3} />
-                      </button>
-                      <button type="button" onClick={() => onOpenFolder(folder)} className="flex min-h-16 w-full items-center gap-3 pr-12 text-left">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Folder size={23} /></span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Abrir pasta</span>
-                          <span className="mt-1 line-clamp-2 block text-sm font-black leading-snug text-[#001a33]">{folder.nome}</span>
-                        </span>
-                      </button>
-                    </article>
-                  );
-                })}
-              </div>
+            <section aria-label={`Pastas em ${currentFolderName}`}>
+              <LibraryFolderGrid
+                folders={standardFolders}
+                selectedIds={selectedFolderIds}
+                onOpen={(folder) => onOpenFolder(folders.find((item) => item.id === folder.id) || folder)}
+                onToggle={onToggleFolder}
+              />
             </section>
           ) : null}
 

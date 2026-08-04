@@ -3,10 +3,17 @@ import {
   Award, BarChart, BellRing, BookOpen, Bot, Briefcase, Building, CalendarDays, ClipboardCheck,
   FileCode, FileSignature, FileText, Handshake, Inbox, LayoutDashboard,
   MessageSquare, MonitorPlay, Settings, Settings2, ShoppingCart, SlidersHorizontal, TrendingUp,
-  UserPlus, UserRound, WalletCards, Workflow, Zap,
+  UserPlus, WalletCards, Workflow, Zap,
 } from 'lucide-react';
 import { canAccessCommunicationRoute, canAccessTab, GestorPermissions } from './access-control';
 import { GestorMenuItem } from './components/GestorPortalShell';
+import {
+  GESTOR_CADASTRO_NAVIGATION,
+  GESTOR_COMMUNICATION_NAVIGATION,
+  GESTOR_MAIN_NAVIGATION,
+} from './gestor-navigation.config';
+
+export { GESTOR_MODULE_ORDER } from './gestor-navigation.config';
 
 export const POLO_CADASTROS_ALLOWED = new Set([
   'cadastros',
@@ -14,12 +21,6 @@ export const POLO_CADASTROS_ALLOWED = new Set([
   'cadastros-livres',
   'cadastros-superior',
 ]);
-
-export const GESTOR_MODULE_ORDER = [
-  'inicio', 'parceiros', 'cadastros', 'gestao', 'secretaria', 'caixa',
-  'financeiro', 'biblioteca', 'calendario', 'comunicacao', 'relatorios',
-  'configuracoes', 'meu-perfil',
-];
 
 interface BuildNavigationOptions {
   permissions: GestorPermissions;
@@ -34,46 +35,57 @@ export const buildGestorNavigation = ({
   pendingChatsCount,
   canOpenModule,
 }: BuildNavigationOptions) => {
-  const cadastroSubItems = [
-    { id: 'cadastros-checklist', label: 'Check List Estágio', icon: <ClipboardCheck size={16} /> },
-    { id: 'cadastros-ead', label: 'Cursos EAD', icon: <MonitorPlay size={16} /> },
-    { id: 'cadastros-especializacao', label: 'Cursos Especialização', icon: <Award size={16} /> },
-    { id: 'cadastros-livres', label: 'Cursos Livres', icon: <Zap size={16} /> },
-    { id: 'cadastros-tecnicos', label: 'Cursos Técnicos', icon: <Briefcase size={16} /> },
-    { id: 'cadastros-superior', label: 'Ensino Superior', icon: <Building size={16} /> },
-    { id: 'cadastros-ficha', label: 'Ficha Cadastral', icon: <FileSignature size={16} /> },
-    { id: 'cadastros-modelos', label: 'Modelos Documentos', icon: <FileCode size={16} /> },
-  ].filter(item => canAccessTab(permissions, 'cadastros', item.id));
+  const cadastroIcons: Record<string, React.ReactNode> = {
+    'cadastros-tecnicos': <Briefcase size={16} />,
+    'cadastros-livres': <Zap size={16} />,
+    'cadastros-especializacao': <Award size={16} />,
+    'cadastros-ead': <MonitorPlay size={16} />,
+    'cadastros-superior': <Building size={16} />,
+    'cadastros-ficha': <FileSignature size={16} />,
+    'cadastros-checklist': <ClipboardCheck size={16} />,
+    'cadastros-modelos': <FileCode size={16} />,
+  };
+  const cadastroSubItems = GESTOR_CADASTRO_NAVIGATION
+    .map(item => ({ ...item, icon: cadastroIcons[item.id] }))
+    .filter(item => canAccessTab(permissions, 'cadastros', item.id));
   const visibleCadastroSubItems = isMatrizSelected
     ? cadastroSubItems
     : cadastroSubItems.filter(item => POLO_CADASTROS_ALLOWED.has(item.id));
-  const communicationSubItems = [
-    { id: 'comunicacao-atendimento', label: 'Atendimento', icon: <Inbox size={16} /> },
-    { id: 'comunicacao-atendimento-config', label: 'Atendimento por polo', icon: <SlidersHorizontal size={16} /> },
-    { id: 'comunicacao-notificacoes-push', label: 'Notificações e Push', icon: <BellRing size={16} /> },
-    { id: 'comunicacao-atrasados', label: 'Atrasados', icon: <WalletCards size={16} /> },
-    { id: 'comunicacao-automacoes', label: 'Automações', icon: <Workflow size={16} /> },
-    { id: 'comunicacao-fluxos', label: 'Fluxos', icon: <Workflow size={16} /> },
-    { id: 'comunicacao-agentes', label: 'Agentes', icon: <Bot size={16} /> },
-    { id: 'comunicacao-configuracoes', label: 'Canais e perfis', icon: <Settings2 size={16} /> },
-  ].filter(item => canAccessCommunicationRoute(permissions, item.id))
+  const communicationIcons: Record<string, React.ReactNode> = {
+    'comunicacao-atendimento': <Inbox size={16} />,
+    'comunicacao-atrasados': <WalletCards size={16} />,
+    'comunicacao-notificacoes-push': <BellRing size={16} />,
+    'comunicacao-automacoes': <Workflow size={16} />,
+    'comunicacao-fluxos': <Workflow size={16} />,
+    'comunicacao-agentes': <Bot size={16} />,
+    'comunicacao-atendimento-config': <SlidersHorizontal size={16} />,
+    'comunicacao-configuracoes': <Settings2 size={16} />,
+  };
+  const communicationSubItems = GESTOR_COMMUNICATION_NAVIGATION
+    .map(item => ({ ...item, icon: communicationIcons[item.id] }))
+    .filter(item => canAccessCommunicationRoute(permissions, item.id))
     .filter(item => item.id !== 'comunicacao-automacoes' || (permissions.allPolos && isMatrizSelected));
 
-  const menuItems: GestorMenuItem[] = [
-    { id: 'inicio', label: 'Início', icon: <LayoutDashboard size={20} /> },
-    { id: 'parceiros', label: 'Parceiros', icon: <Handshake size={20} /> },
-    { id: 'cadastros', label: 'Cadastros', icon: <UserPlus size={20} />, subItems: visibleCadastroSubItems },
-    { id: 'gestao', label: 'Gestão', icon: <Briefcase size={20} /> },
-    { id: 'secretaria', label: 'Secretaria', icon: <FileText size={20} /> },
-    { id: 'caixa', label: 'Caixa', icon: <ShoppingCart size={20} /> },
-    { id: 'financeiro', label: 'Financeiro', icon: <TrendingUp size={20} /> },
-    { id: 'biblioteca', label: 'Biblioteca', icon: <BookOpen size={20} /> },
-    { id: 'calendario', label: 'Calendário', icon: <CalendarDays size={20} /> },
-    { id: 'comunicacao', label: 'Comunicação', icon: <MessageSquare size={20} />, badge: pendingChatsCount, subItems: communicationSubItems },
-    { id: 'relatorios', label: 'Relatórios', icon: <BarChart size={20} /> },
-    { id: 'meu-perfil', label: 'Meu Perfil', icon: <UserRound size={20} /> },
-    { id: 'configuracoes', label: 'Configurações', icon: <Settings size={20} /> },
-  ];
+  const menuIcons: Record<string, React.ReactNode> = {
+    inicio: <LayoutDashboard size={20} />,
+    gestao: <Briefcase size={20} />,
+    secretaria: <FileText size={20} />,
+    calendario: <CalendarDays size={20} />,
+    comunicacao: <MessageSquare size={20} />,
+    parceiros: <Handshake size={20} />,
+    financeiro: <TrendingUp size={20} />,
+    caixa: <ShoppingCart size={20} />,
+    cadastros: <UserPlus size={20} />,
+    biblioteca: <BookOpen size={20} />,
+    relatorios: <BarChart size={20} />,
+    configuracoes: <Settings size={20} />,
+  };
+  const menuItems: GestorMenuItem[] = GESTOR_MAIN_NAVIGATION.map(item => ({
+    ...item,
+    icon: menuIcons[item.id],
+    ...(item.id === 'cadastros' ? { subItems: visibleCadastroSubItems } : {}),
+    ...(item.id === 'comunicacao' ? { badge: pendingChatsCount, subItems: communicationSubItems } : {}),
+  }));
   const visibleMenuItems = (isMatrizSelected ? menuItems : menuItems.filter(item => item.id !== 'configuracoes'))
     .filter(item => canOpenModule(item.id));
 

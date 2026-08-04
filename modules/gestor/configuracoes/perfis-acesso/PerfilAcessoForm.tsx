@@ -4,6 +4,10 @@ import { PerfilSetorComunicacao } from './perfis-acesso.service';
 import { SECRETARIA_ACCESS_OPTIONS } from '../../secretaria/secretaria-access';
 import type { DashboardWidgetId } from '../../access-control';
 import DashboardWidgetsProfileSection from './DashboardWidgetsProfileSection';
+import {
+  GESTOR_CADASTRO_NAVIGATION,
+  GESTOR_MAIN_NAVIGATION,
+} from '../../gestor-navigation.config';
 
 const DAYS_OF_WEEK = [
   { value: 1, label: 'Segunda-feira' },
@@ -15,31 +19,12 @@ const DAYS_OF_WEEK = [
   { value: 0, label: 'Domingo' }
 ];
 
-const MODULE_OPTIONS = [
-  { id: 'inicio', label: 'Início (Dashboard)' },
-  { id: 'parceiros', label: 'Parceiros' },
-  { id: 'cadastros', label: 'Cadastros' },
-  { id: 'gestao', label: 'Gestão' },
-  { id: 'secretaria', label: 'Secretaria' },
-  { id: 'caixa', label: 'Caixa' },
-  { id: 'financeiro', label: 'Financeiro' },
-  { id: 'biblioteca', label: 'Biblioteca' },
-  { id: 'calendario', label: 'Calendário' },
-  { id: 'comunicacao', label: 'Comunicação' },
-  { id: 'relatorios', label: 'Relatórios' },
-  { id: 'configuracoes', label: 'Configurações' }
-];
+const MODULE_OPTIONS = GESTOR_MAIN_NAVIGATION.map(item => ({
+  id: item.id,
+  label: item.id === 'inicio' ? 'Início (Dashboard)' : item.label,
+}));
 
-const CADASTROS_SUB_TABS = [
-  { id: 'cadastros-checklist', label: 'Check List Estágio' },
-  { id: 'cadastros-ead', label: 'Cursos EAD' },
-  { id: 'cadastros-especializacao', label: 'Cursos Especialização' },
-  { id: 'cadastros-livres', label: 'Cursos Livres' },
-  { id: 'cadastros-tecnicos', label: 'Cursos Técnicos' },
-  { id: 'cadastros-superior', label: 'Ensino Superior' },
-  { id: 'cadastros-ficha', label: 'Ficha Cadastral' },
-  { id: 'cadastros-modelos', label: 'Modelos Documentos' }
-];
+const CADASTROS_SUB_TABS = GESTOR_CADASTRO_NAVIGATION.map(item => ({ ...item }));
 
 const FINANCEIRO_TABS = [
   { id: 'resumo', label: 'Resumo / Visão Geral' },
@@ -65,8 +50,9 @@ const GESTAO_TURMA_TABS = [
 ];
 
 const COMUNICACAO_TABS = [
-  { id: 'comunicacao-mensagem', label: 'Mensagens internas' },
-  { id: 'comunicacao-whatsapp', label: 'WhatsApp' }
+  { id: 'comunicacao-mensagem', label: 'Atendimento — Portal e app' },
+  { id: 'comunicacao-whatsapp', label: 'Atendimento — WhatsApp e operações' },
+  { id: 'comunicacao-automacoes', label: 'Automações multicanal' }
 ];
 
 interface PerfilAcessoFormProps {
@@ -377,7 +363,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
                 {/* Abas do Cadastro */}
                 {selectedModules.includes('cadastros') && (
                   <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Cadastros</h5>
+                    <h5 className="text-sm font-bold text-[#001a33]">Acesso Interno: Formações</h5>
                     <div className="space-y-3">
                       {CADASTROS_SUB_TABS.map(tab => {
                         const isTabChecked = (selectedTabs['cadastros'] || []).includes(tab.id);
@@ -399,7 +385,7 @@ const PerfilAcessoForm: React.FC<PerfilAcessoFormProps> = ({
 
                 {selectedModules.includes('comunicacao') && (
                   <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                    <h5 className="text-sm font-bold text-[#001a33]">Canais: Comunicação</h5>
+                    <h5 className="text-sm font-bold text-[#001a33]">Áreas de Comunicação</h5>
                     <div className="space-y-3">
                       {COMUNICACAO_TABS.map(tab => {
                         const isTabChecked = (selectedTabs.comunicacao || []).includes(tab.id);

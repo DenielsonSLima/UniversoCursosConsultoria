@@ -6,8 +6,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Paperclip,
+  Mic,
   Send,
   Sparkles,
+  Square,
   Trash2,
   X,
 } from 'lucide-react';
@@ -137,7 +139,11 @@ export const AlunoMessageList: React.FC<{
           </div>
         );
       }
-      const hasText = Boolean(message.conteudo && !message.conteudo.startsWith('📎'));
+      const hasText = Boolean(
+        message.conteudo
+        && !message.conteudo.startsWith('📎')
+        && message.conteudo !== '🎤 Mensagem de voz',
+      );
       return (
         <div key={message.id} className={`flex items-end gap-2 ${isSelf ? 'justify-end' : 'justify-start'}`}>
           {!isSelf && <div className="w-7 h-7 bg-[#001a33] text-white rounded-lg flex items-center justify-center font-bold text-[10px] shrink-0">AD</div>}
@@ -164,11 +170,25 @@ export const AlunoMessageComposer: React.FC<{
   fileInputRef: RefObject<HTMLInputElement | null>;
   messageText: string;
   pendingFile: File | null;
+  recording: boolean;
+  recordingSeconds: number;
   uploading: boolean;
   onFileChange: (file: File | null) => void;
   onMessageChange: (value: string) => void;
+  onRecord: () => void;
   onSend: () => void;
-}> = ({ fileInputRef, messageText, pendingFile, uploading, onFileChange, onMessageChange, onSend }) => (
+}> = ({
+  fileInputRef,
+  messageText,
+  pendingFile,
+  recording,
+  recordingSeconds,
+  uploading,
+  onFileChange,
+  onMessageChange,
+  onRecord,
+  onSend,
+}) => (
   <div className="space-y-2 p-3">
     {pendingFile && (
       <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
@@ -177,17 +197,42 @@ export const AlunoMessageComposer: React.FC<{
         <button type="button" onClick={() => onFileChange(null)} aria-label="Remover anexo" className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-blue-200 motion-reduce:transition-none md:h-8 md:w-8"><X size={14} className="text-slate-500" /></button>
       </div>
     )}
-    <div className="flex items-center gap-2">
-      <button type="button" onClick={() => fileInputRef.current?.click()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600" title="Anexar arquivo" aria-label="Anexar arquivo"><Paperclip size={19} /></button>
-      <input ref={fileInputRef} type="file" accept={ACCEPTED_ATTACHMENT_TYPES} className="hidden" onChange={(event) => { onFileChange(event.target.files?.[0] || null); event.target.value = ''; }} />
-      <div className="flex-1 bg-slate-50 rounded-xl flex items-center px-4 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white transition-all motion-reduce:transition-none">
-        <input type="text" value={messageText} onChange={(event) => onMessageChange(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && !event.shiftKey && onSend()} placeholder="Escreva sua mensagem..." className="w-full border-none bg-transparent py-3 text-base font-medium text-slate-700 outline-none md:text-xs" />
+    {recording && (
+      <div className="flex min-h-11 items-center gap-3 rounded-xl border border-rose-100 bg-rose-50 px-3 text-rose-700" role="status" aria-live="polite">
+        <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-rose-500 motion-reduce:animate-none" aria-hidden="true" />
+        <span className="text-[11px] font-black uppercase tracking-wide">Gravando áudio</span>
+        <div className="flex flex-1 items-center justify-center gap-1 overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 14 }, (_, index) => (
+            <span key={index} className="w-1 rounded-full bg-rose-300" style={{ height: `${7 + ((index * 7) % 16)}px` }} />
+          ))}
+        </div>
+        <span className="text-xs font-black tabular-nums">
+          {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+        </span>
       </div>
-      <button type="button" onClick={onSend} disabled={(!messageText.trim() && !pendingFile) || uploading} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-md transition-colors hover:bg-blue-900 disabled:opacity-40" aria-label="Enviar mensagem">
+    )}
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={recording || uploading} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40" title="Anexar foto, áudio ou documento" aria-label="Anexar arquivo"><Paperclip size={19} /></button>
+      <input ref={fileInputRef} type="file" accept={ACCEPTED_ATTACHMENT_TYPES} className="hidden" onChange={(event) => { onFileChange(event.target.files?.[0] || null); event.target.value = ''; }} />
+      <button
+        type="button"
+        onClick={onRecord}
+        disabled={uploading || Boolean(pendingFile)}
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors disabled:opacity-40 ${recording ? 'bg-rose-600 text-white hover:bg-rose-700' : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'}`}
+        title={recording ? 'Parar gravação' : 'Gravar áudio'}
+        aria-label={recording ? 'Parar gravação de áudio' : 'Gravar mensagem de áudio'}
+        aria-pressed={recording}
+      >
+        {recording ? <Square size={16} fill="currentColor" /> : <Mic size={19} />}
+      </button>
+      <div className="flex-1 bg-slate-50 rounded-xl flex items-center px-4 border border-slate-200 focus-within:border-blue-500 focus-within:bg-white transition-all motion-reduce:transition-none">
+        <input type="text" value={messageText} onChange={(event) => onMessageChange(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && !event.shiftKey && onSend()} placeholder={recording ? 'Gravando mensagem de voz...' : pendingFile ? 'Adicione uma legenda (opcional)...' : 'Escreva sua mensagem...'} disabled={recording || uploading} className="w-full border-none bg-transparent py-3 text-base font-medium text-slate-700 outline-none disabled:opacity-60 md:text-xs" />
+      </div>
+      <button type="button" onClick={onSend} disabled={recording || (!messageText.trim() && !pendingFile) || uploading} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#001a33] text-white shadow-md transition-colors hover:bg-blue-900 disabled:opacity-40" aria-label="Enviar mensagem">
         {uploading ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent motion-reduce:animate-none" /> : <Send size={17} />}
       </button>
     </div>
-    <p className="hidden pl-12 text-[9px] font-medium text-slate-400 md:block">Aceita: imagens, PDF, Word, Excel, PowerPoint</p>
+    <p className="hidden pl-12 text-[9px] font-medium text-slate-400 md:block">Aceita: áudio, imagens, PDF, Word, Excel e PowerPoint</p>
   </div>
 );
 

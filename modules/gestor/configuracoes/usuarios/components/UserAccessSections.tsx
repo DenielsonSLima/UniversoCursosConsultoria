@@ -171,10 +171,10 @@ const UserAccessSections: React.FC<UserAccessSectionsProps> = ({
           const title = moduleId === 'gestao'
             ? 'Abas das Turmas da Gestão'
             : moduleId === 'cadastros'
-              ? 'Abas de Cadastros'
+              ? 'Opções de Formações'
               : moduleId === 'secretaria'
                 ? 'Abas da Secretaria'
-                : 'Canais de Comunicação';
+                : 'Áreas de Comunicação';
           return (
             <div key={moduleId} className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
               <div className="mb-4 flex items-center gap-2 text-blue-700"><Layers size={18} /><h5 className="text-xs font-black uppercase tracking-widest">{title}</h5></div>

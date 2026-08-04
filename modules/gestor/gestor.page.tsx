@@ -48,7 +48,7 @@ const MOCK_SEARCH_DATA = [
   { id: 3, type: 'financial', title: 'Pagamento Pendente', subtitle: 'Mensalidade Fev/2026 - Marcos Silva', module: 'financeiro' },
   { id: 4, type: 'financial', title: 'Fluxo de Caixa', subtitle: 'Relatório diário de entradas', module: 'caixa' },
   { id: 5, type: 'module', title: 'Emitir Declaração', subtitle: 'Acesso rápido à Secretaria', module: 'secretaria' },
-  { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Cadastros', module: 'cadastros-alunos' },
+  { id: 6, type: 'module', title: 'Cadastrar Novo Aluno', subtitle: 'Atalho para Parceiros', module: 'parceiros-novo-aluno' },
   { id: 7, type: 'partner', title: 'Prefeitura de Japoatã', subtitle: 'Convênio Ativo', module: 'parceiros' },
 ];
 
@@ -87,7 +87,6 @@ const GestorPage: React.FC = () => {
   const [hasUnsavedAutomationDraft, setHasUnsavedAutomationDraft] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
-  const [hoveredMenus, setHoveredMenus] = useState<Set<string>>(new Set());
   const [isPoloSelectorOpen, setIsPoloSelectorOpen] = useState(false);
 
   const setActiveModule = useCallback((moduleId: string) => {
@@ -647,24 +646,13 @@ const GestorPage: React.FC = () => {
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus((current) => {
-      const next = new Set(current);
-      if (next.has(menuId)) next.delete(menuId);
-      else next.add(menuId);
-      return next;
-    });
-  };
-
-  const setMenuHovered = (menuId: string, hovered: boolean) => {
-    setHoveredMenus((current) => {
-      const next = new Set(current);
-      if (hovered) next.add(menuId);
-      else next.delete(menuId);
-      return next;
+      if (current.has(menuId)) return new Set();
+      return new Set([menuId]);
     });
   };
 
   const isDesktopMenuExpanded = (menuId: string) =>
-    isMenuPinned(menuId) || expandedMenus.has(menuId) || hoveredMenus.has(menuId);
+    expandedMenus.size > 0 ? expandedMenus.has(menuId) : isMenuPinned(menuId);
 
   const handleSearchResultClick = (module: string) => {
     if (!canOpenModule(module)) return;
@@ -738,7 +726,6 @@ const GestorPage: React.FC = () => {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         expandedMenus={expandedMenus}
         toggleMenu={toggleMenu}
-        setMenuHovered={setMenuHovered}
         isDesktopMenuExpanded={isDesktopMenuExpanded}
         preloadModule={preloadModule}
         handleLogout={handleLogout}
