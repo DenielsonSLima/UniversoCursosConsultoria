@@ -16,15 +16,12 @@ const DashboardQuickActionsHeader: React.FC<DashboardQuickActionsHeaderProps> = 
   <header className="relative overflow-hidden rounded-[1.75rem] border border-blue-100 bg-white px-6 py-6 shadow-sm sm:px-8">
     <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full bg-blue-100/60 blur-3xl" />
     <div className="relative">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600">Atalhos</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-[28px]">Ações rápidas</h1>
-        <p className="mt-1 text-sm font-medium text-slate-500">
-          Acesse as tarefas mais usadas sem percorrer os módulos do portal.
-        </p>
-      </div>
+      <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-blue-700">
+        <span aria-hidden="true" className="h-4 w-1 rounded-full bg-blue-600" />
+        Atalhos
+      </h2>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
         {canCreatePartner && (
           <button
             type="button"
