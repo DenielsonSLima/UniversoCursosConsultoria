@@ -25,7 +25,7 @@ const DocumentoLegacyReceiptModal: React.FC<
   onSubmit,
   onClose,
 }) => {
-  const canSubmit = !submitting && reason.trim().length >= 10;
+  const canSubmit = !submitting;
 
   return (
     <DocumentosModalShell
@@ -48,22 +48,20 @@ const DocumentoLegacyReceiptModal: React.FC<
           <ClipboardCheck aria-hidden="true" className="mt-0.5 shrink-0" size={20} />
           <p className="text-xs font-semibold leading-relaxed">
             Use quando o gestor recebeu e conferiu o documento, mas não possui
-            uma cópia digital para anexar. Data, responsável e justificativa
-            ficarão registradas para auditoria.
+            uma cópia digital para anexar. Data, responsável e a observação,
+            quando informada, ficarão registrados para auditoria.
           </p>
         </div>
 
         <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
-          Justificativa obrigatória
+          Justificativa (opcional)
           <textarea
             autoFocus
-            required
             rows={4}
-            minLength={10}
             maxLength={1000}
             value={reason}
             onChange={(event) => onReasonChange(event.target.value)}
-            placeholder="Ex.: Documento original entregue e conferido presencialmente na secretaria."
+            placeholder="Opcional: informe alguma observação sobre a entrega presencial."
             className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white p-3 text-xs font-medium normal-case tracking-normal text-[#001a33] outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
           />
           <span className="mt-1 block text-right text-[8px] text-slate-400">

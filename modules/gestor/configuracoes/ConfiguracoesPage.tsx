@@ -20,7 +20,9 @@ import {
   Lock,
   Activity,
   HardDrive,
-  Handshake
+  Handshake,
+  Smartphone,
+  BellRing
 } from 'lucide-react';
 
 // Importação dos Submódulos
@@ -44,6 +46,8 @@ import LogsEventosConfig from './logs-eventos/LogsEventosConfig';
 import PerfisAcessoConfig from './perfis-acesso/PerfisAcessoConfig';
 import ConsultaApiBaneseConfig from './consulta-api-banese/ConsultaApiBaneseConfig';
 import ArmazenamentoConfig from './armazenamento/ArmazenamentoConfig';
+import DispositivosAppConfig from './dispositivos-app/DispositivosAppConfig';
+import PushNotificationsConfig from './push-notifications/PushNotificationsConfig';
 import {
   banesePollingQueryKey,
   consultaApiBaneseService,
@@ -68,6 +72,8 @@ const ConfiguracoesPage: React.FC = () => {
     { id: 'tipos-parceria', title: 'Tipos de Parceria', desc: 'Convênios e vínculos de pessoas jurídicas', icon: <Handshake size={24} />, color: 'bg-blue-700' },
     { id: 'categorias-financeiras', title: 'Categorias Financeiras', desc: 'Adicionar, ativar e inativar', icon: <Wallet2 size={24} />, color: 'bg-rose-600' },
     { id: 'usuarios', title: 'Usuários e Permissões', desc: 'Gestão de acesso ao sistema', icon: <Users size={24} />, color: 'bg-indigo-500' },
+    { id: 'dispositivos-app', title: 'Dispositivos do App', desc: 'Instalações, sessões e notificações por polo', icon: <Smartphone size={24} />, color: 'bg-blue-600' },
+    { id: 'push-notifications', title: 'Políticas de Push', desc: 'Categorias, privacidade e horários de envio', icon: <BellRing size={24} />, color: 'bg-violet-600' },
     { id: 'perfis-acesso', title: 'Perfis de Acesso', desc: 'Gerenciar permissões por perfil', icon: <Lock size={24} />, color: 'bg-rose-500' },
     { id: 'marca-dagua', title: 'Marca D\'água', desc: 'Personalização de documentos', icon: <Stamp size={24} />, color: 'bg-cyan-500' },
     { id: 'assinaturas', title: 'Central de Assinaturas', desc: 'Diretoria, Secretaria e Coordenação', icon: <Stamp size={24} />, color: 'bg-pink-600' },
@@ -98,6 +104,8 @@ const ConfiguracoesPage: React.FC = () => {
       case 'tipos-parceria': return <TiposParceriaConfig />;
       case 'categorias-financeiras': return <CategoriasFinanceirasConfig />;
       case 'usuarios': return <UsuariosConfig />;
+      case 'dispositivos-app': return <DispositivosAppConfig />;
+      case 'push-notifications': return <PushNotificationsConfig />;
       case 'perfis-acesso': return <PerfisAcessoConfig />;
       case 'marca-dagua': return <MarcaDaguaConfig />;
       case 'assinaturas': return <AssinaturasConfig />;

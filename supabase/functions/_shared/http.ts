@@ -15,6 +15,14 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost",
 ];
 
+// Origens fixas do servidor local empacotado pelo Capacitor. Elas não entram
+// em parseOrigin porque `capacitor:` não é um protocolo web e nunca devem ser
+// generalizadas para outros schemes ou hostnames.
+const NATIVE_APP_ORIGINS = new Set([
+  "capacitor://localhost",
+  "https://localhost",
+]);
+
 const ORIGIN_PARSE_TARGETS = [
   "PORTAL_ALLOWED_REDIRECT_ORIGINS",
   "ALLOWED_REDIRECT_ORIGINS",
@@ -117,6 +125,10 @@ const getAllowedCorsOrigins = () => {
 
 const resolveAllowOrigin = (requestOrigin: string | null | undefined) => {
   const allowed = getAllowedCorsOrigins();
+  const normalizedRequestOrigin = normalizeOriginInput(requestOrigin);
+  if (NATIVE_APP_ORIGINS.has(normalizedRequestOrigin)) {
+    return normalizedRequestOrigin;
+  }
   const parsedOrigin = parseOrigin(requestOrigin);
   if (parsedOrigin && (isLocalDevelopmentOrigin(parsedOrigin) || isUniversityDomain(parsedOrigin))) return parsedOrigin;
   if (parsedOrigin && allowed.includes(parsedOrigin)) return parsedOrigin;

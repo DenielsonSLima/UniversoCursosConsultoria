@@ -67,6 +67,12 @@ export type Partner = {
   tipo: string;
   nome: string;
   email?: string | null;
+  auth_user_id?: string | null;
+  acesso_status?: string | null;
+  acesso_erro?: string | null;
+  convite_enviado_em?: string | null;
+  acesso_ativado_em?: string | null;
+  troca_senha_obrigatoria?: boolean | null;
   matricula_acesso?: string | null;
   auth_login_email?: string | null;
   polo_id?: string | null;

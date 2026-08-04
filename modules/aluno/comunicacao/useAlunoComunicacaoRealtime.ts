@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../../../lib/supabase';
 import {
   alunoComunicacaoKeys,
@@ -47,6 +48,7 @@ export const useAlunoComunicacaoRealtime = ({
 
   useEffect(() => {
     const notifyReply = async (chatId: string) => {
+      if (Capacitor.isNativePlatform()) return;
       if (!('Notification' in window) || window.Notification.permission !== 'granted' || !document.hidden) return;
       const chat = await alunoComunicacaoService.getChatById(chatId).catch(() => null);
       if (!chat || chat.remetente_id !== alunoId || !chat.notificar_resposta) return;
@@ -58,7 +60,7 @@ export const useAlunoComunicacaoRealtime = ({
           icon: '/aluno/icons/app-icon-v3-192.png',
           badge: '/aluno/icons/app-icon-v3-192.png',
           tag: `universo-chat-${chatId}`,
-          data: { url: '/aluno/comunicacao' },
+          data: { url: `/aluno/comunicacao?chatId=${encodeURIComponent(chatId)}` },
         });
       }
     };

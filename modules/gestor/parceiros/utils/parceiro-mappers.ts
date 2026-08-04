@@ -133,6 +133,10 @@ export function toCamel(s: any) {
     aceitouTermosUsoEm: s.aceitou_termos_uso_em,
     termosUsoVersao: s.termos_uso_versao,
     trocaSenhaObrigatoria: s.troca_senha_obrigatoria,
+    acessoStatus: s.acesso_status,
+    acessoErro: s.acesso_erro,
+    conviteEnviadoEm: s.convite_enviado_em,
+    acessoAtivadoEm: s.acesso_ativado_em,
     poloIds: s.polo_ids || [],
     modalidadesAluno: s.modalidadesAluno || [],
     cursosAlunoIds: s.cursosAlunoIds || [],
@@ -231,7 +235,20 @@ export function toSnake(c: any) {
     aceitou_termos_uso: source.aceitouTermosUso ?? source.aceitou_termos_uso ?? false,
     aceitou_termos_uso_em: source.aceitouTermosUsoEm || source.aceitou_termos_uso_em || null,
     termos_uso_versao: source.termosUsoVersao || source.termos_uso_versao || null,
-    troca_senha_obrigatoria: source.trocaSenhaObrigatoria ?? source.troca_senha_obrigatoria ?? false,
+    ...(Object.prototype.hasOwnProperty.call(source, 'trocaSenhaObrigatoria')
+      || Object.prototype.hasOwnProperty.call(source, 'troca_senha_obrigatoria')
+      ? {
+        troca_senha_obrigatoria:
+          source.trocaSenhaObrigatoria ?? source.troca_senha_obrigatoria ?? false,
+      }
+      : {}),
+    ...(source.acessoStatus || source.acesso_status
+      ? { acesso_status: source.acessoStatus || source.acesso_status }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(source, 'acessoErro')
+      || Object.prototype.hasOwnProperty.call(source, 'acesso_erro')
+      ? { acesso_erro: source.acessoErro ?? source.acesso_erro ?? null }
+      : {}),
     polo_ids: poloIds,
   };
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Award, BarChart, BookOpen, Bot, Briefcase, Building, CalendarDays, ClipboardCheck,
+  Award, BarChart, BellRing, BookOpen, Bot, Briefcase, Building, CalendarDays, ClipboardCheck,
   FileCode, FileSignature, FileText, Handshake, Inbox, LayoutDashboard,
   MessageSquare, MonitorPlay, Settings, Settings2, ShoppingCart, SlidersHorizontal, TrendingUp,
   UserPlus, UserRound, WalletCards, Workflow, Zap,
@@ -50,6 +50,7 @@ export const buildGestorNavigation = ({
   const communicationSubItems = [
     { id: 'comunicacao-atendimento', label: 'Atendimento', icon: <Inbox size={16} /> },
     { id: 'comunicacao-atendimento-config', label: 'Atendimento por polo', icon: <SlidersHorizontal size={16} /> },
+    { id: 'comunicacao-notificacoes-push', label: 'Notificações e Push', icon: <BellRing size={16} /> },
     { id: 'comunicacao-atrasados', label: 'Atrasados', icon: <WalletCards size={16} /> },
     { id: 'comunicacao-automacoes', label: 'Automações', icon: <Workflow size={16} /> },
     { id: 'comunicacao-fluxos', label: 'Fluxos', icon: <Workflow size={16} /> },

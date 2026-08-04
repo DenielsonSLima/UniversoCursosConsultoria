@@ -56,13 +56,6 @@ type PartnerEmailStatusesResult = {
   statuses?: PartnerEmailConfirmationStatus[];
 };
 
-type ConfirmPartnerEmailResult = {
-  success: boolean;
-  userId?: string | null;
-  emailConfirmed: boolean;
-  message?: string;
-};
-
 const invokeAdminFunction = async <T>(payload: Record<string, unknown>): Promise<T> => {
   const { data, error } = await supabase.functions.invoke('portal-user-management', {
     body: payload,
@@ -99,13 +92,6 @@ export const portalActivationService = {
     }
 
     return statuses;
-  },
-
-  async confirmPartnerEmail(partnerId: string): Promise<ConfirmPartnerEmailResult> {
-    return invokeAdminFunction<ConfirmPartnerEmailResult>({
-      action: 'confirm-partner-email',
-      partnerId,
-    });
   },
 
   async ensureStudentAccess(payload: InviteStudentPayload): Promise<InviteStudentResult> {

@@ -31,6 +31,7 @@ test('rotas de Comunicação preservam permissões legadas sem ampliar acesso', 
     tabs: { comunicacao: ['comunicacao-mensagem'] },
   });
   assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-atendimento'), true);
+  assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-notificacoes-push'), true);
   assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-fluxos'), false);
   assert.equal(canAccessCommunicationRoute(internalOnly, 'comunicacao-configuracoes'), false);
 
@@ -44,6 +45,7 @@ test('rotas de Comunicação preservam permissões legadas sem ampliar acesso', 
   assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-fluxos'), true);
   assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-agentes'), true);
   assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-configuracoes'), true);
+  assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-notificacoes-push'), false);
   assert.equal(canAccessCommunicationRoute(whatsappOnly, 'comunicacao-automacoes'), false);
 });
 

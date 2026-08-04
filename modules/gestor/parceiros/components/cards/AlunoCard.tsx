@@ -12,11 +12,9 @@ interface AlunoCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
-  onConfirmEmail?: () => void;
-  isConfirmingEmail?: boolean;
 }
 
-const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
+const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -149,8 +147,6 @@ const AlunoCard: React.FC<AlunoCardProps> = ({ data, onClick, onDelete, onConfir
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
-                isConfirming={isConfirmingEmail}
-                onConfirm={onConfirmEmail}
               />
             </div>
           </div>

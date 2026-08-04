@@ -1,5 +1,6 @@
 
 import { supabase } from '../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 import { LoginCredentials, AuthResponse } from './login.types';
 import { buildAuthRedirectUrl } from '../../lib/app-url';
 import { clearPortalSession, getPortalProfile } from './portal-session';
@@ -86,6 +87,7 @@ export const loginService = {
         identifier: email.trim(),
         password,
         turnstileToken,
+        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
       },
     });
 
@@ -162,13 +164,18 @@ export const loginService = {
     return data.session;
   },
 
-  async requestPasswordRecovery(identifier: string, turnstileToken: string) {
+  async requestPasswordRecovery(
+    identifier: string,
+    turnstileToken: string,
+    redirectPath = '/recuperar-senha',
+  ) {
     const { error } = await supabase.functions.invoke('portal-auth', {
       body: {
         action: 'recover',
         identifier: identifier.trim(),
         turnstileToken,
-        redirectTo: buildAuthRedirectUrl('/recuperar-senha'),
+        redirectTo: buildAuthRedirectUrl(redirectPath),
+        challengeContext: Capacitor.isNativePlatform() ? 'native' : 'web',
       },
     });
 

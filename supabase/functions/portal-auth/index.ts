@@ -20,6 +20,7 @@ type PortalAuthPayload = {
   password?: string;
   redirectTo?: string;
   turnstileToken?: string;
+  challengeContext?: "web" | "native";
 };
 
 type RateLimitResult = {
@@ -42,6 +43,14 @@ const DEFAULT_PRODUCTION_TURNSTILE_HOSTNAMES = [
   "universocc.com.br",
   "www.universocc.com.br",
 ];
+const DEFAULT_NATIVE_TURNSTILE_HOSTNAMES = [
+  "universocc.com.br",
+  "www.universocc.com.br",
+];
+const NATIVE_APP_ORIGINS = new Set([
+  "capacitor://localhost",
+  "https://localhost",
+]);
 const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 
 const normalizeIdentifier = (value?: string) =>
@@ -63,6 +72,12 @@ const getLocalTurnstileHostnames = () =>
   new Set([
     ...DEFAULT_LOCAL_TURNSTILE_HOSTNAMES,
     ...parseHostnameList(Deno.env.get("TURNSTILE_LOCAL_HOSTNAMES")),
+  ]);
+
+const getNativeTurnstileHostnames = () =>
+  new Set([
+    ...DEFAULT_NATIVE_TURNSTILE_HOSTNAMES,
+    ...parseHostnameList(Deno.env.get("TURNSTILE_NATIVE_ALLOWED_HOSTNAMES")),
   ]);
 
 const isUniversalTurnstileTestSecret = (secret: string) =>
@@ -167,29 +182,51 @@ const getRequestOrigin = (request: Request) => {
   }
 };
 
+const getRawRequestOrigin = (request: Request) =>
+  String(request.headers.get("origin") || "").trim();
+
 const verifyTurnstile = async (
   request: Request,
   token: string,
   expectedAction: "login" | "recover" | "signup",
+  challengeContext: "web" | "native",
 ) => {
-  const requestOrigin = getRequestOrigin(request);
-  const expectedHostname = requestOrigin?.hostname.toLowerCase() || "";
-  if (!requestOrigin || !expectedHostname) return false;
-
-  const isLocalHostname = getLocalTurnstileHostnames().has(expectedHostname);
-  const isProductionHostname =
-    getProductionTurnstileHostnames().has(expectedHostname);
-  const isAllowedProtocol = isLocalHostname
-    ? requestOrigin.protocol === "http:" || requestOrigin.protocol === "https:"
-    : requestOrigin.protocol === "https:";
-  if ((!isLocalHostname && !isProductionHostname) || !isAllowedProtocol) {
+  const rawRequestOrigin = getRawRequestOrigin(request);
+  const isNativeChallenge = challengeContext === "native";
+  if (isNativeChallenge && !NATIVE_APP_ORIGINS.has(rawRequestOrigin)) {
+    return false;
+  }
+  if (!isNativeChallenge && NATIVE_APP_ORIGINS.has(rawRequestOrigin)) {
     return false;
   }
 
-  const secretName = isLocalHostname
-    ? "TURNSTILE_LOCAL_SECRET_KEY"
-    : "TURNSTILE_SECRET_KEY";
-  const secret = String(Deno.env.get(secretName) || "").trim();
+  const requestOrigin = getRequestOrigin(request);
+  const callerHostname = requestOrigin?.hostname.toLowerCase() || "";
+  if (!requestOrigin || !callerHostname) return false;
+
+  const isLocalHostname = getLocalTurnstileHostnames().has(callerHostname);
+  const isProductionHostname =
+    getProductionTurnstileHostnames().has(callerHostname);
+  const isAllowedProtocol = isLocalHostname
+    ? requestOrigin.protocol === "http:" || requestOrigin.protocol === "https:"
+    : requestOrigin.protocol === "https:";
+  if (
+    !isNativeChallenge &&
+    ((!isLocalHostname && !isProductionHostname) || !isAllowedProtocol)
+  ) {
+    return false;
+  }
+
+  const secretName = isNativeChallenge
+    ? "TURNSTILE_NATIVE_SECRET_KEY"
+    : isLocalHostname
+      ? "TURNSTILE_LOCAL_SECRET_KEY"
+      : "TURNSTILE_SECRET_KEY";
+  const secret = String(
+    Deno.env.get(secretName) ||
+      (isNativeChallenge ? Deno.env.get("TURNSTILE_SECRET_KEY") : "") ||
+      "",
+  ).trim();
   if (!secret || isUniversalTurnstileTestSecret(secret)) {
     if (secret) {
       console.error(
@@ -220,9 +257,13 @@ const verifyTurnstile = async (
     if (!response.ok) return false;
 
     const result = await response.json() as TurnstileVerification;
+    const verifiedHostname = String(result.hostname || "").toLowerCase();
+    const hostnameAccepted = isNativeChallenge
+      ? getNativeTurnstileHostnames().has(verifiedHostname)
+      : verifiedHostname === callerHostname;
     return result.success === true &&
       String(result.action || "") === expectedAction &&
-      String(result.hostname || "").toLowerCase() === expectedHostname;
+      hostnameAccepted;
   } catch (error) {
     console.error(
       "portal-auth: falha na validação Turnstile",
@@ -273,6 +314,7 @@ Deno.serve(async (request: Request) => {
   }
 
   const action = payload.action;
+  const challengeContext = payload.challengeContext === "native" ? "native" : "web";
   const identifier = normalizeIdentifier(payload.identifier);
   const cpf = String(payload.cpf || "").replace(/\D/g, "");
   const turnstileToken = String(payload.turnstileToken || "").trim();
@@ -351,7 +393,7 @@ Deno.serve(async (request: Request) => {
 
   const turnstileStartedAt = globalThis.performance.now();
   const turnstileValid = turnstileToken
-    ? await verifyTurnstile(request, turnstileToken, action)
+    ? await verifyTurnstile(request, turnstileToken, action, challengeContext)
     : false;
   timings.turnstileMs = elapsedSince(turnstileStartedAt);
   if (!turnstileValid) {

@@ -24,6 +24,7 @@ const UnifiedCommunicationPage = lazy(() => import('../comunicacao/UnifiedCommun
 const AutomacoesMulticanalPage = lazy(() => import('../comunicacao/automacoes-multicanal/AutomacoesMulticanalPage'));
 const MultichannelOperationsPage = lazy(() => import('../comunicacao/multicanal/MultichannelOperationsPage'));
 const AtendimentoConfigPage = lazy(() => import('../comunicacao/atendimento-config/AtendimentoConfigPage'));
+const NotificacoesPushPage = lazy(() => import('../comunicacao/notificacoes-push/NotificacoesPushPage'));
 const ConfiguracoesPage = lazy(() => import('../configuracoes/ConfiguracoesPage'));
 const DashboardPage = lazy(() => import('../dashboard/DashboardPage'));
 const FinanceiroPage = lazy(() => import('../financeiro/FinanceiroPage'));
@@ -219,6 +220,7 @@ const GestorModuleContentView: React.FC<GestorModuleContentProps> = ({
       return <AccessDenied />;
     case 'comunicacao-atendimento': return <UnifiedCommunicationPage gestorProfile={profile} canAccessInternal={canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')} canAccessWhatsApp={canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp')} />;
     case 'comunicacao-atendimento-config': return <AtendimentoConfigPage poloId={currentPoloId} isGlobal={isGlobal} />;
+    case 'comunicacao-notificacoes-push': return <NotificacoesPushPage />;
     case 'comunicacao-atrasados': return <MultichannelOperationsPage mode="overdue" />;
     case 'comunicacao-automacoes': return <AutomacoesMulticanalPage canAccessLegacyWhatsApp={false} onDirtyChange={onAutomationDraftDirtyChange} />;
     case 'comunicacao-fluxos':

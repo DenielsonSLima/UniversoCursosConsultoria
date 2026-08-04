@@ -108,7 +108,6 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     savePJMutation,
     enrollAlunoMutation,
     deleteMutation,
-    confirmEmailMutation,
   } = useParceirosMutations({
     toast,
     createdAlunoNome,
@@ -256,8 +255,6 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
           onRequestScrollTop?.();
         }}
         onDeleteParceiro={setDeletingParceiro}
-        onConfirmEmail={(parceiro) => confirmEmailMutation.mutate(parceiro)}
-        confirmingEmailPartnerId={confirmEmailMutation.isPending ? confirmEmailMutation.variables?.id || null : null}
       />
 
       <ParceirosExportModal

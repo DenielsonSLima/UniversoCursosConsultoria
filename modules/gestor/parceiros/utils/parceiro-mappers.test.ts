@@ -51,3 +51,23 @@ test('grava os novos vínculos e os textos compatíveis no payload do parceiro',
   assert.equal(payload.tipo_pj, 'Supermercado');
   assert.equal(payload.tipo_convenio, 'FORNECEDOR');
 });
+
+test('mapeia o ciclo de acesso sem apagá-lo em uma atualização sem esses campos', () => {
+  const parceiro = toCamel({
+    id: 'student-1',
+    tipo: 'Aluno',
+    nome: 'Aluno Teste',
+    acesso_status: 'erro',
+    acesso_erro: 'Falha operacional segura',
+    convite_enviado_em: '2026-08-03T10:00:00.000Z',
+    acesso_ativado_em: null,
+  });
+  const unrelatedUpdate = toSnake({ tipo: 'Aluno', nome: 'Aluno Teste' });
+
+  assert.equal(parceiro.acessoStatus, 'erro');
+  assert.equal(parceiro.acessoErro, 'Falha operacional segura');
+  assert.equal(parceiro.conviteEnviadoEm, '2026-08-03T10:00:00.000Z');
+  assert.equal('acesso_status' in unrelatedUpdate, false);
+  assert.equal('acesso_erro' in unrelatedUpdate, false);
+  assert.equal('troca_senha_obrigatoria' in unrelatedUpdate, false);
+});

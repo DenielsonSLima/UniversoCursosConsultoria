@@ -15,6 +15,8 @@ export interface Toast {
   avatarUrl?: string | null;
   avatarName?: string;
   contextLabel?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastNotificationProps {
@@ -44,7 +46,7 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
   const [avatarFailed, setAvatarFailed] = React.useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => onRemove(toast.id), 4500);
+    const timer = setTimeout(() => onRemove(toast.id), toast.onAction ? 7000 : 4500);
     return () => clearTimeout(timer);
   }, [toast.id, onRemove]);
 
@@ -113,6 +115,18 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
         )}
         <p className={`font-black text-sm uppercase tracking-wide ${config.titleColor}`}>{toast.title}</p>
         {toast.message && <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">{toast.message}</p>}
+        {toast.actionLabel && toast.onAction && (
+          <button
+            type="button"
+            onClick={() => {
+              toast.onAction?.();
+              onRemove(toast.id);
+            }}
+            className="mt-2 text-xs font-black text-blue-700 underline decoration-blue-300 underline-offset-2"
+          >
+            {toast.actionLabel}
+          </button>
+        )}
       </div>
       <button
         type="button"

@@ -11,11 +11,9 @@ interface PJCardProps {
   data: any;
   onClick?: () => void;
   onDelete?: () => void;
-  onConfirmEmail?: () => void;
-  isConfirmingEmail?: boolean;
 }
 
-const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail, isConfirmingEmail }) => {
+const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -154,8 +152,6 @@ const PJCard: React.FC<PJCardProps> = ({ data, onClick, onDelete, onConfirmEmail
               <span className="truncate font-medium" title={data.email}>{data.email}</span>
               <EmailConfirmationStatus
                 status={data.emailConfirmationStatus}
-                isConfirming={isConfirmingEmail}
-                onConfirm={onConfirmEmail}
               />
             </div>
           </div>

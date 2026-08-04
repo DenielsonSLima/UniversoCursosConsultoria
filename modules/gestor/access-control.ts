@@ -207,6 +207,9 @@ export const canAccessCommunicationRoute = (
     return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem')
       || canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp');
   }
+  if (routeId === 'comunicacao-notificacoes-push') {
+    return canAccessTab(permissions, 'comunicacao', 'comunicacao-mensagem');
+  }
   if (WHATSAPP_OPERATIONAL_ROUTES.has(routeId)) {
     return canAccessTab(permissions, 'comunicacao', 'comunicacao-whatsapp');
   }

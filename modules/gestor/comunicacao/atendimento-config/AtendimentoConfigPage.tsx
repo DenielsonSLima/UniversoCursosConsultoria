@@ -186,4 +186,3 @@ const ToggleCard = ({ icon: Icon, title, checked, onChange }: { icon: React.Elem
 );
 
 export default AtendimentoConfigPage;
-

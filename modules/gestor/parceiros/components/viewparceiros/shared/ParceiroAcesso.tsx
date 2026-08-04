@@ -18,6 +18,8 @@ interface ParceiroAcessoProps {
   email?: string | null;
   matriculaAcesso?: string | null;
   tipo?: 'Aluno' | 'Professor';
+  acessoStatus?: string | null;
+  acessoErro?: string | null;
 }
 
 const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
@@ -25,6 +27,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
   email,
   matriculaAcesso,
   tipo = 'Aluno',
+  acessoStatus,
+  acessoErro,
 }) => {
   const queryClient = useQueryClient();
   const [googleHint, setGoogleHint] = useState('');
@@ -53,6 +57,8 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
       queryClient.invalidateQueries({
         queryKey: ['partner-google-identity-status', parceiroId],
       });
+      queryClient.invalidateQueries({ queryKey: ['parceiro', parceiroId] });
+      queryClient.invalidateQueries({ queryKey: ['parceiros'] });
     },
     onError: (error: any) => {
       setRecoveryLink('');
@@ -190,6 +196,24 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
 
         {tipo === 'Aluno' && (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+            <div className="mb-5 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Situação do acesso
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-800">
+                {{
+                  sem_acesso: 'Acesso ainda não preparado',
+                  pendente: 'Preparação ou envio pendente',
+                  processando: 'Preparando acesso',
+                  convite_enviado: 'Convite enviado — aguardando o aluno',
+                  ativo: 'Acesso ativo',
+                  erro: 'Falha ao preparar o acesso',
+                }[acessoStatus || ''] || 'Situação ainda não registrada'}
+              </p>
+              {acessoErro ? (
+                <p className="mt-1 text-xs font-semibold text-red-600">{acessoErro}</p>
+              ) : null}
+            </div>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h4 className="mb-1 text-sm font-bold uppercase tracking-widest text-slate-800">
@@ -197,7 +221,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                 </h4>
                 <p className="text-xs font-medium text-slate-500">
                   {email
-                    ? 'Envia a recuperação ao e-mail ou gera um link seguro de contingência.'
+                    ? 'Envia o convite de primeiro acesso ou, se a conta já existir, um link seguro de recuperação.'
                     : 'Gera um link seguro para o aluno sem e-mail criar a senha de acesso.'}
                 </p>
               </div>
@@ -208,7 +232,7 @@ const ParceiroAcesso: React.FC<ParceiroAcessoProps> = ({
                 className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#001a33] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-blue-900 disabled:opacity-60"
               >
                 {accessMutation.isPending && <Loader2 className="animate-spin" size={14} />}
-                {email ? 'Enviar recuperação' : 'Gerar link de acesso'}
+                {email ? 'Enviar acesso' : 'Gerar link de acesso'}
               </button>
             </div>
 

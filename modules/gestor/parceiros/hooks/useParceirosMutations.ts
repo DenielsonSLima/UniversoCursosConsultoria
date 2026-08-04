@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { parceirosService } from '../parceiros.service';
 import { parceirosQueryKeys } from '../parceiros.query-keys';
 import { portalActivationService } from '../portal-activation.service';
-import { TERMS_VERSION } from '../../../shared/constants/terms';
 import { buildAuthRedirectUrl } from '../../../../lib/app-url';
 
 interface ToastApi {
@@ -40,9 +39,11 @@ export const useParceirosMutations = ({
       parceirosService.create({
         ...data,
         tipo: 'Aluno',
-        aceitouTermosUso: true,
-        aceitouTermosUsoEm: new Date().toISOString(),
-        termosUsoVersao: TERMS_VERSION,
+        // O gestor cadastra o aluno, mas somente o próprio aluno pode aceitar
+        // os termos ao validar o convite e concluir o primeiro acesso.
+        aceitouTermosUso: false,
+        aceitouTermosUsoEm: null,
+        termosUsoVersao: null,
         trocaSenhaObrigatoria: true,
       }),
     onSuccess: async (created, data) => {
@@ -52,6 +53,7 @@ export const useParceirosMutations = ({
       let recoverySent = false;
       let lastMessage: string | null = null;
       let manualRecoveryLink: string | null = null;
+      let accessPreparationError: string | null = null;
 
       if (created?.id && !isExistingAluno) {
         const redirectTo = buildAuthRedirectUrl('/login');
@@ -68,10 +70,9 @@ export const useParceirosMutations = ({
           lastMessage = result.message || null;
           manualRecoveryLink = result.recoveryLink || null;
         } catch (error) {
-          toast.error(
-            'Aluno criado sem convite de acesso',
-            `Não foi possível enviar e-mail para definir a primeira senha: ${error instanceof Error ? error.message : 'Erro desconhecido.'}`
-          );
+          accessPreparationError = error instanceof Error
+            ? error.message
+            : 'Erro desconhecido.';
         }
       }
 
@@ -90,23 +91,28 @@ export const useParceirosMutations = ({
             'Aluno já cadastrado',
             `${created.nome} foi localizado. Para aparecer neste polo, vincule o aluno a uma turma deste polo.`,
           );
+        } else if (accessPreparationError) {
+          toast.error(
+            'Cadastro salvo, acesso pendente',
+            `O aluno foi cadastrado, mas o acesso não foi preparado: ${accessPreparationError} Abra a aba Acesso do aluno para tentar novamente.`,
+          );
         } else if (created?.email && inviteDispatched) {
           toast.success(
             'Aluno cadastrado!',
-            lastMessage || `${created.nome} foi registrado com sucesso e receberá e-mail para primeiro acesso.`,
+            lastMessage || `${created.nome} receberá um convite para confirmar o e-mail, aceitar os termos e criar a própria senha.`,
           );
         } else if (created?.email && recoverySent) {
-          toast.success('Aluno cadastrado!', `${created.nome} foi registrado com sucesso e enviamos o e-mail para definir a senha.`);
+          toast.success('Aluno cadastrado!', `${created.nome} já possuía uma conta. Enviamos um link seguro para definir a senha e concluir o acesso.`);
         } else if (manualRecoveryLink) {
           toast.success(
             'Aluno cadastrado!',
             `${created.nome}: ${lastMessage || 'Geramos um link de recuperação para primeiro acesso.'}`
-            + ' Abra a aba Acesso para copiar e enviar o link com segurança.',
+            + ' Abra a aba Acesso para gerar um novo link quando precisar enviá-lo.',
           );
         } else if (created?.email) {
           toast.success(
-            'Aluno cadastrado!',
-            `${created.nome} foi registrado com sucesso. Não foi possível enviar e-mail automático de primeiro acesso automaticamente; finalize pelo gestor se necessário.`,
+            'Cadastro salvo, acesso pendente',
+            `${created.nome} foi cadastrado, mas ainda precisa receber o convite. Abra a aba Acesso do aluno para reenviar.`,
           );
         } else {
           toast.success('Aluno cadastrado!', `${created.nome} foi registrado com sucesso.`);
@@ -173,21 +179,6 @@ export const useParceirosMutations = ({
     onError: (error: any) => toast.error('Erro ao excluir', error?.message || 'Não foi possível remover o registro.')
   });
 
-  const confirmEmailMutation = useMutation({
-    mutationFn: (partner: any) => portalActivationService.confirmPartnerEmail(partner.id),
-    onSuccess: (result, partner) => {
-      invalidatePartners();
-      toast.success(
-        'E-mail confirmado!',
-        result.message || `O e-mail de ${partner.nome} foi confirmado manualmente.`,
-      );
-    },
-    onError: (error: any) => toast.error(
-      'Não foi possível confirmar',
-      error?.message || 'Tente novamente em alguns instantes.',
-    ),
-  });
-
   return {
     saveAlunoMutation,
     saveProfessorMutation,
@@ -195,6 +186,5 @@ export const useParceirosMutations = ({
     savePJMutation,
     enrollAlunoMutation,
     deleteMutation,
-    confirmEmailMutation,
   };
 };
