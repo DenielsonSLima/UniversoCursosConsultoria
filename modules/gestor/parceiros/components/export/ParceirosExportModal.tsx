@@ -19,6 +19,10 @@ import {
   downloadBlob,
   normalizeParceirosForExport,
 } from './parceiros-export.utils';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../../shared/pdf/dom-to-selectable-pdf';
 
 interface ParceirosExportModalProps {
   isOpen: boolean;
@@ -35,58 +39,17 @@ interface ParceirosExportModalProps {
   };
 }
 
-const waitForImages = async (element: HTMLElement) => {
-  const images = Array.from(element.querySelectorAll('img'));
-  await Promise.all(images.map(async (image) => {
-    if (!image.complete) {
-      await new Promise<void>((resolve) => {
-        image.addEventListener('load', () => resolve(), { once: true });
-        image.addEventListener('error', () => resolve(), { once: true });
-      });
-    }
-    if (typeof image.decode === 'function') {
-      await image.decode().catch(() => undefined);
-    }
-  }));
-};
-
 const buildPdfFromElement = async (element: HTMLElement, fileName: string) => {
-  const [{ jsPDF }, html2canvasModule] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas'),
-  ]);
-  const html2canvas = html2canvasModule.default;
   const pages = Array.from(element.querySelectorAll<HTMLElement>('.partners-report-page'));
   if (pages.length === 0) throw new Error('Nenhuma página foi encontrada para exportação.');
-
-  await waitForImages(element);
-
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const page = pages[pageIndex];
-    const canvas = await html2canvas(page, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: page.scrollWidth,
-      windowHeight: page.scrollHeight,
-    });
-
-    if (pageIndex > 0) pdf.addPage('a4', 'portrait');
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', 0.94),
-      'JPEG',
-      0,
-      0,
-      210,
-      297,
-      undefined,
-      'FAST',
-    );
-  }
-
-  pdf.save(`${fileName}.pdf`);
+  const blob = await buildSelectablePdfBlobFromElements(pages, {
+    orientation: 'portrait',
+    artworkFormat: 'PNG',
+    artworkScale: 2,
+    title: 'Relatório de parceiros',
+    subject: 'Registros e filtros do cadastro de parceiros',
+  });
+  downloadPdfBlob(blob, `${fileName}.pdf`);
 };
 
 const ParceirosExportModal: React.FC<ParceirosExportModalProps> = ({
