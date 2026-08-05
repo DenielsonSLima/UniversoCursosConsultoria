@@ -30,6 +30,10 @@ import AlunoSupportAvailabilityCard from './AlunoSupportAvailabilityCard';
 import { useAlunoAppDeviceStatus } from '../native-app/native-app.queries';
 import { nativeAppService } from '../native-app/native-app.service';
 import { NATIVE_PUSH_PERMISSION_CHANGED_EVENT } from '../native-app/native-app.bridge';
+import {
+  NATIVE_AUDIO_CAPTURE_ACCEPT,
+  validateCapturedAudioFile,
+} from '../../shared/comunicacao/native-audio-file';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -79,6 +83,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nativeAudioInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
@@ -115,20 +120,47 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
     if (recorder && recorder.state !== 'inactive') recorder.stop();
   };
 
+  const selectPendingFile = (file: File | null) => {
+    if (!file) {
+      setPendingFile(null);
+      return;
+    }
+    const looksLikeAudio = file.type.toLowerCase().startsWith('audio/')
+      || /\.(?:m4a|mp4|mp3|mpeg|wav|ogg|oga|webm)$/i.test(file.name);
+    if (!looksLikeAudio) {
+      setPendingFile(file);
+      return;
+    }
+
+    const result = validateCapturedAudioFile(file, 25 * 1024 * 1024);
+    if (!result.file || result.error) {
+      toast.error('Áudio não aceito', result.error || 'Não foi possível usar o áudio selecionado.');
+      return;
+    }
+    setPendingFile(result.file);
+  };
+
+  const selectNativeAudioFile = (file: File | null) => {
+    if (!file) return;
+    selectPendingFile(file);
+  };
+
   const startRecording = async () => {
     if (recording || uploadingFile || pendingFile) return;
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      toast.error('Gravação indisponível', 'Este dispositivo não oferece suporte à gravação de áudio.');
+      nativeAudioInputRef.current?.click();
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordingStreamRef.current = stream;
       const Recorder = window.MediaRecorder;
       const preferredTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
-      const mimeType = preferredTypes.find((type) => Recorder.isTypeSupported(type));
+      const mimeType = typeof Recorder.isTypeSupported === 'function'
+        ? preferredTypes.find((type) => Recorder.isTypeSupported(type))
+        : undefined;
       const recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
-      recordingStreamRef.current = stream;
       recorderRef.current = recorder;
       recordingChunksRef.current = [];
 
@@ -493,6 +525,19 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
   return (
     <>
       <ToastNotification toasts={toasts} onRemove={removeToast} />
+      <input
+        ref={nativeAudioInputRef}
+        type="file"
+        accept={NATIVE_AUDIO_CAPTURE_ACCEPT}
+        capture
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          selectNativeAudioFile(event.target.files?.[0] || null);
+          event.target.value = '';
+        }}
+      />
 
       {isMobile ? (
         <AlunoMobileComunicacao
@@ -523,7 +568,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
           canOpenNewChat={canOpenNewChat}
           onBack={() => setMobileConversationOpen(false)}
           onDelete={() => setShowDeleteConfirm(true)}
-          onFileChange={setPendingFile}
+          onFileChange={selectPendingFile}
           onMessageChange={setMessageText}
           onRecord={handleRecord}
           onNewChat={() => canOpenNewChat && setShowNewChatModal(true)}
@@ -742,7 +787,7 @@ const ComunicacaoPage: React.FC<ComunicacaoPageProps> = ({ alunoId, alunoNome, o
                   recording={recording}
                   recordingSeconds={recordingSeconds}
                   uploading={uploadingFile}
-                  onFileChange={setPendingFile}
+                  onFileChange={selectPendingFile}
                   onMessageChange={setMessageText}
                   onRecord={handleRecord}
                   onSend={handleSendMessage}
