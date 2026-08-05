@@ -307,6 +307,6 @@ Deno.test('modal imprime o mesmo PDF agregado preparado, sem reemissão', async 
   assert.doesNotMatch(source, /reissue|reemitir|createEmission\(/i);
   assert.match(
     previewUtilsSource,
-    /assertPdfBlobReady\(blob, 'O PDF da emissão'\);\s+const objectUrl = URL\.createObjectURL\(blob\);/,
+    /assertPdfBlobReady\(blob, 'O PDF da emissão'\);\s+downloadPdfBlob\(blob, filename\);/,
   );
 });

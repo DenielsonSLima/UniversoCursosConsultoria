@@ -22,6 +22,10 @@ import SecretariaAlunoSearchCard from '../shared/SecretariaAlunoSearchCard';
 import { documentValidationPoliciesService } from '../../cadastros/modelos-documentos/validacao-documental/document-validation-policies.service';
 import { LocalQrCodeImage } from '../../../shared/qrcode/LocalQrCodeImage';
 import { waitForQrCodeAssets } from '../../../shared/qrcode/qr-code-assets';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../shared/pdf/dom-to-selectable-pdf';
 
 interface Aluno {
   id: string;
@@ -469,36 +473,20 @@ const SecretariaDeclaracaoMatriculaPage = ({
     setIsDownloading(true);
     let restoreImages = () => {};
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
       await waitForPrintAssets();
       restoreImages = await inlinePrintImages();
 
-      const pdf = new jsPDF({
+      const pdfBlob = await buildSelectablePdfBlobFromElements(pages, {
         orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        title: documentTitle,
+        subject: 'Declaração institucional emitida pela Secretaria',
       });
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const canvas = await html2canvas(pages[index], {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: false,
-        });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        if (index > 0) pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-        canvas.width = 0;
-        canvas.height = 0;
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      }
-
-      pdf.save(`${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`);
+      downloadPdfBlob(
+        pdfBlob,
+        `${fileSlug}-${new Date().toISOString().split('T')[0]}.pdf`,
+      );
     } catch (error) {
       console.error('Erro ao baixar declaração:', error);
       alert('Não foi possível gerar o PDF da declaração.');

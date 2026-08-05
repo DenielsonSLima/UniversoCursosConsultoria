@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.26",
+  "version": "2.2.3-beta.27",
   "type": "module",
   "engines": {
     "node": "24.x"
@@ -37,7 +37,8 @@
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
     "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",
     "ead:update-acs-vimeo": "node scripts/update-acs-vimeo-embed.mjs",
-    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs"
+    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs",
+    "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.3.0",

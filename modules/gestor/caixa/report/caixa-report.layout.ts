@@ -7,6 +7,12 @@ export interface CaixaReportPageDimensions {
 
 const OVERFLOW_TOLERANCE_PX = 2;
 
+export const getCaixaReportArtworkScale = (pageCount: number) => {
+  if (pageCount > 30) return 1;
+  if (pageCount > 15) return 1.25;
+  return 1.5;
+};
+
 export const isCaixaReportPageOverflowing = (
   page: CaixaReportPageDimensions,
 ) => (

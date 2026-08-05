@@ -50,7 +50,10 @@ const ReportWatermark: React.FC<ReportWatermarkProps> = ({ polo, orientation }) 
 
   if (!watermark.url) {
     return (
-      <div className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden opacity-[0.03]">
+      <div
+        data-pdf-raster-text="true"
+        className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden opacity-[0.03]"
+      >
         <h1 className="rotate-[-45deg] text-center text-6xl font-black tracking-widest text-slate-900">
           UNIVERSO CURSOS E CONSULTORIA
         </h1>
