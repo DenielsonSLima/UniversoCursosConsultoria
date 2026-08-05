@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Gift,
   UserRound,
   Loader2,
   Lock,
@@ -37,7 +36,6 @@ type Props = {
   confirmPassword: string;
   showSignupConfirmPassword: boolean;
   acceptedTerms: boolean;
-  relationshipBirthdayChoice: boolean | null;
   signupStep: 'dados' | 'endereco';
   cep: string;
   endereco: string;
@@ -63,7 +61,6 @@ type Props = {
   onConfirmPasswordChange: (value: string) => void;
   onToggleSignupConfirmPassword: () => void;
   onAcceptedTermsChange: (value: boolean) => void;
-  onRelationshipBirthdayChoiceChange: (value: boolean) => void;
   onCepChange: (value: string) => void;
   onEnderecoChange: (value: string) => void;
   onNumeroChange: (value: string) => void;
@@ -97,7 +94,6 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   confirmPassword,
   showSignupConfirmPassword,
   acceptedTerms,
-  relationshipBirthdayChoice,
   signupStep,
   cep,
   endereco,
@@ -123,7 +119,6 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   onConfirmPasswordChange,
   onToggleSignupConfirmPassword,
   onAcceptedTermsChange,
-  onRelationshipBirthdayChoiceChange,
   onCepChange,
   onEnderecoChange,
   onNumeroChange,
@@ -360,7 +355,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Senha</span>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type={showSignupPassword ? 'text' : 'password'} name="new-password" autoComplete="new-password" required value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Mínimo 6 caracteres e 1 maiúscula" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+            <input type={showSignupPassword ? 'text' : 'password'} name="new-password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => onPasswordChange(event.target.value)} placeholder="Mínimo 8 caracteres e 1 maiúscula" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
             <button type="button" onClick={onToggleSignupPassword} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600" aria-label={showSignupPassword ? 'Ocultar senha' : 'Mostrar senha'}>
               {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -369,7 +364,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
             <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${passwordChecks.score >= 3 ? 'bg-emerald-100 text-emerald-700' : passwordChecks.score === 2 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
               Nível: {passwordChecks.strength}
             </span>
-            <span className={passwordChecks.hasMinLength ? 'text-emerald-700' : 'text-slate-500'}>6+ caracteres</span>
+            <span className={passwordChecks.hasMinLength ? 'text-emerald-700' : 'text-slate-500'}>8+ caracteres</span>
             <span className={passwordChecks.hasUppercase ? 'text-emerald-700' : 'text-slate-500'}>1 letra maiúscula</span>
             <span className={passwordChecks.hasLowercase ? 'text-emerald-700' : 'text-slate-500'}>1 letra minúscula</span>
             <span className={passwordChecks.hasNumber ? 'text-emerald-700' : 'text-slate-500'}>1 número</span>
@@ -379,7 +374,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           <span className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-400">Confirmar senha</span>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type={showSignupConfirmPassword ? 'text' : 'password'} name="confirm-password" autoComplete="new-password" required minLength={6} value={confirmPassword} onChange={(event) => onConfirmPasswordChange(event.target.value)} placeholder="Repita sua senha" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
+            <input type={showSignupConfirmPassword ? 'text' : 'password'} name="confirm-password" autoComplete="new-password" required minLength={8} value={confirmPassword} onChange={(event) => onConfirmPasswordChange(event.target.value)} placeholder="Repita sua senha" className="aluno-auth-input h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-12 text-base font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" />
             <button type="button" onClick={onToggleSignupConfirmPassword} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600" aria-label={showSignupConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}>
               {showSignupConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -388,42 +383,11 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
         <label className="col-span-2 flex items-start gap-3">
           <input type="checkbox" checked={acceptedTerms} onChange={(event) => onAcceptedTermsChange(event.target.checked)} className="mt-1 h-4 w-4 accent-blue-700" />
           <span className="text-xs font-semibold text-slate-600 leading-relaxed">
-            Declaro que li e aceito os <a href="/termos" className="text-[#001a33] underline">Termos de Uso</a>{' '}
-            e autorizo o uso dos meus dados para operação do acesso ao ambiente acadêmico.
+            Declaro que li e aceito os <a href="/termos" className="text-[#001a33] underline">Termos de Uso</a> e estou
+            ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob
+            legítimo interesse, e podem ser desativadas a qualquer momento em Notificações.
           </span>
         </label>
-        <fieldset className="col-span-2 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-          <legend className="px-1 text-[10px] font-black uppercase tracking-widest text-blue-700">
-            Opcional: relacionamento
-          </legend>
-          <div className="flex items-start gap-3">
-            <Gift className="mt-0.5 shrink-0 text-pink-600" size={18} />
-            <p className="text-xs font-semibold leading-relaxed text-slate-600">
-              Deseja receber no app felicitações de aniversário e comunicados de relacionamento? Não inclui publicidade comercial nem solicita a permissão de notificações do aparelho agora.
-            </p>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Receber felicitações e comunicados de relacionamento">
-            {([
-              { value: true, label: 'Sim, quero' },
-              { value: false, label: 'Não quero' },
-            ] as const).map((option) => {
-              const selected = relationshipBirthdayChoice === option.value;
-              return (
-                <label key={String(option.value)} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-xs font-black transition ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-blue-100 bg-white text-slate-600 hover:border-blue-300'}`}>
-                  <input
-                    type="radio"
-                    name="relationship-birthday-choice"
-                    value={String(option.value)}
-                    checked={selected}
-                    onChange={() => onRelationshipBirthdayChoiceChange(option.value)}
-                    className="sr-only"
-                  />
-                  {option.label}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-800 sm:col-span-2">
           <CheckCircle2 className="mb-2 inline-block" size={16} /> Na próxima etapa, informe o endereço necessário para emissão do boleto.
         </div>
