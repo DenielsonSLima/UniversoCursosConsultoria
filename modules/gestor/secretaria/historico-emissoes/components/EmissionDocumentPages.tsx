@@ -126,13 +126,13 @@ const EmissionDocumentPages: React.FC<EmissionDocumentPagesProps> = ({
       || templateConfig.fields.some((field: any) => field?.type === 'qrcode');
     return (
       <div
-        className="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm print:shadow-none"
+        className="print-page mx-auto flex h-[297mm] min-h-[297mm] w-[210mm] flex-col items-center justify-center gap-[8mm] overflow-hidden border border-slate-200 bg-white p-[12mm] shadow-xl box-border print:shadow-none"
         data-requires-qr-code={
           validationPublic && hasQrCodeField ? 'true' : undefined
         }
       >
         {(['frente', 'verso'] as const).map((page) => (
-          <div key={page} className="print-page mt-4 rounded-2xl border border-slate-150 bg-white p-2 first:mt-0">
+          <div key={page} className="rounded-2xl border border-slate-150 bg-white p-2">
             <h5 className="mb-2 text-center text-[10px] font-bold uppercase text-slate-400 print:hidden">{page}</h5>
             <CrachaPreview
               formData={{
