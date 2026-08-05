@@ -25,6 +25,10 @@ import {
 import { fetchBaneseBoletoDocument } from '../shared/baneseBoletoDocument';
 import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
 import AlunoMobileFinanceSummary from './components/mobile/AlunoMobileFinanceSummary';
+import {
+  buildSelectablePdfBlobFromContinuousElement,
+  downloadPdfBlob,
+} from '../../shared/pdf/dom-to-selectable-pdf';
 
 const BanesePaymentPage = React.lazy(() => import('./banese/BanesePaymentPage'));
 
@@ -690,63 +694,19 @@ const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ alunoId }) => {
     setIsGeneratingReceiptPdf(true);
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 190;
-      const pageHeight = 277;
-      const ratio = imgWidth / canvas.width;
-      let remainingHeight = canvas.height;
-      const pagePixelHeight = pageHeight / ratio;
-      let position = 0;
-      let pageIndex = 0;
-
-      while (remainingHeight > 0) {
-        const sliceHeight = Math.min(pagePixelHeight, remainingHeight);
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeight;
-        const ctx = sliceCanvas.getContext('2d');
-
-        if (!ctx) {
-          throw new Error('Não foi possível preparar o canvas do recibo.');
-        }
-
-        ctx.drawImage(
-          canvas,
-          0,
-          position,
-          canvas.width,
-          sliceHeight,
-          0,
-          0,
-          canvas.width,
-          sliceHeight
-        );
-
-        const sliceData = sliceCanvas.toDataURL('image/png');
-        const sliceHeightMm = sliceHeight * ratio;
-
-        if (pageIndex > 0) {
-          pdf.addPage();
-        }
-
-        pdf.addImage(sliceData, 'PNG', 10, 10, imgWidth, sliceHeightMm);
-        remainingHeight -= sliceHeight;
-        position += sliceHeight;
-        pageIndex += 1;
-      }
-
       const fileName = `recibo-${String(selectedReceipt.id || '').slice(0, 8).toUpperCase() || 'PAGO'}-${new Date().toISOString().slice(0, 10)}.pdf`;
-      pdf.save(fileName);
+      const pdfBlob = await buildSelectablePdfBlobFromContinuousElement(receiptRef.current, {
+        orientation: 'portrait',
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        marginTopMm: 10,
+        marginRightMm: 10,
+        marginBottomMm: 10,
+        marginLeftMm: 10,
+        title: 'Recibo de pagamento',
+        subject: 'Comprovante financeiro do aluno',
+      });
+      downloadPdfBlob(pdfBlob, fileName);
       setNotice('Recibo baixado com sucesso.');
       setTimeout(() => setNotice(originalNotice), 2000);
     } catch {
