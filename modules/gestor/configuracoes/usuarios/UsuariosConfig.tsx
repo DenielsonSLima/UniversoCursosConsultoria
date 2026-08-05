@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AccessGroupCard from './components/AccessGroupCard';
 import UsersList from './components/UsersList';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,32 +8,70 @@ import { RefreshCw } from 'lucide-react';
 import { usuariosKeys } from './usuarios.keys';
 import { useUsuariosCountsQuery, useUsuariosPolosQuery } from './hooks/useUsuariosConfigQueries';
 
+let usuariosConfigRealtimeInstance = 0;
+
 const UsuariosConfig: React.FC = () => {
   const [selectedContext, setSelectedContext] = useState<{id: string, title: string} | null>(null);
+  const selectedContextRef = useRef(selectedContext);
+  const channelNameRef = useRef<string>();
   const queryClient = useQueryClient();
+
+  if (!channelNameRef.current) {
+    usuariosConfigRealtimeInstance += 1;
+    channelNameRef.current = `usuarios-config-realtime-v2-${usuariosConfigRealtimeInstance}`;
+  }
 
   const { data: polos = [], isLoading: isLoadingPolos } = useUsuariosPolosQuery();
   const { data: userCounts = {}, isLoading: isLoadingUsers } = useUsuariosCountsQuery();
 
   useEffect(() => {
+    selectedContextRef.current = selectedContext;
+  }, [selectedContext]);
+
+  useEffect(() => {
+    let active = true;
     const channel = supabase
-      .channel('usuarios_config_realtime')
+      .channel(channelNameRef.current as string)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'usuarios_sistema' },
         () => {
-          queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
-          if (selectedContext) {
-            queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(selectedContext.id) });
+          if (!active) return;
+          void queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
+          if (selectedContextRef.current) {
+            void queryClient.invalidateQueries({
+              queryKey: usuariosKeys.byContext(selectedContextRef.current.id),
+            });
           }
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'polos' },
+        () => {
+          if (!active) return;
+          void queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
+        },
+      )
+      .subscribe((status) => {
+        if (!active || status !== 'SUBSCRIBED') return;
+
+        // Postgres Changes não reproduz eventos perdidos durante a troca de
+        // conexão. Reconciliar ao assinar mantém o cache canônico atualizado.
+        void queryClient.invalidateQueries({ queryKey: usuariosKeys.polos() });
+        void queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
+        if (selectedContextRef.current) {
+          void queryClient.invalidateQueries({
+            queryKey: usuariosKeys.byContext(selectedContextRef.current.id),
+          });
+        }
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      void supabase.removeChannel(channel);
     };
-  }, [queryClient, selectedContext]);
+  }, [queryClient]);
 
   if (selectedContext) {
     return (
