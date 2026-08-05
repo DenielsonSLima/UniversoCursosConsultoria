@@ -1,32 +1,27 @@
-import { assertCaixaReportPagesFit } from './caixa-report.layout';
+import {
+  assertCaixaReportPagesFit,
+  getCaixaReportArtworkPreset,
+} from './caixa-report.layout';
+import { createSelectablePdfBuilder } from '../../../shared/pdf/dom-to-selectable-pdf';
 
-const settleWithin = async (promise: Promise<unknown>, timeoutMs = 5_000) => {
-  await Promise.race([
-    promise.catch(() => undefined),
-    new Promise<void>((resolve) => {
-      window.setTimeout(resolve, timeoutMs);
-    }),
-  ]);
-};
+const waitForExportLayout = () => new Promise<void>((resolve) => {
+  window.requestAnimationFrame(() => resolve());
+});
 
-const waitForImages = async (element: HTMLElement) => {
-  const images = Array.from(element.querySelectorAll('img'));
-  await Promise.all(images.map(async (image) => {
-    if (!image.complete) {
-      await settleWithin(new Promise<void>((resolve) => {
-        image.addEventListener('load', () => resolve(), { once: true });
-        image.addEventListener('error', () => resolve(), { once: true });
-      }));
-    }
-    if (typeof image.decode === 'function') {
-      await settleWithin(image.decode());
-    }
-  }));
-};
+export const CAIXA_REPORT_TEXT_LAYER_MODE = 'preserve-artwork-text' as const;
 
-const waitForDocumentFonts = async () => {
-  if (typeof document === 'undefined' || !document.fonts?.ready) return;
-  await settleWithin(document.fonts.ready);
+const createCaixaPdfExportHost = () => {
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.position = 'fixed';
+  host.style.inset = '0 auto auto 0';
+  host.style.zIndex = '-2147483648';
+  host.style.width = '297mm';
+  host.style.height = '210mm';
+  host.style.overflow = 'visible';
+  host.style.pointerEvents = 'none';
+  document.body.appendChild(host);
+  return host;
 };
 
 export const buildCaixaReportFileName = (
@@ -43,62 +38,55 @@ export const buildCaixaReportFileName = (
   return `prestacao-caixa-${year}-${month}-${safeScope || 'resultado-geral'}.pdf`;
 };
 
+export const getCaixaReportPdfErrorMessage = (error: unknown) => {
+  const detail = error instanceof Error ? error.message : '';
+  if (/imagem|decodificada/i.test(detail)) {
+    return 'A logo ou a marca d’água não pôde ser carregada para o PDF. Reabra a prévia e tente novamente.';
+  }
+  if (/fonte/i.test(detail)) {
+    return 'As fontes do relatório não terminaram de carregar. Reabra a prévia e tente novamente.';
+  }
+  if (/excede|ultrapassa|proporção A4|layout/i.test(detail)) {
+    return 'Um conteúdo do relatório ultrapassou a área segura da página. Revise a prévia antes de baixar.';
+  }
+  if (/canvas|memory|memória|allocation|out of memory/i.test(detail)) {
+    return 'O navegador ficou sem memória para concluir o PDF. Feche outras abas e tente novamente.';
+  }
+  return 'Não foi possível gerar o PDF. Reabra a prévia e tente novamente.';
+};
+
 export const buildCaixaReportPdf = async (
   element: HTMLElement,
   onProgress?: (current: number, total: number) => void,
 ) => {
-  const [{ jsPDF }, html2canvasModule] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas'),
-  ]);
-  const html2canvas = html2canvasModule.default;
   const pages = Array.from(element.querySelectorAll<HTMLElement>('.caixa-report-page'));
   if (pages.length === 0) throw new Error('Nenhuma página do relatório foi encontrada.');
 
-  await waitForImages(element);
-  await waitForDocumentFonts();
   assertCaixaReportPagesFit(pages);
-
-  const pdf = new jsPDF({
+  const artworkPreset = getCaixaReportArtworkPreset(pages.length);
+  const documentOptions = {
     orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4',
-    compress: true,
-  });
+    // A arte visível preserva exatamente a prévia (incluindo Inter, logo e marca-d'água).
+    // Uma segunda camada invisível mantém seleção, busca e cópia no PDF.
+    ...artworkPreset,
+    textLayerMode: CAIXA_REPORT_TEXT_LAYER_MODE,
+    title: 'Prestação de contas mensal do Caixa',
+    subject: 'Posição contábil e movimentos financeiros confirmados',
+    onProgress,
+  } as const;
+  const builder = await createSelectablePdfBuilder(documentOptions);
+  const exportHost = createCaixaPdfExportHost();
 
-  for (let index = 0; index < pages.length; index += 1) {
-    const page = pages[index];
-    onProgress?.(index + 1, pages.length);
-    const canvas = await html2canvas(page, {
-      scale: 1.5,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: page.scrollWidth,
-      windowHeight: page.scrollHeight,
-    });
-
-    const sourceRatio = canvas.width / canvas.height;
-    const pageRatio = 297 / 210;
-    const imageWidth = sourceRatio >= pageRatio ? 297 : 210 * sourceRatio;
-    const imageHeight = sourceRatio >= pageRatio ? 297 / sourceRatio : 210;
-    const imageX = (297 - imageWidth) / 2;
-    const imageY = (210 - imageHeight) / 2;
-
-    if (index > 0) pdf.addPage('a4', 'landscape');
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', 0.94),
-      'JPEG',
-      imageX,
-      imageY,
-      imageWidth,
-      imageHeight,
-      undefined,
-      'FAST',
-    );
-    canvas.width = 1;
-    canvas.height = 1;
+  try {
+    for (let index = 0; index < pages.length; index += 1) {
+      const pageClone = pages[index].cloneNode(true) as HTMLElement;
+      exportHost.replaceChildren(pageClone);
+      await waitForExportLayout();
+      onProgress?.(index + 1, pages.length);
+      await builder.addPage(pageClone, documentOptions);
+    }
+    return builder.outputBlob();
+  } finally {
+    exportHost.remove();
   }
-
-  return pdf.output('blob');
 };

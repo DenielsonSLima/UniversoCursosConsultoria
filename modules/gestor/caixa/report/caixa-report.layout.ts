@@ -7,6 +7,19 @@ export interface CaixaReportPageDimensions {
 
 const OVERFLOW_TOLERANCE_PX = 2;
 
+export const getCaixaReportArtworkPreset = (pageCount: number) => {
+  if (pageCount > 30) {
+    return { artworkFormat: 'JPEG', artworkQuality: 0.96, artworkScale: 1 } as const;
+  }
+  if (pageCount > 15) {
+    return { artworkFormat: 'JPEG', artworkQuality: 0.97, artworkScale: 1.5 } as const;
+  }
+  if (pageCount > 8) {
+    return { artworkFormat: 'PNG', artworkScale: 2 } as const;
+  }
+  return { artworkFormat: 'PNG', artworkScale: 2.5 } as const;
+};
+
 export const isCaixaReportPageOverflowing = (
   page: CaixaReportPageDimensions,
 ) => (

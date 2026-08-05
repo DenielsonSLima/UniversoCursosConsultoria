@@ -18,6 +18,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 - iOS e Android passam a usar a captura/seleção nativa de áudio quando a WebView não oferece `MediaRecorder`, normalizando M4A, MP3 e WAV antes do envio.
 - O iOS passa a declarar o uso do microfone para liberar a gravação de mensagens de voz; o Android mantém as permissões no manifesto do novo pacote.
 - O boletim deixa de abrir o visualizador legado e passa a usar o visualizador oficial dos demais documentos, com Download PDF, impressão, paginação e campos configurados.
+- A prestação de contas do Caixa deixa de ser um PDF somente em imagem: preserva fielmente a prévia, a logo e a marca-d’água em PNG sem perdas nos relatórios usuais, acrescenta texto selecionável, pesquisável e copiável e adapta a resolução apenas em relatórios extensos, com processamento página a página para evitar falhas no Safari.
 
 ### Alterado
 
@@ -26,7 +27,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 
 ### Qualidade
 
-- O hotfix inclui contratos para vínculo Auth/aluno, criação de gestor, resiliência do chat, permissões nativas, visualizador oficial do boletim, ordem de assinatura Realtime e preferências de relacionamento.
+- O hotfix inclui contratos para vínculo Auth/aluno, criação de gestor, resiliência do chat, permissões nativas, PDFs selecionáveis, visualizador oficial do boletim, ordem de assinatura Realtime e preferências de relacionamento.
 
 ## [2.2.3-beta.26] - 2026-08-04
 

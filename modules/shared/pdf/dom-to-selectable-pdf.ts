@@ -1,9 +1,10 @@
-/* global DOMRect, HTMLCanvasElement */
+/* global CSSStyleDeclaration, DOMRect, HTMLCanvasElement */
 
 import type { jsPDF } from 'jspdf';
 
 export type PdfPageOrientation = 'portrait' | 'landscape';
 export type PdfArtworkFormat = 'PNG' | 'JPEG';
+export type PdfTextLayerMode = 'replace-artwork-text' | 'preserve-artwork-text';
 
 export interface SelectablePdfPageOptions {
   orientation?: PdfPageOrientation;
@@ -11,6 +12,13 @@ export interface SelectablePdfPageOptions {
   artworkFormat?: PdfArtworkFormat;
   artworkQuality?: number;
   backgroundColor?: string;
+  /**
+   * `replace-artwork-text` removes compatible text from the captured artwork
+   * and redraws it visibly with jsPDF. `preserve-artwork-text` keeps the exact
+   * browser rendering in the artwork and adds an invisible PDF text layer for
+   * selection, search and copy.
+   */
+  textLayerMode?: PdfTextLayerMode;
   prepareClone?: (clonedDocument: Document, clonedElement: HTMLElement) => void;
 }
 
@@ -63,6 +71,7 @@ interface DrawTextOptions {
   offsetYmm?: number;
   clipTopPx?: number;
   clipBottomPx?: number;
+  invisible?: boolean;
 }
 
 export interface SelectablePdfBuilder {
@@ -84,6 +93,7 @@ const A4 = {
 const DEFAULT_ARTWORK_SCALE = 2;
 const DEFAULT_BACKGROUND_COLOR = '#ffffff';
 const ASSET_TIMEOUT_MS = 15_000;
+const TEXT_MARKER_LAYOUT_TOLERANCE_PX = 2;
 
 let dependenciesPromise: Promise<LoadedPdfDependencies> | null = null;
 
@@ -158,10 +168,16 @@ const waitForCssImage = async (source: string) => {
   image.src = sourceUrl.href;
   await waitWithin(loaded, 'Uma imagem de fundo obrigatória do documento não pôde ser carregada.');
   if (typeof image.decode === 'function') {
-    await waitWithin(
-      image.decode(),
-      'Uma imagem de fundo obrigatória do documento não pôde ser decodificada.',
-    );
+    try {
+      await waitWithin(
+        image.decode(),
+        'Uma imagem de fundo obrigatória do documento não pôde ser decodificada.',
+      );
+    } catch (error) {
+      // Safari/WebKit pode rejeitar decode() mesmo depois de concluir a imagem.
+      // Dimensões naturais válidas comprovam que o canvas consegue consumi-la.
+      if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) throw error;
+    }
   }
   if (image.naturalWidth <= 0 || image.naturalHeight <= 0) {
     throw new Error('Uma imagem de fundo obrigatória do documento não pôde ser carregada.');
@@ -181,13 +197,18 @@ const waitForPdfFonts = async (element: HTMLElement) => {
     const style = window.getComputedStyle(current);
     fontRequests.add(`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`);
   });
+  // `document.fonts.ready` já aguarda as faces efetivamente usadas. Alguns
+  // WebViews rejeitam FontFaceSet.load() para pilhas com system-ui, embora o
+  // fallback calculado esteja pronto e visível. O aquecimento abaixo é, por
+  // isso, deliberadamente best effort.
   await Promise.all([...fontRequests].map(async (font) => {
-    await waitWithin(
-      document.fonts.load(font, 'Universo 0123456789'),
-      'Uma fonte obrigatória do documento não pôde ser carregada.',
-    );
-    if (!document.fonts.check(font, 'Universo 0123456789')) {
-      throw new Error('Uma fonte obrigatória do documento não pôde ser carregada.');
+    try {
+      await waitWithin(
+        document.fonts.load(font, 'Universo 0123456789'),
+        'Uma fonte obrigatória do documento não pôde ser carregada.',
+      );
+    } catch {
+      // A fonte calculada/fallback já foi estabilizada por document.fonts.ready.
     }
   }));
 };
@@ -202,10 +223,15 @@ export const waitForSelectablePdfAssets = async (element: HTMLElement) => {
       }), 'Uma imagem obrigatória do documento não pôde ser carregada.');
     }
     if (typeof image.decode === 'function') {
-      await waitWithin(
-        image.decode(),
-        'Uma imagem obrigatória do documento não pôde ser decodificada.',
-      );
+      try {
+        await waitWithin(
+          image.decode(),
+          'Uma imagem obrigatória do documento não pôde ser decodificada.',
+        );
+      } catch (error) {
+        // WebKit pode rejeitar decode() para data URLs ou imagens já exibidas.
+        if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) throw error;
+      }
     }
     if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
       throw new Error('Uma imagem obrigatória do documento não pôde ser carregada.');
@@ -245,10 +271,10 @@ const installOriginalTextMarkers = (textNodes: Text[]) => {
     afterRange.selectNodeContents(textNode);
     const afterRect = afterRange.getBoundingClientRect();
     afterRange.detach();
-    return Math.abs(beforeRect.left - afterRect.left) > 0.5
-      || Math.abs(beforeRect.top - afterRect.top) > 0.5
-      || Math.abs(beforeRect.width - afterRect.width) > 0.5
-      || Math.abs(beforeRect.height - afterRect.height) > 0.5;
+    return Math.abs(beforeRect.left - afterRect.left) > TEXT_MARKER_LAYOUT_TOLERANCE_PX
+      || Math.abs(beforeRect.top - afterRect.top) > TEXT_MARKER_LAYOUT_TOLERANCE_PX
+      || Math.abs(beforeRect.width - afterRect.width) > TEXT_MARKER_LAYOUT_TOLERANCE_PX
+      || Math.abs(beforeRect.height - afterRect.height) > TEXT_MARKER_LAYOUT_TOLERANCE_PX;
   });
 
   if (shiftedMarker) {
@@ -312,7 +338,9 @@ const captureArtwork = async (
         Math.ceil(rect.height),
       ),
       onclone: (clonedDocument, clonedElement) => {
-        hideMarkedCloneText(clonedElement);
+        if ((options.textLayerMode ?? 'replace-artwork-text') === 'replace-artwork-text') {
+          hideMarkedCloneText(clonedElement);
+        }
         options.prepareClone?.(clonedDocument, clonedElement);
       },
     });
@@ -390,6 +418,17 @@ const getCumulativeOpacity = (element: HTMLElement, root: HTMLElement) => {
   return Math.max(0, Math.min(1, opacity));
 };
 
+const isFullyVisuallyClipped = (style: CSSStyleDeclaration) => {
+  const normalizedLegacyClip = (style.clip || '').replace(/\s+/g, '').toLowerCase();
+  const hasZeroLegacyClip = /^rect\(0(?:px)?,0(?:px)?,0(?:px)?,0(?:px)?\)$/.test(
+    normalizedLegacyClip,
+  );
+  const normalizedClipPath = (style.clipPath || '').replace(/\s+/g, '').toLowerCase();
+  const hasFullInsetClip = normalizedClipPath === 'inset(50%)'
+    || normalizedClipPath === 'inset(50%50%50%50%)';
+  return hasZeroLegacyClip || hasFullInsetClip;
+};
+
 const isElementVisible = (element: HTMLElement, root: HTMLElement) => {
   let current: HTMLElement | null = element;
   while (current) {
@@ -399,6 +438,9 @@ const isElementVisible = (element: HTMLElement, root: HTMLElement) => {
       || style.visibility === 'hidden'
       || style.visibility === 'collapse'
       || Number.parseFloat(style.opacity) === 0
+      // Conteúdo de acessibilidade (`sr-only`) fica em uma caixa 1x1 totalmente
+      // recortada e não pertence à arte visível nem à camada textual do PDF.
+      || isFullyVisuallyClipped(style)
     ) return false;
     if (current === root) break;
     current = current.parentElement;
@@ -431,6 +473,13 @@ const assertNoClippedText = (root: HTMLElement) => {
           || (clipsY && (textRect.top < clipRect.top - 1 || textRect.bottom > clipRect.bottom + 1))
         ));
         if (clipped) {
+          const allowsIntentionalClipping = current.dataset.pdfAllowClippedText === 'true'
+            || style.textOverflow === 'ellipsis';
+          if (allowsIntentionalClipping) {
+            if (current === root) break;
+            current = current.parentElement;
+            continue;
+          }
           range.detach();
           throw new Error('Um campo de texto ultrapassa sua área segura e seria cortado no PDF.');
         }
@@ -643,6 +692,7 @@ const drawTextRuns = (
     pdf.text(text, x, y, {
       baseline: 'top',
       horizontalScale,
+      renderingMode: options.invisible ? 'invisible' : 'fill',
       flags: { noBOM: false, autoencode: true },
     });
     if (opacity < 0.999) pdf.restoreGraphicsState();
@@ -738,21 +788,25 @@ class BrowserSelectablePdfBuilder implements SelectablePdfBuilder {
       resolvedOptions,
       textLayerPlan.vectorTextNodes,
     );
-    addArtworkToPage(
-      this.pdf,
-      artwork,
-      pageSize.width,
-      pageSize.height,
-      resolvedOptions,
-    );
-    drawTextRuns(this.pdf, textLayerPlan.runs, {
-      scaleX: pageSize.width / pageRect.width,
-      scaleY: pageSize.height / pageRect.height,
-      clipTopPx: 0,
-      clipBottomPx: pageRect.height,
-    });
-    artwork.width = 1;
-    artwork.height = 1;
+    try {
+      addArtworkToPage(
+        this.pdf,
+        artwork,
+        pageSize.width,
+        pageSize.height,
+        resolvedOptions,
+      );
+      drawTextRuns(this.pdf, textLayerPlan.runs, {
+        scaleX: pageSize.width / pageRect.width,
+        scaleY: pageSize.height / pageRect.height,
+        clipTopPx: 0,
+        clipBottomPx: pageRect.height,
+        invisible: resolvedOptions.textLayerMode === 'preserve-artwork-text',
+      });
+    } finally {
+      artwork.width = 1;
+      artwork.height = 1;
+    }
     this.addedPages += 1;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
@@ -882,59 +936,66 @@ export const buildSelectablePdfBlobFromContinuousElement = async (
   const captureScaleY = artwork.height / rect.height;
   const pdf = createPdf(dependencies, orientation, options);
 
-  for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
-    const { startPx, endPx } = pageSlices[pageIndex];
-    const sliceHeightPx = endPx - startPx;
-    const sourceY = Math.round(startPx * captureScaleY);
-    const sourceEnd = Math.round(endPx * captureScaleY);
-    const sourceHeight = Math.max(1, Math.min(
-      artwork.height - sourceY,
-      sourceEnd - sourceY,
-    ));
-    const sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = artwork.width;
-    sliceCanvas.height = sourceHeight;
-    const context = sliceCanvas.getContext('2d');
-    if (!context) throw new Error('Não foi possível preparar a página do PDF.');
-    context.drawImage(
-      artwork,
-      0,
-      sourceY,
-      artwork.width,
-      sourceHeight,
-      0,
-      0,
-      artwork.width,
-      sourceHeight,
-    );
+  try {
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
+      const { startPx, endPx } = pageSlices[pageIndex];
+      const sliceHeightPx = endPx - startPx;
+      const sourceY = Math.round(startPx * captureScaleY);
+      const sourceEnd = Math.round(endPx * captureScaleY);
+      const sourceHeight = Math.max(1, Math.min(
+        artwork.height - sourceY,
+        sourceEnd - sourceY,
+      ));
+      const sliceCanvas = document.createElement('canvas');
+      try {
+        sliceCanvas.width = artwork.width;
+        sliceCanvas.height = sourceHeight;
+        const context = sliceCanvas.getContext('2d');
+        if (!context) throw new Error('Não foi possível preparar a página do PDF.');
+        context.drawImage(
+          artwork,
+          0,
+          sourceY,
+          artwork.width,
+          sourceHeight,
+          0,
+          0,
+          artwork.width,
+          sourceHeight,
+        );
 
-    if (pageIndex > 0) pdf.addPage('a4', orientation);
-    options.onProgress?.(pageIndex + 1, totalPages);
-    addArtworkToPage(
-      pdf,
-      sliceCanvas,
-      contentWidthMm,
-      sliceHeightPx * scaleMmPerPx,
-      options,
-      marginLeftMm,
-      marginTopMm,
-    );
-    drawTextRuns(pdf, textLayerPlan.runs, {
-      scaleX: scaleMmPerPx,
-      scaleY: scaleMmPerPx,
-      offsetXmm: marginLeftMm,
-      offsetYmm: marginTopMm,
-      clipTopPx: startPx,
-      clipBottomPx: endPx,
-    });
-    sliceCanvas.width = 1;
-    sliceCanvas.height = 1;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (pageIndex > 0) pdf.addPage('a4', orientation);
+        options.onProgress?.(pageIndex + 1, totalPages);
+        addArtworkToPage(
+          pdf,
+          sliceCanvas,
+          contentWidthMm,
+          sliceHeightPx * scaleMmPerPx,
+          options,
+          marginLeftMm,
+          marginTopMm,
+        );
+        drawTextRuns(pdf, textLayerPlan.runs, {
+          scaleX: scaleMmPerPx,
+          scaleY: scaleMmPerPx,
+          offsetXmm: marginLeftMm,
+          offsetYmm: marginTopMm,
+          clipTopPx: startPx,
+          clipBottomPx: endPx,
+          invisible: options.textLayerMode === 'preserve-artwork-text',
+        });
+      } finally {
+        sliceCanvas.width = 1;
+        sliceCanvas.height = 1;
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+
+    return pdf.output('blob');
+  } finally {
+    artwork.width = 1;
+    artwork.height = 1;
   }
-
-  artwork.width = 1;
-  artwork.height = 1;
-  return pdf.output('blob');
 };
 
 export const downloadPdfBlob = (blob: Blob, fileName: string) => {
