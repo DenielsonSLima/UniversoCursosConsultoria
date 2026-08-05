@@ -473,5 +473,8 @@ verify_jwt = true
 [functions.portal-auth]
 verify_jwt = false
 
+[functions.public-student-support]
+verify_jwt = false
+
 [functions.push-notification-dispatcher]
 verify_jwt = false
