@@ -95,8 +95,22 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
               <label className="text-xs font-bold text-slate-500 uppercase ml-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="password" name="senha" value={formData.senha} onChange={onChange} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all" placeholder="••••••••" />
+                <input
+                  type="password"
+                  name="senha"
+                  value={formData.senha}
+                  onChange={onChange}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  aria-describedby="gestor-password-requirements"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[#001a33] focus:border-blue-500 outline-none transition-all"
+                  placeholder="••••••••"
+                />
               </div>
+              <p id="gestor-password-requirements" className="px-1 text-[10px] font-semibold text-slate-500">
+                Use 8 ou mais caracteres, com letra maiúscula, minúscula e número.
+              </p>
               {formData.senha && (
                 <div className="flex items-center gap-2 mt-2 px-1">
                   <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -110,7 +124,17 @@ const UserIdentitySections: React.FC<UserIdentitySectionsProps> = ({
               <label className="text-xs font-bold text-slate-500 uppercase ml-1">Confirmar Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="password" name="confirmarSenha" value={formData.confirmarSenha} onChange={onChange} className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl text-[#001a33] outline-none transition-all ${formData.confirmarSenha && formData.senha !== formData.confirmarSenha ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'}`} placeholder="••••••••" />
+                <input
+                  type="password"
+                  name="confirmarSenha"
+                  value={formData.confirmarSenha}
+                  onChange={onChange}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl text-[#001a33] outline-none transition-all ${formData.confirmarSenha && formData.senha !== formData.confirmarSenha ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-blue-500'}`}
+                  placeholder="••••••••"
+                />
               </div>
               {formData.confirmarSenha && formData.senha !== formData.confirmarSenha && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">As senhas não conferem</p>}
             </div>
