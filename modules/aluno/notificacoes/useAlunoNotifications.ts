@@ -198,17 +198,17 @@ export const useAlunoNotificationDetail = (
   };
 };
 
-export const useAlunoPushMarketingPreference = (alunoId: string) => {
+export const useAlunoRelationshipBirthdayPreference = (alunoId: string) => {
   const queryClient = useQueryClient();
-  const key = alunoNotificationKeys.marketingPreference(alunoId);
+  const key = alunoNotificationKeys.relationshipPreference(alunoId);
   const preferenceQuery = useQuery({
     queryKey: key,
-    queryFn: alunoNotificationService.getMarketingPreference,
+    queryFn: alunoNotificationService.getRelationshipPreference,
     enabled: Boolean(alunoId),
     staleTime: 5 * 60_000,
   });
   const updateMutation = useMutation({
-    mutationFn: alunoNotificationService.updateMarketingPreference,
+    mutationFn: alunoNotificationService.updateRelationshipPreference,
     onSuccess: (preference) => {
       queryClient.setQueryData(key, preference);
     },
@@ -218,6 +218,7 @@ export const useAlunoPushMarketingPreference = (alunoId: string) => {
     preference: preferenceQuery.data || null,
     loading: preferenceQuery.isLoading,
     error: preferenceQuery.error || updateMutation.error,
+    refetch: preferenceQuery.refetch,
     updating: updateMutation.isPending,
     update: updateMutation.mutateAsync,
   };
