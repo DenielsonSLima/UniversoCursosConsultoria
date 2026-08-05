@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Download, Loader2, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { LibraryDocument } from '../biblioteca.types';
 import FilePreviewContent from './file-preview/FilePreviewContent';
 import LibraryFileIcon from './file-preview/LibraryFileIcon';
@@ -24,20 +24,16 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
   document: file
 }) => {
   const backButtonRef = useRef<React.ElementRef<'button'>>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const [renderAllPdfPages, setRenderAllPdfPages] = useState(false);
-  const [pdfReady, setPdfReady] = useState(false);
-  const [pdfLoadFailed, setPdfLoadFailed] = useState(false);
-  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
   const normalizedUrl = `${file?.url || ''}`.trim();
   const canDownload = isPublicHttpUrl(normalizedUrl);
   const previewKind = file
     ? resolvePreviewKind(file.fileType, file.title, normalizedUrl)
     : 'OTHER';
   const canPrint = canDownload
-    && (previewKind === 'PDF' || previewKind === 'IMG')
-    && !(previewKind === 'PDF' && pdfLoadFailed);
+    && (previewKind === 'PDF' || previewKind === 'IMG');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,32 +55,55 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    setRenderAllPdfPages(false);
-    setPdfReady(false);
-    setPdfLoadFailed(false);
-    setIsPreparingPrint(false);
-  }, [file?.id, isOpen]);
-
-  useEffect(() => {
-    if (!isPreparingPrint || !pdfReady) return;
-    const timeoutId = window.setTimeout(() => {
-      window.print();
-      setIsPreparingPrint(false);
-    }, 120);
-    return () => window.clearTimeout(timeoutId);
-  }, [isPreparingPrint, pdfReady]);
-
   if (!isOpen || !file || typeof window === 'undefined') return null;
 
   const handlePrint = () => {
-    if (!canPrint || isPreparingPrint) return;
-    if (previewKind === 'PDF' && !pdfReady) {
-      setRenderAllPdfPages(true);
-      setIsPreparingPrint(true);
+    if (!canPrint) return;
+    if (previewKind === 'PDF') {
+      const pdfWindow = window.open('', '_blank');
+      if (!pdfWindow) {
+        window.alert('Permita a abertura de pop-ups para imprimir este PDF.');
+        return;
+      }
+      pdfWindow.opener = null;
+      pdfWindow.location.replace(normalizedUrl);
+      pdfWindow.focus();
       return;
     }
     window.print();
+  };
+
+  const handleDownload = async () => {
+    if (!canDownload || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(normalizedUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (blob.size < 1) throw new Error('Arquivo vazio');
+
+      const sourcePath = new URL(normalizedUrl).pathname;
+      const sourceExtension = sourcePath.match(/\.[a-z0-9]{2,8}$/i)?.[0] || '';
+      const title = file.title.trim() || 'documento';
+      const fileName = /\.[a-z0-9]{2,8}$/i.test(title) ? title : `${title}${sourceExtension}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = window.document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      anchor.style.display = 'none';
+      window.document.body.appendChild(anchor);
+      try {
+        anchor.click();
+      } finally {
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      }
+    } catch (error) {
+      console.error('Não foi possível baixar o documento da biblioteca:', error);
+      window.alert('O servidor do arquivo não autorizou o download direto. Tente novamente ou solicite o arquivo à secretaria.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return createPortal(
@@ -124,13 +143,10 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
-          <a
-            href={canDownload ? normalizedUrl : undefined}
-            download={canDownload ? file.title : undefined}
-            aria-disabled={!canDownload}
-            onClick={(event) => {
-              if (!canDownload) event.preventDefault();
-            }}
+          <button
+            type="button"
+            disabled={!canDownload || isDownloading}
+            onClick={handleDownload}
             className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all sm:px-5 sm:py-3 sm:text-xs ${
               canDownload
                 ? 'border-white/15 bg-white/10 text-white hover:bg-white/20'
@@ -138,37 +154,28 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
             }`}
           >
             <Download size={16} />
-            <span>Baixar</span>
-          </a>
+            <span>{isDownloading ? 'Baixando...' : 'Baixar'}</span>
+          </button>
           <button
             type="button"
             onClick={handlePrint}
-            disabled={!canPrint || isPreparingPrint}
+            disabled={!canPrint}
             className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg shadow-blue-950/30 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40 sm:px-6 sm:py-3 sm:text-xs"
             title={canPrint
-              ? isPreparingPrint ? 'Preparando todas as páginas' : 'Imprimir documento'
+              ? previewKind === 'PDF'
+                ? 'Abrir o PDF original para impressão'
+                : 'Imprimir documento'
               : 'Impressão disponível para PDF e imagens'
             }
           >
-            {isPreparingPrint
-              ? <Loader2 size={16} className="animate-spin" />
-              : <Printer size={16} />
-            }
-            <span>{isPreparingPrint ? 'Preparando...' : 'Imprimir'}</span>
+            <Printer size={16} />
+            <span>{previewKind === 'PDF' ? 'Abrir e imprimir' : 'Imprimir'}</span>
           </button>
         </div>
       </header>
 
       <main className="library-preview-content min-h-0 flex-1 overflow-auto bg-slate-900 custom-scrollbar">
-        <FilePreviewContent
-          file={file}
-          renderAllPdfPages={renderAllPdfPages}
-          onPdfReadyChange={setPdfReady}
-          onPdfError={() => {
-            setPdfLoadFailed(true);
-            setIsPreparingPrint(false);
-          }}
-        />
+        <FilePreviewContent file={file} />
       </main>
 
       <style>{`
@@ -194,20 +201,11 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({
             overflow: visible !important;
             background: white !important;
           }
-          #library-preview-modal .pdf-preview-page {
-            width: 210mm !important;
-            min-height: 297mm !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            page-break-after: always !important;
-            page-break-inside: avoid !important;
-          }
           #library-preview-modal .library-image-preview {
             min-height: 297mm !important;
             padding: 0 !important;
             background: white !important;
           }
-          #library-preview-modal canvas,
           #library-preview-modal img {
             max-width: 100% !important;
           }
