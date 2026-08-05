@@ -4,6 +4,10 @@ import { Download, FileText, Loader2, Printer, X } from 'lucide-react';
 import DocumentHeader from '../../components/DocumentHeader';
 import { empresasService } from '../../configuracoes/empresas/empresas.service';
 import { polosService } from '../../configuracoes/polos/polos.service';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../shared/pdf/dom-to-selectable-pdf';
 
 export type FinancialReportTone = 'emerald' | 'rose' | 'blue' | 'slate' | 'amber';
 
@@ -139,48 +143,18 @@ const paginateRows = (rows: FinancialReportRow[]) => {
 };
 
 const buildPdfFromElement = async (element: HTMLElement, fileName: string) => {
-  const [{ jsPDF }, html2canvasModule] = await Promise.all([
-    import('jspdf'),
-    import('html2canvas'),
-  ]);
-  const html2canvas = html2canvasModule.default;
   const pageElements = Array.from(
     element.querySelectorAll<HTMLElement>('.financeiro-report-page'),
   );
   const pages = pageElements.length > 0 ? pageElements : [element];
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidthMm = 210;
-  const pageHeightMm = 297;
-
-  for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
-    const page = pages[pageIndex];
-    const previousBoxShadow = page.style.boxShadow;
-    let canvas: any;
-    try {
-      page.style.boxShadow = 'none';
-      canvas = await html2canvas(page, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        windowWidth: page.scrollWidth,
-        windowHeight: page.scrollHeight,
-      });
-    } finally {
-      page.style.boxShadow = previousBoxShadow;
-    }
-
-    if (pageIndex > 0) pdf.addPage('a4', 'portrait');
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', 0.94),
-      'JPEG',
-      0,
-      0,
-      pageWidthMm,
-      pageHeightMm,
-    );
-  }
-
-  pdf.save(`${safeFileName(fileName)}.pdf`);
+  const blob = await buildSelectablePdfBlobFromElements(pages, {
+    orientation: 'portrait',
+    artworkFormat: 'PNG',
+    artworkScale: 2,
+    title: fileName,
+    subject: 'Relatório financeiro institucional',
+  });
+  downloadPdfBlob(blob, `${safeFileName(fileName)}.pdf`);
 };
 
 export const FinancialReportStatusBadge: React.FC<{ status: string; label?: string }> = ({ status, label }) => {
@@ -212,18 +186,27 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const emittedAt = useMemo(formatDateTime, []);
   const resolvedPoloId = poloId || currentSessionPoloId();
   const toneStyle = toneStyles[tone];
 
-  const { data: fetchedCompany } = useQuery({
+  const {
+    data: fetchedCompany,
+    error: companyLoadError,
+    isLoading: isCompanyLoading,
+  } = useQuery({
     queryKey: ['financeiro-report-company-principal'],
     queryFn: () => empresasService.getCompanyPrincipal(),
     staleTime: 60_000,
     enabled: !company,
   });
 
-  const { data: fetchedPolo } = useQuery({
+  const {
+    data: fetchedPolo,
+    error: poloLoadError,
+    isLoading: isPoloLoading,
+  } = useQuery({
     queryKey: ['financeiro-report-polo', resolvedPoloId],
     queryFn: () => resolvedPoloId ? polosService.getById(resolvedPoloId) : Promise.resolve(null),
     staleTime: 60_000,
@@ -233,14 +216,33 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
 
   const reportCompany = company || fetchedCompany;
   const reportPolo = polo || fetchedPolo;
+  const reportAssetsLoading = (!company && isCompanyLoading)
+    || (!polo && Boolean(resolvedPoloId) && isPoloLoading);
+  const reportAssetsError = (!company && companyLoadError)
+    || (!polo && Boolean(resolvedPoloId) && poloLoadError);
+  const reportErrorMessage = reportAssetsError
+    ? 'Não foi possível carregar a identidade visual do relatório. Atualize a página e tente novamente.'
+    : downloadError;
   const paginatedRows = useMemo(() => paginateRows(rows), [rows]);
 
   const handleDownload = async () => {
     const element = reportRef.current;
-    if (!element) return;
+    if (!element || reportAssetsLoading) return;
+    if (reportAssetsError) {
+      setDownloadError('Não foi possível carregar a identidade visual do relatório. Atualize a página e tente novamente.');
+      return;
+    }
     setDownloading(true);
+    setDownloadError(null);
     try {
       await buildPdfFromElement(element, fileName);
+    } catch (error) {
+      console.error('Erro ao exportar relatório financeiro:', error);
+      setDownloadError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível gerar o PDF. Confira os dados do relatório e tente novamente.',
+      );
     } finally {
       setDownloading(false);
     }
@@ -292,12 +294,21 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
             <p className="text-xs font-bold text-slate-400">
               {rows.length} {recordLabel} em {paginatedRows.length} página(s)
             </p>
+            {reportAssetsLoading && (
+              <p className="mt-1 text-xs font-bold text-blue-600">Carregando identidade visual...</p>
+            )}
+            {reportErrorMessage && (
+              <p className="mt-1 max-w-2xl text-xs font-bold text-rose-600" role="alert">
+                {reportErrorMessage}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+              disabled={reportAssetsLoading || Boolean(reportAssetsError)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer size={15} />
               Imprimir
@@ -305,7 +316,7 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
             <button
               type="button"
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || reportAssetsLoading || Boolean(reportAssetsError)}
               className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider disabled:opacity-60 ${toneStyle.button}`}
             >
               {downloading ? <Loader2 className="animate-spin" size={15} /> : <Download size={15} />}
@@ -354,7 +365,10 @@ const FinancialReportPreviewModal: React.FC<FinancialReportPreviewModalProps> = 
                         />
                       </div>
                     ) : (
-                      <div className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden opacity-[0.03]">
+                      <div
+                        data-pdf-raster-text="true"
+                        className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center overflow-hidden opacity-[0.03]"
+                      >
                         <h1 className="rotate-[-45deg] text-center text-6xl font-black tracking-widest text-slate-900">
                           UNIVERSO CURSOS E CONSULTORIA
                         </h1>
