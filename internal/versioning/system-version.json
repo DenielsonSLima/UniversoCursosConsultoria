@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.26",
+  "version": "2.2.3-beta.27",
   "display": "BETA",
   "stage": "beta",
-  "revision": 26,
-  "releasedAt": "2026-08-04",
-  "summary": "Aplicativo móvel, notificações ricas e consentimento de relacionamento revisados"
+  "revision": 27,
+  "releasedAt": "2026-08-05",
+  "summary": "Cadastro de alunos e usuários corrigido, com preferências de relacionamento integradas aos termos"
 }
