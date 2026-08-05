@@ -14,11 +14,18 @@ import { getPortalProfile } from '../../login/portal-session';
 import { TERMS_VERSION } from '../../shared/constants/terms';
 import { isValidCpf, isValidEmail, normalizeEmail } from '../../shared/utils/identityValidation';
 import { isPublicAlunoOlderThanTen } from './aluno-birth-date';
-import { relationshipConsentService } from './relationship-consent.service';
+import { relationshipPreferenceService } from './relationship-consent.service';
 import {
+  RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+  RELATIONSHIP_BIRTHDAY_LIA_VERSION,
   RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
-  type RelationshipConsentSurface,
+  type RelationshipPreferenceSurface,
 } from '../../shared/constants/relationship-consent';
+
+type PublicSignupRelationshipSurface = Extract<
+  RelationshipPreferenceSurface,
+  'public_signup_web' | 'public_signup_app'
+>;
 
 export interface PublicAlunoSignupData {
   nome: string;
@@ -28,11 +35,6 @@ export interface PublicAlunoSignupData {
   dataNascimento: string;
   password: string;
   acceptedTerms: boolean;
-  relationshipBirthdayConsent: boolean;
-  relationshipBirthdayConsentSurface: Extract<
-    RelationshipConsentSurface,
-    'public_signup_web' | 'public_signup_app'
-  >;
   cep: string;
   endereco: string;
   numero: string;
@@ -51,11 +53,11 @@ interface FinalizeAlunoFirstAccessData {
   acceptTermsVersion?: string;
   setPassword?: boolean;
   newPassword?: string;
-  relationshipBirthdayConsent?: boolean;
-  relationshipPreferenceDecided?: boolean;
 }
 
-type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'>;
+type PublicAlunoProfileData = Omit<PublicAlunoSignupData, 'password' | 'redirectPath' | 'appFlow'> & {
+  relationshipBirthdayPreferenceSurface?: PublicSignupRelationshipSurface;
+};
 type LegacyPublicAlunoProfileData = Omit<
   PublicAlunoProfileData,
   | 'cep'
@@ -66,8 +68,6 @@ type LegacyPublicAlunoProfileData = Omit<
   | 'cidade'
   | 'uf'
   | 'turnstileToken'
-  | 'relationshipBirthdayConsent'
-  | 'relationshipBirthdayConsentSurface'
 > & Partial<Pick<
   PublicAlunoProfileData,
   | 'cep'
@@ -77,8 +77,7 @@ type LegacyPublicAlunoProfileData = Omit<
   | 'bairro'
   | 'cidade'
   | 'uf'
-  | 'relationshipBirthdayConsent'
-  | 'relationshipBirthdayConsentSurface'
+  | 'relationshipBirthdayPreferenceSurface'
 >>;
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
@@ -99,7 +98,7 @@ export const getSafePublicAlunoRedirectPath = (value?: string | null, fallback =
 };
 
 const isStrongPassword = (value: string) => (
-  value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
+  value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
 
 const getFriendlySignupError = (message: string) => {
@@ -108,7 +107,7 @@ const getFriendlySignupError = (message: string) => {
     return 'Este e-mail já possui acesso. Entre com sua senha para continuar a compra.';
   }
   if (lower.includes('password')) {
-    return 'A senha precisa ter pelo menos 6 caracteres.';
+    return 'A senha precisa ter pelo menos 8 caracteres.';
   }
   if (lower.includes('duplicate') || lower.includes('cpf_cnpj')) {
     return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
@@ -120,7 +119,14 @@ const getFriendlySignupError = (message: string) => {
   ) {
     return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
   }
-  return message;
+  if (
+    lower.includes('unexpected failure')
+    || lower.includes('check server logs')
+    || lower.includes('database error saving new user')
+  ) {
+    return 'Não foi possível concluir o cadastro agora. Tente novamente em instantes; se o problema continuar, fale com a secretaria.';
+  }
+  return message || 'Não foi possível concluir o cadastro. Tente novamente.';
 };
 
 const assertPublicAlunoCpfAvailable = async (
@@ -200,6 +206,19 @@ const getFriendlyAuthRedirectError = (message: string) => {
   return decoded || 'Não foi possível concluir a confirmação do e-mail. Tente entrar novamente.';
 };
 
+const ensureRelationshipTermsDefault = async (
+  surface: 'public_signup_web' | 'public_signup_app' | 'student_first_access',
+) => {
+  try {
+    await relationshipPreferenceService.ensureTermsDefault(surface);
+  } catch (error) {
+    // O trigger transacional do banco é a autoridade. Uma indisponibilidade
+    // deste reforço autenticado não pode transformar um cadastro já concluído
+    // em uma falsa falha para o aluno.
+    console.warn('Não foi possível reconfirmar a preferência de relacionamento.', error);
+  }
+};
+
 const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => {
   const email = normalizeEmail(data.email);
   const nome = data.nome.trim().toLocaleUpperCase('pt-BR');
@@ -250,17 +269,11 @@ const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => 
     throw new Error('Cadastro criado, mas não foi possível iniciar a sessão do aluno.');
   }
 
-  // O trigger do Auth preserva a escolha mesmo quando há confirmação de
-  // e-mail. Esta chamada autenticada cobre cadastro já existente/fallback e é
-  // idempotente quando o trigger já registrou a mesma decisão.
-  if (
-    typeof data.relationshipBirthdayConsent === 'boolean'
-    && data.relationshipBirthdayConsentSurface
-  ) {
-    await relationshipConsentService.registerPreference(
-      data.relationshipBirthdayConsent,
-      data.relationshipBirthdayConsentSurface,
-    );
+  // O trigger do banco cria esta preferência no aceite dos Termos, inclusive
+  // quando a confirmação de e-mail adia a primeira sessão. A garantia
+  // autenticada cobre cadastros já existentes e nunca sobrescreve um opt-out.
+  if (data.acceptedTerms && data.relationshipBirthdayPreferenceSurface) {
+    await ensureRelationshipTermsDefault(data.relationshipBirthdayPreferenceSurface);
   }
 
   return profile;
@@ -288,15 +301,15 @@ const finalizePublicSignupFromMetadata = async () => {
     bairro: String(metadata.bairro || ''),
     cidade: String(metadata.cidade || ''),
     uf: String(metadata.uf || ''),
-    relationshipBirthdayConsent:
-      typeof metadata.relationshipBirthdayConsent === 'boolean'
-        ? metadata.relationshipBirthdayConsent
-        : undefined,
-    relationshipBirthdayConsentSurface:
-      metadata.relationshipBirthdayConsentSurface === 'public_signup_app'
+    relationshipBirthdayPreferenceSurface:
+      metadata.relationshipBirthdayPreferenceSurface === 'public_signup_app'
         ? 'public_signup_app'
-        : metadata.relationshipBirthdayConsentSurface === 'public_signup_web'
+        : metadata.relationshipBirthdayPreferenceSurface === 'public_signup_web'
           ? 'public_signup_web'
+          : metadata.relationshipBirthdayConsentSurface === 'public_signup_app'
+            ? 'public_signup_app'
+            : metadata.relationshipBirthdayConsentSurface === 'public_signup_web'
+              ? 'public_signup_web'
           : undefined,
   });
 };
@@ -403,8 +416,9 @@ export const alunoPublicAuthService = {
     const cpf = onlyDigits(data.cpf);
     const dataNascimento = data.dataNascimento.trim();
     const acceptedTerms = data.acceptedTerms;
-    const relationshipBirthdayConsent = data.relationshipBirthdayConsent;
-    const relationshipBirthdayConsentSurface = data.relationshipBirthdayConsentSurface;
+    const relationshipBirthdayPreferenceSurface: PublicSignupRelationshipSurface = data.appFlow
+      ? 'public_signup_app'
+      : 'public_signup_web';
     const cep = onlyDigits(data.cep);
     const endereco = data.endereco.trim().toLocaleUpperCase('pt-BR');
     const numero = data.numero.trim().toLocaleUpperCase('pt-BR');
@@ -437,7 +451,7 @@ export const alunoPublicAuthService = {
     }
 
     if (!isStrongPassword(data.password)) {
-      throw new Error('A senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
+      throw new Error('A senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
     }
 
     if (!dataNascimento) {
@@ -466,8 +480,7 @@ export const alunoPublicAuthService = {
       cpf,
       dataNascimento,
       acceptedTerms,
-      relationshipBirthdayConsent,
-      relationshipBirthdayConsentSurface,
+      relationshipBirthdayPreferenceSurface,
       cep,
       endereco,
       numero,
@@ -493,10 +506,13 @@ export const alunoPublicAuthService = {
           dataNascimento,
           acceptedTerms,
           termsVersion: TERMS_VERSION,
-          relationshipBirthdayChoiceMade: true,
-          relationshipBirthdayConsent,
+          relationshipBirthdayDefaultEnabled: true,
+          relationshipBirthdayLegalBasis: RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+          relationshipBirthdayActivationReason: 'terms_acceptance',
           relationshipBirthdayPolicyVersion: RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
-          relationshipBirthdayConsentSurface,
+          relationshipBirthdayLiaVersion: RELATIONSHIP_BIRTHDAY_LIA_VERSION,
+          relationshipBirthdayPreferenceSurface,
+          relationshipBirthdayIncludesCommercialAdvertising: false,
           cep,
           endereco,
           numero,
@@ -542,20 +558,8 @@ export const alunoPublicAuthService = {
     acceptTermsVersion = TERMS_VERSION,
     setPassword = false,
     newPassword,
-    relationshipBirthdayConsent,
-    relationshipPreferenceDecided = true,
   }: FinalizeAlunoFirstAccessData) {
     const updates: Record<string, any> = {};
-
-    if (!relationshipPreferenceDecided) {
-      if (typeof relationshipBirthdayConsent !== 'boolean') {
-        throw new Error('Escolha se deseja ou não receber felicitações e comunicados de relacionamento.');
-      }
-      await relationshipConsentService.registerPreference(
-        relationshipBirthdayConsent,
-        'student_first_access',
-      );
-    }
 
     if (acceptedTerms) {
       updates.aceitou_termos_uso = true;
@@ -569,7 +573,7 @@ export const alunoPublicAuthService = {
       }
 
       if (!isStrongPassword(newPassword)) {
-        throw new Error('A nova senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
+        throw new Error('A nova senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.');
       }
 
       const passwordUpdateError = await loginService.updatePassword(newPassword);
@@ -582,12 +586,19 @@ export const alunoPublicAuthService = {
     }
 
     if (Object.keys(updates).length === 0) {
+      if (acceptedTerms) {
+        await ensureRelationshipTermsDefault('student_first_access');
+      }
       return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
     }
 
     const { error } = await supabase.from('parceiros').update(updates).eq('id', partnerId);
     if (error) {
       throw new Error(getFriendlySignupError(error.message));
+    }
+
+    if (acceptedTerms) {
+      await ensureRelationshipTermsDefault('student_first_access');
     }
 
     return getPortalProfile({ preferredRole: 'Aluno', allowedRoles: ['Aluno'] });
