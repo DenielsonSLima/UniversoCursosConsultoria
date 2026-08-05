@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import {
   alunoPublicAuthService,
   getSafePublicAlunoRedirectPath,
+  isPublicAlunoAlreadyRegisteredError,
 } from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
@@ -389,9 +390,11 @@ const AlunoLoginPublicPage: React.FC = () => {
       }
       await finishAuth(result.profile || undefined);
     } catch (error) {
+      const existingAccount = isPublicAlunoAlreadyRegisteredError(error);
       setMessage({
         tone: 'error',
         text: error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.',
+        action: existingAccount ? 'existing-account' : undefined,
       });
     } finally {
       setLoading(false);
@@ -473,6 +476,10 @@ const AlunoLoginPublicPage: React.FC = () => {
             passwordChecks={passwordChecks}
             recoveryHref={`${alunoAppBasePath}/recuperar-senha`}
             onModeChange={switchMode}
+            onExistingAccountLogin={() => {
+              setLoginIdentifier(email);
+              switchMode('login');
+            }}
             onLoginIdentifierChange={setLoginIdentifier}
             onLoginPasswordChange={setLoginPassword}
             onToggleLoginPassword={() => setShowLoginPassword((prev) => !prev)}
