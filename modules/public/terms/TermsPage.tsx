@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { TERMS_EFFECTIVE_DATE, TERMS_VERSION } from '../../shared/constants/terms';
 
 const TermsPage: React.FC = () => {
   useEffect(() => {
@@ -19,6 +20,9 @@ const TermsPage: React.FC = () => {
           </h1>
           <p className="text-blue-100 max-w-2xl mx-auto">
             Regras e condições para utilização dos nossos serviços.
+          </p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-widest text-blue-200">
+            Versão {TERMS_VERSION} · vigente desde {TERMS_EFFECTIVE_DATE}
           </p>
         </div>
       </div>
@@ -47,14 +51,29 @@ const TermsPage: React.FC = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">4. Propriedade Intelectual</h2>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">4. Privacidade, relacionamento e aniversários</h2>
+            <div className="space-y-3">
+              <p>
+                Os dados necessários à conta, matrícula, segurança, atendimento e prestação dos serviços educacionais são tratados conforme as bases legais aplicáveis e com acesso restrito à finalidade informada.
+              </p>
+              <p>
+                Ao aceitar estes Termos, os comunicados não comerciais de relacionamento e as felicitações de aniversário no aplicativo ficam ativos por padrão. Esse tratamento é registrado com base no legítimo interesse, nos termos do art. 7º, IX, da LGPD, com finalidade limitada ao vínculo institucional e sujeito a medidas de necessidade, transparência e balanceamento.
+              </p>
+              <p>
+                Essa preferência não autoriza publicidade comercial, campanhas promocionais ou perfilamento. Ela pode ser desativada e reativada a qualquer momento na Central de Notificações, sem afetar matrícula, acesso, atendimento ou conteúdo acadêmico. A permissão de notificações do aparelho é uma escolha técnica separada.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">5. Propriedade Intelectual</h2>
             <p>
               Todo o conteúdo didático, logotipos, marcas e materiais disponibilizados são propriedade exclusiva da Universo Cursos e Consultoria ou de seus licenciadores, sendo protegidos por leis de direitos autorais.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">5. Modificações</h2>
+            <h2 className="text-xl font-bold text-[#001a33] mb-4 uppercase tracking-tight">6. Modificações</h2>
             <p>
               A Universo Cursos e Consultoria pode revisar estes termos de serviço a qualquer momento, sem aviso prévio. Ao usar este site, você concorda em ficar vinculado à versão atual desses termos de serviço.
             </p>
