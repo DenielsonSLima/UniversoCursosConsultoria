@@ -48,6 +48,7 @@ type Props = {
   passwordChecks: PasswordChecks;
   recoveryHref?: string;
   onModeChange: (mode: AuthMode) => void;
+  onExistingAccountLogin: () => void;
   onLoginIdentifierChange: (value: string) => void;
   onLoginPasswordChange: (value: string) => void;
   onToggleLoginPassword: () => void;
@@ -106,6 +107,7 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
   passwordChecks,
   recoveryHref = '/recuperar-senha',
   onModeChange,
+  onExistingAccountLogin,
   onLoginIdentifierChange,
   onLoginPasswordChange,
   onToggleLoginPassword,
@@ -199,7 +201,24 @@ const AlunoLoginAuthCard: React.FC<Props> = ({
           ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
           : 'border-red-100 bg-red-50 text-red-700'
       }`}>
-        {message.text}
+        <p>{message.text}</p>
+        {message.action === 'existing-account' ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onExistingAccountLogin}
+              className="rounded-xl bg-blue-600 px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-blue-700"
+            >
+              Entrar
+            </button>
+            <a
+              href={recoveryHref}
+              className="rounded-xl border border-red-200 bg-white px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-red-700 transition hover:border-blue-200 hover:text-blue-700"
+            >
+              Recuperar senha
+            </a>
+          </div>
+        ) : null}
       </div>
     )}
 
