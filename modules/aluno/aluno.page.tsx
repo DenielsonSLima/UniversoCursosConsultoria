@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useLocation, useNavigate } from 'react-router';
 import ConfirmModal from '../shared/components/ConfirmModal';
 import { useInactivityLogout } from '../shared/hooks/useInactivityLogout';
@@ -12,6 +13,7 @@ import AlunoAppSplash from './pwa/AlunoAppSplash';
 import AlunoNativeAppDeviceRuntime from './native-app/AlunoNativeAppDeviceRuntime';
 import { nativeAppService } from './native-app/native-app.service';
 import { useAlunoUnreadNotifications } from './notificacoes/useAlunoNotifications';
+import { getAlunoLogoutPath } from './aluno-logout-route';
 
 // Cada área é carregada apenas quando o aluno a acessa, reduzindo o peso inicial no celular.
 const InicioPage = lazy(() => import('./inicio/InicioPage'));
@@ -55,7 +57,9 @@ const AlunoModuleLoading = () => (
 const AlunoPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const executeLogout = usePortalLogout({ loginPath: '/aluno/login-app' });
+  const executeLogout = usePortalLogout({
+    loginPath: getAlunoLogoutPath(Capacitor.isNativePlatform()),
+  });
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const [activeModule, setActiveModule] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
