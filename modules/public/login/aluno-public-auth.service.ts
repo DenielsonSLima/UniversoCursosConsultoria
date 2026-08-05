@@ -47,6 +47,37 @@ export interface PublicAlunoSignupData {
   appFlow?: boolean;
 }
 
+export const PUBLIC_ALUNO_ALREADY_REGISTERED_CODE = 'public_aluno_already_registered' as const;
+export const PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE =
+  'Usuário já cadastrado. Entre com o e-mail informado no cadastro ou use Recuperar senha para acessar sua conta.';
+export const PUBLIC_ALUNO_CONFIRMATION_RESENT_MESSAGE =
+  'Usuário já cadastrado. Enviamos um novo link de confirmação para o e-mail informado. Você também pode Entrar ou usar Recuperar senha.';
+
+export class PublicAlunoAlreadyRegisteredError extends Error {
+  readonly code = PUBLIC_ALUNO_ALREADY_REGISTERED_CODE;
+  readonly confirmationResent: boolean;
+
+  constructor(confirmationResent = false) {
+    super(confirmationResent
+      ? PUBLIC_ALUNO_CONFIRMATION_RESENT_MESSAGE
+      : PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE);
+    this.name = 'PublicAlunoAlreadyRegisteredError';
+    this.confirmationResent = confirmationResent;
+  }
+}
+
+export const isPublicAlunoAlreadyRegisteredError = (
+  error: unknown,
+): error is PublicAlunoAlreadyRegisteredError => (
+  error instanceof PublicAlunoAlreadyRegisteredError
+  || (
+    typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === PUBLIC_ALUNO_ALREADY_REGISTERED_CODE
+  )
+);
+
 interface FinalizeAlunoFirstAccessData {
   partnerId: string;
   acceptedTerms: boolean;
@@ -101,23 +132,24 @@ const isStrongPassword = (value: string) => (
   value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
 
-const getFriendlySignupError = (message: string) => {
+const isAlreadyRegisteredSignupMessage = (message: string) => {
   const lower = message.toLowerCase();
-  if (lower.includes('already registered') || lower.includes('user already')) {
-    return 'Este e-mail já possui acesso. Entre com sua senha para continuar a compra.';
-  }
-  if (lower.includes('password')) {
-    return 'A senha precisa ter pelo menos 8 caracteres.';
-  }
-  if (lower.includes('duplicate') || lower.includes('cpf_cnpj')) {
-    return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
-  }
-  if (
-    lower.includes('public_aluno_cpf_unique')
+  return (
+    lower.includes('already registered')
+    || lower.includes('user already')
+    || lower.includes('duplicate')
+    || lower.includes('cpf_cnpj')
+    || lower.includes('public_aluno_cpf_unique')
     || lower.includes('cpf ja esta cadastrado')
     || lower.includes('cpf já está cadastrado')
-  ) {
-    return 'Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.';
+  );
+};
+
+const getFriendlySignupError = (message: string) => {
+  const lower = message.toLowerCase();
+  if (isAlreadyRegisteredSignupMessage(message)) return PUBLIC_ALUNO_ALREADY_REGISTERED_MESSAGE;
+  if (lower.includes('password')) {
+    return 'A senha precisa ter pelo menos 8 caracteres.';
   }
   if (
     lower.includes('unexpected failure')
@@ -161,7 +193,7 @@ const assertPublicAlunoCpfAvailable = async (
   }
 
   if (context?.status === 409 || code === 'cpf_already_registered') {
-    throw new Error('Este CPF já está cadastrado. Entre com seu e-mail ou fale com a secretaria.');
+    throw new PublicAlunoAlreadyRegisteredError();
   }
   if (context?.status === 403 || code === 'challenge_failed') {
     throw new Error('A verificação de segurança expirou ou falhou. Tente verificá-la novamente.');
@@ -261,6 +293,9 @@ const finalizePublicAlunoSignup = async (data: LegacyPublicAlunoProfileData) => 
     : await supabase.rpc('finalizar_cadastro_publico_aluno', baseRpcPayload);
 
   if (error) {
+    if (isAlreadyRegisteredSignupMessage(error.message)) {
+      throw new PublicAlunoAlreadyRegisteredError();
+    }
     throw new Error(getFriendlySignupError(error.message));
   }
 
@@ -438,6 +473,40 @@ export const alunoPublicAuthService = {
       redirect: postConfirmationPath,
     }).toString()}`;
 
+    const recoverExistingSignup = async () => {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: data.password,
+      });
+      if (!signInError) {
+        try {
+          const profile = await finalizeSignup();
+          return { profile, emailConfirmationRequired: false };
+        } catch (finalizeError) {
+          // A senha comprovou a conta, mas ela só pode permanecer autenticada
+          // depois que o vínculo canônico confirmar um perfil de Aluno.
+          try {
+            const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+            if (signOutError) console.warn('Não foi possível limpar a sessão local após falha do cadastro.', signOutError);
+          } catch (signOutError) {
+            console.warn('Não foi possível limpar a sessão local após falha do cadastro.', signOutError);
+          }
+          throw finalizeError;
+        }
+      }
+
+      // Para cadastros que chegaram ao Auth, mas falharam antes do vínculo do
+      // aluno, o reenvio recupera a confirmação sem revelar se o e-mail existe.
+      // O Auth aplica seu próprio cooldown; o Turnstile já foi validado no
+      // preflight portal-auth que identificou o CPF existente.
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: buildAuthRedirectUrl(confirmationPath) },
+      });
+      throw new PublicAlunoAlreadyRegisteredError(!resendError);
+    };
+
     if (!isValidEmail(email)) {
       throw new Error('Informe um e-mail válido. Ele será usado como login do aluno.');
     }
@@ -490,7 +559,14 @@ export const alunoPublicAuthService = {
       uf,
     });
 
-    await assertPublicAlunoCpfAvailable(cpf, email, data.turnstileToken);
+    try {
+      await assertPublicAlunoCpfAvailable(cpf, email, data.turnstileToken);
+    } catch (error) {
+      if (isPublicAlunoAlreadyRegisteredError(error)) {
+        return recoverExistingSignup();
+      }
+      throw error;
+    }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -526,22 +602,14 @@ export const alunoPublicAuthService = {
 
     if (authError) {
       if (isExistingUserError(authError.message)) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
-        if (signInError) throw new Error(getFriendlySignupError(authError.message));
-
-        const profile = await finalizeSignup();
-        return { profile, emailConfirmationRequired: false };
+        return recoverExistingSignup();
       }
       throw new Error(getFriendlySignupError(authError.message));
     }
 
     const identities = (authData.user as any)?.identities;
     if (Array.isArray(identities) && identities.length === 0) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: data.password });
-      if (signInError) throw new Error('Este e-mail já possui acesso. Entre com sua senha para continuar a compra.');
-
-      const profile = await finalizeSignup();
-      return { profile, emailConfirmationRequired: false };
+      return recoverExistingSignup();
     }
 
     if (!authData.session) {
