@@ -128,7 +128,10 @@ export const usuariosService = {
       throw new Error(data.error);
     }
 
-    return normalizeUser(data?.user || data);
+    return {
+      ...normalizeUser(data?.user || data),
+      access_message: typeof data?.message === 'string' ? data.message : undefined,
+    };
   },
 
   /**
