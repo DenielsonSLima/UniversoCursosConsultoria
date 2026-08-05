@@ -41,8 +41,13 @@ export interface AlunoNotificationPage {
   nextCursor: AlunoNotificationCursor | null;
 }
 
-export interface AlunoPushMarketingPreference {
+export interface AlunoRelationshipBirthdayPreference {
+  configured: boolean;
   allowed: boolean;
   updatedAt: string | null;
   policyVersion: string;
+  legalBasis: 'legitimo_interesse';
+  activationReason: string | null;
+  includesCommercialAdvertising: false;
+  canOptOut: true;
 }
