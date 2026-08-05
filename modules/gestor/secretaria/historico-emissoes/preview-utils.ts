@@ -1,4 +1,10 @@
 import { formatMatricula } from '../../../../lib/academicUtils';
+import {
+  buildSelectablePdfBlobFromElements,
+  createSelectablePdfBuilder,
+  downloadPdfBlob,
+  type PdfPageOrientation,
+} from '../../../shared/pdf/dom-to-selectable-pdf';
 import { waitForDocumentAssets } from '../../../shared/qrcode/document-assets';
 import { assertPdfBlobReady } from '../shared/pdf-blob-print';
 import type { EmissionLog } from './historico-emissoes.types';
@@ -46,6 +52,18 @@ const waitForPdfAssets = async (container: HTMLDivElement, timeoutMs = 15_000) =
   await waitForDocumentAssets(container, timeoutMs);
 };
 
+const getPdfPageOrientation = (
+  pageNode: HTMLElement,
+  fallbackOrientation: PdfPageOrientation,
+): PdfPageOrientation => {
+  if (pageNode.matches('[data-certificate-pdf-page="true"]')) return 'landscape';
+  const pageRect = pageNode.getBoundingClientRect();
+  if (pageRect.width > 0 && pageRect.height > 0) {
+    return pageRect.width >= pageRect.height ? 'landscape' : 'portrait';
+  }
+  return fallbackOrientation;
+};
+
 export const createEmissionBatchPdf = async (
   totalDocuments: number,
   renderDocument: (documentIndex: number) => Promise<HTMLDivElement>,
@@ -53,14 +71,13 @@ export const createEmissionBatchPdf = async (
 ): Promise<Blob> => {
   if (totalDocuments < 1) throw new Error('O lote não possui documentos para gerar.');
 
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
   const captureScale = totalDocuments >= 20 ? 1.15 : 1.5;
-  const imageQuality = totalDocuments >= 20 ? 0.84 : 0.92;
-  let pdf: InstanceType<typeof jsPDF> | null = null;
-  let addedPages = 0;
+  const pdfBuilder = await createSelectablePdfBuilder({
+    artworkFormat: 'PNG',
+    artworkScale: captureScale,
+    title: 'Documentos emitidos em lote',
+    subject: 'Documentos institucionais emitidos em lote',
+  });
 
   onProgress?.(0, totalDocuments);
   for (let documentIndex = 0; documentIndex < totalDocuments; documentIndex += 1) {
@@ -69,47 +86,21 @@ export const createEmissionBatchPdf = async (
     if (!pageNodes.length) throw new Error('Elemento de página não localizado no lote.');
     await waitForPdfAssets(container);
 
-    if (!pdf) {
-      pdf = new jsPDF({
-        orientation: isLandscape ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      });
-    }
-
     for (const pageNode of pageNodes) {
-      const canvas = await html2canvas(pageNode, {
-        scale: captureScale,
-        useCORS: true,
-        logging: false,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
+      await pdfBuilder.addPage(pageNode, {
+        orientation: getPdfPageOrientation(
+          pageNode,
+          isLandscape ? 'landscape' : 'portrait',
+        ),
+        artworkFormat: 'PNG',
+        artworkScale: captureScale,
       });
-      if (addedPages > 0) {
-        pdf.addPage('a4', isLandscape ? 'landscape' : 'portrait');
-      }
-      pdf.addImage(
-        canvas.toDataURL('image/jpeg', imageQuality),
-        'JPEG',
-        0,
-        0,
-        isLandscape ? 297 : 210,
-        isLandscape ? 210 : 297,
-        undefined,
-        'FAST'
-      );
-      canvas.width = 0;
-      canvas.height = 0;
-      addedPages += 1;
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     }
 
     onProgress?.(documentIndex + 1, totalDocuments);
   }
 
-  if (!pdf) throw new Error('Não foi possível iniciar o arquivo PDF do lote.');
-  const blob = pdf.output('blob');
+  const blob = pdfBuilder.outputBlob();
   assertPdfBlobReady(blob, 'O PDF do lote');
   return blob;
 };
@@ -129,53 +120,26 @@ export const downloadEmissionPdf = async (
     : pageNodes.length >= 8
       ? 1.5
       : 2;
-  const imageQuality = pageNodes.length >= 20 ? 0.86 : 0.95;
-
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import('html2canvas'),
-    import('jspdf'),
-  ]);
   await waitForPdfAssets(container, Math.max(15_000, pageNodes.length * 500));
 
-  const pdf = new jsPDF({
-    orientation: isLandscape ? 'landscape' : 'portrait',
-    unit: 'mm',
-    format: 'a4',
-    compress: true,
-  });
-
   onProgress?.(0, pageNodes.length);
-  for (const [index, pageNode] of pageNodes.entries()) {
-    const canvas = await html2canvas(pageNode, {
-      scale: captureScale,
-      useCORS: true,
-      logging: false,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-    });
-    if (index > 0) pdf.addPage('a4', isLandscape ? 'landscape' : 'portrait');
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', imageQuality),
-      'JPEG',
-      0,
-      0,
-      isLandscape ? 297 : 210,
-      isLandscape ? 210 : 297,
-      undefined,
-      'FAST'
-    );
-    canvas.width = 0;
-    canvas.height = 0;
-    onProgress?.(index + 1, pageNodes.length);
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  }
+  const blob = await buildSelectablePdfBlobFromElements(pageNodes, {
+    orientation: isLandscape ? 'landscape' : 'portrait',
+    artworkFormat: 'PNG',
+    artworkScale: captureScale,
+    title: `${emission.documento} - ${emission.codigo}`,
+    subject: 'Documento institucional emitido pela Secretaria',
+    onProgress,
+  });
+  assertPdfBlobReady(blob, 'O PDF da emissão');
 
   if (saveFile) {
-    pdf.save(filename || `${filenamePrefix}-${emission.documento}-${emission.codigo}.pdf`);
+    downloadPdfBlob(
+      blob,
+      filename || `${filenamePrefix}-${emission.documento}-${emission.codigo}.pdf`,
+    );
     return null;
   }
-  const blob = pdf.output('blob');
-  assertPdfBlobReady(blob, 'O PDF da emissão');
   return blob;
 };
 
@@ -185,16 +149,5 @@ export const saveEmissionPdfBlob = (
   filename = `2-via-${emission.documento}-${emission.codigo}.pdf`,
 ) => {
   assertPdfBlobReady(blob, 'O PDF da emissão');
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  try {
-    anchor.click();
-  } finally {
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
-  }
+  downloadPdfBlob(blob, filename);
 };
