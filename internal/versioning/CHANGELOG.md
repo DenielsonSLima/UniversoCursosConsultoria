@@ -2,6 +2,25 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.27] - 2026-08-05
+
+### Corrigido
+
+- O cadastro público deixa de confundir o perfil recém-criado com um CPF duplicado e passa a vincular, na mesma transação, o aluno à identidade correta do Auth.
+- CPFs, e-mails e identidades realmente existentes recebem mensagens claras, sem deixar usuários órfãos após uma falha.
+- A criação de usuários internos valida os dados antes do Auth, grava o vínculo canônico e usa a mesma política de senha forte do servidor.
+- A configuração de usuários registra todos os eventos Realtime antes de assinar o canal, eliminando a falha que interrompia a tela.
+- Ao sair do portal do aluno, o navegador volta ao início público e apenas o aplicativo nativo retorna ao login dedicado do app.
+
+### Alterado
+
+- Felicitações e comunicados não comerciais de relacionamento passam a acompanhar os Termos aceitos, com transparência e controle posterior na Central de Notificações.
+- Todos os fluxos de criação, recuperação e troca de senha passam a exigir no mínimo 8 caracteres, letra maiúscula, minúscula e número.
+
+### Qualidade
+
+- O hotfix inclui contratos para vínculo Auth/aluno, criação de gestor, ordem de assinatura Realtime e preferências de relacionamento.
+
 ## [2.2.3-beta.26] - 2026-08-04
 
 ### Adicionado
