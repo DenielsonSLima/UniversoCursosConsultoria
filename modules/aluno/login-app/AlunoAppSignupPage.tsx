@@ -15,7 +15,10 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { alunoPublicAuthService } from '../../public/login/aluno-public-auth.service';
+import {
+  alunoPublicAuthService,
+  isPublicAlunoAlreadyRegisteredError,
+} from '../../public/login/aluno-public-auth.service';
 import { getPublicAlunoBirthDateMax, isPublicAlunoOlderThanTen } from '../../public/login/aluno-birth-date';
 import { formatCpf, formatPhone } from '../../public/login/aluno-login.utils';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
@@ -82,6 +85,7 @@ const AlunoAppSignupPage: React.FC = () => {
   const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [existingAccount, setExistingAccount] = useState(false);
   const submitInFlightRef = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const currentStepIndex = STEP_ORDER.indexOf(step);
@@ -99,8 +103,9 @@ const AlunoAppSignupPage: React.FC = () => {
     { label: '1 número', valid: /\d/.test(form.password) },
   ]), [form.password]);
 
-  const showError = (text: string) => {
+  const showError = (text: string, accountAlreadyRegistered = false) => {
     setMessage(text);
+    setExistingAccount(accountAlreadyRegistered);
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -167,12 +172,14 @@ const AlunoAppSignupPage: React.FC = () => {
       return;
     }
     setMessage('');
+    setExistingAccount(false);
     setStep(step === 'pessoal' ? 'acesso' : 'endereco');
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goBack = () => {
     setMessage('');
+    setExistingAccount(false);
     setStep(step === 'endereco' ? 'acesso' : 'pessoal');
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -202,6 +209,7 @@ const AlunoAppSignupPage: React.FC = () => {
     submitInFlightRef.current = true;
     setLoading(true);
     setMessage('');
+    setExistingAccount(false);
     const verifiedToken = turnstileToken;
     setTurnstileToken('');
 
@@ -218,7 +226,10 @@ const AlunoAppSignupPage: React.FC = () => {
       }
       finishSignup(result.profile);
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.');
+      showError(
+        error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.',
+        isPublicAlunoAlreadyRegisteredError(error),
+      );
     } finally {
       setLoading(false);
       submitInFlightRef.current = false;
@@ -284,7 +295,17 @@ const AlunoAppSignupPage: React.FC = () => {
 
           {message ? (
             <div role="alert" className="mt-4 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-xs font-bold leading-relaxed text-red-100">
-              {message}
+              <p>{message}</p>
+              {existingAccount ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link to="/aluno/login-app" className="rounded-xl bg-blue-600 px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-white">
+                    Entrar
+                  </Link>
+                  <Link to="/aluno/recuperar-senha-app" className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-blue-100">
+                    Recuperar senha
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
