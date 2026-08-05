@@ -4,6 +4,10 @@ import { ArrowLeft, Download, Loader2, Printer } from 'lucide-react';
 import DocumentHeader from '../../../../components/DocumentHeader';
 import { polosService, type Polo } from '../../../../configuracoes/polos/polos.service';
 import type { ContasReceber } from '../../../financeiro.service';
+import {
+  buildSelectablePdfBlobFromElements,
+  downloadPdfBlob,
+} from '../../../../../shared/pdf/dom-to-selectable-pdf';
 import { paymentMethodLabel } from './modalidade-receber.utils';
 
 interface InstitutionalReceiptModalProps {
@@ -84,20 +88,15 @@ const InstitutionalReceiptModal: React.FC<InstitutionalReceiptModalProps> = ({ i
     setDownloadError('');
 
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        windowWidth: previewRef.current.scrollWidth,
-        windowHeight: previewRef.current.scrollHeight,
+      const pdfBlob = await buildSelectablePdfBlobFromElements([previewRef.current], {
+        orientation: 'portrait',
+        artworkFormat: 'PNG',
+        artworkScale: 2,
+        title: `Recibo institucional ${receiptNumber}`,
+        subject: 'Comprovante de pagamento',
       });
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.96), 'JPEG', 0, 0, 210, 297);
-      pdf.save(
+      downloadPdfBlob(
+        pdfBlob,
         `recibo-universo-${receiptNumber}-${new Date().toISOString().slice(0, 10)}.pdf`,
       );
     } catch (error) {
