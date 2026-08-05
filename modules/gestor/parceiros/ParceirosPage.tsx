@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Building,
   Download,
@@ -24,6 +24,7 @@ import DeleteParceiroModal from './components/DeleteParceiroModal';
 import { useParceirosFilters, ParceirosTabType } from './hooks/useParceirosFilters';
 import { useParceirosMutations } from './hooks/useParceirosMutations';
 import { useParceirosQueries } from './hooks/useParceirosQueries';
+import { filterTurmasByModalidades } from './parceiros-turmas.utils';
 
 export type ParceiroFormType = 'aluno' | 'professor' | 'selection' | 'pf' | 'pj';
 type FormType = ParceiroFormType | null;
@@ -92,12 +93,17 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
     kpis,
   } = useParceirosFilters(allPartners, activeTab);
 
+  const turmasFiltradas = useMemo(
+    () => filterTurmasByModalidades(turmasDisponiveis, alunoModalidadeFilter),
+    [alunoModalidadeFilter, turmasDisponiveis],
+  );
+
   useEffect(() => {
     if (loadingTurmas || turmasError || turmaFilter === 'todas') return;
-    if (!turmasDisponiveis.some((turma: any) => turma.id === turmaFilter)) {
+    if (!turmasFiltradas.some((turma) => turma.id === turmaFilter)) {
       setTurmaFilter('todas');
     }
-  }, [loadingTurmas, setTurmaFilter, turmaFilter, turmasDisponiveis, turmasError]);
+  }, [loadingTurmas, setTurmaFilter, turmaFilter, turmasError, turmasFiltradas]);
 
   const turmaFilterLabel = turmasDisponiveis.find((turma: any) => turma.id === turmaFilter)?.nome;
 
@@ -239,7 +245,7 @@ const ParceirosPage: React.FC<ParceirosPageProps> = ({
         onClearAlunoModalidades={clearAlunoModalidadeFilter}
         onTurmaChange={setTurmaFilter}
         selectedTurma={turmaFilter}
-        turmas={turmasDisponiveis}
+        turmas={turmasFiltradas}
         loadingTurmas={loadingTurmas}
         turmasError={turmasError}
         onRetryTurmas={() => { void reloadTurmas(); }}
