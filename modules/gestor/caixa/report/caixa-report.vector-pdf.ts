@@ -1,4 +1,6 @@
 import type { jsPDF } from 'jspdf';
+import { CAIXA_REPORT_FONTS_A } from './caixa-report.fonts-a';
+import { CAIXA_REPORT_FONTS_B } from './caixa-report.fonts-b';
 import {
   formatCaixaCompetencia,
   formatCaixaCurrency,
@@ -107,6 +109,18 @@ const fetchLogoDataUrl = async (url: string | null) => {
   return typeof window === 'undefined' ? null : fetchAsDataUrl('/LogoUniverso.png');
 };
 
+const inflateEmbeddedFont = async (compressedBase64: string) => {
+  if (typeof DecompressionStream === 'undefined') {
+    throw new Error('Este navegador não oferece suporte à fonte vetorial incorporada.');
+  }
+  const binary = atob(compressedBase64);
+  const compressed = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const stream = new Blob([compressed])
+    .stream()
+    .pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).arrayBuffer();
+};
+
 const registerInterFont = async (
   pdf: jsPDF,
   suppliedFonts?: {
@@ -125,24 +139,13 @@ const registerInterFont = async (
   let extraBoldBuffer = suppliedFonts?.extraBold;
   let blackBuffer = suppliedFonts?.black;
   if (!regularBuffer || !mediumBuffer || !semiBoldBuffer || !boldBuffer || !extraBoldBuffer || !blackBuffer) {
-    const [regularResponse, mediumResponse, semiBoldResponse, boldResponse, extraBoldResponse, blackResponse] = await Promise.all([
-      fetch('/fonts/Inter-Regular.ttf'),
-      fetch('/fonts/Inter-Medium.ttf'),
-      fetch('/fonts/Inter-SemiBold.ttf'),
-      fetch('/fonts/Inter-Bold.ttf'),
-      fetch('/fonts/Inter-ExtraBold.ttf'),
-      fetch('/fonts/Inter-Black.ttf'),
-    ]);
-    if (!regularResponse.ok || !mediumResponse.ok || !semiBoldResponse.ok || !boldResponse.ok || !extraBoldResponse.ok || !blackResponse.ok) {
-      throw new Error('A fonte Inter do relatório não pôde ser carregada.');
-    }
     [regularBuffer, mediumBuffer, semiBoldBuffer, boldBuffer, extraBoldBuffer, blackBuffer] = await Promise.all([
-      regularResponse.arrayBuffer(),
-      mediumResponse.arrayBuffer(),
-      semiBoldResponse.arrayBuffer(),
-      boldResponse.arrayBuffer(),
-      extraBoldResponse.arrayBuffer(),
-      blackResponse.arrayBuffer(),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_A.regular),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_A.medium),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_A.semiBold),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_B.bold),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_B.extraBold),
+      inflateEmbeddedFont(CAIXA_REPORT_FONTS_B.black),
     ]);
   }
   pdf.addFileToVFS('Inter-Regular.ttf', toBase64(regularBuffer));
