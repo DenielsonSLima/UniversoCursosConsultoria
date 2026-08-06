@@ -50,8 +50,8 @@ const COLORS = {
 } as const;
 
 type Tone = 'emerald' | 'rose';
-type PdfWithInternals = jsPDF & {
-  internal: jsPDF['internal'] & { pages?: string[][] };
+type PdfWithInternals = {
+  internal: { pages?: string[][] };
 };
 
 export const CAIXA_REPORT_PDF_PIPELINE = 'native-vector' as const;
