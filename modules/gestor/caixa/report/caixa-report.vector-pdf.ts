@@ -110,14 +110,14 @@ const fetchLogoDataUrl = async (url: string | null) => {
 };
 
 const inflateEmbeddedFont = async (compressedBase64: string) => {
-  if (typeof DecompressionStream === 'undefined') {
+  if (typeof window.DecompressionStream === 'undefined') {
     throw new Error('Este navegador não oferece suporte à fonte vetorial incorporada.');
   }
   const binary = atob(compressedBase64);
   const compressed = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   const stream = new Blob([compressed])
     .stream()
-    .pipeThrough(new DecompressionStream('gzip'));
+    .pipeThrough(new window.DecompressionStream('gzip'));
   return new Response(stream).arrayBuffer();
 };
 
