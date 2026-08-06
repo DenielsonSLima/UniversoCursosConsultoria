@@ -108,7 +108,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
   const recoverySubmitInFlightRef = useRef(false);
 
   const passwordChecks = useMemo(() => {
-    const hasMinLength = password.length >= 6;
+    const hasMinLength = password.length >= 8;
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
@@ -293,7 +293,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
     if (!passwordChecks.isStrong) {
       setMessage({
         tone: 'error',
-        text: 'A nova senha precisa ter no mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
+        text: 'A nova senha precisa ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
       });
       return;
     }
@@ -335,7 +335,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
   };
 
   const requirements = [
-    { label: '6+ caracteres', valid: passwordChecks.hasMinLength },
+    { label: '8+ caracteres', valid: passwordChecks.hasMinLength },
     { label: 'Letra maiúscula', valid: passwordChecks.hasUppercase },
     { label: 'Letra minúscula', valid: passwordChecks.hasLowercase },
     { label: 'Um número', valid: passwordChecks.hasNumber },
@@ -460,7 +460,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
                         type={showPassword ? 'text' : 'password'}
                         name="new-password"
                         autoComplete="new-password"
-                        minLength={6}
+                        minLength={8}
                         required
                         autoFocus
                         value={password}
@@ -492,7 +492,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
                         type={showConfirmation ? 'text' : 'password'}
                         name="confirm-password"
                         autoComplete="new-password"
-                        minLength={6}
+                        minLength={8}
                         required
                         value={confirmPassword}
                         onChange={(event) => setConfirmPassword(event.target.value)}
@@ -782,7 +782,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
                           type={showPassword ? 'text' : 'password'}
                           name="new-password"
                           autoComplete="new-password"
-                          minLength={6}
+                          minLength={8}
                           required
                           autoFocus
                           value={password}
@@ -833,7 +833,7 @@ const PasswordRecoveryPage: React.FC<PasswordRecoveryPageProps> = ({ appFlow = f
                           type={showConfirmation ? 'text' : 'password'}
                           name="confirm-password"
                           autoComplete="new-password"
-                          minLength={6}
+                          minLength={8}
                           required
                           value={confirmPassword}
                           onChange={(event) => setConfirmPassword(event.target.value)}
