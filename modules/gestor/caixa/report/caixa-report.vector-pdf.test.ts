@@ -234,7 +234,7 @@ test('mantém conteúdo vetorial quando logo e marca paisagem são imagens decor
 test('preserva rótulo do resultado e diferença financeira não discriminada', () => {
   assert.equal(getCaixaResultLabel('NEGATIVO'), 'Déficit do mês');
   assert.equal(getCaixaResultLabel('POSITIVO'), 'Superávit do mês');
-  assert.equal(getCaixaResultLabel('ZERADO'), 'Resultado do mês');
+  assert.equal(getCaixaResultLabel('NEUTRO'), 'Resultado do mês');
   const receipt = makeReport().recebimentos[0];
   receipt.diferencaNaoDiscriminada = 7.25;
   assert.deepEqual(buildCaixaAdjustmentLines(receipt).at(-1), 'Não discrim.: R$\u00a07,25');
