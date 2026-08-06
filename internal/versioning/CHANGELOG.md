@@ -2,6 +2,18 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.29] - 2026-08-05
+
+### Corrigido
+
+- A Pasta de Identificação em lote passa a usar o mesmo seletor compacto da Carteirinha, com escolha por turma ou por todos os alunos ativos do polo.
+- Turmas sem alunos ativos deixam de aparecer no seletor e a quantidade do lote é atualizada conforme a seleção.
+- O serviço de emissão restringe o lote geral à Pasta de Identificação e mantém outros documentos protegidos contra ampliação acidental do escopo.
+
+### Qualidade
+
+- O fluxo foi validado no Safari com lote geral e turma específica, além de contrato automatizado, TypeScript, ESLint e build de produção.
+
 ## [2.2.3-beta.28] - 2026-08-05
 
 ### Corrigido
