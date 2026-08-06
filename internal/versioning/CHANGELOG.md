@@ -2,6 +2,21 @@
 
 Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente deve sempre corresponder ao arquivo `system-version.json`.
 
+## [2.2.3-beta.30] - 2026-08-06
+
+### Corrigido
+
+- A prestação de contas do Caixa deixa de fotografar páginas inteiras e passa a gerar texto, tabelas e elementos de interface nativamente em PDF vetorial.
+- O download não move nem sobrepõe páginas da prévia durante a geração no Safari.
+- Logo, marca d’água, faixa azul, curvas, escala, opacidade e rotação configuradas permanecem preservadas como artes decorativas.
+- As fontes Inter oficiais ficam incorporadas ao exportador para manter a mesma tipografia sem depender de CDN ou de arquivos externos.
+- Textos longos passam a quebrar linha sem truncamento e os ajustes financeiros não discriminados permanecem explícitos.
+
+### Qualidade
+
+- Foram adicionados contratos contra regressão rasterizada, divergência de layout, perda de texto selecionável e retorno do palco temporário no navegador.
+- Testes do Caixa, contrato dos PDFs, TypeScript, ESLint e build de produção foram validados antes da publicação da Preview.
+
 ## [2.2.3-beta.29] - 2026-08-05
 
 ### Corrigido
