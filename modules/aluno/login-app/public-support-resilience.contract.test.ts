@@ -80,6 +80,7 @@ test('chat pré-login permanece visitante e nunca herda a identidade encontrada 
   assert.match(edgeFunction, /const requesterType = "Visitante"/);
   assert.match(edgeFunction, /const requesterId = null/);
   assert.match(gestorView, /Visitante não autenticado/);
-  assert.match(unlinkMigration, /where origem = 'publico'/);
-  assert.match(unlinkMigration, /remetente_id = null/);
+  assert.match(unlinkMigration, /when\s*\(new\.origem = 'publico'\)/);
+  assert.match(unlinkMigration, /and chat\.origem = 'publico'/);
+  assert.match(unlinkMigration, /new\.remetente_id := null/);
 });
