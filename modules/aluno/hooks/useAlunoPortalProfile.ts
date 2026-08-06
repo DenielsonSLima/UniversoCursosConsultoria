@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router';
 import { loginService } from '../../login/login.service';
 import { supabase } from '../../../lib/supabase';
@@ -7,6 +8,7 @@ import {
   getPortalProfile,
   type PortalAuthProfile,
 } from '../../login/portal-session';
+import { getAlunoRejectedSessionPath } from '../aluno-logout-route';
 
 const AUTH_CHECK_TIMEOUT_MS = 8_000;
 
@@ -19,11 +21,7 @@ const withAuthTimeout = <T,>(request: PromiseLike<T>) => Promise.race([
 
 const buildLoginRedirect = () => {
   const currentPath = window.location.pathname + window.location.search;
-  const params = new URLSearchParams({
-    reason: 'session_expired',
-    redirect: currentPath,
-  });
-  return `/aluno/login-app?${params.toString()}`;
+  return getAlunoRejectedSessionPath(Capacitor.isNativePlatform(), currentPath);
 };
 
 export const useAlunoPortalProfile = () => {
