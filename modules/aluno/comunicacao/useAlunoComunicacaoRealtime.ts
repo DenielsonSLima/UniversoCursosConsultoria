@@ -1,6 +1,7 @@
-import { Dispatch, SetStateAction, useEffect } from 'react';
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { supabase } from '../../../lib/supabase';
 import {
   alunoComunicacaoKeys,
@@ -22,11 +23,52 @@ export const useAlunoComunicacaoRealtime = ({
   setUnreadChatIds,
 }: UseAlunoComunicacaoRealtimeParams) => {
   const queryClient = useQueryClient();
+  const [reconnectVersion, setReconnectVersion] = useState(0);
+  const instanceIdRef = useRef(
+    `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`,
+  );
+  const lastResyncAtRef = useRef(0);
+  const instanceId = instanceIdRef.current;
+
+  useEffect(() => {
+    let disposed = false;
+    let nativeHandle: PluginListenerHandle | undefined;
+    const resync = () => {
+      const now = Date.now();
+      if (now - lastResyncAtRef.current < 750) return;
+      lastResyncAtRef.current = now;
+      void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
+      void queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+      void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.supportConfig(alunoId) });
+      setReconnectVersion((current) => current + 1);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') resync();
+    };
+
+    window.addEventListener('online', resync);
+    document.addEventListener('visibilitychange', handleVisibility);
+    if (Capacitor.isNativePlatform()) {
+      void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) resync();
+      }).then((handle) => {
+        if (disposed) void handle.remove();
+        else nativeHandle = handle;
+      });
+    }
+
+    return () => {
+      disposed = true;
+      window.removeEventListener('online', resync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      void nativeHandle?.remove();
+    };
+  }, [alunoId, queryClient]);
 
   useEffect(() => {
     if (!supportPoloId) return;
     const channel = supabase
-      .channel(`aluno_support_config_${supportPoloId}`)
+      .channel(`aluno_support_config_${supportPoloId}_${instanceId}_${reconnectVersion}`)
       .on(
         'postgres_changes',
         {
@@ -39,12 +81,16 @@ export const useAlunoComunicacaoRealtime = ({
           void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.supportConfig(alunoId) });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.supportConfig(alunoId) });
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [alunoId, queryClient, supportPoloId]);
+  }, [alunoId, instanceId, queryClient, reconnectVersion, supportPoloId]);
 
   useEffect(() => {
     const notifyReply = async (chatId: string) => {
@@ -76,7 +122,7 @@ export const useAlunoComunicacaoRealtime = ({
     fetchUnread();
 
     const channel = supabase
-      .channel('aluno_comunicacao_msgs_global_realtime')
+      .channel(`aluno_comunicacao_msgs_global_${alunoId}_${instanceId}_${reconnectVersion}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'comunicacao_mensagens' },
@@ -93,12 +139,14 @@ export const useAlunoComunicacaoRealtime = ({
         { event: 'UPDATE', schema: 'public', table: 'comunicacao_mensagens' },
         () => void fetchUnread()
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') void fetchUnread();
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [alunoId, setUnreadChatIds]);
+  }, [alunoId, instanceId, reconnectVersion, setUnreadChatIds]);
 
   useEffect(() => {
     if (!activeChatId) return;
@@ -112,7 +160,7 @@ export const useAlunoComunicacaoRealtime = ({
     };
 
     const channel = supabase
-      .channel(`aluno_msgs_realtime_${activeChatId}`)
+      .channel(`aluno_msgs_${activeChatId}_${instanceId}_${reconnectVersion}`)
       .on(
         'postgres_changes',
         {
@@ -140,18 +188,23 @@ export const useAlunoComunicacaoRealtime = ({
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.messages(activeChatId) });
+          void markAsRead();
+        }
+      });
 
     markAsRead();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [activeChatId, queryClient]);
+  }, [activeChatId, instanceId, queryClient, reconnectVersion]);
 
   useEffect(() => {
     const channel = supabase
-      .channel(`aluno_chats_realtime_${alunoId}`)
+      .channel(`aluno_chats_${alunoId}_${instanceId}_${reconnectVersion}`)
       .on(
         'postgres_changes',
         {
@@ -189,10 +242,14 @@ export const useAlunoComunicacaoRealtime = ({
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          void queryClient.invalidateQueries({ queryKey: alunoComunicacaoKeys.chats(alunoId) });
+        }
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [alunoId, queryClient]);
+  }, [alunoId, instanceId, queryClient, reconnectVersion]);
 };
