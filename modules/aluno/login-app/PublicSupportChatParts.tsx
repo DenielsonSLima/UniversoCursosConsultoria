@@ -8,8 +8,14 @@ import {
   isPublicSupportAudio,
   isPublicSupportImage,
   PUBLIC_SUPPORT_ACCEPTED_FILES,
+  PUBLIC_SUPPORT_MAX_FILE_BYTES,
   validatePublicSupportFile,
 } from './public-support-media';
+import {
+  NATIVE_AUDIO_CAPTURE_ACCEPT,
+  normalizeCompatibleAudioFile,
+  validateCapturedAudioFile,
+} from '../../shared/comunicacao/native-audio-file';
 
 export const PublicSupportAttachment: React.FC<{
   path?: string | null;
@@ -68,6 +74,7 @@ export const PublicSupportComposer: React.FC<{
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [localError, setLocalError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const nativeAudioInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -87,26 +94,39 @@ export const PublicSupportComposer: React.FC<{
 
   const selectFile = (file: File | null) => {
     if (!file) return;
-    const validationError = validatePublicSupportFile(file);
+    const normalizedFile = normalizeCompatibleAudioFile(file) || file;
+    const validationError = validatePublicSupportFile(normalizedFile);
     if (validationError) {
       setLocalError(validationError);
       return;
     }
     setLocalError('');
-    setPendingFile(file);
+    setPendingFile(normalizedFile);
+  };
+
+  const selectNativeAudioFile = (file: File | null) => {
+    if (!file) return;
+    const result = validateCapturedAudioFile(file, PUBLIC_SUPPORT_MAX_FILE_BYTES);
+    if (!result.file || result.error) {
+      setLocalError(result.error || 'Não foi possível usar o áudio selecionado.');
+      return;
+    }
+    selectFile(result.file);
   };
 
   const startRecording = async () => {
     setLocalError('');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      setLocalError('A gravação de áudio não é compatível com este navegador.');
+      nativeAudioInputRef.current?.click();
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const preferredType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((type) => MediaRecorder.isTypeSupported(type));
-      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
       streamRef.current = stream;
+      const preferredType = typeof MediaRecorder.isTypeSupported === 'function'
+        ? ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((type) => MediaRecorder.isTypeSupported(type))
+        : undefined;
+      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
       cancelRecordingRef.current = false;
@@ -127,6 +147,8 @@ export const PublicSupportComposer: React.FC<{
       recorder.start(250);
       setRecording(true);
     } catch (error) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
       const denied = error instanceof DOMException && ['NotAllowedError', 'SecurityError'].includes(error.name);
       setLocalError(denied ? 'Permita o acesso ao microfone para gravar um áudio.' : 'Não foi possível acessar o microfone.');
     }
@@ -178,6 +200,19 @@ export const PublicSupportComposer: React.FC<{
       <form onSubmit={(event) => { event.preventDefault(); void send(); }} className="flex min-h-12 items-end gap-1 rounded-2xl bg-slate-100 p-1.5">
         <button type="button" onClick={() => inputRef.current?.click()} disabled={sending || recording} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-blue-700 disabled:opacity-40" aria-label="Anexar arquivo"><Paperclip size={18} /></button>
         <input ref={inputRef} type="file" accept={PUBLIC_SUPPORT_ACCEPTED_FILES} className="hidden" onChange={(event) => { selectFile(event.target.files?.[0] || null); event.target.value = ''; }} />
+        <input
+          ref={nativeAudioInputRef}
+          type="file"
+          accept={NATIVE_AUDIO_CAPTURE_ACCEPT}
+          capture
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            selectNativeAudioFile(event.target.files?.[0] || null);
+            event.target.value = '';
+          }}
+        />
         <button type="button" onClick={() => void startRecording()} disabled={sending || recording} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-blue-700 disabled:opacity-40" aria-label="Gravar mensagem de áudio"><Mic size={18} /></button>
         <textarea rows={1} value={message} onChange={(event) => setMessage(event.target.value)} disabled={recording || Boolean(pendingFile)} placeholder={pendingFile ? 'Anexo pronto para enviar' : 'Escreva sua mensagem'} className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm font-semibold text-slate-700 outline-none disabled:text-slate-400" />
         <button type="submit" disabled={sending || recording || (!message.trim() && !pendingFile)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-40" aria-label={pendingFile ? 'Enviar anexo' : 'Enviar mensagem'}>{sending ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" /> : <Send size={16} />}</button>
