@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.29",
+  "version": "2.2.3-beta.30",
   "display": "BETA",
   "stage": "beta",
-  "revision": 29,
-  "releasedAt": "2026-08-05",
-  "summary": "Pasta em lote alinhada à Carteirinha e protegida por escopo"
+  "revision": 30,
+  "releasedAt": "2026-08-06",
+  "summary": "PDF do Caixa vetorial, fiel à prévia e estável no Safari"
 }
