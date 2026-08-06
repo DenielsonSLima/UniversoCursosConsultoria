@@ -1,0 +1,193 @@
+-- Restringe as funções dos gatilhos do cadastro público exclusivamente ao
+-- fluxo EAD. Convites criados pelo gestor também usam tipo=Aluno, mas não
+-- carregam CPF nos metadados do Auth e devem retornar sem validação pública.
+begin;
+
+create or replace function public.enforce_public_aluno_cpf_before_auth_write()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_metadata jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v_old_metadata jsonb;
+  v_origin text := coalesce(v_metadata ->> 'origem', '');
+  v_tipo text := coalesce(v_metadata ->> 'tipo', '');
+  v_cpf text := regexp_replace(
+    coalesce(v_metadata ->> 'cpf', ''),
+    '\D',
+    '',
+    'g'
+  );
+begin
+  if v_origin <> 'cadastro_publico_ead' or v_tipo <> 'Aluno' then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    v_old_metadata := coalesce(old.raw_user_meta_data, '{}'::jsonb);
+
+    if regexp_replace(
+         coalesce(v_old_metadata ->> 'cpf', ''),
+         '\D',
+         '',
+         'g'
+       ) = v_cpf
+       and coalesce(v_old_metadata ->> 'origem', '') = v_origin
+       and coalesce(v_old_metadata ->> 'tipo', '') = v_tipo
+    then
+      return new;
+    end if;
+  end if;
+
+  if length(v_cpf) <> 11 or v_cpf ~ '^([0-9])\1{10}$' then
+    raise exception 'Informe um CPF valido para concluir o cadastro.'
+      using errcode = '22023';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('public-aluno-cpf:' || v_cpf, 0)
+  );
+
+  if not public.is_public_aluno_cpf_available(v_cpf, new.id) then
+    raise exception 'Este CPF ja esta cadastrado como aluno.'
+      using
+        errcode = '23505',
+        constraint = 'public_aluno_cpf_unique';
+  end if;
+
+  return new;
+end;
+$$;
+
+comment on function public.enforce_public_aluno_cpf_before_auth_write() is
+  'Bloqueia CPF duplicado somente no cadastro público EAD de aluno, sem interceptar convites do gestor.';
+
+revoke all on function public.enforce_public_aluno_cpf_before_auth_write()
+  from public, anon, authenticated;
+grant execute on function public.enforce_public_aluno_cpf_before_auth_write()
+  to service_role;
+
+create or replace function public.link_public_aluno_auth_partner_after_profile_sync()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_metadata jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  v_origin text := coalesce(v_metadata ->> 'origem', '');
+  v_tipo text := coalesce(v_metadata ->> 'tipo', '');
+  v_cpf text := regexp_replace(
+    coalesce(v_metadata ->> 'cpf', ''),
+    '\D',
+    '',
+    'g'
+  );
+  v_email text := lower(nullif(btrim(new.email), ''));
+  v_partner_id uuid;
+  v_partner_auth_user_id uuid;
+  v_linked_partner_id uuid;
+  v_auth_ready boolean :=
+    coalesce(new.encrypted_password, '') <> ''
+    and coalesce(new.email_confirmed_at, new.confirmed_at) is not null;
+begin
+  if v_origin <> 'cadastro_publico_ead' or v_tipo <> 'Aluno' then
+    return new;
+  end if;
+
+  if v_email is null then
+    raise exception 'O cadastro publico do aluno exige um e-mail de acesso.'
+      using errcode = '22023';
+  end if;
+
+  select parceiro.id, parceiro.auth_user_id
+  into v_partner_id, v_partner_auth_user_id
+  from public.parceiros as parceiro
+  where parceiro.tipo = 'Aluno'
+    and regexp_replace(
+      coalesce(parceiro.cpf_cnpj, ''),
+      '\D',
+      '',
+      'g'
+    ) = v_cpf
+    and (
+      lower(
+        btrim(
+          coalesce(
+            nullif(parceiro.auth_login_email, ''),
+            nullif(parceiro.email, ''),
+            ''
+          )
+        )
+      ) = v_email
+      or (
+        tg_op = 'UPDATE'
+        and parceiro.auth_user_id = new.id
+      )
+    )
+  order by
+    (parceiro.auth_user_id = new.id) desc,
+    parceiro.created_at desc nulls last,
+    parceiro.id
+  limit 1
+  for update;
+
+  if v_partner_id is null then
+    raise exception 'O perfil canonico do aluno nao foi criado durante o cadastro.'
+      using errcode = '23514';
+  end if;
+
+  if v_partner_auth_user_id is not null
+     and v_partner_auth_user_id <> new.id
+  then
+    raise exception 'O perfil canonico do aluno ja possui outra identidade de acesso.'
+      using errcode = '23505';
+  end if;
+
+  update public.parceiros as parceiro
+  set
+    auth_user_id = new.id,
+    auth_login_email = v_email,
+    troca_senha_obrigatoria = false,
+    acesso_status = case
+      when v_auth_ready then 'ativo'
+      else 'pendente'
+    end,
+    acesso_erro = null,
+    acesso_ativado_em = case
+      when v_auth_ready then coalesce(
+        parceiro.acesso_ativado_em,
+        new.email_confirmed_at,
+        new.confirmed_at,
+        now()
+      )
+      else parceiro.acesso_ativado_em
+    end,
+    updated_at = now()
+  where parceiro.id = v_partner_id
+    and (
+      parceiro.auth_user_id is null
+      or parceiro.auth_user_id = new.id
+    )
+  returning parceiro.id into v_linked_partner_id;
+
+  if v_linked_partner_id is null then
+    raise exception 'Nao foi possivel vincular o perfil canonico a identidade de acesso.'
+      using errcode = '23505';
+  end if;
+
+  return new;
+end;
+$$;
+
+comment on function public.link_public_aluno_auth_partner_after_profile_sync() is
+  'Vincula o perfil canônico somente no cadastro público EAD de aluno, sem interceptar convites do gestor.';
+
+revoke all on function public.link_public_aluno_auth_partner_after_profile_sync()
+  from public, anon, authenticated;
+grant execute on function public.link_public_aluno_auth_partner_after_profile_sync()
+  to service_role;
+
+commit;
