@@ -55,9 +55,7 @@ const SummaryPage: React.FC<{ report: CaixaDetailedReport }> = ({ report }) => {
           Prestação de contas mensal
         </h2>
         <p className="mt-1 text-[9px] text-slate-500">
-          Posição contábil e movimentos confirmados de{' '}
-          {formatCaixaCompetencia(statement.meta.competencia)}. Os compromissos
-          em aberto refletem a posição apurada na geração do relatório.
+          {`Posição contábil e movimentos confirmados de ${formatCaixaCompetencia(statement.meta.competencia)}. Os compromissos em aberto refletem a posição apurada na geração do relatório.`}
         </p>
       </div>
 
@@ -232,11 +230,14 @@ export const CaixaReportDocument: React.FC<{
         return (
           <section
             key={page.key}
-            className="caixa-report-page relative box-border flex h-[210mm] min-h-[210mm] w-[297mm] min-w-[297mm] shrink-0 flex-col overflow-hidden bg-white p-[8mm] text-slate-800 shadow-xl"
+            className="caixa-report-page relative box-border grid h-[210mm] min-h-[210mm] w-[297mm] min-w-[297mm] shrink-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-white p-[8mm] text-slate-800 shadow-xl"
             aria-label={`Página ${pageIndex + 1} de ${pages.length}`}
           >
             <ReportWatermark polo={polo} orientation="landscape" />
-            <div className="relative z-10 pl-[7mm] [&>div]:mb-5">
+            <div
+              data-caixa-report-header
+              className="relative z-10 pl-[7mm] [&>div]:mb-5"
+            >
               <DocumentHeader
                 company={company}
                 polo={polo}
@@ -257,7 +258,7 @@ export const CaixaReportDocument: React.FC<{
               />
             </div>
 
-            <div className="relative z-10 min-h-0 flex-1 pl-[7mm]">
+            <div data-caixa-report-content className="relative z-10 min-h-0 pl-[7mm]">
               {page.section === 'RESUMO' && <SummaryPage report={report} />}
               {page.section === 'RECEBIMENTOS' && (
                 <>
@@ -300,7 +301,10 @@ export const CaixaReportDocument: React.FC<{
               )}
             </div>
 
-            <footer className="relative z-10 ml-[7mm] mt-2 grid shrink-0 grid-cols-3 border-t border-slate-100 pt-2 text-[7.5px] font-bold uppercase tracking-widest text-slate-500">
+            <footer
+              data-caixa-report-footer
+              className="relative z-10 ml-[7mm] mt-2 grid grid-cols-3 border-t border-slate-100 pt-2 text-[7.5px] font-bold uppercase tracking-widest text-slate-500"
+            >
               <span>Confidencial · uso interno</span>
               <span className="text-center">
                 Gerado pelo backend em {new Date(report.geradoEm).toLocaleString('pt-BR')}
