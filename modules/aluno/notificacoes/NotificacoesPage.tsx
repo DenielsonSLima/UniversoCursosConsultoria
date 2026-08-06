@@ -18,7 +18,7 @@ import {
 import {
   useAlunoNotificationDetail,
   useAlunoNotifications,
-  useAlunoPushMarketingPreference,
+  useAlunoRelationshipBirthdayPreference,
 } from './useAlunoNotifications';
 import AlunoNotificationDetail from './AlunoNotificationDetail';
 import FinancialUnderlineTabs from '../../gestor/financeiro/components/FinancialUnderlineTabs';
@@ -162,12 +162,13 @@ const NotificacoesPage = ({ alunoId, unreadCount, onNavigate }: NotificacoesPage
     archivingId,
   } = useAlunoNotifications(alunoId, filter);
   const {
-    preference: marketingPreference,
-    loading: marketingPreferenceLoading,
-    error: marketingPreferenceError,
-    updating: marketingPreferenceUpdating,
-    update: updateMarketingPreference,
-  } = useAlunoPushMarketingPreference(alunoId);
+    preference: relationshipPreference,
+    loading: relationshipPreferenceLoading,
+    error: relationshipPreferenceError,
+    updating: relationshipPreferenceUpdating,
+    update: updateRelationshipPreference,
+    refetch: refetchRelationshipPreference,
+  } = useAlunoRelationshipBirthdayPreference(alunoId);
   const {
     notification: detailNotification,
     loading: detailLoading,
@@ -350,30 +351,53 @@ const NotificacoesPage = ({ alunoId, unreadCount, onNavigate }: NotificacoesPage
         </div>
       </section>
 
-      {!marketingPreferenceLoading && !marketingPreferenceError && marketingPreference?.allowed ? (
-        <section className="rounded-2xl border border-pink-100 bg-[linear-gradient(135deg,#fff7fb,#fff)] px-4 py-3.5 sm:px-5">
+      <section className="rounded-2xl border border-pink-100 bg-[linear-gradient(135deg,#fff7fb,#fff)] px-4 py-3.5 sm:px-5">
+        {relationshipPreferenceLoading ? (
+          <div className="flex min-h-10 items-center gap-3 text-xs font-bold text-slate-500">
+            <Loader2 size={17} className="animate-spin text-pink-600" /> Carregando preferência de relacionamento...
+          </div>
+        ) : relationshipPreferenceError ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-rose-700">Não foi possível consultar esta preferência.</p>
+            <button type="button" onClick={() => void refetchRelationshipPreference()} className="min-h-10 rounded-xl bg-white px-3 text-[10px] font-black uppercase tracking-wide text-rose-700 ring-1 ring-rose-100">
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-100 text-pink-700">
               <Gift size={19} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-[#001a33]">Relacionamento ativo</p>
+              <p className="text-sm font-black text-[#001a33]">
+                Relacionamento e aniversários {relationshipPreference?.allowed
+                  ? 'ativos'
+                  : relationshipPreference?.configured
+                    ? 'desativados'
+                    : 'ainda não configurados'}
+              </p>
               <p className="mt-0.5 text-xs font-semibold leading-relaxed text-slate-600">
-                Você aceitou receber comunicados de relacionamento e felicitações de aniversário.
+                {relationshipPreference?.allowed
+                  ? 'Ativos por padrão desde o aceite dos Termos, sob legítimo interesse. Não incluem publicidade comercial ou perfilamento.'
+                  : relationshipPreference?.configured
+                    ? 'Você desativou esses comunicados. Isso não altera seu acesso e você pode reativá-los quando quiser.'
+                    : 'Esta preferência ainda não foi definida. Você pode ativá-la aqui sem alterar seu acesso.'}
               </p>
             </div>
             <button
               type="button"
-              disabled={marketingPreferenceUpdating}
-              onClick={() => void updateMarketingPreference(false).catch(() => undefined)}
+              disabled={relationshipPreferenceUpdating}
+              onClick={() => void updateRelationshipPreference(!relationshipPreference?.allowed).catch(() => undefined)}
               className="min-h-10 shrink-0 rounded-xl px-2.5 text-[10px] font-black uppercase tracking-wide text-slate-500 transition-colors hover:bg-white hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-45 sm:px-3"
-              aria-label="Desativar comunicados de relacionamento"
+              aria-label={`${relationshipPreference?.allowed ? 'Desativar' : 'Ativar'} comunicados de relacionamento e aniversário`}
             >
-              {marketingPreferenceUpdating ? <Loader2 size={15} className="animate-spin" /> : 'Desativar'}
+              {relationshipPreferenceUpdating
+                ? <Loader2 size={15} className="animate-spin" />
+                : relationshipPreference?.allowed ? 'Desativar' : 'Ativar'}
             </button>
           </div>
-        </section>
-      ) : null}
+        )}
+      </section>
 
       <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm sm:hidden" role="tablist" aria-label="Filtrar notificações por categoria">
         {FILTERS.map((item) => {
