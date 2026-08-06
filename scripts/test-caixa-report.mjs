@@ -12,6 +12,7 @@ const tests = [
   'modules/gestor/caixa/report/caixa-report.layout.test.ts',
   'modules/gestor/caixa/report/caixa-report.mapper.test.ts',
   'modules/gestor/caixa/report/caixa-report.pagination.test.ts',
+  'modules/gestor/caixa/report/caixa-report.vector-pdf.test.ts',
 ];
 
 try {
