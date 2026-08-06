@@ -29,14 +29,12 @@ test('preserva a prévia sem perdas e reduz somente relatórios extensos', () =>
     artworkScale: 2,
   });
   assert.deepEqual(getCaixaReportArtworkPreset(16), {
-    artworkFormat: 'JPEG',
-    artworkQuality: 0.97,
-    artworkScale: 1.5,
+    artworkFormat: 'PNG',
+    artworkScale: 2,
   });
   assert.deepEqual(getCaixaReportArtworkPreset(31), {
-    artworkFormat: 'JPEG',
-    artworkQuality: 0.96,
-    artworkScale: 1,
+    artworkFormat: 'PNG',
+    artworkScale: 1.5,
   });
 });
 
