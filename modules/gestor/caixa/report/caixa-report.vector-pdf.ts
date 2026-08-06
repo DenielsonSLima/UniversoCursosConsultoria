@@ -461,7 +461,17 @@ const drawSummaryPage = (pdf: jsPDF, report: CaixaDetailedReport) => {
   cards.forEach((card, index) => {
     const row = index < 4 ? 0 : 1;
     const column = index % 4;
-    drawCard(pdf, CONTENT_LEFT + (column * (cardWidth + gap)), 61 + (row * 19), cardWidth, 16.5, ...card);
+    drawCard(
+      pdf,
+      CONTENT_LEFT + (column * (cardWidth + gap)),
+      61 + (row * 19),
+      cardWidth,
+      16.5,
+      card[0],
+      card[1],
+      card[2],
+      card[3],
+    );
   });
 
   const half = (CONTENT_WIDTH - gap) / 2;
@@ -816,7 +826,7 @@ export const buildCaixaVectorPdf = async (
 };
 
 export const inspectCaixaPdfOperatorsForTest = (pdf: jsPDF) => {
-  const pages = (pdf as PdfWithInternals).internal.pages ?? [];
+  const pages = (pdf as unknown as PdfWithInternals).internal.pages ?? [];
   return pages.slice(1).map((operators) => ({
     hasTextOperator: operators.some((operator) => /\b(?:Tj|TJ)\b/.test(operator)),
     imageDrawCount: operators.filter((operator) => /\/I\w+\s+Do\b/.test(operator)).length,
