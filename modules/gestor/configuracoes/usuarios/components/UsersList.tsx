@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Edit3,
@@ -13,10 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import UserFormAdd from './UserFormAdd';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../../../lib/supabase';
 import { buildGestorPermissionsPayload, normalizeFinanceiroTabs, normalizeGestorModules } from '../../../access-control';
-import { usuariosKeys } from '../usuarios.keys';
 import {
   useUsuariosByContextQuery,
   useUsuariosManagementStatesQuery,
@@ -49,7 +46,6 @@ type UserConfirmation =
     };
 
 const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }) => {
-  const queryClient = useQueryClient();
   const { toasts, removeToast, toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -59,28 +55,12 @@ const UsersList: React.FC<UsersListProps> = ({ contextId, contextTitle, onBack }
   const { data: users = [], isLoading, isError, error } = useUsuariosByContextQuery(contextId);
   const managementStatesQuery = useUsuariosManagementStatesQuery(contextId, users);
 
-  // 2. Escuta Realtime focada neste contexto de usuários
-  useEffect(() => {
-    const channel = supabase
-      .channel(`users_list_realtime_${contextId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'usuarios_sistema', filter: `context=eq.${contextId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
-          queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [contextId, queryClient]);
-
-  const createUserMutation = useCreateUsuarioMutation(contextId, () => {
+  const createUserMutation = useCreateUsuarioMutation(contextId, (createdUser) => {
     setIsAddingUser(false);
-    toast.success('Usuário cadastrado', 'O novo acesso foi criado com sucesso.');
+    toast.success(
+      'Usuário cadastrado',
+      createdUser.access_message || 'O novo acesso foi criado com sucesso.',
+    );
   });
 
   const updateUserMutation = useUpdateUsuarioMutation(contextId, () => {
