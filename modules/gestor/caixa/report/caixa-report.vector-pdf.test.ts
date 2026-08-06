@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { gunzipSync } from 'node:zlib';
 import type { CaixaDetailedReport } from './caixa-report.types';
+import { CAIXA_REPORT_FONTS_A } from './caixa-report.fonts-a';
+import { CAIXA_REPORT_FONTS_B } from './caixa-report.fonts-b';
 import {
   buildCaixaAdjustmentLines,
   CAIXA_REPORT_PDF_PIPELINE,
@@ -10,6 +13,15 @@ import {
   getCaixaResultLabel,
   inspectCaixaPdfOperatorsForTest,
 } from './caixa-report.vector-pdf';
+
+const getEmbeddedFontFiles = () => [
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_A.regular, 'base64')),
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_A.medium, 'base64')),
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_A.semiBold, 'base64')),
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_B.bold, 'base64')),
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_B.extraBold, 'base64')),
+  gunzipSync(Buffer.from(CAIXA_REPORT_FONTS_B.black, 'base64')),
+] as const;
 
 const emptyTotals = {
   valorBase: 0,
@@ -132,14 +144,7 @@ const makeReport = (): CaixaDetailedReport => ({
 });
 
 test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma captura full-page', async () => {
-  const [regularFont, mediumFont, semiBoldFont, boldFont, extraBoldFont, blackFont] = await Promise.all([
-    readFile(resolve('public/fonts/Inter-Regular.ttf')),
-    readFile(resolve('public/fonts/Inter-Medium.ttf')),
-    readFile(resolve('public/fonts/Inter-SemiBold.ttf')),
-    readFile(resolve('public/fonts/Inter-Bold.ttf')),
-    readFile(resolve('public/fonts/Inter-ExtraBold.ttf')),
-    readFile(resolve('public/fonts/Inter-Black.ttf')),
-  ]);
+  const [regularFont, mediumFont, semiBoldFont, boldFont, extraBoldFont, blackFont] = getEmbeddedFontFiles();
   const report = makeReport();
   const pdf = await createCaixaReportPdfDocument(
     report,
@@ -190,15 +195,8 @@ test('gera páginas com texto vetorial visível, Inter incorporada e nenhuma cap
 });
 
 test('mantém conteúdo vetorial quando logo e marca paisagem são imagens decorativas', async () => {
-  const [regularFont, mediumFont, semiBoldFont, boldFont, extraBoldFont, blackFont, logoFile] = await Promise.all([
-    readFile(resolve('public/fonts/Inter-Regular.ttf')),
-    readFile(resolve('public/fonts/Inter-Medium.ttf')),
-    readFile(resolve('public/fonts/Inter-SemiBold.ttf')),
-    readFile(resolve('public/fonts/Inter-Bold.ttf')),
-    readFile(resolve('public/fonts/Inter-ExtraBold.ttf')),
-    readFile(resolve('public/fonts/Inter-Black.ttf')),
-    readFile(resolve('public/LogoUniverso.png')),
-  ]);
+  const [regularFont, mediumFont, semiBoldFont, boldFont, extraBoldFont, blackFont] = getEmbeddedFontFiles();
+  const logoFile = await readFile(resolve('public/LogoUniverso.png'));
   const asArrayBuffer = (file: Uint8Array) => file.buffer.slice(
     file.byteOffset,
     file.byteOffset + file.byteLength,
