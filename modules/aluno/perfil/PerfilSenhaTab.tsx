@@ -3,7 +3,7 @@ import { CheckCircle, Eye, EyeOff, LoaderCircle, Lock } from 'lucide-react';
 import { loginService } from '../../login/login.service';
 
 const hasStrongPassword = (value: string) => (
-  value.length >= 6 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
+  value.length >= 8 && /[A-Z]/.test(value) && /[a-z]/.test(value) && /\d/.test(value)
 );
 
 const PerfilSenhaTab: React.FC = () => {
@@ -30,7 +30,7 @@ const PerfilSenhaTab: React.FC = () => {
     if (!hasStrongPassword(newPassword)) {
       setMessage({
         tone: 'error',
-        text: 'A nova senha precisa ter no mínimo 6 caracteres, 1 letra maiúscula, 1 minúscula e 1 número.',
+        text: 'A nova senha precisa ter no mínimo 8 caracteres, 1 letra maiúscula, 1 minúscula e 1 número.',
       });
       return;
     }
@@ -85,7 +85,7 @@ const PerfilSenhaTab: React.FC = () => {
               type={showNew ? 'text' : 'password'}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              placeholder="Mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número"
+              placeholder="Mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número"
               className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-14 text-base font-semibold text-slate-800 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 md:pr-12 md:text-sm"
               required
             />
@@ -130,7 +130,7 @@ const PerfilSenhaTab: React.FC = () => {
             : 'border-slate-200 bg-slate-50 text-slate-600'
         }`}
         >
-          Sua nova senha precisa ter 6+ caracteres, 1 letra maiúscula, 1 minúscula e 1 número.
+          Sua nova senha precisa ter 8+ caracteres, 1 letra maiúscula, 1 minúscula e 1 número.
         </p>
 
         {message && (
