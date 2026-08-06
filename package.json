@@ -1,7 +1,7 @@
 {
   "name": "universo-cursos-e-consultoria",
   "private": true,
-  "version": "2.2.3-beta.28",
+  "version": "2.2.3-beta.29",
   "type": "module",
   "engines": {
     "node": "24.x"
