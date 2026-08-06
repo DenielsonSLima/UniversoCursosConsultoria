@@ -3,6 +3,7 @@ export type AuthMode = 'login' | 'cadastro';
 export type AuthMessage = {
   tone: 'success' | 'error';
   text: string;
+  action?: 'existing-account';
 };
 
 export type PasswordChecks = {
