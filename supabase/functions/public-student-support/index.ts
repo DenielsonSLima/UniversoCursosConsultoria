@@ -24,6 +24,7 @@ type Payload = {
   platform?: "android" | "ios";
   pushToken?: string;
   permissionStatus?: "granted" | "provisional";
+  requestId?: string;
 };
 
 const ALLOWED_SECTORS = new Set([
@@ -75,6 +76,8 @@ const sha256 = async (value: string) => {
 };
 
 const randomToken = () => `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ACCESS_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
 const protocol = () => {
   const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
   return `UNI-${date}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
@@ -138,10 +141,10 @@ const verifyTurnstile = async (
   }
 };
 
-const rateLimit = async (admin: any, request: Request, action: Action, limit: number) => {
-  const ipHash = await sha256(`public-support:${action}:${getClientIp(request)}`);
+const rateLimit = async (admin: any, bucketKey: string, limit: number) => {
+  const bucketHash = await sha256(`public-support:${bucketKey}`);
   const { data, error } = await admin.rpc("consume_portal_auth_rate_limit", {
-    p_bucket_key: `public-support:${action}:${ipHash}`,
+    p_bucket_key: `public-support:${bucketHash}`,
     p_limit: limit,
     p_window_seconds: 900,
   });
@@ -158,20 +161,6 @@ const resolvePolo = async (admin: any, poloId?: string | null, poloLabel?: strin
   const { data, error } = await query.limit(1).maybeSingle();
   if (error) throw error;
   return data || null;
-};
-
-type PublicSupportIdentity = {
-  identity_kind: "aluno" | "gestor";
-  partner_id: string | null;
-  display_name: string;
-  polo_id: string | null;
-};
-
-const resolveIdentity = async (admin: any, cpf: string): Promise<PublicSupportIdentity | null> => {
-  const { data, error } = await admin.rpc("resolve_public_support_identity_by_cpf", { p_cpf: cpf });
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  return row || null;
 };
 
 const loadBootstrap = async (admin: any) => {
@@ -210,64 +199,83 @@ Deno.serve(async (request: Request) => {
   if (!action || !["bootstrap", "create-ticket", "history", "register-push", "send-message", "send-attachment"].includes(action)) return json({ error: "Ação inválida." }, 400);
 
   try {
-    if (!await rateLimit(admin, request, action, action === "bootstrap" ? 120 : 40)) return json({ error: "Muitas tentativas. Aguarde alguns minutos." }, 429);
+    const ipLimit = action === "bootstrap" ? 180 : action === "create-ticket" ? 40 : 600;
+    if (!await rateLimit(admin, `ip:${action}:${getClientIp(request)}`, ipLimit)) {
+      return json({ error: "Muitas tentativas. Aguarde alguns minutos." }, 429);
+    }
 
     if (action === "bootstrap") return json(await loadBootstrap(admin));
 
     if (action === "create-ticket") {
       const providedName = normalizePersonName(payload.name);
-      const cpf = normalizeCpf(payload.cpf);
+      const rawCpf = String(payload.cpf || "").trim();
+      const cpf = rawCpf ? normalizeCpf(rawCpf) : "";
       const subject = String(payload.subject || "").trim().slice(0, 180);
       const message = String(payload.message || "").trim().slice(0, 4000);
       const sector = ALLOWED_SECTORS.has(String(payload.sector)) ? String(payload.sector) : "atendimento_geral";
+      const requestId = String(payload.requestId || "").trim().toLowerCase();
+      const requestedAccessToken = String(payload.accessToken || "").trim().toLowerCase();
+      if (requestId && !UUID_PATTERN.test(requestId)) return json({ error: "Identificador da solicitação inválido." }, 400);
+      if (requestedAccessToken && !ACCESS_TOKEN_PATTERN.test(requestedAccessToken)) {
+        return json({ error: "Token do atendimento inválido." }, 400);
+      }
       if (!providedName) return json({ error: "Informe seu nome completo, sem números ou abreviações." }, 400);
-      if (!cpf) return json({ error: "Informe um CPF válido. Confira os 11 números e tente novamente." }, 400);
+      if (rawCpf && !cpf) return json({ error: "Informe um CPF válido. Confira os 11 números e tente novamente." }, 400);
       if (subject.length < 2 || message.length < 2) return json({ error: "Informe o assunto e a mensagem do chamado." }, 400);
       const challengeContext = payload.challengeContext === "native" ? "native" : "web";
       if (!await verifyTurnstile(request, String(payload.turnstileToken || ""), challengeContext)) return json({ error: "Confirme a verificação de segurança novamente." }, 400);
-      const identity = await resolveIdentity(admin, cpf);
-      const requestedPoloId = payload.poloId || identity?.polo_id || null;
+      const requestedPoloId = payload.poloId || null;
       const polo = await resolvePolo(admin, requestedPoloId, payload.poloLabel);
       if (!polo) return json({ error: "Polo não encontrado." }, 400);
       const { data: config } = await admin.from("comunicacao_atendimento_config").select("permite_chat_publico,permite_novo_chamado,tempo_medio_resposta_minutos,mensagem_online,mensagem_offline,status_modo,horarios").eq("polo_id", polo.id).maybeSingle();
       if (config && (!config.permite_chat_publico || !config.permite_novo_chamado)) return json({ error: "A abertura de chamados está temporariamente indisponível para este polo." }, 409);
 
-      const accessToken = randomToken();
+      // O cliente atual persiste um bearer de 256 bits antes do invoke. O
+      // caminho derivado mantém compatibilidade temporária com builds que já
+      // enviavam requestId sem accessToken; clientes anteriores, sem requestId,
+      // continuam recebendo um token aleatório do servidor.
+      const accessToken = requestedAccessToken
+        || (requestId ? await sha256(`legacy-public-support-access:${requestId}`) : randomToken());
       const accessHash = await sha256(accessToken);
       const expiresAt = new Date(Date.now() + TOKEN_MAX_AGE_DAYS * 86400000).toISOString();
       const ticketProtocol = protocol();
-      const requesterName = identity?.display_name || providedName;
-      const requesterType = identity?.identity_kind === "aluno" ? "Aluno" : "Visitante";
-      const requesterId = identity?.identity_kind === "aluno" ? identity.partner_id : null;
-      const { data: chat, error: chatError } = await admin.from("comunicacao_chats").insert({
-        remetente_id: requesterId,
-        remetente_nome: requesterName,
-        remetente_tipo: requesterType,
-        status: "pendente",
-        origem: "publico",
-        polo_id: polo.id,
-        setor: sector,
-        assunto: subject,
-        protocolo: ticketProtocol,
-        ultimo_texto: message,
-        ultima_data: new Date().toISOString(),
-        notificar_resposta: Boolean(payload.notifyReply),
-        public_access_hash: accessHash,
-        public_access_expires_at: expiresAt,
-      }).select("id,status,protocolo,created_at").single();
-      if (chatError) throw chatError;
-      const { error: messageError } = await admin.from("comunicacao_mensagens").insert({
-        chat_id: chat.id,
-        remetente_id: requesterId,
-        remetente_nome: requesterName,
-        remetente_tipo: "aluno",
-        conteudo: message,
-      });
-      if (messageError) {
-        await admin.from("comunicacao_chats").delete().eq("id", chat.id);
-        throw messageError;
+      const requesterName = providedName;
+      const requesterType = "Visitante";
+      const requesterId = null;
+      const { data: createdRows, error: createError } = await admin.rpc(
+        "create_public_support_ticket_idempotent",
+        {
+          p_request_id: requestId || null,
+          p_requester_id: requesterId,
+          p_requester_name: requesterName,
+          p_requester_type: requesterType,
+          p_polo_id: polo.id,
+          p_sector: sector,
+          p_subject: subject,
+          p_protocol: ticketProtocol,
+          p_message: message,
+          p_notify_reply: Boolean(payload.notifyReply),
+          p_access_hash: accessHash,
+          p_expires_at: expiresAt,
+        },
+      );
+      if (createError) throw createError;
+      const createdRow = Array.isArray(createdRows) ? createdRows[0] : createdRows;
+      if (!createdRow || createdRow.public_access_hash !== accessHash) {
+        return json({ error: "Não foi possível confirmar a abertura do atendimento." }, 409);
       }
-      return json({ chat, accessToken, polo, averageResponseMinutes: config?.tempo_medio_resposta_minutos || 120 }, 201);
+      const chat = {
+        id: createdRow.id,
+        status: createdRow.status,
+        protocolo: createdRow.protocolo,
+        created_at: createdRow.created_at,
+      };
+      return json({
+        chat,
+        accessToken,
+        polo,
+        averageResponseMinutes: config?.tempo_medio_resposta_minutos || 120,
+      }, createdRow.created ? 201 : 200);
     }
 
     const accessToken = String(payload.accessToken || "").trim();
@@ -278,6 +286,17 @@ Deno.serve(async (request: Request) => {
       .eq("public_access_hash", accessHash).eq("origem", "publico").gt("public_access_expires_at", new Date().toISOString()).maybeSingle();
     if (chatError) throw chatError;
     if (!chat) return json({ error: "Atendimento não encontrado ou expirado." }, 404);
+
+    const accessLimits: Record<Exclude<Action, "bootstrap" | "create-ticket">, number> = {
+      history: 180,
+      "register-push": 60,
+      "send-message": 90,
+      "send-attachment": 30,
+    };
+    const accessAction = action as Exclude<Action, "bootstrap" | "create-ticket">;
+    if (!await rateLimit(admin, `access:${accessAction}:${accessHash}`, accessLimits[accessAction])) {
+      return json({ error: "Muitas tentativas neste atendimento. Aguarde alguns minutos." }, 429);
+    }
 
     if (action === "register-push") {
       const installationId = String(payload.installationId || "").trim();
