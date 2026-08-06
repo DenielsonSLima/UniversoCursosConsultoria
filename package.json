@@ -31,6 +31,7 @@
     "test:multichannel": "deno test --allow-read modules/gestor/comunicacao/automacoes-multicanal/multichannel-automation.test.ts",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
+    "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",
     "test:document-validation": "node scripts/test-document-validation.mjs",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
