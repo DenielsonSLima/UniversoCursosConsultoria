@@ -92,8 +92,8 @@ export const CaixaReportRecurringAnalysis: React.FC<{
             {report.analiseRecorrente.modalidades.map((item) => (
               <div key={item.modalidade} className={`grid ${GRID} items-center gap-1 px-2 py-2`}>
                 <div className="min-w-0">
-                  <p className="truncate text-[9px] font-black text-slate-800">{item.rotulo}</p>
-                  <p className="mt-0.5 truncate text-[8px] text-slate-500">
+                  <p className="break-words text-[9px] font-black leading-tight text-slate-800">{item.rotulo}</p>
+                  <p className="mt-0.5 break-words text-[8px] leading-tight text-slate-500">
                     {item.quantidadeCursos} curso(s) · {item.quantidadeTurmas} turma(s) ·{' '}
                     {item.quantidadeAlunos} aluno(s)
                   </p>
@@ -130,8 +130,8 @@ export const CaixaReportRecurringAnalysis: React.FC<{
           {rows.map((item) => (
             <div key={item.turmaId} className={`grid ${GRID} items-center gap-1 px-2 py-3`}>
               <div className="min-w-0">
-                <p className="truncate text-[9px] font-black text-slate-800">{item.turma}</p>
-                <p className="mt-0.5 truncate text-[8px] text-slate-500">
+                <p className="break-words text-[9px] font-black leading-tight text-slate-800">{item.turma}</p>
+                <p className="mt-0.5 break-words text-[8px] leading-tight text-slate-500">
                   {item.modalidade} · {item.curso} · {item.quantidadeAlunos} aluno(s) ·{' '}
                   {item.quantidadeParcelas} parcela(s)
                 </p>
