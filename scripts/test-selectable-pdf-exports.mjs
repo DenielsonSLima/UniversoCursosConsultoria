@@ -10,6 +10,7 @@ const protectedVectorGenerators = [
   'modules/gestor/calendario/calendario.pdf.ts',
   'modules/gestor/gestao/tecnicos/detalhes/components/diarios/diario-pdf.ts',
   'modules/aluno/secretaria/student-card-pdf.ts',
+  'modules/gestor/caixa/report/caixa-report.vector-pdf.ts',
 ];
 
 const approvedHybridRasterPipelines = new Map([
@@ -172,18 +173,21 @@ const helperSafariFailures = /\brequestAnimationFrame\s*\(/m.test(helperSource)
   : [];
 const caixaReportPdfPath = 'modules/gestor/caixa/report/caixa-report.pdf.ts';
 const caixaReportPdfSource = sources.get(caixaReportPdfPath) || '';
+const caixaVectorPdfPath = 'modules/gestor/caixa/report/caixa-report.vector-pdf.ts';
+const caixaVectorPdfSource = sources.get(caixaVectorPdfPath) || '';
 const caixaReportDocumentPath = 'modules/gestor/caixa/report/CaixaReportDocument.tsx';
 const caixaReportDocumentSource = sources.get(caixaReportDocumentPath) || '';
 const caixaSafariFailures = [
-  ...(/cloneNode\s*\(/m.test(caixaReportPdfSource)
-    ? [`${caixaReportPdfPath} voltou a fotografar clones diferentes da prévia.`]
+  ...(helperReferencePattern.test(caixaReportPdfSource)
+    ? [`${caixaReportPdfPath} voltou a depender do helper híbrido de captura DOM.`]
     : []),
-  ...(!/builder\.addPage\(pages\[index\],\s*documentOptions\)/m.test(caixaReportPdfSource)
-    ? [`${caixaReportPdfPath} deixou de capturar diretamente as páginas da prévia.`]
+  ...(/html2canvas|stagePageForSafariCapture|appendChild\(page\)|renderingMode:\s*['"]invisible/m.test(`${caixaReportPdfSource}\n${caixaVectorPdfSource}`)
+    ? [`O exportador do Caixa voltou a rasterizar, mover a prévia ou desenhar texto invisível.`]
     : []),
-  ...(!/stagePageForSafariCapture\(pages\[index\]\)/m.test(caixaReportPdfSource)
-    || !/finally\s*\{\s*restorePage\(\)/m.test(caixaReportPdfSource)
-    ? [`${caixaReportPdfPath} deixou de estabilizar e restaurar cada página capturada pelo Safari.`]
+  ...(!/CAIXA_REPORT_PDF_PIPELINE\s*=\s*['"]native-vector['"]/m.test(caixaVectorPdfSource)
+    || !/pdf\.text\s*\(/m.test(caixaVectorPdfSource)
+    || !/pdf\.(?:rect|roundedRect|line)\s*\(/m.test(caixaVectorPdfSource)
+    ? [`${caixaVectorPdfPath} perdeu os sinais obrigatórios do gerador vetorial nativo.`]
     : []),
   ...(!/grid-rows-\[auto_minmax\(0,1fr\)_auto\]/m.test(caixaReportDocumentSource)
     || !/data-caixa-report-header/m.test(caixaReportDocumentSource)
@@ -210,7 +214,7 @@ const failures = [
 console.log('Contrato de exportações PDF selecionáveis');
 console.log('========================================');
 console.log(`Helper híbrido central: ${helperExists && missingHelperSignals.length === 0 ? 'OK' : 'INCOMPLETO'} — ${selectablePdfHelper}`);
-console.log(`Continuidade do Caixa no Safari: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaReportPdfPath}`);
+console.log(`Estrutura vetorial do Caixa: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaVectorPdfPath}`);
 
 console.log(`\nConsumidores do helper híbrido (${helperConsumers.length}):`);
 if (helperConsumers.length === 0) console.log('  (nenhum)');
