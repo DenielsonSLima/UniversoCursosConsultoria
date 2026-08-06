@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.28",
+  "version": "2.2.3-beta.29",
   "display": "BETA",
   "stage": "beta",
-  "revision": 28,
+  "revision": 29,
   "releasedAt": "2026-08-05",
-  "summary": "Cadastro e chat resilientes, áudio nativo e PDFs oficiais selecionáveis"
+  "summary": "Pasta em lote alinhada à Carteirinha e protegida por escopo"
 }

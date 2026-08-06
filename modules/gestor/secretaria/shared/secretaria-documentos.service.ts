@@ -305,6 +305,7 @@ export const secretariaDocumentosService = {
     matriculaId?: string;
     matriculaIds?: string[];
     turmaId?: string;
+    allStudentsInPolo?: boolean;
     technicalOnly?: boolean;
     activeEnrollmentOnly?: boolean;
     activeTurmaOnly?: boolean;
@@ -345,7 +346,15 @@ export const secretariaDocumentosService = {
     if (input.modo === 'individual') {
       query = query.eq('id', input.matriculaId!);
     } else if (input.modo === 'lote') {
-      query = query.eq('turma_id', input.turmaId!);
+      if (input.allStudentsInPolo) {
+        if (input.documento !== 'pasta_identificacao') {
+          throw new Error('A emissão para todo o polo não está disponível para este documento.');
+        }
+      } else if (input.turmaId && input.turmaId !== 'todos') {
+        query = query.eq('turma_id', input.turmaId);
+      } else {
+        throw new Error('Selecione uma turma para preparar a emissão em lote.');
+      }
     } else {
       if (!input.matriculaIds?.length) {
         throw new Error('Adicione pelo menos um aluno à lista personalizada.');
@@ -353,7 +362,9 @@ export const secretariaDocumentosService = {
       query = query.in('id', input.matriculaIds);
     }
     if (input.technicalOnly) query = query.eq('turmas.cursos.modalidade', 'TECNICO');
-    if (input.activeEnrollmentOnly) query = query.eq('status', 'ATIVO');
+    const isActiveFolderBatch =
+      input.documento === 'pasta_identificacao' && input.modo === 'lote';
+    if (input.activeEnrollmentOnly || isActiveFolderBatch) query = query.eq('status', 'ATIVO');
     if (input.activeTurmaOnly) query = query.eq('turmas.status', 'EM_ANDAMENTO');
     if (input.enrollmentStatuses?.length) query = query.in('status', input.enrollmentStatuses);
     if (input.completedOnly) query = query.eq('status', 'CONCLUIDO');

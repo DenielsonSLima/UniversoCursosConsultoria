@@ -107,6 +107,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const selectsFichaTemplate = definition.templateSelection === 'ficha_matricula';
   const usesDirectDocumentViewer =
     definition.id === 'ficha_matricula' || definition.id === 'pasta_identificacao';
+  const supportsAllStudentsBatch = definition.id === 'pasta_identificacao';
   const supportsIssuedDocumentPreview = !isCrachaDocument;
   const activeEnrollmentOnly = !!(definition.activeOnly || definition.activeEnrollmentOnly);
   const activeTurmaOnly = !!(definition.activeOnly || definition.activeTurmaOnly);
@@ -196,6 +197,12 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
   const selectedMatricula = matriculas.find((item) => item.id === selectedMatriculaId);
   const selectedTurma = turmas.find((item) => item.id === selectedTurmaId);
+  const pastaBatchTurmas = useMemo(
+    () => supportsAllStudentsBatch
+      ? turmas.filter((turma) => turma.totalAlunos > 0)
+      : turmas,
+    [supportsAllStudentsBatch, turmas]
+  );
   const fichaTargetModalities = useMemo(() => {
     const modalities = mode === 'individual'
       ? [selectedMatricula?.modalidade]
@@ -315,8 +322,13 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   }, [irpfLiberacaoDate, irpfTemplate, isIrpfAnnual]);
 
   useEffect(() => {
-    if (turmas.length && !selectedTurmaId) setSelectedTurmaId(turmas[0].id);
-  }, [turmas, selectedTurmaId]);
+    if (mode !== 'lote' || selectedTurmaId) return;
+    if (supportsAllStudentsBatch) {
+      setSelectedTurmaId('todos');
+      return;
+    }
+    if (turmas.length) setSelectedTurmaId(turmas[0].id);
+  }, [mode, selectedTurmaId, supportsAllStudentsBatch, turmas]);
 
   useEffect(() => {
     if (!selectsFichaTemplate) return;
@@ -382,6 +394,8 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
         alunoId: mode === 'individual' ? selectedAluno?.id : undefined,
         matriculaId: mode === 'individual' ? selectedMatriculaId : undefined,
         turmaId: mode === 'lote' ? selectedTurmaId : undefined,
+        allStudentsInPolo:
+          mode === 'lote' && supportsAllStudentsBatch && selectedTurmaId === 'todos',
         matriculaIds: mode === 'custom'
           ? customSelections.map((selection) => selection.matricula.id)
           : undefined,
@@ -440,7 +454,9 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSearchTerm('');
     setSelectedAluno(null);
     setSelectedMatriculaId('');
-    setSelectedTurmaId('');
+    setSelectedTurmaId(
+      nextMode === 'lote' && supportsAllStudentsBatch ? 'todos' : ''
+    );
     setSelectedModuleId('');
     setCustomSelections([]);
     setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
@@ -1028,12 +1044,46 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
 
           {step === 1 && mode === 'lote' && (
             <div>
-              <h4 className="text-lg font-black text-[#001a33] uppercase">Selecionar turma</h4>
+              <h4 className="text-lg font-black text-[#001a33] uppercase">
+                {supportsAllStudentsBatch ? 'Emissão em lote' : 'Selecionar turma'}
+              </h4>
               <p className="text-sm text-slate-500 mt-1 mb-6">
-                A emissão será preparada conforme a regra acadêmica deste documento.
+                {supportsAllStudentsBatch
+                  ? 'Gere as pastas para uma turma específica ou para todos os alunos deste polo.'
+                  : 'A emissão será preparada conforme a regra acadêmica deste documento.'}
               </p>
               {isLoadingTurmas ? (
                 <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-slate-400" /></div>
+              ) : supportsAllStudentsBatch ? (
+                <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
+                      Selecione a turma
+                    </label>
+                    <select
+                      value={selectedTurmaId}
+                      onChange={(event) => setSelectedTurmaId(event.target.value)}
+                      className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 font-bold text-slate-700 outline-none focus:border-purple-500"
+                    >
+                      <option value="todos">Todos os alunos deste polo</option>
+                      {pastaBatchTurmas.map((turma) => (
+                        <option key={turma.id} value={turma.id}>
+                          {turma.nome} ({turma.codigo})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
+                      Alunos no lote
+                    </label>
+                    <div className="w-full rounded-2xl border border-blue-100 bg-blue-50 p-4 font-bold text-blue-700">
+                      {selectedTurmaId === 'todos'
+                        ? `${pastaBatchTurmas.reduce((total, turma) => total + turma.totalAlunos, 0)} alunos ativos no polo`
+                        : `${selectedTurma?.totalAlunos || 0} alunos ativos na turma`}
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {turmas.map((turma) => (
