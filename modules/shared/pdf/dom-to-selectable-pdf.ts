@@ -1,4 +1,4 @@
-/* global CSSStyleDeclaration, DOMRect, HTMLCanvasElement */
+/* global ChildNode, CSSStyleDeclaration, DOMRect, HTMLCanvasElement */
 
 import type { jsPDF } from 'jspdf';
 
@@ -317,7 +317,13 @@ const captureArtwork = async (
     throw new Error('A qualidade JPEG do PDF deve estar entre 0 e 1.');
   }
 
-  const markers = installOriginalTextMarkers(vectorTextNodes);
+  const textLayerMode = options.textLayerMode ?? 'replace-artwork-text';
+  // In fidelity mode the browser-rendered text remains in the artwork, so no
+  // clone marker is needed. Avoiding hundreds of temporary display:contents
+  // wrappers is especially important for Safari/WebKit reliability.
+  const markers = textLayerMode === 'replace-artwork-text'
+    ? installOriginalTextMarkers(vectorTextNodes)
+    : [];
   try {
     return await dependencies.html2canvas(element, {
       scale: artworkScale,
@@ -338,7 +344,7 @@ const captureArtwork = async (
         Math.ceil(rect.height),
       ),
       onclone: (clonedDocument, clonedElement) => {
-        if ((options.textLayerMode ?? 'replace-artwork-text') === 'replace-artwork-text') {
+        if (textLayerMode === 'replace-artwork-text') {
           hideMarkedCloneText(clonedElement);
         }
         options.prepareClone?.(clonedDocument, clonedElement);
@@ -448,6 +454,21 @@ const isElementVisible = (element: HTMLElement, root: HTMLElement) => {
   return true;
 };
 
+const isInlineLayoutSibling = (node: ChildNode | null) => {
+  if (!node) return false;
+  if (node.nodeType === Node.TEXT_NODE) return Boolean(node.textContent?.trim());
+  if (node.nodeType !== Node.ELEMENT_NODE) return false;
+  const element = node as HTMLElement;
+  const display = window.getComputedStyle(element).display;
+  return display === 'contents' || display.startsWith('inline');
+};
+
+const isSemanticInlineWhitespace = (textNode: Text) => (
+  !textNode.data.trim()
+  && isInlineLayoutSibling(textNode.previousSibling)
+  && isInlineLayoutSibling(textNode.nextSibling)
+);
+
 const assertNoClippedText = (root: HTMLElement) => {
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const range = root.ownerDocument.createRange();
@@ -455,7 +476,11 @@ const assertNoClippedText = (root: HTMLElement) => {
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text;
     const parent = textNode.parentElement;
-    if (!parent || !textNode.data.trim()) continue;
+    if (
+      !parent
+      || !textNode.data
+      || (!textNode.data.trim() && !isSemanticInlineWhitespace(textNode))
+    ) continue;
     if (parent.closest('script, style, noscript, svg, [data-pdf-raster-text="true"]')) continue;
     if (!isElementVisible(parent, root)) continue;
 
@@ -548,6 +573,46 @@ const hasOnlyStandardPdfCharacters = (text: string) => (
   Array.from(text).every((character) => (character.codePointAt(0) ?? 0) <= 0xff)
 );
 
+const runsShareLine = (first: TextRun, second: TextRun) => (
+  Math.abs(first.y - second.y) <= Math.max(1, Math.min(first.height, second.height) * 0.25)
+);
+
+/**
+ * PDF extractors commonly discard a text object made only of whitespace. The
+ * browser, however, often represents the separator between adjacent inline
+ * elements as its own whitespace-only text node. Fold that separator into a
+ * neighbouring visible run so copy/search retains the same words and spaces
+ * shown in the artwork.
+ */
+const mergeStandaloneWhitespaceRuns = (runs: TextRun[]) => {
+  const merged: TextRun[] = [];
+  let pendingWhitespace: TextRun | null = null;
+
+  runs.forEach((run) => {
+    if (!run.text.trim()) {
+      const previous = merged.at(-1);
+      if (previous && runsShareLine(previous, run)) {
+        if (!previous.text.endsWith(' ')) previous.text += ' ';
+        previous.width = Math.max(previous.width, run.x + run.width - previous.x);
+      } else {
+        pendingWhitespace = run;
+      }
+      return;
+    }
+
+    if (pendingWhitespace && runsShareLine(pendingWhitespace, run)) {
+      const originalRight = run.x + run.width;
+      run.text = run.text.startsWith(' ') ? run.text : ` ${run.text}`;
+      run.x = Math.min(run.x, pendingWhitespace.x);
+      run.width = Math.max(run.width, originalRight - run.x);
+    }
+    pendingWhitespace = null;
+    merged.push(run);
+  });
+
+  return merged;
+};
+
 const collectTextLayerPlan = (root: HTMLElement): TextLayerPlan => {
   const rootRect = root.getBoundingClientRect();
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -558,7 +623,14 @@ const collectTextLayerPlan = (root: HTMLElement): TextLayerPlan => {
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text;
     const parent = textNode.parentElement;
-    if (!parent || !textNode.data.trim()) continue;
+    // Only separators between adjacent inline siblings are relevant. Ignoring
+    // indentation between block elements also avoids expensive, empty range
+    // measurements in WebKit/Safari.
+    if (
+      !parent
+      || !textNode.data
+      || (!textNode.data.trim() && !isSemanticInlineWhitespace(textNode))
+    ) continue;
     if (parent.closest('script, style, noscript, svg, [data-pdf-raster-text="true"]')) continue;
     if (!isElementVisible(parent, root)) continue;
     if (hasUnsupportedTextRendering(parent, root)) continue;
@@ -585,18 +657,18 @@ const collectTextLayerPlan = (root: HTMLElement): TextLayerPlan => {
       if (!rect) continue;
 
       const normalizedCharacter = /\s/.test(character) ? ' ' : character;
-      const startsNewLine = currentRun !== null && (
-        Math.abs((rect.top - rootRect.top) - currentRun.y) > Math.max(1, rect.height * 0.25)
-        || rect.left < rootRect.left + currentRun.x + currentRun.width - 0.75
-      );
+      // Safari reports kerning rectangles that can overlap the previous glyph.
+      // Horizontal overlap is therefore not evidence of a new line; the
+      // vertical coordinate is the stable cross-browser line boundary.
+      const startsNewLine = currentRun !== null
+        && Math.abs((rect.top - rootRect.top) - currentRun.y) > Math.max(1, rect.height * 0.25);
 
       if (startsNewLine) {
-        if (currentRun?.text.trim()) runs.push(currentRun);
+        if (currentRun?.text) runs.push(currentRun);
         currentRun = null;
       }
 
       if (!currentRun) {
-        if (normalizedCharacter === ' ') continue;
         currentRun = {
           text: normalizedCharacter,
           x: rect.left - rootRect.left,
@@ -620,7 +692,7 @@ const collectTextLayerPlan = (root: HTMLElement): TextLayerPlan => {
       currentRun.height = Math.max(currentRun.height, rect.height);
     }
 
-    if (currentRun?.text.trim()) runs.push(currentRun);
+    if (currentRun?.text) runs.push(currentRun);
     const plannedRuns = runs.slice(firstRunIndex);
     const renderedText = plannedRuns
       .map((run) => transformText(run.text, run.textTransform))
@@ -633,7 +705,7 @@ const collectTextLayerPlan = (root: HTMLElement): TextLayerPlan => {
   }
 
   range.detach();
-  return { runs, vectorTextNodes };
+  return { runs: mergeStandaloneWhitespaceRuns(runs), vectorTextNodes };
 };
 
 const resolvePdfFont = (run: TextRun) => {
@@ -652,6 +724,31 @@ const resolvePdfFont = (run: TextRun) => {
   return { fontName, fontStyle };
 };
 
+const mergeAdjacentSemanticRuns = (runs: TextRun[]) => {
+  const merged: TextRun[] = [];
+
+  runs.forEach((run) => {
+    const previous = merged.at(-1);
+    const hasExplicitSeparator = previous?.text.endsWith(' ') || run.text.startsWith(' ');
+    const isNearby = previous
+      && run.x <= previous.x + previous.width + Math.max(24, run.fontSize * 1.5);
+
+    if (previous && hasExplicitSeparator && isNearby && runsShareLine(previous, run)) {
+      const separator = previous.text.endsWith(' ') && run.text.startsWith(' ')
+        ? run.text.slice(1)
+        : run.text;
+      previous.text += separator;
+      previous.width = Math.max(previous.width, run.x + run.width - previous.x);
+      previous.height = Math.max(previous.height, run.height);
+      return;
+    }
+
+    merged.push({ ...run });
+  });
+
+  return merged;
+};
+
 const drawTextRuns = (
   pdf: jsPDF,
   runs: TextRun[],
@@ -662,11 +759,12 @@ const drawTextRuns = (
   const clipTopPx = options.clipTopPx ?? 0;
   const clipBottomPx = options.clipBottomPx ?? Number.POSITIVE_INFINITY;
 
-  runs.forEach((run) => {
+  const drawableRuns = options.invisible ? mergeAdjacentSemanticRuns(runs) : runs;
+  drawableRuns.forEach((run) => {
     const runMiddle = run.y + run.height / 2;
     if (runMiddle < clipTopPx || runMiddle >= clipBottomPx) return;
     const text = transformText(run.text, run.textTransform);
-    if (!text.trim()) return;
+    if (!text || (!options.invisible && !text.trim())) return;
 
     const { fontName, fontStyle } = resolvePdfFont(run);
     const fontSizePt = run.fontSize * options.scaleY * (72 / 25.4);
@@ -691,7 +789,11 @@ const drawTextRuns = (
     }
     pdf.text(text, x, y, {
       baseline: 'top',
-      horizontalScale,
+      // The invisible layer exists for semantics, not visual alignment. Keeping
+      // its natural width prevents PDF readers from collapsing small spaces
+      // after aggressive horizontal compression. The visible legacy mode still
+      // uses the measured scale to preserve its existing layout contract.
+      horizontalScale: options.invisible ? 1 : horizontalScale,
       renderingMode: options.invisible ? 'invisible' : 'fill',
       flags: { noBOM: false, autoencode: true },
     });
@@ -808,7 +910,10 @@ class BrowserSelectablePdfBuilder implements SelectablePdfBuilder {
       artwork.height = 1;
     }
     this.addedPages += 1;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    // Safari/WebKit may suspend requestAnimationFrame while a heavy document
+    // export is running, even with the tab visible. Yield through the timer
+    // queue so multi-page reports always continue after the first page.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
   }
 
   outputBlob() {
@@ -988,7 +1093,7 @@ export const buildSelectablePdfBlobFromContinuousElement = async (
         sliceCanvas.width = 1;
         sliceCanvas.height = 1;
       }
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
     }
 
     return pdf.output('blob');
