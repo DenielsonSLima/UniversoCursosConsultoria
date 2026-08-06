@@ -18,7 +18,7 @@ Este arquivo registra as mudanças publicadas no sistema. A entrada mais recente
 - iOS e Android passam a usar a captura/seleção nativa de áudio quando a WebView não oferece `MediaRecorder`, normalizando M4A, MP3 e WAV antes do envio.
 - O iOS passa a declarar o uso do microfone para liberar a gravação de mensagens de voz; o Android mantém as permissões no manifesto do novo pacote.
 - O boletim deixa de abrir o visualizador legado e passa a usar o visualizador oficial dos demais documentos, com Download PDF, impressão, paginação e campos configurados.
-- A prestação de contas do Caixa deixa de ser um PDF somente em imagem: preserva fielmente a prévia, a logo e a marca-d’água em PNG sem perdas nos relatórios usuais, acrescenta texto selecionável, pesquisável e copiável e adapta a resolução apenas em relatórios extensos, com processamento página a página para evitar falhas no Safari.
+- A prestação de contas do Caixa preserva fielmente a prévia, a logo e o fundo paisagem configurado completo — faixa azul, marca central e curvas — em PNG sem perdas nos relatórios usuais, acrescenta texto selecionável, pesquisável e copiável e estabiliza cada folha no Safari para manter cabeçalho e rodapé nas quatro páginas.
 
 ### Alterado
 
