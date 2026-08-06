@@ -13,7 +13,9 @@ import { CaixaReportDocument } from './CaixaReportDocument';
 import {
   buildCaixaReportFileName,
   buildCaixaReportPdf,
+  getCaixaReportPdfErrorMessage,
 } from './caixa-report.pdf';
+import { downloadPdfBlob } from '../../../shared/pdf/dom-to-selectable-pdf';
 import { caixaReportQueryOptions } from './caixa-report.service';
 import type { CaixaDetailedReport } from './caixa-report.types';
 
@@ -129,40 +131,21 @@ export const CaixaReportPreviewModal: React.FC<CaixaReportPreviewModalProps> = (
     setGenerating(true);
     setGenerationError('');
     setProgress('Preparando o documento...');
-    let frozenContainer: HTMLDivElement | null = null;
     try {
-      const frozenDocument = documentRef.current.cloneNode(true) as HTMLElement;
-      frozenContainer = document.createElement('div');
-      frozenContainer.setAttribute('aria-hidden', 'true');
-      frozenContainer.style.position = 'fixed';
-      frozenContainer.style.left = '-100000px';
-      frozenContainer.style.top = '0';
-      frozenContainer.style.width = `${documentRef.current.scrollWidth}px`;
-      frozenContainer.style.pointerEvents = 'none';
-      frozenContainer.appendChild(frozenDocument);
-      document.body.appendChild(frozenContainer);
       const blob = await buildCaixaReportPdf(
-        frozenDocument,
+        documentRef.current,
         (current, total) => setProgress(`Gerando página ${current} de ${total}...`),
       );
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = buildCaixaReportFileName(
+      downloadPdfBlob(blob, buildCaixaReportFileName(
         report.resumo.meta.competencia,
         report.resumo.meta.escopoRotulo,
-      );
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      ));
       setProgress('PDF concluído.');
     } catch (downloadError) {
       console.error('Não foi possível gerar o PDF do Caixa:', downloadError);
-      setGenerationError('Não foi possível gerar o PDF. Revise a prévia e tente novamente.');
+      setGenerationError(getCaixaReportPdfErrorMessage(downloadError));
       setProgress('');
     } finally {
-      frozenContainer?.remove();
       setGenerating(false);
     }
   };

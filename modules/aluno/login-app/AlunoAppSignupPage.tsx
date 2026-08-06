@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Gift,
   Loader2,
   LockKeyhole,
   Mail,
@@ -16,7 +15,10 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { alunoPublicAuthService } from '../../public/login/aluno-public-auth.service';
+import {
+  alunoPublicAuthService,
+  isPublicAlunoAlreadyRegisteredError,
+} from '../../public/login/aluno-public-auth.service';
 import { getPublicAlunoBirthDateMax, isPublicAlunoOlderThanTen } from '../../public/login/aluno-birth-date';
 import { formatCpf, formatPhone } from '../../public/login/aluno-login.utils';
 import { savePortalSession, type PortalAuthProfile } from '../../login/portal-session';
@@ -38,7 +40,6 @@ type SignupForm = {
   password: string;
   confirmPassword: string;
   acceptedTerms: boolean;
-  relationshipBirthdayChoice: boolean | null;
   cep: string;
   endereco: string;
   numero: string;
@@ -57,7 +58,6 @@ const INITIAL_FORM: SignupForm = {
   password: '',
   confirmPassword: '',
   acceptedTerms: false,
-  relationshipBirthdayChoice: null,
   cep: '',
   endereco: '',
   numero: '',
@@ -85,6 +85,7 @@ const AlunoAppSignupPage: React.FC = () => {
   const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [existingAccount, setExistingAccount] = useState(false);
   const submitInFlightRef = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const currentStepIndex = STEP_ORDER.indexOf(step);
@@ -96,14 +97,15 @@ const AlunoAppSignupPage: React.FC = () => {
   };
 
   const passwordChecks = useMemo(() => ([
-    { label: '6+ caracteres', valid: form.password.length >= 6 },
+    { label: '8+ caracteres', valid: form.password.length >= 8 },
     { label: '1 maiúscula', valid: /[A-Z]/.test(form.password) },
     { label: '1 minúscula', valid: /[a-z]/.test(form.password) },
     { label: '1 número', valid: /\d/.test(form.password) },
   ]), [form.password]);
 
-  const showError = (text: string) => {
+  const showError = (text: string, accountAlreadyRegistered = false) => {
     setMessage(text);
+    setExistingAccount(accountAlreadyRegistered);
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -156,10 +158,9 @@ const AlunoAppSignupPage: React.FC = () => {
 
   const validateAccess = () => {
     if (!isValidEmail(form.email)) return 'Informe um e-mail válido. Ele será usado para entrar no aplicativo.';
-    if (!passwordChecks.every((check) => check.valid)) return 'Crie uma senha com 6 caracteres, letra maiúscula, minúscula e número.';
+    if (!passwordChecks.every((check) => check.valid)) return 'Crie uma senha com 8 caracteres, letra maiúscula, minúscula e número.';
     if (form.password !== form.confirmPassword) return 'As senhas não conferem.';
     if (!form.acceptedTerms) return 'Você precisa aceitar os Termos de Uso para continuar.';
-    if (form.relationshipBirthdayChoice === null) return 'Escolha se deseja ou não receber felicitações e comunicados de relacionamento.';
     return '';
   };
 
@@ -171,12 +172,14 @@ const AlunoAppSignupPage: React.FC = () => {
       return;
     }
     setMessage('');
+    setExistingAccount(false);
     setStep(step === 'pessoal' ? 'acesso' : 'endereco');
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goBack = () => {
     setMessage('');
+    setExistingAccount(false);
     setStep(step === 'endereco' ? 'acesso' : 'pessoal');
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -206,15 +209,13 @@ const AlunoAppSignupPage: React.FC = () => {
     submitInFlightRef.current = true;
     setLoading(true);
     setMessage('');
+    setExistingAccount(false);
     const verifiedToken = turnstileToken;
     setTurnstileToken('');
 
     try {
-      const { relationshipBirthdayChoice, ...signupForm } = form;
       const result = await alunoPublicAuthService.signup({
-        ...signupForm,
-        relationshipBirthdayConsent: relationshipBirthdayChoice === true,
-        relationshipBirthdayConsentSurface: 'public_signup_app',
+        ...form,
         turnstileToken: verifiedToken,
         redirectPath: '/aluno/',
         appFlow: true,
@@ -225,7 +226,10 @@ const AlunoAppSignupPage: React.FC = () => {
       }
       finishSignup(result.profile);
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.');
+      showError(
+        error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.',
+        isPublicAlunoAlreadyRegisteredError(error),
+      );
     } finally {
       setLoading(false);
       submitInFlightRef.current = false;
@@ -291,7 +295,17 @@ const AlunoAppSignupPage: React.FC = () => {
 
           {message ? (
             <div role="alert" className="mt-4 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-xs font-bold leading-relaxed text-red-100">
-              {message}
+              <p>{message}</p>
+              {existingAccount ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link to="/aluno/login-app" className="rounded-xl bg-blue-600 px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-white">
+                    Entrar
+                  </Link>
+                  <Link to="/aluno/recuperar-senha-app" className="rounded-xl border border-white/20 bg-white/10 px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wider text-blue-100">
+                    Recuperar senha
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -366,41 +380,9 @@ const AlunoAppSignupPage: React.FC = () => {
                 <label className="flex items-start gap-3 rounded-2xl bg-white/[0.06] p-3">
                   <input type="checkbox" checked={form.acceptedTerms} onChange={(event) => updateField('acceptedTerms', event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-blue-500" />
                   <span className="text-[11px] font-medium leading-relaxed text-blue-100/75">
-                    Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Termos de Uso</a> e o tratamento dos dados necessários ao acesso acadêmico.
+                    Li e aceito os <a href="/termos" target="_blank" rel="noreferrer" className="font-black text-blue-300 underline">Termos de Uso</a>. Estou ciente de que felicitações de aniversário e relacionamento não comercial ficam ativas por padrão, sob legítimo interesse, e podem ser desativadas em Notificações.
                   </span>
                 </label>
-                <fieldset className="rounded-2xl border border-blue-300/15 bg-blue-400/[0.08] p-3">
-                  <legend className="px-1 text-[10px] font-black uppercase tracking-wider text-blue-200">
-                    Opcional: relacionamento
-                  </legend>
-                  <div className="flex items-start gap-2.5">
-                    <Gift className="mt-0.5 shrink-0 text-pink-200" size={17} />
-                    <p className="text-[11px] font-medium leading-relaxed text-blue-100/75">
-                      Deseja receber no app felicitações de aniversário e comunicados de relacionamento? Não inclui publicidade comercial e não solicita a permissão do celular agora.
-                    </p>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Receber felicitações e comunicados de relacionamento">
-                    {([
-                      { value: true, label: 'Sim, quero' },
-                      { value: false, label: 'Não quero' },
-                    ] as const).map((option) => {
-                      const selected = form.relationshipBirthdayChoice === option.value;
-                      return (
-                        <label key={String(option.value)} className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border px-3 text-center text-[11px] font-black transition ${selected ? 'border-blue-300 bg-blue-500 text-white' : 'border-white/15 bg-white/[0.05] text-blue-100/70'}`}>
-                          <input
-                            type="radio"
-                            name="relationship-birthday-choice"
-                            value={String(option.value)}
-                            checked={selected}
-                            onChange={() => updateField('relationshipBirthdayChoice', option.value)}
-                            className="sr-only"
-                          />
-                          {option.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </fieldset>
                 <div className="grid grid-cols-[0.8fr_1.2fr] gap-2.5">
                   <button type="button" onClick={goBack} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.06] text-xs font-black"><ArrowLeft size={17} /> Voltar</button>
                   <button type="submit" className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-xs font-black shadow-xl shadow-blue-950/30">Continuar <ArrowRight size={17} /></button>

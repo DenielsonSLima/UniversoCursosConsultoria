@@ -5,8 +5,12 @@ import type {
   AlunoNotificationCursor,
   AlunoNotificationFilter,
   AlunoNotificationPage,
-  AlunoPushMarketingPreference,
+  AlunoRelationshipBirthdayPreference,
 } from './notificacoes.types';
+import {
+  RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+  RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+} from '../../shared/constants/relationship-consent';
 
 type AlunoNotificationRow = {
   id: string;
@@ -80,8 +84,8 @@ export const alunoNotificationKeys = {
     ['aluno', alunoId, 'notificacoes', 'detalhe', reference] as const,
   details: (alunoId: string) =>
     ['aluno', alunoId, 'notificacoes', 'detalhe'] as const,
-  marketingPreference: (alunoId: string) =>
-    ['aluno', alunoId, 'notificacoes', 'preferencia-marketing'] as const,
+  relationshipPreference: (alunoId: string) =>
+    ['aluno', alunoId, 'notificacoes', 'preferencia-relacionamento-aniversario'] as const,
 };
 
 export const alunoNotificationService = {
@@ -165,27 +169,38 @@ export const alunoNotificationService = {
     return Boolean(data);
   },
 
-  async getMarketingPreference(): Promise<AlunoPushMarketingPreference> {
-    const { data, error } = await (supabase.rpc as any)('aluno_push_marketing_preferencia_obter');
+  async getRelationshipPreference(): Promise<AlunoRelationshipBirthdayPreference> {
+    const { data, error } = await (supabase.rpc as any)('aluno_push_relacionamento_preferencia_obter');
     if (error) throw error;
     const row = asRecord(data);
     return {
+      configured: row.configured === true || row.decided === true,
       allowed: row.allowed === true,
       updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
-      policyVersion: typeof row.policyVersion === 'string' ? row.policyVersion : 'push-marketing-v1',
+      policyVersion: typeof row.policyVersion === 'string' ? row.policyVersion : RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+      legalBasis: RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+      activationReason: typeof row.activationReason === 'string' ? row.activationReason : null,
+      includesCommercialAdvertising: false,
+      canOptOut: true,
     };
   },
 
-  async updateMarketingPreference(allowed: boolean): Promise<AlunoPushMarketingPreference> {
-    const { data, error } = await (supabase.rpc as any)('aluno_push_marketing_preferencia_atualizar', {
+  async updateRelationshipPreference(allowed: boolean): Promise<AlunoRelationshipBirthdayPreference> {
+    const { data, error } = await (supabase.rpc as any)('aluno_push_relacionamento_preferencia_registrar', {
       p_allowed: allowed,
+      p_surface: 'student_notification_preferences',
     });
     if (error) throw error;
     const row = asRecord(data);
     return {
       allowed: row.allowed === true,
+      configured: row.configured === true || row.decided === true,
       updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : null,
-      policyVersion: typeof row.policyVersion === 'string' ? row.policyVersion : 'push-marketing-v1',
+      policyVersion: typeof row.policyVersion === 'string' ? row.policyVersion : RELATIONSHIP_BIRTHDAY_POLICY_VERSION,
+      legalBasis: RELATIONSHIP_BIRTHDAY_LEGAL_BASIS,
+      activationReason: typeof row.activationReason === 'string' ? row.activationReason : null,
+      includesCommercialAdvertising: false,
+      canOptOut: true,
     };
   },
 };

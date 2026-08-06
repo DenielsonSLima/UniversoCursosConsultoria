@@ -138,10 +138,10 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
     event.preventDefault();
     setPasswordMessage(null);
 
-    if (novaSenha.length < 6 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
+    if (novaSenha.length < 8 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/\d/.test(novaSenha)) {
       setPasswordMessage({
         tone: 'error',
-        text: 'A senha deve ter no mínimo 6 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
+        text: 'A senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula e 1 número.',
       });
       return;
     }
@@ -585,7 +585,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
                       value={novaSenha}
                       onChange={(event) => setNovaSenha(event.target.value)}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:bg-white"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                     />
                   </div>
                   <div className="space-y-1">
@@ -601,7 +601,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ professorId }) => {
                 </div>
 
                 <p className="mt-3 text-[11px] font-semibold text-slate-500">
-                  Use no mínimo 6 caracteres, com letra maiúscula, minúscula e número.
+                  Use no mínimo 8 caracteres, com letra maiúscula, minúscula e número.
                 </p>
 
                 {passwordMessage && (

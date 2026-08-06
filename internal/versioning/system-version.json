@@ -1,8 +1,8 @@
 {
-  "version": "2.2.3-beta.27",
+  "version": "2.2.3-beta.28",
   "display": "BETA",
   "stage": "beta",
-  "revision": 27,
+  "revision": 28,
   "releasedAt": "2026-08-05",
-  "summary": "Exportações PDF com texto selecionável, paginação segura e identidade visual preservada"
+  "summary": "Cadastro e chat resilientes, áudio nativo e PDFs oficiais selecionáveis"
 }

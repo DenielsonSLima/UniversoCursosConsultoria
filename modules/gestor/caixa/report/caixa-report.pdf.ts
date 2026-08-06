@@ -1,26 +1,54 @@
 import {
   assertCaixaReportPagesFit,
-  getCaixaReportArtworkScale,
+  getCaixaReportArtworkPreset,
 } from './caixa-report.layout';
 import { createSelectablePdfBuilder } from '../../../shared/pdf/dom-to-selectable-pdf';
 
-const waitForExportLayout = () => new Promise<void>((resolve) => {
-  window.requestAnimationFrame(() => resolve());
-});
+export const CAIXA_REPORT_TEXT_LAYER_MODE = 'preserve-artwork-text' as const;
 
-const createCaixaPdfExportHost = () => {
-  const host = document.createElement('div');
-  host.setAttribute('aria-hidden', 'true');
-  host.style.position = 'fixed';
-  host.style.inset = '0 auto auto 0';
-  host.style.zIndex = '-2147483648';
-  host.style.width = '297mm';
-  host.style.height = '210mm';
-  host.style.overflow = 'visible';
-  host.style.pointerEvents = 'none';
-  document.body.appendChild(host);
-  return host;
+const stagePageForSafariCapture = (page: HTMLElement) => {
+  const parent = page.parentNode;
+  if (!parent) throw new Error('A página do relatório não está vinculada à prévia.');
+
+  const placeholder = document.createComment('caixa-report-capture-position');
+  const rect = page.getBoundingClientRect();
+  const stage = document.createElement('div');
+  stage.dataset.caixaReportCaptureStage = 'true';
+  Object.assign(stage.style, {
+    background: '#ffffff',
+    height: `${Math.ceil(rect.height)}px`,
+    left: '0',
+    overflow: 'hidden',
+    pointerEvents: 'none',
+    position: 'fixed',
+    top: '0',
+    width: `${Math.ceil(rect.width)}px`,
+    zIndex: '2147483647',
+  });
+  parent.insertBefore(placeholder, page);
+  document.body.appendChild(stage);
+  stage.appendChild(page);
+
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    try {
+      if (placeholder.parentNode) placeholder.parentNode.replaceChild(page, placeholder);
+      else if (parent.isConnected) parent.appendChild(page);
+      else page.remove();
+    } finally {
+      placeholder.remove();
+      stage.remove();
+    }
+  };
+
+  return restore;
 };
+
+const waitForSafariPaint = () => new Promise<void>(
+  (resolve) => window.setTimeout(resolve, 50),
+);
 
 export const buildCaixaReportFileName = (
   competencia: string,
@@ -61,30 +89,30 @@ export const buildCaixaReportPdf = async (
   if (pages.length === 0) throw new Error('Nenhuma página do relatório foi encontrada.');
 
   assertCaixaReportPagesFit(pages);
+  const artworkPreset = getCaixaReportArtworkPreset(pages.length);
   const documentOptions = {
     orientation: 'landscape',
-    // O texto continua sendo redesenhado como vetor pelo helper. JPEG é usado somente
-    // na camada visual de fundo para não esgotar a memória em relatórios com muitas páginas.
-    artworkFormat: 'JPEG',
-    artworkQuality: 0.92,
-    artworkScale: getCaixaReportArtworkScale(pages.length),
+    // A arte visível preserva exatamente a prévia (incluindo Inter, logo e marca-d'água).
+    // Uma segunda camada invisível mantém seleção, busca e cópia no PDF.
+    ...artworkPreset,
+    textLayerMode: CAIXA_REPORT_TEXT_LAYER_MODE,
     title: 'Prestação de contas mensal do Caixa',
     subject: 'Posição contábil e movimentos financeiros confirmados',
     onProgress,
   } as const;
   const builder = await createSelectablePdfBuilder(documentOptions);
-  const exportHost = createCaixaPdfExportHost();
-
-  try {
-    for (let index = 0; index < pages.length; index += 1) {
-      const pageClone = pages[index].cloneNode(true) as HTMLElement;
-      exportHost.replaceChildren(pageClone);
-      await waitForExportLayout();
-      onProgress?.(index + 1, pages.length);
-      await builder.addPage(pageClone, documentOptions);
+  for (let index = 0; index < pages.length; index += 1) {
+    onProgress?.(index + 1, pages.length);
+    // WebKit applies the scroll offset of the preview to html2canvas' internal
+    // clone. Stage the original page at the viewport origin so all four sheets
+    // keep the exact same header, logo and configured background.
+    const restorePage = stagePageForSafariCapture(pages[index]);
+    try {
+      await waitForSafariPaint();
+      await builder.addPage(pages[index], documentOptions);
+    } finally {
+      restorePage();
     }
-    return builder.outputBlob();
-  } finally {
-    exportHost.remove();
   }
+  return builder.outputBlob();
 };

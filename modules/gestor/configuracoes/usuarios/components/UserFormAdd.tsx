@@ -25,6 +25,16 @@ interface UserFormAddProps {
   initialUser?: UsuarioSistema;
 }
 
+const GESTOR_PASSWORD_REQUIREMENTS =
+  'A senha precisa ter ao menos 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.';
+
+const isStrongGestorPassword = (password: string) => (
+  password.length >= 8
+  && /[A-Z]/.test(password)
+  && /[a-z]/.test(password)
+  && /\d/.test(password)
+);
+
 const splitFullName = (fullName: string) => {
   const parts = String(fullName || '').trim().split(/\s+/);
   const nome = parts.shift() || '';
@@ -196,9 +206,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const checkPasswordStrength = (pass: string) => {
     let score = 0;
-    if (pass.length > 6) score += 1;
-    if (pass.length > 10) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
+    if (pass.length >= 8) score += 1;
+    if (pass.length >= 12) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
     if (/[0-9]/.test(pass)) score += 1;
     if (/[^A-Za-z0-9]/.test(pass)) score += 1;
     setPasswordStrength(score);
@@ -244,7 +254,9 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
         };
       }
 
-      const availableTabs = USER_FORM_MODULE_TABS[id] || [];
+      const availableTabs = (USER_FORM_MODULE_TABS[id] || []).filter(
+        (tab) => tab.id !== 'comunicacao-automacoes' || prev.todosPolos,
+      );
       return {
         ...prev,
         permissoes: [...current, id],
@@ -260,11 +272,18 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
 
   const toggleTodosPolos = () => {
     if (contextId !== 'global') return;
-    setFormData(prev => ({
-      ...prev,
-      todosPolos: !prev.todosPolos,
-      polosAcesso: !prev.todosPolos ? [] : contextId === 'global' ? [] : [contextId],
-    }));
+    setFormData(prev => {
+      const nextTodosPolos = !prev.todosPolos;
+      return {
+        ...prev,
+        todosPolos: nextTodosPolos,
+        polosAcesso: nextTodosPolos ? [] : contextId === 'global' ? [] : [contextId],
+        abasModulos: nextTodosPolos ? prev.abasModulos : {
+          ...prev.abasModulos,
+          comunicacao: (prev.abasModulos.comunicacao || []).filter((tab) => tab !== 'comunicacao-automacoes'),
+        },
+      };
+    });
   };
 
   const toggleFinanceiroTab = (id: string) => {
@@ -325,8 +344,8 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
       return;
     }
     if (formData.senha || formData.confirmarSenha) {
-      if (!formData.senha || formData.senha.length < 6) {
-        validationError('A senha precisa ter ao menos 6 caracteres.');
+      if (!formData.senha || !isStrongGestorPassword(formData.senha)) {
+        validationError(GESTOR_PASSWORD_REQUIREMENTS);
         return;
       }
       if (formData.senha !== formData.confirmarSenha) {
@@ -368,6 +387,12 @@ const UserFormAdd: React.FC<UserFormAddProps> = ({
     }
     const hasWhatsAppAccess = formData.permissoes.includes('comunicacao')
       && (formData.abasModulos.comunicacao || []).includes('comunicacao-whatsapp');
+    const hasAutomationAccess = formData.permissoes.includes('comunicacao')
+      && (formData.abasModulos.comunicacao || []).includes('comunicacao-automacoes');
+    if (hasAutomationAccess && !formData.todosPolos) {
+      validationError('Automações multicanal exigem acesso global a todos os polos.');
+      return;
+    }
     if (
       hasWhatsAppAccess
       && !formData.podeVisualizarTodosSetores

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import {
   alunoPublicAuthService,
   getSafePublicAlunoRedirectPath,
+  isPublicAlunoAlreadyRegisteredError,
 } from './aluno-public-auth.service';
 import { supabase } from '../../../lib/supabase';
 import { savePortalSession } from '../../login/portal-session';
@@ -77,7 +78,6 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [relationshipBirthdayChoice, setRelationshipBirthdayChoice] = useState<boolean | null>(null);
   const [signupStep, setSignupStep] = useState<SignupStep>('dados');
   const [cep, setCep] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -89,7 +89,7 @@ const AlunoLoginPublicPage: React.FC = () => {
   const [cepStatus, setCepStatus] = useState<CepStatus>('idle');
 
   const passwordChecks = useMemo(() => {
-    const hasMinLength = password.length >= 6;
+    const hasMinLength = password.length >= 8;
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
@@ -306,10 +306,10 @@ const AlunoLoginPublicPage: React.FC = () => {
       setMessage({ tone: 'error', text: 'Informe um WhatsApp válido para continuar.' });
       return false;
     }
-    if (password.length < 6 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
       setMessage({
         tone: 'error',
-        text: 'A senha deve ter no mínimo 6 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.',
+        text: 'A senha deve ter no mínimo 8 caracteres, 1 letra maiúscula, 1 letra minúscula e 1 número.',
       });
       return false;
     }
@@ -321,14 +321,6 @@ const AlunoLoginPublicPage: React.FC = () => {
       setMessage({ tone: 'error', text: 'Você precisa aceitar os Termos de Uso para finalizar o cadastro.' });
       return false;
     }
-    if (relationshipBirthdayChoice === null) {
-      setMessage({
-        tone: 'error',
-        text: 'Escolha se deseja ou não receber felicitações e comunicados de relacionamento.',
-      });
-      return false;
-    }
-
     return true;
   };
 
@@ -373,8 +365,6 @@ const AlunoLoginPublicPage: React.FC = () => {
         dataNascimento,
         password,
         acceptedTerms,
-        relationshipBirthdayConsent: relationshipBirthdayChoice === true,
-        relationshipBirthdayConsentSurface: 'public_signup_web',
         cep,
         endereco,
         numero,
@@ -400,9 +390,11 @@ const AlunoLoginPublicPage: React.FC = () => {
       }
       await finishAuth(result.profile || undefined);
     } catch (error) {
+      const existingAccount = isPublicAlunoAlreadyRegisteredError(error);
       setMessage({
         tone: 'error',
         text: error instanceof Error ? error.message : 'Não foi possível criar seu cadastro.',
+        action: existingAccount ? 'existing-account' : undefined,
       });
     } finally {
       setLoading(false);
@@ -472,7 +464,6 @@ const AlunoLoginPublicPage: React.FC = () => {
             confirmPassword={confirmPassword}
             showSignupConfirmPassword={showSignupConfirmPassword}
             acceptedTerms={acceptedTerms}
-            relationshipBirthdayChoice={relationshipBirthdayChoice}
             signupStep={signupStep}
             cep={cep}
             endereco={endereco}
@@ -485,6 +476,10 @@ const AlunoLoginPublicPage: React.FC = () => {
             passwordChecks={passwordChecks}
             recoveryHref={`${alunoAppBasePath}/recuperar-senha`}
             onModeChange={switchMode}
+            onExistingAccountLogin={() => {
+              setLoginIdentifier(email);
+              switchMode('login');
+            }}
             onLoginIdentifierChange={setLoginIdentifier}
             onLoginPasswordChange={setLoginPassword}
             onToggleLoginPassword={() => setShowLoginPassword((prev) => !prev)}
@@ -498,7 +493,6 @@ const AlunoLoginPublicPage: React.FC = () => {
             onConfirmPasswordChange={setConfirmPassword}
             onToggleSignupConfirmPassword={() => setShowSignupConfirmPassword((prev) => !prev)}
             onAcceptedTermsChange={setAcceptedTerms}
-            onRelationshipBirthdayChoiceChange={setRelationshipBirthdayChoice}
             onCepChange={(value) => {
               setCepStatus('idle');
               setCep(formatCep(value));

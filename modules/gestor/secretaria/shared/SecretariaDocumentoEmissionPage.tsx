@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronRight,
   CreditCard,
-  Eye,
   FileCheck2,
   Loader2,
   Printer,
@@ -34,7 +33,6 @@ import {
   SecretariaMatriculaResumo,
 } from './secretaria-documentos.types';
 import SecretariaAlunoSearchCard from './SecretariaAlunoSearchCard';
-import SecretariaAcademicDocumentPreview from './SecretariaAcademicDocumentPreview';
 import SecretariaIssuedDocumentModal from './SecretariaIssuedDocumentModal';
 import type { EmissionLog } from '../historico-emissoes/historico-emissoes.types';
 import CrachaPreview from '../../cadastros/modelos-documentos/cracha/components/CrachaPreview';
@@ -88,7 +86,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
   const [selectedTurmaId, setSelectedTurmaId] = useState('');
   const [selectedModuleId, setSelectedModuleId] = useState('');
   const [customSelections, setCustomSelections] = useState<CustomEmissionSelection[]>([]);
-  const [isAcademicPreviewOpen, setIsAcademicPreviewOpen] = useState(false);
   const [selectedReferenceYear, setSelectedReferenceYear] = useState(() => getDefaultIrpfCalendarYear());
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [crachaPrintLayout, setCrachaPrintLayout] = useState<'dobra' | 'duplex'>('dobra');
@@ -446,7 +443,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
     setSelectedTurmaId('');
     setSelectedModuleId('');
     setCustomSelections([]);
-    setIsAcademicPreviewOpen(false);
     setSelectedReferenceYear(getDefaultIrpfCalendarYear(irpfLiberacaoDate));
     setIssuedEmissions([]);
     setIsIssuedDocumentOpen(false);
@@ -816,7 +812,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
             </select>
             {!isLoadingFichaTemplates && !compatibleFichaTemplates.length && (
               <p className="mt-2 text-[10px] font-bold text-rose-600">
-                Cadastre e ative um modelo geral ou compatível em Cadastros → Ficha Cadastral antes de emitir.
+                Cadastre e ative um modelo geral ou compatível em Formações → Ficha Cadastral antes de emitir.
               </p>
             )}
           </div>
@@ -1407,7 +1403,7 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                 <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
                   <p className="text-[10px] font-black uppercase tracking-widest">Modelo SES desativado</p>
                   <p className="mt-1 text-xs font-semibold leading-relaxed">
-                    Ative um modelo em Cadastros, Modelos de Documentos, SES.
+                    Ative um modelo em Formações, Modelos de Documentos, SES.
                   </p>
                 </div>
               )}
@@ -1436,15 +1432,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
                     </p>
                   </button>
                 </div>
-              )}
-              {mode === 'individual' && selectedMatriculaId && definition.academicPreview && (
-                <button
-                  type="button"
-                  onClick={() => setIsAcademicPreviewOpen(true)}
-                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-xs font-black uppercase tracking-wider text-indigo-700 transition-colors hover:bg-indigo-100"
-                >
-                  <Eye size={15} /> Visualizar prévia
-                </button>
               )}
               {emissionMutation.isError && (
                 <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
@@ -1530,9 +1517,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
               onClick={() => {
                 if (step === 1) {
                   setStep(2);
-                  if (mode === 'individual' && definition.academicPreview) {
-                    setIsAcademicPreviewOpen(true);
-                  }
                   return;
                 }
                 emissionMutation.mutate();
@@ -1551,15 +1535,6 @@ const SecretariaDocumentoEmissionPage: React.FC<SecretariaDocumentoEmissionPageP
           poloId={context.poloId}
           definition={definition}
           onClose={() => setIsIssuedDocumentOpen(false)}
-        />
-      )}
-      {isAcademicPreviewOpen && mode === 'individual' && selectedMatriculaId && definition.academicPreview && (
-        <SecretariaAcademicDocumentPreview
-          matriculaId={selectedMatriculaId}
-          type={definition.academicPreview}
-          moduleId={isBoletim ? selectedModuleId : undefined}
-          moduleName={isBoletim ? selectedModule?.nome : undefined}
-          onClose={() => setIsAcademicPreviewOpen(false)}
         />
       )}
     </div>

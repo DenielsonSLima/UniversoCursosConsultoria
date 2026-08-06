@@ -41,7 +41,7 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
           {modalities.map((item) => (
             <div key={item.codigo} className="grid grid-cols-[1fr_auto] items-center gap-3 py-1.5">
               <div className="min-w-0">
-                <p className="truncate text-[9px] font-black text-slate-800">{item.rotulo}</p>
+                <p className="break-words text-[9px] font-black leading-tight text-slate-800">{item.rotulo}</p>
                 <p className="mt-0.5 text-[8px] text-slate-500">
                   {item.quantidade} recebimento(s) confirmado(s)
                 </p>
@@ -74,8 +74,8 @@ export const CaixaReportSummaryBreakdowns: React.FC<{
                   className="grid grid-cols-[1fr_repeat(3,72px)] items-center gap-1 py-1.5 text-right"
                 >
                   <div className="min-w-0 text-left">
-                    <p className="truncate text-[8px] font-black text-slate-800">{item.curso}</p>
-                    <p className="mt-0.5 truncate text-[8px] text-slate-500">
+                    <p className="break-words text-[8px] font-black leading-tight text-slate-800">{item.curso}</p>
+                    <p className="mt-0.5 break-words text-[8px] leading-tight text-slate-500">
                       {item.modalidade} · {item.quantidadeTurmas} turma(s) ·{' '}
                       {item.quantidadeAlunos} aluno(s)
                     </p>

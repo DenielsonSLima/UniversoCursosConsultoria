@@ -53,6 +53,10 @@ const helperRequiredSignals = [
   ['remoção do texto no canvas', /\bhideMarkedCloneText\s*\(/m],
   ['desenho da camada textual', /\bdrawTextRuns\s*\(/m],
   ['texto real no jsPDF', /\bpdf\.text\s*\(/m],
+  ['espaços semânticos entre elementos', /\bmergeStandaloneWhitespaceRuns\s*\(/m],
+  ['frases semânticas entre estilos', /\bmergeAdjacentSemanticRuns\s*\(/m],
+  ['camada invisível sem compressão', /horizontalScale:\s*options\.invisible\s*\?\s*1\s*:/m],
+  ['continuidade multipágina no Safari', /window\.setTimeout\(resolve,\s*0\)/m],
   ['validação contra texto cortado', /\bassertNoClippedText\s*\(/m],
 ];
 const addImagePattern = /\.addImage\s*\(/m;
@@ -163,6 +167,29 @@ for (const filePath of protectedVectorGenerators) {
 
 const helperExists = sources.has(selectablePdfHelper);
 const helperSource = sources.get(selectablePdfHelper) || '';
+const helperSafariFailures = /\brequestAnimationFrame\s*\(/m.test(helperSource)
+  ? [`${selectablePdfHelper} voltou a depender de requestAnimationFrame durante a exportação.`]
+  : [];
+const caixaReportPdfPath = 'modules/gestor/caixa/report/caixa-report.pdf.ts';
+const caixaReportPdfSource = sources.get(caixaReportPdfPath) || '';
+const caixaReportDocumentPath = 'modules/gestor/caixa/report/CaixaReportDocument.tsx';
+const caixaReportDocumentSource = sources.get(caixaReportDocumentPath) || '';
+const caixaSafariFailures = [
+  ...(/cloneNode\s*\(/m.test(caixaReportPdfSource)
+    ? [`${caixaReportPdfPath} voltou a fotografar clones diferentes da prévia.`]
+    : []),
+  ...(!/builder\.addPage\(pages\[index\],\s*documentOptions\)/m.test(caixaReportPdfSource)
+    ? [`${caixaReportPdfPath} deixou de capturar diretamente as páginas da prévia.`]
+    : []),
+  ...(!/stagePageForSafariCapture\(pages\[index\]\)/m.test(caixaReportPdfSource)
+    || !/finally\s*\{\s*restorePage\(\)/m.test(caixaReportPdfSource)
+    ? [`${caixaReportPdfPath} deixou de estabilizar e restaurar cada página capturada pelo Safari.`]
+    : []),
+  ...(!/grid-rows-\[auto_minmax\(0,1fr\)_auto\]/m.test(caixaReportDocumentSource)
+    || !/data-caixa-report-header/m.test(caixaReportDocumentSource)
+    ? [`${caixaReportDocumentPath} perdeu as linhas fixas que protegem o cabeçalho durante a captura.`]
+    : []),
+];
 const missingHelperSignals = helperRequiredSignals
   .filter(([, pattern]) => !pattern.test(helperSource))
   .map(([label]) => label);
@@ -176,11 +203,14 @@ const failures = [
   )),
   ...approvedHybridFailures,
   ...vectorGeneratorFailures,
+  ...helperSafariFailures,
+  ...caixaSafariFailures,
 ];
 
 console.log('Contrato de exportações PDF selecionáveis');
 console.log('========================================');
 console.log(`Helper híbrido central: ${helperExists && missingHelperSignals.length === 0 ? 'OK' : 'INCOMPLETO'} — ${selectablePdfHelper}`);
+console.log(`Continuidade do Caixa no Safari: ${caixaSafariFailures.length === 0 ? 'OK' : 'INCOMPLETA'} — ${caixaReportPdfPath}`);
 
 console.log(`\nConsumidores do helper híbrido (${helperConsumers.length}):`);
 if (helperConsumers.length === 0) console.log('  (nenhum)');

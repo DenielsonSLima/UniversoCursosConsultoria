@@ -29,6 +29,7 @@ export interface UsuarioSistema {
   pode_visualizar_todos_polos?: boolean;
   pode_visualizar_todos_setores?: boolean;
   created_at?: string;
+  access_message?: string;
 }
 
 export interface UsuarioSistemaInput {
