@@ -8,15 +8,18 @@ interface UpdateUsuarioPayload {
   user: UsuarioSistemaInput;
 }
 
-export const useCreateUsuarioMutation = (contextId: string, onSuccess?: () => void) => {
+export const useCreateUsuarioMutation = (
+  contextId: string,
+  onSuccess?: (user: Awaited<ReturnType<typeof usuariosService.createUser>>) => void,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (newUser: UsuarioSistemaInput) => usuariosService.createUser(newUser),
-    onSuccess: () => {
+    onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: usuariosKeys.byContext(contextId) });
       queryClient.invalidateQueries({ queryKey: usuariosKeys.counts() });
-      onSuccess?.();
+      onSuccess?.(user);
     },
   });
 };
