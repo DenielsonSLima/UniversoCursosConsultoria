@@ -31,14 +31,14 @@
     "test:multichannel": "deno test --allow-read modules/gestor/comunicacao/automacoes-multicanal/multichannel-automation.test.ts",
     "test:banese-rate-limit-simulation": "node scripts/test-banese-rate-limit-simulation.mjs",
     "test:caixa-report": "node scripts/test-caixa-report.mjs",
+    "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs",
     "test:saldo-inicial": "node scripts/test-saldo-inicial.mjs",
     "test:document-validation": "node scripts/test-document-validation.mjs",
     "seed:ead-users": "node scripts/create-ead-test-accounts.mjs",
     "sitemap:ead": "node scripts/generate-ead-sitemap.mjs",
     "sync:ead-turmas": "node scripts/reconcile-ead-turmas.mjs",
     "ead:update-acs-vimeo": "node scripts/update-acs-vimeo-embed.mjs",
-    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs",
-    "test:pdf-exports": "node scripts/test-selectable-pdf-exports.mjs"
+    "ead:update-acs-assessment": "node scripts/update-acs-assessment-flow.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.3.0",
