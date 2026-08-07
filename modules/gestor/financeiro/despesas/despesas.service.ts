@@ -82,6 +82,16 @@ export interface DespesaRateioInput {
   poloIds?: string[];
 }
 
+export interface DespesaBaixaParams {
+  requestId: string;
+  contaBancariaId: string;
+  dataPagamento: string;
+  formaPagamento: string;
+  jurosValor?: number;
+  multaValor?: number;
+  descontoValor?: number;
+}
+
 export interface CreateDespesaInput {
   requestId: string;
   poloId: string;
